@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "azerty-store-analytics"
+version = "0.1.0"
+description = "Collecteur et serveur MCP en lecture seule pour les statistiques Microsoft Store d'AZERTY Global"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.2,<2"]
+
+[project.scripts]
+azerty-store-collect = "azerty_store_analytics.collector:main"
+azerty-store-mcp = "azerty_store_analytics.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
