@@ -16,7 +16,7 @@ Disposition clavier française améliorée. Majuscules accentuées, point direct
 
 ### Description longue
 
-AZERTY Global est l'AZERTY corrigé : mêmes lettres, meilleure ponctuation, majuscules accentuées faciles, symboles dev accessibles.
+AZERTY Global est l'AZERTY corrigé : les lettres A à Z ainsi que é, è, à et ç restent à leur place ; seul ù est déplacé. La ponctuation est améliorée, les majuscules accentuées sont directes et les symboles de programmation plus accessibles.
 
 Installez l'application, activez-la — c'est tout. Aucun droit administrateur requis.
 
