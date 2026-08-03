@@ -96,6 +96,11 @@ microsoft-store/azerty-global/
         └── *.json
 ```
 
+L'identité fédérée n'autorise que la branche `main`. Un `workflow_dispatch`
+lancé depuis une autre branche collecte bien les données et publie l'artefact de
+diagnostic, puis échoue à l'étape de connexion à Azure par OIDC sans rien
+archiver. Constaté le 2026-08-03.
+
 ## 3. Premier lancement et backfill
 
 Dans l'onglet **Actions** du dépôt GitHub, lancer manuellement
