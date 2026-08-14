@@ -60,7 +60,10 @@ internal sealed class LessonsWindow : IDisposable
     private readonly Layout _layout;
     private readonly KeyMapper _mapper;
     private readonly KeyboardHook _hook;
-    private readonly LessonCatalog _catalog;
+    // Non readonly : rechargé dans la langue courante lors d'une bascule de langue en
+    // cours de session (les titres/instructions sont résolus au parse ; le texte à taper
+    // reste français, donc la session de frappe en cours est préservée).
+    private LessonCatalog _catalog;
     private readonly LessonProgressStore _progress;
     private readonly LessonHintProvider _hints;
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -135,7 +138,7 @@ internal sealed class LessonsWindow : IDisposable
         _layout = layout;
         _mapper = mapper;
         _hook = hook;
-        _catalog = LessonCatalogLoader.LoadFromResource();
+        _catalog = LoadCatalogWithChallenge();
         _progress = new LessonProgressStore();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningMaxStepCompleted);
         _hints = new LessonHintProvider();
@@ -155,9 +158,41 @@ internal sealed class LessonsWindow : IDisposable
 
         _mapper.StateChanged += OnMapperStateChanged;
         _hook.RawKeyDown += OnRawKeyDown;
+        // Bascule de langue en cours de session (ex. depuis le menu tray) : recharger le
+        // catalogue dans la nouvelle langue et repeindre, sans fermer la fenêtre ni perdre
+        // la position (constat smoke test 2026-07-17).
+        _onAppLanguageChanged = _ => RefreshLanguage();
+        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
     }
 
+    private readonly Action<string>? _onAppLanguageChanged;
+
     public bool IsVisible => _visible;
+
+    /// <summary>Langue de l'UI au moment du parse du catalogue (les titres/instructions des
+    /// leçons sont résolus au parse — cf. LessonCatalogLoader.PickText). Mise à jour au
+    /// rechargement live du catalogue ; permet à TrayApplication de recréer la fenêtre si la
+    /// langue a changé pendant qu'elle était masquée.</summary>
+    public string CatalogLanguage { get; private set; } = L.Language;
+
+    /// <summary>Recharge le catalogue dans la langue courante et repeint. Les index de
+    /// position (module/leçon/exercice) et la session de frappe en cours sont conservés :
+    /// le texte à taper (Content) est en français et ne change pas avec la langue, seuls
+    /// les titres/descriptions/instructions sont retraduits (relus depuis _catalog au paint).</summary>
+    private void RefreshLanguage()
+    {
+        if (CatalogLanguage == L.Language) return;
+        _catalog = LoadCatalogWithChallenge();
+        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningMaxStepCompleted);
+        CatalogLanguage = L.Language;
+        // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
+        _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
+        _lessonIndex = Math.Clamp(_lessonIndex, 0, CurrentModule.Lessons.Count - 1);
+        _exerciseIndex = Math.Clamp(_exerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
+        if (_hWnd != IntPtr.Zero)
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
     private bool _inputPaused;
 
     public void SetInputPaused(bool paused)
@@ -165,11 +200,73 @@ internal sealed class LessonsWindow : IDisposable
         _inputPaused = paused;
     }
 
+    /// <summary>
+    /// Catalogue des leçons + module synthétique « Défi du jour » (opt-in). Le module
+    /// n'apparaît que si les rappels sont activés et que la banque d'extraits est chargée.
+    /// </summary>
+    private static LessonCatalog LoadCatalogWithChallenge()
+    {
+        var catalog = LessonCatalogLoader.LoadFromResource();
+        if (!ConfigManager.TrainingEnabled) return catalog;
+        var challenge = DailyChallenge.BuildModule(
+            DateOnly.FromDateTime(DateTime.Now), ConfigManager.TrainingSequenceIndex);
+        if (challenge == null) return catalog;
+        return new LessonCatalog(catalog.Modules.Append(challenge).ToArray());
+    }
+
+    /// <summary>Le défi affiché correspond-il encore à aujourd'hui et à l'étape courante ?</summary>
+    private string? _challengeLessonKey;
+
+    /// <summary>
+    /// Reconstruit le module Défi si la date ou l'étape a changé (fenêtre restée ouverte
+    /// à cheval sur minuit, séance terminée) et repositionne les index si besoin.
+    /// </summary>
+    private void RefreshChallengeModuleIfStale()
+    {
+        string key = ConfigManager.TrainingEnabled
+            ? $"{DateOnly.FromDateTime(DateTime.Now):yyyyMMdd}/{ConfigManager.TrainingSequenceIndex}/{L.Language}"
+            : "off";
+        if (_challengeLessonKey == key) return;
+        _challengeLessonKey = key;
+        bool wasOnChallenge = CurrentModule.Id == DailyChallenge.ModuleId;
+        _catalog = LoadCatalogWithChallenge();
+        _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
+        _lessonIndex = Math.Clamp(_lessonIndex, 0, CurrentModule.Lessons.Count - 1);
+        _exerciseIndex = Math.Clamp(_exerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
+        if (wasOnChallenge && CurrentModule.Id != DailyChallenge.ModuleId)
+        {
+            // Le module a disparu (opt-out) : revenir au premier module proprement.
+            _moduleIndex = 0; _lessonIndex = 0; _exerciseIndex = 0;
+            StartCurrentSession(savePosition: false);
+        }
+    }
+
+    /// <summary>
+    /// Ouvre la fenêtre directement sur la séance « Défi du jour » (clic sur le rappel
+    /// ou entrée du menu tray). Retourne false si le module n'est pas disponible.
+    /// </summary>
+    public bool ShowChallenge()
+    {
+        _challengeLessonKey = null; // forcer la reconstruction (date/étape du moment)
+        RefreshChallengeModuleIfStale();
+        for (int m = 0; m < _catalog.Modules.Count; m++)
+        {
+            if (_catalog.Modules[m].Id != DailyChallenge.ModuleId) continue;
+            var lesson = _catalog.Modules[m].Lessons[0];
+            if (!SelectExercise(DailyChallenge.ModuleId, lesson.Id, 0, savePosition: false))
+                return false;
+            Show();
+            return true;
+        }
+        return false;
+    }
+
     public void Show()
     {
         if (!RestoreSavedBoundsIfVisible())
             CenterOnActiveMonitor();
         UpdateRenderScaleFromCurrentClient(force: true);
+        RefreshChallengeModuleIfStale();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningMaxStepCompleted);
         _mapper.RequestCapsLockOff();
         _mapper.SyncState();
@@ -282,7 +379,7 @@ internal sealed class LessonsWindow : IDisposable
         int x = monInfo.rcWork.left + Math.Max(0, (screenW - winW) / 2);
         int y = monInfo.rcWork.top + Math.Max(0, (screenH - winH) / 2);
 
-        _hWnd = Win32.CreateWindowExW(0, WND_CLASS_NAME, "AZERTY Global — Leçons",
+        _hWnd = Win32.CreateWindowExW(0, WND_CLASS_NAME, L.LessonsWin_WindowTitle,
             style, x, y, winW, winH, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         CaptureBaseWindowMetrics();
         RestoreSavedBoundsIfVisible();
@@ -786,11 +883,11 @@ internal sealed class LessonsWindow : IDisposable
     private void DrawHeader(IntPtr hdc, Win32.RECT rc)
     {
         var titleRect = new Win32.RECT { left = S(20), top = S(12), right = rc.right / 2, bottom = S(44) };
-        DrawText(hdc, _hFontTitle, "Leçons", titleRect, CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontTitle, L.LessonsWin_Title, titleRect, CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
 
         int done = _progress.CountCompleted(_catalog);
         var progressRect = new Win32.RECT { left = S(120), top = S(20), right = rc.right / 2, bottom = S(44) };
-        DrawText(hdc, _hFontSmall, $"{done}/{_catalog.TotalExerciseCount} exercices", progressRect, CLR_MUTED, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontSmall, L.LessonsWin_ExerciseCount(done, _catalog.TotalExerciseCount), progressRect, CLR_MUTED, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
 
         int tabsWidth = S(252);
         int tabsLeft = Math.Max(S(220), (rc.right - tabsWidth) / 2);
@@ -798,10 +895,10 @@ internal sealed class LessonsWindow : IDisposable
         var freeTab = new Win32.RECT { left = tabsLeft + S(130), top = S(18), right = tabsLeft + S(252), bottom = S(48) };
         var tabsFrame = new Win32.RECT { left = lessonsTab.left - S(3), top = lessonsTab.top - S(3), right = freeTab.right + S(3), bottom = freeTab.bottom + S(3) };
         DrawRoundedBox(hdc, tabsFrame, CLR_PANEL_2, CLR_BORDER, S(8));
-        DrawButton(hdc, lessonsTab, "Leçons", !_settingsOpen && _mode == WindowMode.Lessons, () => SwitchMode(WindowMode.Lessons));
-        DrawButton(hdc, freeTab, "Libre", !_settingsOpen && _mode == WindowMode.Free, () => SwitchMode(WindowMode.Free));
+        DrawButton(hdc, lessonsTab, L.LessonsWin_Title, !_settingsOpen && _mode == WindowMode.Lessons, () => SwitchMode(WindowMode.Lessons));
+        DrawButton(hdc, freeTab, L.LessonsWin_TabFree, !_settingsOpen && _mode == WindowMode.Free, () => SwitchMode(WindowMode.Free));
         var settingsRect = new Win32.RECT { left = rc.right - S(136), top = S(18), right = rc.right - S(20), bottom = S(48) };
-        DrawButton(hdc, settingsRect, "Paramètres", _settingsOpen, ToggleSettings);
+        DrawButton(hdc, settingsRect, L.LessonsWin_SettingsTab, _settingsOpen, ToggleSettings);
     }
 
     private void DrawSidebar(IntPtr hdc, Win32.RECT rect)
@@ -868,36 +965,36 @@ internal sealed class LessonsWindow : IDisposable
         int pad = S(22);
         int y = rect.top + pad;
 
-        DrawText(hdc, _hFontTitle, "Paramètres", new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontTitle, L.LessonsWin_SettingsTab, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(48);
 
-        DrawText(hdc, _hFontSubtitle, "Leçons", new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontSubtitle, L.LessonsWin_Title, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(30);
         DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            "Auto-indices", ConfigManager.LessonAutoHintsEnabled, ToggleAutoHints);
+            L.LessonsWin_ToggleAutoHints, ConfigManager.LessonAutoHintsEnabled, ToggleAutoHints);
         y += S(50);
         DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            "Résumé après exercice", ConfigManager.LessonSummaryVisible, () => ToggleBool(ConfigManager.LessonSummaryVisible, ConfigManager.SetLessonSummaryVisible));
+            L.LessonsWin_ToggleSummary, ConfigManager.LessonSummaryVisible, () => ToggleBool(ConfigManager.LessonSummaryVisible, ConfigManager.SetLessonSummaryVisible));
         y += S(50);
 
-        DrawText(hdc, _hFontSubtitle, "Affichage", new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontSubtitle, L.LessonsWin_SectionDisplay, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(30);
         DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            "Stats du mode libre", ConfigManager.LessonFreeStatsVisible, () => ToggleBool(ConfigManager.LessonFreeStatsVisible, ConfigManager.SetLessonFreeStatsVisible));
+            L.LessonsWin_ToggleFreeStats, ConfigManager.LessonFreeStatsVisible, () => ToggleBool(ConfigManager.LessonFreeStatsVisible, ConfigManager.SetLessonFreeStatsVisible));
         y += S(50);
         DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            "Clavier visuel", ConfigManager.LessonKeyboardVisible, () => ToggleBool(ConfigManager.LessonKeyboardVisible, ConfigManager.SetLessonKeyboardVisible));
+            L.LessonsWin_ToggleKeyboard, ConfigManager.LessonKeyboardVisible, () => ToggleBool(ConfigManager.LessonKeyboardVisible, ConfigManager.SetLessonKeyboardVisible));
         y += S(50);
         DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            "Marqueurs invisibles", ConfigManager.LessonInvisibleMarkersVisible, () => ToggleBool(ConfigManager.LessonInvisibleMarkersVisible, ConfigManager.SetLessonInvisibleMarkersVisible));
+            L.LessonsWin_ToggleInvisibleMarkers, ConfigManager.LessonInvisibleMarkersVisible, () => ToggleBool(ConfigManager.LessonInvisibleMarkersVisible, ConfigManager.SetLessonInvisibleMarkersVisible));
         y += S(62);
 
-        DrawText(hdc, _hFontSubtitle, "Actions", new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontSubtitle, L.LessonsWin_SectionActions, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(32);
         var resetFree = new Win32.RECT { left = rect.left + pad, top = y, right = rect.left + pad + S(160), bottom = y + S(36) };
         var resetProgress = new Win32.RECT { left = resetFree.right + S(12), top = y, right = resetFree.right + S(196), bottom = y + S(36) };
-        DrawButton(hdc, resetFree, "Reset stats libre", false, ResetFreeStats);
-        DrawButton(hdc, resetProgress, "Reset progression", false, ResetProgress);
+        DrawButton(hdc, resetFree, L.LessonsWin_BtnResetFreeStats, false, ResetFreeStats);
+        DrawButton(hdc, resetProgress, L.LessonsWin_BtnResetProgress, false, ResetProgress);
     }
 
     private void DrawToggleRow(IntPtr hdc, Win32.RECT row, string label, bool enabled, Action toggle)
@@ -907,7 +1004,7 @@ internal sealed class LessonsWindow : IDisposable
             Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
 
         var stateRect = new Win32.RECT { left = row.right - S(138), top = row.top, right = row.right - S(72), bottom = row.bottom };
-        DrawText(hdc, _hFontSmall, enabled ? "Activé" : "Désactivé", stateRect, enabled ? CLR_TEXT : CLR_MUTED,
+        DrawText(hdc, _hFontSmall, enabled ? L.LessonsWin_ToggleOn : L.LessonsWin_ToggleOff, stateRect, enabled ? CLR_TEXT : CLR_MUTED,
             Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
 
         var pill = new Win32.RECT { left = row.right - S(58), top = row.top + S(9), right = row.right - S(14), bottom = row.bottom - S(9) };
@@ -924,7 +1021,7 @@ internal sealed class LessonsWindow : IDisposable
         GdiHelpers.DrawPanel(hdc, rect, CLR_PANEL, CLR_BORDER, 0, 0);
         int pad = S(18);
         int y = rect.top + pad;
-        string exerciseLabel = $"Exercice {_exerciseIndex + 1}/{CurrentLesson.Exercises.Count}";
+        string exerciseLabel = L.LessonsWin_ExerciseLabel(_exerciseIndex + 1, CurrentLesson.Exercises.Count);
         var topLine = new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(22) };
         DrawText(hdc, _hFontSmall, exerciseLabel, topLine, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         DrawText(hdc, _hFontSmall, BuildTypingStatus(), topLine, CLR_MUTED, Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
@@ -969,7 +1066,7 @@ internal sealed class LessonsWindow : IDisposable
     {
         var lineInfo = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(24) };
         int iconAreaW = S(142);
-        DrawText(hdc, _hFontSmall, "Exercice terminé", new Win32.RECT { left = lineInfo.left, top = lineInfo.top, right = lineInfo.right - iconAreaW - S(8), bottom = lineInfo.bottom },
+        DrawText(hdc, _hFontSmall, L.LessonsWin_ExerciseDone, new Win32.RECT { left = lineInfo.left, top = lineInfo.top, right = lineInfo.right - iconAreaW - S(8), bottom = lineInfo.bottom },
             CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
         DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) });
     }
@@ -979,7 +1076,7 @@ internal sealed class LessonsWindow : IDisposable
         var lineInfo = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(24) };
         int iconAreaW = S(142);
         var lineLabel = new Win32.RECT { left = lineInfo.left, top = lineInfo.top, right = lineInfo.right - iconAreaW - S(8), bottom = lineInfo.bottom };
-        DrawText(hdc, _hFontSmall, $"Ligne {_session.LineIndex + 1}/{_session.TotalLines}", lineLabel, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontSmall, L.LessonsWin_LineLabel(_session.LineIndex + 1, _session.TotalLines), lineLabel, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) });
         y += S(24);
 
@@ -1120,21 +1217,22 @@ internal sealed class LessonsWindow : IDisposable
 
         int x = summaryRect.left + S(18);
         int yy = summaryRect.top + S(12);
-        DrawText(hdc, _hFontSubtitle, "Exercice réussi", new Win32.RECT { left = x, top = yy, right = summaryRect.right - S(12), bottom = yy + S(24) },
+        DrawText(hdc, _hFontSubtitle, L.LessonsWin_ExerciseSuccess, new Win32.RECT { left = x, top = yy, right = summaryRect.right - S(12), bottom = yy + S(24) },
             CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
 
         int metricY = summaryRect.top + S(48);
         int contentRight = summaryRect.right - S(18);
         int gap = S(28);
         int metricW = Math.Max(S(80), (contentRight - x - gap * 2) / 3);
-        DrawSummaryTextMetric(hdc, x, metricY, metricW, "Vitesse", FormatWpm(stats.Wpm), CLR_TEXT);
-        DrawSummaryTextMetric(hdc, x + metricW + gap, metricY, metricW, "Précision", FormatNullable(stats.AccuracyPercent, "%"), GetAccuracyColor(stats.AccuracyPercent));
-        DrawSummaryTextMetric(hdc, x + (metricW + gap) * 2, metricY, metricW, "Erreurs", stats.ErrorCount.ToString(), GetErrorColor(stats.ErrorCount));
+        DrawSummaryTextMetric(hdc, x, metricY, metricW, L.LessonsWin_MetricSpeed, FormatWpm(stats.Wpm), CLR_TEXT);
+        DrawSummaryTextMetric(hdc, x + metricW + gap, metricY, metricW, L.LessonsWin_MetricAccuracy, FormatNullable(stats.AccuracyPercent, "%"), GetAccuracyColor(stats.AccuracyPercent));
+        DrawSummaryTextMetric(hdc, x + (metricW + gap) * 2, metricY, metricW, L.LessonsWin_MetricErrors, stats.ErrorCount.ToString(), GetErrorColor(stats.ErrorCount));
 
         var hard = stats.GetHardestCharacters(3);
+        int elapsedSecondsRounded = (int)Math.Round(stats.ElapsedSeconds);
         string detailText = hard.Count == 0
-            ? $"Temps : {stats.ElapsedSeconds:0}s    Aucun caractère difficile sur cette tentative."
-            : $"Temps : {stats.ElapsedSeconds:0}s    À retravailler : " + string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString())));
+            ? L.LessonsWin_DetailNoHardChar(elapsedSecondsRounded)
+            : L.LessonsWin_DetailHardChars(elapsedSecondsRounded, string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString()))));
         int detailTop = metricY + S(52);
         int detailBottom = summaryRect.bottom - S(10);
         if (detailBottom > detailTop + S(12))
@@ -1159,7 +1257,7 @@ internal sealed class LessonsWindow : IDisposable
         var doneRect = new Win32.RECT { left = rect.left + S(18), top = top, right = rect.right - S(18), bottom = Math.Max(top + S(52), bottom) };
         DrawRoundedBox(hdc, doneRect, CLR_PANEL_2, CLR_BORDER, S(8));
         GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = doneRect.left, top = doneRect.top + S(8), right = doneRect.left + S(4), bottom = doneRect.bottom - S(8) }, CLR_ACCENT);
-        DrawText(hdc, _hFontSubtitle, "Exercice réussi", new Win32.RECT { left = doneRect.left + S(18), top = doneRect.top, right = doneRect.right - S(18), bottom = doneRect.bottom },
+        DrawText(hdc, _hFontSubtitle, L.LessonsWin_ExerciseSuccess, new Win32.RECT { left = doneRect.left + S(18), top = doneRect.top, right = doneRect.right - S(18), bottom = doneRect.bottom },
             CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
     }
 
@@ -1171,13 +1269,13 @@ internal sealed class LessonsWindow : IDisposable
         int x = rect.right - total;
         int y = rect.top + Math.Max(0, (rect.bottom - rect.top - size) / 2);
 
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "‹", "Précédent", false, PreviousExercise);
+        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "‹", L.LessonsWin_IconPrevious, false, PreviousExercise);
         x += size + gap;
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "›", "Suivant", false, NextExercise);
+        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "›", L.LessonsWin_IconNext, false, NextExercise);
         x += size + gap;
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "↻", "Recommencer", false, () => StartCurrentSession(savePosition: true));
+        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "↻", L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true));
         x += size + gap;
-        string hintTooltip = (!_hintBackspace && _hintMethod == null) ? "Indice" : FormatHintButtonText();
+        string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_IconHint : FormatHintButtonText();
         DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "💡", hintTooltip,
             _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, ToggleAutoHints);
     }
@@ -1233,9 +1331,9 @@ internal sealed class LessonsWindow : IDisposable
         GdiHelpers.DrawPanel(hdc, rect, CLR_PANEL, CLR_BORDER, 0, 0);
         int pad = S(18);
         int y = rect.top + pad;
-        DrawText(hdc, _hFontTitle, "Mode libre", new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontTitle, L.LessonsWin_FreeTitle, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(42);
-        DrawText(hdc, _hFontText, "Tape librement pour mesurer le rythme. Rien n'est enregistré après fermeture.", new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(28) }, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+        DrawText(hdc, _hFontText, L.LessonsWin_FreeDescription, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(28) }, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(44);
 
         if (ConfigManager.LessonFreeStatsVisible)
@@ -1243,7 +1341,7 @@ internal sealed class LessonsWindow : IDisposable
             string stats = BuildFreeStatsText();
             var resetStats = new Win32.RECT { left = rect.right - pad - S(116), top = y, right = rect.right - pad, bottom = y + S(32) };
             DrawText(hdc, _hFontSubtitle, stats, new Win32.RECT { left = rect.left + pad, top = y, right = resetStats.left - S(12), bottom = y + S(32) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-            DrawButton(hdc, resetStats, "Reset stats", false, ResetFreeStats);
+            DrawButton(hdc, resetStats, L.LessonsWin_BtnResetStats, false, ResetFreeStats);
             y += S(46);
         }
 
@@ -1568,12 +1666,12 @@ internal sealed class LessonsWindow : IDisposable
     private string BuildFreeStatsText()
     {
         if (!_freeStartedAt.HasValue || _freeChars == 0)
-            return "WPM : —    Caractères/min : —    Durée : 0s    Corrections : 0";
+            return L.LessonsWin_FreeStatsEmpty;
         double seconds = Math.Max(1, (DateTimeOffset.UtcNow - _freeStartedAt.Value).TotalSeconds);
         double minutes = seconds / 60d;
         int wpm = _freeChars >= 10 ? (int)Math.Round((_freeChars / 5d) / minutes) : 0;
         int cpm = (int)Math.Round(_freeChars / minutes);
-        return $"WPM : {(wpm == 0 ? "—" : wpm)}    Caractères/min : {cpm}    Durée : {seconds:0}s    Corrections : {_freeBackspaces}";
+        return L.LessonsWin_FreeStatsFilled(wpm == 0 ? "—" : wpm.ToString(), cpm, (int)Math.Round(seconds), _freeBackspaces);
     }
 
     private void ResetFreeStats()
@@ -1947,6 +2045,16 @@ internal sealed class LessonsWindow : IDisposable
         _showSummary = true;
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         ClearHint();
+
+        // Défi du jour : le dernier exercice de la leçon du jour clôt la séance —
+        // date enregistrée, séquence de désapprentissage avancée, compteur local +1.
+        if (CurrentModule.Id == DailyChallenge.ModuleId &&
+            _exerciseIndex == CurrentLesson.Exercises.Count - 1)
+        {
+            try { TrainingReminders.MarkSessionCompleted(DateOnly.FromDateTime(DateTime.Now)); }
+            catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeCompleted", ex); }
+        }
+
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
@@ -2152,8 +2260,8 @@ internal sealed class LessonsWindow : IDisposable
     private void ResetProgress()
     {
         int result = Win32.MessageBoxW(_hWnd,
-            "Réinitialiser toute la progression des leçons ?\n\nLes préférences, comme les auto-indices, seront conservées.",
-            "AZERTY Global — Leçons", MB_YESNO | MB_ICONWARNING);
+            L.LessonsWin_ResetProgressConfirm,
+            L.LessonsWin_WindowTitle, MB_YESNO | MB_ICONWARNING);
         if (result != IDYES) return;
         _progress.ResetAll();
         StartCurrentSession(savePosition: true);
@@ -2224,24 +2332,24 @@ internal sealed class LessonsWindow : IDisposable
     {
         return instruction
             .Replace("{ALTGR}", "AltGr", StringComparison.OrdinalIgnoreCase)
-            .Replace("{SHIFT}", "Maj", StringComparison.OrdinalIgnoreCase)
-            .Replace("{CAPS}", "Verr. Maj.", StringComparison.OrdinalIgnoreCase);
+            .Replace("{SHIFT}", L.LessonsWin_PlaceholderShift, StringComparison.OrdinalIgnoreCase)
+            .Replace("{CAPS}", L.LessonsWin_PlaceholderCaps, StringComparison.OrdinalIgnoreCase);
     }
 
     private string BuildTypingStatus()
     {
         return CurrentExercise.TypingMode == LessonTypingMode.Strict
-            ? "Mode initiation : retape le bon caractère pour corriger."
-            : "Retour arrière autorisé. Le collage est bloqué.";
+            ? L.LessonsWin_StatusStrict
+            : L.LessonsWin_StatusFlexible;
     }
 
     private string FormatHintButtonText()
     {
         if (_hintBackspace)
-            return "Retour arrière -> corriger";
+            return L.LessonsWin_HintBackspace;
 
         if (_hintMethod == null || !_hintCharacter.HasValue)
-            return "Indice";
+            return L.LessonsWin_IconHint;
 
         string target = FormatVisibleCharacter(_hintCharacter.Value.ToString());
         string key = FormatKeyName(_hintMethod.Key);
@@ -2257,8 +2365,8 @@ internal sealed class LessonsWindow : IDisposable
             string activation = string.IsNullOrEmpty(activationLayer) ? activationKey : $"{activationLayer} + {activationKey}";
             string combo = string.IsNullOrEmpty(layer) ? key : $"{layer} + {key}";
             return string.IsNullOrEmpty(activation)
-                ? $"{dead} puis {combo} -> {target}"
-                : $"{activation} -> {dead} puis {combo} -> {target}";
+                ? $"{dead} {L.Search_ThenWord} {combo} -> {target}"
+                : $"{activation} -> {dead} {L.Search_ThenWord} {combo} -> {target}";
         }
 
         string direct = string.IsNullOrEmpty(layer) ? key : $"{layer} + {key}";
@@ -2281,8 +2389,8 @@ internal sealed class LessonsWindow : IDisposable
             .Where(part => !string.Equals(part, "Base", StringComparison.OrdinalIgnoreCase))
             .Select(part => part switch
             {
-                "Shift" => "Maj",
-                "Caps" => "Verr. Maj.",
+                "Shift" => L.Settings_ShortcutModifier2,
+                "Caps" => L.Onboarding_CapsLockWord,
                 "AltGr" => "AltGr",
                 _ => part
             }));
@@ -2299,7 +2407,7 @@ internal sealed class LessonsWindow : IDisposable
 
         return key switch
         {
-            "Space" => "Espace",
+            "Space" => L.Search_SpaceKeyLabel,
             "Minus" => "-",
             "Equal" => "=",
             "BracketLeft" => "[",
@@ -2455,6 +2563,8 @@ internal sealed class LessonsWindow : IDisposable
     public void Dispose()
     {
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
+        if (_onAppLanguageChanged != null)
+            ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         _mapper.StateChanged -= OnMapperStateChanged;
         _hook.RawKeyDown -= OnRawKeyDown;
         if (_hWnd != IntPtr.Zero)

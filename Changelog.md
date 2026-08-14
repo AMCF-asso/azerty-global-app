@@ -1,5 +1,11 @@
 # Changelog — Application AZERTY Global
 
+## Non publié — source réconciliée le 2026-08-15
+
+- Report de la base interne 1.1.2 et des fonctions 1.2.0 en développement dans le dépôt public canonique : interface bilingue, statistiques locales, défi quotidien facultatif, rappels d'entraînement et activation des notifications Store.
+- Extraction du modèle de disposition, du parseur JSON et de la composition des touches mortes dans `TypingEngine.Core`, projet portable partagé et couvert par sa propre suite de tests.
+- Aucun package MSIX n'a été produit et aucune publication n'a été effectuée. Le manifeste de packaging reste volontairement inchangé jusqu'à la revue de release.
+
 ## Version 1.0.0 — 29 juin 2026
 
 Version stable de lancement Microsoft Store. Cette version reprend la RC interne `0.12.0`, validée le 2026-06-26, puis reconstruite et publiée en `1.0.0` le 2026-06-29. Le MSIX hors Store signé AMCF reste un livrable séparé.

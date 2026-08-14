@@ -25,7 +25,13 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hWnd;
     private IntPtr _hEditHours;
     private IntPtr _hEditMinutes;
+    private IntPtr _hLabel;
+    private IntPtr _hHours;
+    private IntPtr _hMinutes;
+    private IntPtr _hBtnOk;
+    private IntPtr _hBtnCancel;
     private IntPtr _hFont;
+    private Action<string>? _onAppLanguageChanged;
     private bool _done;
     private TimeSpan? _result;
 
@@ -101,12 +107,30 @@ sealed class PauseDurationDialog : IDisposable
         int x = work.left + Math.Max(0, (work.right - work.left - windowW) / 2);
         int y = work.top + Math.Max(0, (work.bottom - work.top - windowH) / 2);
 
-        _hWnd = Win32.CreateWindowExW(0, ClassName, "Mettre AZERTY Global en pause",
+        _hWnd = Win32.CreateWindowExW(0, ClassName, L.Pause_WindowTitle,
             style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
 
         _hFont = Win32.CreateFontW(-14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         CreateControls(hInstance);
         Win32.EnableDarkTitleBar(_hWnd);
+
+        // La pop-up est modale mais l'icône tray reste accessible : un changement de
+        // langue via le menu tray pendant qu'elle est ouverte doit la retraduire sur
+        // place (sinon elle garde la langue d'ouverture — constat visuel 2026-07-23).
+        _onAppLanguageChanged = _ => RefreshLanguage();
+        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
+    }
+
+    private void RefreshLanguage()
+    {
+        if (_hWnd == IntPtr.Zero)
+            return;
+        Win32.SetWindowTextW(_hWnd, L.Pause_WindowTitle);
+        Win32.SetWindowTextW(_hLabel, L.Pause_Label);
+        Win32.SetWindowTextW(_hHours, L.Pause_Hours);
+        Win32.SetWindowTextW(_hMinutes, L.Pause_Minutes);
+        Win32.SetWindowTextW(_hBtnOk, L.Pause_BtnConfirm);
+        Win32.SetWindowTextW(_hBtnCancel, L.Pause_BtnCancel);
     }
 
     private static Win32.RECT GetWorkArea(IntPtr owner)
@@ -127,9 +151,9 @@ sealed class PauseDurationDialog : IDisposable
 
     private void CreateControls(IntPtr hInstance)
     {
-        CreateStatic(hInstance, "Durée de pause temporaire", 18, 16, 280, 22);
-        CreateStatic(hInstance, "Heures", 28, 60, 72, 22);
-        CreateStatic(hInstance, "Minutes", 150, 60, 82, 22);
+        _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 16, 280, 22);
+        _hHours = CreateStatic(hInstance, L.Pause_Hours, 28, 60, 72, 22);
+        _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 150, 60, 82, 22);
 
         _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 82, 54, 50, 26);
         _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 218, 54, 50, 26);
@@ -138,16 +162,17 @@ sealed class PauseDurationDialog : IDisposable
         CreateButton(hInstance, IDC_MINUTES_UP, "▲", 218, 38, 50, 15, BS_PUSHBUTTON);
         CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 218, 81, 50, 15, BS_PUSHBUTTON);
 
-        CreateButton(hInstance, IDOK, "Mettre en pause", 96, 106, 120, 32, BS_DEFPUSHBUTTON);
-        CreateButton(hInstance, IDCANCEL, "Annuler", 224, 106, 84, 32, BS_PUSHBUTTON);
+        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 96, 106, 120, 32, BS_DEFPUSHBUTTON);
+        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 224, 106, 84, 32, BS_PUSHBUTTON);
     }
 
-    private void CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h)
+    private IntPtr CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h)
     {
         var hwnd = Win32.CreateWindowExW(0, "STATIC", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE,
             x, y, w, h, _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        return hwnd;
     }
 
     private IntPtr CreateEdit(IntPtr hInstance, int id, string text, int x, int y, int w, int h)
@@ -160,12 +185,13 @@ sealed class PauseDurationDialog : IDisposable
         return hwnd;
     }
 
-    private void CreateButton(IntPtr hInstance, int id, string text, int x, int y, int w, int h, uint style)
+    private IntPtr CreateButton(IntPtr hInstance, int id, string text, int x, int y, int w, int h, uint style)
     {
         var hwnd = Win32.CreateWindowExW(0, "BUTTON", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | style,
             x, y, w, h, _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        return hwnd;
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -240,7 +266,7 @@ sealed class PauseDurationDialog : IDisposable
         if (hours < 0 || minutes < 0 || minutes > 59 || totalMinutes < 1 || totalMinutes > 1439)
         {
             Win32.MessageBoxW(_hWnd,
-                "Choisis une durée entre 1 minute et 23 h 59.",
+                L.Pause_InvalidDuration,
                 "AZERTY Global", 0x30);
             return;
         }
@@ -291,6 +317,11 @@ sealed class PauseDurationDialog : IDisposable
 
     public void Dispose()
     {
+        if (_onAppLanguageChanged != null)
+        {
+            ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
+            _onAppLanguageChanged = null;
+        }
         if (_hWnd != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hWnd);

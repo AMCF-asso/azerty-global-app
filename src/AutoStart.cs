@@ -130,8 +130,8 @@ static class AutoStart
 
     public static string GetFailureMessage() =>
         ConfigManager.IsPackaged
-            ? "Impossible d'enregistrer le lancement automatique.\nVérifie l'autorisation dans Paramètres > Applications > Démarrage."
-            : "Impossible d'enregistrer le lancement automatique.\nVérifie les permissions du dossier Démarrage.";
+            ? L.AutoStart_FailureMessagePackaged
+            : L.AutoStart_FailureMessageUnpackaged;
 
     private static bool Enable()
     {
@@ -178,7 +178,7 @@ static class AutoStart
             // SetDescription (slot 7)
             IntPtr pSetDesc = Marshal.ReadIntPtr(vtable, VT_IShellLink_SetDescription * IntPtr.Size);
             var setDesc = Marshal.GetDelegateForFunctionPointer<SetDescriptionDelegate>(pSetDesc);
-            hr = setDesc(pShellLink, "AZERTY Global – Lancement automatique");
+            hr = setDesc(pShellLink, L.AutoStart_ShortcutDescription);
             if (hr != S_OK) return false;
 
             // QueryInterface pour IPersistFile
@@ -237,6 +237,10 @@ static class AutoStart
     /// <summary>TaskId déclaré dans AppxManifest.xml.</summary>
     private const string StartupTaskId = "AZERTYGlobalStartup";
 
+    private static bool IsStartupTaskActive(Windows.ApplicationModel.StartupTaskState state) =>
+        state is Windows.ApplicationModel.StartupTaskState.Enabled
+            or Windows.ApplicationModel.StartupTaskState.EnabledByPolicy;
+
     /// <summary>
     /// Active ou désactive la StartupTask MSIX.
     /// Retourne true si l'état final correspond à la demande.
@@ -250,10 +254,19 @@ static class AutoStart
 
             if (enabled)
             {
+                // Déjà activée : ne PAS rappeler RequestEnableAsync. C'est le cas normal à
+                // chaque fermeture (Close() rejoue Set(true)), y compris pendant une mise à
+                // jour MSIX où l'updater diffuse un WM_CLOSE à la fenêtre Paramètres masquée :
+                // RequestEnableAsync peut alors échouer en plein teardown et afficher une
+                // fausse erreur, alors que le lancement automatique est bel et bien actif
+                // (constat smoke test Phase 5, 2026-07-20).
+                if (IsStartupTaskActive(task.State))
+                    return true;
+
                 // RequestEnableAsync retourne l'état réel après la demande.
                 // Peut être Enabled, DisabledByUser, ou DisabledByPolicy.
                 var state = task.RequestEnableAsync().GetAwaiter().GetResult();
-                return state == Windows.ApplicationModel.StartupTaskState.Enabled;
+                return IsStartupTaskActive(state);
             }
             else
             {
@@ -261,7 +274,20 @@ static class AutoStart
                 return true;
             }
         }
-        catch { return false; }
+        catch (Exception ex)
+        {
+            // Ne plus avaler silencieusement : un échec sans trace rendait ce bug invisible
+            // dans error.log (constat 2026-07-20). Si la tâche est en fait active, considérer
+            // comme un succès plutôt que d'alarmer l'utilisateur à tort.
+            ConfigManager.Log("AutoStart.SetStartupTask", ex);
+            try
+            {
+                var t = Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId)
+                    .GetAwaiter().GetResult();
+                return enabled ? IsStartupTaskActive(t.State) : true;
+            }
+            catch { return false; }
+        }
     }
 
     private static bool IsStartupTaskEnabled()
@@ -270,7 +296,7 @@ static class AutoStart
         {
             var task = Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId)
                 .GetAwaiter().GetResult();
-            return task.State == Windows.ApplicationModel.StartupTaskState.Enabled;
+            return IsStartupTaskActive(task.State);
         }
         catch { return false; }
     }

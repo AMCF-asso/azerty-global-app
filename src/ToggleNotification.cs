@@ -179,7 +179,7 @@ internal sealed class ToggleNotification : IDisposable
 
         Win32.SelectObject(hdc, _hFontText);
         Win32.SetTextColor(hdc, _currentActivated ? CLR_ACTIVATED : CLR_DEACTIVATED);
-        string text = _currentActivated ? "AZERTY Global activé" : "AZERTY Global désactivé";
+        string text = _currentActivated ? L.Toggle_Activated : L.Toggle_Deactivated;
         Win32.DrawTextW(hdc, text, -1, ref clientRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 

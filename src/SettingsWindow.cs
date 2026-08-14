@@ -5,6 +5,8 @@ namespace AZERTYGlobal;
 sealed class SettingsWindow : IDisposable
 {
     private const uint BS_AUTOCHECKBOX = 0x0003;
+    private const uint BS_AUTORADIOBUTTON = 0x0009;
+    private const uint WS_GROUP = 0x00020000;
     private const uint BM_GETCHECK = 0x00F0;
     private const uint BM_SETCHECK = 0x00F1;
     private const uint BST_CHECKED = 0x0001;
@@ -20,7 +22,7 @@ sealed class SettingsWindow : IDisposable
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
     private const uint CLR_KEY_BORDER_FOCUS = 0x000078D4;
-    private const string ShortcutCaptureHint = "Appuie sur une touche autorisée";
+    private static string ShortcutCaptureHint => L.Settings_ShortcutCaptureHint;
 
     private const int IDC_EDIT_KEYBOARD = 3101;
     private const int IDC_EDIT_SEARCH = 3102;
@@ -30,9 +32,33 @@ sealed class SettingsWindow : IDisposable
     private const int IDC_LINK_RESET = 3107;
     private const int IDC_RESET_VIRTUAL_KEYBOARD_WINDOW = 3108;
     private const int IDC_RESET_LESSONS_WINDOW = 3109;
+    private const int IDC_RADIO_LANG_FR = 3110;
+    private const int IDC_RADIO_LANG_EN = 3111;
+    private const int IDC_CHK_TRAINING = 3118; // opt-in Défi du jour (v1.2.0)
+    // Section « Apps suspendues » (v1.2.0)
+    private const int IDC_LIST_COMPAT = 3112;
+    private const int IDC_BTN_COMPAT_ADD = 3113;
+    private const int IDC_BTN_COMPAT_REMOVE = 3114;
+    private const int IDC_RADIO_COMPAT_AUTO = 3115;
+    private const int IDC_RADIO_COMPAT_FORCEON = 3116;
+    private const int IDC_RADIO_COMPAT_FORCEOFF = 3117;
 
-    private const int BASE_WIN_W = 240;
-    private const int BASE_WIN_H = 392;
+    // Listbox Win32 (section Apps suspendues)
+    private const uint LBS_NOTIFY = 0x0001;
+    private const uint LBS_NOINTEGRALHEIGHT = 0x0100;
+    private const uint LB_ADDSTRING = 0x0180;
+    private const uint LB_RESETCONTENT = 0x0184;
+    private const uint LB_SETCURSEL = 0x0186;
+    private const uint LB_GETCURSEL = 0x0188;
+    private const int LBN_SELCHANGE = 1;
+    private const uint WS_VSCROLL = 0x00200000;
+    private const uint WS_BORDER = 0x00800000;
+
+    // 240 → 300 le 2026-07-16 (smoke test) : « Virtual keyboard » était tronqué en EN
+    // et la fenêtre était disproportionnée (deux fois plus haute que large).
+    // 470 → 680 le 2026-07-30 : section « Apps suspendues » + opt-in Défi du jour (v1.2.0).
+    private const int BASE_WIN_W = 300;
+    private const int BASE_WIN_H = 680;
 
     private const uint CLR_BG = 0x00DDDDDD;
     private const uint CLR_TITLE = 0x00201C18;
@@ -77,9 +103,20 @@ sealed class SettingsWindow : IDisposable
         public Win32.RECT AutoStartRect;
         public Win32.RECT NotificationsRect;
         public Win32.RECT OnboardingRect;
+        public Win32.RECT TrainingRect;
+        public Win32.RECT LanguagePanel;
+        public Win32.RECT LanguageFrRect;
+        public Win32.RECT LanguageEnRect;
         public Win32.RECT WindowsPanel;
         public Win32.RECT ResetVirtualKeyboardWindowRect;
         public Win32.RECT ResetLessonsWindowRect;
+        public Win32.RECT CompatPanel;
+        public Win32.RECT CompatListRect;
+        public Win32.RECT CompatAddRect;
+        public Win32.RECT CompatRemoveRect;
+        public Win32.RECT CompatAutoRect;
+        public Win32.RECT CompatForceOnRect;
+        public Win32.RECT CompatForceOffRect;
         // GuideRect et CloseButtonRect retirés — la croix système suffit
     }
 
@@ -89,10 +126,22 @@ sealed class SettingsWindow : IDisposable
     private IntPtr _hWndChkAutoStart;
     private IntPtr _hWndChkNotifications;
     private IntPtr _hWndChkOnboarding;
+    private IntPtr _hWndChkTraining;
     private IntPtr _hWndResetVirtualKeyboardWindow;
     private IntPtr _hWndResetLessonsWindow;
+    private IntPtr _hWndRadioLangFr;
+    private IntPtr _hWndRadioLangEn;
     private IntPtr _hWndLinkReset;
     private IntPtr _hWndValidation;
+    // Section « Apps suspendues » (v1.2.0)
+    private IntPtr _hWndCompatList;
+    private IntPtr _hWndCompatAdd;
+    private IntPtr _hWndCompatRemove;
+    private IntPtr _hWndRadioCompatAuto;
+    private IntPtr _hWndRadioCompatForceOn;
+    private IntPtr _hWndRadioCompatForceOff;
+    // Noms de process affichés dans la listbox, dans l'ordre des index de la liste
+    private readonly List<string> _compatProcesses = new();
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Win32.SUBCLASSPROC _linkSubclassProc;
@@ -133,6 +182,13 @@ sealed class SettingsWindow : IDisposable
 
     public bool IsVisible => _visible;
     public Action? ShortcutChanged;
+    /// <summary>Déclenché après tout changement d'override de compatibilité depuis cette
+    /// fenêtre — TrayApplication doit relancer ForegroundMonitor.Recompute().</summary>
+    public Action? CompatibilityOverridesChanged;
+
+    // Abonnement AppLanguageChanged (bascule initiée depuis le tray ou l'onboarding) —
+    // désabonné dans Dispose (événement statique, sinon référence pendante).
+    private readonly Action<string>? _onAppLanguageChanged;
 
     public SettingsWindow()
     {
@@ -158,6 +214,11 @@ sealed class SettingsWindow : IDisposable
         CreateControls();
         ApplyFontsToControls();
         RepositionControls();
+
+        // Bascule de langue initiée ailleurs (menu tray, fenêtre de bienvenue) pendant que
+        // cette fenêtre existe : se rafraîchir. Événement statique → désabonné dans Dispose.
+        _onAppLanguageChanged = _ => OnLanguageChanged();
+        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
 
         try
         {
@@ -219,10 +280,19 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndChkNotifications, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndChkOnboarding, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndResetVirtualKeyboardWindow, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndResetLessonsWindow, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndRadioLangFr, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndRadioLangEn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkReset, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndValidation, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
+        Win32.SendMessageW(_hWndCompatList, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        Win32.SendMessageW(_hWndCompatAdd, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndCompatRemove, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndRadioCompatAuto, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndRadioCompatForceOn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndRadioCompatForceOff, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
     }
 
     private void CreateMainWindow()
@@ -258,7 +328,7 @@ sealed class SettingsWindow : IDisposable
         int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
         int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
 
-        _hWnd = Win32.CreateWindowExW(0, className, "AZERTY Global — Paramètres",
+        _hWnd = Win32.CreateWindowExW(0, className, L.Settings_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         Win32.EnableDarkTitleBar(_hWnd);
@@ -289,41 +359,100 @@ sealed class SettingsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
 
-        _hWndLinkReset = Win32.CreateWindowExW(0, "STATIC", "Valeurs par défaut",
+        _hWndLinkReset = Win32.CreateWindowExW(0, "STATIC", L.Settings_LinkResetDefaults,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_RESET, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkReset, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
-        _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", "Lancer au démarrage de Windows",
+        _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Settings_AutoStart,
             Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
         RefreshAutoStartCheckbox();
 
-        _hWndChkNotifications = Win32.CreateWindowExW(0, "BUTTON", "Notifications",
+        _hWndChkNotifications = Win32.CreateWindowExW(0, "BUTTON", L.Settings_Notifications,
             Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_NOTIFICATIONS, hInstance, IntPtr.Zero);
         if (ConfigManager.NotificationsEnabled)
             Win32.SendMessageW(_hWndChkNotifications, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
 
-        _hWndChkOnboarding = Win32.CreateWindowExW(0, "BUTTON", "Fenêtre de bienvenue au démarrage",
+        _hWndChkOnboarding = Win32.CreateWindowExW(0, "BUTTON", L.Settings_OnboardingWindow,
             Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_ONBOARDING, hInstance, IntPtr.Zero);
         if (ConfigManager.ShowOnboardingAtStartup)
             Win32.SendMessageW(_hWndChkOnboarding, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
 
-        _hWndResetVirtualKeyboardWindow = Win32.CreateWindowExW(0, "BUTTON", "Réinitialiser clavier virtuel",
+        // Opt-in Défi du jour (v1.2.0) — décoché par défaut, appliqué immédiatement au
+        // clic (pas à la fermeture) : l'entrée du menu tray et le module des leçons
+        // dépendent de cet état.
+        _hWndChkTraining = Win32.CreateWindowExW(0, "BUTTON", L.Challenge_OptIn,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
+        if (ConfigManager.TrainingEnabled)
+            Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+
+        // Noms de langue = endonymes, jamais traduits (un sélecteur de langue affiche
+        // chaque langue dans elle-même : "Français" et "English" quelle que soit la langue active).
+        _hWndRadioLangFr = Win32.CreateWindowExW(0, "BUTTON", "Français",
+            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_RADIO_LANG_FR, hInstance, IntPtr.Zero);
+
+        _hWndRadioLangEn = Win32.CreateWindowExW(0, "BUTTON", "English",
+            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_RADIO_LANG_EN, hInstance, IntPtr.Zero);
+        RefreshLanguageRadios();
+
+        _hWndResetVirtualKeyboardWindow = Win32.CreateWindowExW(0, "BUTTON", L.Settings_ResetVirtualKeyboard,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RESET_VIRTUAL_KEYBOARD_WINDOW, hInstance, IntPtr.Zero);
 
-        _hWndResetLessonsWindow = Win32.CreateWindowExW(0, "BUTTON", "Réinitialiser module Leçons",
+        _hWndResetLessonsWindow = Win32.CreateWindowExW(0, "BUTTON", L.Settings_ResetLessonsModule,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RESET_LESSONS_WINDOW, hInstance, IntPtr.Zero);
+
+        // ── Section « Apps suspendues » (v1.2.0) ─────────────────────
+        _hWndCompatList = Win32.CreateWindowExW(0, "LISTBOX", "",
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP |
+            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_LIST_COMPAT, hInstance, IntPtr.Zero);
+
+        _hWndCompatAdd = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatAdd,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_BTN_COMPAT_ADD, hInstance, IntPtr.Zero);
+
+        _hWndCompatRemove = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatRemove,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_BTN_COMPAT_REMOVE, hInstance, IntPtr.Zero);
+
+        // WS_GROUP obligatoire sur le premier radio : termine le groupe Langue,
+        // sinon cocher un mode décocherait Français/English.
+        _hWndRadioCompatAuto = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeAuto,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_RADIO_COMPAT_AUTO, hInstance, IntPtr.Zero);
+
+        _hWndRadioCompatForceOn = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeForceOn,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEON, hInstance, IntPtr.Zero);
+
+        _hWndRadioCompatForceOff = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeForceOff,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEOFF, hInstance, IntPtr.Zero);
+
+        RefreshCompatList(selectProcess: null);
     }
 
     private void ResizeWindow()
@@ -377,6 +506,18 @@ sealed class SettingsWindow : IDisposable
             layout.OnboardingRect.left, layout.OnboardingRect.top,
             layout.OnboardingRect.right - layout.OnboardingRect.left,
             layout.OnboardingRect.bottom - layout.OnboardingRect.top, true);
+        Win32.MoveWindow(_hWndChkTraining,
+            layout.TrainingRect.left, layout.TrainingRect.top,
+            layout.TrainingRect.right - layout.TrainingRect.left,
+            layout.TrainingRect.bottom - layout.TrainingRect.top, true);
+        Win32.MoveWindow(_hWndRadioLangFr,
+            layout.LanguageFrRect.left, layout.LanguageFrRect.top,
+            layout.LanguageFrRect.right - layout.LanguageFrRect.left,
+            layout.LanguageFrRect.bottom - layout.LanguageFrRect.top, true);
+        Win32.MoveWindow(_hWndRadioLangEn,
+            layout.LanguageEnRect.left, layout.LanguageEnRect.top,
+            layout.LanguageEnRect.right - layout.LanguageEnRect.left,
+            layout.LanguageEnRect.bottom - layout.LanguageEnRect.top, true);
         Win32.MoveWindow(_hWndResetVirtualKeyboardWindow,
             layout.ResetVirtualKeyboardWindowRect.left, layout.ResetVirtualKeyboardWindowRect.top,
             layout.ResetVirtualKeyboardWindowRect.right - layout.ResetVirtualKeyboardWindowRect.left,
@@ -385,6 +526,30 @@ sealed class SettingsWindow : IDisposable
             layout.ResetLessonsWindowRect.left, layout.ResetLessonsWindowRect.top,
             layout.ResetLessonsWindowRect.right - layout.ResetLessonsWindowRect.left,
             layout.ResetLessonsWindowRect.bottom - layout.ResetLessonsWindowRect.top, true);
+        Win32.MoveWindow(_hWndCompatList,
+            layout.CompatListRect.left, layout.CompatListRect.top,
+            layout.CompatListRect.right - layout.CompatListRect.left,
+            layout.CompatListRect.bottom - layout.CompatListRect.top, true);
+        Win32.MoveWindow(_hWndCompatAdd,
+            layout.CompatAddRect.left, layout.CompatAddRect.top,
+            layout.CompatAddRect.right - layout.CompatAddRect.left,
+            layout.CompatAddRect.bottom - layout.CompatAddRect.top, true);
+        Win32.MoveWindow(_hWndCompatRemove,
+            layout.CompatRemoveRect.left, layout.CompatRemoveRect.top,
+            layout.CompatRemoveRect.right - layout.CompatRemoveRect.left,
+            layout.CompatRemoveRect.bottom - layout.CompatRemoveRect.top, true);
+        Win32.MoveWindow(_hWndRadioCompatAuto,
+            layout.CompatAutoRect.left, layout.CompatAutoRect.top,
+            layout.CompatAutoRect.right - layout.CompatAutoRect.left,
+            layout.CompatAutoRect.bottom - layout.CompatAutoRect.top, true);
+        Win32.MoveWindow(_hWndRadioCompatForceOn,
+            layout.CompatForceOnRect.left, layout.CompatForceOnRect.top,
+            layout.CompatForceOnRect.right - layout.CompatForceOnRect.left,
+            layout.CompatForceOnRect.bottom - layout.CompatForceOnRect.top, true);
+        Win32.MoveWindow(_hWndRadioCompatForceOff,
+            layout.CompatForceOffRect.left, layout.CompatForceOffRect.top,
+            layout.CompatForceOffRect.right - layout.CompatForceOffRect.left,
+            layout.CompatForceOffRect.bottom - layout.CompatForceOffRect.top, true);
     }
 
     private LayoutInfo GetLayout(int winW, int winH)
@@ -413,7 +578,7 @@ sealed class SettingsWindow : IDisposable
             int validationHeight = MeasureSingleLineHeight(hdc, _hFontSmall);
 
             int labelX = margin + panelPadX;
-            int labelWidth = S(74);
+            int labelWidth = S(120); // assez pour « Virtual keyboard » sans troncature
             int keyOuterW = S(28);
             int keyOuterH = S(24);
             int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
@@ -444,18 +609,42 @@ sealed class SettingsWindow : IDisposable
                 contentWidth - panelPadX * 2, checkboxHeight);
             var onboardingRect = Rect(labelX, notificationsRect.bottom + checkboxGap,
                 contentWidth - panelPadX * 2, checkboxHeight);
+            var trainingRect = Rect(labelX, onboardingRect.bottom + checkboxGap,
+                contentWidth - panelPadX * 2, checkboxHeight);
 
-            int windowsTitleTop = onboardingRect.bottom + S(18);
+            int languageTitleTop = trainingRect.bottom + S(18);
+            var languageFrRect = Rect(labelX, languageTitleTop + panelTitleHeight + S(9),
+                contentWidth - panelPadX * 2, checkboxHeight);
+            var languageEnRect = Rect(labelX, languageFrRect.bottom + checkboxGap,
+                contentWidth - panelPadX * 2, checkboxHeight);
+
+            int windowsTitleTop = languageEnRect.bottom + S(18);
             int buttonHeight = S(28);
             var resetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + panelTitleHeight + S(9),
                 contentWidth - panelPadX * 2, buttonHeight);
             var resetLessonsWindowRect = Rect(labelX, resetVirtualKeyboardWindowRect.bottom + S(7),
                 contentWidth - panelPadX * 2, buttonHeight);
 
-            int panelBottom = resetLessonsWindowRect.bottom + S(12);
+            // Section « Apps suspendues » (v1.2.0) : liste des overrides par process,
+            // boutons Ajouter/Retirer, radio du mode pour l'entrée sélectionnée.
+            int compatTitleTop = resetLessonsWindowRect.bottom + S(18);
+            int innerWidth = contentWidth - panelPadX * 2;
+            var compatListRect = Rect(labelX, compatTitleTop + panelTitleHeight + S(9),
+                innerWidth, S(58));
+            int compatBtnW = (innerWidth - S(6)) / 2;
+            var compatAddRect = Rect(labelX, compatListRect.bottom + S(6), compatBtnW, S(24));
+            var compatRemoveRect = Rect(labelX + compatBtnW + S(6), compatListRect.bottom + S(6),
+                innerWidth - compatBtnW - S(6), S(24));
+            var compatAutoRect = Rect(labelX, compatAddRect.bottom + S(8), innerWidth, checkboxHeight);
+            var compatForceOnRect = Rect(labelX, compatAutoRect.bottom + S(4), innerWidth, checkboxHeight);
+            var compatForceOffRect = Rect(labelX, compatForceOnRect.bottom + S(4), innerWidth, checkboxHeight);
+
+            int panelBottom = compatForceOffRect.bottom + S(12);
             var shortcutsPanel = Rect(margin, shortcutsPanelTop, contentWidth, panelBottom - shortcutsPanelTop);
             var preferencesPanel = Rect(margin, prefsTitleTop, contentWidth, panelBottom - prefsTitleTop);
+            var languagePanel = Rect(margin, languageTitleTop, contentWidth, panelBottom - languageTitleTop);
             var windowsPanel = Rect(margin, windowsTitleTop, contentWidth, panelBottom - windowsTitleTop);
+            var compatPanel = Rect(margin, compatTitleTop, contentWidth, panelBottom - compatTitleTop);
 
             return new LayoutInfo
             {
@@ -481,9 +670,20 @@ sealed class SettingsWindow : IDisposable
                 AutoStartRect = autoStartRect,
                 NotificationsRect = notificationsRect,
                 OnboardingRect = onboardingRect,
+                TrainingRect = trainingRect,
+                LanguagePanel = languagePanel,
+                LanguageFrRect = languageFrRect,
+                LanguageEnRect = languageEnRect,
                 WindowsPanel = windowsPanel,
                 ResetVirtualKeyboardWindowRect = resetVirtualKeyboardWindowRect,
                 ResetLessonsWindowRect = resetLessonsWindowRect,
+                CompatPanel = compatPanel,
+                CompatListRect = compatListRect,
+                CompatAddRect = compatAddRect,
+                CompatRemoveRect = compatRemoveRect,
+                CompatAutoRect = compatAutoRect,
+                CompatForceOnRect = compatForceOnRect,
+                CompatForceOffRect = compatForceOffRect,
             };
         }
         finally
@@ -508,6 +708,12 @@ sealed class SettingsWindow : IDisposable
         LoadShortcutStateFromConfig();
         RefreshShortcutTexts();
         RefreshAutoStartCheckbox();
+        // Les overrides ont pu changer via le sous-menu tray Compatibilité depuis la
+        // dernière ouverture : resynchroniser la section Apps suspendues.
+        RefreshCompatList(SelectedCompatProcess());
+        // L'opt-in Défi du jour a pu changer via l'onboarding.
+        Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK,
+            ConfigManager.TrainingEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkNotifications, BM_SETCHECK,
             ConfigManager.NotificationsEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         // Re-synchroniser la checkbox onboarding a chaque ouverture : l'utilisateur a pu
@@ -515,6 +721,7 @@ sealed class SettingsWindow : IDisposable
         // fermeture des Settings.
         Win32.SendMessageW(_hWndChkOnboarding, BM_SETCHECK,
             ConfigManager.ShowOnboardingAtStartup ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        RefreshLanguageRadios();
         SetValidationMessage(string.Empty);
         _keyboardValid = true;
         _searchValid = true;
@@ -599,9 +806,8 @@ sealed class SettingsWindow : IDisposable
                         if (code == 0)
                         {
                             int confirmResult = Win32.MessageBoxW(_hWnd,
-                                "Réinitialiser les raccourcis aux valeurs par défaut\n"
-                                + "(Ctrl+Maj+Q et Ctrl+Maj+W) ?",
-                                "AZERTY Global — Paramètres",
+                                L.Settings_ConfirmResetShortcuts,
+                                L.Settings_WindowTitle,
                                 0x4 | 0x20); // MB_YESNO | MB_ICONQUESTION
                             if (confirmResult != 6) break; // IDYES = 6
                             _keyboardVk = 0x51;
@@ -611,7 +817,7 @@ sealed class SettingsWindow : IDisposable
                             RefreshShortcutTexts();
                             _keyboardValid = true;
                             _searchValid = true;
-                            SetValidationMessage("Raccourcis réinitialisés ✓");
+                            SetValidationMessage(L.Settings_ShortcutsReset);
                             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                             ShortcutChanged?.Invoke();
                         }
@@ -620,7 +826,7 @@ sealed class SettingsWindow : IDisposable
                         if (code == 0)
                         {
                             ConfigManager.ClearWindowBounds(ConfigManager.VirtualKeyboardBoundsKey);
-                            SetValidationMessage("Fenêtre clavier virtuel réinitialisée ✓");
+                            SetValidationMessage(L.Settings_VirtualKeyboardWindowReset);
                             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                         }
                         break;
@@ -628,9 +834,40 @@ sealed class SettingsWindow : IDisposable
                         if (code == 0)
                         {
                             ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
-                            SetValidationMessage("Fenêtre Leçons réinitialisée ✓");
+                            SetValidationMessage(L.Settings_LessonsWindowReset);
                             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                         }
+                        break;
+                    case IDC_RADIO_LANG_FR:
+                        if (code == 0) ApplyLanguageChange("fr");
+                        break;
+                    case IDC_RADIO_LANG_EN:
+                        if (code == 0) ApplyLanguageChange("en");
+                        break;
+                    case IDC_CHK_TRAINING:
+                        if (code == 0)
+                        {
+                            bool enabled = Win32.SendMessageW(_hWndChkTraining, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+                            ConfigManager.SetTrainingEnabled(enabled);
+                        }
+                        break;
+                    case IDC_LIST_COMPAT:
+                        if (code == LBN_SELCHANGE) RefreshCompatSelectionUi();
+                        break;
+                    case IDC_BTN_COMPAT_ADD:
+                        if (code == 0) OnCompatAdd();
+                        break;
+                    case IDC_BTN_COMPAT_REMOVE:
+                        if (code == 0) ApplyCompatModeToSelection(null);
+                        break;
+                    case IDC_RADIO_COMPAT_AUTO:
+                        if (code == 0) ApplyCompatModeToSelection(null);
+                        break;
+                    case IDC_RADIO_COMPAT_FORCEON:
+                        if (code == 0) ApplyCompatModeToSelection("forceOn");
+                        break;
+                    case IDC_RADIO_COMPAT_FORCEOFF:
+                        if (code == 0) ApplyCompatModeToSelection("forceOff");
                         break;
                 }
                 return IntPtr.Zero;
@@ -661,7 +898,11 @@ sealed class SettingsWindow : IDisposable
                 IntPtr hdcButton = wParam;
                 IntPtr hCtrl = lParam;
                 if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkNotifications || hCtrl == _hWndChkOnboarding ||
-                    hCtrl == _hWndResetVirtualKeyboardWindow || hCtrl == _hWndResetLessonsWindow)
+                    hCtrl == _hWndChkTraining ||
+                    hCtrl == _hWndRadioLangFr || hCtrl == _hWndRadioLangEn ||
+                    hCtrl == _hWndResetVirtualKeyboardWindow || hCtrl == _hWndResetLessonsWindow ||
+                    hCtrl == _hWndCompatAdd || hCtrl == _hWndCompatRemove ||
+                    hCtrl == _hWndRadioCompatAuto || hCtrl == _hWndRadioCompatForceOn || hCtrl == _hWndRadioCompatForceOff)
                 {
                     Win32.SetBkMode(hdcButton, 1);
                     Win32.SetTextColor(hdcButton, CLR_TEXT);
@@ -766,11 +1007,203 @@ sealed class SettingsWindow : IDisposable
             AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
+    private void RefreshLanguageRadios()
+    {
+        bool isEnglish = ConfigManager.AppLanguage == "en";
+        Win32.SendMessageW(_hWndRadioLangFr, BM_SETCHECK, isEnglish ? IntPtr.Zero : (IntPtr)BST_CHECKED, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioLangEn, BM_SETCHECK, isEnglish ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+    }
+
+    /// <summary>
+    /// Applique un changement de langue depuis les radios : persiste le choix et met à jour
+    /// L.Language. Le rafraîchissement de cette fenêtre passe par l'abonnement à
+    /// AppLanguageChanged (OnLanguageChanged), déclenché par SetAppLanguage — même chemin
+    /// que pour une bascule initiée depuis le menu tray ou la fenêtre de bienvenue.
+    /// </summary>
+    private void ApplyLanguageChange(string lang)
+    {
+        if (ConfigManager.AppLanguage == lang) return;
+        L.Language = lang; // avant SetAppLanguage : les abonnés à AppLanguageChanged lisent L.*
+        ConfigManager.SetAppLanguage(lang);
+    }
+
+    /// <summary>Rafraîchit libellés et radios après un changement de langue, quelle qu'en
+    /// soit l'origine (radios de cette fenêtre, menu tray, fenêtre de bienvenue).</summary>
+    private void OnLanguageChanged()
+    {
+        RefreshLanguageTexts();
+        RefreshLanguageRadios();
+        RepositionControls();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>R\u00e9applique tous les libell\u00e9s traduits de cette fen\u00eatre (appel\u00e9 apr\u00e8s un changement de langue).</summary>
+    private void RefreshLanguageTexts()
+    {
+        Win32.SetWindowTextW(_hWnd, L.Settings_WindowTitle);
+        Win32.SetWindowTextW(_hWndLinkReset, L.Settings_LinkResetDefaults);
+        Win32.SetWindowTextW(_hWndChkAutoStart, L.Settings_AutoStart);
+        Win32.SetWindowTextW(_hWndChkNotifications, L.Settings_Notifications);
+        Win32.SetWindowTextW(_hWndChkOnboarding, L.Settings_OnboardingWindow);
+        Win32.SetWindowTextW(_hWndChkTraining, L.Challenge_OptIn);
+        Win32.SetWindowTextW(_hWndResetVirtualKeyboardWindow, L.Settings_ResetVirtualKeyboard);
+        Win32.SetWindowTextW(_hWndResetLessonsWindow, L.Settings_ResetLessonsModule);
+        Win32.SetWindowTextW(_hWndCompatAdd, L.Settings_CompatAdd);
+        Win32.SetWindowTextW(_hWndCompatRemove, L.Settings_CompatRemove);
+        Win32.SetWindowTextW(_hWndRadioCompatAuto, L.Settings_CompatModeAuto);
+        Win32.SetWindowTextW(_hWndRadioCompatForceOn, L.Settings_CompatModeForceOn);
+        Win32.SetWindowTextW(_hWndRadioCompatForceOff, L.Settings_CompatModeForceOff);
+        RefreshCompatList(SelectedCompatProcess()); // libellés de mode traduits dans la liste
+        RefreshShortcutTexts();
+        SetValidationMessage(string.Empty);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Section « Apps suspendues » (v1.2.0) — overrides de compatibilité
+    // ═══════════════════════════════════════════════════════════════
+
+    private string? SelectedCompatProcess()
+    {
+        int sel = (int)Win32.SendMessageW(_hWndCompatList, LB_GETCURSEL, IntPtr.Zero, IntPtr.Zero);
+        return sel >= 0 && sel < _compatProcesses.Count ? _compatProcesses[sel] : null;
+    }
+
+    /// <summary>
+    /// Repeuple la listbox depuis config.json (tri alphabétique), restaure la sélection
+    /// sur <paramref name="selectProcess"/> si présent, puis synchronise radios et boutons.
+    /// Appelé à la création, à Show() (le tray a pu changer un override), après chaque
+    /// action de la section et au changement de langue (libellés de mode).
+    /// </summary>
+    private void RefreshCompatList(string? selectProcess)
+    {
+        var overrides = ConfigManager.GetAllCompatibilityOverrides();
+        _compatProcesses.Clear();
+        _compatProcesses.AddRange(overrides.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase));
+
+        Win32.SendMessageW(_hWndCompatList, LB_RESETCONTENT, IntPtr.Zero, IntPtr.Zero);
+        int selIndex = -1;
+        for (int i = 0; i < _compatProcesses.Count; i++)
+        {
+            string name = _compatProcesses[i];
+            string modeLabel = overrides[name] == "forceOn"
+                ? L.Settings_CompatListForceOn
+                : L.Settings_CompatListForceOff;
+            SendListBoxAddString(_hWndCompatList, $"{name} — {modeLabel}");
+            if (string.Equals(name, selectProcess, StringComparison.OrdinalIgnoreCase))
+                selIndex = i;
+        }
+        if (selIndex >= 0)
+            Win32.SendMessageW(_hWndCompatList, LB_SETCURSEL, (IntPtr)selIndex, IntPtr.Zero);
+        RefreshCompatSelectionUi();
+    }
+
+    private static void SendListBoxAddString(IntPtr hList, string text)
+    {
+        IntPtr ptr = Marshal.StringToHGlobalUni(text);
+        try { Win32.SendMessageW(hList, LB_ADDSTRING, IntPtr.Zero, ptr); }
+        finally { Marshal.FreeHGlobal(ptr); }
+    }
+
+    /// <summary>Synchronise radios et bouton Retirer avec l'entrée sélectionnée
+    /// (radios décochées et grisées quand rien n'est sélectionné).</summary>
+    private void RefreshCompatSelectionUi()
+    {
+        string? proc = SelectedCompatProcess();
+        string? mode = proc != null ? ConfigManager.GetCompatibilityOverride(proc) : null;
+        bool hasSelection = proc != null;
+
+        Win32.EnableWindow(_hWndCompatRemove, hasSelection);
+        Win32.EnableWindow(_hWndRadioCompatAuto, hasSelection);
+        Win32.EnableWindow(_hWndRadioCompatForceOn, hasSelection);
+        Win32.EnableWindow(_hWndRadioCompatForceOff, hasSelection);
+
+        Win32.SendMessageW(_hWndRadioCompatAuto, BM_SETCHECK,
+            hasSelection && mode == null ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioCompatForceOn, BM_SETCHECK,
+            mode == "forceOn" ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioCompatForceOff, BM_SETCHECK,
+            mode == "forceOff" ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+    }
+
+    /// <summary>
+    /// Applique un mode à l'entrée sélectionnée. Auto (mode null) retire l'override —
+    /// l'entrée disparaît de la liste (elle n'existe que par son override). Même garde
+    /// sécurité que le sous-menu tray : jamais de forceOn sur un process anti-cheat ou
+    /// de connexion à distance (chemin complet inconnu ici → garde par nom seul).
+    /// </summary>
+    private void ApplyCompatModeToSelection(string? mode)
+    {
+        string? proc = SelectedCompatProcess();
+        if (proc == null) return;
+        if (ConfigManager.GetCompatibilityOverride(proc) == mode && mode != null) return;
+
+        if (mode == "forceOn" &&
+            (GameRegistry.IsAntiCheatProcess(proc, null) || GameRegistry.IsRemoteAccessProcess(proc)))
+        {
+            SetValidationMessage(L.Settings_CompatForceOnRefused);
+            RefreshCompatSelectionUi(); // re-cocher le radio du mode réel
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            return;
+        }
+
+        ConfigManager.SetCompatibilityOverride(proc, mode);
+        RefreshCompatList(mode == null ? null : proc);
+        SetValidationMessage(mode == null
+            ? L.Settings_CompatRemoved(proc)
+            : L.Settings_CompatUpdated(proc));
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        CompatibilityOverridesChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Bouton Ajouter… : sélecteur de fichier .exe → l'override est créé sur le NOM du
+    /// process (la détection foreground compare des noms, pas des chemins), en mode
+    /// « désactivée » par défaut (c'est la section Apps suspendues) — ajustable ensuite
+    /// via les radios. forceOff est toujours sûr, y compris pour un process anti-cheat.
+    /// </summary>
+    private void OnCompatAdd()
+    {
+        const int bufferChars = 1024;
+        IntPtr buffer = Marshal.AllocHGlobal(bufferChars * 2);
+        try
+        {
+            Marshal.WriteInt16(buffer, 0);
+            var ofn = new Win32.OPENFILENAMEW
+            {
+                lStructSize = Marshal.SizeOf<Win32.OPENFILENAMEW>(),
+                hwndOwner = _hWnd,
+                lpstrFilter = L.Settings_CompatFilterExe + "\0*.exe\0\0",
+                nFilterIndex = 1,
+                lpstrFile = buffer,
+                nMaxFile = bufferChars,
+                lpstrTitle = L.Settings_CompatPickerTitle,
+                Flags = Win32.OFN_FILEMUSTEXIST | Win32.OFN_PATHMUSTEXIST |
+                        Win32.OFN_HIDEREADONLY | Win32.OFN_NOCHANGEDIR,
+            };
+            if (!Win32.GetOpenFileNameW(ref ofn)) return; // annulé
+
+            string? path = Marshal.PtrToStringUni(buffer);
+            if (string.IsNullOrEmpty(path)) return;
+            string name = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(name)) return;
+
+            ConfigManager.SetCompatibilityOverride(name, "forceOff");
+            RefreshCompatList(name);
+            SetValidationMessage(L.Settings_CompatAdded(name));
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            CompatibilityOverridesChanged?.Invoke();
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
     private void ShowAutoStartError()
     {
         Win32.MessageBoxW(_hWnd,
             AutoStart.GetFailureMessage(),
-            "AZERTY Global \u2014 Erreur", 0x10);
+            L.Common_ErrorTitle, 0x10);
     }
 
     private bool IsModifierVirtualKey(uint vk)
@@ -810,7 +1243,7 @@ sealed class SettingsWindow : IDisposable
         if (!ConfigManager.IsShortcutAllowedVk(vk))
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetValidationMessage("Touche r\u00e9serv\u00e9e (conflit applications)");
+            SetValidationMessage(L.Settings_ShortcutReserved);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -818,7 +1251,7 @@ sealed class SettingsWindow : IDisposable
         if (vk == otherVk)
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetValidationMessage("D\u00e9j\u00e0 utilis\u00e9e");
+            SetValidationMessage(L.Settings_ShortcutAlreadyUsed);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -830,14 +1263,14 @@ sealed class SettingsWindow : IDisposable
             _keyboardVk = vk;
             ConfigManager.ShortcutVirtualKeyboardVk = vk;
             RefreshShortcutText(hWndShortcut, _keyboardVk);
-            SetValidationMessage("Raccourci clavier virtuel mis à jour ✓");
+            SetValidationMessage(L.Settings_ShortcutKeyboardUpdated);
         }
         else
         {
             _searchVk = vk;
             ConfigManager.ShortcutCharacterSearchVk = vk;
             RefreshShortcutText(hWndShortcut, _searchVk);
-            SetValidationMessage("Raccourci recherche mis à jour ✓");
+            SetValidationMessage(L.Settings_ShortcutSearchUpdated);
         }
 
         ShortcutChanged?.Invoke();
@@ -977,7 +1410,9 @@ sealed class SettingsWindow : IDisposable
         GdiHelpers.DrawPanel(hdc, layout.ShortcutsPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, 0, 0);
         PaintShortcutPanel(hdc, layout);
         PaintPreferencesPanel(hdc, layout);
+        PaintLanguagePanel(hdc, layout);
         PaintWindowsPanel(hdc, layout);
+        PaintCompatPanel(hdc, layout);
 
         if (gfx != IntPtr.Zero)
             Win32.GdipDeleteGraphics(gfx);
@@ -1051,14 +1486,14 @@ sealed class SettingsWindow : IDisposable
             right = layout.ShortcutsPanel.right - S(12),
             bottom = titleY + S(20)
         };
-        Win32.DrawTextW(hdc, "Raccourcis", -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Settings_SectionShortcuts, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.KeyboardRowY,
-            "Clavier virtuel", GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
+            L.Settings_ShortcutLabelKeyboard, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
         DrawKeyBox(hdc, layout.KeyboardBoxRect, _keyboardValid, _focusedShortcut == _hWndEditKeyboard);
 
         DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.SearchRowY,
-            "Recherche", GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
+            L.Settings_ShortcutLabelSearch, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
         DrawKeyBox(hdc, layout.SearchBoxRect, _searchValid, _focusedShortcut == _hWndEditSearch);
 
         int dividerY = layout.PreferencesPanel.top - S(8);
@@ -1079,7 +1514,27 @@ sealed class SettingsWindow : IDisposable
             right = layout.ShortcutsPanel.right - S(12),
             bottom = titleY + S(20)
         };
-        Win32.DrawTextW(hdc, "Préférences", -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+    }
+
+    private void PaintLanguagePanel(IntPtr hdc, LayoutInfo layout)
+    {
+        int dividerY = layout.LanguagePanel.top - S(8);
+        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
+            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
+
+        int titleX = layout.LanguagePanel.left + S(12);
+        int titleY = layout.LanguagePanel.top;
+        Win32.SelectObject(hdc, _hFontPanelTitle);
+        Win32.SetTextColor(hdc, CLR_LINK);
+        var titleRect = new Win32.RECT
+        {
+            left = titleX,
+            top = titleY,
+            right = layout.LanguagePanel.right - S(12),
+            bottom = titleY + S(20)
+        };
+        Win32.DrawTextW(hdc, L.Settings_SectionLanguage, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
     private void PaintWindowsPanel(IntPtr hdc, LayoutInfo layout)
@@ -1099,7 +1554,27 @@ sealed class SettingsWindow : IDisposable
             right = layout.WindowsPanel.right - S(12),
             bottom = titleY + S(20)
         };
-        Win32.DrawTextW(hdc, "Fenêtres", -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Settings_SectionWindows, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+    }
+
+    private void PaintCompatPanel(IntPtr hdc, LayoutInfo layout)
+    {
+        int dividerY = layout.CompatPanel.top - S(8);
+        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
+            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
+
+        int titleX = layout.CompatPanel.left + S(12);
+        int titleY = layout.CompatPanel.top;
+        Win32.SelectObject(hdc, _hFontPanelTitle);
+        Win32.SetTextColor(hdc, CLR_LINK);
+        var titleRect = new Win32.RECT
+        {
+            left = titleX,
+            top = titleY,
+            right = layout.CompatPanel.right - S(12),
+            bottom = titleY + S(20)
+        };
+        Win32.DrawTextW(hdc, L.Settings_SectionCompat, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
     private void DrawShortcutRow(IntPtr hdc, int labelX, int labelWidth, int rowY,
@@ -1158,7 +1633,7 @@ sealed class SettingsWindow : IDisposable
         {
             ("Ctrl", CLR_INLINE_HIGHLIGHT, _hFontBold),
             (" + ", CLR_TEXT, _hFontText),
-            ("Maj", CLR_INLINE_HIGHLIGHT, _hFontBold),
+            (L.Settings_ShortcutModifier2, CLR_INLINE_HIGHLIGHT, _hFontBold),
             (" + ", CLR_TEXT, _hFontText)
         };
     }
@@ -1178,6 +1653,8 @@ sealed class SettingsWindow : IDisposable
 
     public void Dispose()
     {
+        if (_onAppLanguageChanged != null)
+            ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         if (_hWndEditKeyboard != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndEditKeyboard, _shortcutSubclassProc, (UIntPtr)3);
         if (_hWndEditSearch != IntPtr.Zero)

@@ -66,6 +66,14 @@ sealed class KeyboardHook : IDisposable
         set => _passThroughAll = value;
     }
 
+    /// <summary>
+    /// En mode pass-through « pause volontaire » (pas anti-cheat), autorise la seule
+    /// détection des raccourcis (Ctrl+Maj+Verr.Maj / recherche / clavier virtuel)
+    /// pour que l'utilisateur puisse reprendre au clavier. Aucun remapping n'a lieu.
+    /// Doit rester false en désactivation anti-cheat (inertie totale voulue).
+    /// </summary>
+    public bool ShortcutsWhilePassThrough { get; set; }
+
     public KeyboardHook(KeyMapper mapper)
     {
         _mapper = mapper;
@@ -95,6 +103,35 @@ sealed class KeyboardHook : IDisposable
             throw new InvalidOperationException("Impossible d'installer le hook clavier.");
     }
 
+    /// <summary>
+    /// Réinstalle le hook Win32 SANS changer l'identité de cet objet : les abonnés
+    /// (RawKeyDown de l'onboarding, des leçons, du clavier virtuel) restent valides.
+    /// Le nouveau hook est posé AVANT de décrocher l'ancien : aucun callback ne peut
+    /// s'intercaler (Install/Unhook et les callbacks s'exécutent sur le même thread),
+    /// donc aucune frappe n'est perdue et aucun double traitement n'est possible.
+    /// Retourne false si SetWindowsHookEx échoue (l'ancien hook, s'il existe, est conservé).
+    /// </summary>
+    public bool Reinstall()
+    {
+        var newId = Win32.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, Win32.GetModuleHandleW(null), 0);
+        if (newId == IntPtr.Zero)
+        {
+            // Journaliser aussi le cas « ancien hook conservé » (retour true) : si cet
+            // ancien hook a été décroché silencieusement par Windows (cas visé par le
+            // watchdog), l'échec resterait sinon invisible jusqu'au tick suivant.
+            ConfigManager.LogCompatCriticalEvent("HookReinstallFailed",
+                _hookId != IntPtr.Zero
+                    ? "SetWindowsHookEx returned NULL; keeping previous hook"
+                    : "SetWindowsHookEx returned NULL; no hook installed");
+            return _hookId != IntPtr.Zero; // ancien hook encore posé → état inchangé
+        }
+
+        if (_hookId != IntPtr.Zero)
+            Win32.UnhookWindowsHookEx(_hookId);
+        _hookId = newId;
+        return true;
+    }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         // Audit sécu 2026-05 SEV-A2-04 : try/catch défensif. Une exception remontant
@@ -111,7 +148,11 @@ sealed class KeyboardHook : IDisposable
             if (hookStruct.dwExtraInfo == INJECTED_FLAG)
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
-            if (_passThroughAll)
+            // Pass-through total (anti-cheat) : inertie complète. En pause volontaire
+            // (ShortcutsWhilePassThrough), on continue vers la détection des raccourcis
+            // pour permettre la reprise au clavier — ProcessKey reste inatteignable
+            // (_enabled est false) et RawKeyDown est neutralisé plus bas.
+            if (_passThroughAll && !ShortcutsWhilePassThrough)
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();
@@ -164,8 +205,8 @@ sealed class KeyboardHook : IDisposable
                     return (IntPtr)1;
                 }
 
-                // Notifier le keydown pour animation du clavier virtuel
-                if (isKeyDown)
+                // Notifier le keydown pour animation du clavier virtuel (pas en pass-through)
+                if (isKeyDown && !_passThroughAll)
                     RawKeyDown?.Invoke(hookStruct.scanCode);
 
                 if (_enabled)

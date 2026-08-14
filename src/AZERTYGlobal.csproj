@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>AZERTY Global</AssemblyName>
     <RootNamespace>AZERTYGlobal</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.2</Version>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <Company>AZERTY Global</Company>
     <Product>AZERTY Global</Product>
@@ -37,6 +37,11 @@
     <!-- Audit sécu 2026-05 SEV-A4-02 : reproductibilité binaire explicite. -->
     <Deterministic>true</Deterministic>
 
+    <!-- Requis par l'interop COM source-générée ([GeneratedComInterface]/[GeneratedComClass])
+         de l'activateur de toast (ToastActivation.cs, v1.2.0). Le code applicatif lui-même
+         ne contient aucun bloc unsafe : seul le marshalling généré en a besoin. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
     <!-- Audit sécu 2026-05 : activer les analyseurs sécurité .NET (CA1xxx, CA2xxx, CA5xxx). -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
@@ -53,6 +58,8 @@
     <Compile Remove="**/*(# Edit conflict *).cs" />
     <!-- Exclure le sous-dossier du projet de tests pour éviter la double compilation -->
     <Compile Remove="AZERTYGlobal.Tests/**/*.cs" />
+    <Compile Remove="TypingEngine.Core/**/*.cs" />
+    <Compile Remove="TypingEngine.Core.Tests/**/*.cs" />
   </ItemGroup>
 
   <!-- InternalsVisibleTo déclaré directement dans AssemblyAttributes.cs car
@@ -63,9 +70,18 @@
     <EmbeddedResource Include="AZERTY Global 2026.json" LogicalName="layout.json" />
     <EmbeddedResource Include="character-index.json" LogicalName="character-index.json" />
     <EmbeddedResource Include="lessons.json" LogicalName="lessons.json" />
+    <!-- Banque d'extraits « Défi du jour » (v1.2.0) — générée par build/gen-defi-corpus.mjs -->
+    <EmbeddedResource Include="defi-corpus.json" LogicalName="defi-corpus.json" />
     <!-- Logo pour la fenêtre d'accueil -->
     <EmbeddedResource Include="favicon-azerty-global.png" LogicalName="favicon-azerty-global.png" />
     <EmbeddedResource Include="discord-icon.png" LogicalName="discord-icon.png" />
+    <!-- Drapeaux du sélecteur de langue (mêmes assets que le site, lang-switch) -->
+    <EmbeddedResource Include="flag-en.png" LogicalName="flag-en.png" />
+    <EmbeddedResource Include="flag-fr.png" LogicalName="flag-fr.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="TypingEngine.Core\TypingEngine.Core.csproj" />
   </ItemGroup>
 
 </Project>

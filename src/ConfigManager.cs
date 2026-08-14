@@ -148,6 +148,57 @@ static class ConfigManager
     /// <summary>Active ou désactive les notifications.</summary>
     public static void SetNotifications(bool enabled) => SetBool("notificationsEnabled", enabled);
 
+    /// <summary>Langue de l'interface : "fr" (défaut) ou "en". Toute autre valeur retombe sur "fr".</summary>
+    public static string AppLanguage
+    {
+        get
+        {
+            var raw = GetString("appLanguage");
+            return raw == "en" ? "en" : "fr";
+        }
+    }
+
+    /// <summary>Déclenché après un changement effectif de langue (arg : nouvelle langue).
+    /// Permet aux surfaces à texte persistant (tooltip du tray) de se rafraîchir.</summary>
+    public static event Action<string>? AppLanguageChanged;
+
+    /// <summary>Définit la langue de l'interface. Seules "fr" et "en" sont acceptées.</summary>
+    public static void SetAppLanguage(string lang)
+    {
+        if (lang != "fr" && lang != "en") return;
+        if (AppLanguage == lang) return;
+        SetString("appLanguage", lang);
+        AppLanguageChanged?.Invoke(lang);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Sollicitation d'avis (one-shot à J+7)
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Date du premier lancement (ISO 8601 UTC), enregistrée au premier accès.
+    /// Sert d'horloge pour la sollicitation d'avis unique. Une valeur corrompue
+    /// est ré-enregistrée à maintenant (l'horloge repart, pas de crash).
+    /// </summary>
+    public static DateTimeOffset EnsureFirstRunTimestamp()
+    {
+        var raw = GetString("firstRunTimestamp");
+        if (!string.IsNullOrEmpty(raw) &&
+            DateTimeOffset.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+            return parsed;
+
+        var now = DateTimeOffset.UtcNow;
+        SetString("firstRunTimestamp", now.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
+        return now;
+    }
+
+    /// <summary>La sollicitation d'avis a déjà été affichée. One-shot : jamais répétée.</summary>
+    public static bool ReviewPromptDone => GetBool("reviewPromptDone");
+
+    /// <summary>Marque la sollicitation d'avis comme affichée (dès l'affichage, pas au clic).</summary>
+    public static void SetReviewPromptDone() => SetBool("reviewPromptDone", true);
+
     /// <summary>Indique si les indices automatiques du module Lecons sont actives. Defaut : false.</summary>
     public static bool LessonAutoHintsEnabled => GetBool("lessonAutoHintsEnabled");
 
@@ -314,6 +365,43 @@ static class ConfigManager
                 : new Dictionary<string, string>(_compatibilityCache, StringComparer.OrdinalIgnoreCase);
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Défi du jour (v1.2.0) — rappels d'entraînement opt-in
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>Opt-in explicite (fin d'onboarding ou Paramètres). Décoché par défaut.</summary>
+    public static bool TrainingEnabled => GetBool("trainingEnabled");
+    public static void SetTrainingEnabled(bool enabled)
+    {
+        SetBool("trainingEnabled", enabled);
+        // Réactivation = nouveau consentement : le compteur de rappels ignorés repart à zéro
+        // (garde-fou « 3 ignorés → arrêt définitif », réactivable à tout moment).
+        if (enabled) SetUInt("trainingIgnoredCount", 0);
+    }
+
+    /// <summary>Rappels consécutifs ignorés (timeout sans clic). 3 → arrêt définitif.</summary>
+    public static uint TrainingIgnoredCount => GetUInt("trainingIgnoredCount");
+    public static void SetTrainingIgnoredCount(uint count) => SetUInt("trainingIgnoredCount", count);
+
+    /// <summary>Phase pédagogique : index 0..4 = séquence des 5 changements (désapprentissage),
+    /// 5+ = défi du jour commun. Persisté pour reprendre la séquence où elle en était.</summary>
+    public static uint TrainingSequenceIndex => GetUInt("trainingSequenceIndex");
+    public static void SetTrainingSequenceIndex(uint index) => SetUInt("trainingSequenceIndex", index);
+
+    /// <summary>Date (yyyy-MM-dd) de la dernière séance terminée — une séance par jour max.</summary>
+    public static string? TrainingLastSessionDate => GetString("trainingLastSessionDate");
+    public static void SetTrainingLastSessionDate(string date) => SetString("trainingLastSessionDate", date);
+
+    /// <summary>Date (yyyy-MM-dd) du dernier rappel émis — jamais deux rappels le même jour.</summary>
+    public static string? TrainingLastReminderDate => GetString("trainingLastReminderDate");
+    public static void SetTrainingLastReminderDate(string date) => SetString("trainingLastReminderDate", date);
+
+    /// <summary>Annonce unique « Nouveau : Défi du jour » aux utilisateurs existants faite
+    /// (décision 2026-07-30 : une seule balloon post-mise à jour 1.2.0, exception ponctuelle
+    /// à la doctrine zéro harcèlement — jamais réémise).</summary>
+    public static bool ChallengeAnnounceDone => GetBool("challengeAnnounceDone");
+    public static void SetChallengeAnnounceDone() => SetBool("challengeAnnounceDone", true);
 
     /// <summary>
     /// Active le journal de debug compat niveau 2 (statistiques agrégées d'émission).

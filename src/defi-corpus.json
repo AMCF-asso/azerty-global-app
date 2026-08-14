@@ -1,0 +1,5132 @@
+{
+ "version": 1,
+ "count": 377,
+ "extracts": [
+  {
+   "id": 1,
+   "text": "Écrivez à contact@azerty.global pour toute question ; l’équipe répond vite.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    ";",
+    "@",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "at",
+    "typo"
+   ]
+  },
+  {
+   "id": 2,
+   "text": "Mon adresse pro est prenom.nom@exemple.fr et mon adresse perso reste jean@mail.com.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "@"
+   ],
+   "cats": [
+    "point",
+    "at"
+   ]
+  },
+  {
+   "id": 3,
+   "text": "Le hashtag #clavier rejoint #typographie dans la description de la vidéo.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "#"
+   ],
+   "cats": [
+    "point",
+    "at"
+   ]
+  },
+  {
+   "id": 4,
+   "text": "Copiez le chemin C:\\Users\\vous\\Documents avant de lancer la sauvegarde.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "\\"
+   ],
+   "cats": [
+    "point",
+    "prog"
+   ]
+  },
+  {
+   "id": 5,
+   "text": "En JSON, un objet s’écrit {\"nom\": \"valeur\"} et une liste s’écrit [1, 2, 3].",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "{",
+    "}",
+    "[",
+    "]",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "prog",
+    "typo"
+   ]
+  },
+  {
+   "id": 6,
+   "text": "La fonction retourne {ok} si la liste [a, b] contient l’élément demandé.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "{",
+    "}",
+    "[",
+    "]",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "prog",
+    "typo"
+   ]
+  },
+  {
+   "id": 7,
+   "text": "Sur AZERTY Global, les accolades { } et les crochets [ ] sont sur la rangée de repos.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "{",
+    "}",
+    "[",
+    "]"
+   ],
+   "cats": [
+    "point",
+    "prog"
+   ]
+  },
+  {
+   "id": 8,
+   "text": "Le pipe | enchaîne deux commandes ; l’antislash \\ échappe le caractère suivant.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "|",
+    "\\",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "prog",
+    "typo"
+   ]
+  },
+  {
+   "id": 9,
+   "text": "Écrivez À bientôt, É majuscule comprise, sans ouvrir la table des caractères.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "É",
+    "À",
+    "."
+   ],
+   "cats": [
+    "caps",
+    "point"
+   ]
+  },
+  {
+   "id": 10,
+   "text": "Ça commence par Ç : le verrouillage majuscule donne Ça, Édith et Àlesia d’un seul geste.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "É",
+    "Ç",
+    "À",
+    ".",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 11,
+   "text": "L’Épée d’Étienne — dit-elle — brillait à l’Ouest, entre « guillemets » français.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    "«",
+    "»",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 12,
+   "text": "Señor González habla español ; la niñaño… non : le ñ se tape avec AltGr + N.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "…",
+    "á",
+    "ñ"
+   ],
+   "cats": [
+    "point",
+    "typo",
+    "accents",
+    "international"
+   ]
+  },
+  {
+   "id": 13,
+   "text": "Der Straßenname enthält ein ß ; die Übung übt ä, ö et ü sans changer de clavier.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "ß",
+    "ä",
+    "ö",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 14,
+   "text": "¿Cómo estás? ¡Muy bien! Les points espagnols ¿ et ¡ ouvrent la phrase.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "á",
+    "ó",
+    "¿",
+    "¡"
+   ],
+   "cats": [
+    "point",
+    "accents",
+    "international"
+   ]
+  },
+  {
+   "id": 15,
+   "text": "L’œuvre au cœur du bœuf : le œ s’obtient par AltGr + O, comme æ par AltGr + A.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "œ",
+    "æ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 16,
+   "text": "Un tiret cadratin — puis un demi-cadratin – encadrent l’incise… et des points de suspension.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—",
+    "–",
+    "…"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 17,
+   "text": "Il répondit : « La typographie française mérite ses guillemets » ; puis il sourit.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 18,
+   "text": "Au dire des clowns et des comparses, Malaga mangeait dans l’argent.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 19,
+   "text": "Mais, vers la fin de septembre, quelque chose d’extraordinaire tomba dans sa vie: elle fut invitée à la Vaubyessard, chez le marquis d’Andervilliers.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 20,
+   "text": "Athos profita de la permission, monta l’escalier de son pas le plus léger, arriva sur le carré, et, à travers la porte entrouverte, il vit Milady qui attachait son chapeau.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 21,
+   "text": "Il regarde avec une ardente et profonde curiosité, avec une mystérieuse sympathie qui ne peut plus être exprimée en «paroles païennes», ces choses qui nous entourent et qu'il sait que nous ne voyons qu'en reflets et en énigmes; «un certain commencement», une amorce.",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 22,
+   "text": "Prenez l’escalier, montez au premier et frappez au n° 1.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 23,
+   "text": "Pour en savoir plus long, elle interrogea le percepteur; Binet répliqua, d’un ton rogue, qu’il n’était point payé par la police.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 24,
+   "text": "Ce mot est toute l’histoire d’Esther.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 25,
+   "text": "M. de Tréville, ému jusqu’au fond du coeur de cette preuve de courage, se précipita vers lui.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 26,
+   "text": "La pâleur de la reine augmenta encore, s’il était possible; le roi s’en aperçut, et en jouit avec cette froide cruauté qui était un des mauvais côtés de son caractère.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 27,
+   "text": "Il était doublement trahi et par son ami et par celle qu’il aimait déjà comme une maîtresse.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 28,
+   "text": "Les comparaisons de fiancé, d’époux, d’amant céleste et de mariage éternel qui reviennent dans les sermons lui soulevaient au fond de l’âme des douceurs inattendues.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 29,
+   "text": "Cela fait une semaine que je me repose d’eux.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 30,
+   "text": "Alors l'élan de la gratitude saisit le cœur d'Omer.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 31,
+   "text": "Si Charles l’avait voulu cependant, s’il s’en fût douté, si son regard, une seule fois, fût venu à la rencontre de sa pensée, il lui semblait qu’une abondance subite se serait détachée de son cœur, comme tombe la récolte d’un espalier quand on y porte la main.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 32,
+   "text": "En passant par votre magnifique plaidoirie, mon œuvre a acquis pour moi-même comme une autorité imprévue.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 33,
+   "text": "On part d’un lieu, et l’on arrive à un autre, voilà tout.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 34,
+   "text": "Il était debout devant le comptoir, éclairé par la lumière du bocal rouge, et il disait: — Donnez-moi, je vous prie, une demi-once de vitriol. — Justin, cria l’apothicaire, apporte-nous l’acide sulfurique.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 35,
+   "text": "Il se rassit et la posa sur ses genoux. — Levez-vous, reprit le professeur, et dites-moi votre nom.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 36,
+   "text": "Un horizon de fantaisies réalisables s’ouvrit alors devant Emma.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 37,
+   "text": "Ils arrivèrent à la nuit tombante, comme on commençait à allumer des lampions dans le parc, afin d’éclairer les voitures.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 38,
+   "text": "Charles s’affaissa dans son fauteuil, bouleversé, cherchant ce qu’elle pouvait avoir, imaginant une maladie nerveuse, pleurant, et sentant vaguement circuler autour de lui quelque chose de funeste et d’incompréhensible.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 39,
+   "text": "Dès lors nous n’eûmes plus de repos que nous n’eussions retrouvé, dans les ouvrages contemporains, une trace quelconque de ces noms extraordinaires qui avaient fort éveillé notre curiosité.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 40,
+   "text": "Je vis tantôt d’une manière, tantôt d’une autre, en philosophe, au hasard de la fourchette.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 41,
+   "text": "Tout à coup elle jeta un grand cri de joie et s’élança vers la porte, elle avait reconnu la voix de d’Artagnan.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 42,
+   "text": "Mais tous les jours, dans la tranchée, nous allons joyeusement nous exposer à pis que cela, car un boulet peut nous casser la jambe, et je suis convaincu qu’un chirurgien nous fait plus souffrir en nous coupant la cuisse qu’un bourreau en nous coupant la tête.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 43,
+   "text": "Mais je réponds que ces deux mots seront remis à leur adresse. — Oh!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 44,
+   "text": "Charles, à la maison, l’attendait; l’Hirondelle était toujours en retard le jeudi.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 45,
+   "text": "Il pensait à louer une petite ferme aux environs, et qu’il surveillerait lui-même, tous les matins, en allant voir ses malades.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 46,
+   "text": "Ils causaient d’une troupe de danseurs espagnols, que l’on attendait bientôt sur le théâtre de Rouen. — Vous irez?",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 47,
+   "text": "Je croyais bien en effet avoir vu quelque part ce visage; mais où?",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    ";",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "accents"
+   ]
+  },
+  {
+   "id": 48,
+   "text": "Le clerc jura qu’on n’enterrerait point Candide.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 49,
+   "text": "Quand Éôs aux doigts rosés, née au matin, apparut, la force sacrée d'Alkinoos se leva de son lit, et le dévastateur de citadelles, le divin et subtil Odysseus se leva aussi; et la Force sacrée d'Alkinoos le conduisit à l'agora des Phaiakiens, auprès des nefs.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    ";"
+   ],
+   "cats": [
+    "caps",
+    "point"
+   ]
+  },
+  {
+   "id": 50,
+   "text": "Les yeux de Porthos s’abaissaient furtivement sur cette dame, puis papillonnaient au loin dans la nef.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 51,
+   "text": "Cette épée avait longtemps fait l’ambition de Porthos.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 52,
+   "text": "Il ne désertera pas, monsieur le cardinal; soyez tranquille, je réponds de lui, moi. — Au fait, il ne désertera pas, dit le roi; on le retrouvera toujours, comme dit M. de Tréville.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 53,
+   "text": "Mais les yeux du jeune homme s’étaient habitués à la nuit.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 54,
+   "text": "Et le sage Odysseus, lui répondant, parla ainsi: -- Ô femme, il est bien difficile, après tant de temps, de te répondre, car voici la vingtième année qu'Odysseus est venu dans ma patrie et qu'il en est parti.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "Ô",
+    "."
+   ],
+   "cats": [
+    "caps",
+    "point"
+   ]
+  },
+  {
+   "id": 55,
+   "text": "Il a, l’année dernière, aidé nos gens à rentrer la paille; il en portait jusqu’à six bottes à la fois, tant il est fort! — Bravo!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ";",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 56,
+   "text": "Son Éminence fronça le sourcil, s’arrêta un instant, puis continua son chemin sans prononcer une seule parole.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 57,
+   "text": "Et il se mit à parler de madame Homais, dont la tenue fort négligée leur apprêtait à rire ordinairement. — Qu’est-ce que cela fait?",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 58,
+   "text": "D’Artagnan se jeta à son cou et l’embrassa tendrement puis il voulut l’entraîner hors de ce séjour humide, alors il s’aperçut qu’Athos chancelait.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 59,
+   "text": "De trois gardes de la compagnie de M. des Essarts qui passaient, deux vinrent donc en aide aux quatre compagnons, tandis que l’autre courait à l’hôtel de M. de Tréville, criant: «À nous, mousquetaires, à nous!»",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "À",
+    ".",
+    "«",
+    "»",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 60,
+   "text": "Hippolyte partit à Neufchâtel, et Justin talonna si fort le cheval de Bovary, qu’il le laissa dans la côte du bois Guillaume, fourbu et aux trois quarts crevé.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 61,
+   "text": "Il avait la tête renversée contre le mur, les yeux clos, la bouche ouverte, et tenait dans ses mains une longue mèche de cheveux noirs. — Papa, viens donc!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 62,
+   "text": "Si la rage et la douleur doivent torturer une âme, c’est celle de l’amant qui reçoit sous un nom qui n’est pas le sien des protestations d’amour qui s’adressent à son heureux rival.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 63,
+   "text": "Nous mîmes l’épée à la main, et à la première passe, je le tuai roide. — Diable!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 64,
+   "text": "Rodolphe, en riant, l’attirait à lui et il la prenait sur son cœur.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 65,
+   "text": "D’Artagnan se fit ouvrir successivement tous les cabarets dans lesquels il aperçut un peu de lumière; dans aucun d’eux il ne retrouva Planchet.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 66,
+   "text": "Grimaud comprit à l’instant même qu’il s’agissait d’un déjeuner sur l’herbe, prit le panier, empaqueta les viandes, y joignit les bouteilles et prit le panier à son bras.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 67,
+   "text": "Cependant Mousqueton seul tomba de cheval, non pas qu’il fût grièvement blessé, mais, comme il ne pouvait voir sa blessure, sans doute il crut être plus dangereusement blessé qu’il ne l’était.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 68,
+   "text": "Autant qu’un homme peut en aimer un autre.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 69,
+   "text": "À cette vue, don Quichotte devint muet; il pâlit et défaillit du haut en bas.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "À",
+    ".",
+    ";"
+   ],
+   "cats": [
+    "caps",
+    "point"
+   ]
+  },
+  {
+   "id": 70,
+   "text": "Porthos répondit qu’il ne demandait pas mieux, si l’étranger à son tour voulait boire à la santé du roi.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 71,
+   "text": "Alors il descendit confier à l’ecclésiastique un gros châle pour qu’il le remît à Madame, sitôt qu’il arriverait à la Croix rouge.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 72,
+   "text": "La réunion des quatre amis avait-elle lieu dans un de ces moments-là, un mot, échappé avec un violent effort, était tout le contingent qu’Athos fournissait à la conversation.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 73,
+   "text": "Cependant, il n’avait pas encore perdu connaissance.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 74,
+   "text": "Mais alors, vous comprenez, madame Coquenard, un mulet avec des panaches et des grelots? — Soyez tranquille, dit la procureuse. — Reste la valise, reprit Porthos. — Oh!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 75,
+   "text": "Ils restaient au fond, tous les deux cachés par l’ombre, sans parler.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 76,
+   "text": "Alors Marius la calmait : — Il est absent, je crois.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 77,
+   "text": "Aramis sourit, car il se rappelait le conte qu’il avait fait certain soir à ses amis.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 78,
+   "text": "Il s’agissait donc de détruire ce dernier boulevard du calvinisme, levain dangereux, auquel se venaient incessamment mêler des ferments de révolte civile ou de guerre étrangère.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 79,
+   "text": "Il était midi; les maisons avaient leurs volets fermés, et les toits d’ardoises, qui reluisaient sous la lumière âpre du ciel bleu, semblaient à la crête de leurs pignons faire pétiller des étincelles.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 80,
+   "text": "Si son enfance se fût écoulée dans l’arrière-boutique d’un quartier marchand, elle se serait peut-être ouverte alors aux envahissements lyriques de la nature, qui, d’ordinaire, ne nous arrivent que par la traduction des écrivains.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 81,
+   "text": "Comme une rivalité subsistait entre le percepteur et le colonel, l’un et l’autre, pour montrer leurs talents, faisaient à part manœuvrer leurs hommes.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 82,
+   "text": "Ce frisson, il est d’abord tout léger.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 83,
+   "text": "Avant d’entamer la partie, le joueur regarde ses cartes.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 84,
+   "text": "Le magistrat l’avait reçu debout, dans sa robe, hermine à l’épaule et toque en tête.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 85,
+   "text": "Tout en songeant ainsi et en donnant de temps en temps un coup d’éperon à son cheval, d’Artagnan avait fait la route et était arrivé à Saint-Germain.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 86,
+   "text": "Le blessé avait repris connaissance; le chirurgien déclarait que l’état du mousquetaire n’avait rien qui pût inquiéter ses amis, sa faiblesse ayant été purement et simplement occasionnée par la perte de son sang.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 87,
+   "text": "Venez donc d’aussi bon matin que vous voudrez, à sept heures; mais gare à vous, si vos mousquetaires sont coupables! — Si mes mousquetaires sont coupables, Sire, les coupables seront remis aux mains de Votre Majesté, qui ordonnera d’eux selon son bon plaisir.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 88,
+   "text": "Cunégonde, le capitaine Candide, et la vieille, allèrent chez le gouverneur don Fernando d’Ibaraa, y Figueora, y Mascarenes, y Lampourdos, y Souza.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 89,
+   "text": "Homais se présenta. — Je compte sur vous, fit le docteur.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 90,
+   "text": "Il comprit l’allusion et chercha son chapeau. — J’en ai même oublié le spectacle!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 91,
+   "text": "Le petit cimetière qui l’entoure, clos d’un mur à hauteur d’appui, est si bien rempli de tombeaux, que les vieilles pierres à ras du sol font un dallage continu, où l’herbe a dessiné de soi-même des carrés verts réguliers.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "typo",
+    "accents"
+   ]
+  },
+  {
+   "id": 92,
+   "text": "Celui-ci, outré des procédés de sa femme, lui donna un jour, pour la guérir d’un petit rhume, une médecine si efficace, qu’elle en mourut en deux heures de temps dans des convulsions horribles.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 93,
+   "text": "Tout le monde s’écarta, et l’homme au manteau rouge resta seul debout au milieu de la salle.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 94,
+   "text": "Trois de mes meilleurs soldats, que Votre Majesté connaît de nom et dont elle a plus d’une fois apprécié le dévouement, et qui ont, je puis l’affirmer au roi, son service fort à coeur; — trois de mes meilleurs soldats, dis-je, MM.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 95,
+   "text": "Il n’y avait pas de temps à perdre, d’Artagnan se redressa d’un bond, et au même moment la balle de l’autre mousquet fit voler les cailloux à l’endroit même du chemin où il s’était jeté la face contre terre.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "typo",
+    "accents"
+   ]
+  },
+  {
+   "id": 96,
+   "text": "C’était une maladie nerveuse: on devait la changer d’air.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 97,
+   "text": "Alors il promit à la sainte Vierge trois chasubles pour l’église, et qu’il irait pieds nus depuis le cimetière des Bertaux jusqu’à la chapelle de Vassonville.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 98,
+   "text": "Des scènes pareilles se passaient, comme on sait, dans l’étendue de plus de trois cents lieues, sans qu’on manquât aux cinq prières par jour ordonnées par Mahomet.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 99,
+   "text": "Car je sais qu’un léger hâle dore sa carnation.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 100,
+   "text": "Le café où j’ai rendez-vous est fermé.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "typo",
+    "accents"
+   ]
+  },
+  {
+   "id": 101,
+   "text": "Cacambo partit dès le jour même: c’était un très bon homme que ce Cacambo.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 102,
+   "text": "Et, s’applaudissant d’avoir franchi la difficulté, Léon, du coin de l’œil, épia sa physionomie.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 103,
+   "text": "Elle objecta la difficulté d’un acquéreur; il donna l’espoir d’en trouver; mais elle demanda comment faire pour qu’elle pût vendre. — N’avez-vous pas la procuration?",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 104,
+   "text": "Or, comme il n’y a, de la Huchette à Buchy, pas d’autre chemin que celui d’Yonville, il lui avait fallu traverser le village, et Emma l’avait reconnu à la lueur des lanternes qui coupaient comme un éclair le crépuscule.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 105,
+   "text": "Sa voix, faible d’abord et vagissante, devenait aiguë.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 106,
+   "text": "«Notre charmant Gascon vient de se montrer brave et fidèle comme toujours, dites-lui qu’on lui est bien reconnaissant quelque part de l’avis qu’il a donné.»",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 107,
+   "text": "Ils ne voudront pas! — Et monsieur qui va rentrer! — Je le sais bien...",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 108,
+   "text": "D’un bond, elle descendit l’escalier. — Du vinaigre!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 109,
+   "text": "Athos lui avait bien dit quelques mots qui prouvaient que la conversation qu’elle avait eue avec le cardinal était tombée dans des oreilles étrangères; mais elle ne pouvait admettre qu’il eût pu creuser une contre-mine si prompte et si hardie.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 110,
+   "text": "Ceci dans tous les rouages de l’Éducation Nationale, et dans les sites internet.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 111,
+   "text": "Avec nous, ce droit de prohibition n’existe pas.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 112,
+   "text": "Tout ce qu’avait gagné le pauvre garçon à cette pantomime d’un instant, c’est qu’il était passé de l’arrière-garde à l’avant- garde.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 113,
+   "text": "VI Dans les voyages qu’il faisait pour la voir, Léon souvent avait dîné chez le pharmacien, et s’était cru contraint, par politesse, de l’inviter à son tour. — Volontiers!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 114,
+   "text": "Et, s’étant salués, on se tourna le dos.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 115,
+   "text": "Puis, s’adressant au villageois déjà blême: — N’ayez point peur, mon brave. — Non, non, répondit l’autre, marchez toujours!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 116,
+   "text": "Dans une magnifique demeure cernée par l'Orient entier, j'ai accompli mon immense œuvre et passé mon illustre retraite.",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 117,
+   "text": "Il foulait avec elles les crottins de cheval, une main dans la poche de sa veste et son chapeau de paille mis de côté. — D’ailleurs, ajouta-t-il, quand on habite la campagne... — Tout est peine perdue, dit Emma. — C’est vrai!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 118,
+   "text": "Elle pleurait, elle l’appela même «son bon monsieur Lheureux».",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 119,
+   "text": "Ce monument restera ; c’est l’histoire.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 120,
+   "text": "Aussi n’y retournerai-je point.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 121,
+   "text": "C’était le plus convenable des étudiants: il ne portait les cheveux ni trop longs ni trop courts, ne mangeait pas le 1er du mois l’argent de son trimestre, et se maintenait en de bons termes avec ses professeurs.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 122,
+   "text": "Certes, répond l’agent, comme un braconnier suit le gibier.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 123,
+   "text": "Milady put donc juger de l’effet qu’elle avait produit.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 124,
+   "text": "Charles, après le dîner, la voyant soucieuse, voulut, par distraction, la conduire chez le pharmacien; et la première personne qu’elle aperçut dans la pharmacie, ce fut encore lui, le percepteur!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 125,
+   "text": "Trouvez-vous ce soir vers dix heures à Saint-Cloud, en face du pavillon qui s’élève à l’angle de la maison de M. d’Estrées.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 126,
+   "text": "Impossible! — Achevez, mon cher; achevez!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ";",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 127,
+   "text": "Le bonhomme tomba d’abord comme frappé d’apoplexie.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 128,
+   "text": "Mon coeur est mousquetaire, je le sens bien, monsieur, et cela m’entraîne. — Écartez-vous, jeune homme, cria Jussac, qui sans doute à ses gestes et à l’expression de son visage avait deviné le dessein de d’Artagnan.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 129,
+   "text": "Pour tout vous dire, je crois qu’il aurait rêvé d’être jardinier.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 130,
+   "text": "La récolte non plus n’a pas été trop fameuse.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 131,
+   "text": "«En ce cas, reprit le chanoine, conduisez-y toutes nos montures, et faites revenir le mulet.»",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 132,
+   "text": "C’est le moins qu’on puisse dire.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 133,
+   "text": "Elle était neuve, et, comme il s’était, pendant la route, souvent essuyé les yeux avec les manches, elle avait déteint sur sa figure; et la trace des pleurs y faisait des lignes dans la couche de poussière qui la salissait.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 134,
+   "text": "D’Artagnan en fit autant, puis, aidé de Biscarat, le seul qui fut resté debout, il porta sous le porche du couvent Jussac, Cahusac et celui des adversaires d’Aramis qui n’était que blessé.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 135,
+   "text": "D’Artagnan ne pouvait plus supporter cette conversation, qui l’eût rendu fou; il laissa tomber sa tête sur ses deux mains et fit semblant de s’endormir.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 136,
+   "text": "On n’a rien à craindre de ceux qui vous aiment. — Vous parlez bien vite d’amour, monsieur!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 137,
+   "text": "D’Artagnan et Planchet entrèrent ensemble à Pierrefitte.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 138,
+   "text": "Bientôt les contours s’affirment, les lignes se précisent.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 139,
+   "text": "Tout en rêvant, elle jetait les yeux autour d’elle et classait dans sa tête la topographie du jardin.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 140,
+   "text": "Il n'osait même plus leur parler, leur dire «bonjour,» prononcer un seul mot, de crainte qu'ils ne devinassent tout à l'altération de sa voix.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 141,
+   "text": "L’amour est la plus égoïste de toutes les passions.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 142,
+   "text": "Il fit un signe de tête. — À demain, donc!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "À",
+    ".",
+    "—"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 143,
+   "text": "Il se mit en mouvement, mais, avant de partir, hésita. — Que cherchez-vous?",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 144,
+   "text": "Il se désespérait, voulait appeler. — N’en dis rien, tout retomberait sur ton maître!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 145,
+   "text": "Il mena son armée chez le prêtre, auquel on dévora sa provision de deux mois, et chez le cornette, qui fit des merveilles; mais, comme le disait Planchet, on ne mange toujours qu’une fois, même quand on mange beaucoup.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 146,
+   "text": "C’était un parti pris de résignation, une indulgence universelle.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 147,
+   "text": "Ils étaient assis l’un contre l’autre, sur un lit de feuilles sèches.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 148,
+   "text": "Ceci est la preuve irréfutable que ce conte n’est qu’une faribole.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 149,
+   "text": "D’Artagnan fit sonner le sac qu’il avait dans sa poche.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 150,
+   "text": "Comme les deux amis causaient depuis quelques instants, un serviteur de M. de Tréville entra porteur d’un paquet cacheté.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 151,
+   "text": "Elle s’était appuyée contre l’embrasure de la mansarde, et elle relisait la lettre avec des ricanements de colère.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 152,
+   "text": "Notre Gascon vit du premier coup d’oeil que son billet avait été remis, et ce billet faisait son effet.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 153,
+   "text": "D’Artagnan ne serrait plus qu’un cadavre entre ses bras.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 154,
+   "text": "Et, se tournant vers Aigyptios, il lui dit: -- Ô vieillard, il n'est pas loin, et, dès maintenant, tu peux le voir, celui qui a convoqué le peuple, car une grande douleur m'accable.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "Ô",
+    "."
+   ],
+   "cats": [
+    "caps",
+    "point"
+   ]
+  },
+  {
+   "id": 155,
+   "text": "Tu n’as jamais laissé le tambour se détendre.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 156,
+   "text": "Le bourgeois tira un papier de sa poche, et le présenta à d’Artagnan.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 157,
+   "text": "Pangloss, Candide, et Martin, en retournant à la petite métairie, rencontrèrent un bon vieillard qui prenait le frais à sa porte sous un berceau d’orangers.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 158,
+   "text": "Et Lord de Winter alla se ranger près de d’Artagnan, laissant la place libre à un autre accusateur.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 159,
+   "text": "À la porte il trouva les deux hommes et le cheval qu’ils tenaient en main.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "À",
+    ".",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 160,
+   "text": "En effet, le sieur Bovary père venait de décéder l’avant-veille, tout à coup, d’une attaque d’apoplexie, au sortir de table; et, par excès de précaution pour la sensibilité d’Emma, Charles avait prié M.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 161,
+   "text": "Allons, allons, c’est une bonne raison, dit Diana en riant à demi.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 162,
+   "text": "La maison que le clerc habitait n’avait ni sonnette, ni marteau, ni portier.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 163,
+   "text": "J’avoue que si j’étais à votre place, je ne ferais aucun scrupule d’épouser monsieur le gouverneur, et de faire la fortune de monsieur le capitaine Candide.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 164,
+   "text": "Alors, engagé par le plaisir de parler de ce qu’il aimait, il conta, selon son usage, une partie de ses aventures avec cette illustre Vestphalienne.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 165,
+   "text": "Madame Bovary prit le bras de Rodolphe; il la reconduisit chez elle; ils se séparèrent devant sa porte; puis il se promena seul dans la prairie, tout en attendant l’heure du banquet.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 166,
+   "text": "Au petit jour, madame Bovary mère arriva; Charles en l’embrassant, eut un nouveau débordement de pleurs.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 167,
+   "text": "Il fallait donc que ce fût pour une affaire bien importante; et quelle est l’affaire importante d’une femme de vingt-cinq ans?",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 168,
+   "text": "D’Artagnan raconta son aventure avec Mme Bonacieux.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 169,
+   "text": "A ceste parole le Roy s’esclata de rire.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 170,
+   "text": "Il voyage demain. Il a hâte d’y être.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 171,
+   "text": "Le portail était de deux cent vingt pieds de haut, et de cent de large; il est impossible d’exprimer quelle en était la matière.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 172,
+   "text": "D’Artagnan était de plus en plus étonné.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 173,
+   "text": "Un d’eux, placé sur le degré supérieur, l’épée nue à la main, empêchait ou du moins s’efforçait d’empêcher les trois autres de monter.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 174,
+   "text": "Mais d’Artagnan, cherchant toujours la porte, se tenait sur la défensive.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 175,
+   "text": "Candide apercevant la chaudière et les broches s’écria: Nous allons certainement être rôtis ou bouillis.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 176,
+   "text": "Aux musiques sucrées qui donnent des envies d’écouter du Black Sabbath.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 177,
+   "text": "Zénon Se dresse devant moi paisible, et me dit: «Non.»",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 178,
+   "text": "Il expliquait à la compagnie l’importance future de cet établissement, supputait la force des planchers, l’épaisseur des murailles, et regrettait beaucoup de n’avoir pas de canne métrique, comme M.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 179,
+   "text": "Le cardinal, après avoir lu ces deux lignes, tomba dans une rêverie profonde, mais il ne rendit pas le papier à d’Artagnan.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 180,
+   "text": "Pendant ce temps, Son Éminence continuait sa promenade mélancolique en murmurant entre ses moustaches: «Décidément, il faut que ces quatre hommes soient à moi.»",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "É",
+    ".",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 181,
+   "text": "Cependant, pour savoir quel tendon couper à Hippolyte, il fallait connaître d’abord quelle espèce de pied-bot il avait.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 182,
+   "text": "C’était la première fois qu’Emma s’entendait dire ces choses; et son orgueil, comme quelqu’un qui se délasse dans une étuve, s’étirait mollement et tout entier à la chaleur de ce langage. — Mais, si je ne suis pas venu, continua-t-il, si je n’ai pu vous voir, ah!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 183,
+   "text": "Tout en disant cela, l'hôte courait au galetas, où le suivit toute la compagnie; et ils y trouvèrent don Quichotte dans le plus étrange accoutrement du monde.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "accents"
+   ]
+  },
+  {
+   "id": 184,
+   "text": "Bientôt tous les autres hommes s’intéressèrent à son état.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 185,
+   "text": "Elle se promena dans son jardinet, passant et revenant par les mêmes allées, s’arrêtant devant les plates-bandes, devant l’espalier, devant le curé de plâtre, considérant avec ébahissement toutes ces choses d’autrefois qu’elle connaissait si bien.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 186,
+   "text": "Ce qui est affreux, c’est ce qu’on ne peut pas imaginer.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 187,
+   "text": "Gourmander quelqu’un, c’est le réprimander en lui adressant des reproches sévères, le sermonner.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 188,
+   "text": "Athos était chez vous pendant l’événement, et qu’il n’y a point pris part? — Par votre glorieux père et par vous-même, qui êtes ce que j’aime et ce que je vénère le plus au monde, je le jure! — Veuillez réfléchir, Sire, dit le cardinal.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 189,
+   "text": "On quitte la grande route à la Boissière et l’on continue à plat jusqu’au haut de la côte des Leux, d’où l’on découvre la vallée.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "typo",
+    "accents"
+   ]
+  },
+  {
+   "id": 190,
+   "text": "En effet, elle tendit la main à sa belle-mère avec une dignité de marquise, en lui disant: — Excusez-moi, madame.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 191,
+   "text": "Il s’en aperçut, et alors se mit à faire des plaisanteries sur les dames d’Yonville, à propos de leur toilette; puis il s’excusa lui-même du négligé de la sienne.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 192,
+   "text": "Cela permettra d’obtenir une source fiable de ce qui s’y est dit.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 193,
+   "text": "Et le bonhomme s’en alla sans souffler mot.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 194,
+   "text": "Mais le subtil Odysseus parla ainsi, plein de ruse: -- Ô amis, il n'est pas juste qu'un vieillard flétri par la douleur lutte contre un homme jeune; mais la faim, mauvaise conseillère, me pousse à me faire couvrir de plaies.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "Ô",
+    ".",
+    ";"
+   ],
+   "cats": [
+    "caps",
+    "point"
+   ]
+  },
+  {
+   "id": 195,
+   "text": "Quand elle s’asseyait sur ses genoux, sa jambe, alors trop courte, pendait en l’air; et la mignarde chaussure, qui n’avait pas de quartier, tenait seulement par les orteils à son pied nu.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 196,
+   "text": "Montez chez vous, faites mon compte et avertissez mon laquais. — Quoi!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 197,
+   "text": "À quoi pensait d’Artagnan, qu’il s’écartait ainsi de sa route, regardant les étoiles du ciel, et tantôt soupirant tantôt souriant?",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "À",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "typo"
+   ]
+  },
+  {
+   "id": 198,
+   "text": "D’ailleurs, avec du toupet, un homme réussit toujours dans le monde.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 199,
+   "text": "En effet, les Rochelois avaient fait une sortie pendant la nuit et avaient repris un bastion dont l’armée royaliste s’était emparée deux jours auparavant; il s’agissait de pousser une reconnaissance perdue pour voir comment l’armée gardait ce bastion.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 200,
+   "text": "Ce qu’il ne comprenait pas, c’était tout ce trouble dans une chose aussi simple que l’amour.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 201,
+   "text": "«Felton n’a point parlé, se dit Milady à elle-même, rien n’est perdu alors.»",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 202,
+   "text": "Car ce n’est rien qu’une histoire.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 203,
+   "text": "Répondez! — C’est la vérité pure, s’écria le mercier, mais monsieur ne vous dit pas… — Silence sur moi, silence sur mes amis, silence sur la reine surtout, ou vous perdriez tout le monde sans vous sauver.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—",
+    "…"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 204,
+   "text": "J’ai rêvé que cet Anglais maudit était mort.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 205,
+   "text": "Il arriva dans son cabriolet, qu’il conduisait lui-même.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 206,
+   "text": "Catherine n’osait plus bouger.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 207,
+   "text": "La pleine campagne remontait ensuite d’un mouvement monotone, jusqu’à toucher au loin la base indécise du ciel pâle.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 208,
+   "text": "Alors l’allemande, la plupart du temps, restait garée près de l’entrepôt.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 209,
+   "text": "Et les enfants se mirent à pousser des cris, comme s’ils avaient déjà senti dans leurs entrailles d’atroces douleurs. — Ou bien empoisonner un malade!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 210,
+   "text": "Or d’Artagnan, dans ses projets d’intrigue à venir, et décidé qu’il était à faire de ses trois compagnons les instruments de sa fortune, d’Artagnan n’était pas fâché de réunir d’avance dans sa main les fils invisibles à l’aide desquels il comptait les mener.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 211,
+   "text": "Oui, répondit Pococurante, il est beau d’écrire ce qu’on pense; c’est le privilège de l’homme.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 212,
+   "text": "Une demi-heure après l’entrée du roi, de nouvelles acclamations retentirent: celles-là annonçaient l’arrivée de la reine: les échevins firent ainsi qu’ils avaient fait déjà et, précédés des sergents, ils s’avancèrent au devant de leur illustre convive.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 213,
+   "text": "Et la sage Pènélopéia, doucement endormie aux portes des Songes, lui répondit: -- Ô soeur, pourquoi es-tu venue ici, où je ne t'avais encore jamais vue, tant la demeure est éloignée où tu habites?",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "Ô",
+    "ù"
+   ],
+   "cats": [
+    "caps",
+    "accents"
+   ]
+  },
+  {
+   "id": 214,
+   "text": "Ce n’est pas la culpabilité qui l’a fait venir sur la tombe.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 215,
+   "text": "À la porte de la chapelle, d’Artagnan sentit son courage qui fuyait de nouveau; il se retourna pour chercher Athos, mais Athos avait disparu.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "À",
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "caps",
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 216,
+   "text": "Quant à Bazin, il s’alla coucher sur une botte de paille; et comme il avait plus d’imagination que le Suisse, il rêva que M.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 217,
+   "text": "Cela faisait environ une livre d’aliments pour chacun.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 218,
+   "text": "Rodolphe aurait retenu les places, pris des passeports, et même écrit à Paris, afin d’avoir la malle entière jusqu’à Marseille, où ils achèteraient une calèche et, de là, continueraient sans s’arrêter, par la route de Gênes.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "ù"
+   ],
+   "cats": [
+    "point",
+    "typo",
+    "accents"
+   ]
+  },
+  {
+   "id": 219,
+   "text": "Toute fausseté est un masque, et si bien fait que soit le masque, on arrive toujours, avec un peu d’attention, à le distinguer du visage.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 220,
+   "text": "Il paraît que je m’étais trompé, monsieur, que j’avais arrêté l’un pour l’autre, et que celui qu’on devait arrêter était sauvé. — Mais Athos?",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 221,
+   "text": "Emma recevait ces leçons; madame Bovary les prodiguait; et les mots de ma fille et de ma mère s’échangeaient tout le long du jour, accompagnés d’un petit frémissement des lèvres, chacune lançant des paroles douces d’une voix tremblante de colère.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 222,
+   "text": "Ce mot lui arriva comme une bouffée d’air frais. — Laissez-moi la note, dit Emma. — Oh!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 223,
+   "text": "Un soir qu’il arrivait le nez au vent, léger comme un homme qui attend une pluie d’or, il rencontra la soubrette sous la porte cochère; mais cette fois la jolie Ketty ne se contenta point de lui sourire en passant, elle lui prit doucement la main.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 224,
+   "text": "Porthos alla s’adosser au côté d’un pilier; d’Artagnan, toujours inaperçu, s’appuya de l’autre.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 225,
+   "text": "Ah ! je les tiens, dit une voix, — la voix de Paganel.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "—"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 226,
+   "text": "Grimaud posa son panier à terre et s’assit en secouant la tête.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 227,
+   "text": "C'est pourquoi tous ses frères et sœurs l'aimaient beaucoup.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    "œ"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 228,
+   "text": "Athos, le premier, tua son adversaire: il ne lui avait porté qu’un coup, mais, comme il l’en avait prévenu, le coup avait été mortel.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 229,
+   "text": "Le soir, à l’heure dite, les quatre amis se réunirent: il ne restait plus que trois choses à décider: Ce qu’on écrirait au frère de Milady; Ce qu’on écrirait à la personne adroite de Tours; Et quels seraient les laquais qui porteraient les lettres.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 230,
+   "text": "Au nom du baron et de Pangloss les deux forçats poussèrent un grand cri, s’arrêtèrent sur leur banc, et laissèrent tomber leurs rames.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 231,
+   "text": "Charles y était, elle l’aperçut; il lui parla, elle n’entendit rien, et elle continua vivement à monter les marches; haletante, éperdue, ivre, et toujours tenant cette horrible feuille de papier, qui lui claquait dans les doigts comme une plaque de tôle.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 232,
+   "text": "Mais l’aubergiste ne l’écoutait que d’une oreille, ayant comme lui des chagrins, car M.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 233,
+   "text": "Il ne lui reste plus qu'à se taire et à écouter, sachant, comme cette Sainte encore, que «les pensées ne mûrissent pas d'être dites».",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "«",
+    "»"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 234,
+   "text": "Puis il fit descendre tous ses enfants, curieux d’avoir l’avis du chirurgien sur leur constitution.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 235,
+   "text": "D’Artagnan salua Mme Bonacieux en lui lançant le coup d’oeil le plus amoureux qu’il lui fût possible de concentrer sur sa charmante petite personne, et tandis qu’il descendait l’escalier, il entendit la porte se fermer derrière lui à double tour.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 236,
+   "text": "La seule chose qui m’étonne, c’est qu’il ne m’ait pas tué roide; il en avait le droit, et la douleur que je lui ai causée a dû être atroce.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 237,
+   "text": "Il s’emporta si fort qu’elle se tut, et même il la chargea de se rendre immédiatement à la ville pour acheter ce qu’il fallait.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    "’"
+   ],
+   "cats": [
+    "point",
+    "typo"
+   ]
+  },
+  {
+   "id": 238,
+   "text": "Alors, je puis le dire ainsi, le soleil de ma joie se coucha, et la nuit de ma tristesse acheva de se fermer; je demeurai les yeux sans vue et l'intelligence sans raison, ne pouvant ni trouver l'entrée de sa demeure ni me mouvoir d'aucun côté.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 239,
+   "text": "Les plus riches cités, les plus grands paysages, Jamais ne contenaient l'attrait mystérieux De ceux que le hasard fait avec les nuages, Et toujours le désir nous rendait soucieux! --La jouissance ajoute au désir de la force.",
+   "credit": "Baudelaire, « Les Fleurs du Mal »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 240,
+   "text": "Mon cher maître, repartit Cacambo, vous êtes toujours étonné de tout; pourquoi trouvez-vous si étrange que dans quelques pays il y ait des singes qui obtiennent les bonnes grâces des dames?",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 241,
+   "text": "Alors ma création cosmique, comment c’était, l’asile ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 242,
+   "text": "Sois béni sous la pierre où te voilà couché!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 243,
+   "text": "Et Athalie, le tirant par sa redingote — Papa!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "—"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 244,
+   "text": "Debout sur les marches de sa cuisine, elle murmurait dans son menton: — Quelle bêtise!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "—"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 245,
+   "text": "Et, s'étant assis en ordre sur les bancs, ils détachèrent le câble de la pierre trouée; puis, se courbant, ils frappèrent la mer de leurs avirons.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 246,
+   "text": "Mais où donc est le temps des nymphes ingénues, Qui couraient dans les bois, et dont la nudité Dansait dans la lueur des vagues soirs d'été?",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 247,
+   "text": "Il reprit: --Tu mettras des fleurs naturelles.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 248,
+   "text": "Que, morts, ces grands destins nous fussent réservés!...",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 249,
+   "text": "Mon ami, lui dit l’orateur, croyez-vous que le pape soit l’antechrist?",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 250,
+   "text": "A l’éternel front de l’amour !",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 251,
+   "text": "Conscrits du bon vouloir, nous aurons la philosophie féroce; ignorants pour la science, roués pour le confort; la crevaison pour le monde qui va.",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 252,
+   "text": "Non : de beaux portraits de Saturne, du roi Priam, du vieux Nestor, et du bon père Anchise, sur les épaules de son fils. - Harpagon - Cela est admirable.",
+   "credit": "Molière, « L'Avare »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 253,
+   "text": "Voilà mon âne à l'eau; jusqu'au col il se plonge, Lui le conducteur et l'éponge.",
+   "credit": "La Fontaine, « Fables (livre II) »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 254,
+   "text": "Reste ici; aucun ne se plaint de ta présence, ni moi, ni mes compagnons.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 255,
+   "text": "Et nous le tenions avec vigueur et d'un coeur ferme; mais quand le Vieillard plein de ruses se vit réduit, alors il m'interrogea et il me dit: -- Qui d'entre les dieux, fils d'Atreus, t'a instruit, afin que tu me saisisses malgré moi?",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 256,
+   "text": "Anselme s'élança pour le saisir, ou du moins le reconnaître; mais il en fut empêché par Léonella, qui, se jetant au devant de lui, le tenait embrassé.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 257,
+   "text": "La femme, après avoir médité deux ou trois minutes, prononça: --I n'est seulement point trois heures, qu' tu pourrais commencer la tournée anuit et faire tout l' côté de Tourville.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 258,
+   "text": "Car comment nous vêtirions-nous, car comment nous nourririons-nous sans l’agriculteur?",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 259,
+   "text": "On parle de lui, de ses pensées, de ses actions; et si, n'y entend rien.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 260,
+   "text": "Oui, c'est bien vous; ayant peur jusqu'à la fureur, Fronsac vieux, le marquis happé par la Terreur, Haranguant à mi-corps dans l'hydre qui l'avale.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 261,
+   "text": "Où l'Homme, dont jamais l'espérance n'est lasse, Pour trouver le repos court toujours comme un fou!",
+   "credit": "Baudelaire, « Les Fleurs du Mal »",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 262,
+   "text": "L’apothicaire reprenait: — Sans moi, savez-vous bien, il se serait porté sur lui-même à quelque attentat funeste! — Une si bonne personne!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "’",
+    "—"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 263,
+   "text": "Alors, Cassandre, qu’est-ce que tu vas faire ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 264,
+   "text": "Note: Quelques personnes de bon sens ont cru que l'impossibilité et la contradiction, qui est dans le jugement de ce singe, était une chose à censurer: mais je ne m'en suis servi qu'après Phèdre; et c'est en cela que consiste le bon mot, selon mon avis.",
+   "credit": "La Fontaine, « Fables (livre II) »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 265,
+   "text": "Puis il fit le gouvernail, qu'il munit de claies de saule afin qu'il résistât au choc des flots; puis il amassa un grand lest.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 266,
+   "text": "Selon l'usage du pays, c'étaient plutôt des lucarnes rondes que des fenêtres; encore étaient-elles couvertes par des jalousies épaisses et serrées.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 267,
+   "text": "Plusieurs coups retentirent à la porte; cette fois, Milady le repoussa réellement.",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 268,
+   "text": "Et Eurymakhos, fils de Polybos, lui répondit: -- Fille d'Ikarios, sage Pènélopéia, reprends courage et n'aie point ces inquiétudes dans ton esprit.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 269,
+   "text": "Alors, la femme est gentille, aujourd’hui ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 270,
+   "text": "Sphères par la neige engourdies, Ils ont d'étranges maladies, Pestes, déluges, incendies, Tremblements profonds et fréquents; Leur propre abîme les consume; Leur haleine flamboie et fume; On entend de loin dans leur brume La toux lugubre des volcans.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 271,
+   "text": "Attendait-elle une visite ? non.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 272,
+   "text": "Et les peuples ont vu passer dans les ténèbres Ces spectres de la nuit que nul ne pénétra; Et flamines, santons, brahmanes, mages, guèbres, Ont crié: Jupiter!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 273,
+   "text": "Des yeux hébétés à la façon de la nuit d'été, rouges et noirs, tricolorés, d'acier piqué d'étoiles d'or; des facies déformés, plombés, blêmis, incendiés; des enrouements folâtres!",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 274,
+   "text": "Le ciel, jusqu'à présent, n'a pas voulu que j'aimasse par fatalité; croire que j'aimerai par choix, c'est une erreur.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 275,
+   "text": "Et Céleste, résolue à tout dire, balbutia: --J'crais ben qu'c'est Polyte.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 276,
+   "text": "Et ils lui lièrent les pieds et les mains avec une corde bien tressée ainsi que l'avait ordonné le patient et divin Odysseus, fils de Laertès; puis, l'ayant enchaîné, ils le suspendirent à une haute colonne, près des poutres.",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 277,
+   "text": "Et le médecin dit au père:--Il faut distraire Ce coeur triste, et donner à l'enfant mort un frère.-- Le temps passa; les jours, les semaines, les mois.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 278,
+   "text": "Pendant ce temps, la corne ne restait pas oisive; car elle tournait si vite à la ronde, tantôt pleine, tantôt vide, comme les pots d'une roue à chapelet, qu'elle eut bientôt desséché une outre, de deux qui étaient en évidence.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 279,
+   "text": "Ils jettent dans l'azur des cônes d'ombre énormes, Ténèbres qui des cieux traversent les rayons, Où le regard, ainsi que des flambeaux farouches L'un après l'autre éteints par d'invisibles bouches, Voit plonger tour à tour les constellations!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 280,
+   "text": "Mais dites-moi, seigneur, comment appelez-vous belle et rare cette aventure qui nous laisse dans l'état où nous sommes?",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 281,
+   "text": "Le vicomte articula d'une voix sèche, saccadée: --Vingt pas, au commandement, en levant l'arme au lieu de l'abaisser.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 282,
+   "text": "Camille répondit que cet avis lui semblait bon, et qu'elle le suivrait; mais qu'il fallait, en tout cas, chercher que dire à Anselme sur la cause de cette blessure qu'il ne pouvait manquer de voir.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 283,
+   "text": "On chantait, on s’agenouillait, on se relevait, cela n’en finissait pas!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 284,
+   "text": "Emma, renversée sur la causeuse, répliquait le plus tranquillement possible: — Eh!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "—"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 285,
+   "text": "Quelles sont les étapes de réalisation d’un projet ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 286,
+   "text": "Ta gorge qui s'avance et qui pousse la moire, Ta gorge triomphante est une belle armoire Dont les panneaux bombés et clairs Comme les boucliers accrochent des éclairs; Boucliers provoquants, armés de pointes roses!",
+   "credit": "Baudelaire, « Les Fleurs du Mal »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 287,
+   "text": "Mais la fortune arrangea mieux les choses qu'il ne l'espérait; car, en ce même instant, parut dans une gorge de la montagne qui débouchait sur eux, le jeune homme qu'il voulait chercher.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 288,
+   "text": "Dans ce temps-là, don Quichotte sollicita secrètement un paysan, son voisin, homme de bien (si toutefois on peut donner ce titre à celui qui est pauvre), mais, comme on dit, de peu de plomb dans la cervelle.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 289,
+   "text": "Ils sont là, près de nous, jouant sur notre route; Ils ne dédaignent pas notre soleil obscur, Et derrière eux, et sans que leur candeur s'en doute, Leurs ailes font parfois de l'ombre sur le mur.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 290,
+   "text": "Un jour, une barque perdue Vit à la fois dans l'étendue Un oiseau dans l'air spacieux, Un rameau dans l'eau solitaire; Alors, Gama cria: La terre!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 291,
+   "text": "Et, alors, le divin Théoklyménos lui dit: -- Et moi, cher enfant, où irai-je?",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 292,
+   "text": "Auriez-vous la bonté de m’y conduire ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    "’"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 293,
+   "text": "Ce qui est propre le restera ; quant à ce qui est sale jusqu'à la crasse, il sera difficilement lavable.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 294,
+   "text": "Les mariniers interrogés ne savaient rien; on allait abandonner l'affaire, quand un jeune menuisier d'un village voisin, nommé Georges Louis, dit Le Bourgeois, vint se constituer prisonnier.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 295,
+   "text": "L'âme humaine, après le Calvaire, A plus d'ampleur et de rayon; Le grossissement de ce verre Grandit encor la vision.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 296,
+   "text": "Par ces deux grands yeux noirs, soupiraux de ton âme, O démon sans pitié, verse-moi moins de flamme; Je ne suis pas le Styx pour t'embrasser neuf fois, Hélas!",
+   "credit": "Baudelaire, « Les Fleurs du Mal »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 297,
+   "text": "Tuez, entre deux fêtes, Le malheureux, chargé de fautes et de maux; Moi, je ne mêle pas de spectre à mes rameaux!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 298,
+   "text": "Pourquoi ne l’avez- vous pas fait arrêter pendant qu’il était à Paris? — Arrêter le duc!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "’",
+    "—"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 299,
+   "text": "Puis il faut que j'en aide d'autres: c'est mon devoir.",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 300,
+   "text": "En quel état je suis, imaginez-le; s'il vous importe d'accourir, jugez-en; et si je vous aime ou non, l'événement vous le fera connaître.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 301,
+   "text": "Le reproche est comme le vent ; si on le voit, on le sent.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 302,
+   "text": "J'étais heureux, Je ronflais comme un boeuf; laisse-moi.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 303,
+   "text": "Sur nos groupes confus que voile la fumée Des jours évanouis, L'énorme éternité luit, splendide et stagnante; Le cadran, bouclier de l'heure rayonnante.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 304,
+   "text": "Dieu, qui sait tout, le sait sans doute, moi je n’accuse personne… — Oh!",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "’",
+    "—",
+    "…"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 305,
+   "text": "À vendre les habitations et les migrations, sports, féeries et conforts parfaits, et le bruit, le mouvement et l'avenir qu'ils font!",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    "À"
+   ],
+   "cats": [
+    "caps"
+   ]
+  },
+  {
+   "id": 306,
+   "text": "A l'indulgence affreuse ; et cela fait trembler.",
+   "credit": null,
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 307,
+   "text": "Elle me regarda de ce regard suprême Qui reste à la beauté quand nous en triomphons, Et je lui dis: Veux-tu, c'est le mois où l'on aime, Veux-tu nous en aller sous les arbres profonds?",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "ù"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 308,
+   "text": "Les cathédrales sont belles Et hautes sous le ciel bleu; Mais le nid des hirondelles Est l'édifice de Dieu.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 309,
+   "text": "Il avait sa casquette enfoncée sur ses sourcils, et ses deux grosses lèvres tremblotaient, ce qui ajoutait à son visage quelque chose de stupide; son dos même, son dos tranquille était irritant à voir, et elle y trouvait étalée sur la redingote toute la platitude du personnage.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 310,
+   "text": "«Vous êtes jeune, vous, répondit Athos, et vos souvenirs amers ont le temps de se changer en doux souvenirs!»",
+   "credit": "Dumas, « Les Trois Mousquetaires »",
+   "lang": "fr",
+   "targets": [
+    "«",
+    "»"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 311,
+   "text": "Prenez garde, seigneur; ce sont là des moines de Saint- Benoît, et le carrosse doit être à des gens qui voyagent.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 312,
+   "text": "Je me disais: Il n'épousera pas Suzanne, non, je ne veux pas!...",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 313,
+   "text": "Toute la nature sombre Verse un mystérieux jour; L'âme qui rêve a plus d'ombre Et la fleur a plus d'amour.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 314,
+   "text": "Tiens, je ris, je suis heureuse!... parle donc!",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 315,
+   "text": "Quand la muse apparaît, ces hurleurs de holà Disent: «Qu'est-ce que c'est que cette folle-là?»",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "«",
+    "»"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 316,
+   "text": "Il a des soifs inassouvies; Dans son passé vertigineux, Il sent revivre d'autres vies; De son âme il compte les noeuds.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 317,
+   "text": "Sur mon lit d'hôpital, l'odeur de l'encens m'est revenue si puissante: gardien des aromates sacrés, confesseur, martyr...",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 318,
+   "text": "Un gros paysan jovial déclara: --I n'en mangera pu, à c't' heure.",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 319,
+   "text": "Et les femmes criaient:--Rends-nous ce petit être.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 320,
+   "text": "Finalement, avec une arrogance inouïe, il tutoyait ses égaux et ceux même qui le connaissaient; il disait que son bras était son père, et ses oeuvres sa noblesse, et qu'en qualité de soldat il ne devait rien au roi lui-même.",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 321,
+   "text": "Et il saisit sa main; elle ne la retira pas.",
+   "credit": "Flaubert, « Madame Bovary »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 322,
+   "text": "J'étais l'Arioste et l'Homère D'un poëme éclos d'un seul jet; Pendant que je parlais, leur mère Les regardait rire, et songeait.",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 323,
+   "text": "Et elle pleura quand il eut décrit les choses comme elles étaient; et jetant ses bras au cou d'Odysseus, elle baisa sa tête et lui dit: -- Ne t'irrite point contre moi, Odysseus, toi, le plus prudent des hommes!",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 324,
+   "text": "Nous sommes tes Grands Parents; Tiens, prends Les liqueurs dans nos armoires.",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 325,
+   "text": "Un éclair... puis la nuit!--Fugitive beauté Dont le regard m'a fait soudainement renaître, Ne te verrai-je plus que dans l'éternité?",
+   "credit": "Baudelaire, « Les Fleurs du Mal »",
+   "lang": "fr",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 326,
+   "text": "Il dit au doux oiseau: «Que ton aile est petite, Mais que ton vol est grand!»",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [
+    "«",
+    "»"
+   ],
+   "cats": [
+    "typo"
+   ]
+  },
+  {
+   "id": 327,
+   "text": "De tout mon coeur, dit Candide; et il la ramassa.",
+   "credit": "Voltaire, « Candide »",
+   "lang": "fr",
+   "targets": [
+    ".",
+    ";"
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 328,
+   "text": "Apporter ses soixante francs, canaille !",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 329,
+   "text": "Ne vaudrait-il pas mieux que les paroles qu'il emploie pendant la course à se recommander à sa dame fussent employées à ce qu'il est tenu de faire comme bon chrétien?",
+   "credit": "Cervantes, « Don Quichotte » (trad.)",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 330,
+   "text": "Travail mauvais qui prend l'âge tendre en sa serre, Qui produit la richesse en créant la misère, Qui se sert d'un enfant ainsi que d'un outil!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 331,
+   "text": "C'était ça qui n'emplissait pas la bourse !",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 332,
+   "text": "A-t-il pu, grâce à cette initiation, connaître la vérité ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 333,
+   "text": "Je verrai cet instant jusqu'à ce que je meure, L'instant, pleurs superflus!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 334,
+   "text": "Ce mot vide c'est une supercherie pour dissimuler notre ignorance des causes !",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 335,
+   "text": "Allons donc ! il est neuf heures cinquante-deux minutes !",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 336,
+   "text": "Quand ce spectre a passé, O penseurs, au milieu de ce groupe amassé, Qui vient de voir le fond d'un coeur qui se déchire, Qu'entendez-vous toujours?",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 337,
+   "text": "Que de fois j'ai, là-bas, cherché la tour d'Harfleur, Murmurant: C'est demain que je pars!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 338,
+   "text": "Sire, ne pouvoir mettre plumail au vent par ce temps de joie!",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 339,
+   "text": "Que pouvais-je boire dans cette jeune Oise, Ormeaux sans voix, gazon sans fleurs, ciel couvert: Que tirais-je à la gourde de colocase?",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 340,
+   "text": "As-tu déjà été découragé par les mathématiques au point de tout vouloir abandonner ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 341,
+   "text": "Ces champ de lavande en Provence sont magnifique !",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 342,
+   "text": "Et nous nous figurons, race imbécile et dure, Que nous avons un peu de Dieu dans notre ordure Entre notre ongle et notre chair!",
+   "credit": "Victor Hugo, « Les Contemplations »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 343,
+   "text": "Cela ne valait-il pas mieux que de le faire emmener prisonnier?",
+   "credit": "Maupassant, « Contes du jour et de la nuit »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 344,
+   "text": "Vivent les dames à rebrassés collets, portant atours et broderies!",
+   "credit": "Rimbaud, « Œuvres »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 345,
+   "text": "Bonjour, Madame, vous allez bien ?",
+   "credit": null,
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 346,
+   "text": "Je sais l'art d'évoquer les minutes heureuses!",
+   "credit": "Baudelaire, « Les Fleurs du Mal »",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 347,
+   "text": "Naviguez-vous pour quelque trafic, ou bien, à l'aventure, comme des pirates qui, jouant leur vie, portent le malheur aux étrangers?",
+   "credit": "Homère, « L'Odyssée » (trad.)",
+   "lang": "fr",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 348,
+   "text": "De acordo com a receita?, precisamos de mostarda leve.",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 349,
+   "text": "Bis zu welcher Länge können Sie sich Passwörter merken?",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    "ä",
+    "ö"
+   ],
+   "cats": [
+    "international"
+   ]
+  },
+  {
+   "id": 350,
+   "text": "Das nächste Stück ist etwas für Genießer.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß",
+    "ä",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 351,
+   "text": "Aus dem All betrachtet sind wir alle bloß unwichtige Statisten.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 352,
+   "text": "Das Preis-Leistungs-Verhältnis war überragend!",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    "ä",
+    "ü"
+   ],
+   "cats": [
+    "international"
+   ]
+  },
+  {
+   "id": 353,
+   "text": "Dez anos na universidade? e aqui estou num curral.",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 354,
+   "text": "Artigo 5.º Ninguém será submetido a tortura nem a penas ou tratamentos cruéis, desumanos ou degradantes.",
+   "credit": "ONU, « Declaração Universal (pt) »",
+   "lang": "pt",
+   "targets": [
+    ".",
+    "á"
+   ],
+   "cats": [
+    "point",
+    "accents"
+   ]
+  },
+  {
+   "id": 355,
+   "text": "Bevorzugt sitzt Herr Lürcher nicht im Großraumwagen, sondern im Abteil.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 356,
+   "text": "Aber davon habe ich doch gar nichts gesagt!",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 357,
+   "text": "Alter, was für ein Meisterstück!",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    "ü"
+   ],
+   "cats": [
+    "international"
+   ]
+  },
+  {
+   "id": 358,
+   "text": "Alter, wieso kann ich nicht scrollen?",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 359,
+   "text": "Außerdem sollten Löser für das Mathematikbuch gratis mitgeliefert werden.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß",
+    "ö",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 360,
+   "text": "Eles são gêmeos ou apenas irmãos normais?",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    "ã"
+   ],
+   "cats": [
+    "international"
+   ]
+  },
+  {
+   "id": 361,
+   "text": "A senhora é funcionária da Assembleia?",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    "á"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 362,
+   "text": "Bei uns heißt das Pommes Schranke.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 363,
+   "text": "Agora, o termo que eles fazem não é o tópico, mas a \"entonação\".",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    ".",
+    "ó",
+    "ã"
+   ],
+   "cats": [
+    "point",
+    "accents",
+    "international"
+   ]
+  },
+  {
+   "id": 364,
+   "text": "Das lasse ich mir nicht bieten!",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 365,
+   "text": "A perda de um homem? é o ganho de outro homem.",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 366,
+   "text": "Da liegt ein Handtuch für die Füße.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 367,
+   "text": "Aber ist es ethisch vertretbar?",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 368,
+   "text": "Auf deinem Profilbild sahst du viel hübscher aus!",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    "ü"
+   ],
+   "cats": [
+    "international"
+   ]
+  },
+  {
+   "id": 369,
+   "text": "Bem, muito fácil: porque tudo está aprovado!",
+   "credit": null,
+   "lang": "pt",
+   "targets": [
+    "á"
+   ],
+   "cats": [
+    "accents"
+   ]
+  },
+  {
+   "id": 370,
+   "text": "Das Prinzip des Hintergrundlärms wird für sogenanntes \"Data Augmentation\" verwendet.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ä",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 371,
+   "text": "Da Capo al fine: Erneut von Anfang bis zum Ende oder dem Wort \"fine\".",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    "."
+   ],
+   "cats": [
+    "point"
+   ]
+  },
+  {
+   "id": 372,
+   "text": "Bitte nicht mitten im Lied applaudieren!",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 373,
+   "text": "Auch im Umgang mit Menschen ist ein Mindestmaß an Kompetenz erforderlich.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 374,
+   "text": "Achtung, die U-Bahn fährt ein!",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    "ä"
+   ],
+   "cats": [
+    "international"
+   ]
+  },
+  {
+   "id": 375,
+   "text": "Bist du gut darin, Leute zu verkuppeln?",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  },
+  {
+   "id": 376,
+   "text": "Bei anderen würden längst die Tränen fließen.",
+   "credit": null,
+   "lang": "de",
+   "targets": [
+    ".",
+    "ß",
+    "ä",
+    "ü"
+   ],
+   "cats": [
+    "point",
+    "international"
+   ]
+  },
+  {
+   "id": 377,
+   "text": "Aber wie einbruchsicher sind die Fenster wirklich?",
+   "credit": null,
+   "lang": "de",
+   "targets": [],
+   "cats": []
+  }
+ ]
+}

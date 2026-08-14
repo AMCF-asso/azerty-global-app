@@ -128,6 +128,19 @@ public class GameRegistryTests
         Assert.False(GameRegistry.IsAntiCheatProcess(null, null));
     }
 
+    [Theory]
+    [InlineData("parsecd.exe")]
+    [InlineData("mstsc.exe")]
+    [InlineData("msrdc.exe")]
+    [InlineData("msrdcw.exe")]
+    [InlineData("AnyDesk.exe")]
+    [InlineData("TeamViewer.exe")]
+    [InlineData("rustdesk.exe")]
+    public void IsRemoteAccessProcess_KnownClient_ReturnsTrue(string processName)
+    {
+        Assert.True(GameRegistry.IsRemoteAccessProcess(processName));
+    }
+
     // ────────────────────────────────────────────────────────────────
     // HasGameFrameworkLoaded
     // ────────────────────────────────────────────────────────────────

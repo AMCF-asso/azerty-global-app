@@ -164,7 +164,7 @@ internal static class LessonCatalogLoader
                         lessonId,
                         exerciseIndex,
                         type,
-                        RequiredString(exerciseEl, "instruction"),
+                        PickText(RequiredString(exerciseEl, "instruction"), OptionalString(exerciseEl, "instructionEn")),
                         RequiredString(exerciseEl, "content"),
                         LessonTypingMode.Flexible));
                     exerciseIndex++;
@@ -173,16 +173,16 @@ internal static class LessonCatalogLoader
                 lessons.Add(new LessonLesson(
                     moduleId,
                     lessonId,
-                    RequiredString(lessonEl, "title"),
-                    OptionalString(lessonEl, "description"),
+                    PickText(RequiredString(lessonEl, "title"), OptionalString(lessonEl, "titleEn")),
+                    PickText(OptionalString(lessonEl, "description"), OptionalString(lessonEl, "descriptionEn")),
                     characters,
                     exercises));
             }
 
             modules.Add(new LessonModule(
                 moduleId,
-                RequiredString(moduleEl, "title"),
-                OptionalString(moduleEl, "description"),
+                PickText(RequiredString(moduleEl, "title"), OptionalString(moduleEl, "titleEn")),
+                PickText(OptionalString(moduleEl, "description"), OptionalString(moduleEl, "descriptionEn")),
                 OptionalString(moduleEl, "icon"),
                 isSynthetic: false,
                 lessons));
@@ -202,26 +202,26 @@ internal static class LessonCatalogLoader
     {
         var exercises = new List<LessonExercise>
         {
-            InitiationExercise(0, "Tape É pour découvrir les majuscules accentuées.", "É"),
-            InitiationExercise(1, "Tape cette phrase en utilisant Verr. Maj pour les capitales accentuées.", "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !"),
-            InitiationExercise(2, "Tape cette adresse e-mail.", "jean.dupont@education.gouv.fr"),
-            InitiationExercise(3, "Tape cette phrase de typographie française.", "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %."),
-            InitiationExercise(4, "Tape cette ligne de code.", "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };"),
-            InitiationExercise(5, "Tape ces mots étrangers.", "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe")
+            InitiationExercise(0, L.Lessons_Init0, "É"),
+            InitiationExercise(1, L.Lessons_Init1, "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !"),
+            InitiationExercise(2, L.Lessons_Init2, "jean.dupont@education.gouv.fr"),
+            InitiationExercise(3, L.Lessons_Init3, "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %."),
+            InitiationExercise(4, L.Lessons_Init4, "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };"),
+            InitiationExercise(5, L.Lessons_Init5, "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe")
         };
 
         var lesson = new LessonLesson(
             InitiationModuleId,
             InitiationLessonId,
-            "Premiers pas",
-            "Les 6 exercices courts de l'initiation AZERTY Global.",
+            L.Lessons_InitiationLessonTitle,
+            L.Lessons_InitiationLessonDesc,
             Array.Empty<string>(),
             exercises);
 
         return new LessonModule(
             InitiationModuleId,
-            "Initiation",
-            "Rejouer le parcours de prise en main intégré à l'accueil.",
+            L.Lessons_InitiationModuleTitle,
+            L.Lessons_InitiationModuleDesc,
             "🚀",
             isSynthetic: true,
             new[] { lesson });
@@ -251,5 +251,14 @@ internal static class LessonCatalogLoader
         return element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? ""
             : "";
+    }
+
+    /// <summary>
+    /// Choisit le texte anglais si l'UI est en anglais ET que le champ EN existe, sinon
+    /// retombe sur le français (fallback silencieux — jamais de crash sur champ manquant).
+    /// </summary>
+    private static string PickText(string fr, string en)
+    {
+        return L.IsEnglish && !string.IsNullOrEmpty(en) ? en : fr;
     }
 }

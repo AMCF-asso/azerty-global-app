@@ -17,26 +17,29 @@ sealed class LearningModule : IDisposable
     private record struct LearningStep(string Title, string Instruction, string Target,
         bool Skippable, bool KeepCapsHighlight);
 
-    private static readonly LearningStep[] _steps =
+    // Propriété (pas un champ static readonly) : reconstruite à chaque accès pour refléter
+    // la langue courante — LearningModule est recréé à chaque lancement (pas un singleton),
+    // mais un tableau static readonly ne serait initialisé qu'une seule fois par processus.
+    private static LearningStep[] Steps => new LearningStep[]
     {
-        new("Votre premier É",
-            "Activez Verr. Maj. puis tapez sur la lettre é",
+        new(L.Learning_Step0Title,
+            L.Learning_Step0Instruction,
             "É", false, true),
-        new("Majuscules et ponctuation",
-            "Gardez le Verrouillage Majuscule activé pour taper cette phrase",
+        new(L.Learning_Step1Title,
+            L.Learning_Step1Instruction,
             "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !", false, true),
-        new("Adresse e-mail",
-            "Tapez cette adresse e-mail \u2014 le @ est sur la touche \u00b2 et le point est en acc\u00e8s direct",
+        new(L.Learning_Step2Title,
+            L.Learning_Step2Instruction,
             "jean.dupont@education.gouv.fr", false, false),
-        new("Typographie fran\u00e7aise",
-            "Tapez cette phrase avec les caract\u00e8res typographiques \u2014 suivez les indications du clavier",
-            "L\u00e6titia demande \u00ab d'o\u00f9 vient ce chef-d'\u0153uvre\u2026 \u00bb \u2014 elle l'approuve \u00e0 100 %.", false, false),
-        new("Ligne de code",
-            "Tapez cette ligne de code \u2014 les symboles sont accessibles via AltGr",
+        new(L.Learning_Step3Title,
+            L.Learning_Step3Instruction,
+            "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %.", false, false),
+        new(L.Learning_Step4Title,
+            L.Learning_Step4Instruction,
             "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };", true, false),
-        new("Mots \u00e9trangers",
-            "Tapez ces mots \u00e9trangers \u2014 utilisez les touches mortes indiqu\u00e9es sur le clavier",
-            "S\u00e3o Paulo, C\u00f3rdoba, Troms\u00f8, \u0141\u00f3d\u017a, luned\u00ec, Gr\u00f6\u00dfe", true, false),
+        new(L.Learning_Step5Title,
+            L.Learning_Step5Instruction,
+            "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe", true, false),
     };
 
     // ── Window constants ────────────────────────────────────────────
@@ -256,16 +259,21 @@ sealed class LearningModule : IDisposable
     private readonly Dictionary<string, CharacterSearch.MethodData> _charMethodsCaps = new();    // alternative Caps (utilisée si l'exercice a KeepCapsHighlight=true)
     private readonly Dictionary<string, List<CharacterSearch.MethodData>> _charDeadKeyMethods = new(); // toutes les méthodes DK d'un caractère
     private readonly Dictionary<string, (string key, string layer)> _dkActivations = new();
-    private readonly Dictionary<string, string> _charNames = new(); // char → unicodeNameFr
+    private readonly Dictionary<string, (string Fr, string En)> _charNames = new(); // char → noms FR/EN (tooltip selon L.IsEnglish)
 
     /// <summary>
     /// Overrides explicites des noms de caractères pour les tooltips du clavier mini-onboarding,
-    /// quand le nom Unicode officiel (unicodeNameFr) est trop technique. Prioritaire sur _charNames.
+    /// quand le nom Unicode officiel est trop technique. Prioritaire sur _charNames.
     /// </summary>
-    private static readonly Dictionary<string, string> CharNamesOverride = new()
+    private static readonly Dictionary<string, (string Fr, string En)> CharNamesOverride = new()
     {
-        ["’"] = "APOSTROPHE TYPOGRAPHIQUE",
+        ["’"] = ("APOSTROPHE TYPOGRAPHIQUE", "TYPOGRAPHIC APOSTROPHE"),
     };
+
+    /// <summary>Choisit le nom FR ou EN selon la langue courante, avec repli croisé.</summary>
+    private static string PickCharName((string Fr, string En) names) => L.IsEnglish
+        ? (names.En.Length > 0 ? names.En : names.Fr)
+        : (names.Fr.Length > 0 ? names.Fr : names.En);
 
     // Layout clavier
     private readonly VirtualKeyboard.VisualKey[] _visualKeys;
@@ -324,6 +332,9 @@ sealed class LearningModule : IDisposable
     private IntPtr _hWndBtnFinish;
     private IntPtr _hWndBtnRetry;     // page de choix fin d'exercice
     private IntPtr _hWndBtnContinue;  // page de choix fin d'exercice (« Suivant » ou « Terminer »)
+
+    // Abonnement à la bascule de langue en cours de tutoriel (retraduction live).
+    private readonly Action<string>? _onAppLanguageChanged;
 
     // États hover pour boutons owner-drawn (Quit + Skip → fond rouge clair au survol)
     private bool _quitHovered;
@@ -428,6 +439,12 @@ sealed class LearningModule : IDisposable
         // S'abonner aux événements
         _mapper.StateChanged += OnStateChanged;
         _hook.RawKeyDown += OnRawKeyDown;
+        // Bascule de langue en cours de tutoriel (ex. depuis le menu tray) : retraduire
+        // en direct sans fermer le tutoriel ni perdre la progression (constat smoke test
+        // 2026-07-17). Les libellés de boutons Win32 sont fixés à la création ; le titre,
+        // l'instruction et le texte cible se relisent depuis Steps (dynamique) au repaint.
+        _onAppLanguageChanged = _ => RefreshLanguage();
+        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
         ConfigManager.LogCrashTraceDebug("LM.ctor: events subscribed");
 
         // Highlight initial
@@ -538,16 +555,16 @@ sealed class LearningModule : IDisposable
         {
             return contextLabel switch
             {
-                "Tab" => "Tabulation",
-                "⌫" => "Désactivé pendant les exercices — continue de taper,\nl'erreur se corrige toute seule",
-                "Verr. Maj." => "Verrouillage Majuscule (Caps Lock)",
-                "Maj ⇧" => "Majuscule (Shift)",
-                "Entrée" => "Entrée",
-                "Ctrl" => "Contrôle (Ctrl)",
-                "Win" => "Touche Windows",
-                "Alt" => "Alt",
-                "AltGr" => "Alt droite (AltGr)",
-                "Menu" => "Menu contextuel",
+                "Tab" => L.Keyboard_TooltipTab,
+                "⌫" => L.Learning_TooltipBackspaceDisabled,
+                "Verr. Maj." => L.Keyboard_TooltipCapsLock,
+                "Maj ⇧" => L.Keyboard_TooltipShift,
+                "Entrée" => L.Keyboard_TooltipEnter,
+                "Ctrl" => L.Keyboard_TooltipCtrl,
+                "Win" => L.Keyboard_TooltipWin,
+                "Alt" => L.Keyboard_TooltipAlt,
+                "AltGr" => L.Keyboard_TooltipAltGr,
+                "Menu" => L.Keyboard_TooltipMenu,
                 _ => contextLabel
             };
         }
@@ -561,9 +578,9 @@ sealed class LearningModule : IDisposable
 
         var sb = new System.Text.StringBuilder();
         AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk);
-        AppendTooltipLayer(sb, "Maj", keyDef.Shift, activeDk);
+        AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk);
         AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk);
-        AppendTooltipLayer(sb, "Maj+AltGr", keyDef.ShiftAltGr, activeDk);
+        AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk);
         return sb.ToString().TrimEnd('\n');
     }
 
@@ -582,8 +599,8 @@ sealed class LearningModule : IDisposable
             if (combined != null)
             {
                 sb.Append(label).Append(" : ").Append(combined);
-                if (_charNames.TryGetValue(combined, out var combinedName) && !string.IsNullOrEmpty(combinedName))
-                    sb.Append(" — ").Append(combinedName.ToUpperInvariant());
+                if (_charNames.TryGetValue(combined, out var combinedName))
+                    sb.Append(" — ").Append(PickCharName(combinedName).ToUpperInvariant());
                 sb.Append('\n');
             }
             return;
@@ -598,15 +615,16 @@ sealed class LearningModule : IDisposable
             // (sinon dk_misc_symbols afficherait « FLÈCHE VERS LA DROITE » au lieu de « Symboles divers »).
             // Source de verite : VirtualKeyboard._deadKeyNamesFr (aligne sur tester/deadkeys.js).
             // Fallback sur _layout.DeadKeys[].Description du JSON (peut etre en anglais).
-            if (VirtualKeyboard._deadKeyNamesFr.TryGetValue(value, out var dkName))
-                sb.Append(" — TOUCHE MORTE ").Append(dkName.ToUpperInvariant());
+            var dkNamesDict = L.IsEnglish ? L.DeadKeyNamesEn : VirtualKeyboard._deadKeyNamesFr;
+            if (dkNamesDict.TryGetValue(value, out var dkName))
+                sb.Append(L.Learning_DeadKeyConnector).Append(dkName.ToUpperInvariant());
             else if (_layout.DeadKeys.TryGetValue(value, out var dk))
-                sb.Append(" — TOUCHE MORTE ").Append(dk.Description.ToUpperInvariant());
+                sb.Append(L.Learning_DeadKeyConnector).Append(dk.Description.ToUpperInvariant());
         }
         else if (CharNamesOverride.TryGetValue(disp, out var overrideName))
-            sb.Append(" — ").Append(overrideName.ToUpperInvariant());
-        else if (_charNames.TryGetValue(disp, out var name) && !string.IsNullOrEmpty(name))
-            sb.Append(" — ").Append(name.ToUpperInvariant());
+            sb.Append(" — ").Append(PickCharName(overrideName).ToUpperInvariant());
+        else if (_charNames.TryGetValue(disp, out var name))
+            sb.Append(" — ").Append(PickCharName(name).ToUpperInvariant());
         sb.Append('\n');
     }
 
@@ -681,13 +699,13 @@ sealed class LearningModule : IDisposable
                 _charMethodsCaps[entry.Name] = CreateMethodData(capsMethod.Value);
             }
 
-            // Nom français pour les tooltips (champ "unicodeNameFr" du character-index).
-            if (entry.Value.TryGetProperty("unicodeNameFr", out var nameFr))
-            {
-                var name = nameFr.GetString();
-                if (!string.IsNullOrEmpty(name))
-                    _charNames[entry.Name] = name;
-            }
+            // Noms FR/EN pour les tooltips (champs "unicodeNameFr"/"unicodeName" du character-index).
+            string charNameFr = entry.Value.TryGetProperty("unicodeNameFr", out var nameFr)
+                ? nameFr.GetString() ?? "" : "";
+            string charNameEn = entry.Value.TryGetProperty("unicodeName", out var nameEn)
+                ? nameEn.GetString() ?? "" : "";
+            if (charNameFr.Length > 0 || charNameEn.Length > 0)
+                _charNames[entry.Name] = (charNameFr, charNameEn);
         }
     }
 
@@ -817,7 +835,7 @@ sealed class LearningModule : IDisposable
         int screenX = monInfo.rcWork.left;
         int screenY = monInfo.rcWork.top;
 
-        _hWnd = Win32.CreateWindowExW(dwExStyle, WND_CLASS_NAME, "AZERTY Global \u2014 Exercices",
+        _hWnd = Win32.CreateWindowExW(dwExStyle, WND_CLASS_NAME, L.Learning_WindowTitle,
             dwStyle,
             screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2,
             windowW, windowH,
@@ -847,7 +865,7 @@ sealed class LearningModule : IDisposable
         int margin = S(BASE_MARGIN);
 
         // Bouton Quit en owner-draw pour gérer le hover (fond rouge clair).
-        _hWndBtnQuit = Win32.CreateWindowExW(0, "BUTTON", "Quitter les exercices",
+        _hWndBtnQuit = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnQuit,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             margin, 0, S(180), S(30),
             _hWnd, (IntPtr)IDC_BTN_QUIT, hInstance, IntPtr.Zero);
@@ -856,7 +874,7 @@ sealed class LearningModule : IDisposable
         Win32.SetWindowSubclass(_hWndBtnQuit, _quitSubclassProc, (UIntPtr)1, IntPtr.Zero);
 
         // Bouton Skip en owner-draw avec hover rouge clair (même style que Quit).
-        _hWndBtnSkip = Win32.CreateWindowExW(0, "BUTTON", "Passer cet exercice",
+        _hWndBtnSkip = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnSkip,
             Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             0, 0, S(160), S(30),
             _hWnd, (IntPtr)IDC_BTN_SKIP, hInstance, IntPtr.Zero);
@@ -864,20 +882,20 @@ sealed class LearningModule : IDisposable
         _skipSubclassProc = SkipButtonSubclassProc;
         Win32.SetWindowSubclass(_hWndBtnSkip, _skipSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
-        _hWndBtnFinish = Win32.CreateWindowExW(0, "BUTTON", "Terminer",
+        _hWndBtnFinish = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnFinish,
             Win32.WS_CHILD | Win32.WS_TABSTOP,
             0, 0, S(140), S(30),
             _hWnd, (IntPtr)IDC_BTN_FINISH, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnFinish, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
         // Page de choix fin d'exercice : Reessayer + Suivant (cote a cote, centres sous le titre)
-        _hWndBtnRetry = Win32.CreateWindowExW(0, "BUTTON", "Recommencer l'exercice",
+        _hWndBtnRetry = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnRetry,
             Win32.WS_CHILD | Win32.WS_TABSTOP,
             0, 0, S(200), S(36),
             _hWnd, (IntPtr)IDC_BTN_RETRY, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnRetry, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
-        _hWndBtnContinue = Win32.CreateWindowExW(0, "BUTTON", "Exercice suivant",
+        _hWndBtnContinue = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnNext,
             Win32.WS_CHILD | Win32.WS_TABSTOP,
             0, 0, S(180), S(36),
             _hWnd, (IntPtr)IDC_BTN_CONTINUE, hInstance, IntPtr.Zero);
@@ -962,18 +980,35 @@ sealed class LearningModule : IDisposable
             Win32.ShowWindow(_hWndBtnRetry, 1);
             Win32.ShowWindow(_hWndBtnContinue, 1);
             // « Suivant » → « Terminer » au dernier exercice (on basculera ensuite sur la page Bravo finale)
-            bool isLast = _currentStep >= _steps.Length - 1;
-            Win32.SetWindowTextW(_hWndBtnContinue, isLast ? "Terminer les exercices" : "Exercice suivant");
+            bool isLast = _currentStep >= Steps.Length - 1;
+            Win32.SetWindowTextW(_hWndBtnContinue, isLast ? L.Learning_BtnFinishAll : L.Learning_BtnNext);
         }
         else
         {
             Win32.ShowWindow(_hWndBtnQuit, 1);
-            bool skippable = _currentStep < _steps.Length && _steps[_currentStep].Skippable;
+            bool skippable = _currentStep < Steps.Length && Steps[_currentStep].Skippable;
             Win32.ShowWindow(_hWndBtnSkip, skippable ? 1 : 0);
             Win32.ShowWindow(_hWndBtnFinish, 0);
             Win32.ShowWindow(_hWndBtnRetry, 0);
             Win32.ShowWindow(_hWndBtnContinue, 0);
         }
+    }
+
+    /// <summary>Retraduit le tutoriel en direct après une bascule de langue (menu tray) :
+    /// libellés des boutons Win32 fixés à la création + repaint (titre/instruction/cible
+    /// se relisent depuis Steps). La progression et l'étape courante sont préservées.</summary>
+    private void RefreshLanguage()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        Win32.SetWindowTextW(_hWnd, L.Learning_WindowTitle);
+        Win32.SetWindowTextW(_hWndBtnQuit, L.Learning_BtnQuit);
+        Win32.SetWindowTextW(_hWndBtnSkip, L.Learning_BtnSkip);
+        Win32.SetWindowTextW(_hWndBtnFinish, L.Learning_BtnFinish);
+        Win32.SetWindowTextW(_hWndBtnRetry, L.Learning_BtnRetry);
+        Win32.SetWindowTextW(_hWndBtnContinue, L.Learning_BtnNext);
+        UpdateControlVisibility(); // réapplique le libellé dynamique de « Suivant »/« Terminer »
+        RepositionControls();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1289,12 +1324,12 @@ sealed class LearningModule : IDisposable
                     var dis = Marshal.PtrToStructure<Win32.DRAWITEMSTRUCT>(lParam);
                     if (dis.CtlID == IDC_BTN_QUIT)
                     {
-                        DrawHoverButton(in dis, _quitHovered, "Quitter les exercices");
+                        DrawHoverButton(in dis, _quitHovered, L.Learning_BtnQuit);
                         return (IntPtr)1;
                     }
                     if (dis.CtlID == IDC_BTN_SKIP)
                     {
-                        DrawHoverButton(in dis, _skipHovered, "Passer cet exercice");
+                        DrawHoverButton(in dis, _skipHovered, L.Learning_BtnSkip);
                         return (IntPtr)1;
                     }
                     break;
@@ -1458,9 +1493,9 @@ sealed class LearningModule : IDisposable
     private void OnChar(char c)
     {
         if (_completed || _inTransition || _awaitingChoice) return;
-        if (_currentStep >= _steps.Length) return;
+        if (_currentStep >= Steps.Length) return;
 
-        var target = _steps[_currentStep].Target;
+        var target = Steps[_currentStep].Target;
         if (_cursorPosition >= target.Length) return;
 
         char typed = ResolveTypedCharacter(c);
@@ -1528,8 +1563,22 @@ sealed class LearningModule : IDisposable
 
     private void OnBackspace()
     {
-        // Backspace reste neutre pour le texte, mais peut servir a annuler une mauvaise
-        // touche morte activee dans le mapper. On rafraichit alors le guidage vers l'etape 1.
+        // Une mauvaise frappe ne fait pas avancer le curseur, mais reste affichée en erreur.
+        // Backspace l'efface pour permettre de retaper immédiatement le caractère attendu.
+        if (_currentCharError)
+        {
+            _currentCharError = false;
+            ClearPendingPhysicalText();
+            if (_hWnd != IntPtr.Zero)
+            {
+                UpdateHighlight();
+                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+            }
+            return;
+        }
+
+        // Backspace peut aussi annuler une mauvaise touche morte activee dans le mapper.
+        // On rafraichit alors le guidage vers l'etape 1.
         if (_highlightedScancodes.Contains(0x0E))
         {
             UpdateHighlight();
@@ -1547,7 +1596,7 @@ sealed class LearningModule : IDisposable
         _currentStepSuccessCount = 0; // reset pour le nouvel exercice (1er succes => « Bravo ! » s'affiche)
         ClearPendingPhysicalText();
 
-        if (_currentStep >= _steps.Length)
+        if (_currentStep >= Steps.Length)
         {
             _completed = true;
             ClearHighlight();
@@ -1568,7 +1617,7 @@ sealed class LearningModule : IDisposable
 
     private void SkipStep()
     {
-        if (_currentStep < _steps.Length && _steps[_currentStep].Skippable)
+        if (_currentStep < Steps.Length && Steps[_currentStep].Skippable)
             AdvanceToNextStep();
     }
 
@@ -1659,9 +1708,9 @@ sealed class LearningModule : IDisposable
     {
         ClearHighlight();
         if (_completed || _inTransition) return;
-        if (_currentStep >= _steps.Length) return;
+        if (_currentStep >= Steps.Length) return;
 
-        var target = _steps[_currentStep].Target;
+        var target = Steps[_currentStep].Target;
         if (_cursorPosition >= target.Length) return;
 
         var nextChar = target[_cursorPosition].ToString();
@@ -1669,13 +1718,13 @@ sealed class LearningModule : IDisposable
 
         // Si l'exercice demande de garder Verr.Maj activée et qu'une variante Caps existe
         // pour ce caractère, l'utiliser (= ne pas demander Maj redondant à l'utilisateur).
-        if (_steps[_currentStep].KeepCapsHighlight
+        if (Steps[_currentStep].KeepCapsHighlight
             && _charMethodsCaps.TryGetValue(nextChar, out var capsAlt))
         {
             method = capsAlt;
         }
 
-        if (_currentStep == _steps.Length - 1
+        if (_currentStep == Steps.Length - 1
             && GetLanguageExerciseMethod(nextChar) is { } languageMethod)
         {
             method = languageMethod;
@@ -1733,7 +1782,7 @@ sealed class LearningModule : IDisposable
         // KeepCapsHighlight : exercices qui demandent de garder Verr.Maj activée pendant
         // toute la durée de l'exercice (1 et 2). On force Verr.Maj dans le highlight même
         // pour les caractères dont la méthode ne nécessite pas Caps (espace, virgule, !).
-        if (_steps[_currentStep].KeepCapsHighlight)
+        if (Steps[_currentStep].KeepCapsHighlight)
         {
             _highlightedLabels.Add("Verr. Maj.");
             if (string.IsNullOrEmpty(_highlightType)) _highlightType = "direct";
@@ -1804,8 +1853,8 @@ sealed class LearningModule : IDisposable
     {
         if (!isStep2
             && vk.Label == "Verr. Maj."
-            && _currentStep < _steps.Length
-            && _steps[_currentStep].KeepCapsHighlight)
+            && _currentStep < Steps.Length
+            && Steps[_currentStep].KeepCapsHighlight)
         {
             return (CLR_HL_DIRECT, CLR_HL_DIRECT_BG);
         }
@@ -1895,7 +1944,7 @@ sealed class LearningModule : IDisposable
         int dotDiam = S(12);
         int dotSpacing = S(8);
         int dotsTop = y + S(4);
-        for (int i = 0; i < _steps.Length; i++)
+        for (int i = 0; i < Steps.Length; i++)
         {
             uint dotColor = i < _currentStep ? CLR_PROGRESS_DONE
                           : i == _currentStep ? CLR_PROGRESS_CURRENT
@@ -1916,15 +1965,15 @@ sealed class LearningModule : IDisposable
         y += S(22);
         Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, CLR_HEADER_TITLE);
-        string title = $"Exercice {_currentStep + 1}/{_steps.Length} \u2014 {_steps[_currentStep].Title}";
+        string title = L.Learning_ExerciseHeader(_currentStep + 1, Steps.Length, Steps[_currentStep].Title);
         var titleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(32) };
         Win32.DrawTextW(hdc, title, title.Length, ref titleRect, 0);
 
         // Suffixe \u00ab (Bonus) \u00bb \u00e0 la suite du titre, en dor\u00e9, si l'exercice est facultatif.
-        if (_steps[_currentStep].Skippable)
+        if (Steps[_currentStep].Skippable)
         {
             int titleW = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontTitle, title);
-            const string bonusSuffix = " (Bonus)";
+            string bonusSuffix = L.Learning_BonusSuffix;
             var bonusRect = new Win32.RECT { left = margin + titleW, top = y, right = cw - margin, bottom = y + S(32) };
             Win32.SetTextColor(hdc, CLR_BONUS_TEXT);
             Win32.DrawTextW(hdc, bonusSuffix, bonusSuffix.Length, ref bonusRect, 0);
@@ -1934,13 +1983,13 @@ sealed class LearningModule : IDisposable
         y = S(BASE_HEADER_H) + S(4);
         Win32.SelectObject(hdc, _hFontInstruction);
         Win32.SetTextColor(hdc, CLR_INSTRUCTION);
-        string instr = _steps[_currentStep].Instruction;
+        string instr = Steps[_currentStep].Instruction;
         var instrRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(BASE_INSTRUCTION_H) };
         Win32.DrawTextW(hdc, instr, instr.Length, ref instrRect, 0);
 
         // Texte cible — caractère par caractère
         y = S(BASE_HEADER_H + BASE_INSTRUCTION_H) + S(4);
-        var target = _steps[_currentStep].Target;
+        var target = Steps[_currentStep].Target;
         Win32.SelectObject(hdc, _hFontTarget);
 
         int textX = margin;
@@ -2012,22 +2061,21 @@ sealed class LearningModule : IDisposable
 
         // Ligne Verrouillage Majuscule (toujours)
         bool capsActive = _mapper.CapsLockActive;
-        string capsSuffix = capsActive ? "ACTIVÉ" : "désactivé";
+        string capsSuffix = capsActive ? L.Learning_CapsLockOn : L.Learning_CapsLockOff;
         uint capsSuffixColor = capsActive ? CLR_TARGET_CORRECT : CLR_STATUS;
         DrawTwoColorRightAligned(hdc, _hFontStatus,
-            "Verrouillage Majuscule : ", CLR_STATUS,
+            L.Learning_CapsLockLabel, CLR_STATUS,
             capsSuffix, capsSuffixColor,
             rightX, topLineY);
 
         // Ligne Touche morte (si active)
         if (dkLineShown)
         {
-            VirtualKeyboard._deadKeyNamesFr.TryGetValue(activeDk!, out var dkName);
+            var dkNamesDictStatus = L.IsEnglish ? L.DeadKeyNamesEn : VirtualKeyboard._deadKeyNamesFr;
+            dkNamesDictStatus.TryGetValue(activeDk!, out var dkName);
             dkName ??= activeDk!;
             string symbol = GetDeadKeySymbolNonCombining(activeDk!);
-            string dkText = string.IsNullOrEmpty(symbol)
-                ? $"Touche morte : {dkName}"
-                : $"Touche morte : {dkName} {symbol}";
+            string dkText = L.Learning_ActiveDeadKey(dkName, symbol);
             DrawSingleColorRightAligned(hdc, _hFontStatus, dkText, CLR_STATUS, rightX, bottomLineY);
         }
 
@@ -2082,7 +2130,7 @@ sealed class LearningModule : IDisposable
         int centerY = kbTop / 2;
         var hOldFont = Win32.SelectObject(hdc, _hFontTransition);
         Win32.SetTextColor(hdc, CLR_TRANSITION);
-        string text = "\u2713 Bravo !";
+        string text = L.Learning_BravoShort;
         var rect = new Win32.RECT { left = 0, top = centerY - S(20), right = cw, bottom = centerY + S(20) };
         Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         Win32.SelectObject(hdc, hOldFont);
@@ -2112,7 +2160,7 @@ sealed class LearningModule : IDisposable
             // Titre \u00ab \u2713 Bravo ! \u00bb centre, grande police, vert valide
             var hOldFont = Win32.SelectObject(hdc, _hFontTransition);
             Win32.SetTextColor(hdc, CLR_TRANSITION);
-            const string title = "\u2713 Bravo !";
+            string title = L.Learning_BravoShort;
             var titleRect = new Win32.RECT { left = margin, top = titleTop, right = cw - margin, bottom = titleBottom };
             Win32.DrawTextW(hdc, title, title.Length, ref titleRect,
                 Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
@@ -2135,7 +2183,7 @@ sealed class LearningModule : IDisposable
         {
             var items = new (string Text, uint Color)[]
             {
-                ("Touche morte", CLR_DK_CHAR),
+                (L.Learning_LegendDeadKey, CLR_DK_CHAR),
             };
             const string sep = "  —  ";
             int sepW = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontStatus, sep);
@@ -2185,7 +2233,7 @@ sealed class LearningModule : IDisposable
         // Titre \u00ab Bravo ! \u00bb centr\u00e9, grande police, orange brand
         var hOldFont = Win32.SelectObject(hdc, _hFontTransition);
         Win32.SetTextColor(hdc, CLR_PROGRESS_DONE);
-        const string title = "Bravo !";
+        string title = L.Learning_FinalTitle;
         var titleRect = new Win32.RECT { left = margin, top = blockTop, right = cw - margin, bottom = blockTop + titleH };
         Win32.DrawTextW(hdc, title, title.Length, ref titleRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
@@ -2193,7 +2241,7 @@ sealed class LearningModule : IDisposable
         // Sous-titre \u2014 police plus petite, fonc\u00e9e
         Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, CLR_HEADER_TITLE);
-        const string subtitle = "Vous ma\u00eetrisez les bases d'AZERTY Global.";
+        string subtitle = L.Learning_FinalSubtitle;
         var subtitleRect = new Win32.RECT { left = margin, top = blockTop + titleH + gap, right = cw - margin, bottom = blockTop + titleH + gap + subtitleH };
         Win32.DrawTextW(hdc, subtitle, subtitle.Length, ref subtitleRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
@@ -2364,8 +2412,8 @@ sealed class LearningModule : IDisposable
 
             // Badge highlight (1 ou 2)
             bool keepCapsStatusKey = vk.Label == "Verr. Maj."
-                && _currentStep < _steps.Length
-                && _steps[_currentStep].KeepCapsHighlight;
+                && _currentStep < Steps.Length
+                && Steps[_currentStep].KeepCapsHighlight;
             if (isHighlighted && _highlightType == "step1" && !keepCapsStatusKey)
             {
                 PaintBadge(hdc, kx + kw - S(12), ky + S(1), "1", CLR_HL_STEP1);
@@ -2417,7 +2465,7 @@ sealed class LearningModule : IDisposable
         Win32.SetTextColor(hdc, 0x00FFFFFFu);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         var rc = new Win32.RECT { left = 0, top = top, right = cw, bottom = bottom };
-        const string msg = "Cliquez pour reprendre";
+        string msg = L.Learning_ClickToResume;
         Win32.DrawTextW(hdc, msg, msg.Length, ref rc,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         Win32.SelectObject(hdc, hOldFont);
@@ -2459,7 +2507,7 @@ sealed class LearningModule : IDisposable
         }
 
         // Exercices 1 à 5 : affichage simplifié. Exercice 6 : simplifié + quelques aides langues.
-        bool languageExercise = _currentStep == _steps.Length - 1;
+        bool languageExercise = _currentStep == Steps.Length - 1;
         keyDef = FilterKeyForOnboarding(keyDef, vk.Scancode, languageExercise);
 
         // ── 2. Dispatcher selon la famille de touche ──
@@ -3020,6 +3068,8 @@ sealed class LearningModule : IDisposable
 
         _mapper.StateChanged -= OnStateChanged;
         _hook.RawKeyDown -= OnRawKeyDown;
+        if (_onAppLanguageChanged != null)
+            ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
 
         if (_quitSubclassProc != null && _hWndBtnQuit != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndBtnQuit, _quitSubclassProc, (UIntPtr)1);

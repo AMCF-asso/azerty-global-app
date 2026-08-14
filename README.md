@@ -14,7 +14,7 @@ AZERTY Global est une disposition clavier française améliorée, alternative à
 
 L'application Windows permet d'utiliser AZERTY Global **sans installation système et sans droits administrateur**. Elle fonctionne en arrière-plan et intercepte les frappes clavier pour appliquer la disposition.
 
-**Version actuelle du code :** 1.0.0 — package Microsoft Store 1.0.0.0, publié sur le Microsoft Store.
+**État du code :** base 1.1.2 réconciliée avec les fonctions 1.2.0 encore en développement. Le manifeste MSIX local reste en 1.0.0.0 : cette branche n'est pas un package prêt à publier.
 
 ### Fonctionnalités
 
@@ -23,6 +23,9 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 - **Clavier virtuel** — Visualisation interactive de la disposition
 - **Recherche de caractères** — Trouvez n'importe quel caractère parmi les 1 000+ disponibles
 - **Module d'apprentissage** — Leçons interactives pour s'entraîner aux 5 améliorations
+- **Interface française et anglaise** — Changement de langue à chaud dans toute l'application
+- **Statistiques locales** — Compteurs agrégés conservés sur l'appareil, sans télémétrie réseau
+- **Défi du jour facultatif** — Rappels et séances courtes, désactivés par défaut
 - **Suspension automatique pour les jeux** — Détection des applications fullscreen et désactivation transparente du remapping
 - **Compatibilité jeux renforcée** — Mode d'émission natif par scancode et désactivation de sécurité pour les anti-cheats connus
 - **Détection de l'application au premier plan** — Pour des comportements contextuels par application
@@ -51,24 +54,33 @@ Le binaire compilé se trouve dans `src/bin/Release/net8.0-windows10.0.17763.0/w
 
 ### Tests
 
-Le projet inclut une suite de tests unitaires xUnit dans `src/AZERTYGlobal.Tests/`.
+Le projet inclut la suite Windows historique et une suite portable pour le moteur commun.
 
 ```bash
 dotnet test src/AZERTYGlobal.Tests
+dotnet test src/TypingEngine.Core.Tests
 ```
 
-La version 1.0.0 compte 127 tests unitaires.
+La suite comprend 215 tests applicatifs et 6 tests portables du moteur commun. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
 
 ```
 src/                              Code source C#
+├── TypingEngine.Core/            Modèle, JSON et composition portables
+├── TypingEngine.Core.Tests/      Tests du moteur sans dépendance Windows
 ├── Program.cs                    Point d'entrée
 ├── TrayApplication.cs            Application tray (icône, menu)
 ├── KeyboardHook.cs               Hook clavier bas niveau
 ├── KeyMapper.cs                  Mapping des touches (8 couches)
-├── LayoutLoader.cs               Chargement du JSON de disposition
+├── LayoutLoader.cs               Adaptateur de ressource vers le moteur commun
 ├── CharacterSearch.cs            Recherche de caractères
+├── Localization/                 Textes français et anglais
+├── UsageStats.cs                 Statistiques agrégées 100 % locales
+├── UsageStatsWindow.cs           Interface des statistiques locales
+├── DailyChallenge.cs             Sélection du défi quotidien
+├── TrainingReminders.cs          Politique locale de rappels facultatifs
+├── ToastActivation.cs            Activation des notifications Store
 ├── VirtualKeyboard.cs            Clavier virtuel interactif
 ├── LearningModule.cs             Module d'apprentissage interactif
 ├── LessonsWindow.cs              Fenêtre Leçons avec catalogue et mode libre

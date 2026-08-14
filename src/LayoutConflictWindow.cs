@@ -160,7 +160,7 @@ sealed class LayoutConflictWindow : IDisposable
         int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
 
         _hWnd = Win32.CreateWindowExW(dwExStyle, WND_CLASS_NAME,
-            "AZERTY Global — Disposition système détectée",
+            L.LayoutConflict_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         Win32.EnableDarkTitleBar(_hWnd);
@@ -170,12 +170,12 @@ sealed class LayoutConflictWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
-        _hWndBtnQuit = Win32.CreateWindowExW(0, "BUTTON", "Quitter l'application",
+        _hWndBtnQuit = Win32.CreateWindowExW(0, "BUTTON", L.LayoutConflict_BtnQuit,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_QUIT, hInstance, IntPtr.Zero);
 
-        _hWndBtnKeep = Win32.CreateWindowExW(0, "BUTTON", "Garder l'application",
+        _hWndBtnKeep = Win32.CreateWindowExW(0, "BUTTON", L.LayoutConflict_BtnKeep,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_KEEP, hInstance, IntPtr.Zero);
@@ -310,7 +310,7 @@ sealed class LayoutConflictWindow : IDisposable
         Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, CLR_TITLE);
         var titleRect = new Win32.RECT { left = x, top = y, right = x + contentW, bottom = y + S(28) };
-        Win32.DrawTextW(hdc, "Disposition système AZERTY Global détectée", -1, ref titleRect,
+        Win32.DrawTextW(hdc, L.LayoutConflict_Title, -1, ref titleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         y += S(36);
 
@@ -318,8 +318,8 @@ sealed class LayoutConflictWindow : IDisposable
         Win32.SelectObject(hdc, _hFontText);
         Win32.SetTextColor(hdc, CLR_TEXT);
         string introText = _isAtStartup
-            ? "Une disposition système AZERTY Global est déjà installée sur cet ordinateur."
-            : "Une disposition système AZERTY Global vient d'être activée sur cet ordinateur.";
+            ? L.LayoutConflict_IntroAtStartup
+            : L.LayoutConflict_IntroAfterSwitch;
         int introH = MeasureWrapped(hdc, _hFontText, introText, contentW);
         var introRect = new Win32.RECT { left = x, top = y, right = x + contentW, bottom = y + introH };
         Win32.DrawTextW(hdc, introText, -1, ref introRect,
@@ -330,22 +330,22 @@ sealed class LayoutConflictWindow : IDisposable
         Win32.SelectObject(hdc, _hFontBold);
         Win32.SetTextColor(hdc, CLR_TITLE);
         var qRect = new Win32.RECT { left = x, top = y, right = x + contentW, bottom = y + S(20) };
-        Win32.DrawTextW(hdc, "Quel est ton besoin ?", -1, ref qRect,
+        Win32.DrawTextW(hdc, L.LayoutConflict_Question, -1, ref qRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         y += S(28);
 
         // Section 1 — avant login
         DrawOption(hdc, ref y, x, contentW,
-            "▸ Taper avec AZERTY Global AVANT le login",
-            "(mot de passe Windows, écran de verrouillage, UAC, BitLocker)",
-            "→ Garde la disposition système et quitte cette application — elle fait double emploi et ne tourne pas avant le login de toute façon.");
+            L.LayoutConflict_Option1Heading,
+            L.LayoutConflict_Option1Subline,
+            L.LayoutConflict_Option1Body);
         y += S(10);
 
         // Section 2 — confort post-login
         DrawOption(hdc, ref y, x, contentW,
-            "▸ Profiter du clavier virtuel et de la recherche de caractère",
+            L.LayoutConflict_Option2Heading,
             null,
-            "→ Utilise plutôt cette application. Enlève AZERTY Global de la liste des dispositions chargées dans les options de langue (Paramètres Windows → Heure et langue → Langue → Options de la langue concernée). N'oublie pas alors de cocher « Lancer au démarrage de Windows » dans cette application pour qu'elle soit toujours active après le login.");
+            L.LayoutConflict_Option2Body);
 
         Win32.BitBlt(hdcPaint, 0, 0, cw, ch, hdc, 0, 0, Win32.SRCCOPY);
         Win32.SelectObject(hdc, hBmpOld);
