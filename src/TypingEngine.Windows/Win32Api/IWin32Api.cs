@@ -1,13 +1,13 @@
 // Abstraction des P/Invoke critiques utilisés par KeyMapper et ForegroundMonitor.
 // Permet d'injecter une implémentation mock dans les tests unitaires.
 //
-// KeyboardHook n'utilise PAS cette interface : sa nature (SetWindowsHookEx) est
-// intrinsèquement liée à un appel statique, et il est testé manuellement via
-// smoke tests. Cf. plan v0.9.7 § « KeyboardHook n'est PAS refactoré ».
+// KeyboardHook conserve ses appels statiques SetWindowsHookEx : le callback natif
+// reste couvert par les smoke tests, tandis que sa logique de mapping est testée
+// via KeyMapper et cette interface.
 
-namespace AZERTYGlobal;
+namespace TypingEngine.Windows;
 
-internal interface IWin32Api
+public interface IWin32Api
 {
     // Layout / clavier
     short VkKeyScanExW(char ch, IntPtr hkl);

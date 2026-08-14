@@ -1,7 +1,6 @@
-﻿using AZERTYGlobal;
 using Xunit;
 
-namespace AZERTYGlobal.Tests;
+namespace TypingEngine.Windows.Tests;
 
 /// <summary>
 /// Tests niveau 1 + 2 sur les méthodes de construction d'INPUT du KeyMapper.

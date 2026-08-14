@@ -30,7 +30,13 @@ jobs:
       - name: Publish ARM64
         run: dotnet publish src/AZERTYGlobal.csproj -c Release -r win-arm64
 
-      - name: Test
+      - name: Test Core
+        run: dotnet test src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj -c Release
+
+      - name: Test Windows engine
+        run: dotnet test src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj -c Release
+
+      - name: Test application
         run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release
 
       - name: Pack MSIX

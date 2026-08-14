@@ -23,10 +23,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AZERTYGlobal.csproj" />
+    <ProjectReference Include="..\TypingEngine.Windows\TypingEngine.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="**/*(# Name clash *).cs" />
+    <Compile Include="..\TestSupport\MockWin32Api.cs" Link="TestSupport\MockWin32Api.cs" />
   </ItemGroup>
 
 </Project>

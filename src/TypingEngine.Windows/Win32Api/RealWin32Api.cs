@@ -2,9 +2,9 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace AZERTYGlobal;
+namespace TypingEngine.Windows;
 
-internal sealed class RealWin32Api : IWin32Api
+public sealed class RealWin32Api : IWin32Api
 {
     public short VkKeyScanExW(char ch, IntPtr hkl) => Win32.VkKeyScanExW(ch, hkl);
 

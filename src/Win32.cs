@@ -117,39 +117,6 @@ static class Win32
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct INPUT
-    {
-        public uint type;
-        public INPUTUNION u;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 32)]
-    public struct INPUTUNION
-    {
-        [FieldOffset(0)] public KEYBDINPUT ki;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct KEYBDINPUT
-    {
-        public ushort wVk;
-        public ushort wScan;
-        public uint dwFlags;
-        public uint time;
-        public IntPtr dwExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct KBDLLHOOKSTRUCT
-    {
-        public uint vkCode;
-        public uint scanCode;
-        public uint flags;
-        public uint time;
-        public IntPtr dwExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
     public struct MINMAXINFO
     {
         public POINT ptReserved;
@@ -164,7 +131,6 @@ static class Win32
     // ═══════════════════════════════════════════════════════════════
 
     public delegate IntPtr WNDPROC(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-    public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
     public delegate IntPtr SUBCLASSPROC(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData);
 
     // ═══════════════════════════════════════════════════════════════
@@ -570,26 +536,10 @@ static class Win32
     // ═══════════════════════════════════════════════════════════════
 
     [DllImport("user32.dll")]
-    public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-    [DllImport("user32.dll")]
-    public static extern short GetAsyncKeyState(int vKey);
-
-    [DllImport("user32.dll")]
     public static extern short GetKeyState(int nVirtKey);
 
     [DllImport("user32.dll")]
-    public static extern short VkKeyScanW(char ch);
-
-    [DllImport("user32.dll")]
-    public static extern uint MapVirtualKeyW(uint uCode, uint uMapType);
-
-    [DllImport("user32.dll")]
     public static extern uint MapVirtualKeyExW(uint uCode, uint uMapType, IntPtr dwhkl);
-
-    [DllImport("user32.dll")]
-    public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
-        [Out] System.Text.StringBuilder pwszBuff, int cchBuff, uint wFlags);
 
     [DllImport("user32.dll")]
     public static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
@@ -597,20 +547,6 @@ static class Win32
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetKeyboardLayout(uint idThread);
-
-    // ═══════════════════════════════════════════════════════════════
-    // P/Invoke — Keyboard hook
-    // ═══════════════════════════════════════════════════════════════
-
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — Focus / Thread
@@ -853,54 +789,12 @@ static class Win32
     public static extern int GetWindowTextW(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
     // ═══════════════════════════════════════════════════════════════
-    // P/Invoke — Process inspection (PSAPI) — pour ForegroundMonitor
+    // P/Invoke — PID de la fenêtre au premier plan
     // ═══════════════════════════════════════════════════════════════
-
-    [DllImport("psapi.dll", SetLastError = true)]
-    public static extern bool EnumProcessModulesEx(IntPtr hProcess, [Out] IntPtr[] lphModule, uint cb, out uint lpcbNeeded, uint dwFilterFlag);
-    public const uint LIST_MODULES_ALL = 0x03;
-
-    [DllImport("psapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern uint GetModuleFileNameExW(IntPtr hProcess, IntPtr hModule, [Out] System.Text.StringBuilder lpFilename, uint nSize);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool QueryFullProcessImageNameW(IntPtr hProcess, uint dwFlags, [Out] System.Text.StringBuilder lpExeName, ref uint lpdwSize);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
-    public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
-    public const uint PROCESS_VM_READ = 0x10;
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool CloseHandle(IntPtr hObject);
 
     /// <summary>Surcharge avec out uint pour récupérer le PID en plus du TID.</summary>
     [DllImport("user32.dll", EntryPoint = "GetWindowThreadProcessId")]
     public static extern uint GetWindowThreadProcessIdOut(IntPtr hWnd, out uint lpdwProcessId);
-
-    // ═══════════════════════════════════════════════════════════════
-    // P/Invoke — Layout natif (combo native)
-    // ═══════════════════════════════════════════════════════════════
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    public static extern short VkKeyScanExW(char ch, IntPtr dwhkl);
-
-    // ═══════════════════════════════════════════════════════════════
-    // P/Invoke — Window event hook (foreground tracking)
-    // ═══════════════════════════════════════════════════════════════
-
-    public delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
-        int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
-        WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
-
-    [DllImport("user32.dll")]
-    public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
-
-    public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
-    public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
 
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — Menu radio items (sous-menu compatibilité)
@@ -913,11 +807,10 @@ static class Win32
     public const uint MF_BYPOSITION = 0x00000400;
 
     // ═══════════════════════════════════════════════════════════════
-    // Constantes additionnelles (compat layer)
+    // Constantes additionnelles (changement de disposition)
     // ═══════════════════════════════════════════════════════════════
 
     public const uint WM_INPUTLANGCHANGE = 0x0051;
-    public const uint VK_NUMLOCK = 0x90;
 
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — Alimentation / session (réinstallation du hook)

@@ -10,9 +10,7 @@
 // Les tests niveau 3 valident donc la LOGIQUE de construction des INPUT[],
 // pas le comportement runtime de Windows.
 
-using AZERTYGlobal;
-
-namespace AZERTYGlobal.Tests;
+namespace TypingEngine.Windows.Testing;
 
 internal sealed class MockWin32Api : IWin32Api
 {
@@ -131,4 +129,27 @@ internal sealed class MockWin32Api : IWin32Api
         UnhookWinEventCalled = true;
         return true;
     }
+}
+
+internal sealed class TestWindowsTypingHost : IWindowsTypingHost
+{
+    private readonly Dictionary<string, string> _overrides =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public uint ShortcutCharacterSearchVk { get; set; }
+    public uint ShortcutVirtualKeyboardVk { get; set; }
+    public bool CompatibilityDebugLog { get; set; }
+    public List<string> EmittedTexts { get; } = new();
+
+    public void SetCompatibilityOverride(string processName, string mode) =>
+        _overrides[processName] = mode;
+
+    public string? GetCompatibilityOverride(string processName) =>
+        _overrides.TryGetValue(processName, out var mode) ? mode : null;
+
+    public string AnonymizeProcessName(string? processName) => processName ?? "unknown";
+    public void RecordEmittedText(string text) => EmittedTexts.Add(text);
+    public void Log(string context, Exception exception) { }
+    public void LogCompatibilityEvent(string eventName, string details) { }
+    public void LogCompatibilityCriticalEvent(string eventName, string details) { }
 }

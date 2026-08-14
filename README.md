@@ -54,14 +54,15 @@ Le binaire compilé se trouve dans `src/bin/Release/net8.0-windows10.0.17763.0/w
 
 ### Tests
 
-Le projet inclut la suite Windows historique et une suite portable pour le moteur commun.
+Le projet sépare les tests du produit, de l'adaptateur Windows et du moteur portable.
 
 ```bash
 dotnet test src/AZERTYGlobal.Tests
+dotnet test src/TypingEngine.Windows.Tests
 dotnet test src/TypingEngine.Core.Tests
 ```
 
-La suite comprend 215 tests applicatifs et 6 tests portables du moteur commun. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
+La suite comprend 121 tests applicatifs, 95 tests Windows et 6 tests portables, soit 222 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
 
@@ -69,10 +70,12 @@ La suite comprend 215 tests applicatifs et 6 tests portables du moteur commun. L
 src/                              Code source C#
 ├── TypingEngine.Core/            Modèle, JSON et composition portables
 ├── TypingEngine.Core.Tests/      Tests du moteur sans dépendance Windows
+├── TypingEngine.Windows/         Hook, injection et compatibilité Windows
+├── TypingEngine.Windows.Tests/   Tests isolés de l'adaptateur Windows
+├── TestSupport/                  Doubles partagés par les suites de tests
 ├── Program.cs                    Point d'entrée
 ├── TrayApplication.cs            Application tray (icône, menu)
-├── KeyboardHook.cs               Hook clavier bas niveau
-├── KeyMapper.cs                  Mapping des touches (8 couches)
+├── AzertyGlobalWindowsTypingHost.cs Adaptateur configuration/statistiques du produit
 ├── LayoutLoader.cs               Adaptateur de ressource vers le moteur commun
 ├── CharacterSearch.cs            Recherche de caractères
 ├── Localization/                 Textes français et anglais
@@ -93,11 +96,9 @@ src/                              Code source C#
 ├── SettingsWindow.cs             Fenêtre des paramètres
 ├── ConfigManager.cs              Gestion de la configuration
 ├── AutoStart.cs                  Démarrage automatique
-├── ForegroundMonitor.cs          Détection de l'application au premier plan
-├── GameRegistry.cs               Suspension automatique pour les jeux
 ├── GdiHelpers.cs                 Utilitaires GDI+ (rendu texte)
 ├── GdiImageLoader.cs             Chargement d'images GDI+
-├── Win32.cs                      Interop Win32 / P/Invoke
+├── Win32.cs                      Interop Win32 propre à l'interface du produit
 ├── AssemblyAttributes.cs         Attributs d'assemblage
 ├── AZERTY Global 2026.json       Disposition clavier (ressource embarquée)
 ├── character-index.json          Index de recherche (ressource embarquée)
@@ -105,8 +106,7 @@ src/                              Code source C#
 ├── favicon-azerty-global.png     Icône (ressource embarquée)
 ├── discord-icon.png              Icône Discord (ressource embarquée)
 ├── Properties/                   Métadonnées du projet
-├── Win32Api/                     Interfaces et implémentations Win32 (testabilité)
-└── AZERTYGlobal.Tests/           Tests unitaires xUnit
+└── AZERTYGlobal.Tests/           Tests du produit et d'intégration xUnit
 msix/                             Packaging Microsoft Store
 ├── AppxManifest.xml              Manifeste MSIX
 ├── Fiche Store.md                Descriptions FR/EN pour le Store

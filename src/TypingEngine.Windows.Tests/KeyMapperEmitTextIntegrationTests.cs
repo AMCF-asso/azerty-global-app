@@ -1,32 +1,15 @@
-using AZERTYGlobal;
 using Xunit;
 
-namespace AZERTYGlobal.Tests;
+namespace TypingEngine.Windows.Tests;
 
 /// <summary>
 /// Tests niveau 3 — EmitText() avec ForegroundMonitor mocké.
 /// Vérifie le dispatch entre Default (Unicode), NativeCombo (combo native ou Alt+code).
 /// </summary>
-public class KeyMapperEmitTextIntegrationTests : IDisposable
+public class KeyMapperEmitTextIntegrationTests
 {
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const uint KEYEVENTF_SCANCODE = 0x0008;
-
-    private readonly string _tempDir;
-    private readonly string _configPath;
-
-    public KeyMapperEmitTextIntegrationTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "AZGKM_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-        _configPath = Path.Combine(_tempDir, "config.json");
-        ConfigManager.OverrideConfigPathForTests(_configPath);
-    }
-
-    public void Dispose()
-    {
-        try { Directory.Delete(_tempDir, true); } catch { }
-    }
 
     [Fact]
     public void EmitText_DefaultMode_UsesKeyEventfUnicode()
@@ -175,6 +158,18 @@ public class KeyMapperEmitTextIntegrationTests : IDisposable
         // Un seul appel SendInput pour les 3 caractères (batching)
         Assert.Single(mock.SendInputCalls);
         Assert.Equal(6, mock.SendInputCalls[0].Length); // 3 chars × 2 events
+    }
+
+    [Fact]
+    public void EmitText_ReportsTextToHost()
+    {
+        var mock = new MockWin32Api();
+        var host = new TestWindowsTypingHost();
+        var km = new KeyMapper(new Layout(), mock, host);
+
+        km.EmitText("abc");
+
+        Assert.Equal(new[] { "abc" }, host.EmittedTexts);
     }
 
     [Fact]
