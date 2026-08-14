@@ -60,6 +60,9 @@
     <Compile Remove="AZERTYGlobal.Tests/**/*.cs" />
     <Compile Remove="TypingEngine.Core/**/*.cs" />
     <Compile Remove="TypingEngine.Core.Tests/**/*.cs" />
+    <Compile Remove="TypingEngine.Windows/**/*.cs" />
+    <Compile Remove="TypingEngine.Windows.Tests/**/*.cs" />
+    <Compile Remove="TestSupport/**/*.cs" />
   </ItemGroup>
 
   <!-- InternalsVisibleTo déclaré directement dans AssemblyAttributes.cs car
@@ -82,6 +85,7 @@
 
   <ItemGroup>
     <ProjectReference Include="TypingEngine.Core\TypingEngine.Core.csproj" />
+    <ProjectReference Include="TypingEngine.Windows\TypingEngine.Windows.csproj" />
   </ItemGroup>
 
 </Project>

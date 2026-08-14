@@ -133,6 +133,7 @@ sealed class TrayApplication : IDisposable
 
     // Compatibilité jeux (v0.9.7) : couche de détection foreground + désactivation auto anti-cheat
     private readonly IWin32Api _win32Api = new RealWin32Api();
+    private readonly IWindowsTypingHost _typingHost = new AzertyGlobalWindowsTypingHost();
     private ForegroundMonitor? _foregroundMonitor;
     private bool _wasEnabledBeforeAutoDisable;
     private bool _suspendedForCompatibility;
@@ -277,10 +278,10 @@ sealed class TrayApplication : IDisposable
     {
         var layout = LayoutLoader.LoadFromResource();
         _layout = layout;
-        _mapper = new KeyMapper(layout, _win32Api);
+        _mapper = new KeyMapper(layout, _win32Api, _typingHost);
         _mapper.StateChanged += OnStateChanged;
         _mapper.ToggleRequested += OnToggleShortcut;
-        _hook = new KeyboardHook(_mapper);
+        _hook = new KeyboardHook(_mapper, _typingHost);
         _hook.RawKeyDown += OnKeyPressed;
         _hook.SearchRequested += () => Win32.PostMessageW(_hWnd, WM_APP_SEARCH, IntPtr.Zero, IntPtr.Zero);
         _hook.VirtualKeyboardRequested += () => Win32.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);
@@ -320,7 +321,7 @@ sealed class TrayApplication : IDisposable
         // fenêtre tray (HWND requis pour le SetTimer debounce). Mode dégradé si échec.
         try
         {
-            _foregroundMonitor = new ForegroundMonitor(_win32Api, _hWnd);
+            _foregroundMonitor = new ForegroundMonitor(_win32Api, _hWnd, _typingHost);
             _foregroundMonitor.ForegroundChanged += OnForegroundChanged;
             _mapper.SetForegroundMonitor(_foregroundMonitor);
             // Le ctor de ForegroundMonitor a deja calcule un snapshot initial avant

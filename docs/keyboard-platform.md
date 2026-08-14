@@ -27,7 +27,7 @@ Projet `net8.0` portable, sans cible `-windows` et sans P/Invoke :
 
 Le Core reçoit des entrées explicites et retourne des décisions. Il ne capture pas le clavier, n'injecte pas de frappes, n'ouvre pas de fenêtre et ne charge pas une ressource propre à une application.
 
-### `TypingEngine.Windows` — prochaine extraction
+### `TypingEngine.Windows`
 
 Projet Windows commun :
 
@@ -37,7 +37,9 @@ Projet Windows commun :
 - adaptation au layout de la fenêtre active ;
 - politique de pass-through et compatibilité jeux.
 
-Le code correspondant vit encore dans `KeyMapper`, `KeyboardHook`, `ForegroundMonitor`, `Win32` et `Win32Api`. Il sera déplacé par tranches couvertes par les tests existants.
+Cette couche est maintenant extraite dans un projet `net8.0-windows10.0.17763.0` séparé. Elle contient `KeyMapper`, `KeyboardHook`, `ForegroundMonitor`, `GameRegistry`, les P/Invoke strictement nécessaires à la saisie et l'abstraction testable `IWin32Api`.
+
+Le contrat `IWindowsTypingHost` inverse la dépendance vers le produit : AZERTY Global fournit les raccourcis, les overrides de compatibilité, la journalisation et le compteur local de texte émis. La couche Windows ne référence donc ni `ConfigManager`, ni `UsageStats`, ni une classe de l'application.
 
 ### `App.*`
 
@@ -58,11 +60,14 @@ La première tranche est intégrée :
 - `LayoutLoader` n'est plus qu'un adaptateur de ressource propre à l'application ;
 - `KeyMapper` délègue la composition des touches mortes au Core ;
 - `TypingEngine.Core.Tests` cible `net8.0` et s'exécute sans l'application ni Windows.
+- `TypingEngine.Windows` porte désormais le remapping, le hook global, l'injection et la politique de compatibilité Windows ;
+- `TypingEngine.Windows.Tests` contient 95 tests de caractérisation indépendants du produit ;
+- `AzertyGlobalWindowsTypingHost` est le seul adaptateur entre les services du moteur et la configuration/statistique du produit.
 
 ## Séquence d'extraction
 
-1. Compléter les tests de caractérisation nécessaires à chaque tranche Windows avant son déplacement.
-2. Extraire `TypingEngine.Windows` derrière des contrats d'entrée et de sortie, sans renommer simultanément l'application.
+1. Terminé — compléter et transférer les tests de caractérisation de la couche Windows.
+2. Terminé — extraire `TypingEngine.Windows` derrière `IWin32Api` et `IWindowsTypingHost`, sans renommer simultanément l'application.
 3. Déplacer les dispositions vers un dossier partagé validé par schéma, tout en gardant les fichiers canoniques protégés inchangés.
 4. Renommer le projet produit en `App.AZERTYGlobal` seulement après stabilisation des références et du packaging AOT/MSIX.
 5. Ajouter un second produit ou module comme preuve de réutilisation avant toute publication NuGet.
@@ -71,6 +76,7 @@ La première tranche est intégrée :
 
 - aucune référence de `TypingEngine.Core` vers `AZERTYGlobal` ou une autre application ;
 - aucune API Windows dans le Core ;
+- aucune référence de `TypingEngine.Windows` vers `AZERTYGlobal` ou ses services concrets ;
 - aucune règle de disposition codée dans une UI ;
 - chaque bug moteur reçoit un test au niveau commun ;
 - un module optionnel dépend du Core, jamais l'inverse ;

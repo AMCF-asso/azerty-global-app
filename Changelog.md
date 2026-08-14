@@ -4,6 +4,7 @@
 
 - Report de la base interne 1.1.2 et des fonctions 1.2.0 en développement dans le dépôt public canonique : interface bilingue, statistiques locales, défi quotidien facultatif, rappels d'entraînement et activation des notifications Store.
 - Extraction du modèle de disposition, du parseur JSON et de la composition des touches mortes dans `TypingEngine.Core`, projet portable partagé et couvert par sa propre suite de tests.
+- Extraction du remapping, du hook clavier, de l'injection Win32 et de la compatibilité jeux dans `TypingEngine.Windows`. L'application fournit désormais sa configuration, ses journaux et ses statistiques via `IWindowsTypingHost`.
 - Aucun package MSIX n'a été produit et aucune publication n'a été effectuée. Le manifeste de packaging reste volontairement inchangé jusqu'à la revue de release.
 
 ## Version 1.0.0 — 29 juin 2026

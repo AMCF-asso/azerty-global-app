@@ -12,9 +12,9 @@
 // release. À l'horizon v1.0+, envisager de la charger depuis un fichier embarqué
 // ou téléchargé périodiquement (cf. plan v0.9.7 § Évolutions futures).
 
-namespace AZERTYGlobal;
+namespace TypingEngine.Windows;
 
-internal static class GameRegistry
+public static class GameRegistry
 {
     /// <summary>
     /// Clients de connexion à distance pour lesquels le remapping local doit être suspendu.

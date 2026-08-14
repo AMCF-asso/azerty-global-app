@@ -1,9 +1,8 @@
-using AZERTYGlobal;
 using Xunit;
 
-namespace AZERTYGlobal.Tests;
+namespace TypingEngine.Windows.Tests;
 
-public class KeyMapperPassThroughLayoutTests : IDisposable
+public class KeyMapperPassThroughLayoutTests
 {
     private const uint SC_E01 = 0x02;
     private const uint SC_D01 = 0x10;
@@ -20,20 +19,6 @@ public class KeyMapperPassThroughLayoutTests : IDisposable
     private static readonly IntPtr HklFrAzerty = (IntPtr)0x040C040C;
     private static readonly IntPtr HklUsQwerty = (IntPtr)0x04090409;
     private static readonly short KeyDown = unchecked((short)0x8000);
-
-    private readonly string _tempDir;
-
-    public KeyMapperPassThroughLayoutTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), "AZGPT_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_tempDir);
-        ConfigManager.OverrideConfigPathForTests(Path.Combine(_tempDir, "config.json"));
-    }
-
-    public void Dispose()
-    {
-        try { Directory.Delete(_tempDir, true); } catch { }
-    }
 
     [Fact]
     public void ProcessKey_QwertyForeground_DoesNotPassThroughAzertyPositions()

@@ -1,11 +1,11 @@
 // Moteur de remapping — traduit les scancodes en caractères AZERTY Global
-namespace AZERTYGlobal;
+namespace TypingEngine.Windows;
 
 /// <summary>
 /// Gère la logique de remapping clavier.
 /// Reçoit les événements du hook et émet les caractères AZERTY Global.
 /// </summary>
-sealed class KeyMapper
+public sealed class KeyMapper
 {
     // Virtual key codes
     private const uint VK_SHIFT = 0x10;
@@ -32,6 +32,7 @@ sealed class KeyMapper
     private readonly Layout _layout;
     private readonly CompositionEngine _composition;
     private readonly IWin32Api _api;
+    private readonly IWindowsTypingHost _host;
     private ForegroundMonitor? _foregroundMonitor;
 
     private bool _capsLockState;
@@ -74,11 +75,12 @@ sealed class KeyMapper
     /// Constructeur principal pour les tests (IWin32Api injecté).
     /// La version <see cref="KeyMapper(Layout)"/> appelle celle-ci avec un RealWin32Api.
     /// </summary>
-    internal KeyMapper(Layout layout, IWin32Api api)
+    public KeyMapper(Layout layout, IWin32Api api, IWindowsTypingHost? host = null)
     {
         _layout = layout;
         _composition = new CompositionEngine(layout);
         _api = api;
+        _host = host ?? NullWindowsTypingHost.Instance;
         // Lire l'état initial du Caps Lock
         _capsLockState = (_api.GetKeyState(0x14) & 0x0001) != 0;
         // Vider le buffer de touche morte du layout Windows sous-jacent
@@ -89,7 +91,7 @@ sealed class KeyMapper
     /// <summary>
     /// Injecte le ForegroundMonitor pour permettre l'émission en mode combo native.
     /// Null-safe : si non injecté, fallback Unicode (comportement v0.9.6).
-    /// Appelé depuis TrayApplication après création de la fenêtre tray.
+    /// Appelé par le produit hôte après création de sa fenêtre principale.
     /// </summary>
     public void SetForegroundMonitor(ForegroundMonitor? monitor) => _foregroundMonitor = monitor;
 
@@ -149,7 +151,7 @@ sealed class KeyMapper
     /// </summary>
     public void SyncState()
     {
-        bool actualCaps = (Win32.GetKeyState(0x14) & 0x0001) != 0;
+        bool actualCaps = (_api.GetKeyState(0x14) & 0x0001) != 0;
         bool changed = _capsLockState != actualCaps;
         _capsLockState = actualCaps;
 
@@ -186,7 +188,7 @@ sealed class KeyMapper
     /// ignore proprement). Évite les "stuck keys" côté apps qui suivent l'état
     /// up/down par scancode.
     /// </summary>
-    internal void ClearPassedThroughKeys()
+    public void ClearPassedThroughKeys()
     {
         Win32.INPUT[]? inputs = null;
         lock (_passedThroughKeysLock)
@@ -740,8 +742,8 @@ sealed class KeyMapper
     internal void EmitText(string text)
     {
         // Statistiques locales d'usage (v1.1) : compteurs en mémoire uniquement, aucune
-        // I/O ici — cf. UsageStats.RecordEmittedText. Rien de ceci ne quitte la machine.
-        UsageStats.RecordEmittedText(text);
+        // I/O ici : l'hôte reçoit uniquement le texte émis pour ses compteurs locaux.
+        _host.RecordEmittedText(text);
 
         // Audit sécu 2026-05 SEV-A2-05 : lecture atomique single-shot du snapshot
         // ForegroundMonitor. Évite race mode/hkl discordants pendant alt-tab.

@@ -2,13 +2,13 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-namespace AZERTYGlobal;
+namespace TypingEngine.Windows;
 
 /// <summary>
 /// Hook clavier bas niveau (WH_KEYBOARD_LL).
 /// Intercepte les frappes au niveau système et les redirige vers le KeyMapper.
 /// </summary>
-sealed class KeyboardHook : IDisposable
+public sealed class KeyboardHook : IDisposable
 {
     private const int WH_KEYBOARD_LL = 13;
 
@@ -32,6 +32,7 @@ sealed class KeyboardHook : IDisposable
     private IntPtr _hookId = IntPtr.Zero;
     private readonly Win32.LowLevelKeyboardProc _proc;
     private readonly KeyMapper _mapper;
+    private readonly IWindowsTypingHost _host;
     private bool _enabled = true;
     private bool _passThroughAll;
 
@@ -74,9 +75,10 @@ sealed class KeyboardHook : IDisposable
     /// </summary>
     public bool ShortcutsWhilePassThrough { get; set; }
 
-    public KeyboardHook(KeyMapper mapper)
+    public KeyboardHook(KeyMapper mapper, IWindowsTypingHost? host = null)
     {
         _mapper = mapper;
+        _host = host ?? NullWindowsTypingHost.Instance;
         _proc = HookCallback;
         ReloadShortcuts();
     }
@@ -84,8 +86,8 @@ sealed class KeyboardHook : IDisposable
     /// <summary>Recharge les raccourcis depuis la configuration.</summary>
     public void ReloadShortcuts()
     {
-        _vkSearch = ConfigManager.ShortcutCharacterSearchVk;
-        _vkVirtualKeyboard = ConfigManager.ShortcutVirtualKeyboardVk;
+        _vkSearch = _host.ShortcutCharacterSearchVk;
+        _vkVirtualKeyboard = _host.ShortcutVirtualKeyboardVk;
         // Sécurité : si les deux raccourcis sont identiques, désactiver le second
         if (_vkSearch != 0 && _vkSearch == _vkVirtualKeyboard)
             _vkVirtualKeyboard = 0;
@@ -119,7 +121,7 @@ sealed class KeyboardHook : IDisposable
             // Journaliser aussi le cas « ancien hook conservé » (retour true) : si cet
             // ancien hook a été décroché silencieusement par Windows (cas visé par le
             // watchdog), l'échec resterait sinon invisible jusqu'au tick suivant.
-            ConfigManager.LogCompatCriticalEvent("HookReinstallFailed",
+            _host.LogCompatibilityCriticalEvent("HookReinstallFailed",
                 _hookId != IntPtr.Zero
                     ? "SetWindowsHookEx returned NULL; keeping previous hook"
                     : "SetWindowsHookEx returned NULL; no hook installed");
@@ -228,9 +230,9 @@ sealed class KeyboardHook : IDisposable
         catch (Exception ex)
         {
             // SEV-A2-04 : log + fallthrough vers CallNextHookEx pour ne pas perdre
-            // la frappe et ne pas crash le process. ConfigManager.Log catch elle-même
+            // la frappe et ne pas crash le process. Le service de log hôte absorbe
             // ses propres erreurs en interne.
-            try { ConfigManager.Log("KeyboardHook.HookCallback", ex); } catch { }
+            try { _host.Log("KeyboardHook.HookCallback", ex); } catch { }
             return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
     }

@@ -5,7 +5,7 @@
 // - Le callback est routé vers le thread de la boucle de messages (WINEVENT_OUTOFCONTEXT
 //   sur le thread qui a appelé SetWinEventHook, soit notre thread principal)
 // - Debounce 100 ms via SetTimer sur la fenêtre tray (pour absorber les rafales d'alt-tab)
-// - À l'expiration du timer, TrayApplication appelle Recompute() qui :
+// - À l'expiration du timer, le produit hôte appelle Recompute() qui :
 //   1. lit le process foreground via IWin32Api.TryGetForegroundProcess
 //   2. énumère les modules du process via IWin32Api.TryEnumProcessModules
 //   3. calcule CurrentMode selon la liste anti-cheat / DLL signatures / overrides utilisateur
@@ -14,9 +14,9 @@
 // Mode dégradé : si SetWinEventHook retourne IntPtr.Zero (env MSIX restrictif rare),
 // CurrentMode reste à Default et l'app fonctionne en comportement v0.9.6.
 
-namespace AZERTYGlobal;
+namespace TypingEngine.Windows;
 
-internal enum CompatibilityMode
+public enum CompatibilityMode
 {
     /// <summary>Comportement v0.9.6 — injection KEYEVENTF_UNICODE.</summary>
     Default,
@@ -26,7 +26,7 @@ internal enum CompatibilityMode
     DisabledAntiCheat
 }
 
-internal enum CompatibilitySuspendReason
+public enum CompatibilitySuspendReason
 {
     None,
     AntiCheat,
@@ -35,9 +35,10 @@ internal enum CompatibilitySuspendReason
     UnknownForeground
 }
 
-internal sealed class ForegroundMonitor : IDisposable
+public sealed class ForegroundMonitor : IDisposable
 {
     private readonly IWin32Api _api;
+    private readonly IWindowsTypingHost _host;
     private readonly IntPtr _trayHwnd;
 
     /// <summary>ID du timer Win32 utilisé pour le debounce. Doit être unique côté wndproc.</summary>
@@ -99,9 +100,10 @@ internal sealed class ForegroundMonitor : IDisposable
     /// trayHwnd = HWND de la fenêtre tray (utilisé pour le SetTimer debounce). IntPtr.Zero
     /// désactive le debounce (utile pour les tests qui invoquent Recompute() directement).
     /// </summary>
-    public ForegroundMonitor(IWin32Api api, IntPtr trayHwnd)
+    public ForegroundMonitor(IWin32Api api, IntPtr trayHwnd, IWindowsTypingHost? host = null)
     {
         _api = api;
+        _host = host ?? NullWindowsTypingHost.Instance;
         _trayHwnd = trayHwnd;
 
         try
@@ -113,7 +115,7 @@ internal sealed class ForegroundMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            ConfigManager.Log("ForegroundMonitor.ctor", ex);
+            _host.Log("ForegroundMonitor.ctor", ex);
             _winEventHook = IntPtr.Zero;
         }
 
@@ -143,7 +145,7 @@ internal sealed class ForegroundMonitor : IDisposable
             }
             catch (Exception ex)
             {
-                ConfigManager.Log("ForegroundMonitor.OnWinEvent", ex);
+                _host.Log("ForegroundMonitor.OnWinEvent", ex);
             }
             Win32.SetTimer(_trayHwnd, (UIntPtr)TIMER_FOREGROUND_DEBOUNCE, 100, IntPtr.Zero);
         }
@@ -201,22 +203,22 @@ internal sealed class ForegroundMonitor : IDisposable
             CompatibilityMode oldMode = oldSnapshot?.Mode ?? CompatibilityMode.Default;
             _snapshot = new Snapshot(processName, fullPath, hkl, mode, resolved.Reason);
 
-            if (oldMode != mode && ConfigManager.CompatibilityDebugLog)
+            if (oldMode != mode && _host.CompatibilityDebugLog)
             {
-                ConfigManager.LogCompatEvent("CompatMode",
-                    $"{oldMode} → {mode} (process={ConfigManager.AnonymizeProcessName(processName)})");
+                _host.LogCompatibilityEvent("CompatMode",
+                    $"{oldMode} → {mode} (process={_host.AnonymizeProcessName(processName)})");
             }
 
             if (oldMode != mode || (oldMode == mode && processName != null))
             {
                 // Toujours notifier sur changement effectif de process pour permettre à
-                // TrayApplication de mettre à jour l'état UI (override changes, etc.)
+                // au produit hôte de mettre à jour son état UI (override changes, etc.)
                 ForegroundChanged?.Invoke();
             }
         }
         catch (Exception ex)
         {
-            ConfigManager.Log("ForegroundMonitor.Recompute", ex);
+            _host.Log("ForegroundMonitor.Recompute", ex);
         }
     }
 
@@ -242,7 +244,7 @@ internal sealed class ForegroundMonitor : IDisposable
         if (GameRegistry.IsRemoteAccessProcess(processName))
             return (CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.RemoteAccess);
 
-        var userOverride = ConfigManager.GetCompatibilityOverride(processName);
+        var userOverride = _host.GetCompatibilityOverride(processName);
 
         // Anti-cheat : surclasse tout override forceOn (sécurité utilisateur)
         if (GameRegistry.IsAntiCheatProcess(processName, fullPath))

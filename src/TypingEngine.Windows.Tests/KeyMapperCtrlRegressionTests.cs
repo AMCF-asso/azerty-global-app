@@ -1,7 +1,6 @@
-using AZERTYGlobal;
 using Xunit;
 
-namespace AZERTYGlobal.Tests;
+namespace TypingEngine.Windows.Tests;
 
 public class KeyMapperCtrlRegressionTests
 {
