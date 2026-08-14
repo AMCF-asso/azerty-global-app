@@ -81,6 +81,7 @@ sealed class CharacterSearch : IDisposable
         public string NameFr { get; set; } = "";
         public string NameEn { get; set; } = "";
         public string[] Aliases { get; set; } = Array.Empty<string>();
+        public string[] EnglishAliases { get; set; } = Array.Empty<string>();
         public string MethodDisplay { get; set; } = "";
         public bool IsDirectAccess { get; set; }
         public MethodData? Method { get; set; }
@@ -90,6 +91,7 @@ sealed class CharacterSearch : IDisposable
         public string NormalizedNameFr { get; set; } = "";
         public string NormalizedNameEn { get; set; } = "";
         public string[][] NormalizedAliasWords { get; set; } = Array.Empty<string[]>();
+        public string[][] NormalizedEnglishAliasWords { get; set; } = Array.Empty<string[]>();
         public string[] NormalizedNameFrWords { get; set; } = Array.Empty<string>();
         public string[] NormalizedNameEnWords { get; set; } = Array.Empty<string>();
         public string NormalizedChar { get; set; } = "";
@@ -196,13 +198,13 @@ sealed class CharacterSearch : IDisposable
     }
 
     /// <summary>Retourne un dictionnaire caractère → nom français (pour le clavier virtuel).</summary>
-    public Dictionary<string, string> GetCharacterNames()
+    public Dictionary<string, (string Fr, string En)> GetCharacterNames()
     {
-        var names = new Dictionary<string, string>();
+        var names = new Dictionary<string, (string Fr, string En)>();
         foreach (var entry in _allEntries)
         {
-            if (!string.IsNullOrEmpty(entry.NameFr))
-                names[entry.Character] = entry.NameFr;
+            if (!string.IsNullOrEmpty(entry.NameFr) || !string.IsNullOrEmpty(entry.NameEn))
+                names[entry.Character] = (entry.NameFr, entry.NameEn);
         }
         return names;
     }
@@ -277,6 +279,14 @@ sealed class CharacterSearch : IDisposable
                         aliases.Add(a);
             }
 
+            var englishAliases = new List<string>();
+            if (entry.Value.TryGetProperty("englishAliases", out var ea) && ea.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var alias in ea.EnumerateArray())
+                    if (alias.GetString() is string a)
+                        englishAliases.Add(a);
+            }
+
             // Trouver la méthode recommandée, tout en gardant les alternatives
             // pour les cas où la requête doit distinguer caractère vif et accent.
             string methodDisplay = "";
@@ -323,6 +333,7 @@ sealed class CharacterSearch : IDisposable
                 NameFr = nameFr,
                 NameEn = nameEn,
                 Aliases = aliases.ToArray(),
+                EnglishAliases = englishAliases.ToArray(),
                 MethodDisplay = methodDisplay,
                 IsDirectAccess = isDirectAccess,
                 Method = methodData,
@@ -336,6 +347,9 @@ sealed class CharacterSearch : IDisposable
             entry2.NormalizedNameEnWords = entry2.NormalizedNameEn.Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries);
             entry2.NormalizedChar = NormalizeForSearch(charStr);
             entry2.NormalizedAliasWords = aliases.Select(a =>
+                NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
+            ).ToArray();
+            entry2.NormalizedEnglishAliasWords = englishAliases.Select(a =>
                 NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
             ).ToArray();
 
@@ -375,12 +389,8 @@ sealed class CharacterSearch : IDisposable
         if (method.Type == "deadkey")
         {
             var activation = _deadKeyActivations.GetValueOrDefault(method.DeadKey, method.DeadKey);
-            var keyLabel = KeyLabels.GetValueOrDefault(method.Key, method.Key);
-            var afterDk = method.Layer switch
-            {
-                "Shift" => $"puis Maj + {keyLabel}",
-                _ => $"puis {keyLabel}",
-            };
+            var keyLabel = GetKeyLabel(method.Key);
+            var afterDk = L.Search_AfterDeadKeyLabel(method.Layer, keyLabel);
             return $"{activation}\n{afterDk}";
         }
 
@@ -403,13 +413,9 @@ sealed class CharacterSearch : IDisposable
         {
             var dkName = method.GetProperty("deadkey").GetString() ?? "";
             var activation = _deadKeyActivations.GetValueOrDefault(dkName, dkName);
-            var keyLabel = KeyLabels.GetValueOrDefault(key, key);
+            var keyLabel = GetKeyLabel(key);
             // Le layer de la touche après la DK : si c'est "Shift", il faut Maj + touche
-            var afterDk = layer switch
-            {
-                "Shift" => $"puis Maj + {keyLabel}",
-                _ => $"puis {keyLabel}",
-            };
+            var afterDk = L.Search_AfterDeadKeyLabel(layer, keyLabel);
             // 2 lignes : activation en haut, association en bas
             return $"{activation}\n{afterDk}";
         }
@@ -417,22 +423,16 @@ sealed class CharacterSearch : IDisposable
         return "";
     }
 
+    /// <summary>Retourne le libellé d'affichage d'une touche : légende physique AZERTY
+    /// (inchangée quelle que soit la langue), sauf « Espace » qui est un mot traduit.</summary>
+    private static string GetKeyLabel(string key) =>
+        key == "Space" ? L.Search_SpaceKeyLabel : KeyLabels.GetValueOrDefault(key, key);
+
     /// <summary>Formate une méthode directe (couche + touche).</summary>
     private static string FormatDirectMethod(string key, string layer)
     {
-        var keyLabel = KeyLabels.GetValueOrDefault(key, key);
-        return layer switch
-        {
-            "Base" => keyLabel,
-            "Shift" => $"Maj + {keyLabel}",
-            "AltGr" => $"AltGr + {keyLabel}",
-            "AltGr+Shift" or "Shift+AltGr" => $"AltGr + Maj + {keyLabel}",
-            "Caps" => $"Verr.Maj + {keyLabel}",
-            "Caps+Shift" => $"Verr.Maj + Maj + {keyLabel}",
-            "Caps+AltGr" => $"Verr.Maj + AltGr + {keyLabel}",
-            "Caps+Shift+AltGr" or "Caps+AltGr+Shift" => $"Verr.Maj + AltGr + Maj + {keyLabel}",
-            _ => keyLabel,
-        };
+        var keyLabel = GetKeyLabel(key);
+        return L.Search_LayerKeyLabel(layer, keyLabel);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -456,13 +456,29 @@ sealed class CharacterSearch : IDisposable
         var lowerQuery = query.ToLowerInvariant();
         var normalizedQuery = NormalizeForSearch(query);
         var queryWords = normalizedQuery.Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries);
+        // Synonymes de requête : les noms Unicode disent « capital »/« small », jamais
+        // « uppercase »/« lowercase » — sans cela, « é uppercase » ne trouvait rien
+        // (constat smoke test 2026-07-16). Le synonyme est une ALTERNATIVE (pas un
+        // remplacement) et s'applique dès les préfixes (« up », « upper »…) pour que
+        // la recherche incrémentale fonctionne — sans casser les requêtes littérales
+        // comme « low line » (U+005F). Aligné sur tester-search.js (site).
+        var querySynonyms = new string?[queryWords.Length];
+        for (int i = 0; i < queryWords.Length; i++)
+        {
+            var w = queryWords[i];
+            querySynonyms[i] = w.Length >= 2 && "uppercase".StartsWith(w, StringComparison.Ordinal)
+                ? "capital"
+                : w.Length >= 2 && "lowercase".StartsWith(w, StringComparison.Ordinal)
+                    ? "small"
+                    : null;
+        }
         var originalQueryWords = lowerQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         // Score et tri
         var scored = new List<(CharEntry entry, int score)>();
         foreach (var entry in _allEntries)
         {
-            int score = MatchScore(entry, query, lowerQuery, normalizedQuery, queryWords, originalQueryWords);
+            int score = MatchScore(entry, query, lowerQuery, normalizedQuery, queryWords, querySynonyms, originalQueryWords);
             if (score > 0)
             {
                 var resultEntry = ApplyQuerySpecificMethod(entry, normalizedQuery);
@@ -480,6 +496,14 @@ sealed class CharacterSearch : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         // Ne PAS appeler NotifySelectionChanged ici : le highlight ne doit
         // se déclencher que sur Entrée, clic ou navigation flèches.
+    }
+
+    /// <summary>Nom affiché dans les résultats, selon la langue de l'UI (fallback croisé si le champ est vide).</summary>
+    private static string GetDisplayName(CharEntry entry)
+    {
+        if (L.IsEnglish)
+            return !string.IsNullOrEmpty(entry.NameEn) ? entry.NameEn : entry.NameFr;
+        return !string.IsNullOrEmpty(entry.NameFr) ? entry.NameFr : entry.NameEn;
     }
 
     /// <summary>Normalise un texte pour la recherche (supprime les diacritiques, met en minuscule).</summary>
@@ -502,9 +526,12 @@ sealed class CharacterSearch : IDisposable
         return (normalizedQuery, entry.Character) switch
         {
             ("circonflexe", "^") => WithPreferredMethod(entry, "direct", "", "KeyI", "AltGr"),
+            ("circumflex", "^") => WithPreferredMethod(entry, "direct", "", "KeyI", "AltGr"),
             ("accent circonflexe", "^") => WithPreferredMethod(entry, "deadkey", "dk_circumflex", "Space", "Base"),
+            ("circumflex accent", "^") => WithPreferredMethod(entry, "deadkey", "dk_circumflex", "Space", "Base"),
             ("backtick", "`") => WithPreferredMethod(entry, "direct", "", "KeyL", "AltGr"),
             ("accent grave", "`") => WithPreferredMethod(entry, "deadkey", "dk_grave", "Space", "Base"),
+            ("grave accent", "`") => WithPreferredMethod(entry, "deadkey", "dk_grave", "Space", "Base"),
             _ => entry
         };
     }
@@ -527,6 +554,7 @@ sealed class CharacterSearch : IDisposable
             NameFr = entry.NameFr,
             NameEn = entry.NameEn,
             Aliases = entry.Aliases,
+            EnglishAliases = entry.EnglishAliases,
             MethodDisplay = FormatMethod(method),
             IsDirectAccess = type == "direct",
             Method = method,
@@ -534,6 +562,7 @@ sealed class CharacterSearch : IDisposable
             NormalizedNameFr = entry.NormalizedNameFr,
             NormalizedNameEn = entry.NormalizedNameEn,
             NormalizedAliasWords = entry.NormalizedAliasWords,
+            NormalizedEnglishAliasWords = entry.NormalizedEnglishAliasWords,
             NormalizedNameFrWords = entry.NormalizedNameFrWords,
             NormalizedNameEnWords = entry.NormalizedNameEnWords,
             NormalizedChar = entry.NormalizedChar,
@@ -543,15 +572,24 @@ sealed class CharacterSearch : IDisposable
     /// <summary>Vérifie si tous les mots de la requête matchent des mots du texte (chaque mot de requête
     /// est le début d'un mot du texte). L'ordre des mots n'a pas d'importance.
     /// Si un mot de la requête fait 1 caractère, il doit correspondre exactement (pas de StartsWith)
-    /// pour éviter que "a" matche "avec", "aigu", etc.</summary>
-    private static bool AllWordsMatch(string[] queryWords, string[] textWords)
+    /// pour éviter que "a" matche "avec", "aigu", etc.
+    /// <paramref name="querySynonyms"/> (aligné sur queryWords, éléments null autorisés) offre
+    /// une alternative par mot : « upper… » matche aussi « capital » (cf. Search).</summary>
+    private static bool AllWordsMatch(string[] queryWords, string?[] querySynonyms, string[] textWords)
     {
-        foreach (var qw in queryWords)
+        for (int i = 0; i < queryWords.Length; i++)
         {
+            var qw = queryWords[i];
+            var syn = i < querySynonyms.Length ? querySynonyms[i] : null;
             bool found = false;
             foreach (var tw in textWords)
             {
                 if (qw.Length == 1 ? tw == qw : (tw == qw || tw.StartsWith(qw)))
+                {
+                    found = true;
+                    break;
+                }
+                if (syn != null && (tw == syn || tw.StartsWith(syn)))
                 {
                     found = true;
                     break;
@@ -564,7 +602,7 @@ sealed class CharacterSearch : IDisposable
 
     /// <summary>Score de correspondance — identique au site web (tester-modal.js searchCharacters).</summary>
     private static int MatchScore(CharEntry entry, string query, string lowerQuery,
-        string normalizedQuery, string[] queryWords, string[] originalQueryWords)
+        string normalizedQuery, string[] queryWords, string?[] querySynonyms, string[] originalQueryWords)
     {
         int score = 0;
 
@@ -580,21 +618,28 @@ sealed class CharacterSearch : IDisposable
         }
         // Alias français : tous les mots matchent (pré-normalisés)
         else if (entry.NormalizedAliasWords.Length > 0 && queryWords.Length > 0 &&
-            entry.NormalizedAliasWords.Any(aliasWords => AllWordsMatch(queryWords, aliasWords)))
+            entry.NormalizedAliasWords.Any(aliasWords => AllWordsMatch(queryWords, querySynonyms, aliasWords)))
+        {
+            score = 80;
+        }
+        // Alias anglais : tous les mots matchent (pré-normalisés) — recherche bilingue
+        // permanente, indépendante de la langue de l'UI (cf. plan i18n Phase 3).
+        else if (entry.NormalizedEnglishAliasWords.Length > 0 && queryWords.Length > 0 &&
+            entry.NormalizedEnglishAliasWords.Any(aliasWords => AllWordsMatch(queryWords, querySynonyms, aliasWords)))
         {
             score = 80;
         }
         // Nom français : tous les mots matchent (pré-normalisé)
         else if (entry.NormalizedNameFrWords.Length > 0 && queryWords.Length > 0)
         {
-            if (AllWordsMatch(queryWords, entry.NormalizedNameFrWords))
+            if (AllWordsMatch(queryWords, querySynonyms, entry.NormalizedNameFrWords))
                 score = 70;
         }
 
         // Nom anglais : tous les mots matchent (pré-normalisé)
         if (score == 0 && entry.NormalizedNameEnWords.Length > 0 && queryWords.Length > 0)
         {
-            if (AllWordsMatch(queryWords, entry.NormalizedNameEnWords))
+            if (AllWordsMatch(queryWords, querySynonyms, entry.NormalizedNameEnWords))
                 score = 50;
         }
 
@@ -675,7 +720,7 @@ sealed class CharacterSearch : IDisposable
         _hWnd = Win32.CreateWindowExW(
             Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW,
             className,
-            "Rechercher un caractère",
+            L.Search_WindowTitle,
             Win32.WS_POPUP | Win32.WS_BORDER | Win32.WS_CLIPCHILDREN,
             x, y, BASE_WIN_W, BASE_WIN_H_MIN,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
@@ -811,6 +856,10 @@ sealed class CharacterSearch : IDisposable
 
     public void Show()
     {
+        // Signal Défi du jour (v1.2.0) : compteur GLOBAL d'ouvertures uniquement —
+        // jamais le contenu des requêtes (décision 2026-07-22).
+        UsageStats.RecordSearchOpened();
+
         // Adapter la taille selon les résultats actuels, puis repositionner
         ResizeToFitResults();
 
@@ -989,7 +1038,7 @@ sealed class CharacterSearch : IDisposable
                 Win32.SelectObject(hdc, _hFontPlaceholder);
                 Win32.GetClientRect(hWnd, out var editRect);
                 editRect.left += Scale(4);
-                var phText = "Rechercher un caractère…";
+                var phText = L.Search_Placeholder;
                 Win32.DrawTextW(hdc, phText, phText.Length, ref editRect,
                     Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
                 Win32.ReleaseDC(hWnd, hdc);
@@ -1119,7 +1168,8 @@ sealed class CharacterSearch : IDisposable
         }
     }
 
-    private static IntPtr AllocateClipboardText(string text)
+    // internal : réutilisés par UsageStatsWindow (même filet de restauration du presse-papiers).
+    internal static IntPtr AllocateClipboardText(string text)
     {
         int byteCount = (text.Length + 1) * 2; // UTF-16 + null terminator
         IntPtr hMem = Win32.GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)byteCount);
@@ -1145,7 +1195,7 @@ sealed class CharacterSearch : IDisposable
         }
     }
 
-    private static string? ReadClipboardText()
+    internal static string? ReadClipboardText()
     {
         if (!Win32.IsClipboardFormatAvailable(CF_UNICODETEXT))
             return null;
@@ -1168,7 +1218,7 @@ sealed class CharacterSearch : IDisposable
         }
     }
 
-    private static void RestoreClipboardText(string? previousText)
+    internal static void RestoreClipboardText(string? previousText)
     {
         if (previousText == null)
             return;
@@ -1271,7 +1321,8 @@ sealed class CharacterSearch : IDisposable
                     right = charColW + nameColW - pad,
                     bottom = y + rowH - rowPad,
                 };
-                Win32.DrawTextW(hdcMem, entry.NameFr, entry.NameFr.Length, ref nameRect,
+                string displayName1 = GetDisplayName(entry);
+                Win32.DrawTextW(hdcMem, displayName1, displayName1.Length, ref nameRect,
                     Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
 
                 // Colonne 3 : méthode (colorée)
@@ -1329,7 +1380,7 @@ sealed class CharacterSearch : IDisposable
                 Win32.SetTextColor(hdcMem, CLR_FOOTER);
                 Win32.SelectObject(hdcMem, hFontName);
                 var noResultRect = new Win32.RECT { left = 0, top = y + Scale(4), right = cw, bottom = ch };
-                var noResultText = "Aucun résultat";
+                var noResultText = L.Search_NoResults;
                 Win32.DrawTextW(hdcMem, noResultText, noResultText.Length, ref noResultRect,
                     Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
             }
@@ -1340,7 +1391,7 @@ sealed class CharacterSearch : IDisposable
                 Win32.SetTextColor(hdcMem, CLR_FOOTER);
 
                 int ty = y + Scale(8);
-                var tipText = "Entrée copier · Échap fermer";
+                var tipText = L.Search_Tip;
                 var tipRect = new Win32.RECT { left = 0, top = ty, right = cw, bottom = ty + Scale(24) };
                 Win32.DrawTextW(hdcMem, tipText, tipText.Length, ref tipRect,
                     Win32.DT_CENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
@@ -1354,7 +1405,7 @@ sealed class CharacterSearch : IDisposable
         if (_showCopiedFeedback)
         {
             Win32.SetTextColor(hdcMem, CLR_COPIED);
-            var copiedText = $"« {_copiedChar} » copié !";
+            var copiedText = L.Search_CopiedFeedback(_copiedChar);
             Win32.DrawTextW(hdcMem, copiedText, copiedText.Length, ref footerRect,
                 Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         }
@@ -1362,8 +1413,8 @@ sealed class CharacterSearch : IDisposable
         {
             Win32.SetTextColor(hdcMem, CLR_FOOTER);
             var countText = _filteredResults.Count == 1
-                ? "1 résultat — Entrée pour copier"
-                : $"{_filteredResults.Count} résultats — Entrée pour copier";
+                ? L.Search_ResultCountSingular
+                : L.Search_ResultCountPlural(_filteredResults.Count);
             Win32.DrawTextW(hdcMem, countText, countText.Length, ref footerRect,
                 Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         }
@@ -1438,7 +1489,8 @@ sealed class CharacterSearch : IDisposable
         // Mesurer le nom
         Win32.SelectObject(hdc, hFontName);
         var nameRect = new Win32.RECT { left = 0, top = 0, right = nameColW - pad, bottom = 9999 };
-        int nameH = Win32.DrawTextW(hdc, entry.NameFr, entry.NameFr.Length, ref nameRect,
+        string displayName2 = GetDisplayName(entry);
+        int nameH = Win32.DrawTextW(hdc, displayName2, displayName2.Length, ref nameRect,
             Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_CALCRECT | Win32.DT_NOPREFIX);
 
         // Mesurer la méthode

@@ -24,6 +24,28 @@ public class LessonCoreTests
     }
 
     [Fact]
+    public void CatalogLoader_EnglishUi_UsesEnglishTitlesButKeepsIdsAndContent()
+    {
+        L.Language = "en";
+        try
+        {
+            var catalog = LessonCatalogLoader.LoadFromResource();
+            var emailWeb = catalog.Modules.Single(m => m.Id == "email-web");
+            var point = emailWeb.Lessons.Single(l => l.Id == "point");
+
+            Assert.Equal("Email and Web", emailWeb.Title);
+            Assert.Equal("Period .", point.Title);
+            Assert.Equal("Type the period", point.Exercises[0].Instruction);
+            // Le contenu à taper reste français quelle que soit la langue de l'UI.
+            Assert.Equal(". . . . .", point.Exercises[0].Content);
+        }
+        finally
+        {
+            L.Language = "fr";
+        }
+    }
+
+    [Fact]
     public void ExerciseHash_ChangesWhenInstructionOrContentChanges()
     {
         var a = new LessonExercise("m", "l", 0, "practice", "Tapez", "abc", LessonTypingMode.Flexible);
@@ -560,6 +582,27 @@ public class LessonCoreTests
         Assert.Same(strokeMethod, preferred);
         Assert.Same(acuteMethod, alternative);
         Assert.Null(invalid);
+    }
+
+    [Fact]
+    public void LearningModule_Backspace_ClearsCurrentTypingError()
+    {
+        var module = (LearningModule)System.Runtime.CompilerServices.RuntimeHelpers
+            .GetUninitializedObject(typeof(LearningModule));
+        typeof(LearningModule).GetField("_highlightedScancodes",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(module, new HashSet<uint>());
+        typeof(LearningModule).GetField("_currentCharError",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(module, true);
+
+        typeof(LearningModule).GetMethod("OnBackspace",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(module, null);
+
+        Assert.False((bool)typeof(LearningModule).GetField("_currentCharError",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .GetValue(module)!);
     }
 
     [Fact]

@@ -26,6 +26,15 @@ internal enum CompatibilityMode
     DisabledAntiCheat
 }
 
+internal enum CompatibilitySuspendReason
+{
+    None,
+    AntiCheat,
+    RemoteAccess,
+    UserOverride,
+    UnknownForeground
+}
+
 internal sealed class ForegroundMonitor : IDisposable
 {
     private readonly IWin32Api _api;
@@ -42,7 +51,12 @@ internal sealed class ForegroundMonitor : IDisposable
     // fullPath, hkl, mode) sont mis à jour en une seule écriture de référence (atomique CLR
     // pour les types ref). Évite que le hook thread lise des combinaisons mixtes (ex. nouveau
     // processName / ancien hkl) pendant que le tray thread écrit séquentiellement.
-    private sealed record class Snapshot(string? ProcessName, string? FullPath, IntPtr Hkl, CompatibilityMode Mode);
+    private sealed record class Snapshot(
+        string? ProcessName,
+        string? FullPath,
+        IntPtr Hkl,
+        CompatibilityMode Mode,
+        CompatibilitySuspendReason SuspendReason);
     private Snapshot? _snapshot;
 
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
@@ -56,6 +70,10 @@ internal sealed class ForegroundMonitor : IDisposable
 
     /// <summary>Mode de compatibilité résolu pour le process foreground actuel.</summary>
     public CompatibilityMode CurrentMode => _snapshot?.Mode ?? CompatibilityMode.Default;
+
+    /// <summary>Motif précis de la suspension, indépendant du mode d'injection.</summary>
+    public CompatibilitySuspendReason CurrentSuspendReason =>
+        _snapshot?.SuspendReason ?? CompatibilitySuspendReason.None;
 
     /// <summary>
     /// Audit sécu 2026-05 SEV-A2-05 : lecture atomique des deux champs critiques
@@ -109,6 +127,24 @@ internal sealed class ForegroundMonitor : IDisposable
         // Programmer le debounce 100 ms si on a un HWND tray, sinon recompute immédiat (tests)
         if (_trayHwnd != IntPtr.Zero)
         {
+            // Bascule anti-cheat sans attendre le debounce : si le nouveau foreground est
+            // un process anti-cheat connu, recalculer immédiatement pour réduire la fenêtre
+            // pendant laquelle des frappes seraient encore traitées (audit 2026-07 m4).
+            // Coût : une inspection de process par event, déjà payée dans Recompute() ensuite.
+            try
+            {
+                if (_api.TryGetForegroundProcess(out var fgName, out var fgPath, out _, out _) &&
+                    (GameRegistry.IsAntiCheatProcess(fgName, fgPath) ||
+                     GameRegistry.IsRemoteAccessProcess(fgName)))
+                {
+                    Recompute();
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                ConfigManager.Log("ForegroundMonitor.OnWinEvent", ex);
+            }
             Win32.SetTimer(_trayHwnd, (UIntPtr)TIMER_FOREGROUND_DEBOUNCE, 100, IntPtr.Zero);
         }
         else
@@ -148,15 +184,22 @@ internal sealed class ForegroundMonitor : IDisposable
                 string.Equals(processName, "StartMenuExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "ShellExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "TextInputHost.exe", StringComparison.OrdinalIgnoreCase));
-            if (isTransientShell && _snapshot != null && !string.IsNullOrEmpty(_snapshot.ProcessName))
+            // Exception : ne JAMAIS conserver un snapshot DisabledAntiCheat au retour sur le
+            // shell (Alt+Tab jeu → bureau) — sinon l'app resterait « Suspendu pour
+            // compatibilité » sur le bureau tant qu'aucune autre app ne prend le focus
+            // (audit 2026-07 m8). L'injection cible le foreground : réactiver sur le shell
+            // est sans risque pour le jeu resté en arrière-plan.
+            if (isTransientShell && _snapshot != null && !string.IsNullOrEmpty(_snapshot.ProcessName)
+                && _snapshot.Mode != CompatibilityMode.DisabledAntiCheat)
                 return;
 
-            CompatibilityMode mode = ResolveMode(processName, fullPath, pid, hasFg);
+            var resolved = ResolveState(processName, fullPath, pid, hasFg);
+            CompatibilityMode mode = resolved.Mode;
 
             // Snapshot atomique : une seule écriture de référence (atomique CLR sur ref types).
             var oldSnapshot = _snapshot;
             CompatibilityMode oldMode = oldSnapshot?.Mode ?? CompatibilityMode.Default;
-            _snapshot = new Snapshot(processName, fullPath, hkl, mode);
+            _snapshot = new Snapshot(processName, fullPath, hkl, mode, resolved.Reason);
 
             if (oldMode != mode && ConfigManager.CompatibilityDebugLog)
             {
@@ -177,7 +220,8 @@ internal sealed class ForegroundMonitor : IDisposable
         }
     }
 
-    private CompatibilityMode ResolveMode(string? processName, string? fullPath, uint pid, bool hasFg)
+    private (CompatibilityMode Mode, CompatibilitySuspendReason Reason) ResolveState(
+        string? processName, string? fullPath, uint pid, bool hasFg)
     {
         if (!hasFg)
         {
@@ -185,31 +229,38 @@ internal sealed class ForegroundMonitor : IDisposable
             // on privilégie la sécurité utilisateur : ne pas laisser le hook actif
             // face à un process potentiellement protégé par anti-cheat.
             if (pid != 0)
-                return CompatibilityMode.DisabledAntiCheat;
-            return CompatibilityMode.Default;
+                return (CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UnknownForeground);
+            return (CompatibilityMode.Default, CompatibilitySuspendReason.None);
         }
 
         if (string.IsNullOrEmpty(processName))
-            return CompatibilityMode.Default;
+            return (CompatibilityMode.Default, CompatibilitySuspendReason.None);
 
         // Override utilisateur lu en premier (mais l'anti-cheat le surclasse pour la sécurité)
+        // Les clients de connexion à distance surclassent les overrides : si AZERTY Global
+        // tourne aussi sur le poste distant, le passthrough provoquerait un double remapping.
+        if (GameRegistry.IsRemoteAccessProcess(processName))
+            return (CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.RemoteAccess);
+
         var userOverride = ConfigManager.GetCompatibilityOverride(processName);
 
         // Anti-cheat : surclasse tout override forceOn (sécurité utilisateur)
         if (GameRegistry.IsAntiCheatProcess(processName, fullPath))
-            return CompatibilityMode.DisabledAntiCheat;
+            return (CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.AntiCheat);
 
-        if (userOverride == "forceOn") return CompatibilityMode.NativeCombo;
-        if (userOverride == "forceOff") return CompatibilityMode.DisabledAntiCheat;
+        if (userOverride == "forceOn")
+            return (CompatibilityMode.NativeCombo, CompatibilitySuspendReason.None);
+        if (userOverride == "forceOff")
+            return (CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UserOverride);
 
         // Détection auto via modules chargés
         if (pid != 0 && _api.TryEnumProcessModules(pid, out var modules))
         {
             if (GameRegistry.HasGameFrameworkLoaded(modules))
-                return CompatibilityMode.NativeCombo;
+                return (CompatibilityMode.NativeCombo, CompatibilitySuspendReason.None);
         }
 
-        return CompatibilityMode.Default;
+        return (CompatibilityMode.Default, CompatibilitySuspendReason.None);
     }
 
     public void Dispose()

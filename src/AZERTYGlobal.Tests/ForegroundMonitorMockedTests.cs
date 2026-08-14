@@ -56,6 +56,17 @@ public class ForegroundMonitorMockedTests : IDisposable
     }
 
     [Fact]
+    public void Recompute_ParsecClient_ReturnsDisabledCompatibility()
+    {
+        var mock = SetupMock("parsecd.exe", @"C:\Program Files\Parsec\parsecd.exe");
+
+        using var fm = new ForegroundMonitor(mock, IntPtr.Zero);
+
+        Assert.Equal(CompatibilityMode.DisabledAntiCheat, fm.CurrentMode);
+        Assert.Equal("RemoteAccess", fm.CurrentSuspendReason.ToString());
+    }
+
+    [Fact]
     public void Recompute_UninspectableForegroundProcess_FailsClosed()
     {
         var mock = SetupMock("protected.exe");
@@ -64,6 +75,7 @@ public class ForegroundMonitorMockedTests : IDisposable
         using var fm = new ForegroundMonitor(mock, IntPtr.Zero);
 
         Assert.Equal(CompatibilityMode.DisabledAntiCheat, fm.CurrentMode);
+        Assert.Equal("UnknownForeground", fm.CurrentSuspendReason.ToString());
         Assert.Null(fm.CurrentProcessName);
     }
 
@@ -112,6 +124,19 @@ public class ForegroundMonitorMockedTests : IDisposable
         var mock = SetupMock("Notepad.exe", @"C:\Windows\notepad.exe");
         using var fm = new ForegroundMonitor(mock, IntPtr.Zero);
         Assert.Equal(CompatibilityMode.DisabledAntiCheat, fm.CurrentMode);
+    }
+
+    [Fact]
+    public void OverrideForceOff_ReportsUserOverrideReason()
+    {
+        ConfigManager.SetCompatibilityOverride("Notepad.exe", "forceOff");
+        var mock = SetupMock("Notepad.exe", @"C:\Windows\notepad.exe");
+        using var fm = new ForegroundMonitor(mock, IntPtr.Zero);
+
+        var property = typeof(ForegroundMonitor).GetProperty("CurrentSuspendReason");
+
+        Assert.NotNull(property);
+        Assert.Equal("UserOverride", property.GetValue(fm)?.ToString());
     }
 
     [Fact]

@@ -30,10 +30,10 @@ sealed class KeyMapper
     private const uint KEYEVENTF_SCANCODE = 0x0008;
 
     private readonly Layout _layout;
+    private readonly CompositionEngine _composition;
     private readonly IWin32Api _api;
     private ForegroundMonitor? _foregroundMonitor;
 
-    private string? _activeDeadKey;
     private bool _capsLockState;
 
     // État des modificateurs (tracké manuellement pour fiabilité)
@@ -43,6 +43,10 @@ sealed class KeyMapper
     private bool _rightCtrlDown;
     private bool _leftAltDown;
     private bool _rightAltDown; // AltGr
+    // Touches Windows : trackées uniquement pour laisser passer les raccourcis
+    // Win+<touche> (Win+. emoji, Win+V…) sans remapping. Pas de notification UI.
+    private bool _leftWinDown;
+    private bool _rightWinDown;
 
     // Touches passées en pass-through (compatibilité jeux) — ne pas bloquer leur keyup.
     // Lock obligatoire car ClearPassedThroughKeys peut être appelé depuis le thread
@@ -52,7 +56,7 @@ sealed class KeyMapper
     private readonly object _passedThroughKeysLock = new();
 
     public bool CapsLockActive => _capsLockState;
-    public string? ActiveDeadKey => _activeDeadKey;
+    public string? ActiveDeadKey => _composition.ActiveDeadKey;
     public bool ShiftDown => IsShiftDown;
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
@@ -73,6 +77,7 @@ sealed class KeyMapper
     internal KeyMapper(Layout layout, IWin32Api api)
     {
         _layout = layout;
+        _composition = new CompositionEngine(layout);
         _api = api;
         // Lire l'état initial du Caps Lock
         _capsLockState = (_api.GetKeyState(0x14) & 0x0001) != 0;
@@ -149,9 +154,8 @@ sealed class KeyMapper
         _capsLockState = actualCaps;
 
         // Réinitialiser une éventuelle touche morte en attente
-        if (_activeDeadKey != null)
+        if (_composition.Cancel())
         {
-            _activeDeadKey = null;
             changed = true;
         }
 
@@ -290,6 +294,8 @@ sealed class KeyMapper
             case VK_RCONTROL: _rightCtrlDown = isKeyDown; break;
             case VK_LMENU: _leftAltDown = isKeyDown; break;
             case VK_RMENU: _rightAltDown = isKeyDown; break;
+            case VK_LWIN: _leftWinDown = isKeyDown; break;
+            case VK_RWIN: _rightWinDown = isKeyDown; break;
             case VK_SHIFT:
                 if (scanCode == 0x2A) _leftShiftDown = isKeyDown;
                 else if (scanCode == 0x36) _rightShiftDown = isKeyDown;
@@ -310,8 +316,10 @@ sealed class KeyMapper
             StateChanged?.Invoke();
     }
 
-    /// <summary>Vérifie si Ctrl+Shift sont enfoncés (pour le raccourci toggle).</summary>
-    public bool IsToggleShortcut() => IsShiftDown && IsCtrlDown && !IsAltGrDown && !_leftAltDown;
+    /// <summary>Vérifie si Ctrl+Shift sont enfoncés (pour le raccourci toggle). Win exclu
+    /// pour ne pas capturer les raccourcis système Win+Ctrl+Maj+<touche>.</summary>
+    public bool IsToggleShortcut() => IsShiftDown && IsCtrlDown && !IsAltGrDown && !_leftAltDown
+        && !_leftWinDown && !_rightWinDown;
 
     /// <summary>
     /// Verifie si l'evenement correspond a un raccourci configure.
@@ -395,6 +403,12 @@ sealed class KeyMapper
         { _leftAltDown = false; changed = true; }
         if (_rightAltDown && (_api.GetAsyncKeyState((int)VK_RMENU) & 0x8000) == 0)
         { _rightAltDown = false; changed = true; }
+        // Win : resync silencieuse (pas d'impact UI, mais conditionne IsToggleShortcut
+        // et le pass-through Win+<touche> dans ProcessKey)
+        if (_leftWinDown && (_api.GetAsyncKeyState((int)VK_LWIN) & 0x8000) == 0)
+            _leftWinDown = false;
+        if (_rightWinDown && (_api.GetAsyncKeyState((int)VK_RWIN) & 0x8000) == 0)
+            _rightWinDown = false;
 
         if (changed)
             StateChanged?.Invoke();
@@ -461,9 +475,8 @@ sealed class KeyMapper
         }
 
         // Backspace : annuler la touche morte active et laisser passer
-        if (vkCode == 0x08 && isKeyDown && _activeDeadKey != null)
+        if (vkCode == 0x08 && isKeyDown && _composition.Cancel())
         {
-            _activeDeadKey = null;
             StateChanged?.Invoke();
             return false; // Laisser Windows traiter le Backspace normalement
         }
@@ -475,6 +488,11 @@ sealed class KeyMapper
         // Si Alt gauche est enfoncé SANS Right Ctrl → raccourcis système (Alt+Tab, Alt+F4, etc.)
         // Note : Right Ctrl + Left Alt = AltGr simulé → ne PAS laisser passer
         if (_leftAltDown && !_rightCtrlDown)
+            return false;
+
+        // Si une touche Windows est enfoncée → raccourcis système (Win+., Win+V, Win+chiffre…) :
+        // laisser passer keydown ET keyup sans remapping (même convention que Alt ci-dessus).
+        if (_leftWinDown || _rightWinDown)
             return false;
 
         if (!isKeyDown && TryReleaseSyntheticVirtualKey(scanCode))
@@ -574,62 +592,15 @@ sealed class KeyMapper
         if (output == null || output == "")
             return true; // Bloquer quand même pour éviter que le layout Windows sous-jacent ne produise un caractère
 
-        // Touche morte ?
-        if (output.StartsWith("dk_"))
+        // La composition est pure et portable ; l'émission reste dans l'adaptateur Windows.
+        if (output.StartsWith("dk_", StringComparison.Ordinal) || _composition.ActiveDeadKey != null)
         {
-            if (_activeDeadKey != null)
-            {
-                // Une touche morte est déjà active : résoudre comme touche morte + caractère isolé
-                var activeDk = _layout.DeadKeys.GetValueOrDefault(_activeDeadKey);
-                var isolated = activeDk?.GetIsolated();
-                _activeDeadKey = null;
-
-                if (isolated != null)
-                {
-                    // Chercher dans la table de la NOUVELLE touche morte
-                    var newDk = _layout.DeadKeys.GetValueOrDefault(output);
-                    var transformed = newDk?.Apply(isolated);
-                    if (transformed != null)
-                    {
-                        EmitText(transformed);
-                        StateChanged?.Invoke();
-                        return true;
-                    }
-                    // Pas de correspondance : envoyer l'isolé de la première, activer la nouvelle
-                    EmitText(isolated);
-                }
-            }
-            _activeDeadKey = output;
-            StateChanged?.Invoke();
-
+            var result = _composition.Process(output);
+            if (result.Text.Length > 0)
+                EmitText(result.Text);
+            if (result.StateChanged)
+                StateChanged?.Invoke();
             return true;
-        }
-
-        // Si une touche morte est active, appliquer la transformation
-        if (_activeDeadKey != null)
-        {
-            var dk = _layout.DeadKeys.GetValueOrDefault(_activeDeadKey);
-            _activeDeadKey = null;
-            StateChanged?.Invoke();
-
-            if (dk != null)
-            {
-                var transformed = dk.Apply(output);
-                if (transformed != null)
-                {
-                    EmitText(transformed);
-
-                    return true;
-                }
-
-                // Pas de correspondance : envoyer le diacritique isolé + le caractère
-                var isolatedChar = dk.GetIsolated();
-                if (isolatedChar != null)
-                    EmitText(isolatedChar);
-                EmitText(output);
-
-                return true;
-            }
         }
 
         // Caractère normal — si le layout Windows natif produit le même caractère,
@@ -768,6 +739,10 @@ sealed class KeyMapper
     /// </summary>
     internal void EmitText(string text)
     {
+        // Statistiques locales d'usage (v1.1) : compteurs en mémoire uniquement, aucune
+        // I/O ici — cf. UsageStats.RecordEmittedText. Rien de ceci ne quitte la machine.
+        UsageStats.RecordEmittedText(text);
+
         // Audit sécu 2026-05 SEV-A2-05 : lecture atomique single-shot du snapshot
         // ForegroundMonitor. Évite race mode/hkl discordants pendant alt-tab.
         var (mode, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);

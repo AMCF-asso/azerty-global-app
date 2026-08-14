@@ -107,14 +107,18 @@ internal static class KeyboardRenderer
         (0x2D, 3),
     };
 
-    private static readonly Dictionary<string, string> CharNamesOverride = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, (string Fr, string En)> CharNamesOverride = new(StringComparer.Ordinal)
     {
-        ["’"] = "APOSTROPHE TYPOGRAPHIQUE",
+        ["’"] = ("APOSTROPHE TYPOGRAPHIQUE", "TYPOGRAPHIC APOSTROPHE"),
     };
 
-    private static readonly Lazy<Dictionary<string, string>> CharacterNames = new(LoadCharacterNames);
+    private static readonly Lazy<Dictionary<string, (string Fr, string En)>> CharacterNames = new(LoadCharacterNames);
 
-    public static IReadOnlyList<VirtualKeyboard.VisualKey> VisualKeys => VirtualKeyboard.BuildKeyLayout();
+    // Cache : BuildKeyLayout() alloue un tableau ; VisualKeys est lu 2× par WM_PAINT
+    // de la fenêtre Leçons (audit 2026-07 n5). Le layout est immuable.
+    private static readonly VirtualKeyboard.VisualKey[] _visualKeysCache = VirtualKeyboard.BuildKeyLayout();
+
+    public static IReadOnlyList<VirtualKeyboard.VisualKey> VisualKeys => _visualKeysCache;
 
     public static bool IsSlotVisible(
         KeyboardRenderProfile profile,
@@ -216,9 +220,9 @@ internal static class KeyboardRenderer
 
         var sb = new System.Text.StringBuilder();
         AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk, state.ShowInvisibleMarkers);
-        AppendTooltipLayer(sb, "Maj", keyDef.Shift, activeDk, state.ShowInvisibleMarkers);
+        AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk, state.ShowInvisibleMarkers);
         AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk, state.ShowInvisibleMarkers);
-        AppendTooltipLayer(sb, "Maj+AltGr", keyDef.ShiftAltGr, activeDk, state.ShowInvisibleMarkers);
+        AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk, state.ShowInvisibleMarkers);
         return sb.ToString().TrimEnd('\n');
     }
 
@@ -226,16 +230,16 @@ internal static class KeyboardRenderer
     {
         return label switch
         {
-            "Tab" => "Tabulation",
-            "⌫" => "Retour arrière",
-            "Verr. Maj." => "Verrouillage Majuscule (Caps Lock)",
-            "Maj ⇧" => "Majuscule (Shift)",
-            "Entrée" => "Entrée",
-            "Ctrl" => "Contrôle (Ctrl)",
-            "Win" => "Touche Windows",
-            "Alt" => "Alt",
-            "AltGr" => "Alt droite (AltGr)",
-            "Menu" => "Menu contextuel",
+            "Tab" => L.Keyboard_TooltipTab,
+            "⌫" => L.Keyboard_TooltipBackspace,
+            "Verr. Maj." => L.Keyboard_TooltipCapsLock,
+            "Maj ⇧" => L.Keyboard_TooltipShift,
+            "Entrée" => L.Keyboard_TooltipEnter,
+            "Ctrl" => L.Keyboard_TooltipCtrl,
+            "Win" => L.Keyboard_TooltipWin,
+            "Alt" => L.Keyboard_TooltipAlt,
+            "AltGr" => L.Keyboard_TooltipAltGr,
+            "Menu" => L.Keyboard_TooltipMenu,
             _ => label
         };
     }
@@ -263,7 +267,7 @@ internal static class KeyboardRenderer
         string display = GetDisplayChar(value, showInvisibleMarkers) ?? value;
         sb.Append(label).Append(" : ").Append(display);
         if (value.StartsWith("dk_", StringComparison.Ordinal))
-            sb.Append(" — touche morte ").Append(VirtualKeyboard.GetDeadKeyFrenchName(value));
+            sb.Append(L.Keyboard_DeadKeyConnector).Append(VirtualKeyboard.GetDeadKeyDisplayName(value));
         else
             AppendCharacterName(sb, value, display);
         sb.Append('\n');
@@ -273,20 +277,27 @@ internal static class KeyboardRenderer
     {
         if (CharNamesOverride.TryGetValue(display, out var overrideName))
         {
-            sb.Append(" — ").Append(overrideName.ToUpperInvariant());
+            var chosen = L.IsEnglish ? overrideName.En : overrideName.Fr;
+            sb.Append(" — ").Append(chosen.ToUpperInvariant());
             return;
         }
 
         if (CharacterNames.Value.TryGetValue(value, out var name) ||
             CharacterNames.Value.TryGetValue(display, out name))
         {
-            sb.Append(" — ").Append(name.ToUpperInvariant());
+            // Nom selon la langue de l'UI ; repli sur l'autre langue si absent
+            // (même logique que VirtualKeyboard / LearningModule).
+            string chosen = L.IsEnglish
+                ? (name.En.Length > 0 ? name.En : name.Fr)
+                : (name.Fr.Length > 0 ? name.Fr : name.En);
+            if (chosen.Length > 0)
+                sb.Append(" — ").Append(chosen.ToUpperInvariant());
         }
     }
 
-    private static Dictionary<string, string> LoadCharacterNames()
+    private static Dictionary<string, (string Fr, string En)> LoadCharacterNames()
     {
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        var names = new Dictionary<string, (string Fr, string En)>(StringComparer.Ordinal);
         try
         {
             string json;
@@ -312,12 +323,12 @@ internal static class KeyboardRenderer
             {
                 if (entry.Name.StartsWith("dk:", StringComparison.Ordinal))
                     continue;
-                if (entry.Value.TryGetProperty("unicodeNameFr", out var nameFr))
-                {
-                    var name = nameFr.GetString();
-                    if (!string.IsNullOrEmpty(name))
-                        names[entry.Name] = name;
-                }
+                string frName = entry.Value.TryGetProperty("unicodeNameFr", out var nameFr)
+                    ? nameFr.GetString() ?? "" : "";
+                string enName = entry.Value.TryGetProperty("unicodeName", out var nameEn)
+                    ? nameEn.GetString() ?? "" : "";
+                if (frName.Length > 0 || enName.Length > 0)
+                    names[entry.Name] = (frName, enName);
             }
         }
         catch
@@ -557,8 +568,8 @@ internal static class KeyboardRenderer
 
     private static void DrawActiveDeadKeyStatus(IntPtr hdc, Win32.RECT rect, string activeDeadKey, IntPtr hFont)
     {
-        string name = VirtualKeyboard.GetDeadKeyFrenchName(activeDeadKey);
-        string text = $"Touche morte active : {name}";
+        string name = VirtualKeyboard.GetDeadKeyDisplayName(activeDeadKey);
+        string text = L.Keyboard_ActiveDeadKeyStatus(name);
         var textRect = new Win32.RECT { left = rect.left, top = rect.top, right = rect.right - 4, bottom = rect.bottom };
         var oldFont = Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, CLR_DK_ACTIVE_TEXT);
@@ -819,8 +830,8 @@ internal static class KeyboardRenderer
 
         return value switch
         {
-            "\u202F" => "esp. ins. fine",
-            "\u00A0" => "esp. ins.",
+            "\u202F" => L.Keyboard_NarrowNbsp,
+            "\u00A0" => L.Keyboard_Nbsp,
             "\u2011" => "‑",
             " " => " ",
             _ => value

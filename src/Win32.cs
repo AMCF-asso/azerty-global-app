@@ -783,6 +783,53 @@ static class Win32
     [DllImport("ole32.dll")]
     public static extern int CreateStreamOnHGlobal(IntPtr hGlobal, bool fDeleteOnRelease, out IntPtr ppstm);
 
+    // Enregistrement du serveur COM d'activation de toast (ToastActivation, v1.2.0)
+    [DllImport("ole32.dll")]
+    public static extern int CoRegisterClassObject(in Guid rclsid, IntPtr pUnk, uint dwClsContext, uint flags, out uint lpdwRegister);
+
+    [DllImport("ole32.dll")]
+    public static extern int CoRevokeClassObject(uint dwRegister);
+
+    // ═══════════════════════════════════════════════════════════════
+    // P/Invoke — Boîte de dialogue Ouvrir (onglet Apps suspendues, v1.2.0)
+    // ═══════════════════════════════════════════════════════════════
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct OPENFILENAMEW
+    {
+        public int lStructSize;
+        public IntPtr hwndOwner;
+        public IntPtr hInstance;
+        [MarshalAs(UnmanagedType.LPWStr)] public string? lpstrFilter;
+        public IntPtr lpstrCustomFilter;
+        public int nMaxCustFilter;
+        public int nFilterIndex;
+        public IntPtr lpstrFile;          // buffer alloué par l'appelant
+        public int nMaxFile;
+        public IntPtr lpstrFileTitle;
+        public int nMaxFileTitle;
+        [MarshalAs(UnmanagedType.LPWStr)] public string? lpstrInitialDir;
+        [MarshalAs(UnmanagedType.LPWStr)] public string? lpstrTitle;
+        public uint Flags;
+        public ushort nFileOffset;
+        public ushort nFileExtension;
+        public IntPtr lpstrDefExt;
+        public IntPtr lCustData;
+        public IntPtr lpfnHook;
+        public IntPtr lpTemplateName;
+        public IntPtr pvReserved;
+        public uint dwReserved;
+        public uint FlagsEx;
+    }
+
+    public const uint OFN_FILEMUSTEXIST = 0x00001000;
+    public const uint OFN_PATHMUSTEXIST = 0x00000800;
+    public const uint OFN_HIDEREADONLY = 0x00000004;
+    public const uint OFN_NOCHANGEDIR = 0x00000008;
+
+    [DllImport("comdlg32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool GetOpenFileNameW(ref OPENFILENAMEW ofn);
+
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — DPI
     // ═══════════════════════════════════════════════════════════════
@@ -871,4 +918,30 @@ static class Win32
 
     public const uint WM_INPUTLANGCHANGE = 0x0051;
     public const uint VK_NUMLOCK = 0x90;
+
+    // ═══════════════════════════════════════════════════════════════
+    // P/Invoke — Alimentation / session (réinstallation du hook)
+    // ═══════════════════════════════════════════════════════════════
+
+    public const uint WM_POWERBROADCAST = 0x0218;
+    public const int PBT_APMRESUMESUSPEND = 0x0007;
+    public const int PBT_APMRESUMEAUTOMATIC = 0x0012;
+
+    public const uint WM_WTSSESSION_CHANGE = 0x02B1;
+    public const int WTS_CONSOLE_CONNECT = 0x1;
+    public const int WTS_REMOTE_CONNECT = 0x3;
+    public const int WTS_SESSION_UNLOCK = 0x8;
+    public const uint NOTIFY_FOR_THIS_SESSION = 0;
+
+    public const uint WM_QUERYENDSESSION = 0x0011;
+    public const uint WM_ENDSESSION = 0x0016;
+
+    [DllImport("user32.dll")]
+    public static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [DllImport("wtsapi32.dll", SetLastError = true)]
+    public static extern bool WTSRegisterSessionNotification(IntPtr hWnd, uint dwFlags);
+
+    [DllImport("wtsapi32.dll")]
+    public static extern bool WTSUnRegisterSessionNotification(IntPtr hWnd);
 }

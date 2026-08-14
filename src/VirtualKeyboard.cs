@@ -96,7 +96,7 @@ sealed class VirtualKeyboard : IDisposable
     // (testeur web AZERTY Global). Doit rester aligné pour cohérence cross-canal.
     internal static readonly Dictionary<string, string> _deadKeyNamesFr = new()
     {
-        ["dk_circumflex"] = "Circonflexe",
+        ["dk_circumflex"] = "Accent circonflexe",
         ["dk_diaeresis"] = "Tréma",
         ["dk_acute"] = "Accent aigu",
         ["dk_grave"] = "Accent grave",
@@ -127,10 +127,11 @@ sealed class VirtualKeyboard : IDisposable
         ["dk_punctuation"] = "Symboles de ponctuation",
     };
 
-    /// <summary>Retourne le nom français d'une touche morte.</summary>
-    internal static string GetDeadKeyFrenchName(string deadKeyId)
+    /// <summary>Retourne le nom d'affichage d'une touche morte, dans la langue courante de l'UI.</summary>
+    internal static string GetDeadKeyDisplayName(string deadKeyId)
     {
-        return _deadKeyNamesFr.TryGetValue(deadKeyId, out var name) ? name.ToUpperInvariant() : deadKeyId;
+        var dict = L.IsEnglish ? L.DeadKeyNamesEn : _deadKeyNamesFr;
+        return dict.TryGetValue(deadKeyId, out var name) ? name.ToUpperInvariant() : deadKeyId;
     }
 
     // Taille de la fenêtre par défaut
@@ -229,7 +230,7 @@ sealed class VirtualKeyboard : IDisposable
     private IntPtr _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Layout _layout;
-    private readonly Dictionary<string, string> _charNames; // char → nom français
+    private readonly Dictionary<string, (string Fr, string En)> _charNames; // char → noms FR/EN (tooltip selon L.IsEnglish)
 
     private bool _visible;
     private IntPtr _preferredMonitorWindow;
@@ -326,7 +327,7 @@ sealed class VirtualKeyboard : IDisposable
         _cachedCh = ch;
     }
 
-    public VirtualKeyboard(Layout layout, Dictionary<string, string>? charNames = null)
+    public VirtualKeyboard(Layout layout, Dictionary<string, (string Fr, string En)>? charNames = null)
     {
         _layout = layout;
         _charNames = charNames ?? LoadCharacterNames();
@@ -478,9 +479,9 @@ sealed class VirtualKeyboard : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Chargement des noms de caractères
     // ═══════════════════════════════════════════════════════════════
-    private static Dictionary<string, string> LoadCharacterNames()
+    private static Dictionary<string, (string Fr, string En)> LoadCharacterNames()
     {
-        var names = new Dictionary<string, string>();
+        var names = new Dictionary<string, (string Fr, string En)>();
 
         try
         {
@@ -493,12 +494,12 @@ sealed class VirtualKeyboard : IDisposable
             {
                 foreach (var entry in chars.EnumerateObject())
                 {
-                    if (entry.Value.TryGetProperty("unicodeNameFr", out var nameFr))
-                    {
-                        var frName = nameFr.GetString();
-                        if (frName != null)
-                            names[entry.Name] = frName;
-                    }
+                    string frName = entry.Value.TryGetProperty("unicodeNameFr", out var nameFr)
+                        ? nameFr.GetString() ?? "" : "";
+                    string enName = entry.Value.TryGetProperty("unicodeName", out var nameEn)
+                        ? nameEn.GetString() ?? "" : "";
+                    if (frName.Length > 0 || enName.Length > 0)
+                        names[entry.Name] = (frName, enName);
                 }
             }
         }
@@ -527,6 +528,10 @@ sealed class VirtualKeyboard : IDisposable
 
     public void Show()
     {
+        // Signal Défi du jour (v1.2.0) : compteur GLOBAL d'ouvertures uniquement —
+        // jamais les caractères consultés ou insérés (décision 2026-07-22).
+        UsageStats.RecordVirtualKeyboardOpened();
+
         if (!TryRestoreSavedBounds())
             CenterOnActiveMonitor();
         else
@@ -1185,7 +1190,7 @@ sealed class VirtualKeyboard : IDisposable
         // Indication touche morte active — afficher la description (ex: "Accent circonflexe")
         if (_activeDeadKey != null)
         {
-            string dkText = GetDeadKeyFrenchName(_activeDeadKey);
+            string dkText = GetDeadKeyDisplayName(_activeDeadKey);
             var dkRect = new Win32.RECT { left = offsetX, top = offsetY + (int)kbHeight + 2, right = offsetX + (int)kbWidth, bottom = ch - 2 };
             Win32.SelectObject(hdc, hCtxFont);
             Win32.SetTextColor(hdc, CLR_DK_CHAR);
@@ -1325,10 +1330,12 @@ sealed class VirtualKeyboard : IDisposable
             {
                 string? ch2 = GetDisplayChar(_visualKeys[hitIndex].Scancode);
                 if (ch2 != null && !ch2.StartsWith("dk_") && _charNames.TryGetValue(ch2, out var name))
-                    UpdateTooltipText(name);
+                    UpdateTooltipText(L.IsEnglish
+                        ? (name.En.Length > 0 ? name.En : name.Fr)
+                        : (name.Fr.Length > 0 ? name.Fr : name.En));
                 else if (ch2 != null && ch2.StartsWith("dk_"))
                 {
-                    UpdateTooltipText(GetDeadKeyFrenchName(ch2));
+                    UpdateTooltipText(GetDeadKeyDisplayName(ch2));
                 }
                 else
                     UpdateTooltipText("");

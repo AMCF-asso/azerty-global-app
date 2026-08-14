@@ -20,7 +20,7 @@ sealed class AboutWindow : IDisposable
     private const int IDC_BTN_CLOSE = 4104;
     private const int IDC_LINK_AMCF = 4105;
 
-    private const int BASE_WIN_W = 500;
+    private const int BASE_WIN_W = 550;
     private const int BASE_WIN_H = 230;
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
@@ -62,6 +62,10 @@ sealed class AboutWindow : IDisposable
     private IntPtr _hFontButton;
 
     public bool IsVisible => _visible;
+
+    /// <summary>Langue de l'UI à la création : titre, liens et bouton sont figés au
+    /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
+    public string UiLanguage { get; } = L.Language;
 
     public AboutWindow()
     {
@@ -167,7 +171,7 @@ sealed class AboutWindow : IDisposable
         int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
         int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
 
-        _hWnd = Win32.CreateWindowExW(0, className, "AZERTY Global — À propos",
+        _hWnd = Win32.CreateWindowExW(0, className, L.About_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         Win32.EnableDarkTitleBar(_hWnd);
@@ -204,32 +208,32 @@ sealed class AboutWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
-        _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", "Site web",
+        _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", L.About_LinkSite,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkSite, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
 
-        _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", "Code source GitHub",
+        _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkGithub, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
-        _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", "Licence EUPL 1.2 (open source)",
+        _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkLicense, _linkSubclassProc, (UIntPtr)3, IntPtr.Zero);
 
         // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure)
-        _hWndLinkAmcf = Win32.CreateWindowExW(0, "STATIC", "Association pour la Modernisation du Clavier Français",
+        _hWndLinkAmcf = Win32.CreateWindowExW(0, "STATIC", L.About_LinkAmcf,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_AMCF, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkAmcf, _linkSubclassProc, (UIntPtr)4, IntPtr.Zero);
 
-        _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", "Fermer",
+        _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", L.About_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
@@ -483,7 +487,7 @@ sealed class AboutWindow : IDisposable
         Win32.SelectObject(hdc, _hFontText);
         Win32.SetTextColor(hdc, CLR_TEXT);
         var descRect = new Win32.RECT { left = margin, top = descY, right = cw - margin, bottom = descY + S(22) };
-        Win32.DrawTextW(hdc, "Disposition clavier améliorée pour les francophones.", -1, ref descRect,
+        Win32.DrawTextW(hdc, L.About_Description, -1, ref descRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         // Ligne AMCF : « Édité par l' » (GDI) + lien STATIC + « (AMCF) » (GDI)
@@ -491,9 +495,9 @@ sealed class AboutWindow : IDisposable
         int amcfH = S(20);
         Win32.SelectObject(hdc, _hFontText);
         Win32.SetTextColor(hdc, CLR_TEXT);
-        const string amcfPrefix = "Édité par l'";
-        const string amcfLinkText = "Association pour la Modernisation du Clavier Français";
-        const string amcfSuffix = " (AMCF)";
+        string amcfPrefix = L.About_AmcfPrefix;
+        string amcfLinkText = L.About_LinkAmcf;
+        string amcfSuffix = L.About_AmcfSuffix;
         // Mesurer chaque portion via DT_CALCRECT
         var measurePrefix = new Win32.RECT { left = 0, top = 0, right = 9999, bottom = 9999 };
         Win32.DrawTextW(hdc, amcfPrefix, -1, ref measurePrefix, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);

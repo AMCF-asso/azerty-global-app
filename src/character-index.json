@@ -281,6 +281,10 @@
       "frenchAliases": [
         "guillemets"
       ],
+      "englishAliases": [
+        "quotation mark",
+        "quotes"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -302,6 +306,10 @@
       "frenchAliases": [
         "hashtag",
         "dièse"
+      ],
+      "englishAliases": [
+        "hashtag",
+        "number sign"
       ],
       "methods": [
         {
@@ -353,6 +361,10 @@
         "pourcent",
         "pourcentage"
       ],
+      "englishAliases": [
+        "percent",
+        "percent sign"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -374,6 +386,10 @@
       "frenchAliases": [
         "et commercial",
         "perluette"
+      ],
+      "englishAliases": [
+        "ampersand",
+        "and sign"
       ],
       "methods": [
         {
@@ -414,6 +430,10 @@
       "frenchAliases": [
         "parenthèse ouvrante"
       ],
+      "englishAliases": [
+        "left parenthesis",
+        "opening parenthesis"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -435,6 +455,10 @@
       "frenchAliases": [
         "parenthèse fermante"
       ],
+      "englishAliases": [
+        "right parenthesis",
+        "closing parenthesis"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -455,6 +479,10 @@
       "unicodeNameFr": "ASTÉRISQUE",
       "frenchAliases": [
         "étoile"
+      ],
+      "englishAliases": [
+        "asterisk",
+        "star"
       ],
       "methods": [
         {
@@ -512,6 +540,10 @@
       "unicodeNameFr": "TRAIT D'UNION-SIGNE MOINS",
       "frenchAliases": [
         "tiret du 6"
+      ],
+      "englishAliases": [
+        "hyphen",
+        "minus"
       ],
       "methods": [
         {
@@ -575,6 +607,10 @@
       "unicodeNameFr": "BARRE OBLIQUE",
       "frenchAliases": [
         "slash"
+      ],
+      "englishAliases": [
+        "slash",
+        "forward slash"
       ],
       "methods": [
         {
@@ -657,6 +693,10 @@
       "frenchAliases": [
         "chevron ouvrant"
       ],
+      "englishAliases": [
+        "less than",
+        "left angle bracket"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -705,6 +745,10 @@
       "unicodeNameFr": "SIGNE SUPÉRIEUR À",
       "frenchAliases": [
         "chevron fermant"
+      ],
+      "englishAliases": [
+        "greater than",
+        "right angle bracket"
       ],
       "methods": [
         {
@@ -755,6 +799,10 @@
       "frenchAliases": [
         "at",
         "a commercial"
+      ],
+      "englishAliases": [
+        "at sign",
+        "at"
       ],
       "methods": [
         {
@@ -1255,6 +1303,10 @@
       "frenchAliases": [
         "crochet ouvrant"
       ],
+      "englishAliases": [
+        "left bracket",
+        "opening bracket"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -1275,6 +1327,9 @@
       "unicodeNameFr": "BARRE OBLIQUE INVERSÉE",
       "frenchAliases": [
         "antislash",
+        "backslash"
+      ],
+      "englishAliases": [
         "backslash"
       ],
       "methods": [
@@ -1298,6 +1353,10 @@
       "frenchAliases": [
         "crochet fermant"
       ],
+      "englishAliases": [
+        "right bracket",
+        "closing bracket"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -1314,10 +1373,14 @@
     },
     "^": {
       "codePoint": "U+005E",
-      "unicodeName": "CIRCUMFLEX ACCENT",
+      "unicodeName": "CIRCUMFLEX",
       "unicodeNameFr": "CIRCONFLEXE",
       "frenchAliases": [
         "accent circonflexe"
+      ],
+      "englishAliases": [
+        "circumflex accent",
+        "caret"
       ],
       "methods": [
         {
@@ -1364,6 +1427,10 @@
       "frenchAliases": [
         "tiret du 8"
       ],
+      "englishAliases": [
+        "underscore",
+        "low line"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -1380,11 +1447,15 @@
     },
     "`": {
       "codePoint": "U+0060",
-      "unicodeName": "GRAVE ACCENT",
+      "unicodeName": "BACKTICK",
       "unicodeNameFr": "BACKTICK",
       "frenchAliases": [
         "backtick",
         "accent grave"
+      ],
+      "englishAliases": [
+        "backtick",
+        "grave accent"
       ],
       "methods": [
         {
@@ -1899,6 +1970,10 @@
       "frenchAliases": [
         "accolade ouvrante"
       ],
+      "englishAliases": [
+        "left brace",
+        "opening brace"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -1919,6 +1994,10 @@
       "unicodeNameFr": "BARRE VERTICALE",
       "frenchAliases": [
         "pipe"
+      ],
+      "englishAliases": [
+        "pipe",
+        "vertical bar"
       ],
       "methods": [
         {
@@ -1941,6 +2020,10 @@
       "frenchAliases": [
         "accolade fermante"
       ],
+      "englishAliases": [
+        "right brace",
+        "closing brace"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -1961,6 +2044,9 @@
       "unicodeNameFr": "TILDE",
       "frenchAliases": [
         "approximation"
+      ],
+      "englishAliases": [
+        "tilde"
       ],
       "methods": [
         {
@@ -2023,8 +2109,13 @@
       "unicodeName": "INVERTED EXCLAMATION MARK",
       "unicodeNameFr": "POINT D'EXCLAMATION RENVERSÉ",
       "frenchAliases": [
-        "point d'exclamation inversépoint d'exclamation espagnol",
+        "point d'exclamation inversé",
+        "point d'exclamation espagnol",
         "point d'exclamation à l'envers"
+      ],
+      "englishAliases": [
+        "inverted exclamation mark",
+        "spanish exclamation"
       ],
       "methods": [
         {
@@ -2046,6 +2137,10 @@
       "unicodeNameFr": "SIGNE CENTIME",
       "frenchAliases": [
         "cent"
+      ],
+      "englishAliases": [
+        "cent",
+        "cent sign"
       ],
       "methods": [
         {
@@ -2071,6 +2166,10 @@
         "livre sterling",
         "livre anglaise"
       ],
+      "englishAliases": [
+        "pound",
+        "pound sterling"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -2092,6 +2191,9 @@
       "frenchAliases": [
         "symbole monétaire",
         "monnaie"
+      ],
+      "englishAliases": [
+        "currency sign"
       ],
       "methods": [
         {
@@ -2127,6 +2229,9 @@
       "unicodeNameFr": "MONNAIE YEN",
       "frenchAliases": [
         "yuan"
+      ],
+      "englishAliases": [
+        "yen"
       ],
       "methods": [
         {
@@ -2168,6 +2273,10 @@
       "unicodeNameFr": "SYMBOLE PARAGRAPHE",
       "frenchAliases": [
         "paragraphe",
+        "section"
+      ],
+      "englishAliases": [
+        "section sign",
         "section"
       ],
       "methods": [
@@ -2238,6 +2347,9 @@
         "copyright",
         "droit d auteur"
       ],
+      "englishAliases": [
+        "copyright"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2260,6 +2372,11 @@
       "unicodeNameFr": "INDICATEUR ORDINAL FÉMININ",
       "frenchAliases": [
         "petit a portugais"
+      ],
+      "englishAliases": [
+        "feminine ordinal",
+        "ordinal indicator",
+        "portuguese small a"
       ],
       "methods": [
         {
@@ -2296,6 +2413,10 @@
       "frenchAliases": [
         "guillemet francais gauche"
       ],
+      "englishAliases": [
+        "left guillemet",
+        "french quote left"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -2317,6 +2438,10 @@
       "frenchAliases": [
         "negation logique",
         "non"
+      ],
+      "englishAliases": [
+        "not sign",
+        "logical not"
       ],
       "methods": [
         {
@@ -2374,6 +2499,10 @@
         "registered",
         "marque deposee"
       ],
+      "englishAliases": [
+        "registered",
+        "registered trademark"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2430,6 +2559,10 @@
         "petit rond",
         "degre"
       ],
+      "englishAliases": [
+        "degree",
+        "degree sign"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -2451,6 +2584,10 @@
       "frenchAliases": [
         "plus ou moins",
         "plus-moins"
+      ],
+      "englishAliases": [
+        "plus minus",
+        "plus or minus"
       ],
       "methods": [
         {
@@ -2500,6 +2637,10 @@
         "carré",
         "petit deux"
       ],
+      "englishAliases": [
+        "superscript two",
+        "squared"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2523,6 +2664,10 @@
       "frenchAliases": [
         "cube",
         "petit trois"
+      ],
+      "englishAliases": [
+        "superscript three",
+        "cubed"
       ],
       "methods": [
         {
@@ -2580,6 +2725,10 @@
         "mu",
         "m grec"
       ],
+      "englishAliases": [
+        "micro sign",
+        "mu"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2627,6 +2776,10 @@
       "frenchAliases": [
         "paragraphe"
       ],
+      "englishAliases": [
+        "pilcrow",
+        "paragraph mark"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2660,6 +2813,10 @@
       "unicodeName": "MIDDLE DOT",
       "unicodeNameFr": "POINT MÉDIAN",
       "frenchAliases": [
+        "interpunct"
+      ],
+      "englishAliases": [
+        "middle dot",
         "interpunct"
       ],
       "methods": [
@@ -2739,6 +2896,9 @@
       "frenchAliases": [
         "petit un"
       ],
+      "englishAliases": [
+        "superscript one"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2761,6 +2921,10 @@
       "unicodeNameFr": "INDICATEUR ORDINAL MASCULIN",
       "frenchAliases": [
         "petit o portugais"
+      ],
+      "englishAliases": [
+        "masculine ordinal",
+        "portuguese o"
       ],
       "methods": [
         {
@@ -2797,6 +2961,10 @@
       "frenchAliases": [
         "guillemet francais droit"
       ],
+      "englishAliases": [
+        "right guillemet",
+        "french quote right"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -2817,6 +2985,10 @@
       "unicodeNameFr": "FRACTION UN QUART",
       "frenchAliases": [
         "un quart"
+      ],
+      "englishAliases": [
+        "one quarter",
+        "quarter fraction"
       ],
       "methods": [
         {
@@ -2854,6 +3026,10 @@
         "un demi",
         "moitié"
       ],
+      "englishAliases": [
+        "one half",
+        "half fraction"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -2882,6 +3058,9 @@
       "unicodeNameFr": "FRACTION TROIS QUARTS",
       "frenchAliases": [
         "trois quarts"
+      ],
+      "englishAliases": [
+        "three quarters"
       ],
       "methods": [
         {
@@ -2918,6 +3097,10 @@
       "frenchAliases": [
         "point d'interrogation espagnol",
         "point d'interrogation inversé"
+      ],
+      "englishAliases": [
+        "inverted question mark",
+        "spanish question"
       ],
       "methods": [
         {
@@ -2989,7 +3172,12 @@
       "unicodeName": "LATIN CAPITAL LETTER A WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE A MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "a chapeau"
+        "a chapeau",
+        "a accent circonflexe"
+      ],
+      "englishAliases": [
+        "a circumflex capital",
+        "a circumflex accent"
       ],
       "methods": [
         {
@@ -3037,6 +3225,12 @@
           "key": "KeyQ",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "a portugais"
+      ],
+      "englishAliases": [
+        "portuguese a capital"
       ]
     },
     "Ä": {
@@ -3057,6 +3251,16 @@
           "key": "KeyQ",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "a allemand",
+        "a suédois",
+        "a finlandais"
+      ],
+      "englishAliases": [
+        "german a capital",
+        "swedish a capital",
+        "finnish a capital"
       ]
     },
     "Å": {
@@ -3071,6 +3275,15 @@
         "a suédois",
         "a finlandais",
         "a petit rond"
+      ],
+      "englishAliases": [
+        "a ring above capital",
+        "nordic a",
+        "scandinavian a capital",
+        "danish a capital",
+        "norwegian a capital",
+        "swedish a capital",
+        "finnish a capital"
       ],
       "methods": [
         {
@@ -3110,6 +3323,9 @@
         "ae collés",
         "a e collés"
       ],
+      "englishAliases": [
+        "ae ligature capital"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -3130,6 +3346,9 @@
       "unicodeNameFr": "LETTRE C MAJUSCULE AVEC CÉDILLE",
       "frenchAliases": [
         "ç majuscule"
+      ],
+      "englishAliases": [
+        "c cedilla capital"
       ],
       "methods": [
         {
@@ -3165,6 +3384,9 @@
       "frenchAliases": [
         "è majuscule"
       ],
+      "englishAliases": [
+        "e grave capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -3199,6 +3421,9 @@
       "frenchAliases": [
         "é majuscule"
       ],
+      "englishAliases": [
+        "e acute capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -3231,7 +3456,12 @@
       "unicodeName": "LATIN CAPITAL LETTER E WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE E MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "e chapeau"
+        "e chapeau",
+        "e accent circonflexe"
+      ],
+      "englishAliases": [
+        "e circumflex capital",
+        "e circumflex accent"
       ],
       "methods": [
         {
@@ -3314,7 +3544,12 @@
       "unicodeName": "LATIN CAPITAL LETTER I WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE I MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "i chapeau"
+        "i chapeau",
+        "i accent circonflexe"
+      ],
+      "englishAliases": [
+        "i circumflex capital",
+        "i circumflex accent"
       ],
       "methods": [
         {
@@ -3359,6 +3594,10 @@
       "frenchAliases": [
         "d islandais"
       ],
+      "englishAliases": [
+        "eth capital",
+        "icelandic d capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -3381,7 +3620,15 @@
       "unicodeNameFr": "LETTRE N MAJUSCULE AVEC TILDE",
       "frenchAliases": [
         "n espagnol",
-        "ene"
+        "ene",
+        "n wolof majuscule",
+        "n peul majuscule"
+      ],
+      "englishAliases": [
+        "n tilde capital",
+        "spanish n capital",
+        "wolof n capital",
+        "fula n capital"
       ],
       "methods": [
         {
@@ -3456,7 +3703,12 @@
       "unicodeName": "LATIN CAPITAL LETTER O WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE O MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "o chapeau"
+        "o chapeau",
+        "o accent circonflexe"
+      ],
+      "englishAliases": [
+        "o circumflex capital",
+        "o circumflex accent"
       ],
       "methods": [
         {
@@ -3492,6 +3744,14 @@
           "key": "KeyO",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "o portugais",
+        "o estonien"
+      ],
+      "englishAliases": [
+        "portuguese o capital",
+        "estonian o capital"
       ]
     },
     "Ö": {
@@ -3512,6 +3772,18 @@
           "key": "KeyO",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "o allemand",
+        "o suédois",
+        "o finlandais",
+        "o turc"
+      ],
+      "englishAliases": [
+        "german o capital",
+        "swedish o capital",
+        "finnish o capital",
+        "turkish o capital"
       ]
     },
     "×": {
@@ -3522,6 +3794,10 @@
         "multiplié",
         "fois",
         "x"
+      ],
+      "englishAliases": [
+        "multiplication sign",
+        "times"
       ],
       "methods": [
         {
@@ -3573,6 +3849,13 @@
         "o danois",
         "o norvégien"
       ],
+      "englishAliases": [
+        "o stroke capital",
+        "nordic o capital",
+        "scandinavian o capital",
+        "danish o capital",
+        "norwegian o capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -3607,6 +3890,9 @@
       "unicodeNameFr": "LETTRE U MAJUSCULE AVEC ACCENT GRAVE",
       "frenchAliases": [
         "ù majuscule"
+      ],
+      "englishAliases": [
+        "u grave capital"
       ],
       "methods": [
         {
@@ -3671,7 +3957,12 @@
       "unicodeName": "LATIN CAPITAL LETTER U WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE U MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "u chapeau"
+        "u chapeau",
+        "u accent circonflexe"
+      ],
+      "englishAliases": [
+        "u circumflex capital",
+        "u circumflex accent"
       ],
       "methods": [
         {
@@ -3707,6 +3998,14 @@
           "key": "KeyU",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "u allemand",
+        "u turc"
+      ],
+      "englishAliases": [
+        "german u capital",
+        "turkish u capital"
       ]
     },
     "Ý": {
@@ -3738,6 +4037,10 @@
         "p islandais",
         "b islandais"
       ],
+      "englishAliases": [
+        "thorn capital",
+        "icelandic th capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -3762,6 +4065,11 @@
         "s allemand",
         "scharfes s",
         "s pointu"
+      ],
+      "englishAliases": [
+        "sharp s",
+        "eszett",
+        "german s"
       ],
       "methods": [
         {
@@ -3827,7 +4135,12 @@
       "unicodeName": "LATIN SMALL LETTER A WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE A MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "a chapeau"
+        "a chapeau",
+        "a accent circonflexe"
+      ],
+      "englishAliases": [
+        "a circumflex",
+        "a circumflex accent"
       ],
       "methods": [
         {
@@ -3851,6 +4164,10 @@
       "unicodeNameFr": "LETTRE A MINUSCULE AVEC TILDE",
       "frenchAliases": [
         "a portugais"
+      ],
+      "englishAliases": [
+        "a tilde",
+        "portuguese a"
       ],
       "methods": [
         {
@@ -3885,7 +4202,17 @@
       "unicodeName": "LATIN SMALL LETTER A WITH DIAERESIS",
       "unicodeNameFr": "LETTRE A MINUSCULE AVEC TRÉMA",
       "frenchAliases": [
-        "a trema"
+        "a trema",
+        "a allemand",
+        "a suédois",
+        "a finlandais"
+      ],
+      "englishAliases": [
+        "a diaeresis",
+        "a umlaut",
+        "german a",
+        "swedish a",
+        "finnish a"
       ],
       "methods": [
         {
@@ -3915,6 +4242,15 @@
         "a suédois",
         "a finlandais",
         "a petit rond"
+      ],
+      "englishAliases": [
+        "a ring above",
+        "nordic a",
+        "scandinavian a",
+        "danish a",
+        "norwegian a",
+        "swedish a",
+        "finnish a"
       ],
       "methods": [
         {
@@ -3953,6 +4289,9 @@
         "e-dans-l'a",
         "a e collés",
         "ae collés"
+      ],
+      "englishAliases": [
+        "ae ligature"
       ],
       "methods": [
         {
@@ -4048,7 +4387,12 @@
       "unicodeName": "LATIN SMALL LETTER E WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE E MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "e chapeau"
+        "e chapeau",
+        "e accent circonflexe"
+      ],
+      "englishAliases": [
+        "e circumflex",
+        "e circumflex accent"
       ],
       "methods": [
         {
@@ -4131,7 +4475,12 @@
       "unicodeName": "LATIN SMALL LETTER I WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE I MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "i chapeau"
+        "i chapeau",
+        "i accent circonflexe"
+      ],
+      "englishAliases": [
+        "i circumflex",
+        "i circumflex accent"
       ],
       "methods": [
         {
@@ -4176,6 +4525,10 @@
       "frenchAliases": [
         "d islandais"
       ],
+      "englishAliases": [
+        "eth",
+        "icelandic d"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -4198,7 +4551,16 @@
       "unicodeNameFr": "LETTRE N MINUSCULE AVEC TILDE",
       "frenchAliases": [
         "ene",
-        "n espagnol"
+        "n espagnol",
+        "n wolof",
+        "n peul",
+        "n diola"
+      ],
+      "englishAliases": [
+        "n tilde",
+        "spanish n",
+        "wolof n",
+        "fula n"
       ],
       "methods": [
         {
@@ -4273,7 +4635,12 @@
       "unicodeName": "LATIN SMALL LETTER O WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE O MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "o chapeau"
+        "o chapeau",
+        "o accent circonflexe"
+      ],
+      "englishAliases": [
+        "o circumflex",
+        "o circumflex accent"
       ],
       "methods": [
         {
@@ -4309,6 +4676,14 @@
           "key": "KeyO",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "o portugais",
+        "o estonien"
+      ],
+      "englishAliases": [
+        "portuguese o",
+        "estonian o"
       ]
     },
     "ö": {
@@ -4329,6 +4704,18 @@
           "key": "KeyO",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "o allemand",
+        "o suédois",
+        "o finlandais",
+        "o turc"
+      ],
+      "englishAliases": [
+        "german o",
+        "swedish o",
+        "finnish o",
+        "turkish o"
       ]
     },
     "÷": {
@@ -4338,6 +4725,10 @@
       "frenchAliases": [
         "diviser",
         "obelus"
+      ],
+      "englishAliases": [
+        "division sign",
+        "divide"
       ],
       "methods": [
         {
@@ -4376,6 +4767,13 @@
         "o scandinave",
         "o norvégien",
         "o danois"
+      ],
+      "englishAliases": [
+        "o stroke",
+        "nordic o",
+        "scandinavian o",
+        "danish o",
+        "norwegian o"
       ],
       "methods": [
         {
@@ -4472,7 +4870,12 @@
       "unicodeName": "LATIN SMALL LETTER U WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE U MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "u chapeau"
+        "u chapeau",
+        "u accent circonflexe"
+      ],
+      "englishAliases": [
+        "u circumflex",
+        "u circumflex accent"
       ],
       "methods": [
         {
@@ -4508,6 +4911,14 @@
           "key": "KeyU",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "u allemand",
+        "u turc"
+      ],
+      "englishAliases": [
+        "german u",
+        "turkish u"
       ]
     },
     "ý": {
@@ -4539,6 +4950,10 @@
         "b islandais",
         "th islandais",
         "thor"
+      ],
+      "englishAliases": [
+        "thorn",
+        "icelandic th"
       ],
       "methods": [
         {
@@ -4594,6 +5009,14 @@
           "key": "KeyQ",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "a letton",
+        "a maori"
+      ],
+      "englishAliases": [
+        "latvian a capital",
+        "maori a capital"
       ]
     },
     "ā": {
@@ -4614,6 +5037,14 @@
           "key": "KeyQ",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "a letton",
+        "a maori"
+      ],
+      "englishAliases": [
+        "latvian a",
+        "maori a"
       ]
     },
     "Ă": {
@@ -4622,6 +5053,10 @@
       "unicodeNameFr": "LETTRE A MAJUSCULE AVEC BRÈVE",
       "frenchAliases": [
         "a roumain"
+      ],
+      "englishAliases": [
+        "a breve capital",
+        "romanian a capital"
       ],
       "methods": [
         {
@@ -4657,6 +5092,10 @@
       "unicodeNameFr": "LETTRE A MINUSCULE AVEC BRÈVE",
       "frenchAliases": [
         "a roumain"
+      ],
+      "englishAliases": [
+        "a breve",
+        "romanian a"
       ],
       "methods": [
         {
@@ -4716,6 +5155,12 @@
           "key": "KeyQ",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "a polonais"
+      ],
+      "englishAliases": [
+        "polish a capital"
       ]
     },
     "ą": {
@@ -4748,6 +5193,12 @@
           "key": "KeyQ",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "a polonais"
+      ],
+      "englishAliases": [
+        "polish a"
       ]
     },
     "Ć": {
@@ -4768,6 +5219,12 @@
           "key": "KeyC",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "c polonais"
+      ],
+      "englishAliases": [
+        "polish c capital"
       ]
     },
     "ć": {
@@ -4788,6 +5245,12 @@
           "key": "KeyC",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "c polonais"
+      ],
+      "englishAliases": [
+        "polish c"
       ]
     },
     "Ĉ": {
@@ -4795,7 +5258,14 @@
       "unicodeName": "LATIN CAPITAL LETTER C WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE C MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "c chapeau"
+        "c chapeau",
+        "c accent circonflexe",
+        "c espéranto"
+      ],
+      "englishAliases": [
+        "c circumflex capital",
+        "c circumflex accent",
+        "esperanto c capital"
       ],
       "methods": [
         {
@@ -4818,7 +5288,14 @@
       "unicodeName": "LATIN SMALL LETTER C WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE C MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "c chapeau"
+        "c chapeau",
+        "c accent circonflexe",
+        "c espéranto"
+      ],
+      "englishAliases": [
+        "c circumflex",
+        "c circumflex accent",
+        "esperanto c"
       ],
       "methods": [
         {
@@ -4841,7 +5318,12 @@
       "unicodeName": "LATIN CAPITAL LETTER C WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE C MAJUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "c point en chef"
+        "c point en chef",
+        "c maltais"
+      ],
+      "englishAliases": [
+        "c dot above capital",
+        "maltese c capital"
       ],
       "methods": [
         {
@@ -4864,7 +5346,12 @@
       "unicodeName": "LATIN SMALL LETTER C WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE C MINUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "c point en chef"
+        "c point en chef",
+        "c maltais"
+      ],
+      "englishAliases": [
+        "c dot above",
+        "maltese c"
       ],
       "methods": [
         {
@@ -4912,6 +5399,14 @@
           "key": "KeyC",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "c tchèque",
+        "c croate"
+      ],
+      "englishAliases": [
+        "czech c capital",
+        "croatian c capital"
       ]
     },
     "č": {
@@ -4944,6 +5439,14 @@
           "key": "KeyC",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "c tchèque",
+        "c croate"
+      ],
+      "englishAliases": [
+        "czech c",
+        "croatian c"
       ]
     },
     "Ď": {
@@ -4964,6 +5467,14 @@
           "key": "KeyD",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "d tchèque",
+        "d slovaque"
+      ],
+      "englishAliases": [
+        "czech d capital",
+        "slovak d capital"
       ]
     },
     "ď": {
@@ -4984,6 +5495,14 @@
           "key": "KeyD",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "d tchèque",
+        "d slovaque"
+      ],
+      "englishAliases": [
+        "czech d",
+        "slovak d"
       ]
     },
     "Đ": {
@@ -4991,7 +5510,14 @@
       "unicodeName": "LATIN CAPITAL LETTER D WITH STROKE",
       "unicodeNameFr": "LETTRE D MAJUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
-        "d barré"
+        "d barré",
+        "d vietnamien",
+        "d croate"
+      ],
+      "englishAliases": [
+        "d stroke capital",
+        "vietnamese d capital",
+        "croatian d capital"
       ],
       "methods": [
         {
@@ -5014,7 +5540,14 @@
       "unicodeName": "LATIN SMALL LETTER D WITH STROKE",
       "unicodeNameFr": "LETTRE D MINUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
-        "d barré"
+        "d barré",
+        "d vietnamien",
+        "d croate"
+      ],
+      "englishAliases": [
+        "d stroke",
+        "vietnamese d",
+        "croatian d"
       ],
       "methods": [
         {
@@ -5050,6 +5583,14 @@
           "key": "KeyE",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "e letton",
+        "e maori"
+      ],
+      "englishAliases": [
+        "latvian e capital",
+        "maori e capital"
       ]
     },
     "ē": {
@@ -5070,6 +5611,14 @@
           "key": "KeyE",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "e letton",
+        "e maori"
+      ],
+      "englishAliases": [
+        "latvian e",
+        "maori e"
       ]
     },
     "Ĕ": {
@@ -5117,7 +5666,12 @@
       "unicodeName": "LATIN CAPITAL LETTER E WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE E MAJUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "e point en chef"
+        "e point en chef",
+        "e lituanien"
+      ],
+      "englishAliases": [
+        "e dot above capital",
+        "lithuanian e capital"
       ],
       "methods": [
         {
@@ -5140,7 +5694,12 @@
       "unicodeName": "LATIN SMALL LETTER E WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE E MINUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "e point en chef"
+        "e point en chef",
+        "e lituanien"
+      ],
+      "englishAliases": [
+        "e dot above",
+        "lithuanian e"
       ],
       "methods": [
         {
@@ -5188,6 +5747,12 @@
           "key": "KeyE",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "e polonais"
+      ],
+      "englishAliases": [
+        "polish e capital"
       ]
     },
     "ę": {
@@ -5220,6 +5785,12 @@
           "key": "KeyE",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "e polonais"
+      ],
+      "englishAliases": [
+        "polish e"
       ]
     },
     "Ě": {
@@ -5240,6 +5811,12 @@
           "key": "KeyE",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "e tchèque"
+      ],
+      "englishAliases": [
+        "czech e capital"
       ]
     },
     "ě": {
@@ -5260,6 +5837,12 @@
           "key": "KeyE",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "e tchèque"
+      ],
+      "englishAliases": [
+        "czech e"
       ]
     },
     "Ĝ": {
@@ -5267,7 +5850,14 @@
       "unicodeName": "LATIN CAPITAL LETTER G WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE G MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "g chapeau"
+        "g chapeau",
+        "g accent circonflexe",
+        "g espéranto"
+      ],
+      "englishAliases": [
+        "g circumflex capital",
+        "g circumflex accent",
+        "esperanto g capital"
       ],
       "methods": [
         {
@@ -5290,7 +5880,14 @@
       "unicodeName": "LATIN SMALL LETTER G WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE G MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "g chapeau"
+        "g chapeau",
+        "g accent circonflexe",
+        "g espéranto"
+      ],
+      "englishAliases": [
+        "g circumflex",
+        "g circumflex accent",
+        "esperanto g"
       ],
       "methods": [
         {
@@ -5314,6 +5911,10 @@
       "unicodeNameFr": "LETTRE G MAJUSCULE AVEC BRÈVE",
       "frenchAliases": [
         "g turc"
+      ],
+      "englishAliases": [
+        "g breve capital",
+        "turkish g capital"
       ],
       "methods": [
         {
@@ -5350,6 +5951,10 @@
       "frenchAliases": [
         "g turc"
       ],
+      "englishAliases": [
+        "g breve",
+        "turkish g"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -5383,7 +5988,12 @@
       "unicodeName": "LATIN CAPITAL LETTER G WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE G MAJUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "g point en chef"
+        "g point en chef",
+        "g maltais"
+      ],
+      "englishAliases": [
+        "g dot above capital",
+        "maltese g capital"
       ],
       "methods": [
         {
@@ -5406,7 +6016,12 @@
       "unicodeName": "LATIN SMALL LETTER G WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE G MINUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "g point en chef"
+        "g point en chef",
+        "g maltais"
+      ],
+      "englishAliases": [
+        "g dot above",
+        "maltese g"
       ],
       "methods": [
         {
@@ -5442,6 +6057,12 @@
           "key": "KeyG",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "g letton"
+      ],
+      "englishAliases": [
+        "latvian g capital"
       ]
     },
     "ģ": {
@@ -5462,6 +6083,12 @@
           "key": "KeyG",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "g letton"
+      ],
+      "englishAliases": [
+        "latvian g"
       ]
     },
     "Ĥ": {
@@ -5469,7 +6096,14 @@
       "unicodeName": "LATIN CAPITAL LETTER H WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE H MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "h chapeau"
+        "h chapeau",
+        "h accent circonflexe",
+        "h espéranto"
+      ],
+      "englishAliases": [
+        "h circumflex capital",
+        "h circumflex accent",
+        "esperanto h capital"
       ],
       "methods": [
         {
@@ -5492,7 +6126,14 @@
       "unicodeName": "LATIN SMALL LETTER H WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE H MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "h chapeau"
+        "h chapeau",
+        "h accent circonflexe",
+        "h espéranto"
+      ],
+      "englishAliases": [
+        "h circumflex",
+        "h circumflex accent",
+        "esperanto h"
       ],
       "methods": [
         {
@@ -5515,7 +6156,12 @@
       "unicodeName": "LATIN CAPITAL LETTER H WITH STROKE",
       "unicodeNameFr": "LETTRE H MAJUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
-        "h barré"
+        "h barré",
+        "h maltais"
+      ],
+      "englishAliases": [
+        "h stroke capital",
+        "maltese h capital"
       ],
       "methods": [
         {
@@ -5538,7 +6184,12 @@
       "unicodeName": "LATIN SMALL LETTER H WITH STROKE",
       "unicodeNameFr": "LETTRE H MINUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
-        "h barré"
+        "h barré",
+        "h maltais"
+      ],
+      "englishAliases": [
+        "h stroke",
+        "maltese h"
       ],
       "methods": [
         {
@@ -5614,6 +6265,14 @@
           "key": "KeyI",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "i letton",
+        "i maori"
+      ],
+      "englishAliases": [
+        "latvian i capital",
+        "maori i capital"
       ]
     },
     "ī": {
@@ -5634,6 +6293,14 @@
           "key": "KeyI",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "i letton",
+        "i maori"
+      ],
+      "englishAliases": [
+        "latvian i",
+        "maori i"
       ]
     },
     "Ĭ": {
@@ -5694,6 +6361,12 @@
           "key": "KeyI",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "i lituanien"
+      ],
+      "englishAliases": [
+        "lithuanian i capital"
       ]
     },
     "į": {
@@ -5714,6 +6387,12 @@
           "key": "KeyI",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "i lituanien"
+      ],
+      "englishAliases": [
+        "lithuanian i"
       ]
     },
     "İ": {
@@ -5721,7 +6400,12 @@
       "unicodeName": "LATIN CAPITAL LETTER I WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE I MAJUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "i point en chef"
+        "i point en chef",
+        "i turc majuscule"
+      ],
+      "englishAliases": [
+        "i dot above capital",
+        "turkish capital i"
       ],
       "methods": [
         {
@@ -5758,6 +6442,10 @@
       "frenchAliases": [
         "i turc"
       ],
+      "englishAliases": [
+        "dotless i",
+        "turkish i"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -5793,6 +6481,9 @@
       "frenchAliases": [
         "ij majuscule"
       ],
+      "englishAliases": [
+        "ij ligature capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -5816,6 +6507,9 @@
       "frenchAliases": [
         "ij minuscule"
       ],
+      "englishAliases": [
+        "ij ligature lowercase"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -5837,7 +6531,14 @@
       "unicodeName": "LATIN CAPITAL LETTER J WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE J MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "j chapeau"
+        "j chapeau",
+        "j accent circonflexe",
+        "j espéranto"
+      ],
+      "englishAliases": [
+        "j circumflex capital",
+        "j circumflex accent",
+        "esperanto j capital"
       ],
       "methods": [
         {
@@ -5860,7 +6561,14 @@
       "unicodeName": "LATIN SMALL LETTER J WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE J MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "j chapeau"
+        "j chapeau",
+        "j accent circonflexe",
+        "j espéranto"
+      ],
+      "englishAliases": [
+        "j circumflex",
+        "j circumflex accent",
+        "esperanto j"
       ],
       "methods": [
         {
@@ -5896,6 +6604,12 @@
           "key": "KeyK",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "k letton"
+      ],
+      "englishAliases": [
+        "latvian k capital"
       ]
     },
     "ķ": {
@@ -5916,6 +6630,12 @@
           "key": "KeyK",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "k letton"
+      ],
+      "englishAliases": [
+        "latvian k"
       ]
     },
     "Ĺ": {
@@ -5936,6 +6656,12 @@
           "key": "KeyL",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "l slovaque accent aigu"
+      ],
+      "englishAliases": [
+        "slovak l acute capital"
       ]
     },
     "ĺ": {
@@ -5956,6 +6682,12 @@
           "key": "KeyL",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "l slovaque accent aigu"
+      ],
+      "englishAliases": [
+        "slovak l acute"
       ]
     },
     "Ļ": {
@@ -5976,6 +6708,12 @@
           "key": "KeyL",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "l letton"
+      ],
+      "englishAliases": [
+        "latvian l capital"
       ]
     },
     "ļ": {
@@ -5996,6 +6734,12 @@
           "key": "KeyL",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "l letton"
+      ],
+      "englishAliases": [
+        "latvian l"
       ]
     },
     "Ľ": {
@@ -6016,6 +6760,12 @@
           "key": "KeyL",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "l slovaque"
+      ],
+      "englishAliases": [
+        "slovak l capital"
       ]
     },
     "ľ": {
@@ -6036,6 +6786,12 @@
           "key": "KeyL",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "l slovaque"
+      ],
+      "englishAliases": [
+        "slovak l"
       ]
     },
     "Ł": {
@@ -6045,6 +6801,10 @@
       "frenchAliases": [
         "l barré",
         "l polonais"
+      ],
+      "englishAliases": [
+        "l stroke capital",
+        "polish l capital"
       ],
       "methods": [
         {
@@ -6081,6 +6841,10 @@
       "frenchAliases": [
         "l barré",
         "l polonais"
+      ],
+      "englishAliases": [
+        "l stroke",
+        "polish l"
       ],
       "methods": [
         {
@@ -6128,6 +6892,12 @@
           "key": "KeyN",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "n polonais"
+      ],
+      "englishAliases": [
+        "polish n capital"
       ]
     },
     "ń": {
@@ -6148,6 +6918,12 @@
           "key": "KeyN",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "n polonais"
+      ],
+      "englishAliases": [
+        "polish n"
       ]
     },
     "Ņ": {
@@ -6168,6 +6944,12 @@
           "key": "KeyN",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "n letton"
+      ],
+      "englishAliases": [
+        "latvian n capital"
       ]
     },
     "ņ": {
@@ -6188,6 +6970,12 @@
           "key": "KeyN",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "n letton"
+      ],
+      "englishAliases": [
+        "latvian n"
       ]
     },
     "Ň": {
@@ -6208,6 +6996,14 @@
           "key": "KeyN",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "n tchèque",
+        "n slovaque"
+      ],
+      "englishAliases": [
+        "czech n capital",
+        "slovak n capital"
       ]
     },
     "ň": {
@@ -6228,6 +7024,14 @@
           "key": "KeyN",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "n tchèque",
+        "n slovaque"
+      ],
+      "englishAliases": [
+        "czech n",
+        "slovak n"
       ]
     },
     "Ŋ": {
@@ -6235,7 +7039,19 @@
       "unicodeName": "LATIN CAPITAL LETTER ENG",
       "unicodeNameFr": "LETTRE ENG MAJUSCULE",
       "frenchAliases": [
-        "n africain"
+        "n africain",
+        "ng majuscule",
+        "n velaire majuscule",
+        "n wolof majuscule",
+        "n bambara majuscule"
+      ],
+      "englishAliases": [
+        "eng capital",
+        "african n capital",
+        "ng capital",
+        "velar n capital",
+        "wolof n capital",
+        "bambara n capital"
       ],
       "methods": [
         {
@@ -6258,7 +7074,23 @@
       "unicodeName": "LATIN SMALL LETTER ENG",
       "unicodeNameFr": "LETTRE ENG MINUSCULE",
       "frenchAliases": [
-        "n africain"
+        "n africain",
+        "ng",
+        "n velaire",
+        "n wolof",
+        "n bambara",
+        "n peul",
+        "n lingala"
+      ],
+      "englishAliases": [
+        "eng",
+        "african n",
+        "ng",
+        "velar n",
+        "wolof n",
+        "bambara n",
+        "fula n",
+        "lingala n"
       ],
       "methods": [
         {
@@ -6294,6 +7126,12 @@
           "key": "KeyO",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "o maori"
+      ],
+      "englishAliases": [
+        "maori o capital"
       ]
     },
     "ō": {
@@ -6314,6 +7152,12 @@
           "key": "KeyO",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "o maori"
+      ],
+      "englishAliases": [
+        "maori o"
       ]
     },
     "Ŏ": {
@@ -6363,6 +7207,10 @@
       "frenchAliases": [
         "o hongrois"
       ],
+      "englishAliases": [
+        "o double acute capital",
+        "hungarian o capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -6385,6 +7233,10 @@
       "unicodeNameFr": "LETTRE O MINUSCULE AVEC ACCENT AIGU DOUBLE",
       "frenchAliases": [
         "o hongrois"
+      ],
+      "englishAliases": [
+        "o double acute",
+        "hungarian o"
       ],
       "methods": [
         {
@@ -6412,6 +7264,9 @@
         "o e collés",
         "oe collés"
       ],
+      "englishAliases": [
+        "oe ligature capital"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -6435,6 +7290,9 @@
         "e-dans-l'o",
         "o e collés",
         "oe collés"
+      ],
+      "englishAliases": [
+        "oe ligature"
       ],
       "methods": [
         {
@@ -6468,6 +7326,12 @@
           "key": "KeyR",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "r slovaque"
+      ],
+      "englishAliases": [
+        "slovak r capital"
       ]
     },
     "ŕ": {
@@ -6488,6 +7352,12 @@
           "key": "KeyR",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "r slovaque"
+      ],
+      "englishAliases": [
+        "slovak r"
       ]
     },
     "Ŗ": {
@@ -6508,6 +7378,12 @@
           "key": "KeyR",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "r letton"
+      ],
+      "englishAliases": [
+        "latvian r capital"
       ]
     },
     "ŗ": {
@@ -6528,6 +7404,12 @@
           "key": "KeyR",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "r letton"
+      ],
+      "englishAliases": [
+        "latvian r"
       ]
     },
     "Ř": {
@@ -6548,6 +7430,12 @@
           "key": "KeyR",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "r tchèque"
+      ],
+      "englishAliases": [
+        "czech r capital"
       ]
     },
     "ř": {
@@ -6568,6 +7456,12 @@
           "key": "KeyR",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "r tchèque"
+      ],
+      "englishAliases": [
+        "czech r"
       ]
     },
     "Ś": {
@@ -6588,6 +7482,12 @@
           "key": "KeyS",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "s polonais"
+      ],
+      "englishAliases": [
+        "polish s capital"
       ]
     },
     "ś": {
@@ -6608,6 +7508,12 @@
           "key": "KeyS",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "s polonais"
+      ],
+      "englishAliases": [
+        "polish s"
       ]
     },
     "Ŝ": {
@@ -6615,7 +7521,14 @@
       "unicodeName": "LATIN CAPITAL LETTER S WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE S MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "s chapeau"
+        "s chapeau",
+        "s accent circonflexe",
+        "s espéranto"
+      ],
+      "englishAliases": [
+        "s circumflex capital",
+        "s circumflex accent",
+        "esperanto s capital"
       ],
       "methods": [
         {
@@ -6638,7 +7551,14 @@
       "unicodeName": "LATIN SMALL LETTER S WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE S MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "s chapeau"
+        "s chapeau",
+        "s accent circonflexe",
+        "s espéranto"
+      ],
+      "englishAliases": [
+        "s circumflex",
+        "s circumflex accent",
+        "esperanto s"
       ],
       "methods": [
         {
@@ -6686,6 +7606,12 @@
           "key": "KeyS",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "s turc"
+      ],
+      "englishAliases": [
+        "turkish s capital"
       ]
     },
     "ş": {
@@ -6718,6 +7644,12 @@
           "key": "KeyS",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "s turc"
+      ],
+      "englishAliases": [
+        "turkish s"
       ]
     },
     "Š": {
@@ -6750,6 +7682,14 @@
           "key": "KeyS",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "s tchèque",
+        "s croate"
+      ],
+      "englishAliases": [
+        "czech s capital",
+        "croatian s capital"
       ]
     },
     "š": {
@@ -6782,6 +7722,14 @@
           "key": "KeyS",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "s tchèque",
+        "s croate"
+      ],
+      "englishAliases": [
+        "czech s",
+        "croatian s"
       ]
     },
     "Ţ": {
@@ -6842,6 +7790,14 @@
           "key": "KeyT",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "t tchèque",
+        "t slovaque"
+      ],
+      "englishAliases": [
+        "czech t capital",
+        "slovak t capital"
       ]
     },
     "ť": {
@@ -6862,6 +7818,14 @@
           "key": "KeyT",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "t tchèque",
+        "t slovaque"
+      ],
+      "englishAliases": [
+        "czech t",
+        "slovak t"
       ]
     },
     "Ŧ": {
@@ -6870,6 +7834,9 @@
       "unicodeNameFr": "LETTRE T MAJUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
         "t barré"
+      ],
+      "englishAliases": [
+        "t stroke capital"
       ],
       "methods": [
         {
@@ -6893,6 +7860,9 @@
       "unicodeNameFr": "LETTRE T MINUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
         "t barré"
+      ],
+      "englishAliases": [
+        "t stroke"
       ],
       "methods": [
         {
@@ -6968,6 +7938,14 @@
           "key": "KeyU",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "u letton",
+        "u maori"
+      ],
+      "englishAliases": [
+        "latvian u capital",
+        "maori u capital"
       ]
     },
     "ū": {
@@ -6988,6 +7966,14 @@
           "key": "KeyU",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "u letton",
+        "u maori"
+      ],
+      "englishAliases": [
+        "latvian u",
+        "maori u"
       ]
     },
     "Ŭ": {
@@ -7008,6 +7994,12 @@
           "key": "KeyU",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "u espéranto"
+      ],
+      "englishAliases": [
+        "esperanto u capital"
       ]
     },
     "ŭ": {
@@ -7028,6 +8020,12 @@
           "key": "KeyU",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "u espéranto"
+      ],
+      "englishAliases": [
+        "esperanto u"
       ]
     },
     "Ů": {
@@ -7035,7 +8033,12 @@
       "unicodeName": "LATIN CAPITAL LETTER U WITH RING ABOVE",
       "unicodeNameFr": "LETTRE U MAJUSCULE AVEC ROND EN CHEF",
       "frenchAliases": [
-        "u petit rond"
+        "u petit rond",
+        "u tchèque"
+      ],
+      "englishAliases": [
+        "u ring above capital",
+        "czech u capital"
       ],
       "methods": [
         {
@@ -7058,7 +8061,12 @@
       "unicodeName": "LATIN SMALL LETTER U WITH RING ABOVE",
       "unicodeNameFr": "LETTRE U MINUSCULE AVEC ROND EN CHEF",
       "frenchAliases": [
-        "u petit rond"
+        "u petit rond",
+        "u tchèque"
+      ],
+      "englishAliases": [
+        "u ring above",
+        "czech u"
       ],
       "methods": [
         {
@@ -7083,6 +8091,10 @@
       "frenchAliases": [
         "u hongrois"
       ],
+      "englishAliases": [
+        "u double acute capital",
+        "hungarian u capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -7105,6 +8117,10 @@
       "unicodeNameFr": "LETTRE U MINUSCULE AVEC ACCENT AIGU DOUBLE",
       "frenchAliases": [
         "u hongrois"
+      ],
+      "englishAliases": [
+        "u double acute",
+        "hungarian u"
       ],
       "methods": [
         {
@@ -7140,6 +8156,12 @@
           "key": "KeyU",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "u lituanien"
+      ],
+      "englishAliases": [
+        "lithuanian u capital"
       ]
     },
     "ų": {
@@ -7160,6 +8182,12 @@
           "key": "KeyU",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "u lituanien"
+      ],
+      "englishAliases": [
+        "lithuanian u"
       ]
     },
     "Ŵ": {
@@ -7167,7 +8195,14 @@
       "unicodeName": "LATIN CAPITAL LETTER W WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE W MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "w chapeau"
+        "w chapeau",
+        "w accent circonflexe",
+        "w gallois"
+      ],
+      "englishAliases": [
+        "w circumflex capital",
+        "w circumflex accent",
+        "welsh w capital"
       ],
       "methods": [
         {
@@ -7190,7 +8225,14 @@
       "unicodeName": "LATIN SMALL LETTER W WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE W MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "w chapeau"
+        "w chapeau",
+        "w accent circonflexe",
+        "w gallois"
+      ],
+      "englishAliases": [
+        "w circumflex",
+        "w circumflex accent",
+        "welsh w"
       ],
       "methods": [
         {
@@ -7213,7 +8255,14 @@
       "unicodeName": "LATIN CAPITAL LETTER Y WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE Y MAJUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "y chapeau"
+        "y chapeau",
+        "y accent circonflexe",
+        "y gallois"
+      ],
+      "englishAliases": [
+        "y circumflex capital",
+        "y circumflex accent",
+        "welsh y capital"
       ],
       "methods": [
         {
@@ -7236,7 +8285,14 @@
       "unicodeName": "LATIN SMALL LETTER Y WITH CIRCUMFLEX",
       "unicodeNameFr": "LETTRE Y MINUSCULE AVEC CIRCONFLEXE",
       "frenchAliases": [
-        "y chapeau"
+        "y chapeau",
+        "y accent circonflexe",
+        "y gallois"
+      ],
+      "englishAliases": [
+        "y circumflex",
+        "y circumflex accent",
+        "welsh y"
       ],
       "methods": [
         {
@@ -7292,6 +8348,12 @@
           "key": "KeyW",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "z polonais accent aigu"
+      ],
+      "englishAliases": [
+        "polish z acute capital"
       ]
     },
     "ź": {
@@ -7312,6 +8374,12 @@
           "key": "KeyW",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "z polonais accent aigu"
+      ],
+      "englishAliases": [
+        "polish z acute"
       ]
     },
     "Ż": {
@@ -7319,7 +8387,12 @@
       "unicodeName": "LATIN CAPITAL LETTER Z WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE Z MAJUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "z point en chef"
+        "z point en chef",
+        "z polonais"
+      ],
+      "englishAliases": [
+        "z dot above capital",
+        "polish z capital"
       ],
       "methods": [
         {
@@ -7354,7 +8427,12 @@
       "unicodeName": "LATIN SMALL LETTER Z WITH DOT ABOVE",
       "unicodeNameFr": "LETTRE Z MINUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
-        "z point en chef"
+        "z point en chef",
+        "z polonais"
+      ],
+      "englishAliases": [
+        "z dot above",
+        "polish z"
       ],
       "methods": [
         {
@@ -7402,6 +8480,14 @@
           "key": "KeyW",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "z tchèque",
+        "z croate"
+      ],
+      "englishAliases": [
+        "czech z capital",
+        "croatian z capital"
       ]
     },
     "ž": {
@@ -7422,6 +8508,14 @@
           "key": "KeyW",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "z tchèque",
+        "z croate"
+      ],
+      "englishAliases": [
+        "czech z",
+        "croatian z"
       ]
     },
     "ſ": {
@@ -7430,6 +8524,9 @@
       "unicodeNameFr": "LETTRE MINUSCULE LATINE S LONG",
       "frenchAliases": [
         "s long"
+      ],
+      "englishAliases": [
+        "long s"
       ],
       "methods": [
         {
@@ -7466,6 +8563,9 @@
       "frenchAliases": [
         "b barré"
       ],
+      "englishAliases": [
+        "b stroke"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -7488,7 +8588,14 @@
       "unicodeNameFr": "LETTRE MAJUSCULE LATINE B CROSSE",
       "frenchAliases": [
         "b majuscule crochet",
-        "b majuscule crosse"
+        "b majuscule crosse",
+        "b peul majuscule",
+        "b haoussa majuscule"
+      ],
+      "englishAliases": [
+        "b hook capital",
+        "fula b capital",
+        "hausa b capital"
       ],
       "methods": [
         {
@@ -7536,6 +8643,13 @@
           "key": "KeyO",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "o bambara majuscule",
+        "o lingala majuscule"
+      ],
+      "englishAliases": [
+        "o bambara capital"
       ]
     },
     "Ƈ": {
@@ -7545,6 +8659,9 @@
       "frenchAliases": [
         "c majuscule crochet",
         "c majuscule crosse"
+      ],
+      "englishAliases": [
+        "c hook capital"
       ],
       "methods": [
         {
@@ -7569,6 +8686,9 @@
       "frenchAliases": [
         "c crochet",
         "c crosse"
+      ],
+      "englishAliases": [
+        "c hook"
       ],
       "methods": [
         {
@@ -7624,6 +8744,14 @@
           "key": "KeyD",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "d peul majuscule",
+        "d haoussa majuscule"
+      ],
+      "englishAliases": [
+        "fula d capital",
+        "hausa d capital"
       ]
     },
     "Ǝ": {
@@ -7632,6 +8760,9 @@
       "unicodeNameFr": "LETTRE MAJUSCULE LATINE E RENVERSÉ",
       "frenchAliases": [
         "e renversé majuscule"
+      ],
+      "englishAliases": [
+        "reversed e capital"
       ],
       "methods": [
         {
@@ -7661,6 +8792,9 @@
       "unicodeNameFr": "LETTRE MAJUSCULE LATINE SCHWA",
       "frenchAliases": [
         "schwa majuscule"
+      ],
+      "englishAliases": [
+        "schwa capital"
       ],
       "methods": [
         {
@@ -7696,7 +8830,14 @@
       "unicodeNameFr": "LETTRE MAJUSCULE LATINE EPSILON OUVERT",
       "frenchAliases": [
         "epsilon ouvert majuscule",
-        "epsilon latin majuscule"
+        "epsilon latin majuscule",
+        "e ouvert majuscule",
+        "e bambara majuscule",
+        "e ewe majuscule"
+      ],
+      "englishAliases": [
+        "open e capital",
+        "e bambara capital"
       ],
       "methods": [
         {
@@ -7764,6 +8905,14 @@
           "key": "KeyF",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "f ewe",
+        "f mina"
+      ],
+      "englishAliases": [
+        "ewe f",
+        "mina f"
       ]
     },
     "Ɠ": {
@@ -7804,6 +8953,14 @@
           "key": "KeyG",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "gh majuscule",
+        "g berbere majuscule"
+      ],
+      "englishAliases": [
+        "gh capital",
+        "berber g capital"
       ]
     },
     "Ɩ": {
@@ -7812,6 +8969,9 @@
       "unicodeNameFr": "LETTRE MAJUSCULE LATINE IOTA",
       "frenchAliases": [
         "iota latin majuscule"
+      ],
+      "englishAliases": [
+        "iota capital"
       ],
       "methods": [
         {
@@ -7836,6 +8996,9 @@
       "frenchAliases": [
         "i barré"
       ],
+      "englishAliases": [
+        "i stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -7859,6 +9022,9 @@
       "frenchAliases": [
         "k majuscule crochet",
         "k majuscule crosse"
+      ],
+      "englishAliases": [
+        "k hook capital"
       ],
       "methods": [
         {
@@ -7896,6 +9062,9 @@
         "k crochet",
         "k crosse"
       ],
+      "englishAliases": [
+        "k hook"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -7930,7 +9099,15 @@
       "unicodeNameFr": "LETTRE MAJUSCULE LATINE N HAMEÇON GAUCHE",
       "frenchAliases": [
         "n palatal majuscule",
-        "n majuscule crochet gauche"
+        "n majuscule crochet gauche",
+        "gn majuscule",
+        "n bambara majuscule",
+        "n dioula majuscule"
+      ],
+      "englishAliases": [
+        "n left hook capital",
+        "gn capital",
+        "bambara n capital"
       ],
       "methods": [
         {
@@ -7966,6 +9143,12 @@
           "key": "KeyO",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "o vietnamien"
+      ],
+      "englishAliases": [
+        "vietnamese o capital"
       ]
     },
     "ơ": {
@@ -7986,6 +9169,12 @@
           "key": "KeyO",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "o vietnamien"
+      ],
+      "englishAliases": [
+        "vietnamese o"
       ]
     },
     "Ƥ": {
@@ -7995,6 +9184,9 @@
       "frenchAliases": [
         "p majuscule crochet",
         "p majuscule crosse"
+      ],
+      "englishAliases": [
+        "p hook capital"
       ],
       "methods": [
         {
@@ -8019,6 +9211,9 @@
       "frenchAliases": [
         "p crochet",
         "p crosse"
+      ],
+      "englishAliases": [
+        "p hook"
       ],
       "methods": [
         {
@@ -8114,6 +9309,12 @@
           "key": "KeyU",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "u vietnamien"
+      ],
+      "englishAliases": [
+        "vietnamese u capital"
       ]
     },
     "ư": {
@@ -8134,6 +9335,12 @@
           "key": "KeyU",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "u vietnamien"
+      ],
+      "englishAliases": [
+        "vietnamese u"
       ]
     },
     "Ʊ": {
@@ -8194,6 +9401,14 @@
           "key": "KeyY",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "y peul majuscule",
+        "y haoussa majuscule"
+      ],
+      "englishAliases": [
+        "fula y capital",
+        "hausa y capital"
       ]
     },
     "ƴ": {
@@ -8214,6 +9429,14 @@
           "key": "KeyY",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "y peul",
+        "y haoussa"
+      ],
+      "englishAliases": [
+        "fula y",
+        "hausa y"
       ]
     },
     "Ƶ": {
@@ -8443,6 +9666,9 @@
       "frenchAliases": [
         "e retourné",
         "e renversé minuscule"
+      ],
+      "englishAliases": [
+        "turned e"
       ],
       "methods": [
         {
@@ -9281,6 +10507,10 @@
       "frenchAliases": [
         "s roumain"
       ],
+      "englishAliases": [
+        "s comma below capital",
+        "romanian s capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9315,6 +10545,10 @@
       "unicodeNameFr": "LETTRE S MINUSCULE AVEC VIRGULE SOUSCRITE",
       "frenchAliases": [
         "s roumain"
+      ],
+      "englishAliases": [
+        "s comma below",
+        "romanian s"
       ],
       "methods": [
         {
@@ -9351,6 +10585,10 @@
       "frenchAliases": [
         "t roumain"
       ],
+      "englishAliases": [
+        "t comma below capital",
+        "romanian t capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9373,6 +10611,10 @@
       "unicodeNameFr": "LETTRE T MINUSCULE AVEC VIRGULE SOUSCRITE",
       "frenchAliases": [
         "t roumain"
+      ],
+      "englishAliases": [
+        "t comma below",
+        "romanian t"
       ],
       "methods": [
         {
@@ -9437,6 +10679,9 @@
       "frenchAliases": [
         "a point en chef"
       ],
+      "englishAliases": [
+        "a dot above capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9459,6 +10704,9 @@
       "unicodeNameFr": "LETTRE A MINUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
         "a point en chef"
+      ],
+      "englishAliases": [
+        "a dot above"
       ],
       "methods": [
         {
@@ -9523,6 +10771,9 @@
       "frenchAliases": [
         "o point en chef"
       ],
+      "englishAliases": [
+        "o dot above capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9545,6 +10796,9 @@
       "unicodeNameFr": "LETTRE O MINUSCULE AVEC POINT SUSCRIT",
       "frenchAliases": [
         "o point en chef"
+      ],
+      "englishAliases": [
+        "o dot above"
       ],
       "methods": [
         {
@@ -9609,6 +10863,9 @@
       "frenchAliases": [
         "a barré"
       ],
+      "englishAliases": [
+        "a stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9631,6 +10888,9 @@
       "unicodeNameFr": "LETTRE C MAJUSCULE AVEC BARRE OBLIQUE",
       "frenchAliases": [
         "c barré"
+      ],
+      "englishAliases": [
+        "c stroke capital"
       ],
       "methods": [
         {
@@ -9655,6 +10915,9 @@
       "frenchAliases": [
         "c barré"
       ],
+      "englishAliases": [
+        "c stroke"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9677,6 +10940,9 @@
       "unicodeNameFr": "LETTRE T MAJUSCULE AVEC BARRE OBLIQUE",
       "frenchAliases": [
         "t barré"
+      ],
+      "englishAliases": [
+        "t diagonal stroke capital"
       ],
       "methods": [
         {
@@ -9701,6 +10967,9 @@
       "frenchAliases": [
         "b barré"
       ],
+      "englishAliases": [
+        "b stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9723,6 +10992,9 @@
       "unicodeNameFr": "LETTRE U MAJUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
         "u barré"
+      ],
+      "englishAliases": [
+        "u bar capital"
       ],
       "methods": [
         {
@@ -9767,6 +11039,9 @@
       "frenchAliases": [
         "e barré"
       ],
+      "englishAliases": [
+        "e stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9789,6 +11064,9 @@
       "unicodeNameFr": "LETTRE E MINUSCULE AVEC BARRE OBLIQUE",
       "frenchAliases": [
         "e barré"
+      ],
+      "englishAliases": [
+        "e stroke"
       ],
       "methods": [
         {
@@ -9813,6 +11091,9 @@
       "frenchAliases": [
         "j barré"
       ],
+      "englishAliases": [
+        "j stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9835,6 +11116,9 @@
       "unicodeNameFr": "LETTRE J MINUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
         "j barré"
+      ],
+      "englishAliases": [
+        "j stroke"
       ],
       "methods": [
         {
@@ -9859,6 +11143,9 @@
       "frenchAliases": [
         "r barré"
       ],
+      "englishAliases": [
+        "r stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9881,6 +11168,9 @@
       "unicodeNameFr": "LETTRE R MINUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
         "r barré"
+      ],
+      "englishAliases": [
+        "r stroke"
       ],
       "methods": [
         {
@@ -9905,6 +11195,9 @@
       "frenchAliases": [
         "y barré"
       ],
+      "englishAliases": [
+        "y stroke capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -9927,6 +11220,9 @@
       "unicodeNameFr": "LETTRE Y MINUSCULE AVEC BARRE HORIZONTALE",
       "frenchAliases": [
         "y barré"
+      ],
+      "englishAliases": [
+        "y stroke"
       ],
       "methods": [
         {
@@ -9990,7 +11286,14 @@
       "unicodeNameFr": "LETTRE MINUSCULE LATINE B CROSSE",
       "frenchAliases": [
         "b crochet",
-        "b crosse"
+        "b crosse",
+        "b peul",
+        "b haoussa"
+      ],
+      "englishAliases": [
+        "b hook",
+        "fula b",
+        "hausa b"
       ],
       "methods": [
         {
@@ -10038,6 +11341,17 @@
           "key": "KeyO",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "o bambara",
+        "o ewe",
+        "o fon",
+        "o lingala"
+      ],
+      "englishAliases": [
+        "o bambara",
+        "o ewe",
+        "o lingala"
       ]
     },
     "ɖ": {
@@ -10078,6 +11392,14 @@
           "key": "KeyD",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "d peul",
+        "d haoussa"
+      ],
+      "englishAliases": [
+        "fula d",
+        "hausa d"
       ]
     },
     "ɘ": {
@@ -10105,6 +11427,9 @@
       "unicodeName": "LATIN SMALL LETTER SCHWA",
       "unicodeNameFr": "LETTRE MINUSCULE LATINE SCHWA",
       "frenchAliases": [
+        "schwa"
+      ],
+      "englishAliases": [
         "schwa"
       ],
       "methods": [
@@ -10141,7 +11466,18 @@
       "unicodeNameFr": "LETTRE MINUSCULE LATINE EPSILON OUVERT",
       "frenchAliases": [
         "epsilon ouvert",
-        "epsilon latin"
+        "epsilon latin",
+        "e ouvert",
+        "e bambara",
+        "e ewe",
+        "e fon",
+        "e baoule"
+      ],
+      "englishAliases": [
+        "open e",
+        "e bambara",
+        "e ewe",
+        "e fon"
       ],
       "methods": [
         {
@@ -10237,6 +11573,16 @@
           "key": "KeyG",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "gh",
+        "g berbere",
+        "g kabyle"
+      ],
+      "englishAliases": [
+        "gh",
+        "berber g",
+        "kabyle g"
       ]
     },
     "ɥ": {
@@ -10286,6 +11632,9 @@
       "frenchAliases": [
         "i barré"
       ],
+      "englishAliases": [
+        "i stroke"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -10320,6 +11669,9 @@
       "unicodeNameFr": "LETTRE MINUSCULE LATINE IOTA",
       "frenchAliases": [
         "iota latin"
+      ],
+      "englishAliases": [
+        "iota"
       ],
       "methods": [
         {
@@ -10483,7 +11835,20 @@
       "unicodeNameFr": "LETTRE MINUSCULE LATINE N HAMEÇON GAUCHE",
       "frenchAliases": [
         "n palatal",
-        "n crochet gauche"
+        "n crochet gauche",
+        "gn",
+        "ny",
+        "n bambara",
+        "n dioula",
+        "n peul"
+      ],
+      "englishAliases": [
+        "n left hook",
+        "gn",
+        "ny",
+        "bambara n",
+        "dioula n",
+        "fula n"
       ],
       "methods": [
         {
@@ -10641,6 +12006,10 @@
         "r français",
         "r uvulaire"
       ],
+      "englishAliases": [
+        "french r",
+        "uvular r"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -10687,6 +12056,10 @@
       "unicodeNameFr": "LETTRE ESH MINUSCULE",
       "frenchAliases": [
         "son ch"
+      ],
+      "englishAliases": [
+        "esh",
+        "sh sound"
       ],
       "methods": [
         {
@@ -10883,6 +12256,10 @@
       "frenchAliases": [
         "son j"
       ],
+      "englishAliases": [
+        "ezh",
+        "zh sound"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11001,6 +12378,10 @@
         "virgule culbutée",
         "okina"
       ],
+      "englishAliases": [
+        "turned comma",
+        "okina"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11022,7 +12403,12 @@
       "unicodeName": "MODIFIER LETTER APOSTROPHE",
       "unicodeNameFr": "LETTRE MODIFICATIVE APOSTROPHE",
       "frenchAliases": [
-        "apostrophe modificative"
+        "apostrophe modificative",
+        "apostrophe haoussa"
+      ],
+      "englishAliases": [
+        "modifier apostrophe",
+        "hausa apostrophe"
       ],
       "methods": [
         {
@@ -11441,6 +12827,9 @@
       "frenchAliases": [
         "accent aigu combinant"
       ],
+      "englishAliases": [
+        "combining acute accent"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11463,6 +12852,9 @@
       "unicodeNameFr": "ACCENT CIRCONFLEXE COMBINANT",
       "frenchAliases": [
         "accent circonflexe combinant"
+      ],
+      "englishAliases": [
+        "combining circumflex accent"
       ],
       "methods": [
         {
@@ -11531,6 +12923,9 @@
       "frenchAliases": [
         "macron combinant"
       ],
+      "englishAliases": [
+        "combining macron"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11574,6 +12969,9 @@
       "frenchAliases": [
         "brève combinante"
       ],
+      "englishAliases": [
+        "combining breve"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11597,6 +12995,9 @@
       "frenchAliases": [
         "point en chef combinant"
       ],
+      "englishAliases": [
+        "combining dot above"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11619,6 +13020,9 @@
       "unicodeNameFr": "TRÉMA COMBINANT",
       "frenchAliases": [
         "tréma combinant"
+      ],
+      "englishAliases": [
+        "combining diaeresis"
       ],
       "methods": [
         {
@@ -11687,6 +13091,9 @@
       "frenchAliases": [
         "rond en chef combinant"
       ],
+      "englishAliases": [
+        "combining ring above"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11710,6 +13117,9 @@
       "frenchAliases": [
         "double accent aigu combinant"
       ],
+      "englishAliases": [
+        "combining double acute accent"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11732,6 +13142,9 @@
       "unicodeNameFr": "CARON COMBINANT",
       "frenchAliases": [
         "caron combinant"
+      ],
+      "englishAliases": [
+        "combining caron"
       ],
       "methods": [
         {
@@ -11844,6 +13257,9 @@
       "frenchAliases": [
         "angle gauche en chef combinant"
       ],
+      "englishAliases": [
+        "combining left angle above"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11943,6 +13359,9 @@
       "frenchAliases": [
         "tréma souscrit combinant"
       ],
+      "englishAliases": [
+        "combining diaeresis below"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -11965,6 +13384,9 @@
       "unicodeNameFr": "ROND SOUSCRIT COMBINANT",
       "frenchAliases": [
         "rond souscrit combinant"
+      ],
+      "englishAliases": [
+        "combining ring below"
       ],
       "methods": [
         {
@@ -12021,6 +13443,9 @@
       "frenchAliases": [
         "cédille combinante"
       ],
+      "englishAliases": [
+        "combining cedilla"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -12043,6 +13468,9 @@
       "unicodeNameFr": "OGONEK COMBINANT",
       "frenchAliases": [
         "ogonek combinant"
+      ],
+      "englishAliases": [
+        "combining ogonek"
       ],
       "methods": [
         {
@@ -12087,6 +13515,9 @@
       "frenchAliases": [
         "caron souscrit combinant"
       ],
+      "englishAliases": [
+        "combining caron below"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -12109,6 +13540,9 @@
       "unicodeNameFr": "ACCENT CIRCONFLEXE SOUSCRIT COMBINANT",
       "frenchAliases": [
         "accent circonflexe souscrit combinant"
+      ],
+      "englishAliases": [
+        "combining circumflex accent below"
       ],
       "methods": [
         {
@@ -12145,6 +13579,9 @@
       "frenchAliases": [
         "brève souscrite combinante"
       ],
+      "englishAliases": [
+        "combining breve below"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -12167,6 +13604,9 @@
       "unicodeNameFr": "BRÈVE RENVERSÉE SOUSCRITE COMBINANTE",
       "frenchAliases": [
         "brève renversée souscrite combinante"
+      ],
+      "englishAliases": [
+        "combining inverted breve below"
       ],
       "methods": [
         {
@@ -12930,6 +14370,10 @@
         "omega majuscule",
         "ohm"
       ],
+      "englishAliases": [
+        "omega capital",
+        "ohm"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13087,6 +14531,9 @@
       "frenchAliases": [
         "alpha"
       ],
+      "englishAliases": [
+        "alpha"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13108,6 +14555,9 @@
       "unicodeName": "GREEK SMALL LETTER BETA",
       "unicodeNameFr": "GRECQUE MINUSCULE BÊTA",
       "frenchAliases": [
+        "beta"
+      ],
+      "englishAliases": [
         "beta"
       ],
       "methods": [
@@ -13133,6 +14583,9 @@
       "frenchAliases": [
         "gamma"
       ],
+      "englishAliases": [
+        "gamma"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13156,6 +14609,9 @@
       "frenchAliases": [
         "delta minuscule"
       ],
+      "englishAliases": [
+        "delta lowercase"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13177,6 +14633,9 @@
       "unicodeName": "GREEK SMALL LETTER EPSILON",
       "unicodeNameFr": "GRECQUE MINUSCULE EPSILON",
       "frenchAliases": [
+        "epsilon"
+      ],
+      "englishAliases": [
         "epsilon"
       ],
       "methods": [
@@ -13242,6 +14701,9 @@
       "frenchAliases": [
         "theta"
       ],
+      "englishAliases": [
+        "theta"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13303,6 +14765,9 @@
       "unicodeName": "GREEK SMALL LETTER LAMDA",
       "unicodeNameFr": "GRECQUE MINUSCULE LAMDA",
       "frenchAliases": [
+        "lambda"
+      ],
+      "englishAliases": [
         "lambda"
       ],
       "methods": [
@@ -13408,6 +14873,9 @@
       "frenchAliases": [
         "pi"
       ],
+      "englishAliases": [
+        "pi"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13483,6 +14951,9 @@
       "frenchAliases": [
         "sigma"
       ],
+      "englishAliases": [
+        "sigma"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13546,6 +15017,9 @@
       "frenchAliases": [
         "phi"
       ],
+      "englishAliases": [
+        "phi"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13589,6 +15063,9 @@
       "frenchAliases": [
         "psi"
       ],
+      "englishAliases": [
+        "psi"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -13610,6 +15087,9 @@
       "unicodeName": "GREEK SMALL LETTER OMEGA",
       "unicodeNameFr": "GRECQUE MINUSCULE OMÉGA",
       "frenchAliases": [
+        "omega"
+      ],
+      "englishAliases": [
         "omega"
       ],
       "methods": [
@@ -13762,6 +15242,9 @@
       "unicodeNameFr": "CYRILLIQUE MAJUSCULE DJÉ",
       "frenchAliases": [
         "dje majuscule"
+      ],
+      "englishAliases": [
+        "dje capital"
       ],
       "methods": [
         {
@@ -13983,6 +15466,9 @@
         "tshe majuscule",
         "tché majuscule"
       ],
+      "englishAliases": [
+        "tshe capital"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -14077,6 +15563,9 @@
       "unicodeNameFr": "CYRILLIQUE MAJUSCULE DJÉ MACÉDONIEN",
       "frenchAliases": [
         "dzhe majuscule"
+      ],
+      "englishAliases": [
+        "dzhe capital"
       ],
       "methods": [
         {
@@ -15632,6 +17121,9 @@
         "tshe minuscule",
         "tché minuscule"
       ],
+      "englishAliases": [
+        "tshe"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -15714,6 +17206,9 @@
       "unicodeNameFr": "CYRILLIQUE MINUSCULE DJÉ MACÉDONIEN",
       "frenchAliases": [
         "dzhe minuscule"
+      ],
+      "englishAliases": [
+        "dzhe"
       ],
       "methods": [
         {
@@ -16067,6 +17562,14 @@
           "key": "KeyD",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "d berbere",
+        "d emphatique"
+      ],
+      "englishAliases": [
+        "berber d",
+        "emphatic d"
       ]
     },
     "Ḏ": {
@@ -16307,6 +17810,14 @@
           "key": "KeyH",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "h berbere",
+        "h emphatique"
+      ],
+      "englishAliases": [
+        "berber h",
+        "emphatic h"
       ]
     },
     "Ḧ": {
@@ -16987,6 +18498,14 @@
           "key": "KeyR",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "r berbere",
+        "r emphatique"
+      ],
+      "englishAliases": [
+        "berber r",
+        "emphatic r"
       ]
     },
     "Ṟ": {
@@ -17107,6 +18626,16 @@
           "key": "KeyS",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "s berbere",
+        "s emphatique",
+        "s yoruba"
+      ],
+      "englishAliases": [
+        "berber s",
+        "emphatic s",
+        "yoruba s"
       ]
     },
     "Ṫ": {
@@ -17187,6 +18716,14 @@
           "key": "KeyT",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "t berbere",
+        "t emphatique"
+      ],
+      "englishAliases": [
+        "berber t",
+        "emphatic t"
       ]
     },
     "Ṯ": {
@@ -17647,6 +19184,12 @@
           "key": "KeyW",
           "layer": "Caps"
         }
+      ],
+      "frenchAliases": [
+        "z accent circonflexe"
+      ],
+      "englishAliases": [
+        "z circumflex accent"
       ]
     },
     "ẑ": {
@@ -17667,6 +19210,12 @@
           "key": "KeyW",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "z accent circonflexe"
+      ],
+      "englishAliases": [
+        "z circumflex accent"
       ]
     },
     "Ẓ": {
@@ -17707,6 +19256,14 @@
           "key": "KeyW",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "z berbere",
+        "z emphatique"
+      ],
+      "englishAliases": [
+        "berber z",
+        "emphatic z"
       ]
     },
     "Ẕ": {
@@ -17836,6 +19393,11 @@
       "frenchAliases": [
         "S allemand majuscule",
         "Eszett majuscule"
+      ],
+      "englishAliases": [
+        "capital sharp s",
+        "capital eszett",
+        "german s capital"
       ],
       "methods": [
         {
@@ -17969,6 +19531,12 @@
           "key": "KeyE",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "e yoruba"
+      ],
+      "englishAliases": [
+        "yoruba e"
       ]
     },
     "Ẻ": {
@@ -18169,6 +19737,12 @@
           "key": "KeyO",
           "layer": "Caps+Shift"
         }
+      ],
+      "frenchAliases": [
+        "o yoruba"
+      ],
+      "englishAliases": [
+        "yoruba o"
       ]
     },
     "Ỏ": {
@@ -18496,6 +20070,9 @@
       "frenchAliases": [
         "tiret moyen"
       ],
+      "englishAliases": [
+        "en dash"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -18516,6 +20093,9 @@
       "unicodeNameFr": "TIRET CADRATIN",
       "frenchAliases": [
         "tiret long"
+      ],
+      "englishAliases": [
+        "em dash"
       ],
       "methods": [
         {
@@ -18557,6 +20137,9 @@
       "unicodeNameFr": "GUILLEMET-APOSTROPHE OUVRANT",
       "frenchAliases": [
         "guillemet simple anglais ouvrant"
+      ],
+      "englishAliases": [
+        "left single quote"
       ],
       "methods": [
         {
@@ -18603,6 +20186,10 @@
       "frenchAliases": [
         "apostrophe typographique",
         "apostrophe courbe"
+      ],
+      "englishAliases": [
+        "curly apostrophe",
+        "typographic apostrophe"
       ],
       "methods": [
         {
@@ -18713,6 +20300,9 @@
       "frenchAliases": [
         "guillemet anglais ouvrant"
       ],
+      "englishAliases": [
+        "left double quote"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -18733,6 +20323,9 @@
       "unicodeNameFr": "GUILLEMET-APOSTROPHE DOUBLE FERMANT",
       "frenchAliases": [
         "guillemet anglais fermant"
+      ],
+      "englishAliases": [
+        "right double quote"
       ],
       "methods": [
         {
@@ -18819,6 +20412,9 @@
       "frenchAliases": [
         "obele"
       ],
+      "englishAliases": [
+        "dagger"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -18842,6 +20438,9 @@
       "frenchAliases": [
         "double obele"
       ],
+      "englishAliases": [
+        "double dagger"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -18864,6 +20463,9 @@
       "unicodeNameFr": "PUCE",
       "frenchAliases": [
         "point median"
+      ],
+      "englishAliases": [
+        "bullet"
       ],
       "methods": [
         {
@@ -18951,6 +20553,9 @@
       "unicodeNameFr": "ESPACE FINE INSÉCABLE",
       "frenchAliases": [
         "ESPACE INSÉCABLE ÉTROITE"
+      ],
+      "englishAliases": [
+        "narrow non-breaking space"
       ],
       "methods": [
         {
@@ -19059,6 +20664,9 @@
       "frenchAliases": [
         "guillemet simple ouvrant"
       ],
+      "englishAliases": [
+        "single left angle quote"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -19093,6 +20701,9 @@
       "unicodeNameFr": "GUILLEMET SIMPLE CHEVRON FERMANT",
       "frenchAliases": [
         "guillemet simple fermant"
+      ],
+      "englishAliases": [
+        "single right angle quote"
       ],
       "methods": [
         {
@@ -20061,6 +21672,10 @@
       "frenchAliases": [
         "euro"
       ],
+      "englishAliases": [
+        "euro",
+        "euro sign"
+      ],
       "methods": [
         {
           "type": "direct",
@@ -20538,6 +22153,10 @@
         "numéro",
         "no"
       ],
+      "englishAliases": [
+        "numero",
+        "numero sign"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -20689,6 +22308,9 @@
       "frenchAliases": [
         "trademark"
       ],
+      "englishAliases": [
+        "trademark"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -20752,6 +22374,9 @@
       "frenchAliases": [
         "un tiers"
       ],
+      "englishAliases": [
+        "one third"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -20786,6 +22411,9 @@
       "unicodeNameFr": "FRACTION DEUX TIERS",
       "frenchAliases": [
         "deux tiers"
+      ],
+      "englishAliases": [
+        "two thirds"
       ],
       "methods": [
         {
@@ -20822,6 +22450,9 @@
       "frenchAliases": [
         "fleche gauche"
       ],
+      "englishAliases": [
+        "left arrow"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -20845,6 +22476,9 @@
       "frenchAliases": [
         "fleche haut"
       ],
+      "englishAliases": [
+        "up arrow"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -20867,6 +22501,9 @@
       "unicodeNameFr": "FLÈCHE VERS LA DROITE",
       "frenchAliases": [
         "fleche droite"
+      ],
+      "englishAliases": [
+        "right arrow"
       ],
       "methods": [
         {
@@ -20915,6 +22552,9 @@
       "frenchAliases": [
         "fleche bas"
       ],
+      "englishAliases": [
+        "down arrow"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -20937,6 +22577,9 @@
       "unicodeNameFr": "FLÈCHE GAUCHE-DROITE",
       "frenchAliases": [
         "fleche gauche droite"
+      ],
+      "englishAliases": [
+        "left right arrow"
       ],
       "methods": [
         {
@@ -20974,6 +22617,10 @@
         "flèche haut droite",
         "flèche vers le haut"
       ],
+      "englishAliases": [
+        "up right arrow",
+        "northeast arrow"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -21009,6 +22656,10 @@
       "frenchAliases": [
         "flèche bas droite",
         "flèche vers le bas"
+      ],
+      "englishAliases": [
+        "down right arrow",
+        "southeast arrow"
       ],
       "methods": [
         {
@@ -21133,6 +22784,10 @@
       "frenchAliases": [
         "implique"
       ],
+      "englishAliases": [
+        "implies",
+        "right double arrow"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -21200,6 +22855,10 @@
       "frenchAliases": [
         "equivalent",
         "si et seulement si"
+      ],
+      "englishAliases": [
+        "if and only if",
+        "equivalent"
       ],
       "methods": [
         {
@@ -21322,6 +22981,10 @@
       "frenchAliases": [
         "delta"
       ],
+      "englishAliases": [
+        "delta",
+        "increment"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -21343,6 +23006,10 @@
       "unicodeName": "NABLA",
       "unicodeNameFr": "NABLA",
       "frenchAliases": [
+        "gradient"
+      ],
+      "englishAliases": [
+        "nabla",
         "gradient"
       ],
       "methods": [
@@ -21368,6 +23035,10 @@
       "frenchAliases": [
         "appartient a"
       ],
+      "englishAliases": [
+        "element of",
+        "belongs to"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -21391,6 +23062,10 @@
       "frenchAliases": [
         "pas élément de",
         "n'appartient pas"
+      ],
+      "englishAliases": [
+        "not an element of",
+        "does not belong"
       ],
       "methods": [
         {
@@ -21828,6 +23503,10 @@
         "environ egal",
         "approximativement"
       ],
+      "englishAliases": [
+        "almost equal",
+        "approximately equal"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -21894,6 +23573,9 @@
       "unicodeNameFr": "DIFFÉRENT DE",
       "frenchAliases": [
         "non egal"
+      ],
+      "englishAliases": [
+        "not equal"
       ],
       "methods": [
         {
@@ -21962,6 +23644,9 @@
       "frenchAliases": [
         "inferieur ou egal"
       ],
+      "englishAliases": [
+        "less than or equal"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -22006,6 +23691,9 @@
       "unicodeNameFr": "SUPÉRIEUR OU ÉGAL À",
       "frenchAliases": [
         "superieur ou egal"
+      ],
+      "englishAliases": [
+        "greater than or equal"
       ],
       "methods": [
         {
@@ -22053,6 +23741,9 @@
         "inclus dans",
         "sous-ensemble"
       ],
+      "englishAliases": [
+        "subset of"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -22077,6 +23768,9 @@
         "inclus dans",
         "sous ensemble égal"
       ],
+      "englishAliases": [
+        "subset or equal"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -22100,6 +23794,9 @@
       "frenchAliases": [
         "contient",
         "sur ensemble égal"
+      ],
+      "englishAliases": [
+        "superset or equal"
       ],
       "methods": [
         {
@@ -23609,6 +25306,6 @@
       ]
     }
   },
-  "generated": "2026-06-06T19:24:26.040Z",
+  "generated": "2026-07-15T14:27:50.254Z",
   "totalCharacters": 1034
 }

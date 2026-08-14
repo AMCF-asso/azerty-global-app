@@ -18,6 +18,7 @@ sealed class OnboardingWindow : IDisposable
     private const uint BM_SETCHECK = 0x00F1;
     private const uint BST_CHECKED = 0x0001;
     private const uint SS_NOTIFY = 0x0100;
+    private const uint SS_CENTER = 0x0001;
 
     // ── Control IDs ──────────────────────────────────────────────────
     private const int IDC_CHK_DONT_SHOW = 2001;
@@ -30,10 +31,16 @@ sealed class OnboardingWindow : IDisposable
     private const int IDC_LINK_DISCORD = 2010;
     private const int IDC_BTN_TRY = 2011;       // « Essayer maintenant » — etape 1 uniquement
     private const int IDC_LINK_LESSONS = 2012;
+    private const int IDC_CHK_TRAINING = 2013;  // opt-in Défi du jour (v1.2.0) — étape 3 uniquement
 
     // Dimensions de base (96 DPI)
     private const int BASE_WIN_W = 560;
-    private const int BASE_WIN_H = 673;
+    // +90 (v1.2.0) pour la 3e case « Défi du jour » + son texte descriptif sur 2 lignes,
+    // ajoutés au panneau Préférences de l'étape 3 (cf. GetStep3Layout).
+    private const int BASE_WIN_H = 763;
+    // Drapeau de bascule de langue dans le header (proportions 3:2 du site, +50 % : 45×30)
+    private const int BASE_FLAG_W = 45;
+    private const int BASE_FLAG_H = 30;
     private const float ONBOARDING_UI_SCALE = 0.75f;
     private const int BASE_MARGIN = 28;
     private const int BASE_BOTTOM_MARGIN = 52;
@@ -123,6 +130,13 @@ sealed class OnboardingWindow : IDisposable
 
     // Contrôles — Étape 1
     private IntPtr _hWndLinkFeedbackBanner;
+    // Drapeau de bascule de langue (langue cible), dessiné en GDI+ dans le header —
+    // pas un contrôle enfant. Le rect (coordonnées client) sert au hit-test souris.
+    private Win32.RECT _flagRect;
+
+    // Abonnement AppLanguageChanged (bascule initiée depuis le tray ou les Paramètres) —
+    // désabonné dans Dispose (événement statique, sinon référence pendante).
+    private readonly Action<string>? _onAppLanguageChanged;
 
     // Contrôles — Étape 3
     private IntPtr _hWndLinkLessons;
@@ -131,6 +145,7 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _hWndLinkDiscord;
     private IntPtr _hWndChkAutoStart;
     private IntPtr _hWndChkDontShow;
+    private IntPtr _hWndChkTraining; // opt-in Défi du jour (v1.2.0)
 
     // Delegates (prevent GC)
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -147,6 +162,8 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _gdipToken;
     private IntPtr _gdipLogo;
     private IntPtr _gdipDiscord;
+    private IntPtr _gdipFlagEn;
+    private IntPtr _gdipFlagFr;
     private IntPtr _hIcon;
 
     private bool _visible;
@@ -164,6 +181,7 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _hFontLink;
     private IntPtr _hFontSmall;
     private IntPtr _hFontReassure; // mention vie privée étape 1 — plus petite que _hFontSmall pour tenir sur une ligne en 175% DPI
+    private IntPtr _hFontVersion; // numéro de version sous le drapeau de langue (header)
     private IntPtr _hFontButton;
     private IntPtr _hFontBannerBold;
     private IntPtr _hFontStepSummary;
@@ -194,9 +212,16 @@ sealed class OnboardingWindow : IDisposable
 
         _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "favicon-azerty-global.png");
         _gdipDiscord = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "discord-icon.png");
+        _gdipFlagEn = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-en.png");
+        _gdipFlagFr = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-fr.png");
         CreateFonts();
         CreateMainWindow();
         ApplyFontsToControls();
+
+        // Bascule de langue initiée ailleurs (menu tray, Paramètres) pendant que cette
+        // fenêtre existe : se rafraîchir. Événement statique → désabonné dans Dispose.
+        _onAppLanguageChanged = _ => OnLanguageChanged();
+        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
 
         // Corriger le DPI avec le vrai DPI du moniteur où la fenêtre est apparue
         try
@@ -225,6 +250,7 @@ sealed class OnboardingWindow : IDisposable
         _hFontBold = Win32.CreateFontW(-S(17), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontLink = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontSmall = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontVersion = Win32.CreateFontW(-S(21), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         // Scaling proportionnel calibre sur 17 a 175% (taille validee visuellement).
         // 17 / 1.75 = 9.71 logique → 10 a 100%, 12 a 125%, 15 a 150%, 17 a 175%, 19 a 200%.
         _hFontReassure = Win32.CreateFontW(-(int)Math.Round(17.0 * _dpiScale / 1.75), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
@@ -245,6 +271,7 @@ sealed class OnboardingWindow : IDisposable
         Win32.DeleteObject(_hFontBold);
         Win32.DeleteObject(_hFontLink);
         Win32.DeleteObject(_hFontSmall);
+        Win32.DeleteObject(_hFontVersion);
         Win32.DeleteObject(_hFontReassure);
         Win32.DeleteObject(_hFontButton);
         Win32.DeleteObject(_hFontBannerBold);
@@ -270,9 +297,10 @@ sealed class OnboardingWindow : IDisposable
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
-        Win32.SetWindowTextW(_hWndLinkDiscord, "Échanger avec les autres utilisateurs");
+        Win32.SetWindowTextW(_hWndLinkDiscord, L.Onboarding_LinkDiscord);
         Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -301,7 +329,8 @@ sealed class OnboardingWindow : IDisposable
         int bottomY = S(BASE_WIN_H) - S(BASE_BOTTOM_MARGIN);
         GetStep3Layout(_contentY, winW, out _, out _,
             out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out int linkControlHeight,
-            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out int checkboxHeight);
+            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out int checkboxHeight,
+            out int checkboxTrainingY, out _, out _);
 
         // Navigation : btnPrev seulement ici (position fixe a gauche).
         // btnNext et btnTry sont positionnes dans UpdateStepVisibility selon les 3 etats
@@ -317,6 +346,7 @@ sealed class OnboardingWindow : IDisposable
         // Préférences
         Win32.MoveWindow(_hWndChkAutoStart, checkboxX, checkboxY, checkboxWidth, checkboxHeight, true);
         Win32.MoveWindow(_hWndChkDontShow, checkboxX, checkboxY + checkboxSpacing, checkboxWidth, checkboxHeight, true);
+        Win32.MoveWindow(_hWndChkTraining, checkboxX, checkboxTrainingY, checkboxWidth, checkboxHeight, true);
     }
 
     private void CreateMainWindow()
@@ -401,13 +431,13 @@ sealed class OnboardingWindow : IDisposable
         int linkH = S(28);
 
         // ══ Navigation ══ (largeur initiale = minimum ; ajustée dynamiquement dans UpdateStepVisibility)
-        _hWndBtnNext = Win32.CreateWindowExW(0, "BUTTON", "Suivant",
+        _hWndBtnNext = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_Next,
             Win32.WS_CHILD | Win32.WS_VISIBLE | 0x0001 | Win32.WS_TABSTOP,
             winW - margin - S(BASE_BTN_W_NEXT_MIN), bottomY, S(BASE_BTN_W_NEXT_MIN), S(BASE_BTN_H),
             _hWnd, (IntPtr)IDC_BTN_NEXT, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnNext, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
-        _hWndBtnPrev = Win32.CreateWindowExW(0, "BUTTON", "Précédent",
+        _hWndBtnPrev = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_Prev,
             Win32.WS_CHILD | Win32.WS_TABSTOP,
             margin, bottomY, S(BASE_BTN_W_PREV), S(BASE_BTN_H),
             _hWnd, (IntPtr)IDC_BTN_PREV, hInstance, IntPtr.Zero);
@@ -417,7 +447,7 @@ sealed class OnboardingWindow : IDisposable
         // n'ont pas ete completes une fois. Positionne dans UpdateStepVisibility a gauche du
         // bouton « Suivant », pour que l'utilisateur puisse choisir : essayer maintenant OU
         // passer directement a l'etape 2.
-        _hWndBtnTry = Win32.CreateWindowExW(0, "BUTTON", "Essayer maintenant",
+        _hWndBtnTry = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_TryNow,
             Win32.WS_CHILD | Win32.WS_TABSTOP,
             0, bottomY, S(BASE_BTN_W_NEXT_MIN), S(BASE_BTN_H),
             _hWnd, (IntPtr)IDC_BTN_TRY, hInstance, IntPtr.Zero);
@@ -431,7 +461,7 @@ sealed class OnboardingWindow : IDisposable
 
         // ══ Étape 1 — ancien lien de retours, conserve masque pour compatibilite des handlers ══
         // Position initiale temporaire — repositionné dynamiquement dans UpdateStepVisibility
-        _hWndLinkFeedbackBanner = Win32.CreateWindowExW(0, "STATIC", "donnez votre avis.",
+        _hWndLinkFeedbackBanner = Win32.CreateWindowExW(0, "STATIC", "",
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             margin, 0, S(160), S(26),
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK_BANNER, hInstance, IntPtr.Zero);
@@ -441,42 +471,51 @@ sealed class OnboardingWindow : IDisposable
         // ══ Étape 3 — Liens et checkboxes ══
         // Positions initiales temporaires — repositionnés dans RepositionControls
         int y = 0;
-        _hWndLinkLessons = Win32.CreateWindowExW(0, "STATIC", "Continuer avec les leçons",
+        _hWndLinkLessons = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkLessons,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(240), linkH,
             _hWnd, (IntPtr)IDC_LINK_LESSONS, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkLessons, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SetWindowSubclass(_hWndLinkLessons, _linkSubclassProc, (UIntPtr)6, IntPtr.Zero);
 
-        _hWndLinkGuide = Win32.CreateWindowExW(0, "STATIC", "Guide de prise en main",
+        _hWndLinkGuide = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkGuide,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(200), linkH,
             _hWnd, (IntPtr)IDC_LINK_GUIDE, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SetWindowSubclass(_hWndLinkGuide, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
 
-        _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", "Donner son avis",
+        _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Tray_MenuGiveFeedback,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(280), linkH,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SetWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)3, IntPtr.Zero);
 
-        _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", "Discord — Échanger avec les utilisateurs",
+        _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkDiscord,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(380), linkH,
             _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)5, IntPtr.Zero);
 
-        _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", "Lancer au démarrage de Windows (recommandé)",
+        _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkAutoStart,
             Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         RefreshAutoStartCheckbox();
 
-        _hWndChkDontShow = Win32.CreateWindowExW(0, "BUTTON", "Ne plus afficher cet écran au démarrage",
+        _hWndChkDontShow = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkDontShow,
             Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(280), S(26),
             _hWnd, (IntPtr)IDC_CHK_DONT_SHOW, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+
+        // Opt-in Défi du jour (v1.2.0) — décochée par défaut ; resynchronisée sur
+        // ConfigManager.TrainingEnabled à chaque affichage de l'étape 3 (cf. UpdateStepVisibility),
+        // au cas où l'utilisateur l'aurait déjà activée depuis les Paramètres.
+        _hWndChkTraining = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkTraining,
+            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            margin, y, S(320), S(26),
+            _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -487,7 +526,11 @@ sealed class OnboardingWindow : IDisposable
         // Topmost uniquement sur l'etape 1 (presentation des features). Etapes 2 et 3 :
         // laisser l'utilisateur consulter les ressources mentionnees (guide, Discord, feedback)
         // sans que le wizard ne masque le navigateur. Cf. plan UX 2026-05-02 Q3.
-        IntPtr insertAfter = _currentStep == 0 ? Win32.HWND_TOPMOST : Win32.HWND_NOTOPMOST;
+        // Exception : quand le mini-tutoriel (LearningModule) est ouvert, ne pas se remettre
+        // topmost — sinon un rafraichissement (ex. bascule de langue depuis le tray) ferait
+        // repasser l'onboarding devant le tutoriel actif (constat smoke test 2026-07-17).
+        IntPtr insertAfter = (_currentStep == 0 && _learningModule == null)
+            ? Win32.HWND_TOPMOST : Win32.HWND_NOTOPMOST;
         Win32.SetWindowPos(_hWnd, insertAfter, 0, 0, 0, 0,
             Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
 
@@ -500,6 +543,15 @@ sealed class OnboardingWindow : IDisposable
         Win32.ShowWindow(_hWndLinkDiscord, step3Vis);
         Win32.ShowWindow(_hWndChkAutoStart, step3Vis);
         Win32.ShowWindow(_hWndChkDontShow, step3Vis);
+        Win32.ShowWindow(_hWndChkTraining, step3Vis);
+        if (step3Vis == 1)
+        {
+            // Resynchronisation à chaque affichage de l'étape 3 : l'utilisateur a pu
+            // activer/désactiver l'opt-in depuis les Paramètres pendant que l'onboarding
+            // est ouvert (même principe que RefreshAutoStartCheckbox pour l'autostart).
+            Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK,
+                ConfigManager.TrainingEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        }
 
         Win32.ShowWindow(_hWndBtnPrev, _currentStep > 0 ? 1 : 0);
 
@@ -512,7 +564,7 @@ sealed class OnboardingWindow : IDisposable
         bool isStep1Attempted    = _currentStep == 0 &&  _learningModuleAttempted && !_learningModuleDone; // etat B
         // etat C = _currentStep == 0 && _learningModuleDone (ou etapes 2/3) → comportement standard
 
-        string nextText = _currentStep == 2 ? "C'est parti !" : "Suivant";
+        string nextText = _currentStep == 2 ? L.Onboarding_LetsGo : L.Onboarding_Next;
         Win32.SetWindowTextW(_hWndBtnNext, nextText);
 
         int btnWinW = S(BASE_WIN_W);
@@ -524,7 +576,7 @@ sealed class OnboardingWindow : IDisposable
             // Etat A : seul « Essayer maintenant », position droite. « Suivant » cache.
             Win32.ShowWindow(_hWndBtnNext, 0);
             Win32.ShowWindow(_hWndBtnTry, 1);
-            const string tryText = "Essayer maintenant";
+            string tryText = L.Onboarding_TryNow;
             IntPtr hdc = Win32.GetDC(_hWnd);
             int tryTextW;
             try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
@@ -541,7 +593,7 @@ sealed class OnboardingWindow : IDisposable
             var nextGeomB = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
             Win32.MoveWindow(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width, S(BASE_BTN_H), true);
 
-            const string tryText = "Essayer maintenant";
+            string tryText = L.Onboarding_TryNow;
             IntPtr hdc = Win32.GetDC(_hWnd);
             int tryTextW;
             try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
@@ -691,6 +743,15 @@ sealed class OnboardingWindow : IDisposable
                         if (code == 0) OpenLink("https://discord.gg/nYknqshJz3"); break;
                     case IDC_LINK_LESSONS:
                         if (code == 0) OpenLessonsRequested?.Invoke(); break;
+                    case IDC_CHK_TRAINING:
+                        // Applique immédiatement (pas à la fermeture du wizard) — même pattern
+                        // que IDC_CHK_TRAINING dans SettingsWindow.cs.
+                        if (code == 0)
+                        {
+                            bool trainingEnabled = Win32.SendMessageW(_hWndChkTraining, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+                            ConfigManager.SetTrainingEnabled(trainingEnabled);
+                        }
+                        break;
                 }
                 return IntPtr.Zero;
 
@@ -714,7 +775,7 @@ sealed class OnboardingWindow : IDisposable
                     Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
                     return _hBannerBgBrush;
                 }
-                if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkDontShow)
+                if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkDontShow || hCtrl == _hWndChkTraining)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
                     Win32.SetTextColor(hdcStatic, CLR_TEXT);
@@ -734,7 +795,27 @@ sealed class OnboardingWindow : IDisposable
                     Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
                     return (IntPtr)1;
                 }
+                // Drapeau de langue : zone GDI du header (pas un contrôle), curseur main au survol.
+                if (wParam == _hWnd && IsCursorOverFlag())
+                {
+                    Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
+                    return (IntPtr)1;
+                }
                 break;
+
+            case Win32.WM_LBUTTONUP:
+            {
+                // Clic sur le drapeau de bascule de langue (hit-test sur le rect GDI du header).
+                int mx = unchecked((short)(lParam.ToInt64() & 0xFFFF));
+                int my = unchecked((short)((lParam.ToInt64() >> 16) & 0xFFFF));
+                if (mx >= _flagRect.left && mx < _flagRect.right &&
+                    my >= _flagRect.top && my < _flagRect.bottom)
+                {
+                    ApplyLanguageChange(L.IsEnglish ? "fr" : "en");
+                    return IntPtr.Zero;
+                }
+                break;
+            }
 
             case Win32.WM_KEYDOWN:
             {
@@ -790,11 +871,56 @@ sealed class OnboardingWindow : IDisposable
             AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
+    /// <summary>Curseur au-dessus du drapeau de langue du header (coordonnées client) ?</summary>
+    private bool IsCursorOverFlag()
+    {
+        if (!Win32.GetCursorPos(out var pt)) return false;
+        if (!Win32.ScreenToClient(_hWnd, ref pt)) return false;
+        return pt.x >= _flagRect.left && pt.x < _flagRect.right &&
+               pt.y >= _flagRect.top && pt.y < _flagRect.bottom;
+    }
+
+    /// <summary>
+    /// Applique un changement de langue depuis le drapeau du header : persiste le choix et
+    /// met à jour L.Language. Le rafraîchissement de cette fenêtre passe par l'abonnement à
+    /// AppLanguageChanged (OnLanguageChanged) — même chemin que pour une bascule initiée
+    /// depuis le menu tray ou les Paramètres.
+    /// </summary>
+    private void ApplyLanguageChange(string lang)
+    {
+        if (ConfigManager.AppLanguage == lang) return;
+        L.Language = lang; // avant SetAppLanguage : les abonnés à AppLanguageChanged lisent L.*
+        ConfigManager.SetAppLanguage(lang);
+    }
+
+    /// <summary>Rafraîchit les libellés des contrôles Win32 fixes après un changement de
+    /// langue, quelle qu'en soit l'origine (les textes GDI se mettent à jour au repaint).</summary>
+    private void OnLanguageChanged()
+    {
+        RefreshLanguageTexts();
+        UpdateStepVisibility();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>Réapplique les libellés des contrôles Win32 dont le texte est fixé une fois à la création.</summary>
+    private void RefreshLanguageTexts()
+    {
+        Win32.SetWindowTextW(_hWndBtnPrev, L.Onboarding_Prev);
+        Win32.SetWindowTextW(_hWndBtnTry, L.Onboarding_TryNow);
+        Win32.SetWindowTextW(_hWndLinkLessons, L.Onboarding_LinkLessons);
+        Win32.SetWindowTextW(_hWndLinkGuide, L.Onboarding_LinkGuide);
+        Win32.SetWindowTextW(_hWndLinkFeedback, L.Tray_MenuGiveFeedback);
+        Win32.SetWindowTextW(_hWndLinkDiscord, L.Onboarding_LinkDiscord);
+        Win32.SetWindowTextW(_hWndChkAutoStart, L.Onboarding_ChkAutoStart);
+        Win32.SetWindowTextW(_hWndChkDontShow, L.Onboarding_ChkDontShow);
+        Win32.SetWindowTextW(_hWndChkTraining, L.Onboarding_ChkTraining);
+    }
+
     private void ShowAutoStartError()
     {
         Win32.MessageBoxW(_hWnd,
             AutoStart.GetFailureMessage(),
-            "AZERTY Global \u2014 Erreur", 0x10);
+            L.Common_ErrorTitle, 0x10);
     }
 
     private static bool IsPausedInputMessage(uint msg)
@@ -1004,20 +1130,42 @@ sealed class OnboardingWindow : IDisposable
             textX = margin + logoSize + S(12);
         }
 
-        Win32.SelectObject(hdc, _hFontSubtitle);
+        // Drapeau de bascule de langue (langue cible : anglais si l'UI est en français,
+        // français sinon) en haut à droite, à la place de l'ancien libellé de version —
+        // mêmes assets et même idiome que le bandeau du site (lang-switch). La version
+        // est dessinée juste en dessous. Le rect du drapeau sert au hit-test WM_LBUTTONUP.
+        int flagW = S(BASE_FLAG_W);
+        int flagH = S(BASE_FLAG_H);
+        int flagLeft = cw - margin - flagW;
+        int flagTop = y + S(6);
+        _flagRect = new Win32.RECT { left = flagLeft, top = flagTop, right = flagLeft + flagW, bottom = flagTop + flagH };
+        IntPtr flag = L.IsEnglish ? _gdipFlagFr : _gdipFlagEn;
+        if (flag != IntPtr.Zero)
+        {
+            Win32.GdipDrawImageRectI(gfx, flag, flagLeft, flagTop, flagW, flagH);
+        }
+        else
+        {
+            // Repli si la ressource manque : endonyme court de la langue cible.
+            Win32.SelectObject(hdc, _hFontSmall);
+            Win32.SetTextColor(hdc, CLR_TEXT);
+            var flagFallbackRect = _flagRect;
+            Win32.DrawTextW(hdc, L.IsEnglish ? "FR" : "EN", -1, ref flagFallbackRect,
+                Win32.DT_CENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        }
+
+        Win32.SelectObject(hdc, _hFontVersion);
         Win32.SetTextColor(hdc, 0x00888888);
         string versionText = "v" + Program.Version;
-        int versionWidth = MeasureSingleLineWidth(hdc, _hFontSubtitle, versionText) + S(8);
-        int versionLeft = cw - margin - versionWidth;
         var versionRect = new Win32.RECT
         {
-            left = versionLeft,
-            top = y + S(8),
-            right = cw - margin,
-            bottom = y + S(32)
+            left = flagLeft - S(60),
+            top = flagTop + flagH + S(4),
+            right = flagLeft + flagW,
+            bottom = flagTop + flagH + S(30)
         };
         Win32.DrawTextW(hdc, versionText, -1, ref versionRect,
-            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+            Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, CLR_TITLE);
@@ -1025,7 +1173,7 @@ sealed class OnboardingWindow : IDisposable
         {
             left = textX,
             top = titleTop,
-            right = Math.Max(textX, versionLeft - S(8)),
+            right = Math.Max(textX, flagLeft - S(8)),
             bottom = titleBottom
         };
         Win32.DrawTextW(hdc, "AZERTY Global", -1, ref titleRect,
@@ -1040,10 +1188,12 @@ sealed class OnboardingWindow : IDisposable
             right = cw - margin,
             bottom = subtitleBottom
         };
-        Win32.DrawTextW(hdc, "Votre clavier est maintenant amélioré.", -1, ref subtitleRect,
+        Win32.DrawTextW(hdc, L.Onboarding_Subtitle, -1, ref subtitleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
-        int headerBottom = Math.Max(logoY + logoSize, subtitleRect.bottom) + S(2);
+        // Le bloc drapeau + version (à droite) peut désormais descendre plus bas que le
+        // sous-titre : l'inclure dans la hauteur du header pour ne pas mordre le séparateur.
+        int headerBottom = Math.Max(logoY + logoSize, Math.Max(subtitleRect.bottom, versionRect.bottom)) + S(2);
         y = headerBottom;
 
         var sepBrush = Win32.CreateSolidBrush(0x00D0D0D0);
@@ -1059,7 +1209,8 @@ sealed class OnboardingWindow : IDisposable
     private void GetStep3Layout(int topY, int winW,
         out Win32.RECT resourcesPanel, out Win32.RECT prefsPanel,
         out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out int linkControlHeight,
-        out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out int checkboxHeight)
+        out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out int checkboxHeight,
+        out int checkboxTrainingY, out int trainingDescY, out int trainingDescHeight)
     {
         int margin = S(BASE_MARGIN);
         int panelWidth = winW - margin * 2;
@@ -1098,7 +1249,12 @@ sealed class OnboardingWindow : IDisposable
             int prefsTop = resourcesPanel.bottom + panelGap + prefsTitleHeight + S(8);
             checkboxY = prefsTop + prefsPaddingTop;
             checkboxSpacing = checkboxHeight + S(10);
-            int prefsHeight = prefsPaddingTop + checkboxHeight * 2 + S(10) + prefsPaddingBottom;
+            // 3e case « Défi du jour » (v1.2.0) + son texte descriptif sur 1-2 lignes,
+            // sous les 2 cases existantes (même colonne, même largeur).
+            checkboxTrainingY = checkboxY + checkboxSpacing * 2;
+            trainingDescY = checkboxTrainingY + checkboxHeight + S(2);
+            trainingDescHeight = MeasureTextHeight(hdc, _hFontReassure, L.Onboarding_ChkTrainingDesc, checkboxWidth);
+            int prefsHeight = prefsPaddingTop + checkboxHeight * 3 + S(10) * 2 + S(2) + trainingDescHeight + prefsPaddingBottom;
             prefsPanel = new Win32.RECT
             {
                 left = margin,
@@ -1153,31 +1309,31 @@ sealed class OnboardingWindow : IDisposable
         Win32.SelectObject(hdc, _hFontStepSummary);
         Win32.SetTextColor(hdc, CLR_TITLE);
         var stepTitleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(28) };
-        Win32.DrawTextW(hdc, "5 améliorations, 99 % de vos habitudes préservées", -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Onboarding_Step1Title, -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         y += S(40);
 
         // ── Les 5 améliorations ──
         DrawFeatureWithHighlight(hdc, margin, cw, ref y, "1",
-            "Verrouillage Majuscule intelligent",
-            "Verr. Maj. + é è ç à \u2192 É È Ç À.");
+            L.Onboarding_Feature1Title,
+            "");
         DrawFeature(hdc, margin, cw, ref y, "2",
-            "Point en accès direct",
-            "Le point et le point-virgule échangent leurs places.");
+            L.Onboarding_Feature2Title,
+            L.Onboarding_Feature2Desc);
         DrawFeature(hdc, margin, cw, ref y, "3",
-            "@ et # sur la touche en haut à gauche",
-            "Accès direct sans AltGr.");
+            L.Onboarding_Feature3Title,
+            L.Onboarding_Feature3Desc);
         DrawFeatureWithHighlight(hdc, margin, cw, ref y, "4",
-            "Symboles de programmation accessibles",
-            "{ } [ ] \\ | sur la rangée de repos avec AltGr.");
+            L.Onboarding_Feature4Title,
+            "");
         DrawFeatureWithHighlight(hdc, margin, cw, ref y, "5",
-            "Accents internationaux",
-            "Accents aigu, grave et tilde sur la touche à droite du M.");
+            L.Onboarding_Feature5Title,
+            "");
 
         // ── Mention rassurante (vie privée) ──
         y += S(8);
         Win32.SelectObject(hdc, _hFontReassure);
         Win32.SetTextColor(hdc, CLR_REASSURE);
-        const string reassure = "Cette application améliore votre clavier. Aucune frappe n'est enregistrée ni transmise.";
+        string reassure = L.Onboarding_PrivacyReassurance;
         var reassureRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(18) };
         Win32.DrawTextW(hdc, reassure, -1, ref reassureRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
@@ -1198,22 +1354,22 @@ sealed class OnboardingWindow : IDisposable
         Win32.SelectObject(hdc, _hFontStepSummary);
         Win32.SetTextColor(hdc, CLR_TITLE);
         var stepTitleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(28) };
-        Win32.DrawTextW(hdc, "Comment utiliser AZERTY Global", -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Onboarding_Step2Title, -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         y += S(38);
 
         DrawStepCard(hdc, margin, cw, ref y, "1",
-            "L'icône AG est dans la barre des tâches",
-            "Elle indique si le remapping est actif. Clic droit pour accéder aux options.");
+            L.Onboarding_Card1Title,
+            L.Onboarding_Card1Desc);
 
         DrawToggleStepCard(hdc, margin, cw, ref y);
 
         DrawStepCardWithRuns(hdc, margin, cw, ref y, "3",
-            "Explorez avec le clavier virtuel",
-            GetShortcutRuns(null, "Ctrl + Maj + Q", " pour voir tous les caractères disponibles."));
+            L.Onboarding_Card3Title,
+            GetShortcutRuns(null, $"Ctrl + {L.Settings_ShortcutModifier2} + Q", L.Onboarding_Card3Suffix));
 
         DrawStepCardWithRuns(hdc, margin, cw, ref y, "4",
-            "Recherchez n'importe quel caractère",
-            GetShortcutRuns(null, "Ctrl + Maj + W", " puis tapez le nom d'un caractère pour le copier et voir comment le taper sur le clavier virtuel."));
+            L.Onboarding_Card4Title,
+            GetShortcutRuns(null, $"Ctrl + {L.Settings_ShortcutModifier2} + W", L.Onboarding_Card4Suffix));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1252,7 +1408,7 @@ sealed class OnboardingWindow : IDisposable
         {
             "1" => new (string Text, uint Color, IntPtr Font)[]
             {
-                ("Verr. Maj. + ", CLR_TEXT, _hFontText),
+                (L.Onboarding_Feature1Prefix, CLR_TEXT, _hFontText),
                 ("\u00E9 \u00E8 \u00E7 \u00E0", CLR_INLINE_HIGHLIGHT, _hFontBold),
                 (" \u2192 ", CLR_TEXT, _hFontText),
                 ("\u00C9 \u00C8 \u00C7 \u00C0", CLR_INLINE_HIGHLIGHT, _hFontBold),
@@ -1261,11 +1417,11 @@ sealed class OnboardingWindow : IDisposable
             "4" => new (string Text, uint Color, IntPtr Font)[]
             {
                 ("{ } [ ] \\ |", CLR_INLINE_HIGHLIGHT, _hFontBold),
-                (" sur la rang\u00E9e de repos avec AltGr.", CLR_TEXT, _hFontText)
+                (L.Onboarding_Feature4DescSuffix, CLR_TEXT, _hFontText)
             },
             "5" => new (string Text, uint Color, IntPtr Font)[]
             {
-                ("Accents aigu, grave et tilde sur la touche \u00E0 droite du M.", CLR_TEXT, _hFontText)
+                (L.Onboarding_Feature5Desc, CLR_TEXT, _hFontText)
             },
             _ => new (string Text, uint Color, IntPtr Font)[]
             {
@@ -1396,7 +1552,7 @@ sealed class OnboardingWindow : IDisposable
         int textX = margin + cardPaddingX + badgeW + badgeGap;
         int textWidth = contentWidth - cardPaddingX * 2 - badgeW - badgeGap;
         int titleHeight = S(24);
-        var shortcutRuns = GetShortcutRuns("Raccourci : ", "Ctrl + Maj + Verr. Maj.");
+        var shortcutRuns = GetShortcutRuns(L.Onboarding_Card2ShortcutPrefix, $"Ctrl + {L.Settings_ShortcutModifier2} + {L.Onboarding_CapsLockWord}");
         int shortcutHeight = GdiHelpers.MeasureColoredRunsHeight(hdc, textWidth, S(22), shortcutRuns);
         int cardHeight = Math.Max(S(78), cardPaddingY * 2 + titleHeight + shortcutHeight + S(10));
 
@@ -1413,7 +1569,7 @@ sealed class OnboardingWindow : IDisposable
             right = textX + textWidth,
             bottom = cardTop + cardPaddingY + titleHeight
         };
-        Win32.DrawTextW(hdc, "Activez / désactivez à tout moment", -1, ref titleRect,
+        Win32.DrawTextW(hdc, L.Onboarding_Card2Title, -1, ref titleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         int lineY = cardTop + cardPaddingY + titleHeight + S(4);
@@ -1427,12 +1583,13 @@ sealed class OnboardingWindow : IDisposable
         int margin = S(BASE_MARGIN);
         GetStep3Layout(y, cw, out var resourcesPanel, out var prefsPanel,
             out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out _,
-            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out _);
+            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out _,
+            out _, out int trainingDescY, out int trainingDescHeight);
 
         Win32.SelectObject(hdc, _hFontPageTitle);
         Win32.SetTextColor(hdc, CLR_TITLE);
         var stepTitleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = resourcesPanel.top - S(12) };
-        Win32.DrawTextW(hdc, "Ressources & communauté", -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Onboarding_SectionResources, -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         var prefsTitleRect = new Win32.RECT
         {
@@ -1441,7 +1598,7 @@ sealed class OnboardingWindow : IDisposable
             right = cw - margin,
             bottom = prefsPanel.top - S(8)
         };
-        Win32.DrawTextW(hdc, "Préférences", -1, ref prefsTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref prefsTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         GdiHelpers.DrawPanel(hdc, resourcesPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
         GdiHelpers.DrawPanel(hdc, prefsPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
@@ -1458,6 +1615,21 @@ sealed class OnboardingWindow : IDisposable
             };
             GdiHelpers.FillSolidRect(hdc, rowSep, 0x00E3E3E3);
         }
+
+        // Texte descriptif sous la case « Défi du jour » (3e case du panneau Préférences) —
+        // simple texte dessiné (comme la mention vie privée de l'étape 1), pas de contrôle
+        // STATIC dédié : pas besoin d'interaction, juste une précision sous le libellé de la case.
+        Win32.SelectObject(hdc, _hFontReassure);
+        Win32.SetTextColor(hdc, CLR_REASSURE);
+        var trainingDescRect = new Win32.RECT
+        {
+            left = checkboxX,
+            top = trainingDescY,
+            right = checkboxX + checkboxWidth,
+            bottom = trainingDescY + trainingDescHeight
+        };
+        Win32.DrawTextW(hdc, L.Onboarding_ChkTrainingDesc, -1, ref trainingDescRect,
+            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1465,6 +1637,9 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     public void Dispose()
     {
+        if (_onAppLanguageChanged != null)
+            ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
+
         _learningModule?.Dispose();
         _learningModule = null;
 
@@ -1481,6 +1656,8 @@ sealed class OnboardingWindow : IDisposable
         if (_hIcon != IntPtr.Zero) { Win32.DestroyIcon(_hIcon); _hIcon = IntPtr.Zero; }
         if (_gdipLogo != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipLogo); _gdipLogo = IntPtr.Zero; }
         if (_gdipDiscord != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipDiscord); _gdipDiscord = IntPtr.Zero; }
+        if (_gdipFlagEn != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagEn); _gdipFlagEn = IntPtr.Zero; }
+        if (_gdipFlagFr != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagFr); _gdipFlagFr = IntPtr.Zero; }
         if (_gdipToken != IntPtr.Zero) { Win32.GdiplusShutdown(_gdipToken); _gdipToken = IntPtr.Zero; }
         DestroyFonts();
         Win32.DeleteObject(_hBgBrush);

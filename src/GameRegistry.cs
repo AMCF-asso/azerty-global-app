@@ -17,6 +17,22 @@ namespace AZERTYGlobal;
 internal static class GameRegistry
 {
     /// <summary>
+    /// Clients de connexion à distance pour lesquels le remapping local doit être suspendu.
+    /// Le poste distant applique son propre remapping : laisser les deux instances actives
+    /// transformerait deux fois les frappes qui ne passent pas nativement.
+    /// </summary>
+    public static readonly string[] RemoteAccessProcesses =
+    {
+        "parsecd.exe",
+        "mstsc.exe",
+        "msrdc.exe",
+        "msrdcw.exe",
+        "AnyDesk.exe",
+        "TeamViewer.exe",
+        "rustdesk.exe",
+    };
+
+    /// <summary>
     /// Termes-clés (sous-chaîne, case-insensitive) qui identifient un process protégé
     /// par un anti-cheat kernel-level avec risque de ban pour injection de frappes.
     /// AZERTY Global se désactive complètement quand ces processes sont au foreground.
@@ -135,6 +151,13 @@ internal static class GameRegistry
                 return true;
 
         return false;
+    }
+
+    public static bool IsRemoteAccessProcess(string? processName)
+    {
+        if (string.IsNullOrEmpty(processName)) return false;
+        return RemoteAccessProcesses.Any(candidate =>
+            string.Equals(processName, candidate, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

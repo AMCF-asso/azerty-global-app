@@ -1,0 +1,642 @@
+// Fenêtre « Mes statistiques » — statistiques d'usage 100 % locales (v1.1).
+using System.Runtime.InteropServices;
+
+namespace AZERTYGlobal;
+
+/// <summary>
+/// Mini-fenêtre custom GDI affichant les statistiques d'usage locales (jours d'utilisation,
+/// caractères spéciaux produits grâce au remapping) avec un bouton d'export presse-papiers.
+/// Calquée sur AboutWindow pour le style (fond clair, double buffering, DPI-aware).
+/// Aucune de ces données ne quitte jamais la machine (cf. UsageStats).
+/// </summary>
+sealed class UsageStatsWindow : IDisposable
+{
+    private const uint SS_NOTIFY = 0x0100;
+
+    private const int IDC_BTN_COPY = 4201;
+    private const int IDC_BTN_CLOSE = 4202;
+    private const int IDC_LINK_FEEDBACK = 4203;
+    private const int IDC_LINK_DISCORD = 4204;
+    private const uint TIMER_COPY_FEEDBACK = 4210;
+
+    private const int BASE_WIN_W = 460;
+    private const int BASE_WIN_H = 590; // 460 + 130 : section « Défi du jour » ajoutée en v1.2.0
+
+    // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
+    private const uint CLR_BG = 0x00DDDDDD;
+    private const uint CLR_TITLE = 0x00201C18;
+    private const uint CLR_TEXT = 0x00333333;
+    private const uint CLR_MUTED = 0x00888888;
+    private const uint CLR_ACCENT = 0x00D47800;
+    private const uint CLR_SEPARATOR = 0x00D7D7D7;
+    private const uint CLR_LINK = 0x00D47800;
+    private const uint CLR_LINK_HOVER = 0x000078D4;
+
+    private const uint CF_UNICODETEXT = 13;
+
+    private IntPtr _hWnd;
+    private IntPtr _hWndBtnCopy;
+    private IntPtr _hWndBtnClose;
+    private IntPtr _hWndLinkFeedback;
+    private IntPtr _hWndLinkDiscord;
+
+    private readonly Win32.WNDPROC _wndProcDelegate;
+    private readonly Win32.SUBCLASSPROC _linkSubclassProc;
+    private IntPtr _hoveredLink;
+    private readonly IntPtr _hBgBrush;
+
+    private bool _visible;
+    private bool _showCopiedFeedback;
+
+    private float _dpiScale;
+    private int S(int val) => (int)(val * _dpiScale);
+
+    private IntPtr _hFontTitle;
+    private IntPtr _hFontText;
+    private IntPtr _hFontMuted;
+    private IntPtr _hFontBold;
+    private IntPtr _hFontButton;
+    private IntPtr _hFontLink;
+
+    public bool IsVisible => _visible;
+
+    /// <summary>Langue de l'UI à la création : titre, boutons et liens sont figés au
+    /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
+    public string UiLanguage { get; } = L.Language;
+
+    public UsageStatsWindow()
+    {
+        _wndProcDelegate = WndProc;
+        _linkSubclassProc = LinkSubclassProc;
+        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
+
+        var hdcScreen = Win32.GetDC(IntPtr.Zero);
+        int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
+        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+        _dpiScale = dpi / 96f;
+
+        CreateFonts();
+        CreateMainWindow();
+        CreateControls();
+        ApplyFontsToControls();
+
+        try
+        {
+            int realDpi = Win32.GetDpiForWindow(_hWnd);
+            if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+            {
+                _dpiScale = realDpi / 96f;
+                RecreateFonts();
+                ResizeWindow();
+                RepositionControls();
+            }
+        }
+        catch { /* GetDpiForWindow non disponible (Windows 8.1-) */ }
+    }
+
+    private void CreateFonts()
+    {
+        _hFontTitle = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontText = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontMuted = Win32.CreateFontW(-S(12), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontBold = Win32.CreateFontW(-S(14), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontButton = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontLink = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
+    }
+
+    private void DestroyFonts()
+    {
+        Win32.DeleteObject(_hFontTitle);
+        Win32.DeleteObject(_hFontText);
+        Win32.DeleteObject(_hFontMuted);
+        Win32.DeleteObject(_hFontBold);
+        Win32.DeleteObject(_hFontButton);
+        Win32.DeleteObject(_hFontLink);
+    }
+
+    private void RecreateFonts()
+    {
+        DestroyFonts();
+        CreateFonts();
+        ApplyFontsToControls();
+    }
+
+    private void ApplyFontsToControls()
+    {
+        Win32.SendMessageW(_hWndBtnCopy, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
+        Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
+    }
+
+    private void CreateMainWindow()
+    {
+        var hInstance = Win32.GetModuleHandleW(null);
+        const string className = "AZERTYGlobal_UsageStats";
+
+        var wc = new Win32.WNDCLASSEXW
+        {
+            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
+            lpfnWndProc = _wndProcDelegate,
+            hInstance = hInstance,
+            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
+            hbrBackground = _hBgBrush,
+            lpszClassName = className
+        };
+        Win32.RegisterClassExW(ref wc);
+
+        int winW = S(BASE_WIN_W);
+        int winH = S(BASE_WIN_H);
+        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
+        Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
+        int windowW = adjustRect.right - adjustRect.left;
+        int windowH = adjustRect.bottom - adjustRect.top;
+
+        Win32.GetCursorPos(out var cursorPt);
+        var hMonitor = Win32.MonitorFromPoint(cursorPt, 0x00000001);
+        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        Win32.GetMonitorInfo(hMonitor, ref monInfo);
+        int screenX = monInfo.rcWork.left;
+        int screenY = monInfo.rcWork.top;
+        int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
+        int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+
+        _hWnd = Win32.CreateWindowExW(0, className, L.Stats_WindowTitle,
+            dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
+            IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        Win32.EnableDarkTitleBar(_hWnd);
+    }
+
+    private void CreateControls()
+    {
+        var hInstance = Win32.GetModuleHandleW(null);
+
+        _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkFeedback,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
+        Win32.SetWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
+
+        _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkDiscord,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
+        Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
+
+        _hWndBtnCopy = Win32.CreateWindowExW(0, "BUTTON", L.Stats_BtnCopy,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_BTN_COPY, hInstance, IntPtr.Zero);
+
+        _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
+
+        RepositionControls();
+    }
+
+    private void ResizeWindow()
+    {
+        int winW = S(BASE_WIN_W);
+        int winH = S(BASE_WIN_H);
+        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
+        Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
+        int windowW = adjustRect.right - adjustRect.left;
+        int windowH = adjustRect.bottom - adjustRect.top;
+        Win32.GetWindowRect(_hWnd, out var currentRect);
+        int cx = (currentRect.left + currentRect.right) / 2;
+        int cy = (currentRect.top + currentRect.bottom) / 2;
+        Win32.MoveWindow(_hWnd, cx - windowW / 2, cy - windowH / 2, windowW, windowH, true);
+    }
+
+    private void RepositionControls()
+    {
+        int winW = S(BASE_WIN_W);
+        int winH = S(BASE_WIN_H);
+        int margin = S(20);
+
+        int btnH = S(32);
+        int btnY = winH - margin - btnH;
+
+        int btnCloseW = S(90);
+        int btnCloseX = winW - margin - btnCloseW;
+        Win32.MoveWindow(_hWndBtnClose, btnCloseX, btnY, btnCloseW, btnH, true);
+
+        int btnCopyW = S(210);
+        int btnCopyX = btnCloseX - S(12) - btnCopyW;
+        Win32.MoveWindow(_hWndBtnCopy, btnCopyX, btnY, btnCopyW, btnH, true);
+
+        // Liens retours/communauté sur une ligne au-dessus des boutons
+        int linkH = S(22);
+        int linkY = btnY - S(10) - linkH;
+        int wFeedback = S(130);
+        int wDiscord = S(240);
+        int linkGap = S(24);
+        int linksX = (winW - wFeedback - wDiscord - linkGap) / 2;
+        Win32.MoveWindow(_hWndLinkFeedback, linksX, linkY, wFeedback, linkH, true);
+        Win32.MoveWindow(_hWndLinkDiscord, linksX + wFeedback + linkGap, linkY, wDiscord, linkH, true);
+    }
+
+    /// <summary>Affiche la fenêtre. Les compteurs sont relus à chaque ouverture (pas de cache).</summary>
+    public void Show()
+    {
+        _showCopiedFeedback = false;
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        Win32.ShowWindow(_hWnd, 1);
+        Win32.SetForegroundWindow(_hWnd);
+        _visible = true;
+    }
+
+    public void Close()
+    {
+        Win32.ShowWindow(_hWnd, 0);
+        _visible = false;
+    }
+
+    private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        try
+        {
+            switch (msg)
+            {
+                case Win32.WM_PAINT:
+                    OnPaint(hWnd);
+                    return IntPtr.Zero;
+
+                case Win32.WM_ERASEBKGND:
+                    return (IntPtr)1;
+
+                case Win32.WM_DPICHANGED:
+                {
+                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
+                    if (newDpi > 0)
+                        _dpiScale = newDpi / 96f;
+                    RecreateFonts();
+                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
+                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
+                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    RepositionControls();
+                    Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                    return IntPtr.Zero;
+                }
+
+                case Win32.WM_COMMAND:
+                {
+                    int id = wParam.ToInt32() & 0xFFFF;
+                    int code = (wParam.ToInt32() >> 16) & 0xFFFF;
+                    if (code != 0) break;
+                    switch (id)
+                    {
+                        case IDC_BTN_COPY:
+                            OnCopyStats();
+                            break;
+                        case IDC_BTN_CLOSE:
+                            Close();
+                            break;
+                        case IDC_LINK_FEEDBACK:
+                            Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback", null, null, 1);
+                            break;
+                        case IDC_LINK_DISCORD:
+                            Win32.ShellExecuteW(IntPtr.Zero, "open", "https://discord.gg/nYknqshJz3", null, null, 1);
+                            break;
+                    }
+                    return IntPtr.Zero;
+                }
+
+                case Win32.WM_CTLCOLORSTATIC:
+                {
+                    IntPtr hdcStatic = wParam;
+                    IntPtr hCtrl = lParam;
+                    if (hCtrl == _hWndLinkFeedback || hCtrl == _hWndLinkDiscord)
+                    {
+                        Win32.SetBkMode(hdcStatic, 1);
+                        bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
+                        Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
+                        return _hBgBrush;
+                    }
+                    break;
+                }
+
+                case Win32.WM_SETCURSOR:
+                    if (wParam == _hWndLinkFeedback || wParam == _hWndLinkDiscord)
+                    {
+                        Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
+                        return (IntPtr)1;
+                    }
+                    break;
+
+                case Win32.WM_TIMER:
+                    if (wParam.ToInt64() == TIMER_COPY_FEEDBACK)
+                    {
+                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK);
+                        _showCopiedFeedback = false;
+                        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                    }
+                    return IntPtr.Zero;
+
+                case Win32.WM_KEYDOWN:
+                    if (wParam == (IntPtr)0x1B) // VK_ESCAPE
+                    {
+                        Close();
+                        return IntPtr.Zero;
+                    }
+                    break;
+
+                case Win32.WM_CLOSE:
+                    Close();
+                    return IntPtr.Zero;
+            }
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("UsageStatsWindow WndProc", ex);
+        }
+
+        return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
+    }
+
+    private IntPtr LinkSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
+    {
+        switch (msg)
+        {
+            case Win32.WM_MOUSEMOVE:
+                if (_hoveredLink != hWnd)
+                {
+                    _hoveredLink = hWnd;
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
+                    var tme = new Win32.TRACKMOUSEEVENT
+                    {
+                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
+                        dwFlags = Win32.TME_LEAVE,
+                        hwndTrack = hWnd
+                    };
+                    Win32.TrackMouseEvent(ref tme);
+                }
+                break;
+            case Win32.WM_MOUSELEAVE:
+                if (_hoveredLink == hWnd)
+                {
+                    _hoveredLink = IntPtr.Zero;
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
+                }
+                break;
+            case 0x0087: // WM_GETDLGCODE
+                return (IntPtr)0x0004; // DLGC_WANTALLKEYS
+            case Win32.WM_KEYDOWN:
+                if (wParam == (IntPtr)0x0D) // VK_RETURN
+                {
+                    int ctrlId = Win32.GetDlgCtrlID(hWnd);
+                    Win32.SendMessageW(_hWnd, Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
+                    return IntPtr.Zero;
+                }
+                break;
+        }
+        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+    }
+
+    /// <summary>
+    /// Copie le résumé lisible dans le presse-papiers. Usage prévu : témoignages, retours
+    /// pilotes, mails au support — copie uniquement, aucun envoi automatique.
+    /// </summary>
+    private void OnCopyStats()
+    {
+        if (CopyToClipboard(UsageStats.BuildShareText()))
+        {
+            _showCopiedFeedback = true;
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            Win32.SetTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK, 1500, IntPtr.Zero);
+        }
+    }
+
+    private bool CopyToClipboard(string text)
+    {
+        IntPtr hMem = IntPtr.Zero;
+        bool ownershipTransferred = false;
+        try
+        {
+            hMem = CharacterSearch.AllocateClipboardText(text);
+            if (hMem == IntPtr.Zero) return false;
+
+            if (!Win32.OpenClipboard(_hWnd)) return false;
+            try
+            {
+                // Même filet que CharacterSearch : mémoriser l'ancien contenu pour le
+                // restaurer si SetClipboardData échoue après EmptyClipboard.
+                string? previousText = CharacterSearch.ReadClipboardText();
+                if (!Win32.EmptyClipboard()) return false;
+
+                if (Win32.SetClipboardData(CF_UNICODETEXT, hMem) == IntPtr.Zero)
+                {
+                    ConfigManager.Log("UsageStatsWindow clipboard", new ExternalException("SetClipboardData a échoué."));
+                    CharacterSearch.RestoreClipboardText(previousText);
+                    return false;
+                }
+                ownershipTransferred = true; // propriété transférée au clipboard — ne pas libérer
+                return true;
+            }
+            finally
+            {
+                Win32.CloseClipboard();
+            }
+        }
+        catch (Exception ex) when (ex is ExternalException or ArgumentException or OutOfMemoryException)
+        {
+            ConfigManager.Log("UsageStatsWindow.CopyToClipboard", ex);
+            return false;
+        }
+        finally
+        {
+            if (!ownershipTransferred && hMem != IntPtr.Zero)
+                Win32.GlobalFree(hMem);
+        }
+    }
+
+    private void OnPaint(IntPtr hWnd)
+    {
+        var hdcPaint = Win32.BeginPaint(hWnd, out var ps);
+        Win32.GetClientRect(hWnd, out var clientRect);
+        int cw = clientRect.right;
+        int ch = clientRect.bottom;
+
+        var hdcScreen = Win32.GetDC(IntPtr.Zero);
+        var hdc = Win32.CreateCompatibleDC(hdcScreen);
+        var hBmp = Win32.CreateCompatibleBitmap(hdcScreen, cw, ch);
+        var hBmpOld = Win32.SelectObject(hdc, hBmp);
+        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+
+        Win32.FillRect(hdc, ref clientRect, _hBgBrush);
+        Win32.SetBkMode(hdc, 1);
+
+        int margin = S(20);
+        int y = S(18);
+
+        Win32.SelectObject(hdc, _hFontTitle);
+        Win32.SetTextColor(hdc, CLR_TITLE);
+        var titleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(28) };
+        Win32.DrawTextW(hdc, L.Stats_Title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        y += S(40);
+
+        Win32.SetTextColor(hdc, CLR_TEXT);
+
+        var first = UsageStats.FirstRemapDate;
+        string headline = first.HasValue
+            ? L.Stats_HeadlineWithDate(L.FormatDate(first.Value))
+            : L.Stats_HeadlineNoData;
+        y = DrawWrappedLine(hdc, _hFontText, headline, margin, y, cw - margin * 2, S(20));
+
+        int activeDays = UsageStats.ActiveDaysCount;
+        if (activeDays > 0)
+        {
+            string joursLine = L.Stats_DaysLine(activeDays, UsageStats.CurrentStreak, UsageStats.BestStreak);
+            y = DrawWrappedLine(hdc, _hFontText, joursLine, margin, y, cw - margin * 2, S(20));
+
+            long activeMinutes = UsageStats.TotalActiveMinutes;
+            if (activeMinutes > 0)
+            {
+                long avg = activeMinutes / activeDays;
+                bool showAvg = avg >= 5 && activeDays > 1;
+                string tempsLine = L.Stats_ActiveTimeLine(UsageStats.FormatActiveTime(activeMinutes),
+                    showAvg ? UsageStats.FormatActiveTime(avg) : null);
+                y = DrawWrappedLine(hdc, _hFontText, tempsLine, margin, y, cw - margin * 2, S(20));
+            }
+        }
+        y += S(8);
+
+        var sepBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
+        var sepRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + 1 };
+        Win32.FillRect(hdc, ref sepRect, sepBrush);
+        Win32.DeleteObject(sepBrush);
+        y += S(14);
+
+        y = DrawStatLine(hdc, L.Stats_LabelAccented, UsageStats.AccentedUppercaseCount, margin, y, cw - margin);
+        y = DrawStatLine(hdc, L.Stats_LabelTypography, UsageStats.FrenchTypographyCount, margin, y, cw - margin);
+        y = DrawStatLine(hdc, L.Stats_LabelInternational, UsageStats.InternationalCount, margin, y, cw - margin);
+        y = DrawStatLine(hdc, L.Stats_LabelSymbols, UsageStats.SymbolsCount, margin, y, cw - margin);
+        y += S(4);
+        y = DrawStatLine(hdc, L.Stats_LabelTotal, UsageStats.TotalSpecialCharsCount, margin, y, cw - margin, bold: true);
+        y += S(12);
+
+        // Section « Défi du jour » : visible dès qu'il y a quelque chose à montrer — rappels
+        // actifs, ou historique conservé même après désactivation des rappels (v1.2.0).
+        if (ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0)
+            y = DrawChallengeSection(hdc, margin, y, cw - margin);
+
+        string reassurance = _showCopiedFeedback
+            ? L.Stats_CopiedFeedback
+            : L.Stats_PrivacyReassurance;
+        Win32.SetTextColor(hdc, _showCopiedFeedback ? CLR_ACCENT : CLR_MUTED);
+        DrawWrappedLine(hdc, _hFontMuted, reassurance, margin, y, cw - margin * 2, S(16));
+
+        Win32.BitBlt(hdcPaint, 0, 0, cw, ch, hdc, 0, 0, Win32.SRCCOPY);
+        Win32.SelectObject(hdc, hBmpOld);
+        Win32.DeleteObject(hBmp);
+        Win32.DeleteDC(hdc);
+        Win32.EndPaint(hWnd, ref ps);
+    }
+
+    private int DrawWrappedLine(IntPtr hdc, IntPtr font, string text, int x, int y, int width, int lineHeight)
+    {
+        Win32.SelectObject(hdc, font);
+        var measureRect = new Win32.RECT { left = x, top = 0, right = x + width, bottom = lineHeight * 4 };
+        Win32.DrawTextW(hdc, text, -1, ref measureRect, Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
+        int height = Math.Max(lineHeight, measureRect.bottom - measureRect.top);
+
+        var paintRect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + height };
+        Win32.DrawTextW(hdc, text, -1, ref paintRect, Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
+        return y + height + S(6);
+    }
+
+    private int DrawStatLine(IntPtr hdc, string label, long count, int left, int y, int right, bool bold = false)
+    {
+        int h = S(20);
+        Win32.SelectObject(hdc, bold ? _hFontBold : _hFontText);
+        Win32.SetTextColor(hdc, CLR_TEXT);
+        var labelRect = new Win32.RECT { left = left, top = y, right = right - S(70), bottom = y + h };
+        Win32.DrawTextW(hdc, label, -1, ref labelRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        Win32.SetTextColor(hdc, bold ? CLR_ACCENT : CLR_TEXT);
+        var valueRect = new Win32.RECT { left = right - S(70), top = y, right = right, bottom = y + h };
+        Win32.DrawTextW(hdc, count.ToString("N0", L.DisplayCulture), -1, ref valueRect,
+            Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        return y + h;
+    }
+
+    /// <summary>
+    /// Section « Défi du jour » : séances terminées, avancement de la « Prise en main »
+    /// (5 changements) puis bascule vers les défis quotidiens, et date de la dernière séance.
+    /// Lue depuis ConfigManager/UsageStats à chaque ouverture, pas de cache.
+    /// </summary>
+    private int DrawChallengeSection(IntPtr hdc, int left, int y, int right)
+    {
+        var sepBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
+        var sepRect = new Win32.RECT { left = left, top = y, right = right, bottom = y + 1 };
+        Win32.FillRect(hdc, ref sepRect, sepBrush);
+        Win32.DeleteObject(sepBrush);
+        y += S(14);
+
+        Win32.SelectObject(hdc, _hFontBold);
+        Win32.SetTextColor(hdc, CLR_TEXT);
+        var titleRect = new Win32.RECT { left = left, top = y, right = right, bottom = y + S(20) };
+        Win32.DrawTextW(hdc, L.Challenge_StatsSectionTitle, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        y += S(26);
+
+        y = DrawStatLine(hdc, L.Challenge_StatsSessionsLabel, UsageStats.ChallengesCompletedCount, left, y, right);
+
+        uint seq = ConfigManager.TrainingSequenceIndex;
+        string onboardingValue = seq >= DailyChallenge.SequenceLength
+            ? L.Challenge_StatsOnboardingDone
+            : $"{Math.Min(seq, (uint)DailyChallenge.SequenceLength)}/{DailyChallenge.SequenceLength}";
+        y = DrawStatLineText(hdc, L.Challenge_StatsOnboardingLabel, onboardingValue, left, y, right);
+
+        var lastSession = ParseTrainingDate(ConfigManager.TrainingLastSessionDate);
+        string lastSessionValue = lastSession.HasValue ? L.FormatDate(lastSession.Value) : L.Challenge_StatsNoSessionYet;
+        y = DrawStatLineText(hdc, L.Challenge_StatsLastSessionLabel, lastSessionValue, left, y, right);
+
+        return y;
+    }
+
+    /// <summary>Variante de DrawStatLine pour une valeur textuelle (date, étiquette) plutôt
+    /// qu'un compteur numérique — colonne de valeur plus large pour les dates longues.</summary>
+    private int DrawStatLineText(IntPtr hdc, string label, string value, int left, int y, int right, bool bold = false)
+    {
+        int h = S(20);
+        Win32.SelectObject(hdc, bold ? _hFontBold : _hFontText);
+        Win32.SetTextColor(hdc, CLR_TEXT);
+        var labelRect = new Win32.RECT { left = left, top = y, right = right - S(160), bottom = y + h };
+        Win32.DrawTextW(hdc, label, -1, ref labelRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        Win32.SetTextColor(hdc, bold ? CLR_ACCENT : CLR_TEXT);
+        var valueRect = new Win32.RECT { left = right - S(160), top = y, right = right, bottom = y + h };
+        Win32.DrawTextW(hdc, value, -1, ref valueRect, Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        return y + h;
+    }
+
+    /// <summary>Parse "yyyy-MM-dd" (format de stockage ConfigManager) — même format que
+    /// TrainingReminders.ParseDate, dupliqué ici car privé dans l'autre classe.</summary>
+    private static DateOnly? ParseTrainingDate(string? s) =>
+        s != null && DateOnly.TryParseExact(s, "yyyy-MM-dd", out var d) ? d : null;
+
+    public void Dispose()
+    {
+        if (_hWndLinkFeedback != IntPtr.Zero)
+            Win32.RemoveWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)1);
+        if (_hWndLinkDiscord != IntPtr.Zero)
+            Win32.RemoveWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2);
+        if (_hWnd != IntPtr.Zero)
+        {
+            Win32.DestroyWindow(_hWnd);
+            _hWnd = IntPtr.Zero;
+        }
+
+        DestroyFonts();
+        Win32.DeleteObject(_hBgBrush);
+
+        // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
+        Win32.UnregisterClassW("AZERTYGlobal_UsageStats", Win32.GetModuleHandleW(null));
+    }
+}
