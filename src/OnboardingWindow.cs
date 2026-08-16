@@ -114,6 +114,13 @@ sealed class OnboardingWindow : IDisposable
     public Layout? AppLayout { get; set; }
     public Action? OpenLessonsRequested { get; set; }
 
+    /// <summary>
+    /// Appelé après chaque fermeture de la fenêtre. Permet à l'appelant de reprendre la
+    /// main sur ce qu'il avait différé pendant que la fenêtre occupait l'écran — la
+    /// sollicitation d'avis notamment, qui ne doit pas s'afficher par-dessus l'accueil.
+    /// </summary>
+    public Action? OnClosed { get; set; }
+
     public void SetInputPaused(bool paused)
     {
         _inputPaused = paused;
@@ -679,6 +686,9 @@ sealed class OnboardingWindow : IDisposable
 
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
+        // Après le masquage : l'appelant peut afficher ce qu'il avait différé sans que la
+        // notification se retrouve derrière la fenêtre d'accueil.
+        try { OnClosed?.Invoke(); } catch (Exception ex) { ConfigManager.Log("OnboardingWindow.OnClosed", ex); }
     }
 
     // ═══════════════════════════════════════════════════════════════

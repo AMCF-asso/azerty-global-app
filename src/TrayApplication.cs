@@ -71,6 +71,22 @@ sealed class TrayApplication : IDisposable
     // Deep link vers le volet « Donner un avis » de la fiche Microsoft Store de l'app
     private const string StoreReviewUrl = "ms-windows-store://review/?ProductId=9N4BTS43SSSZ";
 
+    // ── Sollicitation d'avis (v1.2.0) ───────────────────────────────
+    // Seuils en JOURS D'USAGE distincts, pas en jours calendaires : jusqu'en v1.1 la
+    // sollicitation partait à J+7 du premier lancement, ce qui traitait de la même façon
+    // celui qui tape tous les jours et celui qui a installé puis oublié l'application.
+    private const int ReviewPromptFirstActiveDays = 3;
+    private const int ReviewPromptSecondActiveDays = 10;
+    // Planchers calendaires : jamais dans les trois premiers jours, et sept jours au moins
+    // entre les deux essais, sinon le second tombe dans la même semaine que le premier et
+    // se lit comme une relance.
+    private const int ReviewPromptFirstMinDays = 3;
+    private const int ReviewPromptSecondMinGapDays = 7;
+    // Au-delà, l'utilisateur est considéré comme parti : on ne relance pas un absent.
+    private const int ReviewPromptStaleDays = 3;
+    // Pas de sollicitation dans la foulée d'une erreur.
+    private const int ReviewPromptErrorCooldownHours = 48;
+
     // ── Menu flags ──────────────────────────────────────────────────
     private const uint MF_STRING = 0x0000;
     private const uint MF_SEPARATOR = 0x0800;
@@ -109,6 +125,11 @@ sealed class TrayApplication : IDisposable
     // affiche qu'apres que l'utilisateur a clique « Garder l'app » dans LayoutConflictWindow.
     // Sinon, ce flag reste a false et l'onboarding s'affiche normalement.
     private bool _pendingOnboardingShow;
+    // La sollicitation d'avis était due au démarrage mais la fenêtre d'accueil occupait
+    // l'écran : elle est reprise à la fermeture de celle-ci. Jusqu'en v1.1 elle vivait
+    // dans le `else` du test d'accueil et se trouvait donc perdue, définitivement, pour
+    // tout utilisateur qui revoyait l'accueil à chaque démarrage.
+    private bool _reviewPromptDeferred;
     private bool _enabled = true;
     private DateTimeOffset? _pauseUntilUtc;
 
@@ -243,6 +264,9 @@ sealed class TrayApplication : IDisposable
 #endif
             if (shouldShowOnboarding)
             {
+                // La sollicitation d'avis n'est plus subordonnée à l'absence d'accueil :
+                // elle est différée, pas annulée (cf. _reviewPromptDeferred).
+                _reviewPromptDeferred = true;
                 if (_layoutPopupOpen)
                 {
                     // Conflit layout systeme detecte : la mini-fenetre LayoutConflictWindow
@@ -920,6 +944,19 @@ sealed class TrayApplication : IDisposable
         onboarding.Hook = _hook;
         onboarding.AppLayout = _layout;
         onboarding.OpenLessonsRequested = ShowLessonsWindow;
+        onboarding.OnClosed = OnOnboardingClosed;
+    }
+
+    /// <summary>
+    /// Reprend la sollicitation d'avis différée au démarrage parce que la fenêtre
+    /// d'accueil occupait l'écran. Sans ce relais, tout utilisateur qui revoit l'accueil à
+    /// chaque démarrage ne serait jamais sollicité.
+    /// </summary>
+    private void OnOnboardingClosed()
+    {
+        if (!_reviewPromptDeferred) return;
+        _reviewPromptDeferred = false;
+        MaybeShowReviewPrompt();
     }
 
     private void ShowLessonsWindow()
@@ -1463,38 +1500,90 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// Sollicitation d'avis one-shot : 7 jours après le premier lancement, une seule
-    /// notification invite à donner son avis. Marquée comme faite dès l'affichage (pas
-    /// au clic) : jamais répétée, même si la notification est manquée — zéro harcèlement.
-    /// En packagé, la cible est tirée au sort 50/50 (volet d'avis Store ou page feedback
-    /// du site) pour alimenter les deux canaux ; le tirage précède l'affichage car le
-    /// texte annonce sa cible. Hors package : toujours la page feedback (pas de fiche
-    /// Store à noter). Retourne true si la notification a été affichée.
+    /// Sollicitation d'avis : deux essais au maximum sur toute la vie de l'installation,
+    /// déclenchés par l'usage réel et non par le calendrier. Quelqu'un qui a installé
+    /// l'application puis l'a oubliée n'a rien à en dire ; le J+7 calendaire de la v1.1
+    /// le sollicitait quand même.
+    ///
+    /// Essai 1 : <see cref="ReviewPromptFirstActiveDays"/> jours d'usage distincts, et au
+    /// moins <see cref="ReviewPromptFirstMinDays"/> jours écoulés depuis la première
+    /// frappe remappée. Essai 2 : <see cref="ReviewPromptSecondActiveDays"/> jours d'usage
+    /// distincts, et <see cref="ReviewPromptSecondMinGapDays"/> jours au moins après
+    /// l'essai 1 — sans ce plancher les deux notifications tombent dans la même semaine et
+    /// la seconde n'a rien de neuf à dire.
+    ///
+    /// Le second essai est abandonné si le premier a été cliqué (l'utilisateur a répondu,
+    /// peu importe ce qu'il a fait ensuite) ou si l'application n'a plus servi depuis plus
+    /// de <see cref="ReviewPromptStaleDays"/> jours. Aucune sollicitation dans les
+    /// <see cref="ReviewPromptErrorCooldownHours"/> heures qui suivent une erreur
+    /// journalisée : on ne demande pas un avis à quelqu'un qui vient d'avoir un problème.
+    ///
+    /// En packagé la cible est toujours la fiche Store — le tirage 50/50 de la v1.1
+    /// envoyait une sollicitation sur deux vers un canal privé, alors que la note publique
+    /// est le seul levier qui manque. Hors package, toujours la page feedback, faute de
+    /// fiche à noter.
+    ///
+    /// Marquée comme faite dès l'affichage : une notification manquée consomme l'essai,
+    /// mais il en reste un second, ce que la v1.1 n'offrait pas.
+    /// Retourne true si la notification a été affichée.
     /// </summary>
     private bool MaybeShowReviewPrompt()
     {
         try
         {
-            if (ConfigManager.ReviewPromptDone || !ConfigManager.NotificationsEnabled)
-                return false;
-            var firstRun = ConfigManager.EnsureFirstRunTimestamp();
-            if (DateTimeOffset.UtcNow - firstRun < TimeSpan.FromDays(7))
+            if (!ConfigManager.NotificationsEnabled) return false;
+
+            int already = ConfigManager.ReviewPromptCount;
+            if (already >= 2 || ConfigManager.ReviewPromptClicked) return false;
+
+            var lastError = ConfigManager.LastErrorUtc;
+            if (lastError.HasValue &&
+                DateTime.UtcNow - lastError.Value < TimeSpan.FromHours(ReviewPromptErrorCooldownHours))
                 return false;
 
-            ConfigManager.SetReviewPromptDone();
-            _reviewPromptShownDate = DateOnly.FromDateTime(DateTime.Now); // l'avis prime sur le défi ce jour
-            bool toStore = ConfigManager.IsPackaged && Random.Shared.Next(2) == 0;
-            string body = toStore ? L.Tray_ReviewPromptBodyStore : L.Tray_ReviewPromptBodyFeedback;
+            // Sans première frappe remappée, l'application n'a jamais servi : rien à noter.
+            var firstRemap = UsageStats.FirstRemapDate;
+            if (firstRemap == null) return false;
+
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            int activeDays = UsageStats.ActiveDaysCount;
+            int attempt = already + 1;
+
+            if (attempt == 1)
+            {
+                if (activeDays < ReviewPromptFirstActiveDays) return false;
+                if (today.DayNumber - firstRemap.Value.DayNumber < ReviewPromptFirstMinDays) return false;
+            }
+            else
+            {
+                if (activeDays < ReviewPromptSecondActiveDays) return false;
+                // Null pour une installation migrée depuis la v1.1, qui ne connaissait pas
+                // cette date : l'essai 1 y est forcément ancien, le plancher est acquis.
+                var lastShown = ConfigManager.ReviewPromptLastShown;
+                if (lastShown.HasValue &&
+                    today.DayNumber - lastShown.Value.DayNumber < ReviewPromptSecondMinGapDays)
+                    return false;
+                var lastActive = UsageStats.LastActiveDate;
+                if (lastActive == null ||
+                    today.DayNumber - lastActive.Value.DayNumber > ReviewPromptStaleDays)
+                    return false;
+            }
+
+            ConfigManager.RecordReviewPromptShown();
+            _reviewPromptShownDate = today; // l'avis prime sur le défi ce jour
+            bool toStore = ConfigManager.IsPackaged;
+            string title = L.Tray_ReviewPromptTitle(attempt);
+            string body = toStore ? L.Tray_ReviewPromptBodyStore(attempt) : L.Tray_ReviewPromptBodyFeedback(attempt);
 
             // v1.2.0 : en packagé avec activateur COM enregistré, passer par un vrai toast
             // (clic livré au processus vivant, plus aucune seconde instance). Repli balloon
             // si l'enregistrement ou l'affichage échoue.
             if (ConfigManager.IsPackaged && _toastActivatorRegistered &&
-                ToastActivation.TryShowToast(L.Tray_ReviewPromptTitle, body,
+                ToastActivation.TryShowToast(title, body,
                     toStore ? "action=review&target=store" : "action=review&target=feedback"))
                 return true;
 
-            ShowBalloon(L.Tray_ReviewPromptTitle, body);
+            ShowBalloon(title, body);
             _pendingBalloon = PendingBalloonKind.Review;
             _reviewTargetIsStore = toStore;
             return true;
@@ -1513,6 +1602,11 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void OpenReviewTarget(bool toStore)
     {
+        // L'utilisateur a répondu à la sollicitation : plus aucune relance, quoi qu'il
+        // fasse ensuite sur le Store — nous n'avons aucun moyen de le savoir, et lui
+        // redemander après qu'il a joué le jeu serait le pire des cas.
+        try { ConfigManager.SetReviewPromptClicked(); } catch (Exception ex) { ConfigManager.Log("SetReviewPromptClicked", ex); }
+
         if (toStore && ConfigManager.IsPackaged)
             Win32.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1);
         else
