@@ -172,13 +172,15 @@ static class ConfigManager
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Sollicitation d'avis (one-shot à J+7)
+    // Sollicitation d'avis (v1.2.0 : deux essais, seuils d'usage)
     // ═══════════════════════════════════════════════════════════════
 
     /// <summary>
     /// Date du premier lancement (ISO 8601 UTC), enregistrée au premier accès.
-    /// Sert d'horloge pour la sollicitation d'avis unique. Une valeur corrompue
-    /// est ré-enregistrée à maintenant (l'horloge repart, pas de crash).
+    /// Depuis la v1.2.0 la sollicitation d'avis se déclenche sur les jours d'usage réels
+    /// (<see cref="UsageStats.ActiveDaysCount"/>) et non plus sur cette horloge ; elle
+    /// reste écrite pour les installations existantes et le diagnostic. Une valeur
+    /// corrompue est ré-enregistrée à maintenant (l'horloge repart, pas de crash).
     /// </summary>
     public static DateTimeOffset EnsureFirstRunTimestamp()
     {
@@ -193,11 +195,76 @@ static class ConfigManager
         return now;
     }
 
-    /// <summary>La sollicitation d'avis a déjà été affichée. One-shot : jamais répétée.</summary>
-    public static bool ReviewPromptDone => GetBool("reviewPromptDone");
+    /// <summary>
+    /// Nombre de sollicitations d'avis déjà affichées : 0, 1 ou 2 (plafond dur).
+    ///
+    /// Migration v1.1 → v1.2 : les installations existantes ne connaissent que le booléen
+    /// `reviewPromptDone`. Un `true` vaut une sollicitation déjà consommée, sinon la
+    /// v1.2.0 enverrait deux nouvelles notifications à quelqu'un qui a déjà été sollicité.
+    /// La conversion est déduite à la lecture, sans réécrire les configs existantes.
+    /// </summary>
+    public static int ReviewPromptCount
+    {
+        get
+        {
+            var stored = GetUInt("reviewPromptCount");
+            if (stored > 0) return (int)stored;
+            return GetBool("reviewPromptDone") ? 1 : 0;
+        }
+    }
 
-    /// <summary>Marque la sollicitation d'avis comme affichée (dès l'affichage, pas au clic).</summary>
-    public static void SetReviewPromptDone() => SetBool("reviewPromptDone", true);
+    /// <summary>Date (UTC, au jour près) de la dernière sollicitation affichée, si connue.</summary>
+    public static DateOnly? ReviewPromptLastShown
+    {
+        get
+        {
+            var raw = GetString("reviewPromptLastShown");
+            return DateOnly.TryParseExact(raw, "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var parsed) ? parsed : null;
+        }
+    }
+
+    /// <summary>
+    /// L'utilisateur a cliqué une sollicitation. Il a répondu : on ne le relance plus,
+    /// quel que soit ce qu'il a fait ensuite sur le Store.
+    /// </summary>
+    public static bool ReviewPromptClicked => GetBool("reviewPromptClicked");
+
+    /// <summary>
+    /// Enregistre une sollicitation affichée : incrémente le compteur et pose la date.
+    /// `reviewPromptDone` reste écrit pour qu'un retour arrière en v1.1 ne reparte pas
+    /// de zéro.
+    /// </summary>
+    public static void RecordReviewPromptShown()
+    {
+        lock (_lock)
+        {
+            var next = (uint)Math.Min(ReviewPromptCount + 1, 2);
+            SetUInt("reviewPromptCount", next);
+            SetString("reviewPromptLastShown",
+                DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+            SetBool("reviewPromptDone", true);
+        }
+    }
+
+    /// <summary>Marque la sollicitation comme cliquée : plus aucune relance.</summary>
+    public static void SetReviewPromptClicked() => SetBool("reviewPromptClicked", true);
+
+    /// <summary>
+    /// Date de la dernière erreur journalisée par ce process, ou null. Sert de garde à la
+    /// sollicitation d'avis : on ne demande pas un avis à quelqu'un qui vient de
+    /// rencontrer un problème.
+    ///
+    /// Volontairement en mémoire seulement, et alimenté par <see cref="Log(string, Exception)"/>
+    /// uniquement : la date d'écriture d'error.log ne conviendrait pas puisque le même
+    /// fichier reçoit les événements de compatibilité jeux, qui ne sont pas des erreurs et
+    /// bloqueraient un joueur régulier en permanence. Persister ici est également exclu —
+    /// <see cref="Save"/> journalise ses propres échecs, une écriture de config depuis le
+    /// chemin d'erreur se rappellerait elle-même.
+    /// </summary>
+    public static DateTime? LastErrorUtc => _lastErrorUtc;
+    private static DateTime? _lastErrorUtc;
 
     /// <summary>Indique si les indices automatiques du module Lecons sont actives. Defaut : false.</summary>
     public static bool LessonAutoHintsEnabled => GetBool("lessonAutoHintsEnabled");
@@ -499,6 +566,7 @@ static class ConfigManager
     /// <summary>Écrit une entrée dans error.log de façon asynchrone et non-bloquante. Sanitize l'exception (SEV-A1-01).</summary>
     public static void Log(string context, Exception ex)
     {
+        _lastErrorUtc = DateTime.UtcNow; // garde de la sollicitation d'avis
         var logDir = LogDirectory;
         var logEntry = $"[{DateTime.Now:s}] {context}: {SanitizeException(ex)}\n";
         var logFile = Path.Combine(logDir, "error.log");

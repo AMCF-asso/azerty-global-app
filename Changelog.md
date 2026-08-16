@@ -5,7 +5,46 @@
 - Report de la base interne 1.1.2 et des fonctions 1.2.0 en développement dans le dépôt public canonique : interface bilingue, statistiques locales, défi quotidien facultatif, rappels d'entraînement et activation des notifications Store.
 - Extraction du modèle de disposition, du parseur JSON et de la composition des touches mortes dans `TypingEngine.Core`, projet portable partagé et couvert par sa propre suite de tests.
 - Extraction du remapping, du hook clavier, de l'injection Win32 et de la compatibilité jeux dans `TypingEngine.Windows`. L'application fournit désormais sa configuration, ses journaux et ses statistiques via `IWindowsTypingHost`.
+**Sollicitation d'avis — refonte (décision du 2026-08-16)**
+
+- La sollicitation n'est plus subordonnée à l'absence de fenêtre d'accueil : elle vivait dans le `else` du test d'affichage de l'accueil, si bien qu'un utilisateur qui revoyait l'accueil à chaque démarrage n'était **jamais** sollicité. Elle est désormais différée à la fermeture de l'accueil, via un nouveau callback `OnboardingWindow.OnClosed`.
+- Déclenchement sur les jours d'usage réels au lieu du calendrier : essai 1 à 3 jours d'usage distincts (plancher de 3 jours depuis la première frappe remappée), essai 2 à 10 jours d'usage distincts (plancher de 7 jours après l'essai 1). Le J+7 calendaire de la v1.1 sollicitait de la même façon celui qui tape tous les jours et celui qui avait installé puis oublié l'application.
+- Deux essais au maximum sur toute la vie de l'installation, contre un seul auparavant. Le second est abandonné si le premier a été cliqué, ou si l'application n'a plus servi depuis plus de trois jours.
+- Fin du tirage 50/50 entre la fiche Store et la page feedback : en packagé la cible est toujours le Store. Une sollicitation sur deux partait vers un canal privé alors que la note publique est le seul levier qui manque à la fiche. La page feedback ne sert plus qu'aux installations hors Store, qui n'ont pas de fiche à noter.
+- Aucune sollicitation dans les 48 heures qui suivent une erreur journalisée.
+- `reviewPromptDone` cède la place à `reviewPromptCount` (plafonné à deux), `reviewPromptLastShown` et `reviewPromptClicked`. Migration des installations v1.1 : un `reviewPromptDone` à true vaut un essai déjà consommé, sinon la v1.2.0 enverrait deux notifications supplémentaires à quelqu'un qui a déjà été sollicité.
+- Textes distincts pour chaque essai, sans aucun chiffre d'usage : les statistiques restent affaire de la fenêtre « Mes statistiques ». Le second essai annonce qu'il est le dernier, ce qui est vrai.
+
 - Aucun package MSIX n'a été produit et aucune publication n'a été effectuée. Le manifeste de packaging reste volontairement inchangé jusqu'à la revue de release.
+
+## Version 1.1.0 — 23 juillet 2026
+
+Publiée sur le Microsoft Store en `1.1.0.0` (révision Store `2026-07-23T22:11:18Z`). Le package a été produit hors de ce dépôt : aucun tag ni commit de release ne lui correspond ici, et le code n'a rejoint la branche canonique qu'avec le commit `452aab0` du 2026-08-15. Entrée reconstituée le 2026-08-16 à partir des notes de version publiées (FR et EN), du code réconcilié et de l'inspection de l'application installée depuis le Store, pas d'un diff de release.
+
+**Interface bilingue**
+
+- Interface complète en anglais, en plus du français.
+- Changement de langue à chaud depuis la fenêtre de bienvenue, le menu de la zone de notification ou les Paramètres.
+
+**Statistiques locales**
+
+- Nouvelle fenêtre « Mes statistiques » : jours d'utilisation, séries, temps de frappe actif et caractères spéciaux produits avec AZERTY Global.
+- Calcul et stockage exclusivement sur l'appareil, sans télémétrie réseau. Aucune frappe ni aucun texte n'est enregistré ni transmis.
+- Bouton de copie volontaire d'un résumé lisible des statistiques dans le presse-papiers.
+
+**Avis et retours**
+
+- Accès direct aux avis, aux retours et à la communauté depuis l'application.
+- Sollicitation d'avis unique 7 jours après le premier lancement (`MaybeShowReviewPrompt`), cible tirée à 50/50 entre le volet d'avis du Store et la page feedback du site, marquée comme faite dès l'affichage. Vérifié sur une installation Store 1.1.0.0 : `firstRunTimestamp` et `reviewPromptDone` sont écrits dans `config.json`.
+
+**Recherche de caractères**
+
+- Prise en charge des noms anglais et de nombreux alias supplémentaires liés aux langues.
+
+**Fiabilité**
+
+- Comportement fiabilisé après une mise en veille ou une session de bureau à distance.
+- Messages d'erreur plus clairs et correctifs d'interface divers.
 
 ## Version 1.0.0 — 29 juin 2026
 
@@ -322,4 +361,4 @@ Refonte majeure de la couche d'injection pour résoudre les problèmes de compat
 
 ---
 
-*Dernière mise à jour : 2026-06-29 (v1.0.0 — publication Microsoft Store)*
+*Dernière mise à jour : 2026-08-16 (ajout rétroactif de l'entrée v1.1.0)*

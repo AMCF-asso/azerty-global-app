@@ -4,9 +4,10 @@ using Xunit;
 namespace AZERTYGlobal.Tests;
 
 /// <summary>
-/// Tests des clés de la sollicitation d'avis one-shot : horloge du premier lancement
-/// (enregistrée au premier accès, stable ensuite, tolérante à la corruption) et
-/// flag reviewPromptDone (défaut false, persisté une fois posé).
+/// Tests des clés de la sollicitation d'avis : horloge du premier lancement (enregistrée
+/// au premier accès, stable ensuite, tolérante à la corruption), compteur d'essais
+/// plafonné à deux, date du dernier essai, drapeau de clic, et migration des
+/// installations v1.1 qui ne connaissent que le booléen reviewPromptDone.
 /// </summary>
 public class ReviewPromptConfigTests : IDisposable
 {
@@ -72,19 +73,69 @@ public class ReviewPromptConfigTests : IDisposable
     }
 
     [Fact]
-    public void ReviewPromptDone_DefaultsToFalse()
+    public void ReviewPromptCount_DefaultsToZero()
     {
-        Assert.False(ConfigManager.ReviewPromptDone);
+        Assert.Equal(0, ConfigManager.ReviewPromptCount);
+        Assert.Null(ConfigManager.ReviewPromptLastShown);
+        Assert.False(ConfigManager.ReviewPromptClicked);
     }
 
     [Fact]
-    public void SetReviewPromptDone_PersistsTrue()
+    public void RecordReviewPromptShown_IncrementsAndPersists()
     {
-        ConfigManager.SetReviewPromptDone();
-        Assert.True(ConfigManager.ReviewPromptDone);
+        ConfigManager.RecordReviewPromptShown();
+        Assert.Equal(1, ConfigManager.ReviewPromptCount);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow), ConfigManager.ReviewPromptLastShown);
 
         // Persistance disque (survit à un redémarrage)
         ConfigManager.OverrideConfigPathForTests(_configPath);
-        Assert.True(ConfigManager.ReviewPromptDone);
+        Assert.Equal(1, ConfigManager.ReviewPromptCount);
+
+        ConfigManager.RecordReviewPromptShown();
+        Assert.Equal(2, ConfigManager.ReviewPromptCount);
+    }
+
+    [Fact]
+    public void RecordReviewPromptShown_CapsAtTwo()
+    {
+        for (int i = 0; i < 5; i++) ConfigManager.RecordReviewPromptShown();
+        Assert.Equal(2, ConfigManager.ReviewPromptCount);
+    }
+
+    /// <summary>
+    /// Migration v1.1 → v1.2 : une installation qui ne porte que `reviewPromptDone` a déjà
+    /// consommé un essai. Sans cette équivalence, la v1.2.0 enverrait deux notifications
+    /// supplémentaires à quelqu'un qui a déjà été sollicité.
+    /// </summary>
+    [Fact]
+    public void ReviewPromptCount_MigratesLegacyDoneFlagToOne()
+    {
+        File.WriteAllText(_configPath, "{\"reviewPromptDone\": true}");
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+
+        Assert.Equal(1, ConfigManager.ReviewPromptCount);
+
+        // Le second essai reste possible et porte bien le compteur à 2, pas à 3.
+        ConfigManager.RecordReviewPromptShown();
+        Assert.Equal(2, ConfigManager.ReviewPromptCount);
+    }
+
+    [Fact]
+    public void ReviewPromptCount_ExplicitCountWinsOverLegacyFlag()
+    {
+        File.WriteAllText(_configPath, "{\"reviewPromptDone\": true, \"reviewPromptCount\": 2}");
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+
+        Assert.Equal(2, ConfigManager.ReviewPromptCount);
+    }
+
+    [Fact]
+    public void SetReviewPromptClicked_PersistsTrue()
+    {
+        ConfigManager.SetReviewPromptClicked();
+        Assert.True(ConfigManager.ReviewPromptClicked);
+
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+        Assert.True(ConfigManager.ReviewPromptClicked);
     }
 }
