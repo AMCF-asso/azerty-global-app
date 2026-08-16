@@ -122,12 +122,29 @@ Installer l'extra MCP :
 python -m pip install -e ".\store-analytics[mcp]"
 ```
 
-Pour lire un export local :
+Pour lire un export local, rapatrier d'abord le dernier snapshot :
 
 ```powershell
-$env:STORE_ANALYTICS_SOURCE = "D:\chemin\vers\latest"
+python tools\refresh_snapshot.py
+$env:STORE_ANALYTICS_SOURCE = "D:\chemin\vers\store-analytics\out\latest"
 azerty-store-mcp
 ```
+
+`tools/refresh_snapshot.py` rapatrie dans `out/` l'artefact du dernier run
+**réussi** du workflow — exactement l'arborescence archivée dans Azure. Le jeton
+GitHub est lu à la volée dans le gestionnaire d'identifiants (celui de
+`git push`) et n'est jamais écrit sur le disque ; il est retiré de la requête
+avant la redirection vers le stockage d'artefacts. Aucun secret à créer, aucune
+expiration à surveiller. La rétention des artefacts est de 14 jours, sans
+conséquence puisqu'un run tourne chaque jour : relancer le script suffit.
+
+⚠️ **Le miroir ne se met pas à jour tout seul** : relancer le script avant toute
+lecture, sinon les chiffres servis sont ceux du dernier rapatriement. Le compte
+GitHub y est épinglé sur le propriétaire du dépôt — sans `username=`, le
+gestionnaire d'identifiants rend la dernière identité utilisée, et un mauvais
+jeton sur un dépôt privé répond **404, pas 403** : la panne se lit comme un
+mauvais chemin. C'est ce qui a figé le miroir jumeau de `search-analytics`
+pendant onze jours en août 2026.
 
 Pour lire le conteneur privé Azure, générer un SAS **en lecture seule**, limité
 au conteneur et de courte durée :
