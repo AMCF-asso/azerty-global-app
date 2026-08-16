@@ -32,8 +32,6 @@ sealed class UsageStatsWindow : IDisposable
     private const uint CLR_LINK = 0x00D47800;
     private const uint CLR_LINK_HOVER = 0x000078D4;
 
-    private const uint CF_UNICODETEXT = 13;
-
     private IntPtr _hWnd;
     private IntPtr _hWndBtnCopy;
     private IntPtr _hWndBtnClose;
@@ -403,7 +401,7 @@ sealed class UsageStatsWindow : IDisposable
     /// </summary>
     private void OnCopyStats()
     {
-        if (CopyToClipboard(UsageStats.BuildShareText()))
+        if (ClipboardText.TrySet(_hWnd, UsageStats.BuildShareText()))
         {
             _showCopiedFeedback = true;
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
@@ -411,48 +409,9 @@ sealed class UsageStatsWindow : IDisposable
         }
     }
 
-    private bool CopyToClipboard(string text)
-    {
-        IntPtr hMem = IntPtr.Zero;
-        bool ownershipTransferred = false;
-        try
-        {
-            hMem = CharacterSearch.AllocateClipboardText(text);
-            if (hMem == IntPtr.Zero) return false;
-
-            if (!Win32.OpenClipboard(_hWnd)) return false;
-            try
-            {
-                // Même filet que CharacterSearch : mémoriser l'ancien contenu pour le
-                // restaurer si SetClipboardData échoue après EmptyClipboard.
-                string? previousText = CharacterSearch.ReadClipboardText();
-                if (!Win32.EmptyClipboard()) return false;
-
-                if (Win32.SetClipboardData(CF_UNICODETEXT, hMem) == IntPtr.Zero)
-                {
-                    ConfigManager.Log("UsageStatsWindow clipboard", new ExternalException("SetClipboardData a échoué."));
-                    CharacterSearch.RestoreClipboardText(previousText);
-                    return false;
-                }
-                ownershipTransferred = true; // propriété transférée au clipboard — ne pas libérer
-                return true;
-            }
-            finally
-            {
-                Win32.CloseClipboard();
-            }
-        }
-        catch (Exception ex) when (ex is ExternalException or ArgumentException or OutOfMemoryException)
-        {
-            ConfigManager.Log("UsageStatsWindow.CopyToClipboard", ex);
-            return false;
-        }
-        finally
-        {
-            if (!ownershipTransferred && hMem != IntPtr.Zero)
-                Win32.GlobalFree(hMem);
-        }
-    }
+    // La copie elle-même vit dans ClipboardText.TrySet depuis la v1.2.0, avec le même
+    // filet de restauration : mémoriser l'ancien contenu pour le remettre si
+    // SetClipboardData échoue après EmptyClipboard.
 
     private void OnPaint(IntPtr hWnd)
     {
