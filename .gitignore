@@ -18,6 +18,15 @@ config.json
 # IDE
 .vs/
 *.user
+
+# Miroir local du pipeline analytics et artefacts Python
+# `out/` est rapatrie par store-analytics/tools/refresh_snapshot.py : c'est un
+# cache du dernier run GitHub Actions, jamais une source.
+store-analytics/out/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.venv/
 *.suo
 
 # OS
