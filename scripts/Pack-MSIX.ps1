@@ -65,7 +65,11 @@ $msixArchiveDir = Join-Path (Join-Path $msixArchiveRoot 'by-version') $storeVers
 foreach ($arch in $architectures) {
     $publishExe = Join-Path $srcDir "bin\Release\net8.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
     if (-not (Test-Path $publishExe)) {
-        throw "Publish introuvable pour $arch : $publishExe`nLancer: dotnet publish -c Release -r win-$arch"
+        # Le prefixe de PATH n'est pas decoratif : sans vswhere.exe l'edition de liens
+        # native AOT echoue sur un MSB3073 qui designe link.exe, pas la cause reelle.
+        # Meme prerequis que msix/README.md, repete ici car c'est cette commande-la
+        # qui est copiee quand le pack s'arrete.
+        throw "Publish introuvable pour $arch : $publishExe`nLancer:`n  `$env:PATH += `";C:\Program Files (x86)\Microsoft Visual Studio\Installer`"`n  dotnet publish -c Release -r win-$arch"
     }
 }
 
