@@ -503,7 +503,8 @@ sealed class TrayApplication : IDisposable
                             ShowChallengeWindow();
                         }
                         else if (kind == PendingBalloonKind.Announcement)
-                            ShowSettingsWindow(); // l'opt-in Défi du jour vit dans les Paramètres
+                            ShowChallengeWindow(); // le défi s'ouvre sans opt-in depuis le 2026-08-16 :
+                                                   // l'annonce mène à la séance, plus aux Paramètres
                     }
                     else if (mouseMsg == NIN_BALLOONTIMEOUT)
                     {
@@ -571,7 +572,7 @@ sealed class TrayApplication : IDisposable
                         case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://discord.gg/nYknqshJz3", null, null, 1); break;
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global", null, null, 1); break;
                         case IDM_FEEDBACK: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback", null, null, 1); break;
-                        case IDM_RATE_STORE: Win32.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1); break;
+                        case IDM_RATE_STORE: OpenStoreReview(); break;
                         case IDM_BUG: OnReportBug(); break;
                         case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/soutien", null, null, 1); break;
                         case IDM_ONBOARDING:
@@ -961,17 +962,32 @@ sealed class TrayApplication : IDisposable
 
     private void ShowLessonsWindow()
     {
-        if (_mapper == null || _hook == null || _layout == null) return;
-        // Le catalogue de leçons est résolu dans la langue courante au parse : si la langue
-        // a changé depuis la création de la fenêtre, on la recrée (fenêtre masquée uniquement).
+        if (!EnsureLessonsWindow()) return;
+        ApplyWindowInputState();
+        _lessons!.Show();
+    }
+
+    /// <summary>
+    /// Crée la fenêtre Leçons si besoin et lui rattache ses rappels. Retourne false si
+    /// l'application n'est pas encore en état de l'ouvrir.
+    ///
+    /// Le catalogue de leçons est résolu dans la langue courante au parse : si la langue a
+    /// changé depuis la création de la fenêtre, on la recrée (fenêtre masquée uniquement).
+    /// </summary>
+    private bool EnsureLessonsWindow()
+    {
+        if (_mapper == null || _hook == null || _layout == null) return false;
         if (_lessons != null && !_lessons.IsVisible && _lessons.CatalogLanguage != L.Language)
         {
             _lessons.Dispose();
             _lessons = null;
         }
-        _lessons ??= new LessonsWindow(_layout, _mapper, _hook);
-        ApplyWindowInputState();
-        _lessons.Show();
+        if (_lessons == null)
+        {
+            _lessons = new LessonsWindow(_layout, _mapper, _hook);
+            _lessons.ChallengeShared = OnChallengeShared;
+        }
+        return true;
     }
 
     private void ShowSettingsWindow()
@@ -1020,15 +1036,9 @@ sealed class TrayApplication : IDisposable
     /// (clic sur le rappel ou entrée du menu tray).</summary>
     private void ShowChallengeWindow()
     {
-        if (_mapper == null || _hook == null || _layout == null) return;
-        if (_lessons != null && !_lessons.IsVisible && _lessons.CatalogLanguage != L.Language)
-        {
-            _lessons.Dispose();
-            _lessons = null;
-        }
-        _lessons ??= new LessonsWindow(_layout, _mapper, _hook);
+        if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
-        if (!_lessons.ShowChallenge())
+        if (!_lessons!.ShowChallenge())
             _lessons.Show(); // banque indisponible : fenêtre Leçons normale plutôt que rien
     }
 
@@ -1077,10 +1087,13 @@ sealed class TrayApplication : IDisposable
         uint searchFlags = ShouldProcessHook || _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchKey));
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_EXERCISES, L.Tray_MenuLessons);
-        // Défi du jour (v1.2.0) : visible uniquement après opt-in — cohérent avec le
-        // module synthétique du catalogue des leçons.
-        if (ConfigManager.TrainingEnabled)
-            Win32.AppendMenuW(hMenu, MF_STRING, IDM_CHALLENGE, L.Tray_MenuChallenge);
+        // Défi du jour : toujours visible depuis la décision du 2026-08-16. L'entrée était
+        // conditionnée à `trainingEnabled`, qui vaut false par défaut : sur une installation
+        // neuve la fonction n'existait donc pas visuellement, alors que le défi commun est
+        // le seul contenu identique pour tous les utilisateurs — le seul comparable, et le
+        // seul partageable. L'opt-in ne gouverne plus que les rappels d'entraînement, qui
+        // sont des notifications et relèvent d'un consentement distinct.
+        Win32.AppendMenuW(hMenu, MF_STRING, IDM_CHALLENGE, L.Tray_MenuChallenge);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_ONBOARDING, L.Tray_MenuWelcomeWindow);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
@@ -1608,9 +1621,75 @@ sealed class TrayApplication : IDisposable
         try { ConfigManager.SetReviewPromptClicked(); } catch (Exception ex) { ConfigManager.Log("SetReviewPromptClicked", ex); }
 
         if (toStore && ConfigManager.IsPackaged)
-            Win32.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1);
+            OpenStoreReview();
         else
             Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback?source=app-notification", null, null, 1);
+    }
+
+    /// <summary>
+    /// Ouvre la notation. La boîte intégrée du Store est tentée d'abord : elle recueille
+    /// la note sans quitter AZERTY Global, là où <see cref="StoreReviewUrl"/> impose une
+    /// bascule vers l'application Store et l'attente de son chargement. Repli sur le lien
+    /// profond dès que l'API n'est pas disponible — installation hors Store, Store absent
+    /// du système, ou refus de l'API.
+    /// </summary>
+    private void OpenStoreReview()
+    {
+        if (StoreReview.TryShow(ReviewOwnerWindow(), StoreReviewUrl)) return;
+        Win32.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1);
+    }
+
+    /// <summary>
+    /// Fenêtre propriétaire de la boîte de notation. L'API exige un HWND du processus ;
+    /// une fenêtre visible est préférée quand l'utilisateur en a une sous les yeux, sinon
+    /// la fenêtre de la zone de notification, masquée mais bien réelle.
+    /// </summary>
+    private IntPtr ReviewOwnerWindow()
+    {
+        if (_lessons?.IsVisible == true && _lessons.Handle != IntPtr.Zero)
+            return _lessons.Handle;
+        return _hWnd;
+    }
+
+    /// <summary>
+    /// L'utilisateur vient de copier son résultat de défi puis de refermer la fenêtre.
+    /// Le geste de partage est le signal de promotion le plus net dont dispose
+    /// l'application : il vaut mieux que n'importe quel seuil de jours, et c'est le seul
+    /// chemin de sollicitation qui atteint aussi ceux qui ont coupé les notifications
+    /// Windows — la sollicitation par toast, elle, ne leur parvient jamais.
+    ///
+    /// Les garde-fous de <see cref="MaybeShowReviewPrompt"/> restent en vigueur : deux
+    /// essais au maximum sur la vie de l'installation, aucun après une réponse, aucun dans
+    /// les 48 heures qui suivent une erreur journalisée, un seul par jour.
+    /// </summary>
+    private void OnChallengeShared()
+    {
+        try
+        {
+            if (!ConfigManager.IsPackaged) return;
+            if (ConfigManager.ReviewPromptClicked) return;
+            if (ConfigManager.ReviewPromptCount >= 2) return;
+
+            var lastError = ConfigManager.LastErrorUtc;
+            if (lastError.HasValue &&
+                DateTime.UtcNow - lastError.Value < TimeSpan.FromHours(ReviewPromptErrorCooldownHours))
+                return;
+
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            if (_reviewPromptShownDate == today) return;
+
+            if (!StoreReview.TryShow(_hWnd, StoreReviewUrl)) return;
+
+            // Consommé seulement une fois la boîte réellement affichée : contrairement à la
+            // notification, dont l'échec est invisible, l'API répond ici tout de suite.
+            ConfigManager.RecordReviewPromptShown();
+            ConfigManager.SetReviewPromptClicked();
+            _reviewPromptShownDate = today;
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("TrayApplication.OnChallengeShared", ex);
+        }
     }
 
     private void ShowBalloon(string title, string text)

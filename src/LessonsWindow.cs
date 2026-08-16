@@ -110,6 +110,12 @@ internal sealed class LessonsWindow : IDisposable
     private LessonTypingSession _session;
     private bool _showSummary;
     private LessonAttemptStats? _lastCompletedStats;
+    // Partage du défi (v1.2.0) : non null uniquement quand la séance qui vient de s'achever
+    // est le défi commun — les séances de prise en main dépendent de la progression
+    // individuelle, deux personnes n'y tapent pas le même extrait.
+    private string? _challengeShareText;
+    private bool _challengeShareCopied;
+    private bool _challengeSharedThisSession;
     private char? _hintCharacter;
     private LessonHintMethod? _hintMethod;
     private bool _hintBackspace;
@@ -168,6 +174,17 @@ internal sealed class LessonsWindow : IDisposable
     private readonly Action<string>? _onAppLanguageChanged;
 
     public bool IsVisible => _visible;
+
+    /// <summary>Handle de la fenêtre — propriétaire des boîtes de dialogue système.</summary>
+    public IntPtr Handle => _hWnd;
+
+    /// <summary>
+    /// Émis à la fermeture de la fenêtre lorsque l'utilisateur a copié un résultat de défi
+    /// pendant la séance. Différé à la fermeture volontairement : demander un avis à
+    /// l'instant du clic couperait le geste en deux, alors que l'utilisateur est
+    /// précisément en train de partir coller son résultat ailleurs.
+    /// </summary>
+    public Action? ChallengeShared;
 
     /// <summary>Langue de l'UI au moment du parse du catalogue (les titres/instructions des
     /// leçons sont résolus au parse — cf. LessonCatalogLoader.PickText). Mise à jour au
@@ -695,6 +712,8 @@ internal sealed class LessonsWindow : IDisposable
         _session = new LessonTypingSession(CurrentExercise);
         _showSummary = false;
         _lastCompletedStats = null;
+        _challengeShareText = null;
+        _challengeShareCopied = false;
         _hintCharacter = null;
         _hintMethod = null;
         _hintBackspace = false;
@@ -1064,11 +1083,17 @@ internal sealed class LessonsWindow : IDisposable
 
     private void DrawCompletedExerciseControls(IntPtr hdc, Win32.RECT rect, int y)
     {
+        // Le bouton « Copier mon résultat » vit sur la carte du récapitulatif, que
+        // l'utilisateur peut avoir repliée. Dans ce cas seulement, le partage se rabat sur
+        // une icône de cette rangée-ci, qui elle est toujours dessinée : replier le
+        // récapitulatif est un choix de compacité, pas un renoncement au partage.
+        bool shareAsIcon = _challengeShareText != null && !ConfigManager.LessonSummaryVisible;
+
         var lineInfo = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(24) };
-        int iconAreaW = S(142);
+        int iconAreaW = shareAsIcon ? S(178) : S(142);
         DrawText(hdc, _hFontSmall, L.LessonsWin_ExerciseDone, new Win32.RECT { left = lineInfo.left, top = lineInfo.top, right = lineInfo.right - iconAreaW - S(8), bottom = lineInfo.bottom },
             CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-        DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) });
+        DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) }, shareAsIcon);
     }
 
     private void DrawTargetLine(IntPtr hdc, Win32.RECT rect, ref int y)
@@ -1217,7 +1242,30 @@ internal sealed class LessonsWindow : IDisposable
 
         int x = summaryRect.left + S(18);
         int yy = summaryRect.top + S(12);
-        DrawText(hdc, _hFontSubtitle, L.LessonsWin_ExerciseSuccess, new Win32.RECT { left = x, top = yy, right = summaryRect.right - S(12), bottom = yy + S(24) },
+
+        // Bouton de partage — uniquement après le défi commun, sur la ligne de titre :
+        // les métriques commencent 48 px plus bas et la ligne de détail occupe le bas
+        // de la carte, cette rangée est la seule libre.
+        int titleRight = summaryRect.right - S(12);
+        if (_challengeShareText != null)
+        {
+            int buttonW = S(150);
+            int buttonH = S(26);
+            var shareRect = new Win32.RECT
+            {
+                left = summaryRect.right - S(14) - buttonW,
+                top = summaryRect.top + S(10),
+                right = summaryRect.right - S(14),
+                bottom = summaryRect.top + S(10) + buttonH
+            };
+            DrawButton(hdc, shareRect,
+                _challengeShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareButton,
+                _challengeShareCopied, OnCopyChallengeResult);
+            AddHover(shareRect, L.Challenge_ShareTooltip, preferAbove: true);
+            titleRight = shareRect.left - S(10);
+        }
+
+        DrawText(hdc, _hFontSubtitle, L.LessonsWin_ExerciseSuccess, new Win32.RECT { left = x, top = yy, right = titleRight, bottom = yy + S(24) },
             CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
 
         int metricY = summaryRect.top + S(48);
@@ -1261,13 +1309,22 @@ internal sealed class LessonsWindow : IDisposable
             CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
     }
 
-    private void DrawLessonIconButtons(IntPtr hdc, Win32.RECT rect)
+    private void DrawLessonIconButtons(IntPtr hdc, Win32.RECT rect, bool includeShare = false)
     {
         int size = Math.Min(S(30), rect.bottom - rect.top);
         int gap = S(6);
-        int total = size * 4 + gap * 3;
+        int count = includeShare ? 5 : 4;
+        int total = size * count + gap * (count - 1);
         int x = rect.right - total;
         int y = rect.top + Math.Max(0, (rect.bottom - rect.top - size) / 2);
+
+        if (includeShare)
+        {
+            DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size },
+                "📋", _challengeShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareTooltip,
+                _challengeShareCopied, OnCopyChallengeResult);
+            x += size + gap;
+        }
 
         DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "‹", L.LessonsWin_IconPrevious, false, PreviousExercise);
         x += size + gap;
@@ -2040,6 +2097,15 @@ internal sealed class LessonsWindow : IDisposable
     private void CompleteExercise()
     {
         if (_showSummary) return;
+
+        bool challengeFinale = CurrentModule.Id == DailyChallenge.ModuleId &&
+                               _exerciseIndex == CurrentLesson.Exercises.Count - 1;
+        // Le meilleur score doit être lu AVANT RecordSuccess, qui l'écrase par le résultat
+        // de la tentative courante : après l'appel, toute séance est son propre record.
+        int? previousBestWpm = challengeFinale
+            ? _progress.GetValidProgress(CurrentExercise)?.BestWpm
+            : null;
+
         _lastCompletedStats = _session.Stats;
         _progress.RecordSuccess(CurrentExercise, _session.Stats);
         _showSummary = true;
@@ -2048,13 +2114,59 @@ internal sealed class LessonsWindow : IDisposable
 
         // Défi du jour : le dernier exercice de la leçon du jour clôt la séance —
         // date enregistrée, séquence de désapprentissage avancée, compteur local +1.
-        if (CurrentModule.Id == DailyChallenge.ModuleId &&
-            _exerciseIndex == CurrentLesson.Exercises.Count - 1)
+        if (challengeFinale)
         {
+            PrepareChallengeShare(previousBestWpm);
             try { TrainingReminders.MarkSessionCompleted(DateOnly.FromDateTime(DateTime.Now)); }
             catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeCompleted", ex); }
         }
 
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>
+    /// Prépare le texte partageable de la séance qui vient de s'achever, ou le laisse à null
+    /// si elle n'est pas comparable. Appelé avant <see cref="TrainingReminders.MarkSessionCompleted"/>,
+    /// qui fait avancer l'index de séquence et changerait la phase lue ici.
+    /// </summary>
+    private void PrepareChallengeShare(int? previousBestWpm)
+    {
+        _challengeShareText = null;
+        _challengeShareCopied = false;
+        try
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            var session = DailyChallenge.SessionFor(today, ConfigManager.TrainingSequenceIndex);
+            if (session == null || session.IsSequencePhase) return;
+
+            // Un premier résultat n'est pas un record : sans meilleur score antérieur,
+            // il n'y a rien à battre.
+            bool personalBest = previousBestWpm.HasValue && _session.Stats.Wpm.HasValue &&
+                                _session.Stats.Wpm.Value > previousBestWpm.Value;
+
+            _challengeShareText = ChallengeShare.Build(
+                today, session.Extract.Credit, _session.Stats, personalBest);
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("LessonsWindow.PrepareChallengeShare", ex);
+            _challengeShareText = null;
+        }
+    }
+
+    /// <summary>
+    /// Copie le résultat du défi. Le succès change le libellé du bouton et arme la
+    /// sollicitation d'avis différée : quelqu'un qui partage son résultat est la personne
+    /// la mieux disposée à noter l'application, et c'est le seul moment où l'application
+    /// le sait de source sûre.
+    /// </summary>
+    private void OnCopyChallengeResult()
+    {
+        if (_challengeShareText == null) return;
+        if (!ClipboardText.TrySet(_hWnd, _challengeShareText)) return;
+
+        _challengeShareCopied = true;
+        _challengeSharedThisSession = true;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
@@ -2558,6 +2670,15 @@ internal sealed class LessonsWindow : IDisposable
         _freeStartedAt = null;
         ClearPendingPhysicalText();
         Win32.ShowWindow(_hWnd, 0);
+
+        // Le partage a eu lieu pendant cette séance : c'est maintenant, la fenêtre refermée,
+        // que la sollicitation d'avis peut se présenter sans couper quoi que ce soit.
+        if (_challengeSharedThisSession)
+        {
+            _challengeSharedThisSession = false;
+            try { ChallengeShared?.Invoke(); }
+            catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeShared", ex); }
+        }
     }
 
     public void Dispose()
