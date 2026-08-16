@@ -38,6 +38,35 @@ internal static partial class L
         "Rappels d’entraînement « Défi du jour »",
         "“Daily challenge” training reminders");
 
+    // ── Partage du résultat (v1.2.0) ─────────────────────────────────
+    // Ce texte est destiné à être collé publiquement : il ne porte aucune statistique
+    // d’usage de l’application, seulement la performance de la séance qui vient d’être
+    // jouée. Les chiffres d’usage restent dans « Mes statistiques ».
+    public static string Challenge_ShareTitle(DateOnly date) => T(
+        $"AZERTY Global — Défi du {FormatDate(date)}",
+        $"AZERTY Global — Challenge for {FormatDate(date)}");
+    public static string Challenge_ShareSpeed(int wpm) => T($"{wpm} mots/min", $"{wpm} wpm");
+    public static string Challenge_ShareAccuracy(int percent) => T($"{percent} % de précision", $"{percent}% accuracy");
+    public static string Challenge_ShareSeconds(int seconds) => T($"{seconds} s", $"{seconds}s");
+    public static string Challenge_ShareRecord => T("🏆 Nouveau record personnel", "🏆 New personal best");
+    public static string Challenge_ShareFlawless => T("⭐ Sans faute", "⭐ Flawless");
+    public static string Challenge_ShareHardest(string characters) => T(
+        $"Ce qui m’a résisté : {characters}",
+        $"What tripped me up: {characters}");
+    public static string Challenge_ShareCredit(string credit) => T(
+        $"Extrait d’après {credit}",
+        $"Passage after {credit}");
+    public static string Challenge_ShareFooter => T(
+        "Même extrait pour tout le monde → azerty.global",
+        "Same passage for everyone → azerty.global");
+
+    // Bouton du récapitulatif de fin de défi
+    public static string Challenge_ShareButton => T("Copier mon résultat", "Copy my result");
+    public static string Challenge_ShareButtonCopied => T("Copié ✓", "Copied ✓");
+    public static string Challenge_ShareTooltip => T(
+        "Copie ton résultat du jour, prêt à coller dans une conversation.",
+        "Copies today’s result, ready to paste into a conversation.");
+
     // ── Section « Défi du jour » dans Mes statistiques (v1.2.0) ──────
     public static string Challenge_StatsSectionTitle => T("Défi du jour", "Daily challenge");
     public static string Challenge_StatsSessionsLabel => T("Séances terminées", "Sessions completed");

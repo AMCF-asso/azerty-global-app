@@ -15,7 +15,25 @@
 - `reviewPromptDone` cède la place à `reviewPromptCount` (plafonné à deux), `reviewPromptLastShown` et `reviewPromptClicked`. Migration des installations v1.1 : un `reviewPromptDone` à true vaut un essai déjà consommé, sinon la v1.2.0 enverrait deux notifications supplémentaires à quelqu'un qui a déjà été sollicité.
 - Textes distincts pour chaque essai, sans aucun chiffre d'usage : les statistiques restent affaire de la fenêtre « Mes statistiques ». Le second essai annonce qu'il est le dernier, ce qui est vrai.
 
-- Aucun package MSIX n'a été produit et aucune publication n'a été effectuée. Le manifeste de packaging reste volontairement inchangé jusqu'à la revue de release.
+**Défi du jour — sortie de l'ombre et partage (décisions du 2026-08-16)**
+
+- L'entrée « Défi du jour » du menu de la zone de notification est désormais **toujours visible**. Elle était conditionnée à `trainingEnabled`, qui vaut `false` par défaut : sur une installation neuve la fonction n'existait donc pas visuellement, alors que le défi commun est le seul contenu identique pour tous les utilisateurs. L'opt-in ne gouverne plus que les rappels d'entraînement, qui sont des notifications et relèvent d'un consentement distinct.
+- Nouveau bouton **« Copier mon résultat »** sur le récapitulatif de fin de séance, présent uniquement après le défi commun : les cinq séances de prise en main dépendent de la progression individuelle, deux personnes n'y tapent pas le même extrait et il n'y a rien à y comparer.
+- Le texte copié porte la date, la vitesse, la précision, la durée, les caractères qui ont posé problème, l'attribution de l'extrait quand il en a une, et le lien du site. Format texte et non image : il se colle dans une conversation sans capture d'écran ni téléversement. Aucune statistique d'usage n'y figure — elles restent dans « Mes statistiques ».
+- Le record personnel, stocké dans `lessons-progress.json` depuis la v1.0 mais jamais affiché, est enfin lu : une séance qui bat le meilleur score antérieur est signalée comme telle.
+- L'annonce unique du Défi du jour aux utilisateurs existants ouvre maintenant la séance du jour au lieu des Paramètres, et son texte a été reformulé en conséquence.
+
+**Notation intégrée au Store (décision du 2026-08-16)**
+
+- La sollicitation d'avis et l'entrée « Noter sur le Microsoft Store » passent par la boîte de notation **intégrée** de Windows (`StoreContext.RequestRateAndReviewAppAsync`) : la note se dépose sans quitter AZERTY Global. Le lien profond `ms-windows-store://review/` imposait une bascule vers l'application Store et l'attente de son chargement ; il reste le repli automatique hors package ou en cas d'échec de l'API.
+- L'API exige Windows 10 1809, soit exactement le `MinVersion` déclaré dans le manifeste. La couche WinRT est celle qui pilote déjà `StartupTask` depuis la v1.0, et la publication AOT x64 la compile et la lie sans avertissement.
+- Nouveau déclencheur : copier son résultat de défi puis refermer la fenêtre présente la boîte de notation. Le partage est le signal de promotion le plus net dont dispose l'application, et c'est le seul chemin de sollicitation qui atteigne aussi ceux qui ont coupé les notifications Windows. Les garde-fous existants restent en vigueur — deux essais au maximum sur la vie de l'installation, aucun après une réponse, aucun dans les 48 heures qui suivent une erreur journalisée, un seul par jour.
+
+**Revue de release 1.2.0**
+
+- Version applicative portée de `1.1.2` à `1.2.0`, manifeste de packaging de `1.0.0.0` à `1.2.0.0` (le Store sert `1.1.0.0`).
+- 133 tests xUnit passent, dont 8 nouveaux sur le texte partagé. Publication AOT x64 : 0 avertissement, 0 erreur.
+- Aucun package MSIX n'a été produit et aucune publication n'a été effectuée.
 
 ## Version 1.1.0 — 23 juillet 2026
 
@@ -361,4 +379,4 @@ Refonte majeure de la couche d'injection pour résoudre les problèmes de compat
 
 ---
 
-*Dernière mise à jour : 2026-08-16 (ajout rétroactif de l'entrée v1.1.0)*
+*Dernière mise à jour : 2026-08-16*

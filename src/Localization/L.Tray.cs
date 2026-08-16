@@ -128,8 +128,8 @@ internal static partial class L
     // Annonce unique du Défi du jour aux utilisateurs existants (v1.2.0, jamais réémise).
     public static string Tray_ChallengeAnnounceTitle => T("Nouveau : Défi du jour", "New: Daily challenge");
     public static string Tray_ChallengeAnnounceBody => T(
-        "Une séance d’entraînement courte par jour, sur demande. Cliquez pour découvrir l’option dans les Paramètres.",
-        "One short training session a day, on your terms. Click to find the option in Settings.");
+        "Un extrait à taper chaque jour, le même pour tout le monde. Cliquez pour ouvrir la séance du jour.",
+        "A passage to type every day, the same one for everyone. Click to open today’s session.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");
