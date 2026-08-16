@@ -3,8 +3,12 @@
 // La séquence OpenClipboard / EmptyClipboard / SetClipboardData a un piège de propriété :
 // après un SetClipboardData réussi, le handle appartient au presse-papiers et le libérer
 // provoque une double libération ; avant, il appartient encore à l'appelant et l'oublier
-// fuit. CharacterSearch et UsageStatsWindow portent chacun leur copie de ce code depuis
-// la v1.1. Le partage du défi en aurait fait une troisième.
+// fuit. CharacterSearch et UsageStatsWindow portaient chacun leur copie de ce code depuis
+// la v1.1, et le partage du défi en aurait fait une troisième : les trois appellent
+// désormais cette implémentation unique.
+//
+// Les primitives d'allocation, de lecture et de restauration restent dans CharacterSearch,
+// où vivent les constantes de format du presse-papiers.
 using System.Runtime.InteropServices;
 
 namespace AZERTYGlobal;

@@ -1113,7 +1113,7 @@ sealed class CharacterSearch : IDisposable
         if (_selectedIndex < 0 || _selectedIndex >= _filteredResults.Count) return;
 
         var entry = _filteredResults[_selectedIndex];
-        if (!CopyToClipboard(entry.Character)) return;
+        if (!ClipboardText.TrySet(_hWnd, entry.Character)) return;
 
         // Feedback visuel "Copié !"
         _showCopiedFeedback = true;
@@ -1122,53 +1122,12 @@ sealed class CharacterSearch : IDisposable
         Win32.SetTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK, 1500, IntPtr.Zero);
     }
 
-    private bool CopyToClipboard(string text)
-    {
-        IntPtr hMem = IntPtr.Zero;
-        bool ownershipTransferred = false;
-        try
-        {
-            hMem = AllocateClipboardText(text);
-            if (hMem == IntPtr.Zero)
-                return false;
+    // La séquence de copie elle-même vit dans ClipboardText.TrySet depuis la v1.2.0 :
+    // elle existait ici, dans UsageStatsWindow et dans le partage du défi, chaque copie
+    // portant sa propre gestion du transfert de propriété du handle.
 
-            if (!Win32.OpenClipboard(_hWnd))
-                return false;
-
-            try
-            {
-                string? previousText = ReadClipboardText();
-                if (!Win32.EmptyClipboard())
-                    return false;
-
-                if (Win32.SetClipboardData(CF_UNICODETEXT, hMem) == IntPtr.Zero)
-                {
-                    ConfigManager.Log("CharSearch clipboard", new ExternalException("SetClipboardData a échoué."));
-                    RestoreClipboardText(previousText);
-                    return false;
-                }
-
-                ownershipTransferred = true;
-                return true;
-            }
-            finally
-            {
-                Win32.CloseClipboard();
-            }
-        }
-        catch (Exception ex) when (ex is ExternalException or ArgumentException or OutOfMemoryException)
-        {
-            ConfigManager.Log("CharSearch clipboard", ex);
-            return false;
-        }
-        finally
-        {
-            if (!ownershipTransferred && hMem != IntPtr.Zero)
-                Win32.GlobalFree(hMem);
-        }
-    }
-
-    // internal : réutilisés par UsageStatsWindow (même filet de restauration du presse-papiers).
+    // internal : primitives réutilisées par ClipboardText (même filet de restauration
+    // du presse-papiers). Elles restent ici, où vivent les constantes de format.
     internal static IntPtr AllocateClipboardText(string text)
     {
         int byteCount = (text.Length + 1) * 2; // UTF-16 + null terminator
