@@ -89,6 +89,12 @@ affiché ne renomme pas.
 n'importe où dans un littéral, plus seulement en tête ; il ignore les commentaires. Sortie
 attendue : les seules déclarations de `ProductIdentity.cs`, code de sortie 0.
 
+Depuis le 2026-08-17 il tourne en CI, étape « Aucun littéral d'identité hors
+ProductIdentity » de `ci.yml`, placée juste après le checkout : une régression passe le
+build au rouge en quelques secondes au lieu d'attendre les deux publications. Le contrôle
+a été prouvé dans les deux sens sur l'arbre propre — 0 littéral inattendu, sortie 0 ; et
+avec un littéral injecté dans `TrayApplication.cs`, sortie 1 avec le fichier nommé.
+
 Cette classe ne figure pas dans la séquence d'extraction ci-dessous parce qu'elle ne
 déplace aucun code entre projets : elle prépare l'étape 4, où le produit sera renommé, et
 sert déjà à un dépôt qui n'aura jamais de seconde application.
