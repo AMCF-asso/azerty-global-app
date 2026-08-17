@@ -163,13 +163,23 @@ position doivent rester écrits, parce qu'ils encodent une intention et non un c
 parseur, `LayoutJsonParser` lève toujours un `KeyNotFoundException` nu, et l'accord entre
 le schéma et lui n'est prouvé que dans un sens.
 
-Deux obstacles connus sur ce chemin. `Sync-LayoutResources.ps1` est **inexécutable** depuis
-la migration : ses deux candidats de `$siteRoot` désignent des dossiers disparus et la
-résolution lève avant la première copie. Et sa branche `-SyncPublicRepo` est résiduelle —
-le clone public qu'elle cherche n'existe pas, son second candidat est le dépôt lui-même,
-si bien qu'elle copie les fichiers sur eux-mêmes en annonçant un succès — mais la
-supprimer casserait `LessonCoreTests.SyncScript_AllowsCreatingPublicLessonsResource`, qui
-assère sur le texte du script.
+`Sync-LayoutResources.ps1` était **inexécutable** depuis la migration : ses deux candidats
+de `$siteRoot` désignaient des dossiers disparus et la résolution levait avant la première
+copie. Le contrôle de provenance conseillant de le rejouer, il fallait qu'il puisse
+tourner. Il vise maintenant `../website`, les deux anciens noms restant en repli, et il
+dit ce qu'il fait : une ligne par fichier avec l'empreinte avant et après, et un `-DryRun`
+qui compare sans rien écraser. Il importe l'état de travail du site, pas une version
+publiée — le seul instant où il écrit est précisément celui où quelque chose change.
+
+Deux réserves demeurent. La branche `-SyncPublicRepo` est résiduelle : le clone public
+qu'elle cherche n'existe pas, son second candidat est le dépôt lui-même, si bien qu'elle
+copie les fichiers sur eux-mêmes en annonçant un succès. La supprimer casserait
+`LessonCoreTests.SyncScript_AllowsCreatingPublicLessonsResource`, qui assère sur le texte
+du script — les deux se traitent ensemble ou pas du tout. Et le récapitulatif final
+annonçait « 29 touches mortes » et « 1034 entrees » en dur, troisième endroit à corriger à
+la main ; ces lignes sont retirées plutôt que recalculées, parce que PowerShell ne sait pas
+lire ce fichier : le `ConvertFrom-Json` de la 5.1 est insensible à la casse et rejette les
+tables de touches mortes, qui contiennent `a` et `A`.
 
 ## Séquence d'extraction
 
