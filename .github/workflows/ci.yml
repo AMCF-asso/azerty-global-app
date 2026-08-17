@@ -14,6 +14,24 @@ permissions:
   attestations: write
 
 jobs:
+  # Job séparé, et volontairement pas un `needs:` du build : les trois JSON de src/ sont
+  # des copies de fichiers protégés du dépôt du site, et ce contrôle lit l'original sur
+  # son URL brute publique. Une panne réseau ne doit donc pas empêcher une release de se
+  # construire — elle sort en 2, la dérive sort en 1, et le run passe au rouge dans les
+  # deux cas. Pour rendre le contrôle bloquant, ajouter `needs: provenance` au job build.
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Les JSON embarqués sont identiques à leur original canonique
+        run: python scripts/check-layout-provenance.py
+
   build:
     runs-on: windows-latest
     steps:

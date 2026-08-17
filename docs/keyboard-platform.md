@@ -99,6 +99,57 @@ Cette classe ne figure pas dans la séquence d'extraction ci-dessous parce qu'el
 déplace aucun code entre projets : elle prépare l'étape 4, où le produit sera renommé, et
 sert déjà à un dépôt qui n'aura jamais de seconde application.
 
+## Dispositions et provenance au 2026-08-17
+
+Les trois JSON de `src/` ne sont pas des sources. `AZERTY Global 2026.json`,
+`character-index.json` et `lessons.json` sont des copies de fichiers du dépôt du site,
+où ils sont protégés en écriture. Mesuré ce jour : les trois copies sont byte-identiques
+à leur original.
+
+**« Dossier partagé » ne peut pas vouloir dire un même dossier sur le disque.** Le site,
+l'application et l'espace qui les contient sont trois dépôts git indépendants, et la CI de
+l'application ne récupère qu'elle-même. Ce qui est partagé est donc la source de vérité,
+pas l'emplacement : l'original reste au site, la copie devient prouvable.
+
+Le job `provenance` de `ci.yml` lit l'original sur son URL brute publique et compare les
+empreintes SHA-256. `scripts/check-layout-provenance.py` sort en 0 quand les trois copies
+sont identiques, en 1 quand l'une a dérivé, et en **2** quand l'original n'a pas pu être
+lu — un code distinct pour qu'une panne réseau ne se lise jamais comme une dérive. Le job
+est délibérément séparé du build plutôt qu'un `needs:` : un incident réseau ne doit pas
+empêcher une release de se construire, le run passant au rouge dans les deux cas. Un
+`needs: provenance` sur le job build suffit à rendre le contrôle bloquant.
+
+Lire les fichiers protégés est permis ; seule leur modification est interdite. Une
+première version de ce plan avait converti l'une en l'autre, et cette confusion vidait le
+contrôle de son intérêt : une empreinte consignée dans le même dépôt que le fichier
+qu'elle décrit ne prouve rien que git ne prouve déjà.
+
+Reste à faire sur cette étape : un schéma JSON **fermé** du format natif — 17 clés racine
+réelles, `additionalProperties: false`, et un `pattern` de scancode conforme aux trois
+formes que `ParseScancode` accepte, préfixe `SC` en hexadécimal, préfixe `0x` en
+hexadécimal, sinon décimal ; sa validation en CI par Python, sans dépendance ajoutée au
+binaire publié, l'AOT étant actif ; un test par mutation, qui retire tour à tour chaque
+champ requis et vérifie que `Parse` lève. Le schéma décrira le fichier, pas seulement ce
+que le parseur consomme, sans quoi une faute de frappe sur `dead_keys` passerait les deux
+contrôles et l'application démarrerait avec zéro touche morte.
+
+Les cinq compteurs de `statistics` se recalculent exactement depuis la donnée —
+`physical_keys` 49, `dead_keys_count` 29, `dead_key_combinations` 1016,
+`direct_characters` 131, `total_unique_characters` 1005, ces deux derniers en excluant les
+29 jetons `dk_*` posés sur les couches. Les listes de constantes tenues à la main en double,
+validateur Node de `Sync-LayoutResources.ps1` et miroir C# de `ResourceAlignmentTests`,
+n'ont donc pas besoin d'un fichier commun : elles ont besoin de disparaître au profit d'un
+recalcul. Seuls les treize contrôles de position doivent rester écrits, parce qu'ils
+encodent une intention et non un dénombrement.
+
+Deux obstacles connus sur ce chemin. `Sync-LayoutResources.ps1` est **inexécutable** depuis
+la migration : ses deux candidats de `$siteRoot` désignent des dossiers disparus et la
+résolution lève avant la première copie. Et sa branche `-SyncPublicRepo` est résiduelle —
+le clone public qu'elle cherche n'existe pas, son second candidat est le dépôt lui-même,
+si bien qu'elle copie les fichiers sur eux-mêmes en annonçant un succès — mais la
+supprimer casserait `LessonCoreTests.SyncScript_AllowsCreatingPublicLessonsResource`, qui
+assère sur le texte du script.
+
 ## Séquence d'extraction
 
 1. Terminé — compléter et transférer les tests de caractérisation de la couche Windows.
