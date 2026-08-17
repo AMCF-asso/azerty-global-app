@@ -71,7 +71,7 @@ sealed class TrayApplication : IDisposable
     private const uint NIN_BALLOONUSERCLICK = 0x0405;
 
     // Deep link vers le volet « Donner un avis » de la fiche Microsoft Store de l'app
-    private const string StoreReviewUrl = "ms-windows-store://review/?ProductId=9N4BTS43SSSZ";
+    private const string StoreReviewUrl = ProductIdentity.StoreReviewUrl;
 
     // ── Sollicitation d'avis (v1.2.0) ───────────────────────────────
     // Seuils en JOURS D'USAGE distincts, pas en jours calendaires : jusqu'en v1.1 la
@@ -168,7 +168,7 @@ sealed class TrayApplication : IDisposable
 
         // Créer une fenêtre cachée pour recevoir les messages tray
         var hInstance = Win32.GetModuleHandleW(null);
-        var className = "AZERTYGlobal_Wnd";
+        var className = ProductIdentity.WindowClass("Wnd");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -179,7 +179,7 @@ sealed class TrayApplication : IDisposable
         };
         Win32.RegisterClassExW(ref wc);
 
-        _hWnd = Win32.CreateWindowExW(0, className, "AZERTY Global",
+        _hWnd = Win32.CreateWindowExW(0, className, ProductIdentity.DisplayName,
             0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         if (_hWnd == IntPtr.Zero)
         {
@@ -206,7 +206,7 @@ sealed class TrayApplication : IDisposable
             uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP,
             uCallbackMessage = WM_TRAYICON,
             hIcon = _hIcon,
-            szTip = "AZERTY Global v" + Program.Version,
+            szTip = ProductIdentity.DisplayName + " v" + Program.Version,
             szInfo = "",
             szInfoTitle = ""
         };
@@ -287,7 +287,7 @@ sealed class TrayApplication : IDisposable
             else if (!MaybeShowReviewPrompt() && !MaybeShowChallengeAnnouncement()
                      && !MaybeShowAutoStartNudge())
             {
-                ShowBalloon("AZERTY Global", L.Tray_ActiveBalloonBody);
+                ShowBalloon(ProductIdentity.DisplayName, L.Tray_ActiveBalloonBody);
             }
         }
         catch (Exception ex)
@@ -535,18 +535,18 @@ sealed class TrayApplication : IDisposable
                     if (ShouldProcessHook)
                         _characterSearch?.Toggle();
                     else if (IsPaused)
-                        ShowBalloon("AZERTY Global", L.Tray_PausedBalloonBody);
+                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_PausedBalloonBody);
                     else
-                        ShowBalloon("AZERTY Global", L.Tray_DisabledBalloonBody);
+                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_DisabledBalloonBody);
                     return IntPtr.Zero;
 
                 case WM_APP_VKBD:
                     if (ShouldProcessHook)
                         _virtualKeyboard?.Toggle();
                     else if (IsPaused)
-                        ShowBalloon("AZERTY Global", L.Tray_PausedBalloonBody);
+                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_PausedBalloonBody);
                     else
-                        ShowBalloon("AZERTY Global", L.Tray_DisabledBalloonBody);
+                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_DisabledBalloonBody);
                     return IntPtr.Zero;
 
                 case Win32.WM_COMMAND:
@@ -573,18 +573,18 @@ sealed class TrayApplication : IDisposable
                         case IDM_SETTINGS:
                             ShowSettingsWindow();
                             break;
-                        case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/guide", null, null, 1); break;
-                        case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/nouveautes", null, null, 1); break;
-                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/assets/Prise_en_main_AZERTY_Global.pdf", null, null, 1); break;
-                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/guide#cartes", null, null, 1); break;
-                        case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/mentions-legales#confidentialite-securite", null, null, 1); break;
-                        case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://discord.gg/nYknqshJz3", null, null, 1); break;
-                        case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global", null, null, 1); break;
-                        case IDM_FEEDBACK: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback", null, null, 1); break;
+                        case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
+                        case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
+                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/assets/Prise_en_main_AZERTY_Global.pdf"), null, null, 1); break;
+                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide#cartes"), null, null, 1); break;
+                        case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/mentions-legales#confidentialite-securite"), null, null, 1); break;
+                        case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
+                        case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
+                        case IDM_FEEDBACK: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/feedback"), null, null, 1); break;
                         case IDM_RATE_STORE: OnRateStoreFromMenu(); break;
                         case IDM_AUTOSTART: ToggleAutoStart(); break;
                         case IDM_BUG: OnReportBug(); break;
-                        case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/soutien", null, null, 1); break;
+                        case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/soutien"), null, null, 1); break;
                         case IDM_ONBOARDING:
                             if (_onboarding == null)
                             {
@@ -1219,7 +1219,7 @@ sealed class TrayApplication : IDisposable
         // depuis notre app : le sous-menu "Compatibilité — AZERTY Global.exe" n'a pas de sens).
         var fgProc = _foregroundMonitor?.CurrentProcessName;
         bool fgIsOwnApp = !string.IsNullOrEmpty(fgProc) &&
-            string.Equals(fgProc, "AZERTY Global.exe", StringComparison.OrdinalIgnoreCase);
+            string.Equals(fgProc, ProductIdentity.ExecutableName, StringComparison.OrdinalIgnoreCase);
         var hSubMenu = Win32.CreatePopupMenu();
         if (!string.IsNullOrEmpty(fgProc) && !fgIsOwnApp)
         {
@@ -1297,24 +1297,24 @@ sealed class TrayApplication : IDisposable
             var reason = _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.UnknownForeground;
             if (reason == CompatibilitySuspendReason.RemoteAccess)
             {
-                ShowSecurityBalloon("AZERTY Global", L.Tray_ForceOnRemoteRefused(procName));
+                ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_ForceOnRemoteRefused(procName));
                 ConfigManager.LogCompatCriticalEvent("RemoteAccessToggleRefused",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, attempted=enable");
             }
             else if (reason == CompatibilitySuspendReason.AntiCheat)
             {
-                ShowSecurityBalloon("AZERTY Global", L.Tray_AntiCheatToggleRefused(procName));
+                ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_AntiCheatToggleRefused(procName));
                 // Audit sécu 2026-05 SEV-A1-02 : anonymisation du process name dans le log.
                 ConfigManager.LogCompatCriticalEvent("AntiCheatToggleRefused",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, attempted=enable");
             }
             else if (reason == CompatibilitySuspendReason.UserOverride)
             {
-                ShowBalloon("AZERTY Global", L.Tray_UserOverrideToggleRefused(procName));
+                ShowBalloon(ProductIdentity.DisplayName, L.Tray_UserOverrideToggleRefused(procName));
             }
             else
             {
-                ShowSecurityBalloon("AZERTY Global", L.Tray_SuspendedUnknownForeground);
+                ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_SuspendedUnknownForeground);
             }
             return;
         }
@@ -1386,7 +1386,7 @@ sealed class TrayApplication : IDisposable
         ApplyHookState();
         UpdateIcon();
         UpdateTooltip();
-        ShowBalloon("AZERTY Global", L.Tray_PausedForDuration(FormatDuration(totalMinutes)));
+        ShowBalloon(ProductIdentity.DisplayName, L.Tray_PausedForDuration(FormatDuration(totalMinutes)));
     }
 
     private void StopPause(bool expired)
@@ -1399,7 +1399,7 @@ sealed class TrayApplication : IDisposable
         UpdateTooltip();
 
         if (wasPaused)
-            ShowBalloon("AZERTY Global", expired ? L.Tray_PauseEnded : L.Tray_PauseStopped);
+            ShowBalloon(ProductIdentity.DisplayName, expired ? L.Tray_PauseEnded : L.Tray_PauseStopped);
     }
 
     private static string FormatDuration(int totalMinutes)
@@ -1465,7 +1465,7 @@ sealed class TrayApplication : IDisposable
         var os = Environment.OSVersion;
         var winVer = os.Version.Build >= 22000 ? "11" : "10";
         var osVersion = $"Windows {winVer} ({os.Version.Build})";
-        var url = $"https://azerty.global/bug?v={Uri.EscapeDataString(Program.Version)}&os={Uri.EscapeDataString(osVersion)}&src=app";
+        var url = ProductIdentity.Url($"/bug?v={Uri.EscapeDataString(Program.Version)}&os={Uri.EscapeDataString(osVersion)}&src=app");
         Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
     }
 
@@ -1544,7 +1544,7 @@ sealed class TrayApplication : IDisposable
 
     private void UpdateTooltip()
     {
-        var parts = new List<string> { "AZERTY Global v" + Program.Version };
+        var parts = new List<string> { ProductIdentity.DisplayName + " v" + Program.Version };
         if (_suspendedForCompatibility)
             parts.Add(L.Tray_TooltipSuspendedCompat);
         else if (IsPaused)
@@ -1713,7 +1713,7 @@ sealed class TrayApplication : IDisposable
         if (toStore && ConfigManager.IsPackaged)
             OpenStoreReview();
         else
-            Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback?source=app-notification", null, null, 1);
+            Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/feedback?source=app-notification"), null, null, 1);
     }
 
     /// <summary>
@@ -1864,21 +1864,21 @@ sealed class TrayApplication : IDisposable
             switch (reason)
             {
                 case CompatibilitySuspendReason.UnknownForeground:
-                    ShowSecurityBalloon("AZERTY Global", L.Tray_SuspendedUnknownForeground);
+                    ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_SuspendedUnknownForeground);
                     ConfigManager.LogCompatCriticalEvent("UnknownForegroundSuspended", "action=disable");
                     break;
                 case CompatibilitySuspendReason.RemoteAccess:
-                    ShowSecurityBalloon("AZERTY Global", L.Tray_DisabledForRemoteAccess(procName));
+                    ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_DisabledForRemoteAccess(procName));
                     ConfigManager.LogCompatCriticalEvent("RemoteAccessDetected",
                         $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                     break;
                 case CompatibilitySuspendReason.UserOverride:
-                    ShowBalloon("AZERTY Global", L.Tray_DisabledByUserOverride(procName));
+                    ShowBalloon(ProductIdentity.DisplayName, L.Tray_DisabledByUserOverride(procName));
                     ConfigManager.LogCompatEvent("UserOverrideApplied",
                         $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                     break;
                 default:
-                    ShowSecurityBalloon("AZERTY Global", L.Tray_DisabledForAntiCheat(procName));
+                    ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_DisabledForAntiCheat(procName));
                     ConfigManager.LogCompatCriticalEvent("AntiCheatDetected",
                         $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                     break;
@@ -1891,7 +1891,7 @@ sealed class TrayApplication : IDisposable
             if (_wasEnabledBeforeAutoDisable && _enabled)
             {
                 ApplyHookState(syncWhenActive: true);
-                ShowBalloon("AZERTY Global", L.Tray_ActiveAgain);
+                ShowBalloon(ProductIdentity.DisplayName, L.Tray_ActiveAgain);
             }
             else
             {
@@ -1917,13 +1917,13 @@ sealed class TrayApplication : IDisposable
 
         if (mode == "forceOn" && GameRegistry.IsRemoteAccessProcess(proc))
         {
-            ShowSecurityBalloon("AZERTY Global", L.Tray_ForceOnRemoteRefused(proc));
+            ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_ForceOnRemoteRefused(proc));
             return;
         }
 
         if (mode == "forceOn" && GameRegistry.IsAntiCheatProcess(proc, _foregroundMonitor?.CurrentFullPath))
         {
-            ShowSecurityBalloon("AZERTY Global", L.Tray_ForceOnRefused(proc));
+            ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_ForceOnRefused(proc));
             return;
         }
 

@@ -10,7 +10,7 @@ namespace AZERTYGlobal;
 /// </summary>
 static class AutoStart
 {
-    private const string ShortcutName = "AZERTY Global.lnk";
+    private const string ShortcutName = ProductIdentity.ShortcutFileName;
 
     private static string StartupFolder =>
         Environment.GetFolderPath(Environment.SpecialFolder.Startup);

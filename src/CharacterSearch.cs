@@ -701,7 +701,7 @@ sealed class CharacterSearch : IDisposable
     private void CreateWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        var className = "AZERTYGlobal_CharSearch";
+        var className = ProductIdentity.WindowClass("CharSearch");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -1507,6 +1507,6 @@ sealed class CharacterSearch : IDisposable
         }
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_CharSearch", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("CharSearch"), Win32.GetModuleHandleW(null));
     }
 }

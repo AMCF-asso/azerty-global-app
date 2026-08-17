@@ -4,7 +4,7 @@ namespace AZERTYGlobal;
 
 internal sealed class LessonsWindow : IDisposable
 {
-    private const string WND_CLASS_NAME = "AZERTYGlobal_Lessons";
+    private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("Lessons");
     private const int BASE_WIN_W = 1120;
     private const int BASE_WIN_H = 760;
     private const int BASE_MIN_W = 940;

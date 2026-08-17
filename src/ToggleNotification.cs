@@ -48,7 +48,7 @@ internal sealed class ToggleNotification : IDisposable
     private void CreateMainWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        const string className = "AZERTYGlobal_ToggleNotif";
+        string className = ProductIdentity.WindowClass("ToggleNotif");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -207,6 +207,6 @@ internal sealed class ToggleNotification : IDisposable
             Win32.DeleteObject(_hBgBrush);
         }
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_ToggleNotif", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("ToggleNotif"), Win32.GetModuleHandleW(null));
     }
 }

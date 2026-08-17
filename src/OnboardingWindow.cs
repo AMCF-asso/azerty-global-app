@@ -217,7 +217,7 @@ sealed class OnboardingWindow : IDisposable
         var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
         Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
 
-        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "favicon-azerty-global.png");
+        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), ProductIdentity.LogoResourceName);
         _gdipDiscord = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "discord-icon.png");
         _gdipFlagEn = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-en.png");
         _gdipFlagFr = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-fr.png");
@@ -359,7 +359,7 @@ sealed class OnboardingWindow : IDisposable
     private void CreateMainWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        var className = "AZERTYGlobal_Onboarding";
+        var className = ProductIdentity.WindowClass("Onboarding");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -390,7 +390,7 @@ sealed class OnboardingWindow : IDisposable
         int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
         int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
 
-        _hWnd = Win32.CreateWindowExW(dwExStyle, className, "AZERTY Global",
+        _hWnd = Win32.CreateWindowExW(dwExStyle, className, ProductIdentity.DisplayName,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         Win32.EnableDarkTitleBar(_hWnd);
@@ -746,11 +746,11 @@ sealed class OnboardingWindow : IDisposable
                         if (_currentStep > 0) { _currentStep--; UpdateStepVisibility(); }
                         break;
                     case IDC_LINK_FEEDBACK_BANNER: case IDC_LINK_FEEDBACK:
-                        if (code == 0) OpenLink("https://azerty.global/feedback"); break;
+                        if (code == 0) OpenLink(ProductIdentity.Url("/feedback")); break;
                     case IDC_LINK_GUIDE:
-                        if (code == 0) OpenLink("https://azerty.global/guide"); break;
+                        if (code == 0) OpenLink(ProductIdentity.Url("/guide")); break;
                     case IDC_LINK_DISCORD:
-                        if (code == 0) OpenLink("https://discord.gg/nYknqshJz3"); break;
+                        if (code == 0) OpenLink(ProductIdentity.DiscordInviteUrl); break;
                     case IDC_LINK_LESSONS:
                         if (code == 0) OpenLessonsRequested?.Invoke(); break;
                     case IDC_CHK_TRAINING:
@@ -1186,7 +1186,7 @@ sealed class OnboardingWindow : IDisposable
             right = Math.Max(textX, flagLeft - S(8)),
             bottom = titleBottom
         };
-        Win32.DrawTextW(hdc, "AZERTY Global", -1, ref titleRect,
+        Win32.DrawTextW(hdc, ProductIdentity.DisplayName, -1, ref titleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         Win32.SelectObject(hdc, _hFontSubtitle);
@@ -1675,6 +1675,6 @@ sealed class OnboardingWindow : IDisposable
         Win32.DeleteObject(_hPanelBrush);
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_Onboarding", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("Onboarding"), Win32.GetModuleHandleW(null));
     }
 }

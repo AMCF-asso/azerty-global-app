@@ -5,7 +5,7 @@ namespace AZERTYGlobal;
 
 sealed class PauseDurationDialog : IDisposable
 {
-    private const string ClassName = "AZERTYGlobal_PauseDuration";
+    private static readonly string ClassName = ProductIdentity.WindowClass("PauseDuration");
     private const int IDOK = 1;
     private const int IDCANCEL = 2;
     private const int IDC_EDIT_HOURS = 4301;
@@ -267,7 +267,7 @@ sealed class PauseDurationDialog : IDisposable
         {
             Win32.MessageBoxW(_hWnd,
                 L.Pause_InvalidDuration,
-                "AZERTY Global", 0x30);
+                ProductIdentity.DisplayName, 0x30);
             return;
         }
 

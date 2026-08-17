@@ -22,7 +22,7 @@ sealed class LayoutConflictWindow : IDisposable
     // apres dispose de la 1ere (cas : conflit detecte au demarrage puis re-detecte apres
     // Ctrl+Shift) crashe au prochain WM_PAINT/WM_COMMAND. Pattern documente dans
     // LearningModule.cs:740 (bug Reset->Essayer post-1ere completion fixe en v0.9.7).
-    private const string WND_CLASS_NAME = "AZERTYGlobal_LayoutConflict";
+    private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("LayoutConflict");
 
     private const int BASE_WIN_W = 560;
     private const int BASE_WIN_H = 440;
