@@ -47,6 +47,18 @@ jobs:
       - name: Aucun littéral d'identité hors ProductIdentity
         run: python scripts/list-identity-literals.py
 
+      # Ces trois étapes bloquent le build, contrairement au job provenance : elles ne
+      # dépendent que du dépôt, et empaqueter une disposition malformée livrerait une
+      # application qui démarre sans touches mortes.
+      - name: Installer jsonschema
+        run: python -m pip install "jsonschema>=4,<5"
+
+      - name: La disposition est conforme à son schéma
+        run: python scripts/validate-layout.py
+
+      - name: Témoins du schéma de disposition
+        run: python -m unittest discover -s scripts/tests -v
+
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
