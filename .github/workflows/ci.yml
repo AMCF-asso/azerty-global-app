@@ -56,7 +56,7 @@ jobs:
       - name: La disposition est conforme à son schéma
         run: python scripts/validate-layout.py
 
-      - name: Témoins du schéma de disposition
+      - name: Témoins du schéma et de son accord avec le parseur
         run: python -m unittest discover -s scripts/tests -v
 
       - name: Setup .NET 8 SDK

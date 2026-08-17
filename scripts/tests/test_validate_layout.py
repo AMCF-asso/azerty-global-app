@@ -90,6 +90,14 @@ class LayoutSchemaTests(unittest.TestCase):
     def test_scancode_decimal_accepte(self):
         self.assertAccepted(lambda l: l["rows"][0]["keys"][0].update(scancode="18"))
 
+    def test_scancode_decimal_a_neuf_chiffres_accepte(self):
+        """Neuf chiffres décimaux tiennent dans un uint : la frontière haute du motif."""
+        self.assertAccepted(lambda l: l["rows"][0]["keys"][0].update(scancode="999999999"))
+
+    def test_scancode_decimal_a_dix_chiffres_rejete(self):
+        """Dix chiffres tenaient dans le motif et pas dans un uint : le parseur débordait."""
+        self.assertRejected(lambda l: l["rows"][0]["keys"][0].update(scancode="9999999999"), "9999999999")
+
     # --- autres formes contraintes
 
     def test_position_hors_forme_rejetee(self):

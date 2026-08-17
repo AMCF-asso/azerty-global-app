@@ -148,11 +148,12 @@ dépôt, et empaqueter une disposition malformée livrerait une application cass
 n'ajoute rien au binaire publié, `jsonschema` restant une dépendance de la CI seule, ce
 qui importe puisque `PublishAot` est actif.
 
-Les 24 témoins de `scripts/tests/test_validate_layout.py` prouvent que le contrôle voit ce
+Les 26 témoins de `scripts/tests/test_validate_layout.py` prouvent que le contrôle voit ce
 qu'il prétend voir : clé racine mal orthographiée, champ de touche inconnu, scancode
-hexadécimal sans préfixe, déclencheur de table à deux caractères, doigt hors énumération,
-compteur faux, touche morte retirée, caractère direct inédit posé sur une couche libre,
-caractère inédit produit par une combinaison, touche morte orpheline, scancode en double.
+hexadécimal sans préfixe, scancode décimal à dix chiffres, déclencheur de table à deux
+caractères, doigt hors énumération, compteur faux, touche morte retirée, caractère direct
+inédit posé sur une couche libre, caractère inédit produit par une combinaison, touche morte
+orpheline, scancode en double.
 Touche morte retirée, caractère direct inédit et caractère inédit produit sont arrivés avec
 la déduplication ci-dessous : un compteur ne perd sa constante écrite à la main qu'une fois
 prouvé qu'une mutation de la donnée le fait virer au rouge nommément. Le schéma a d'ailleurs commencé
@@ -183,8 +184,34 @@ d'origine, si bien que MSBuild juge l'assembly à jour et garde les ressources m
 le binaire. Le premier run vert après restauration était donc rouge à tort ; il faut
 toucher les fichiers restaurés avant de reconstruire.
 
-Reste sur cette étape : `LayoutJsonParser` lève toujours un `KeyNotFoundException` nu, et
-l'accord entre le schéma et lui n'est prouvé que dans un sens.
+`LayoutJsonParser` ne laisse plus sortir d'exception muette. Il lisait quatre propriétés par
+`GetProperty`, qui lève un `KeyNotFoundException` disant « The given key was not present in
+the dictionary. » : ni la propriété manquante, ni la touche d'où elle venait. Trois autres
+formes fautives sortaient en `InvalidOperationException` depuis `EnumerateArray` ou
+`GetString`, et un scancode hors bornes en `OverflowException`. Ces huit cas lèvent maintenant
+un `LayoutFormatException` portant le chemin JSON du fautif — `rows[0].keys[1].scancode` — et
+ce que la valeur a de faux ; le chemin est une propriété de l'exception et pas seulement du
+texte, donc un appelant peut le traiter. Les huit tests ont été écrits avant le correctif et
+lancés sur l'ancien parseur : leur rouge est ce qui prouve que les exceptions nues sortaient
+bien, et il a nommé leurs types exacts plutôt que de les faire deviner. Deux dérives
+silencieuses tombent au passage : un `scancode` ou un `position` à `null` valait `"0"` et `""`,
+donc une touche muette rangée sous le scancode 0.
+
+Le trou de l'accord était réel, et mesuré plutôt que supposé. Le motif du `scancode` acceptait
+dix chiffres décimaux, soit jusqu'à 9999999999, quand un `uint` s'arrête à 4294967295 : un
+fichier que le schéma acceptait faisait déborder le parseur au démarrage, et la CI l'aurait
+laissé passer. La branche décimale est resserrée à neuf chiffres, et deux témoins épinglent la
+frontière des deux côtés.
+
+Le sens manquant se teste maintenant sans liste tenue à la main.
+`scripts/tests/test_schema_parser_agreement.py` lit la source du parseur, en extrait ce qu'il
+exige et ce qu'il lit, puis confronte les deux au schéma : ce qu'il exige doit être `required`
+au bon niveau, sinon un fichier valide lève au démarrage ; ce qu'il lit doit être déclaré dans
+`properties`, sinon `additionalProperties: false` interdit à un fichier valide de le porter. Un
+receveur inconnu, c'est-à-dire un nouveau niveau dans le parseur, fait échouer le témoin au
+lieu de le laisser conclure à l'accord — c'est ce qui l'empêche de devenir faux sans qu'on le
+voie. Les trois contrôles ont été mis au rouge sur les trois régressions correspondantes,
+fichiers restaurés octet pour octet ensuite.
 
 `Sync-LayoutResources.ps1` était **inexécutable** depuis la migration : ses deux candidats
 de `$siteRoot` désignaient des dossiers disparus et la résolution levait avant la première
@@ -208,7 +235,7 @@ tables de touches mortes, qui contiennent `a` et `A`.
 
 1. Terminé — compléter et transférer les tests de caractérisation de la couche Windows.
 2. Terminé — extraire `TypingEngine.Windows` derrière `IWin32Api` et `IWindowsTypingHost`, sans renommer simultanément l'application.
-3. Déplacer les dispositions vers un dossier partagé validé par schéma, tout en gardant les fichiers canoniques protégés inchangés.
+3. Terminé — déplacer les dispositions vers un dossier partagé validé par schéma, tout en gardant les fichiers canoniques protégés inchangés. Rien n'y reste ouvert depuis le 2026-08-17 : provenance, schéma, compteurs recalculés, accord schéma/parseur prouvé dans les deux sens.
 4. Renommer le projet produit en `App.AZERTYGlobal` seulement après stabilisation des références et du packaging AOT/MSIX.
 5. Ajouter un second produit ou module comme preuve de réutilisation avant toute publication NuGet.
 
