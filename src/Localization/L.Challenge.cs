@@ -43,8 +43,8 @@ internal static partial class L
     // d’usage de l’application, seulement la performance de la séance qui vient d’être
     // jouée. Les chiffres d’usage restent dans « Mes statistiques ».
     public static string Challenge_ShareTitle(DateOnly date) => T(
-        $"AZERTY Global — Défi du {FormatDate(date)}",
-        $"AZERTY Global — Challenge for {FormatDate(date)}");
+        $"{Product} — Défi du {FormatDate(date)}",
+        $"{Product} — Challenge for {FormatDate(date)}");
     public static string Challenge_ShareSpeed(int wpm) => T($"{wpm} mots/min", $"{wpm} wpm");
     public static string Challenge_ShareAccuracy(int percent) => T($"{percent} % de précision", $"{percent}% accuracy");
     public static string Challenge_ShareSeconds(int seconds) => T($"{seconds} s", $"{seconds}s");
@@ -57,8 +57,8 @@ internal static partial class L
         $"Extrait d’après {credit}",
         $"Passage after {credit}");
     public static string Challenge_ShareFooter => T(
-        "Même extrait pour tout le monde → azerty.global",
-        "Same passage for everyone → azerty.global");
+        $"Même extrait pour tout le monde → {ProductIdentity.SiteDomain}",
+        $"Same passage for everyone → {ProductIdentity.SiteDomain}");
 
     // Bouton du récapitulatif de fin de défi
     public static string Challenge_ShareButton => T("Copier mon résultat", "Copy my result");

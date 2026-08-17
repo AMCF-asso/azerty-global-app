@@ -11,8 +11,8 @@ internal static partial class L
         "Replay the guided walkthrough from the welcome screen.");
     public static string Lessons_InitiationLessonTitle => T("Premiers pas", "First steps");
     public static string Lessons_InitiationLessonDesc => T(
-        "Les 6 exercices courts de l’initiation AZERTY Global.",
-        "The 6 short exercises from the AZERTY Global walkthrough.");
+        $"Les 6 exercices courts de l’initiation {Product}.",
+        $"The 6 short exercises from the {Product} walkthrough.");
 
     public static string Lessons_Init0 => T("Tapez É pour découvrir les majuscules accentuées.", "Type É to discover accented capitals.");
     public static string Lessons_Init1 => T(

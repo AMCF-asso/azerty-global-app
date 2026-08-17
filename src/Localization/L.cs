@@ -16,6 +16,12 @@ internal static partial class L
             ? new System.Globalization.CultureInfo("en-US")
             : new System.Globalization.CultureInfo("fr-FR");
 
+    /// <summary>Nom du produit à l'intérieur d'une phrase traduite. Alias local de
+    /// <see cref="ProductIdentity.DisplayName"/> : les chaînes de Localization/ en portent
+    /// 86 occurrences, et le chemin complet les rendrait illisibles. Le domaine, lui, n'a que
+    /// 4 sites et garde le chemin complet.</summary>
+    private const string Product = ProductIdentity.DisplayName;
+
     private static string T(string fr, string en) => IsEnglish ? en : fr;
 
     /// <summary>Formate une date longue lisible selon la langue courante (ex. "12 mars 2026" / "March 12, 2026").</summary>

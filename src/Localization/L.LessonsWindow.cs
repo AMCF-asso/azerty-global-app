@@ -2,7 +2,7 @@ namespace AZERTYGlobal;
 
 internal static partial class L
 {
-    public static string LessonsWin_WindowTitle => T("AZERTY Global — Leçons", "AZERTY Global — Lessons");
+    public static string LessonsWin_WindowTitle => T($"{Product} — Leçons", $"{Product} — Lessons");
     public static string LessonsWin_Title => Tray_MenuLessons; // "Leçons"/"Lessons" — réutilisé tel quel
     public static string LessonsWin_ExerciseCount(int done, int total) => T($"{done}/{total} exercices", $"{done}/{total} exercises");
     public static string LessonsWin_TabFree => T("Libre", "Free");

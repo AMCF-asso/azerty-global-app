@@ -1,14 +1,14 @@
 // Identité du produit — v1.2.0.
 //
-// Tranche A de docs/keyboard-platform.md, moitié non localisée. Rassemble ce qui *nomme*
-// AZERTY Global partout ailleurs que dans une phrase traduite : nom affiché, forme
-// identifiant, URL du site, identifiant Store, dossier de configuration, ressources
-// embarquées, noms de classes fenêtre.
+// Tranche A de docs/keyboard-platform.md, complète depuis le 2026-08-17. Rassemble tout ce
+// qui *nomme* AZERTY Global : nom affiché, forme identifiant, domaine et URL du site,
+// identifiant Store, dossier de configuration, ressources embarquées, noms de classes
+// fenêtre.
 //
-// Ce qui reste dehors, volontairement : les ~65 occurrences du nom enchâssées dans les
-// chaînes de Localization/, qui doivent devenir des interpolations. Elles réécrivent du
-// texte visible en français et en anglais, et ne se touchent pas la veille d'une
-// soumission Store.
+// Les phrases traduites de Localization/ n'écrivent plus le nom en dur : ses 86 occurrences
+// y passent par l'alias privé L.Product, et les 4 sites qui portaient le domaine par
+// SiteDomain et Url(). Conversion vérifiée en comparant les 700 chaînes rendues (fr et en)
+// avant et après — identiques.
 //
 // Deux formes, jamais confondues :
 //   - DisplayName « AZERTY Global », ce que l'utilisateur lit ;
@@ -41,7 +41,10 @@ static class ProductIdentity
     public const string ConfigFolderName = "AZERTY Global";
 
     public const string StoreProductId = "9N4BTS43SSSZ";
-    public const string SiteBaseUrl = "https://azerty.global";
+    /// <summary>Domaine nu, tel qu'il est écrit dans une phrase adressée à
+    /// l'utilisateur (« → azerty.global ») et non cliqué.</summary>
+    public const string SiteDomain = "azerty.global";
+    public const string SiteBaseUrl = "https://" + SiteDomain;
     public const string DiscordInviteUrl = "https://discord.gg/nYknqshJz3";
     public const string RepositoryUrl = "https://github.com/AZERTYGlobal/app";
     public const string LogoResourceName = "favicon-azerty-global.png";

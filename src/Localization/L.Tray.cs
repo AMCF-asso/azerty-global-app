@@ -4,15 +4,15 @@ internal static partial class L
 {
     // ── Erreurs de démarrage ─────────────────────────────────────────
     public static string Tray_WindowCreationError => T(
-        "Impossible de créer la fenêtre interne d’AZERTY Global. L’application va se fermer.",
-        "AZERTY Global couldn't create its internal window. The application will close.");
+        $"Impossible de créer la fenêtre interne d’{Product}. L’application va se fermer.",
+        $"{Product} couldn't create its internal window. The application will close.");
     public static string Tray_StartupError => T(
-        "AZERTY Global n’a pas pu démarrer correctement.\n\n" +
+        $"{Product} n’a pas pu démarrer correctement.\n\n" +
         "Le détail technique a été enregistré dans error.log. " +
-        "Si le problème persiste, contactez le support : https://azerty.global/soutien",
-        "AZERTY Global couldn't start properly.\n\n" +
+        $"Si le problème persiste, contactez le support : {ProductIdentity.Url("/soutien")}",
+        $"{Product} couldn't start properly.\n\n" +
         "Technical details were recorded in error.log. " +
-        "If the problem persists, contact support: https://azerty.global/soutien");
+        $"If the problem persists, contact support: {ProductIdentity.Url("/soutien")}");
 
     // ── Balloons d'état ───────────────────────────────────────────────
     public static string Tray_ActiveBalloonBody => T(
@@ -28,13 +28,13 @@ internal static partial class L
 
     public static string Tray_GameCompatDisabledTitle => T("Compatibilité jeu désactivée", "Game compatibility disabled");
     public static string Tray_GameCompatDisabledBody(string list) => T(
-        $"AZERTY Global a désactivé l’option de compatibilité pour : {list}. Ces jeux sont désormais protégés par un anti-cheat. AZERTY Global se mettra automatiquement en pause quand ils seront ouverts.",
-        $"AZERTY Global disabled the compatibility option for: {list}. These games are now protected by anti-cheat. AZERTY Global will automatically pause itself when they are open.");
+        $"{Product} a désactivé l’option de compatibilité pour : {list}. Ces jeux sont désormais protégés par un anti-cheat. {Product} se mettra automatiquement en pause quand ils seront ouverts.",
+        $"{Product} disabled the compatibility option for: {list}. These games are now protected by anti-cheat. {Product} will automatically pause itself when they are open.");
 
     public static string Tray_ThisGameFallback => T("ce jeu", "this game");
     public static string Tray_AntiCheatToggleRefused(string procName) => T(
-        $"AZERTY Global ne peut pas être activé pendant que {procName} tourne : son anti-cheat pourrait considérer cela comme de la triche et bannir votre compte.",
-        $"AZERTY Global can't be turned on while {procName} is running: its anti-cheat could flag this as cheating and get your account banned.");
+        $"{Product} ne peut pas être activé pendant que {procName} tourne : son anti-cheat pourrait considérer cela comme de la triche et bannir votre compte.",
+        $"{Product} can't be turned on while {procName} is running: its anti-cheat could flag this as cheating and get your account banned.");
 
     public static string Tray_PausedForDuration(string durationText) => T($"en pause pour {durationText}.", $"paused for {durationText}.");
     public static string Tray_PauseEnded => T("pause terminée.", "pause ended.");
@@ -53,14 +53,14 @@ internal static partial class L
         $"suspendu dans {procName} selon votre réglage de compatibilité.",
         $"suspended in {procName} according to your compatibility setting.");
     public static string Tray_ForceOnRefused(string proc) => T(
-        $"AZERTY Global ne peut pas être activé sur {proc} : son anti-cheat pourrait considérer cela comme de la triche et bannir votre compte.",
-        $"AZERTY Global can't be turned on for {proc}: its anti-cheat could flag this as cheating and get your account banned.");
+        $"{Product} ne peut pas être activé sur {proc} : son anti-cheat pourrait considérer cela comme de la triche et bannir votre compte.",
+        $"{Product} can't be turned on for {proc}: its anti-cheat could flag this as cheating and get your account banned.");
     public static string Tray_ForceOnRemoteRefused(string proc) => T(
-        $"AZERTY Global reste suspendu sur {proc} pour éviter que les frappes soient transformées deux fois entre cet ordinateur et l’ordinateur distant.",
-        $"AZERTY Global stays suspended for {proc} to prevent keystrokes from being transformed twice between this computer and the remote computer.");
+        $"{Product} reste suspendu sur {proc} pour éviter que les frappes soient transformées deux fois entre cet ordinateur et l’ordinateur distant.",
+        $"{Product} stays suspended for {proc} to prevent keystrokes from being transformed twice between this computer and the remote computer.");
     public static string Tray_UserOverrideToggleRefused(string proc) => T(
-        $"AZERTY Global reste suspendu dans {proc}. Choisissez « Auto » dans Compatibilité des applications pour retirer ce réglage.",
-        $"AZERTY Global stays suspended in {proc}. Choose “Auto” under App compatibility to remove this setting.");
+        $"{Product} reste suspendu dans {proc}. Choisissez « Auto » dans Compatibilité des applications pour retirer ce réglage.",
+        $"{Product} stays suspended in {proc}. Choose “Auto” under App compatibility to remove this setting.");
 
     // ── Tooltip ────────────────────────────────────────────────────────
     public static string Tray_TooltipSuspendedCompat => T("Suspendu pour compatibilité", "Suspended for compatibility");
@@ -85,8 +85,8 @@ internal static partial class L
     // neutre : les règles du Store autorisent à solliciter un avis, pas à orienter vers
     // une note positive.
     public static string Tray_ReviewPromptTitle(int attempt) => attempt >= 2
-        ? T("Aider AZERTY Global", "Help AZERTY Global")
-        : T("AZERTY Global vous plaît ?", "Enjoying AZERTY Global?");
+        ? T($"Aider {Product}", $"Help {Product}")
+        : T($"{Product} vous plaît ?", $"Enjoying {Product}?");
 
     // Corps nommés par CIBLE du clic (Store ou page feedback) : depuis la v1.2.0 le
     // packagé vise toujours le Store, la page feedback ne sert plus qu'aux installations
@@ -94,14 +94,14 @@ internal static partial class L
     public static string Tray_ReviewPromptBodyStore(int attempt) => attempt >= 2
         ? T("Le projet avance grâce aux retours de ses utilisateurs. Quelques secondes sur le Store, et c’est la dernière fois qu’on vous le demande.\nCliquez sur cette notification pour noter l’app.",
             "The project moves forward thanks to user feedback. A few seconds on the Store, and we won’t ask again.\nClick this notification to rate the app.")
-        : T("AZERTY Global est gratuit et open source. Un avis sur le Microsoft Store aide vraiment le projet à avancer.\nCliquez sur cette notification pour noter l’app.",
-            "AZERTY Global is free and open source. A review on the Microsoft Store genuinely helps the project move forward.\nClick this notification to rate the app.");
+        : T($"{Product} est gratuit et open source. Un avis sur le Microsoft Store aide vraiment le projet à avancer.\nCliquez sur cette notification pour noter l’app.",
+            $"{Product} is free and open source. A review on the Microsoft Store genuinely helps the project move forward.\nClick this notification to rate the app.");
 
     public static string Tray_ReviewPromptBodyFeedback(int attempt) => attempt >= 2
         ? T("Le projet avance grâce aux retours de ses utilisateurs. Quelques secondes suffisent, et c’est la dernière fois qu’on vous le demande.\nCliquez sur cette notification pour donner votre avis.",
             "The project moves forward thanks to user feedback. It only takes a moment, and we won’t ask again.\nClick this notification to share yours.")
-        : T("AZERTY Global est gratuit et open source. Votre avis aide vraiment le projet à avancer.\nCliquez sur cette notification pour le donner.",
-            "AZERTY Global is free and open source. Your feedback genuinely helps the project move forward.\nClick this notification to share it.");
+        : T($"{Product} est gratuit et open source. Votre avis aide vraiment le projet à avancer.\nCliquez sur cette notification pour le donner.",
+            $"{Product} is free and open source. Your feedback genuinely helps the project move forward.\nClick this notification to share it.");
 
     // ── Menu tray ────────────────────────────────────────────────────
     public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr.Maj", "Turn off\tCtrl+Shift+Caps Lock");
@@ -135,8 +135,8 @@ internal static partial class L
         "A passage to type every day, the same one for everyone. Click to open today’s session.");
     // Relance unique du lancement automatique (v1.2.0, jamais réémise).
     public static string Tray_AutoStartNudgeTitle => T(
-        "Lancer AZERTY Global au démarrage ?",
-        "Launch AZERTY Global at startup?");
+        $"Lancer {Product} au démarrage ?",
+        $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
         "L’application ne démarre pas encore avec Windows : il faut la lancer à la main à chaque fois. Cliquez pour l’activer.",
         "The app doesn’t start with Windows yet: you have to launch it manually every time. Click to turn it on.");
@@ -144,8 +144,8 @@ internal static partial class L
         "Lancement au démarrage activé",
         "Launch at startup enabled");
     public static string Tray_AutoStartEnabledBody => T(
-        "AZERTY Global démarrera désormais avec Windows. Vous pouvez revenir dessus depuis le menu ou les Paramètres.",
-        "AZERTY Global will now start with Windows. You can undo this from the menu or in Settings.");
+        $"{Product} démarrera désormais avec Windows. Vous pouvez revenir dessus depuis le menu ou les Paramètres.",
+        $"{Product} will now start with Windows. You can undo this from the menu or in Settings.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");
@@ -154,17 +154,17 @@ internal static partial class L
     public static string Tray_MenuAppCompat => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoTitle => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoBody => T(
-        "AZERTY Global adapte automatiquement son fonctionnement à l’application active.\n\n" +
+        $"{Product} adapte automatiquement son fonctionnement à l’application active.\n\n" +
         "Auto\nUtilise le mode normal, un mode spécial pour certains jeux, ou suspend l’application lorsque c’est nécessaire.\n\n" +
         "Forcer compatibilité jeu\nUtilise des combinaisons de touches natives dans l’application sélectionnée. Ce mode aide les jeux qui ignorent l’injection Unicode.\n\n" +
-        "Forcer désactivation\nSuspend AZERTY Global uniquement dans l’application sélectionnée.\n\n" +
-        "Connexions à distance\nAZERTY Global se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer ou RustDesk est au premier plan. Cela évite de transformer deux fois les frappes si AZERTY Global fonctionne aussi sur l’ordinateur distant.\n\n" +
+        $"Forcer désactivation\nSuspend {Product} uniquement dans l’application sélectionnée.\n\n" +
+        $"Connexions à distance\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer ou RustDesk est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant.\n\n" +
         "La détection reste entièrement locale. Aucun nom d’application n’est transmis.",
-        "AZERTY Global automatically adapts its behavior to the active app.\n\n" +
+        $"{Product} automatically adapts its behavior to the active app.\n\n" +
         "Auto\nUses normal mode, a special mode for some games, or suspends the app when necessary.\n\n" +
         "Force game compatibility\nUses native key combinations in the selected app. This mode helps games that ignore Unicode input injection.\n\n" +
-        "Force disable\nSuspends AZERTY Global only in the selected app.\n\n" +
-        "Remote connections\nAZERTY Global automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, or RustDesk is in the foreground. This prevents keystrokes from being transformed twice when AZERTY Global also runs on the remote computer.\n\n" +
+        $"Force disable\nSuspends {Product} only in the selected app.\n\n" +
+        $"Remote connections\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, or RustDesk is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer.\n\n" +
         "Detection stays entirely local. No app names are transmitted.");
     public static string Tray_MenuAbout => T("À propos", "About");
     public static string Tray_MenuResetOnboardingDebug => T("🛠 [DEBUG] Réinitialiser onboarding", "🛠 [DEBUG] Reset onboarding");

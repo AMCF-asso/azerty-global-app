@@ -2,7 +2,7 @@ namespace AZERTYGlobal;
 
 internal static partial class L
 {
-    public static string About_WindowTitle => T("AZERTY Global — À propos", "AZERTY Global — About");
+    public static string About_WindowTitle => T($"{Product} — À propos", $"{Product} — About");
     public static string About_LinkSite => T("Site web", "Website");
     public static string About_LinkGithub => T("Code source GitHub", "GitHub source code");
     public static string About_LinkLicense => T("Licence EUPL 1.2 (open source)", "EUPL 1.2 license (open source)");
