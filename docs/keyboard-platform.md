@@ -148,20 +148,43 @@ dépôt, et empaqueter une disposition malformée livrerait une application cass
 n'ajoute rien au binaire publié, `jsonschema` restant une dépendance de la CI seule, ce
 qui importe puisque `PublishAot` est actif.
 
-Les 21 témoins de `scripts/tests/test_validate_layout.py` prouvent que le contrôle voit ce
+Les 24 témoins de `scripts/tests/test_validate_layout.py` prouvent que le contrôle voit ce
 qu'il prétend voir : clé racine mal orthographiée, champ de touche inconnu, scancode
 hexadécimal sans préfixe, déclencheur de table à deux caractères, doigt hors énumération,
-compteur faux, touche morte orpheline, scancode en double. Le schéma a d'ailleurs commencé
+compteur faux, touche morte retirée, caractère direct inédit posé sur une couche libre,
+caractère inédit produit par une combinaison, touche morte orpheline, scancode en double.
+Touche morte retirée, caractère direct inédit et caractère inédit produit sont arrivés avec
+la déduplication ci-dessous : un compteur ne perd sa constante écrite à la main qu'une fois
+prouvé qu'une mutation de la donnée le fait virer au rouge nommément. Le schéma a d'ailleurs commencé
 par rejeter la disposition réelle, sur un `design_notes` que sa première version croyait
 être une chaîne alors que c'est un tableau : la donnée avait raison, le schéma a été
 corrigé.
 
-Reste sur cette étape : les listes de constantes tenues à la main en double — validateur
-Node de `Sync-LayoutResources.ps1` et miroir C# de `ResourceAlignmentTests` — que le
-recalcul rend redondantes pour tout ce qui est dénombrement. Seuls les treize contrôles de
-position doivent rester écrits, parce qu'ils encodent une intention et non un compte. Côté
-parseur, `LayoutJsonParser` lève toujours un `KeyNotFoundException` nu, et l'accord entre
-le schéma et lui n'est prouvé que dans un sens.
+Les constantes de comptage tenues à la main en double ont disparu le 2026-08-17. Le
+here-string Node de `Sync-LayoutResources.ps1` portait 63 assertions ; un comparateur les a
+extraites des deux côtés, normalisé les échappements `\uXXXX` et confronté les ensembles
+famille par famille : 60 étaient le double mot pour mot de `ResourceAlignmentTests`, aucune
+assertion C# n'était absente du Node, et les 3 restantes — `direct_characters` 131,
+`dead_key_combinations` 1016, `total_unique_characters` 1005 — étaient précisément des
+comptes que `validate-layout.py` recalcule. Cette mesure est ce qui a autorisé la
+suppression : rien n'a été retiré sur une impression de doublon. Le script appelle
+maintenant `validate-layout.py`, qui contrôle davantage que le validateur retiré, une
+sortie 2 avertissant sans bloquer puisque `jsonschema` n'existe qu'en CI. Côté C#, le compte
+des touches mortes est parti et les deux totaux d'index en dur sont devenus une relation :
+le total déclaré doit valoir le nombre réel d'entrées. Les treize contrôles de position
+restent écrits, dans `ResourceAlignmentTests` seul, parce qu'ils encodent une intention et
+non un compte.
+
+Le rouge a été vérifié plutôt que supposé : les trois copies embarquées mutées une par une
+— `E00` en Maj, le total de l'index, le nom français du circonflexe — font échouer
+exactement les trois tests survivants, et rien d'autre. Un piège s'y cache pour la
+prochaine fois : restaurer avec `shutil.copy2` rend les octets d'origine **et** leur date
+d'origine, si bien que MSBuild juge l'assembly à jour et garde les ressources mutées dans
+le binaire. Le premier run vert après restauration était donc rouge à tort ; il faut
+toucher les fichiers restaurés avant de reconstruire.
+
+Reste sur cette étape : `LayoutJsonParser` lève toujours un `KeyNotFoundException` nu, et
+l'accord entre le schéma et lui n'est prouvé que dans un sens.
 
 `Sync-LayoutResources.ps1` était **inexécutable** depuis la migration : ses deux candidats
 de `$siteRoot` désignaient des dossiers disparus et la résolution levait avant la première

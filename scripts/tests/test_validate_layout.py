@@ -144,6 +144,32 @@ class LayoutCounterTests(unittest.TestCase):
         problems = validator.check_counters(self.mutate(lambda l: l["rows"][0]["keys"].pop()))
         self.assertTrue(any("physical_keys" in problem for problem in problems))
 
+    def test_touche_morte_retiree_desaccorde_les_compteurs(self):
+        """Le nombre de touches mortes etait tenu a la main dans le validateur Node du
+        script de synchronisation, et dans ResourceAlignmentTests. Il se recalcule."""
+        problems = validator.check_counters(self.mutate(lambda l: l["dead_keys"].pop("dk_horn")))
+        self.assertTrue(any("dead_keys_count" in problem for problem in problems))
+
+    def test_caractere_direct_ajoute_desaccorde_les_compteurs(self):
+        """Poser un caractere inedit sur une couche libre : le mode de panne d'un ajout a la
+        main, que la constante direct_characters du validateur Node attrapait."""
+
+        def change(layout):
+            layout["rows"][0]["keys"][0]["shift_alt_gr"] = ""
+
+        problems = validator.check_counters(self.mutate(change))
+        self.assertTrue(any("direct_characters" in problem for problem in problems))
+
+    def test_caractere_produit_inedit_desaccorde_les_compteurs(self):
+        """Une combinaison qui produit un caractere absent partout ailleurs deplace le total
+        unique : c'est ce que la constante total_unique_characters attrapait."""
+
+        def change(layout):
+            layout["dead_keys"]["dk_horn"]["table"][""] = ""
+
+        problems = validator.check_counters(self.mutate(change))
+        self.assertTrue(any("total_unique_characters" in problem for problem in problems))
+
     def test_combinaison_retiree_desaccorde_les_compteurs(self):
         def change(layout):
             table = layout["dead_keys"]["dk_circumflex"]["table"]
