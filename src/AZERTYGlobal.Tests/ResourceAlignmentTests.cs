@@ -6,12 +6,16 @@ namespace AZERTYGlobal.Tests;
 
 public class ResourceAlignmentTests
 {
+    /// <summary>Les treize raccourcis que la version publique promet. Ils encodent une
+    /// intention — telle touche produit tel caractère — et restent donc écrits, ici et
+    /// nulle part ailleurs depuis le retrait du validateur Node de
+    /// <c>Sync-LayoutResources.ps1</c>. Le nombre de touches mortes n'y figure plus :
+    /// <c>scripts/validate-layout.py</c> le recalcule depuis la donnée.</summary>
     [Fact]
     public void EmbeddedLayout_MatchesCurrentPublicShortcuts()
     {
         var layout = LayoutLoader.LoadFromResource();
 
-        Assert.Equal(29, layout.DeadKeys.Count);
         Assert.Equal("#", Key(layout, "E00").Shift);
         Assert.Equal("#", Key(layout, "B09").AltGr);
         Assert.Equal("^", Key(layout, "D08").AltGr);
@@ -27,15 +31,19 @@ public class ResourceAlignmentTests
         Assert.Equal("dk_dot_above", Key(layout, "E03").ShiftAltGr);
     }
 
+    /// <summary>Le total déclaré par l'index doit valoir le nombre réel d'entrées. La
+    /// relation remplace deux fois le même total écrit en dur : un compte à la main ne
+    /// prouve que la vigilance de qui l'a écrit, et il fallait le corriger dans deux
+    /// langages à chaque évolution de l'index. Les deux lettres modificatives, elles,
+    /// encodent une intention et restent assérées nommément.</summary>
     [Fact]
-    public void EmbeddedCharacterIndex_MatchesCurrentCharacterCount()
+    public void EmbeddedCharacterIndex_DeclaredTotalMatchesItsEntries()
     {
         using var doc = LoadCharacterIndex();
         var root = doc.RootElement;
         var characters = root.GetProperty("characters");
 
-        Assert.Equal(1034, root.GetProperty("totalCharacters").GetInt32());
-        Assert.Equal(1034, characters.EnumerateObject().Count());
+        Assert.Equal(characters.EnumerateObject().Count(), root.GetProperty("totalCharacters").GetInt32());
         Assert.True(characters.TryGetProperty("\u02BC", out _));
         Assert.True(characters.TryGetProperty("\u02BB", out _));
     }
