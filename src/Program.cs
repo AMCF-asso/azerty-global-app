@@ -7,7 +7,7 @@ namespace AZERTYGlobal;
 static class Program
 {
     /// <summary>Version affichée partout (tooltip, À propos, etc.).</summary>
-    internal const string Version = "1.1.2";
+    internal const string Version = "1.2.0";
 
     private static string BuildSecondInstanceLogDetails(bool packaged, string[] args) =>
         $"packaged={packaged}, argCount={args.Length}";

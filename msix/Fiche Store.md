@@ -76,6 +76,19 @@ Site web : https://azerty.global
 
 ### Nouveautés de cette version (notes de version)
 
+Version 1.2.0 :
+ • Défi du jour accessible à tout moment depuis l'icône de la zone de notification : le même extrait pour tout le monde, chaque jour.
+ • Nouveau bouton « Copier mon résultat » en fin de séance : vitesse, précision, durée et caractères qui ont posé problème, prêts à coller dans une conversation.
+ • Votre record personnel est signalé quand une séance bat votre meilleur score.
+ • Vous pouvez noter l'application sans quitter AZERTY Global.
+
+Version 1.1.0 :
+ • Interface entièrement disponible en anglais, avec changement de langue à chaud.
+ • Nouvelle fenêtre « Mes statistiques » : jours d'utilisation, séries, temps de frappe actif et caractères spéciaux produits, calculés et conservés uniquement sur votre appareil.
+ • Accès direct aux avis, aux retours et à la communauté depuis l'application.
+ • Recherche de caractères : prise en charge des noms anglais et de nombreux alias supplémentaires.
+ • Comportement fiabilisé après une mise en veille ou une session de bureau à distance, messages d'erreur plus clairs et correctifs d'interface divers.
+
 Version 1.0.0 :
  • Nouveau module Leçons avec catalogue d'exercices, progression locale et mode libre non persistant.
  • Clavier visuel harmonisé entre le clavier virtuel, l'onboarding et les leçons.
@@ -194,6 +207,19 @@ Licensed under EUPL 1.2 — source code available on GitHub.
 Website: https://azerty.global
 
 ### What's new (release notes)
+
+Version 1.2.0:
+ • Daily challenge available at any time from the notification area icon: the same passage for everyone, every day.
+ • New “Copy my result” button at the end of a session: speed, accuracy, duration and the characters that gave you trouble, ready to paste into a conversation.
+ • Your personal best is now highlighted when a session beats your previous record.
+ • You can rate the app without leaving AZERTY Global.
+
+Version 1.1.0:
+ • Full English interface, with instant language switching.
+ • New “My statistics” window: active days, streaks, active typing time and special characters produced, computed and stored on your device only.
+ • Direct access to reviews, feedback and the community from within the app.
+ • Character search: support for English names and many additional aliases.
+ • More reliable behavior after sleep or a remote desktop session, clearer error messages and assorted interface fixes.
 
 Version 1.0.0:
  • New Lessons module with exercise catalog, local progress and non-persistent free typing mode.
