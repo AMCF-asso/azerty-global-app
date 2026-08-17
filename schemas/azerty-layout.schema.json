@@ -100,9 +100,9 @@
           "pattern": "^[A-E][0-9]{2}$"
         },
         "scancode": {
-          "description": "Les trois seules formes que ParseScancode accepte : préfixe SC en hexadécimal, préfixe 0x en hexadécimal, sinon décimal. Une chaîne quelconque satisfait « type string » et fait lever uint.Parse au démarrage — d'où ce pattern.",
+          "description": "Les trois seules formes que ParseScancode accepte : préfixe SC en hexadécimal, préfixe 0x en hexadécimal, sinon décimal. Une chaîne quelconque satisfait « type string » et fait lever uint.Parse au démarrage — d'où ce pattern. La branche décimale s'arrête à neuf chiffres : dix tenaient dans le motif et pas dans un uint, et ce fichier-là faisait déborder le parseur tout en passant le schéma.",
           "type": "string",
-          "pattern": "^(?:[Ss][Cc][0-9A-Fa-f]{1,8}|0[Xx][0-9A-Fa-f]{1,8}|[0-9]{1,10})$"
+          "pattern": "^(?:[Ss][Cc][0-9A-Fa-f]{1,8}|0[Xx][0-9A-Fa-f]{1,8}|[0-9]{1,9})$"
         },
         "vk": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
         "finger": {
