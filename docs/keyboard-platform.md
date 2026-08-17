@@ -124,23 +124,44 @@ première version de ce plan avait converti l'une en l'autre, et cette confusion
 contrôle de son intérêt : une empreinte consignée dans le même dépôt que le fichier
 qu'elle décrit ne prouve rien que git ne prouve déjà.
 
-Reste à faire sur cette étape : un schéma JSON **fermé** du format natif — 17 clés racine
-réelles, `additionalProperties: false`, et un `pattern` de scancode conforme aux trois
-formes que `ParseScancode` accepte, préfixe `SC` en hexadécimal, préfixe `0x` en
-hexadécimal, sinon décimal ; sa validation en CI par Python, sans dépendance ajoutée au
-binaire publié, l'AOT étant actif ; un test par mutation, qui retire tour à tour chaque
-champ requis et vérifie que `Parse` lève. Le schéma décrira le fichier, pas seulement ce
-que le parseur consomme, sans quoi une faute de frappe sur `dead_keys` passerait les deux
-contrôles et l'application démarrerait avec zéro touche morte.
+`schemas/azerty-layout.schema.json` décrit le format natif — les 17 clés racine réelles,
+`additionalProperties: false` à chaque niveau structurel, et un `pattern` de scancode
+conforme aux trois seules formes que `ParseScancode` accepte : préfixe `SC` en
+hexadécimal, préfixe `0x` en hexadécimal, sinon décimal. Il décrit le fichier, pas
+seulement ce que le parseur consomme, sans quoi une faute de frappe sur `dead_keys`
+passerait les deux contrôles et l'application démarrerait avec zéro touche morte. Le
+schéma n'est publié à aucune URL et ne porte donc pas de `$id`. Il reste distinct du
+manifeste OKLM, format d'export produit en aval par un convertisseur, dont le draft 0.1
+est gelé derrière une revue de compatibilité non commencée.
 
-Les cinq compteurs de `statistics` se recalculent exactement depuis la donnée —
-`physical_keys` 49, `dead_keys_count` 29, `dead_key_combinations` 1016,
-`direct_characters` 131, `total_unique_characters` 1005, ces deux derniers en excluant les
-29 jetons `dk_*` posés sur les couches. Les listes de constantes tenues à la main en double,
-validateur Node de `Sync-LayoutResources.ps1` et miroir C# de `ResourceAlignmentTests`,
-n'ont donc pas besoin d'un fichier commun : elles ont besoin de disparaître au profit d'un
-recalcul. Seuls les treize contrôles de position doivent rester écrits, parce qu'ils
-encodent une intention et non un dénombrement.
+`scripts/validate-layout.py` l'applique, et y ajoute les deux contrôles que JSON Schema ne
+sait pas exprimer. Les cinq compteurs de `statistics` sont **recalculés** depuis la donnée
+au lieu d'être crus — `physical_keys` 49, `dead_keys_count` 29, `dead_key_combinations`
+1016, `direct_characters` 131, `total_unique_characters` 1005, ces deux derniers en
+excluant les 29 jetons `dk_*` posés sur les couches. Les références croisées sont
+recoupées : tout jeton `dk_*` armé sur une couche doit être déclaré, toute touche morte
+déclarée doit être posée, et scancodes comme positions doivent être uniques — un doublon
+de scancode s'écrase en silence dans le dictionnaire que construit le parseur.
+
+La validation tourne en CI dans le job `build`, où elle **bloque** : elle ne dépend que du
+dépôt, et empaqueter une disposition malformée livrerait une application cassée. Elle
+n'ajoute rien au binaire publié, `jsonschema` restant une dépendance de la CI seule, ce
+qui importe puisque `PublishAot` est actif.
+
+Les 21 témoins de `scripts/tests/test_validate_layout.py` prouvent que le contrôle voit ce
+qu'il prétend voir : clé racine mal orthographiée, champ de touche inconnu, scancode
+hexadécimal sans préfixe, déclencheur de table à deux caractères, doigt hors énumération,
+compteur faux, touche morte orpheline, scancode en double. Le schéma a d'ailleurs commencé
+par rejeter la disposition réelle, sur un `design_notes` que sa première version croyait
+être une chaîne alors que c'est un tableau : la donnée avait raison, le schéma a été
+corrigé.
+
+Reste sur cette étape : les listes de constantes tenues à la main en double — validateur
+Node de `Sync-LayoutResources.ps1` et miroir C# de `ResourceAlignmentTests` — que le
+recalcul rend redondantes pour tout ce qui est dénombrement. Seuls les treize contrôles de
+position doivent rester écrits, parce qu'ils encodent une intention et non un compte. Côté
+parseur, `LayoutJsonParser` lève toujours un `KeyNotFoundException` nu, et l'accord entre
+le schéma et lui n'est prouvé que dans un sens.
 
 Deux obstacles connus sur ce chemin. `Sync-LayoutResources.ps1` est **inexécutable** depuis
 la migration : ses deux candidats de `$siteRoot` désignent des dossiers disparus et la
