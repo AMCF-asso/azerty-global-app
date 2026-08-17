@@ -469,6 +469,11 @@ static class ConfigManager
     /// à la doctrine zéro harcèlement — jamais réémise).</summary>
     public static bool ChallengeAnnounceDone => GetBool("challengeAnnounceDone");
     public static void SetChallengeAnnounceDone() => SetBool("challengeAnnounceDone", true);
+    /// <summary>Relance unique du lancement automatique faite (décision 2026-08-17) :
+    /// une seule proposition sur la vie de l'installation, jamais réémise. Même doctrine
+    /// que l'annonce du Défi du jour ci-dessus.</summary>
+    public static bool AutoStartNudgeDone => GetBool("autoStartNudgeDone");
+    public static void SetAutoStartNudgeDone() => SetBool("autoStartNudgeDone", true);
 
     /// <summary>
     /// Active le journal de debug compat niveau 2 (statistiques agrégées d'émission).

@@ -124,12 +124,28 @@ internal static partial class L
     public static string Tray_MenuGiveFeedback => T("Donner mon avis", "Give feedback");
     public static string Tray_MenuReportBug => T("Signaler un bug", "Report a bug");
     public static string Tray_MenuFeedbackSupport => T("Retours et soutien", "Feedback && support");
+    // Lancement automatique : affordance permanente, cochée quand la tâche est
+    // enregistrée. Seul chemin visible pour qui a fermé l'accueil avant l'étape 3.
+    public static string Tray_MenuAutoStart => T("Lancer au démarrage de Windows", "Launch at Windows startup");
     public static string Tray_MenuSettings => T("Paramètres", "Settings");
     // Annonce unique du Défi du jour aux utilisateurs existants (v1.2.0, jamais réémise).
     public static string Tray_ChallengeAnnounceTitle => T("Nouveau : Défi du jour", "New: Daily challenge");
     public static string Tray_ChallengeAnnounceBody => T(
         "Un extrait à taper chaque jour, le même pour tout le monde. Cliquez pour ouvrir la séance du jour.",
         "A passage to type every day, the same one for everyone. Click to open today’s session.");
+    // Relance unique du lancement automatique (v1.2.0, jamais réémise).
+    public static string Tray_AutoStartNudgeTitle => T(
+        "Lancer AZERTY Global au démarrage ?",
+        "Launch AZERTY Global at startup?");
+    public static string Tray_AutoStartNudgeBody => T(
+        "L’application ne démarre pas encore avec Windows : il faut la lancer à la main à chaque fois. Cliquez pour l’activer.",
+        "The app doesn’t start with Windows yet: you have to launch it manually every time. Click to turn it on.");
+    public static string Tray_AutoStartEnabledTitle => T(
+        "Lancement au démarrage activé",
+        "Launch at startup enabled");
+    public static string Tray_AutoStartEnabledBody => T(
+        "AZERTY Global démarrera désormais avec Windows. Vous pouvez revenir dessus depuis le menu ou les Paramètres.",
+        "AZERTY Global will now start with Windows. You can undo this from the menu or in Settings.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");
