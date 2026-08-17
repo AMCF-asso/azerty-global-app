@@ -66,17 +66,32 @@ La première tranche est intégrée :
 
 ## Identité produit au 2026-08-17
 
-`ProductIdentity` centralise la moitié non localisée de l'identité : nom affiché, forme
-identifiant, URL, identifiant Store, dossier de configuration, ressources embarquées et
-noms de classes fenêtre. 78 sites y ont été ramenés sans changement de comportement.
+`ProductIdentity` centralise l'identité du produit : nom affiché, forme identifiant,
+domaine et URL du site, identifiant Store, dossier de configuration, ressources embarquées
+et noms de classes fenêtre. La tranche est complète, en deux moitiés.
+
+**Moitié non localisée** — 78 sites ramenés sur `ProductIdentity`, sans changement de
+comportement.
+
+**Moitié localisée** — les 86 occurrences du nom dans les phrases traduites de
+`Localization/` interpolent désormais `L.Product`, alias privé de
+`ProductIdentity.DisplayName` ; les 4 sites qui portaient le domaine passent par
+`SiteDomain` et `Url()`. Le chemin complet aurait rendu les phrases illisibles, l'alias
+garde une seule indirection. La conversion a été vérifiée en comparant les 700 chaînes
+rendues, français et anglais, avant et après : identiques.
+
+Trois littéraux restent volontairement autonomes : `ConfigFolderName` — renommer le
+produit ne doit pas déplacer la configuration de tout le monde — `ExecutableName`, dont la
+source est `<AssemblyName>`, et `Namespace`, la forme identifiant, que renommer le nom
+affiché ne renomme pas.
+
+`scripts/list-identity-literals.py` couvre maintenant `Localization/` et cherche le nom
+n'importe où dans un littéral, plus seulement en tête ; il ignore les commentaires. Sortie
+attendue : les seules déclarations de `ProductIdentity.cs`, code de sortie 0.
 
 Cette classe ne figure pas dans la séquence d'extraction ci-dessous parce qu'elle ne
 déplace aucun code entre projets : elle prépare l'étape 4, où le produit sera renommé, et
 sert déjà à un dépôt qui n'aura jamais de seconde application.
-
-Reste dû sur ce front : les ~65 occurrences du nom de produit à l'intérieur des chaînes
-traduites de `Localization/`, à convertir en interpolations. Ce travail réécrit du texte
-visible en deux langues et attend la soumission de la v1.2.0.
 
 ## Séquence d'extraction
 

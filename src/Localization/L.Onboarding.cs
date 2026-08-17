@@ -44,7 +44,7 @@ internal static partial class L
         "This application improves your keyboard. No keystroke is ever logged or transmitted.");
 
     // ── Étape 2 — comment utiliser ────────────────────────────────────
-    public static string Onboarding_Step2Title => T("Comment utiliser AZERTY Global", "How to use AZERTY Global");
+    public static string Onboarding_Step2Title => T($"Comment utiliser {Product}", $"How to use {Product}");
     public static string Onboarding_Card1Title => T("L’icône AG est dans la barre des tâches", "The AG icon is in the taskbar");
     public static string Onboarding_Card1Desc => T(
         "Elle indique si le remapping est actif. Clic droit pour accéder aux options.",

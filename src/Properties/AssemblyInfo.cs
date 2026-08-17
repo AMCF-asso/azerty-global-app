@@ -4,7 +4,7 @@ using System.Runtime.Versioning;
 [assembly: AssemblyCompany(AZERTYGlobal.ProductIdentity.DisplayName)]
 [assembly: AssemblyConfiguration("Release")]
 [assembly: AssemblyCopyright("© 2017-2026 Antoine Olivier — EUPL 1.2")]
-[assembly: AssemblyDescription("AZERTY Global — disposition clavier française améliorée")]
+[assembly: AssemblyDescription(AZERTYGlobal.ProductIdentity.DisplayName + " — disposition clavier française améliorée")]
 [assembly: AssemblyFileVersion("1.2.0.0")]
 [assembly: AssemblyInformationalVersion("1.2.0")]
 [assembly: AssemblyProduct(AZERTYGlobal.ProductIdentity.DisplayName)]

@@ -3,19 +3,19 @@ namespace AZERTYGlobal;
 internal static partial class L
 {
     // ── Fenêtre « Mes statistiques » ─────────────────────────────────
-    public static string Stats_WindowTitle => T("AZERTY Global — Mes statistiques", "AZERTY Global — My statistics");
+    public static string Stats_WindowTitle => T($"{Product} — Mes statistiques", $"{Product} — My statistics");
     public static string Stats_Title => T("Mes statistiques", "My statistics");
     public static string Stats_LinkFeedback => T("Donner mon avis", "Give feedback");
     public static string Stats_LinkDiscord => T("Rejoindre la communauté Discord", "Join the Discord community");
     public static string Stats_BtnCopy => T("Copier mes statistiques", "Copy my statistics");
 
     public static string Stats_HeadlineNoData => T(
-        "Vous n’avez pas encore tapé de caractère spécial avec AZERTY Global.",
-        "You haven't typed a special character with AZERTY Global yet.");
+        $"Vous n’avez pas encore tapé de caractère spécial avec {Product}.",
+        $"You haven't typed a special character with {Product} yet.");
 
     public static string Stats_HeadlineWithDate(string dateText) => T(
-        $"Vous utilisez AZERTY Global depuis le {dateText}.",
-        $"You've been using AZERTY Global since {dateText}.");
+        $"Vous utilisez {Product} depuis le {dateText}.",
+        $"You've been using {Product} since {dateText}.");
 
     public static string Stats_DaysLine(int days, int streak, int best) => T(
         $"{days} jour(s) d’utilisation — série actuelle : {streak} jour(s), record : {best} jour(s).",
@@ -42,14 +42,14 @@ internal static partial class L
 
     // ── Export presse-papiers (UsageStats.BuildShareText) ────────────
     public static string Stats_ShareJustStarted => T(
-        "Je viens tout juste de commencer à utiliser AZERTY Global.",
-        "I've only just started using AZERTY Global.");
+        $"Je viens tout juste de commencer à utiliser {Product}.",
+        $"I've only just started using {Product}.");
 
     public static string Stats_ShareDayWord(int count) => T(count > 1 ? "jours" : "jour", count > 1 ? "days" : "day");
 
     public static string Stats_ShareBase(string dateText, int days, string dayWord, string intensityText) => T(
-        $"J’utilise AZERTY Global depuis le {dateText} — {days} {dayWord} d’utilisation{intensityText}",
-        $"I've been using AZERTY Global since {dateText} — {days} {dayWord} of use{intensityText}");
+        $"J’utilise {Product} depuis le {dateText} — {days} {dayWord} d’utilisation{intensityText}",
+        $"I've been using {Product} since {dateText} — {days} {dayWord} of use{intensityText}");
 
     public static string Stats_ShareIntensity(string activeTime, string? avgTime) => T(
         avgTime != null

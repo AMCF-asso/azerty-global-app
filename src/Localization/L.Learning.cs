@@ -29,7 +29,7 @@ internal static partial class L
         "Type these foreign words — use the dead keys shown on the keyboard");
 
     // ── Fenêtre et boutons ─────────────────────────────────────────────
-    public static string Learning_WindowTitle => T("AZERTY Global — Exercices", "AZERTY Global — Exercises");
+    public static string Learning_WindowTitle => T($"{Product} — Exercices", $"{Product} — Exercises");
     public static string Learning_BtnQuit => T("Quitter les exercices", "Quit exercises");
     public static string Learning_BtnSkip => T("Passer cet exercice", "Skip this exercise");
     public static string Learning_BtnFinish => T("Terminer", "Finish");
@@ -60,7 +60,7 @@ internal static partial class L
     public static string Learning_BravoShort => T("✓ Bravo !", "✓ Well done!");
     public static string Learning_LegendDeadKey => T("Touche morte", "Dead key");
     public static string Learning_FinalTitle => T("Bravo !", "Well done!");
-    public static string Learning_FinalSubtitle => T("Vous maîtrisez les bases d’AZERTY Global.", "You've mastered the basics of AZERTY Global.");
+    public static string Learning_FinalSubtitle => T($"Vous maîtrisez les bases d’{Product}.", $"You've mastered the basics of {Product}.");
 
     // ── Overlay de pause ────────────────────────────────────────────────
     public static string Learning_ClickToResume => T("Cliquez pour reprendre", "Click to resume");

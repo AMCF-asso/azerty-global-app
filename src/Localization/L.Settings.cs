@@ -2,7 +2,7 @@ namespace AZERTYGlobal;
 
 internal static partial class L
 {
-    public static string Settings_WindowTitle => T("AZERTY Global — Paramètres", "AZERTY Global — Settings");
+    public static string Settings_WindowTitle => T($"{Product} — Paramètres", $"{Product} — Settings");
 
     public static string Settings_SectionShortcuts => T("Raccourcis", "Shortcuts");
     public static string Settings_SectionPreferences => T("Préférences", "Preferences");

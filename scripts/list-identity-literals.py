@@ -1,17 +1,17 @@
 """Liste les littéraux d'identité produit restés hors de ProductIdentity.
 
-Contrôle du refactor du 2026-08-17 : 78 sites ont été ramenés sur
-`src/ProductIdentity.cs`. Ce script dit si un nom, une URL ou un identifiant en dur
-est revenu ailleurs.
+Contrôle du refactor du 2026-08-17 : 78 sites ont d'abord été ramenés sur
+`src/ProductIdentity.cs`, puis les 86 littéraux des phrases traduites de
+`src/Localization/` ont été convertis en interpolations. Ce script dit si un nom, une
+URL ou un identifiant en dur est revenu ailleurs.
 
     python scripts/list-identity-literals.py
 
-Sortie attendue sur un dépôt sain : les seules déclarations de `ProductIdentity.cs`,
-plus l'`AssemblyDescription`, dont la phrase française appartient à la moitié
-localisée encore due. Tout autre fichier listé est une régression.
+Sortie attendue sur un dépôt sain : les seules déclarations de `ProductIdentity.cs`.
+Tout autre fichier listé est une régression.
 
-`src/Localization/` est exclu à dessein : le nom du produit y est enchâssé dans des
-phrases traduites, et leur conversion en interpolations est un chantier séparé.
+`src/Localization/` est désormais couvert : ses chaînes interpolent `L.Product`, alias
+privé de `ProductIdentity.DisplayName`, et n'écrivent plus le nom en dur.
 """
 import re
 import sys
@@ -27,10 +27,14 @@ for stream in (sys.stdout, sys.stderr):
 
 SRC = Path(__file__).resolve().parent.parent / "src"
 
+# Le nom et le domaine sont cherchés n'importe où DANS un littéral, pas seulement en
+# tête : depuis la conversion de Localization/, une régression prendrait la forme d'une
+# phrase traduite qui réécrit « AZERTY Global » au milieu, pas d'un littéral qui commence
+# par lui. Une ancre en tête n'aurait rien vu.
 PATTERN = re.compile(
-    r'"AZERTY Global[^"]*"'
+    r'"[^"\n]*AZERTY Global[^"\n]*"'
+    r'|"[^"\n]*azerty\.global[^"\n]*"'
     r'|"AZERTYGlobal_[^"]*"'
-    r'|"https://azerty\.global[^"]*"'
     r'|"https://discord\.gg/[^"]*"'
     r'|"https://github\.com/[^"]*"'
     r'|9N4BTS43SSSZ'
@@ -39,12 +43,37 @@ PATTERN = re.compile(
 )
 
 SKIP_DIRS = {
-    "Localization", "AZERTYGlobal.Tests", "TypingEngine.Core",
+    "AZERTYGlobal.Tests", "TypingEngine.Core",
     "TypingEngine.Core.Tests", "TypingEngine.Windows",
     "TypingEngine.Windows.Tests", "TestSupport", "bin", "obj",
 }
 
-EXPECTED = {"ProductIdentity.cs", "Properties/AssemblyInfo.cs"}
+EXPECTED = {"ProductIdentity.cs"}
+
+
+def strip_line_comment(line: str) -> str:
+    """Coupe la partie `//` d'une ligne, sans se laisser prendre par un `//` dans un
+    littéral (« https://… »). Le motif étant élargi à l'intérieur des chaînes, un
+    commentaire qui cite le nom entre guillemets serait sinon compté comme régression —
+    c'est arrivé sur `TrayApplication.cs:1219`."""
+    in_string = False
+    escaped = False
+    i = 0
+    while i < len(line):
+        c = line[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif c == "\\":
+                escaped = True
+            elif c == '"':
+                in_string = False
+        elif c == '"':
+            in_string = True
+        elif c == "/" and line[i + 1:i + 2] == "/":
+            return line[:i]
+        i += 1
+    return line
 
 
 def main() -> int:
@@ -61,7 +90,7 @@ def main() -> int:
         hits = [
             (n, line.strip())
             for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
-            if PATTERN.search(line)
+            if PATTERN.search(strip_line_comment(line))
         ]
         if not hits:
             continue
