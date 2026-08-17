@@ -1,6 +1,8 @@
 # Changelog — Application AZERTY Global
 
-## Non publié — source réconciliée le 2026-08-15
+## Version 1.2.0 — 17 août 2026
+
+Préparée et vérifiée dans ce dépôt ; **non encore soumise au Microsoft Store**. Remplacer cette ligne par la révision Store le jour de l'acceptation. Source réconciliée le 2026-08-15.
 
 - Report de la base interne 1.1.2 et des fonctions 1.2.0 en développement dans le dépôt public canonique : interface bilingue, statistiques locales, défi quotidien facultatif, rappels d'entraînement et activation des notifications Store.
 - Extraction du modèle de disposition, du parseur JSON et de la composition des touches mortes dans `TypingEngine.Core`, projet portable partagé et couvert par sa propre suite de tests.
@@ -29,10 +31,25 @@
 - L'API exige Windows 10 1809, soit exactement le `MinVersion` déclaré dans le manifeste. La couche WinRT est celle qui pilote déjà `StartupTask` depuis la v1.0, et la publication AOT x64 la compile et la lie sans avertissement.
 - Nouveau déclencheur : copier son résultat de défi puis refermer la fenêtre présente la boîte de notation. Le partage est le signal de promotion le plus net dont dispose l'application, et c'est le seul chemin de sollicitation qui atteigne aussi ceux qui ont coupé les notifications Windows. Les garde-fous existants restent en vigueur — deux essais au maximum sur la vie de l'installation, aucun après une réponse, aucun dans les 48 heures qui suivent une erreur journalisée, un seul par jour.
 
+**Sollicitation d'avis — arbitrages du 2026-08-17**
+
+- Le partage d'un résultat n'incrémente plus que le compteur d'essais : il ne pose plus `reviewPromptClicked`. Windows ne dit jamais si l'utilisateur a déposé sa note, si bien qu'un partage suivi d'une boîte refermée aussitôt sans rien noter éteignait toute sollicitation ultérieure — le second essai était perdu pour quelqu'un qui n'avait rien donné. Le plafond de deux essais, la limite d'une sollicitation par jour et le silence de 48 heures après une erreur journalisée restent en vigueur.
+- L'entrée « Noter sur le Microsoft Store » du menu de la zone de notification pose désormais `reviewPromptClicked` : y aller de soi-même est le signal d'intention le plus net dont dispose l'application, et relancer quelqu'un qui vient de jouer le jeu serait le pire des cas. Elle ne consomme pas d'essai pour autant — ce n'est pas une sollicitation que l'application s'est accordée, c'est une action de l'utilisateur.
+- Le bouton de copie de « Mes statistiques », présent depuis la v1.1 sans avoir jamais rien armé, déclenche la même sollicitation différée que le partage d'un résultat de défi : même geste de promotion, mêmes garde-fous, et tir à la fermeture de la fenêtre plutôt qu'au clic, pour ne pas couper le geste en deux.
+
+**Lancement automatique — rattrapage hors accueil (décision du 2026-08-17)**
+
+- Nouvelle entrée « Lancer au démarrage de Windows » au premier niveau du menu de la zone de notification, cochée quand la tâche est réellement enregistrée. Hors Paramètres, le lancement automatique n'avait aucune affordance permanente.
+- Relance unique lorsque l'application a servi deux jours distincts sans démarrage automatique. Deux jours d'usage sans autostart signifient que l'utilisateur l'a relancée lui-même : l'intention est déjà démontrée, on ne lui épargne que le geste. Une seule proposition sur la vie de l'installation, jamais réémise, et rien ne s'active sans un clic.
+- Motif : le manifeste déclare le `StartupTask` à `Enabled="false"`, et `OnboardingWindow.Close()` ne persistait la case pré-cochée que si l'utilisateur avait atteint l'étape 3, c'est-à-dire après deux clics sur « Suivant ». Qui refermait l'accueil plus tôt — croix, Échap, « Quitter » — n'obtenait jamais le lancement automatique et ne revoyait pas l'application au démarrage suivant.
+- La décision de la v0.9.7.1 reste intacte : aucune case jamais vue n'est persistée en silence. Un choix fait à la main dans le menu éteint la relance, dans un sens comme dans l'autre.
+- La règle de déclenchement vit dans `AutoStartNudge`, pure et testable sans fenêtre, sur le modèle de `TrainingReminders.ShouldRemind`.
+
 **Revue de release 1.2.0**
 
-- Version applicative portée de `1.1.2` à `1.2.0`, manifeste de packaging de `1.0.0.0` à `1.2.0.0` (le Store sert `1.1.0.0`).
-- 133 tests xUnit passent, dont 8 nouveaux sur le texte partagé. Publication AOT x64 : 0 avertissement, 0 erreur.
+- Version applicative portée de `1.1.2` à `1.2.0`, manifeste de packaging de `1.0.0.0` à `1.2.0.0` (le Store sert `1.1.0.0`). `Program.cs` et `AssemblyInfo.cs` étaient restés en `1.1.2` : l'infobulle du tray et les rapports de bug se seraient annoncés en 1.1.2, et `Verify-Release.ps1` bloquait dessus.
+- 250 tests xUnit passent sur les trois suites — 149 applicatifs, 95 moteur Windows, 6 moteur portable — dont 8 nouveaux sur le texte partagé, 12 sur la relance du lancement automatique et 4 sur la cohérence des versions. Build Release : 0 avertissement, 0 erreur.
+- Quatre tests comparent `Program.Version` aux attributs d'assembly à chaque exécution de la suite. La dérive qui a bloqué les portes de release ce jour-là ne se voyait que dans `Verify-Release.ps1`, une levée à la fois et au moment du packaging ; elle apparaît désormais en CI, avant. Le csproj et `AppxManifest.xml` restent couverts par le script, hors de portée d'un test qui ne connaît que l'assembly compilé.
 - Aucun package MSIX n'a été produit et aucune publication n'a été effectuée.
 
 ## Version 1.1.0 — 23 juillet 2026
