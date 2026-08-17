@@ -1,5 +1,6 @@
 param(
-    [switch]$SyncPublicRepo
+    [switch]$SyncPublicRepo,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,7 +15,12 @@ function Resolve-FirstExistingPath([string[]]$Candidates, [string]$Label) {
     throw "$Label introuvable. Chemins testes: $($Candidates -join '; ')"
 }
 
+# Le site s'appelle 'website' depuis la migration du 2026-08-03. Les deux anciens noms
+# restent en repli pour un arbre non migre, mais aucun des deux n'existe plus ici: le
+# script levait donc avant sa premiere copie, et personne ne s'en apercevait puisque les
+# trois JSON etaient deja synchronises a la main.
 $siteRoot = Resolve-FirstExistingPath @(
+    (Join-Path $projectRoot '..\website'),
     (Join-Path $projectRoot '..\Site AZERTY Global'),
     (Join-Path $projectRoot '..\2026\Site AZERTY Global')
 ) 'Site AZERTY Global'
@@ -41,14 +47,27 @@ function Show-GitStatus([string]$RepoPath) {
     }
 }
 
+function Get-ShortHash([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return 'absent' }
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.Substring(0, 16).ToLower()
+}
+
 function Copy-Exact([string]$Source, [string]$Destination) {
-    if ((Test-Path -LiteralPath $Source) -and (Test-Path -LiteralPath $Destination)) {
-        $sourceHash = (Get-FileHash -LiteralPath $Source -Algorithm SHA256).Hash
-        $destinationHash = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash
-        if ($sourceHash -eq $destinationHash) {
-            return
-        }
+    $sourceHash = Get-ShortHash $Source
+    $destinationHash = Get-ShortHash $Destination
+    $name = Split-Path -Leaf $Destination
+
+    if ($sourceHash -ne 'absent' -and $sourceHash -eq $destinationHash) {
+        Write-Host " - INCHANGE $name  $destinationHash"
+        return
     }
+
+    # Ce script importe l'etat de travail du site, pas une version publiee. Le seul moment
+    # ou il ecrit est justement celui ou quelque chose change: il le dit avant de le faire,
+    # et -DryRun permet de le lire sans rien ecraser.
+    $action = if ($DryRun) { 'A METTRE A JOUR' } else { 'MISE A JOUR    ' }
+    Write-Host " - $action $name  $destinationHash -> $sourceHash"
+    if ($DryRun) { return }
 
     try {
         [System.IO.File]::Copy($Source, $Destination, $true)
@@ -247,9 +266,19 @@ if ($SyncPublicRepo) {
     Invoke-ResourceValidation (Join-Path $publicRootResolved 'src\AZERTY Global 2026.json') (Join-Path $publicRootResolved 'src\character-index.json')
 }
 
-Write-Host 'Ressources layout synchronisees.'
-Write-Host " - Layout: 29 touches mortes"
-Write-Host " - Character index: 1034 entrees (1005 caracteres Unicode + 29 touches mortes)"
+if ($DryRun) {
+    Write-Host 'Aucune ecriture: -DryRun. Les lignes ci-dessus disent ce qui serait copie.'
+} else {
+    Write-Host 'Ressources layout synchronisees.'
+}
+
+# Deux lignes affichaient ici '29 touches mortes' et '1034 entrees' en dur: un troisieme
+# endroit a corriger a la main apres chaque evolution de la disposition. Elles sont
+# retirees plutot que recalculees, PowerShell etant incapable de lire ce fichier:
+# ConvertFrom-Json de la 5.1 est insensible a la casse et rejette les tables de touches
+# mortes, qui contiennent a la fois 'a' et 'A'. Les comptes sont asseres par le validateur
+# Node ci-dessus, et recalcules par scripts/validate-layout.py.
+Write-Host ' - Controle Node passe. Comptes recalcules par scripts/validate-layout.py.'
 if ($SyncPublicRepo) {
     Write-Host " - Clone public synchronise: $publicRepoRoot"
 }
