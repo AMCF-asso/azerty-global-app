@@ -248,10 +248,28 @@ sealed class UsageStatsWindow : IDisposable
         _visible = true;
     }
 
+    /// <summary>
+    /// Émis à la fermeture de la fenêtre lorsque l'utilisateur a copié son résumé de
+    /// statistiques pendant la visite. Même report que <see cref="LessonsWindow"/> et son
+    /// <c>ChallengeShared</c> : solliciter à l'instant du clic couperait le geste en deux,
+    /// alors que l'utilisateur part précisément coller son résumé ailleurs.
+    /// </summary>
+    public Action? StatsShared;
+
+    private bool _statsSharedThisSession;
+
     public void Close()
     {
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
+
+        // Les trois chemins de fermeture — bouton, Échap, WM_CLOSE — passent tous ici.
+        if (_statsSharedThisSession)
+        {
+            _statsSharedThisSession = false;
+            try { StatsShared?.Invoke(); }
+            catch (Exception ex) { ConfigManager.Log("UsageStatsWindow.StatsShared", ex); }
+        }
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -403,6 +421,7 @@ sealed class UsageStatsWindow : IDisposable
     {
         if (ClipboardText.TrySet(_hWnd, UsageStats.BuildShareText()))
         {
+            _statsSharedThisSession = true;
             _showCopiedFeedback = true;
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             Win32.SetTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK, 1500, IntPtr.Zero);

@@ -14,7 +14,7 @@ AZERTY Global est une disposition clavier française améliorée, alternative à
 
 L'application Windows permet d'utiliser AZERTY Global **sans installation système et sans droits administrateur**. Elle fonctionne en arrière-plan et intercepte les frappes clavier pour appliquer la disposition.
 
-**État du code :** base 1.1.2 réconciliée avec les fonctions 1.2.0 encore en développement. Le manifeste MSIX local reste en 1.0.0.0 : cette branche n'est pas un package prêt à publier.
+**État du code :** version 1.2.0, manifeste MSIX local en 1.2.0.0, portes de version de `Verify-Release.ps1` franchies. Aucun package n'a encore été produit ni soumis.
 
 ### Fonctionnalités
 
@@ -62,7 +62,7 @@ dotnet test src/TypingEngine.Windows.Tests
 dotnet test src/TypingEngine.Core.Tests
 ```
 
-La suite comprend 121 tests applicatifs, 95 tests Windows et 6 tests portables, soit 222 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
+La suite comprend 149 tests applicatifs, 95 tests Windows et 6 tests portables, soit 250 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
 
@@ -96,6 +96,7 @@ src/                              Code source C#
 ├── SettingsWindow.cs             Fenêtre des paramètres
 ├── ConfigManager.cs              Gestion de la configuration
 ├── AutoStart.cs                  Démarrage automatique
+├── AutoStartNudge.cs             Règle de la relance unique du démarrage auto
 ├── GdiHelpers.cs                 Utilitaires GDI+ (rendu texte)
 ├── GdiImageLoader.cs             Chargement d'images GDI+
 ├── Win32.cs                      Interop Win32 propre à l'interface du produit

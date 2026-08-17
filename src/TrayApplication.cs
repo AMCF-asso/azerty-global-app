@@ -19,6 +19,7 @@ sealed class TrayApplication : IDisposable
     // wParam = 1 : action=review, cible Store ; wParam = 2 : action=review, cible
     // page feedback (répartition tirée à l'affichage — un toast antérieur sans
     // segment target= vaut cible Store, comportement historique).
+    // wParam = 3 : action=autostart, relance unique du lancement au démarrage.
     private const uint WM_APP_TOAST = WM_APP + 4;
 
     // ── Menu IDs ────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ sealed class TrayApplication : IDisposable
     private const int IDM_COMPAT_FORCE_OFF = 1022;
     private const int IDM_COMPAT_INFO = 1034;
     private const int IDM_CHALLENGE = 1035;
+    private const int IDM_AUTOSTART = 1036;
 #if DEBUG
     private const int IDM_RESET_ONBOARDING = 1015;
 #endif
@@ -137,7 +139,7 @@ sealed class TrayApplication : IDisposable
     // routé selon cette valeur (avis → page d'avis, défi → séance). Invalidé dès qu'une
     // autre balloon la remplace ou qu'elle expire. L'avis ne concerne plus que le canal
     // balloon (hors package, ou repli si le toast COM échoue — ToastActivation, v1.2.0).
-    private enum PendingBalloonKind { None, Review, Training, Announcement }
+    private enum PendingBalloonKind { None, Review, Training, Announcement, AutoStart }
     private PendingBalloonKind _pendingBalloon;
 
     // Cible de la sollicitation d'avis en cours (canal balloon uniquement : le canal
@@ -231,6 +233,8 @@ sealed class TrayApplication : IDisposable
                         Win32.PostMessageW(_hWnd, WM_APP_TOAST,
                             args.Contains("target=feedback", StringComparison.Ordinal) ? (IntPtr)2 : (IntPtr)1,
                             IntPtr.Zero);
+                    else if (args.Contains("action=autostart", StringComparison.Ordinal))
+                        Win32.PostMessageW(_hWnd, WM_APP_TOAST, (IntPtr)3, IntPtr.Zero);
                 };
             }
         }
@@ -280,7 +284,8 @@ sealed class TrayApplication : IDisposable
                     ShowOnboardingNow();
                 }
             }
-            else if (!MaybeShowReviewPrompt() && !MaybeShowChallengeAnnouncement())
+            else if (!MaybeShowReviewPrompt() && !MaybeShowChallengeAnnouncement()
+                     && !MaybeShowAutoStartNudge())
             {
                 ShowBalloon("AZERTY Global", L.Tray_ActiveBalloonBody);
             }
@@ -505,6 +510,8 @@ sealed class TrayApplication : IDisposable
                         else if (kind == PendingBalloonKind.Announcement)
                             ShowChallengeWindow(); // le défi s'ouvre sans opt-in depuis le 2026-08-16 :
                                                    // l'annonce mène à la séance, plus aux Paramètres
+                        else if (kind == PendingBalloonKind.AutoStart)
+                            EnableAutoStartFromPrompt();
                     }
                     else if (mouseMsg == NIN_BALLOONTIMEOUT)
                     {
@@ -520,6 +527,8 @@ sealed class TrayApplication : IDisposable
                         OpenReviewTarget(toStore: true);
                     else if (wParam == (IntPtr)2)
                         OpenReviewTarget(toStore: false);
+                    else if (wParam == (IntPtr)3)
+                        EnableAutoStartFromPrompt();
                     return IntPtr.Zero;
 
                 case WM_APP_SEARCH:
@@ -572,7 +581,8 @@ sealed class TrayApplication : IDisposable
                         case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://discord.gg/nYknqshJz3", null, null, 1); break;
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global", null, null, 1); break;
                         case IDM_FEEDBACK: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback", null, null, 1); break;
-                        case IDM_RATE_STORE: OpenStoreReview(); break;
+                        case IDM_RATE_STORE: OnRateStoreFromMenu(); break;
+                        case IDM_AUTOSTART: ToggleAutoStart(); break;
                         case IDM_BUG: OnReportBug(); break;
                         case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/soutien", null, null, 1); break;
                         case IDM_ONBOARDING:
@@ -616,6 +626,7 @@ sealed class TrayApplication : IDisposable
                                 _usageStats = null;
                             }
                             _usageStats ??= new UsageStatsWindow();
+                            _usageStats.StatsShared = OnStatsShared;
                             _usageStats.Show();
                             break;
                         case IDM_EXERCISES:
@@ -1032,6 +1043,79 @@ sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>
+    /// Relance unique du lancement automatique (décision 2026-08-17). Le manifeste déclare
+    /// le StartupTask à Enabled="false" et l'accueil ne persiste sa case qu'à l'étape 3 :
+    /// qui referme le wizard avant n'a jamais l'autostart et relance l'application à la
+    /// main. On lui propose une fois, jamais deux. La règle de décision vit dans
+    /// <see cref="AutoStartNudge"/>, testable sans fenêtre.
+    /// Retourne true si la proposition a été émise (l'appelant saute la balloon « Actif »).
+    /// </summary>
+    private bool MaybeShowAutoStartNudge()
+    {
+        try
+        {
+            if (!AutoStartNudge.ShouldPrompt(AutoStartNudge.Snapshot())) return false;
+
+            // Marqué avant l'affichage : jamais deux fois, même si la balloon échoue
+            // ensuite — même doctrine que l'annonce du Défi du jour.
+            AutoStartNudge.MarkPromptShown();
+
+            if (ConfigManager.IsPackaged && _toastActivatorRegistered &&
+                ToastActivation.TryShowToast(L.Tray_AutoStartNudgeTitle,
+                    L.Tray_AutoStartNudgeBody, "action=autostart"))
+                return true;
+
+            ShowBalloon(L.Tray_AutoStartNudgeTitle, L.Tray_AutoStartNudgeBody);
+            _pendingBalloon = PendingBalloonKind.AutoStart;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("MaybeShowAutoStartNudge", ex);
+            return false;
+        }
+    }
+
+    /// <summary>Clic sur la proposition : on active et on confirme. Un échec est dit,
+    /// pas avalé — l'utilisateur vient de demander quelque chose.</summary>
+    private void EnableAutoStartFromPrompt()
+    {
+        try
+        {
+            if (AutoStart.Set(true))
+                ShowBalloon(L.Tray_AutoStartEnabledTitle, L.Tray_AutoStartEnabledBody);
+            else
+                ShowBalloon(L.Common_ErrorTitle, AutoStart.GetFailureMessage());
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("EnableAutoStartFromPrompt", ex);
+        }
+    }
+
+    /// <summary>Bascule « Lancer au démarrage » depuis le menu de la zone de notification.
+    /// Un choix fait à la main éteint la relance, dans un sens comme dans l'autre.</summary>
+    private void ToggleAutoStart()
+    {
+        try
+        {
+            bool target = !AutoStart.IsRegistered;
+            if (!AutoStart.Set(target))
+            {
+                ShowBalloon(L.Common_ErrorTitle, AutoStart.GetFailureMessage());
+                return;
+            }
+            AutoStartNudge.MarkPromptShown();
+            if (target)
+                ShowBalloon(L.Tray_AutoStartEnabledTitle, L.Tray_AutoStartEnabledBody);
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("ToggleAutoStart", ex);
+        }
+    }
+
     /// <summary>Ouvre la fenêtre Leçons directement sur la séance Défi du jour
     /// (clic sur le rappel ou entrée du menu tray).</summary>
     private void ShowChallengeWindow()
@@ -1121,6 +1205,12 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
         // Configuration
+        // « Lancer au démarrage » au premier niveau : hors Paramètres, c'est la seule
+        // affordance permanente de l'autostart, et l'accueil ne persiste sa case qu'à
+        // l'étape 3 (décision 2026-08-17). L'état coché vient de AutoStart.IsRegistered,
+        // jamais du cache ConfigManager.AutoStartEnabled.
+        Win32.AppendMenuW(hMenu, MF_STRING | (AutoStart.IsRegistered ? MF_CHECKED : 0u),
+            IDM_AUTOSTART, L.Tray_MenuAutoStart);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, L.Tray_MenuSettings);
 
         // Sous-menu compatibilite du process foreground (conditionnel — n'apparait que si fg detecte).
@@ -1640,6 +1730,21 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
+    /// « Noter sur le Microsoft Store » depuis le menu de la zone de notification. Aller
+    /// chercher l'entrée soi-même est le signal d'intention le plus net dont dispose
+    /// l'application : plus aucune sollicitation ensuite, et relancer quelqu'un qui vient
+    /// de jouer le jeu serait le pire des cas (arbitrage du 2026-08-17). Le compteur
+    /// d'essais n'est pas touché : cette ouverture n'est pas un essai que l'application
+    /// s'est accordé, c'est une action de l'utilisateur.
+    /// </summary>
+    private void OnRateStoreFromMenu()
+    {
+        try { ConfigManager.SetReviewPromptClicked(); }
+        catch (Exception ex) { ConfigManager.Log("OnRateStoreFromMenu", ex); }
+        OpenStoreReview();
+    }
+
+    /// <summary>
     /// Fenêtre propriétaire de la boîte de notation. L'API exige un HWND du processus ;
     /// une fenêtre visible est préférée quand l'utilisateur en a une sous les yeux, sinon
     /// la fenêtre de la zone de notification, masquée mais bien réelle.
@@ -1662,7 +1767,14 @@ sealed class TrayApplication : IDisposable
     /// essais au maximum sur la vie de l'installation, aucun après une réponse, aucun dans
     /// les 48 heures qui suivent une erreur journalisée, un seul par jour.
     /// </summary>
-    private void OnChallengeShared()
+    private void OnChallengeShared() => MaybeShowReviewAfterShare("challenge");
+
+    /// <summary>Résumé de statistiques copié puis fenêtre refermée. Le bouton de copie
+    /// existe depuis la v1.1 sans avoir jamais rien armé, alors que c'est le même geste de
+    /// promotion que le partage d'un résultat de défi (décision du 2026-08-17).</summary>
+    private void OnStatsShared() => MaybeShowReviewAfterShare("stats");
+
+    private void MaybeShowReviewAfterShare(string source)
     {
         try
         {
@@ -1682,13 +1794,19 @@ sealed class TrayApplication : IDisposable
 
             // Consommé seulement une fois la boîte réellement affichée : contrairement à la
             // notification, dont l'échec est invisible, l'API répond ici tout de suite.
+            //
+            // Un essai, pas la vie de l'installation (arbitrage du 2026-08-17). La boîte
+            // s'est affichée, mais Windows ne dit jamais si l'utilisateur a déposé sa note :
+            // poser aussi `reviewPromptClicked` faisait qu'un seul partage — même refermé
+            // aussitôt sans rien noter — éteignait toute sollicitation ultérieure. Le
+            // plafond de deux essais, la règle « une seule par jour » et le silence de 48 h
+            // après une erreur restent les garde-fous.
             ConfigManager.RecordReviewPromptShown();
-            ConfigManager.SetReviewPromptClicked();
             _reviewPromptShownDate = today;
         }
         catch (Exception ex)
         {
-            ConfigManager.Log("TrayApplication.OnChallengeShared", ex);
+            ConfigManager.Log($"TrayApplication.MaybeShowReviewAfterShare({source})", ex);
         }
     }
 
