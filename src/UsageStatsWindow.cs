@@ -130,7 +130,7 @@ sealed class UsageStatsWindow : IDisposable
     private void CreateMainWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        const string className = "AZERTYGlobal_UsageStats";
+        string className = ProductIdentity.WindowClass("UsageStats");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -313,10 +313,10 @@ sealed class UsageStatsWindow : IDisposable
                             Close();
                             break;
                         case IDC_LINK_FEEDBACK:
-                            Win32.ShellExecuteW(IntPtr.Zero, "open", "https://azerty.global/feedback", null, null, 1);
+                            Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/feedback"), null, null, 1);
                             break;
                         case IDC_LINK_DISCORD:
-                            Win32.ShellExecuteW(IntPtr.Zero, "open", "https://discord.gg/nYknqshJz3", null, null, 1);
+                            Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1);
                             break;
                     }
                     return IntPtr.Zero;
@@ -615,6 +615,6 @@ sealed class UsageStatsWindow : IDisposable
         Win32.DeleteObject(_hBgBrush);
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_UsageStats", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("UsageStats"), Win32.GetModuleHandleW(null));
     }
 }

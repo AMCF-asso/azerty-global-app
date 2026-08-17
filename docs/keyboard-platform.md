@@ -64,6 +64,20 @@ La première tranche est intégrée :
 - `TypingEngine.Windows.Tests` contient 95 tests de caractérisation indépendants du produit ;
 - `AzertyGlobalWindowsTypingHost` est le seul adaptateur entre les services du moteur et la configuration/statistique du produit.
 
+## Identité produit au 2026-08-17
+
+`ProductIdentity` centralise la moitié non localisée de l'identité : nom affiché, forme
+identifiant, URL, identifiant Store, dossier de configuration, ressources embarquées et
+noms de classes fenêtre. 78 sites y ont été ramenés sans changement de comportement.
+
+Cette classe ne figure pas dans la séquence d'extraction ci-dessous parce qu'elle ne
+déplace aucun code entre projets : elle prépare l'étape 4, où le produit sera renommé, et
+sert déjà à un dépôt qui n'aura jamais de seconde application.
+
+Reste dû sur ce front : les ~65 occurrences du nom de produit à l'intérieur des chaînes
+traduites de `Localization/`, à convertir en interpolations. Ce travail réécrit du texte
+visible en deux langues et attend la soumission de la v1.2.0.
+
 ## Séquence d'extraction
 
 1. Terminé — compléter et transférer les tests de caractérisation de la couche Windows.

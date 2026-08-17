@@ -80,7 +80,7 @@ sealed class AboutWindow : IDisposable
 
         var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
         Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
-        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(AboutWindow), "favicon-azerty-global.png");
+        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(AboutWindow), ProductIdentity.LogoResourceName);
 
         CreateFonts();
         CreateMainWindow();
@@ -141,7 +141,7 @@ sealed class AboutWindow : IDisposable
     private void CreateMainWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        const string className = "AZERTYGlobal_About";
+        string className = ProductIdentity.WindowClass("About");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -331,10 +331,10 @@ sealed class AboutWindow : IDisposable
                     switch (id)
                     {
                         case IDC_LINK_SITE:
-                            if (code == 0) OpenLink("https://azerty.global");
+                            if (code == 0) OpenLink(ProductIdentity.SiteBaseUrl);
                             break;
                         case IDC_LINK_GITHUB:
-                            if (code == 0) OpenLink("https://github.com/AZERTYGlobal/app");
+                            if (code == 0) OpenLink(ProductIdentity.RepositoryUrl);
                             break;
                         case IDC_LINK_LICENSE:
                             if (code == 0) OpenLink("https://eupl.eu/1.2/fr/");
@@ -474,7 +474,7 @@ sealed class AboutWindow : IDisposable
         Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, CLR_TITLE);
         var titleRect = new Win32.RECT { left = textX, top = titleY, right = cw - margin, bottom = titleY + S(28) };
-        Win32.DrawTextW(hdc, "AZERTY Global", -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, ProductIdentity.DisplayName, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         int versionY = titleY + S(28);
         Win32.SelectObject(hdc, _hFontVersion);
@@ -575,6 +575,6 @@ sealed class AboutWindow : IDisposable
         }
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_About", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("About"), Win32.GetModuleHandleW(null));
     }
 }

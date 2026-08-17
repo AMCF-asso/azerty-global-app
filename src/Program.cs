@@ -27,7 +27,7 @@ static class Program
         // user-land squatte le nom et bloque le démarrage (DoS trivial sans
         // préfixe). Local\ scope = current session uniquement, donc safe.
         var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? "anon";
-        var mutexName = $"Local\\AZERTYGlobalSingleInstance.{sid}";
+        var mutexName = $"Local\\{ProductIdentity.SingleInstanceMutexName}.{sid}";
         using var mutex = new Mutex(true, mutexName, out bool isNew);
         if (!isNew)
         {
@@ -51,7 +51,7 @@ static class Program
             {
                 Win32.MessageBoxW(IntPtr.Zero,
                     L.Startup_AlreadyRunning,
-                    "AZERTY Global", 0x40); // MB_ICONINFORMATION
+                    ProductIdentity.DisplayName, 0x40); // MB_ICONINFORMATION
             }
             return;
         }

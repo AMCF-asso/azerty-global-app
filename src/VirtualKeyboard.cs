@@ -334,7 +334,7 @@ sealed class VirtualKeyboard : IDisposable
         _wndProcDelegate = WndProc;
 
         var hInstance = Win32.GetModuleHandleW(null);
-        var className = "AZERTYGlobal_VK";
+        var className = ProductIdentity.WindowClass("VK");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -362,7 +362,7 @@ sealed class VirtualKeyboard : IDisposable
         _hWnd = Win32.CreateWindowExW(
             dwExStyle,
             className,
-            "AZERTY Global",
+            ProductIdentity.DisplayName,
             dwStyle,
             posX, posY, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
@@ -1371,6 +1371,6 @@ sealed class VirtualKeyboard : IDisposable
         }
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_VK", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("VK"), Win32.GetModuleHandleW(null));
     }
 }

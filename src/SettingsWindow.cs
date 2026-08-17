@@ -206,7 +206,7 @@ sealed class SettingsWindow : IDisposable
 
         var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
         Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
-        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(SettingsWindow), "favicon-azerty-global.png");
+        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(SettingsWindow), ProductIdentity.LogoResourceName);
         LoadShortcutStateFromConfig();
 
         CreateFonts();
@@ -298,7 +298,7 @@ sealed class SettingsWindow : IDisposable
     private void CreateMainWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        const string className = "AZERTYGlobal_Settings";
+        string className = ProductIdentity.WindowClass("Settings");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -1445,7 +1445,7 @@ sealed class SettingsWindow : IDisposable
         int headerLineTop = Math.Min(layout.LogoRect.top, layout.HeaderTitleY);
         int headerLineBottom = Math.Max(layout.LogoRect.bottom, layout.HeaderTitleY + titleHeight);
 
-        string title = "AZERTY Global";
+        string title = ProductIdentity.DisplayName;
         int titleRight = versionLeft - S(8);
         Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, CLR_TITLE);
@@ -1684,6 +1684,6 @@ sealed class SettingsWindow : IDisposable
         }
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW("AZERTYGlobal_Settings", Win32.GetModuleHandleW(null));
+        Win32.UnregisterClassW(ProductIdentity.WindowClass("Settings"), Win32.GetModuleHandleW(null));
     }
 }

@@ -62,7 +62,7 @@ static class ConfigManager
         {
             // Mode MSIX : dossier du package en lecture seule → utiliser LocalAppData
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appDataDir = Path.Combine(localAppData, "AZERTY Global");
+            var appDataDir = Path.Combine(localAppData, ProductIdentity.ConfigFolderName);
             Directory.CreateDirectory(appDataDir);
 
             return Path.Combine(appDataDir, "config.json");
@@ -536,7 +536,7 @@ static class ConfigManager
     /// <summary>Dossier de logs (LocalAppData en MSIX, à côté de l'exe sinon).</summary>
     private static string? _logDirectoryOverride;
     public static string LogDirectory => _logDirectoryOverride ?? (IsPackaged
-        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AZERTY Global")
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ProductIdentity.ConfigFolderName)
         : AppContext.BaseDirectory);
 
     private static readonly object _logFlushLock = new();

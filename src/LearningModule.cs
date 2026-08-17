@@ -46,7 +46,7 @@ sealed class LearningModule : IDisposable
     // Nom de classe Win32. Defini en const partagee entre CreateMainWindow et Dispose
     // (UnregisterClassW au Dispose pour eviter que la classe survive l'instance et garde
     // un delegate WndProc collecte par GC).
-    private const string WND_CLASS_NAME = "AZERTYGlobal_Learning";
+    private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("Learning");
 
     // Dimensions de référence à 96 DPI. Bouton « Quitter » placé en haut à droite,
     // pas de légende footer, donc on peut réduire la hauteur.
