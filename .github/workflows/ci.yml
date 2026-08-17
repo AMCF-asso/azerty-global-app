@@ -19,6 +19,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Sort en 1 dès qu'un nom, une URL ou un identifiant produit réapparaît en dur
+      # hors de src/ProductIdentity.cs. Placé avant le build : le contrôle coûte une
+      # seconde, la publication cinq minutes.
+      - name: Aucun littéral d'identité hors ProductIdentity
+        run: python scripts/list-identity-literals.py
+
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
