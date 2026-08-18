@@ -82,8 +82,53 @@ Vérifie que la version est alignée dans : `Program.cs`, `.csproj`, `AssemblyIn
 
 ### 5. Tester localement avant soumission
 
+`Pack-MSIX.ps1` **ne signe pas**. Un bundle non signe est refuse par
+`Add-AppxPackage` avec `0x800B0100 - No signature was present in the subject`, et le
+bundle de `msix\` doit rester non signe : c'est lui qu'attend Partner Center.
+
+Signer une **copie** avec un certificat auto-signe, dont le sujet doit etre exactement
+le `Publisher` du `AppxManifest.xml` :
+
 ```powershell
-Add-AppxPackage -Path ".\msix\AZERTYGlobal-<version>.msixbundle"
+$dir = "Archives\local-signing\<version>"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+$cert = New-SelfSignedCertificate -Type Custom `
+  -Subject "CN=7FD049E3-1C58-42E0-A07F-A9712DE19E38" `
+  -KeyUsage DigitalSignature -CertStoreLocation "Cert:\CurrentUser\My" `
+  -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3","2.5.29.19={text}") `
+  -NotAfter (Get-Date).AddYears(1)
+Export-Certificate -Cert $cert -FilePath "$dir\AZERTYGlobal-local-test.cer"
+Copy-Item "msix\AZERTYGlobal-<version>.msixbundle" "$dir\AZERTYGlobal-<version>-local-signed.msixbundle"
+& "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe" `
+  sign /fd SHA256 /sha1 $cert.Thumbprint /v "$dir\AZERTYGlobal-<version>-local-signed.msixbundle"
+```
+
+Les `.cer` des versions precedentes sont archives sous
+`sources/legacy/.../Microsoft Store/Archives/local-signing/`, mais **sans leur cle
+privee** : ils ne permettent pas de signer, il faut regenerer un certificat.
+
+Puis, en administrateur, faire confiance au certificat et installer :
+
+```powershell
+Import-Certificate -FilePath "$dir\AZERTYGlobal-local-test.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+Add-AppxPackage -Path "$dir\AZERTYGlobal-<version>-local-signed.msixbundle"
+```
+
+Deux erreurs a ne pas confondre :
+
+- `0x800B0100` - le bundle n'est pas signe, ou son certificat n'est pas dans
+  `TrustedPeople`.
+- `0x80073D02` - **la version precedente tourne**. Ce n'est pas un probleme de
+  signature. Quitter l'app par son menu tray, pas par `Stop-Process` : une sortie propre
+  laisse ecrire les statistiques, et ce fichier est la base de comparaison du test de
+  migration.
+
+Une mise a jour par-dessus un paquet installe depuis le Store fonctionne : verifie le
+2026-08-18, la 1.1.0.0 en `SignatureKind: Store` a accepte la 1.2.0.0 signee localement.
+Le retrait du certificat de test, une fois le smoke test fini :
+
+```powershell
+Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object { $_.Subject -like "*7FD049E3*" } | Remove-Item
 ```
 
 Vérifier :

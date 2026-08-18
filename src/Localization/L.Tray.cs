@@ -78,30 +78,34 @@ internal static partial class L
 
     // Sollicitation d'avis (v1.2.0) — deux essais au maximum sur toute la vie de
     // l'installation, paramétrés par le rang de l'essai. Le second ne répète pas le
-    // premier : il parle du projet et annonce sa propre fin, ce qui est vrai (plafond de
-    // deux) et lève la crainte du harcèlement au moment précis où on la formule.
+    // premier : il ajoute le cadre associatif que le premier laisse de côté.
+    // Aucune des deux n'annonce sa propre fin. La formule « c'est la dernière fois qu'on
+    // vous le demande », décidée le 2026-08-16 pour lever la crainte du harcèlement, a été
+    // retirée le 2026-08-18 au premier smoke test : annoncer un plafond fait peser la
+    // demande au lieu de l'alléger. Aucune ne donne d'ordre non plus — la ligne de clic
+    // est descriptive, elle dit ce que la notification ouvre au lieu de l'imposer.
     // Aucun chiffre d'usage n'y figure — décision du 2026-08-16 : les statistiques restent
     // affaire de la fenêtre « Mes statistiques », pas des notifications. Le texte reste
     // neutre : les règles du Store autorisent à solliciter un avis, pas à orienter vers
     // une note positive.
     public static string Tray_ReviewPromptTitle(int attempt) => attempt >= 2
-        ? T($"Aider {Product}", $"Help {Product}")
+        ? T($"Votre avis sur {Product} ?", $"Your feedback on {Product}?")
         : T($"{Product} vous plaît ?", $"Enjoying {Product}?");
 
     // Corps nommés par CIBLE du clic (Store ou page feedback) : depuis la v1.2.0 le
     // packagé vise toujours le Store, la page feedback ne sert plus qu'aux installations
     // hors Store, qui n'ont pas de fiche à noter.
     public static string Tray_ReviewPromptBodyStore(int attempt) => attempt >= 2
-        ? T("Le projet avance grâce aux retours de ses utilisateurs. Quelques secondes sur le Store, et c’est la dernière fois qu’on vous le demande.\nCliquez sur cette notification pour noter l’app.",
-            "The project moves forward thanks to user feedback. A few seconds on the Store, and we won’t ask again.\nClick this notification to rate the app.")
-        : T($"{Product} est gratuit et open source. Un avis sur le Microsoft Store aide vraiment le projet à avancer.\nCliquez sur cette notification pour noter l’app.",
-            $"{Product} is free and open source. A review on the Microsoft Store genuinely helps the project move forward.\nClick this notification to rate the app.");
+        ? T("Le projet est gratuit et open source, porté par une association. Un avis sur le Microsoft Store est la façon la plus simple de le soutenir.\nCette notification ouvre la fenêtre de notation.",
+            "The project is free and open source, run by a nonprofit association. A review on the Microsoft Store is the simplest way to support it.\nThis notification opens the rating window.")
+        : T($"{Product} est gratuit et open source. Un avis sur le Microsoft Store est la façon la plus simple de soutenir le projet.\nCette notification ouvre la fenêtre de notation.",
+            $"{Product} is free and open source. A review on the Microsoft Store is the simplest way to support the project.\nThis notification opens the rating window.");
 
     public static string Tray_ReviewPromptBodyFeedback(int attempt) => attempt >= 2
-        ? T("Le projet avance grâce aux retours de ses utilisateurs. Quelques secondes suffisent, et c’est la dernière fois qu’on vous le demande.\nCliquez sur cette notification pour donner votre avis.",
-            "The project moves forward thanks to user feedback. It only takes a moment, and we won’t ask again.\nClick this notification to share yours.")
-        : T($"{Product} est gratuit et open source. Votre avis aide vraiment le projet à avancer.\nCliquez sur cette notification pour le donner.",
-            $"{Product} is free and open source. Your feedback genuinely helps the project move forward.\nClick this notification to share it.");
+        ? T("Le projet est gratuit et open source, porté par une association. Votre avis est la façon la plus simple de le soutenir.\nCette notification ouvre la page d’avis.",
+            "The project is free and open source, run by a nonprofit association. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.")
+        : T($"{Product} est gratuit et open source. Votre avis est la façon la plus simple de soutenir le projet.\nCette notification ouvre la page d’avis.",
+            $"{Product} is free and open source. Your feedback is the simplest way to support the project.\nThis notification opens the feedback page.");
 
     // ── Menu tray ────────────────────────────────────────────────────
     public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr.Maj", "Turn off\tCtrl+Shift+Caps Lock");
