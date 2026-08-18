@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10" IgnorableNamespaces="uap rescap desktop" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
+  <Identity Name="AZERTYGlobal.AZERTYGlobal" Publisher="CN=7FD049E3-1C58-42E0-A07F-A9712DE19E38" Version="1.1.0.0" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>AZERTY Global - Clavier français amélioré</DisplayName>
+    <PublisherDisplayName>AZERTY Global</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>L'AZERTY corrigé : majuscules accentuées, point direct, symboles dev accessibles, langues étrangères.</Description>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="fr-FR" />
+    <Resource Language="en-US" />
+  </Resources>
+  <Applications>
+    <Application Id="AZERTYGlobal" Executable="AZERTY Global.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="AZERTY Global - Clavier français amélioré" Description="L'AZERTY corrigé : majuscules accentuées, point direct, symboles dev accessibles, langues étrangères." BackgroundColor="#1a1a2e" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+      <Extensions>
+        <!-- Lancement automatique au démarrage de Windows.
+             L'utilisateur peut activer/désactiver depuis
+             Paramètres > Applications > Démarrage -->
+        <desktop:Extension Category="windows.startupTask" Executable="AZERTY Global.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="AZERTYGlobalStartup" Enabled="false" DisplayName="AZERTY Global" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <!-- Requis pour les apps Win32 Desktop Bridge -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+  <mp:PhoneIdentity PhoneProductId="5b326b12-befe-4ee3-852f-ca5c76975502" PhonePublisherId="c2a2d793-a4f2-46d5-98c9-69bd8940e677" />
+</Package>

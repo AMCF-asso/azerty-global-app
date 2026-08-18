@@ -1,0 +1,714 @@
+<title>Audit AZERTY Global 1.2.0</title>
+
+<style>
+  :root {
+    --ground:      #F4F6F9;
+    --surface:     #FFFFFF;
+    --surface-2:   #EAEDF2;
+    --ink:         #14181F;
+    --ink-2:       #434C5A;
+    --ink-3:       #6E7887;
+    --rule:        #D3D9E2;
+    --rule-2:      #E2E7ED;
+
+    --accent:      #9C6512;
+    --accent-soft: #F3E6CE;
+
+    --blocker:     #9C382C;
+    --blocker-soft:#F6E1DD;
+    --warn:        #7E6115;
+    --warn-soft:   #F5EBD2;
+    --cleared:     #256257;
+    --cleared-soft:#DCEBE7;
+
+    --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+    --sans: "Segoe UI Variable Text", -apple-system, "Segoe UI", system-ui, sans-serif;
+
+    --shadow: 0 1px 2px rgba(20, 24, 31, .05), 0 8px 24px -12px rgba(20, 24, 31, .12);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #101318;
+      --surface:     #171B22;
+      --surface-2:   #1F242D;
+      --ink:         #E6E9EE;
+      --ink-2:       #AFB8C5;
+      --ink-3:       #7E8896;
+      --rule:        #2B313B;
+      --rule-2:      #232932;
+
+      --accent:      #D9A24C;
+      --accent-soft: #33291A;
+
+      --blocker:     #E08375;
+      --blocker-soft:#38221E;
+      --warn:        #D2AC53;
+      --warn-soft:   #302819;
+      --cleared:     #6FBBAA;
+      --cleared-soft:#172E29;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #101318;
+    --surface:     #171B22;
+    --surface-2:   #1F242D;
+    --ink:         #E6E9EE;
+    --ink-2:       #AFB8C5;
+    --ink-3:       #7E8896;
+    --rule:        #2B313B;
+    --rule-2:      #232932;
+
+    --accent:      #D9A24C;
+    --accent-soft: #33291A;
+
+    --blocker:     #E08375;
+    --blocker-soft:#38221E;
+    --warn:        #D2AC53;
+    --warn-soft:   #302819;
+    --cleared:     #6FBBAA;
+    --cleared-soft:#172E29;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .6);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 40px) 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 52px;
+  }
+
+  /* ---- masthead ---- */
+
+  .mast { display: flex; flex-direction: column; gap: 18px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    align-items: center;
+  }
+  .eyebrow b { color: var(--accent); font-weight: 700; }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(30px, 5.5vw, 46px);
+    font-weight: 700;
+    letter-spacing: -.025em;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 .v { color: var(--accent); }
+
+  .standfirst {
+    font-size: clamp(16.5px, 2vw, 18.5px);
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* ---- verdict band ---- */
+
+  .verdict {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .vcell {
+    background: var(--surface);
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-top: 3px solid var(--rule);
+  }
+  .vcell.is-blocker { border-top-color: var(--blocker); }
+  .vcell.is-warn    { border-top-color: var(--warn); }
+  .vcell.is-ok      { border-top-color: var(--cleared); }
+  .vcell.is-neutral { border-top-color: var(--accent); }
+
+  .vnum {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .is-blocker .vnum { color: var(--blocker); }
+  .is-warn    .vnum { color: var(--warn); }
+  .is-ok      .vnum { color: var(--cleared); }
+  .is-neutral .vnum { color: var(--accent); }
+
+  .vlabel {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .vnote { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+
+  /* ---- sections ---- */
+
+  section { display: flex; flex-direction: column; gap: 20px; }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0;
+    padding-bottom: 11px;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 11px;
+  }
+  h2 .idx { color: var(--accent); font-weight: 700; }
+
+  h3 {
+    font-family: var(--sans);
+    font-size: 17.5px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+  p.lead { color: var(--ink); }
+  p + p { margin-top: -4px; }
+
+  code, .m {
+    font-family: var(--mono);
+    font-size: .875em;
+    background: var(--surface-2);
+    padding: .12em .38em;
+    border-radius: 2px;
+    color: var(--ink);
+    word-break: break-word;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* ---- finding cards ---- */
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--rule);
+    border-radius: 3px;
+    padding: 17px 20px 19px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .finding.sev-block { border-left-color: var(--blocker); }
+  .finding.sev-high  { border-left-color: var(--blocker); }
+  .finding.sev-med   { border-left-color: var(--warn); }
+  .finding.sev-low   { border-left-color: var(--ink-3); }
+  .finding.sev-ok    { border-left-color: var(--cleared); }
+
+  .fhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .tag-id      { background: var(--surface-2); color: var(--ink-2); }
+  .tag-block   { background: var(--blocker-soft); color: var(--blocker); }
+  .tag-high    { background: var(--blocker-soft); color: var(--blocker); }
+  .tag-med     { background: var(--warn-soft);    color: var(--warn); }
+  .tag-low     { background: var(--surface-2);    color: var(--ink-3); }
+  .tag-ok      { background: var(--cleared-soft); color: var(--cleared); }
+  .tag-verif   { background: var(--accent-soft);  color: var(--accent); }
+
+  .cite {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--surface-2);
+    border-left: 2px solid var(--rule);
+    padding: 9px 12px;
+    border-radius: 0 2px 2px 0;
+    overflow-x: auto;
+    color: var(--ink);
+    white-space: pre;
+  }
+
+  /* ---- delta bar ---- */
+
+  .delta { display: flex; flex-direction: column; gap: 12px; }
+  .bar {
+    display: flex;
+    height: 40px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+  .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--surface);
+    min-width: 0;
+  }
+  .seg-shipped { background: var(--ink-3);  flex: 259; }
+  .seg-new     { background: var(--accent); flex: 104; }
+  .seg-typo    { background: var(--warn);   flex: 19; opacity: .55; }
+  .barkey {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    font-size: 13.5px;
+    color: var(--ink-2);
+  }
+  .barkey span { display: flex; align-items: center; gap: 7px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+  /* ---- tables ---- */
+
+  .tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule-2);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, td.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .bad  { color: var(--blocker); font-weight: 700; }
+  td .good { color: var(--cleared); font-weight: 700; }
+
+  /* ---- checklist ---- */
+
+  ol.check { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  ol.check > li {
+    background: var(--surface);
+    padding: 13px 16px;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 4px 12px;
+    align-items: baseline;
+  }
+  ol.check > li.is-prereq { background: var(--accent-soft); }
+  .step {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .stitle { font-weight: 600; color: var(--ink); font-size: 15px; }
+  .sexp { grid-column: 2; font-size: 13.5px; color: var(--ink-2); }
+  .sexp b { color: var(--ink); font-weight: 650; }
+
+  ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--ink-2); max-width: 70ch; }
+  ul.plain li::marker { color: var(--accent); }
+
+  details {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0;
+  }
+  summary {
+    cursor: pointer;
+    padding: 13px 16px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    list-style-position: inside;
+  }
+  details[open] summary { border-bottom: 1px solid var(--rule); color: var(--ink); }
+  .dbody { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+    font-size: 13px;
+    color: var(--ink-3);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  footer .m { background: none; padding: 0; color: var(--ink-3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">
+      <span>Audit de release</span><span>·</span>
+      <span>2026-08-18</span><span>·</span>
+      <span>HEAD <b>697d1a3</b></span><span>·</span>
+      <span>avant smoke test</span>
+    </div>
+    <h1>AZERTY Global <span class="v">1.2.0</span><br>ce qui a changé depuis la 1.1.0</h1>
+    <p class="standfirst">Quatre axes audités : comportement visible, migration des données, code et régressions, portes de release. Aucun <code>.cs</code> modifié, aucun MSIX produit, aucune publication. Deux blocages doivent tomber avant le packaging.</p>
+  </header>
+
+  <div class="verdict">
+    <div class="vcell is-blocker">
+      <span class="vnum">2</span>
+      <span class="vlabel">bloquants</span>
+      <span class="vnote">Binaires AOT en 1.1.2.0 ; CLSID de toast non déclaré</span>
+    </div>
+    <div class="vcell is-warn">
+      <span class="vnum">9</span>
+      <span class="vlabel">régressions</span>
+      <span class="vnote">3 revérifiées à la main, 6 reprises avec citation</span>
+    </div>
+    <div class="vcell is-neutral">
+      <span class="vnum">104</span>
+      <span class="vlabel">chaînes neuves</span>
+      <span class="vnote">Mesurées contre le binaire 1.1.0.0 expédié</span>
+    </div>
+    <div class="vcell is-ok">
+      <span class="vnum">16/18</span>
+      <span class="vlabel">changelog vérifié</span>
+      <span class="vnote">2 partielles, 0 introuvable, 3 à corriger</span>
+    </div>
+    <div class="vcell is-warn">
+      <span class="vnum">258</span>
+      <span class="vlabel">tests réels</span>
+      <span class="vnote">Contre 250 annoncés : le compte est périmé</span>
+    </div>
+  </div>
+
+  <section>
+    <h2><span class="idx">01</span> La base a dû être reconstruite</h2>
+    <p class="lead">Il n'existe aucune révision git égale à la v1.1.0. Les tags s'arrêtent à <code>v1.0.0</code>, et le commit <code>452aab0</code> mélange le rapatriement du code déjà expédié, des fonctions 1.2.0 et l'extraction du <code>TypingEngine</code> — 74 fichiers, 13 694 insertions.</p>
+    <p>La version que le code s'attribue le prouve : <code>452aab0^</code> s'annonce en <b>1.0.0</b>. La plage souvent citée comme « les changements de la 1.2.0 » couvre en réalité deux releases.</p>
+
+    <div class="cite">ad049fc  (452aab0^)  src/Program.cs -> Version = "1.0.0"
+452aab0              src/Program.cs -> Version = "1.1.2"
+697d1a3  (HEAD)      src/Program.cs -> Version = "1.2.0"</div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Plage</th><th>Commits</th><th>Fichiers</th><th>Lignes</th><th>Défaut</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">452aab0^..HEAD</td><td class="num">23</td><td class="num">115</td><td class="num">+17 840 / −1 946</td><td>Sur-déclare : compte la 1.1.0 entière comme neuve</td></tr>
+          <tr><td class="mono">452aab0..HEAD</td><td class="num">22</td><td class="num">86</td><td class="num">+5 168 / −2 110</td><td>Sous-déclare : rate les fonctions 1.2.0 posées dans <code>452aab0</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Corroboration structurelle : à <code>452aab0^</code>, <code>src/</code> ne contient ni <code>Localization/</code>, ni <code>StoreReview.cs</code>, ni <code>ProductIdentity.cs</code>, ni <code>UsageStatsWindow.cs</code> — donc ni interface bilingue, ni sollicitation d'avis, ni fenêtre de statistiques, qui sont trois fonctions <b>de la v1.1.0 publiée</b>.</p>
+    <p>La référence retenue est donc le <b>binaire expédié</b>, seul artefact qui soit réellement la 1.1.0 : <code>AZERTYGlobal.AZERTYGlobal_1.1.0.0_x64__w9kghr08zmhbg</code>, SHA-256 <code>3B08F41A…82ABB85</code>.</p>
+
+    <div class="delta">
+      <h3>Delta du texte visible, mesuré</h3>
+      <p>Dénominateur : 382 littéraux distincts de <code>src/Localization/</code> à HEAD, cherchés dans les 2 638 chaînes UTF-16 du binaire 1.1.0.0.</p>
+      <div class="bar" role="img" aria-label="Sur 382 chaînes : 259 déjà expédiées, 104 réellement neuves, 19 typographiques">
+        <div class="seg seg-shipped">259</div>
+        <div class="seg seg-new">104</div>
+        <div class="seg seg-typo">19</div>
+      </div>
+      <div class="barkey">
+        <span><i class="dot" style="background: var(--ink-3)"></i> Déjà dans la 1.1.0 — hors delta</span>
+        <span><i class="dot" style="background: var(--accent)"></i> Texte réellement neuf ou reformulé</span>
+        <span><i class="dot" style="background: var(--warn); opacity: .55"></i> Même phrase, typographie seule</span>
+      </div>
+      <p>Extracteur et normalisateur validés par témoin dans les deux sens : une chaîne mutée doit échouer en comparaison exacte et passer en comparaison normalisée. Réserve : environ 6 des 104 sont des fragments de concaténation captés par le regex, pas des phrases affichées.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">02</span> Bloquants avant tout packaging</h2>
+
+    <div class="finding sev-block">
+      <div class="fhead">
+        <span class="tag tag-id">B1</span>
+        <span class="tag tag-block">bloquant</span>
+        <span class="tag tag-verif">revérifié</span>
+        <h3>Les exécutables AOT publiés sur disque sont en 1.1.2.0</h3>
+      </div>
+      <p><code>Pack-MSIX.ps1</code> consommerait des binaires antérieurs à la correction de version. Un MSIX assemblé en l'état livrerait des binaires 1.1.2 dans un package annoncé 1.2.0.0.</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Artefact</th><th>FileVersion</th><th>Écrit le</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">win-x64/publish/AZERTY Global.exe</td><td class="mono"><span class="bad">1.1.2.0</span></td><td class="mono">2026-08-16 23:49</td></tr>
+            <tr><td class="mono">win-arm64/publish/AZERTY Global.exe</td><td class="mono"><span class="bad">1.1.2.0</span></td><td class="mono">2026-08-16 23:47</td></tr>
+            <tr><td class="mono">msix/AppxManifest.xml déclare</td><td class="mono"><span class="good">1.2.0.0</span></td><td>—</td></tr>
+            <tr><td class="mono">AssemblyInfo.cs:8 déclare</td><td class="mono"><span class="good">1.2.0.0</span></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Les deux publications AOT précèdent le commit <code>27541e1</code> (2026-08-17 11:36) qui a corrigé la version, et les 16 commits suivants. Précision face au rapport brut : la sortie <i>framework-dependent</i> porte bien 1.2.0.0, mais elle date du <code>dotnet build</code> de l'audit lui-même — ce n'est pas l'artefact que le packaging consomme.</p>
+    </div>
+
+    <div class="finding sev-block">
+      <div class="fhead">
+        <span class="tag tag-id">B2</span>
+        <span class="tag tag-block">bloquant</span>
+        <span class="tag tag-verif">revérifié</span>
+        <h3>L'activateur COM de toast réclame une déclaration manifeste absente</h3>
+      </div>
+      <p><code>src/ToastActivation.cs</code> l'exige deux fois, lignes 12 et 53, pour le CLSID <code>126A58B4-3200-43A6-9018-612C108F4A94</code> :</p>
+      <div class="cite">« Le CLSID doit rester identique à celui du manifest (com:Class + ToastActivatorCLSID) »</div>
+      <p><code>msix/AppxManifest.xml</code> ne contient <b>aucune</b> extension <code>com:</code> — sa seule <code>desktop:Extension</code> est <code>windows.startupTask</code> (ligne 49). L'activateur est pourtant enregistré en production packagée (<code>TrayApplication.cs:227</code>) et commande les deux chemins de toast.</p>
+      <p>Le test qui devrait voir ce trou est aveugle par construction : <code>ActivatorClsid_MatchesAppxManifestDeclaration</code> (<code>ToastActivationTests.cs:28-35</code>) compare une chaîne codée en dur à une autre chaîne codée en dur, sans jamais lire le manifeste.</p>
+      <p>L'effet à l'exécution n'est <b>pas</b> établi : le repli balloon existe et <code>CoRegisterClassObject</code> peut réussir sans déclaration. C'est une contradiction interne au dépôt, à lever par l'étape 9 du smoke test.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">03</span> Régressions, par gravité</h2>
+
+    <div class="finding sev-high">
+      <div class="fhead">
+        <span class="tag tag-id">R1</span>
+        <span class="tag tag-high">grave</span>
+        <span class="tag tag-verif">revérifié</span>
+        <h3>Deux sollicitations d'avis le même jour, les deux essais de la vie brûlés</h3>
+      </div>
+      <p><code>TrayApplication.cs:151</code> déclare un champ <b>d'instance</b>, donc nul à chaque démarrage du processus. C'est le seul que teste la garde « une par jour » du chemin partage :</p>
+      <div class="cite">src/TrayApplication.cs:151   private DateOnly? _reviewPromptShownDate;
+src/TrayApplication.cs:1791  if (_reviewPromptShownDate == today) return;</div>
+      <p>La date persistée existe — <code>ConfigManager.ReviewPromptLastShown</code> (<code>ConfigManager.cs:217</code>) — mais n'est lue qu'à <code>TrayApplication.cs:1665</code>, et seulement pour le plancher de 7 jours du second essai. Partager, redémarrer l'app, repartager : deuxième sollicitation le même jour. « Une seule par jour » n'est qu'« une seule par session de processus ». <b>Correctif : une ligne.</b></p>
+    </div>
+
+    <div class="finding sev-high">
+      <div class="fhead">
+        <span class="tag tag-id">R3</span>
+        <span class="tag tag-high">grave</span>
+        <span class="tag tag-verif">revérifié</span>
+        <h3>Le chemin partage ignore tous les seuils d'usage</h3>
+      </div>
+      <p><code>MaybeShowReviewAfterShare</code> (<code>TrayApplication.cs:1777-1793</code>) ne teste que <code>IsPackaged</code>, <code>ReviewPromptClicked</code>, <code>ReviewPromptCount &gt;= 2</code>, le silence de 48 h (inerte, voir R4) et la date en mémoire. <b>Aucun <code>activeDays</code>, aucun plancher depuis la première frappe remappée.</b></p>
+      <p>Un utilisateur du jour 1 qui termine le Défi du jour et clique « Copier mon résultat » reçoit la boîte de notation Store immédiatement. Les seuils 3 jours / 10 jours que le Changelog présente comme la refonte centrale ne gouvernent que le chemin par notification — et le Changelog ne dit nulle part qu'ils ne s'appliquent pas au partage.</p>
+    </div>
+
+    <div class="finding sev-med">
+      <div class="fhead">
+        <span class="tag tag-id">R2</span>
+        <span class="tag tag-med">moyen</span>
+        <span class="tag tag-verif">revérifié · corrigé</span>
+        <h3>La relance d'autostart se réémet après un refus explicite</h3>
+      </div>
+      <p><code>AutoStartNudge.MarkPromptShown()</code> n'est appelé que par les deux chemins du menu tray (<code>TrayApplication.cs:1062</code>, <code>:1109</code>). Les deux autres chemins d'écriture appellent <code>AutoStart.Set</code> sans marquer : <code>SettingsWindow.cs:754</code> et <code>OnboardingWindow.cs:681</code>.</p>
+      <p><b>Correction apportée au rapport brut</b>, qui élargissait la porte d'entrée : <code>ShouldPrompt</code> teste <code>if (s.AlreadyRegistered) return false;</code> (<code>AutoStartNudge.cs:41</code>). Décocher une case déjà décochée est un non-événement. Le scénario réel exige d'avoir <b>activé</b> le lancement automatique puis de l'avoir <b>désactivé</b> hors du menu.</p>
+      <p>Le Changelog écrit « un choix fait à la main <b>dans le menu</b> éteint la relance ». Pris au mot, c'est exact — le défaut est que Paramètres et Accueil ne sont pas couverts.</p>
+    </div>
+
+    <div class="finding sev-med">
+      <div class="fhead">
+        <span class="tag tag-id">R4 · R5</span>
+        <span class="tag tag-med">moyen</span>
+        <span class="tag tag-low">cité, non revérifié</span>
+        <h3>Garde-fous de la sollicitation qui ne gardent rien</h3>
+      </div>
+      <p><b>R4</b> — <code>ConfigManager.cs:265</code> : <code>_lastErrorUtc</code> non persisté, ce que le commentaire du code assume (« Volontairement en mémoire seulement »). Au démarrage le champ est quasi toujours nul, donc le silence de 48 h ne s'applique jamais à la sollicitation la plus probable.</p>
+      <p><b>R5</b> — l'essai est consommé dès que <code>StoreReview.TryShow</code> rend <code>true</code>, or <code>StoreReview.cs:49-52</code> rend <code>true</code> dès que <code>operation.Completed</code> est câblé. Le commentaire « l'API répond ici tout de suite » est faux. Soupçon associé : <code>MaybeShowReviewAfterShare</code> passe <code>_hWnd</code>, la fenêtre tray <b>masquée</b>, alors que <code>ReviewOwnerWindow()</code> existe pour préférer une fenêtre visible.</p>
+    </div>
+
+    <div class="finding sev-med">
+      <div class="fhead">
+        <span class="tag tag-id">R6 · R7 · R8</span>
+        <span class="tag tag-med">moyen</span>
+        <span class="tag tag-low">cité, non revérifié</span>
+        <h3>Chemin de frappe : trois changements de comportement</h3>
+      </div>
+      <p><b>R6</b> — <code>CompositionEngine.cs:31</code> : <code>string.Concat(deadKey.GetIsolated(), output)</code> remplace deux <code>EmitText</code> successifs. Deux <code>SendInput</code> deviennent un ; <code>GetEmitContext()</code> lu une fois au lieu de deux.</p>
+      <p><b>R7</b> — <code>CompositionEngine.cs:28-29</code> : touche morte orpheline, plus de repli sur le pass-through. Atteignable seulement par une disposition malformée, que ni le parseur ni le schéma ne rejettent.</p>
+      <p><b>R8</b> — <code>KeyMapper.cs:600-604</code> : ordre <code>EmitText</code> / <code>StateChanged</code> inversé sur le cas « touche morte + caractère composable ».</p>
+      <p>Le test qui devrait voir R6 est <b>structurellement aveugle</b> : <code>MockWin32Api.cs:22</code> aplatit <code>SendInputCalls.SelectMany(…)</code> — un lot de deux caractères et deux lots d'un seul rendent la même chaîne.</p>
+    </div>
+
+    <div class="finding sev-low">
+      <div class="fhead">
+        <span class="tag tag-id">R9</span>
+        <span class="tag tag-low">mineur</span>
+        <h3>Mélange UTC / local sur le plancher de 7 jours</h3>
+      </div>
+      <p>Écriture en <code>DateTime.UtcNow</code> (<code>ConfigManager.cs:246</code>), comparaison en <code>DateTime.Now</code> (<code>TrayApplication.cs:1652</code>) : un jour de dérive entre minuit et 2 h.</p>
+    </div>
+
+    <div class="finding sev-ok">
+      <div class="fhead">
+        <span class="tag tag-id">écarté</span>
+        <span class="tag tag-ok">risque n°1 levé</span>
+        <span class="tag tag-verif">revérifié</span>
+        <h3>Le lancement automatique de la v1.1 survit à la mise à jour</h3>
+      </div>
+      <p>C'était le risque le plus grave de la release : un <code>TaskId</code> dérivé du refactor d'identité aurait rendu orpheline la tâche enregistrée par la v1.1, cassant le démarrage automatique en silence.</p>
+      <div class="cite">src/AutoStart.cs:238  private const string StartupTaskId = "AZERTYGlobalStartup";
+manifeste 1.1.0.0     TaskId="AZERTYGlobalStartup"</div>
+      <p>Identiques. Le Changelog liste pourtant « le préfixe du <code>TaskId</code> de démarrage » parmi les 78 sites unifiés par <code>ProductIdentity</code> — or cette classe n'a aucun membre <code>TaskId</code>. Défaut de documentation, et le littéral est le choix le plus sûr des deux. Soupçon résiduel : cet identifiant est aussi hors du motif du scanner <code>list-identity-literals.py:33-42</code> — le seul dont la dérive casse le démarrage est le seul non tenu.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">04</span> Le poste de test est un cas de migration</h2>
+    <p class="lead">État réel mesuré : <code>config.json</code> du 2026-08-05, <code>usage-stats.json</code> du 2026-08-18. Tous les garde-fous passent.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Garde-fou</th><th>État mesuré</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><code>shouldShowOnboarding</code></td><td class="mono">showOnboardingAtStartup: true<br>learningMaxStepCompleted: 6</td><td>faux → branche <code>else</code></td></tr>
+          <tr><td><code>already &gt;= 2 || Clicked</code></td><td class="mono">reviewPromptDone: true → count 1</td><td><span class="bad">passe</span></td></tr>
+          <tr><td><code>NotificationsEnabled</code></td><td class="mono">absent → GetBoolDefaultTrue → true</td><td><span class="bad">passe</span></td></tr>
+          <tr><td><code>activeDays &gt;= 10</code> (essai 2)</td><td class="mono">activeDaysCount: 19</td><td><span class="bad">passe</span></td></tr>
+          <tr><td>Plancher de 7 jours</td><td class="mono">reviewPromptLastShown absent → null</td><td><span class="bad">test sauté</span></td></tr>
+          <tr><td><code>today − lastActive &lt;= 3</code></td><td class="mono">lastActiveDate: 2026-08-18</td><td><span class="bad">passe</span></td></tr>
+          <tr><td>Silence de 48 h</td><td class="mono">_lastErrorUtc non persisté</td><td><span class="bad">passe</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Le premier démarrage de la v1.2.0 sur ce poste consomme l'essai 2, le dernier de la vie de l'installation.</b> Sauvegarder <code>config.json</code> avant le smoke test est donc un prérequis, sinon aucun chemin de sollicitation n'est retestable.</p>
+    <p>Second point de méthode : <code>%LOCALAPPDATA%\AZERTY Global</code> <b>n'existe pas</b> — la configuration vit dans la redirection packagée. Un build local non packagé démarre sur un état vierge et ne traverse jamais le code de migration.</p>
+
+    <details>
+      <summary>Schémas et migration — le détail</summary>
+      <div class="dbody">
+        <p>Aucun numéro de version de schéma dans <code>config.json</code> ; <code>lessons-progress.json</code> en a un. Dix clés ajoutées en v1.2. La migration est déduite <b>à la lecture</b>, sans réécriture, donc idempotente :</p>
+        <div class="cite">var stored = GetUInt("reviewPromptCount");
+if (stored &gt; 0) return (int)stored;
+return GetBool("reviewPromptDone") ? 1 : 0;</div>
+        <p><code>reviewPromptDone</code> est laissé en place et réécrit à <code>true</code> à chaque essai : un retour arrière vers la v1.1 se comporte correctement. Un <code>false</code> explicite et une absence sont traités identiquement. <code>LessonProgressStore.cs</code> : zéro ligne de diff sur toute la plage. <code>usage-stats.json</code> : quatre champs ajoutés, dégradation propre à <code>0</code> / <code>null</code>.</p>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <h2><span class="idx">05</span> Nouveautés absentes du Changelog</h2>
+    <p class="lead">Prouvées sur le binaire expédié, donc réellement invisibles pour un utilisateur de la 1.1.0.</p>
+    <ul class="plain">
+      <li><b>Détection d'accès distant.</b> Zéro occurrence de <code>distant</code>, <code>remote</code> ou <code>Remote</code> dans le binaire 1.1.0.0. Le concept de suspension existait — « Suspendu pour compatibilité » y est — mais pas le motif de refus pour application protégée ou de connexion à distance.</li>
+      <li><b>Sélecteur manuel d'application et liste des suspensions.</b> « Choisir une application », « Applications (*.exe) », « Apps suspendues » : absents du binaire.</li>
+      <li><b>Mention de confidentialité de la détection.</b> « La détection reste entièrement locale. Aucun nom d'application n'est transmis. » Elle engage le dépôt sur un point de conformité : elle mérite une ligne.</li>
+      <li><b>Activateur COM de toast.</b> Le binaire ne contient ni <code>ToastGeneric</code> ni <code>ActivatorCLSID</code> ni <code>StoreContext</code>, mais contient <code>ms-windows-store://review/</code> — profil d'une v1.1 en balloon plus lien profond. Limite : en Native AOT les noms de types ne sont pas garantis présents comme chaînes, donc ce sont les littéraux XML de toast qui portent la conclusion.</li>
+      <li><b>Trois messages de suspension distincts</b> (<code>TrayApplication.cs:1863-1886</code>) et les boutons de réinitialisation de fenêtre.</li>
+    </ul>
+    <p>Écart d'ergonomie à trancher, pas un défaut : la case « Défi du jour » de l'accueil s'applique <b>au clic</b> (<code>OnboardingWindow.cs:756-764</code>), alors que ses deux voisines n'appliquent qu'à la fermeture et seulement si l'étape 3 est atteinte (<code>:669-685</code>). Trois cases côte à côte, deux régimes de persistance.</p>
+  </section>
+
+  <section>
+    <h2><span class="idx">06</span> Portes de release</h2>
+    <p><code>Verify-Release.ps1</code>, exécuté : les 15 vérifications de version passent, puis échec net à l'item 17 — <code>Fichier requis introuvable: msix\AZERTYGlobal.msixbundle</code>. Les comparaisons de hash publish ↔ bundle ne sont jamais atteintes. Le script ne vérifie ni les capacités du manifeste, ni les comptes de tests, ni la typographie, <b>ni la <code>FileVersion</code> des exécutables publiés</b> — c'est-à-dire exactement B1.</p>
+    <p><b>258 tests réels contre 250 annoncés</b> : 149 applicatifs + 95 moteur Windows + 14 moteur portable, contre 6 annoncés pour le portable. Deux mesures indépendantes concordantes. Cause : le commit <code>6bd8624</code> (14:44) a ajouté 8 tests après que le Changelog a figé le chiffre au commit <code>7ad768a</code> (11:36). Les trois sous-comptes annoncés sont exacts. Build Release : 0 avertissement, 0 erreur.</p>
+    <p>Manifeste : le <b>seul</b> écart entre la 1.1.0.0 installée et HEAD est la ligne <code>Version</code>. Identiques : <code>Identity Name</code>, <code>Publisher</code>, <code>Application Id</code>, <code>MinVersion 10.0.17763.0</code>, <code>TaskId</code>, <code>Enabled="false"</code>, et la seule capacité <code>runFullTrust</code>. Aucune capacité ajoutée pour la boîte de notation intégrée, ce qui est correct — <code>StoreContext</code> n'en exige pas. <code>mp:PhoneIdentity</code> figure dans le manifeste installé et n'a <b>jamais</b> existé dans le dépôt : ses GUID sont des valeurs Partner Center, le Store les injecte.</p>
+
+    <details>
+      <summary>Garde-fous sans témoin</summary>
+      <div class="dbody">
+        <p>Un garde-fou dont on n'a jamais vu un échec ne prouve rien.</p>
+        <ul class="plain">
+          <li><code>ActivatorClsid_MatchesAppxManifestDeclaration</code> — deux chaînes codées en dur comparées entre elles. C'est ce test qui aurait dû voir B2.</li>
+          <li><code>SyncScript_AllowsCreatingPublicLessonsResource</code> — deux <code>Assert.Contains</code> sur le texte source du <code>.ps1</code>, jamais exécuté.</li>
+          <li><code>list-identity-literals.py</code> et <code>check-layout-provenance.py</code> — bloquants en CI, exit 0 en l'état, aucun test ne réintroduit une régression pour prouver qu'ils la détecteraient.</li>
+          <li><code>Sync-LayoutResources.ps1 -SyncPublicRepo</code> — copie un fichier sur lui-même en annonçant un succès, bug reconnu par <code>docs/keyboard-platform.md:224-227</code>, non corrigé.</li>
+          <li>Le <code>SKIP_DIRS</code> du scanner d'identité saute <code>TypingEngine.Core</code> et <code>TypingEngine.Windows</code>, devenus du code de production.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <h2><span class="idx">07</span> Smoke test qui en découle</h2>
+    <p class="lead">Ordre imposé par les dépendances. Les étapes 1 et 2 sont des prérequis, pas des tests.</p>
+    <ol class="check">
+      <li class="is-prereq"><span class="step">1</span><span class="stitle">Sauvegarder <code>config.json</code> et <code>usage-stats.json</code></span><span class="sexp">Copie hors du dossier packagé <b>avant tout lancement</b>. Sans elle, l'essai 2 est perdu et aucun chemin de sollicitation n'est retestable.</span></li>
+      <li class="is-prereq"><span class="step">2</span><span class="stitle">Republier les deux cibles AOT, puis relancer <code>Verify-Release.ps1</code></span><span class="sexp"><code>vswhere</code> dans le PATH. Attendu : <b>FileVersion 1.2.0.0</b> sur les deux <code>publish/</code>, script au vert jusqu'au bundle.</span></li>
+      <li><span class="step">3</span><span class="stitle">Build non packagé, état vierge : les 104 chaînes neuves</span><span class="sexp">Textes FR et EN corrects, aucune clé manquante affichée brute.</span></li>
+      <li><span class="step">4</span><span class="stitle">Jour 1 : Défi du jour puis « Copier mon résultat »</span><span class="sexp"><b>R3</b> — la boîte de notation apparaît-elle dès le jour 1 ?</span></li>
+      <li><span class="step">5</span><span class="stitle">Partager, redémarrer l'app, repartager le même jour</span><span class="sexp"><b>R1</b> — deuxième sollicitation le même jour ?</span></li>
+      <li><span class="step">6</span><span class="stitle">Activer l'autostart, le désactiver depuis Paramètres, simuler deux jours d'usage</span><span class="sexp"><b>R2</b> — la relance revient-elle ?</span></li>
+      <li><span class="step">7</span><span class="stitle">Entrée « Défi du jour » du menu tray, installation neuve</span><span class="sexp">Toujours visible, même avec <code>trainingEnabled</code> à <code>false</code>.</span></li>
+      <li><span class="step">8</span><span class="stitle">Les trois cases de l'accueil, fermeture à l'étape 1 puis à l'étape 3</span><span class="sexp">La case « Défi du jour » s'applique au clic, les deux autres à la fermeture.</span></li>
+      <li><span class="step">9</span><span class="stitle">MSIX installé par-dessus la 1.1.0 : premier démarrage</span><span class="sexp">Essai 2 attendu. <b>B2</b> — le toast passe-t-il, ou le repli balloon prend-il ?</span></li>
+      <li><span class="step">10</span><span class="stitle">MSIX : cliquer la notification de sollicitation</span><span class="sexp">Un seul processus, pas de seconde instance ; la boîte intégrée s'ouvre sans quitter l'app.</span></li>
+      <li><span class="step">11</span><span class="stitle">MSIX : le lancement automatique de la v1.1 survit à la mise à jour</span><span class="sexp">Tâche toujours enregistrée, <code>State: 2</code>.</span></li>
+      <li><span class="step">12</span><span class="stitle">MSIX : touches mortes, Verr. Maj. + lettre identique, <code>K</code> sur YouTube</span><span class="sexp"><b>R6 · R7 · R8</b> — composition et pass-through inchangés.</span></li>
+      <li><span class="step">13</span><span class="stitle">MSIX : sélecteur manuel, liste des suspensions, message d'accès distant</span><span class="sexp">Fonctions non documentées, à valider avant de les documenter.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="idx">08</span> Limites de cet audit</h2>
+    <ul class="plain">
+      <li><b>Aucune exécution de l'application.</b> Tout provient de la lecture du code, de git, des fichiers de configuration réels et des chaînes du binaire expédié. Les 13 étapes ci-dessus sont précisément ce que la lecture ne peut pas trancher.</li>
+      <li><b>La v1.1.0 n'est connue que par son binaire x64.</b> L'ARM64 expédié n'a pas été inspecté ; les notes de version publiées sur le Store n'ont pas été relues.</li>
+      <li><b>L'équivalence comportementale de l'extraction <code>TypingEngine.Windows</code></b> (<code>1b68caa</code>) n'a pas été relue ligne à ligne. R6 à R8 viennent de <code>TypingEngine.Core</code>.</li>
+      <li><b>Le pass-through Win + touche et l'exclusion de Win dans <code>IsToggleShortcut</code> sont entièrement non testés</b> — <code>grep VK_LWIN</code> sur les tests : zéro fichier.</li>
+      <li><b>R4 à R9 n'ont pas été revérifiées</b> par la session principale ; elles portent la citation du rapport brut. R1, R2, R3, B1, B2, les versions, le manifeste et le delta de texte l'ont été.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Rapport source et pièces : <span class="m">components/microsoft-store/docs/audit-v1.2.0/</span></span>
+    <span>Mesures rejouables : <span class="m">witness-baseline.py</span>, <span class="m">delta-typographie.py</span></span>
+    <span>Rapports bruts par axe : <span class="m">raw-comportement.md</span>, <span class="m">raw-migration.md</span>, <span class="m">raw-code.md</span>, <span class="m">raw-release.md</span></span>
+  </footer>
+
+</div>
