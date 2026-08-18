@@ -15,7 +15,7 @@ Préparée et vérifiée dans ce dépôt ; **non encore soumise au Microsoft Sto
 - Fin du tirage 50/50 entre la fiche Store et la page feedback : en packagé la cible est toujours le Store. Une sollicitation sur deux partait vers un canal privé alors que la note publique est le seul levier qui manque à la fiche. La page feedback ne sert plus qu'aux installations hors Store, qui n'ont pas de fiche à noter.
 - Aucune sollicitation dans les 48 heures qui suivent une erreur journalisée.
 - `reviewPromptDone` cède la place à `reviewPromptCount` (plafonné à deux), `reviewPromptLastShown` et `reviewPromptClicked`. Migration des installations v1.1 : un `reviewPromptDone` à true vaut un essai déjà consommé, sinon la v1.2.0 enverrait deux notifications supplémentaires à quelqu'un qui a déjà été sollicité.
-- Textes distincts pour chaque essai, sans aucun chiffre d'usage : les statistiques restent affaire de la fenêtre « Mes statistiques ». Le second essai annonce qu'il est le dernier, ce qui est vrai.
+- Textes distincts pour chaque essai, sans aucun chiffre d'usage : les statistiques restent affaire de la fenêtre « Mes statistiques ». Le second essai ajoute le cadre associatif que le premier laisse de côté. Aucun des deux n'annonce sa propre fin : la formule « c'est la dernière fois qu'on vous le demande », prévue le 16 août pour lever la crainte du harcèlement, a été retirée le 18 août au premier smoke test — annoncer un plafond fait peser la demande au lieu de l'alléger. Les deux notifications décrivent ce que le clic ouvre au lieu de l'ordonner.
 
 **Défi du jour — sortie de l'ombre et partage (décisions du 2026-08-16)**
 
