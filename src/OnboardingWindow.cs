@@ -678,10 +678,18 @@ sealed class OnboardingWindow : IDisposable
             ConfigManager.SetShowOnboardingAtStartup(checkState != (IntPtr)BST_CHECKED);
 
             var autoStartState = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
-            bool autoStartSaved = AutoStart.Set(autoStartState == (IntPtr)BST_CHECKED);
+            bool autoStart = autoStartState == (IntPtr)BST_CHECKED;
+            bool autoStartWasRegistered = AutoStart.IsRegistered;
+            bool autoStartSaved = AutoStart.Set(autoStart);
             RefreshAutoStartCheckbox();
             if (!autoStartSaved)
                 ShowAutoStartError();
+            // Ce bloc n'est atteint que si _step3Reached : la case a donc été vue, et la
+            // modifier est un choix, qui éteint la relance dans un sens comme dans
+            // l'autre (R2 de l'audit v1.2.0). Une case jamais vue reste hors de ce
+            // chemin, la décision v0.9.7.1 est intacte.
+            else if (autoStart != autoStartWasRegistered)
+                AutoStartNudge.MarkPromptShown();
         }
 
         Win32.ShowWindow(_hWnd, 0);

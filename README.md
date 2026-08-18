@@ -62,7 +62,7 @@ dotnet test src/TypingEngine.Windows.Tests
 dotnet test src/TypingEngine.Core.Tests
 ```
 
-La suite comprend 149 tests applicatifs, 95 tests Windows et 6 tests portables, soit 250 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
+La suite comprend 169 tests applicatifs, 95 tests Windows et 18 tests portables, soit 282 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
 

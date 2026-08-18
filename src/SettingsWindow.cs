@@ -751,10 +751,17 @@ sealed class SettingsWindow : IDisposable
     public void Close()
     {
         bool autoStart = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+        bool autoStartWasRegistered = AutoStart.IsRegistered;
         bool autoStartSaved = AutoStart.Set(autoStart);
         RefreshAutoStartCheckbox();
         if (!autoStartSaved)
             ShowAutoStartError();
+        // Un choix fait à la main éteint la relance, dans un sens comme dans l'autre —
+        // même doctrine que ToggleAutoStart pour le menu tray (R2 de l'audit v1.2.0).
+        // Seul un changement réel compte : refermer Paramètres sans toucher la case
+        // n'est pas un choix, et ne doit pas consommer la proposition.
+        else if (autoStart != autoStartWasRegistered)
+            AutoStartNudge.MarkPromptShown();
 
         bool notifications = Win32.SendMessageW(_hWndChkNotifications, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
         ConfigManager.SetNotifications(notifications);

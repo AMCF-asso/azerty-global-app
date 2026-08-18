@@ -213,7 +213,7 @@ static class ConfigManager
         }
     }
 
-    /// <summary>Date (UTC, au jour près) de la dernière sollicitation affichée, si connue.</summary>
+    /// <summary>Date (heure locale, au jour près) de la dernière sollicitation affichée, si connue.</summary>
     public static DateOnly? ReviewPromptLastShown
     {
         get
@@ -235,15 +235,24 @@ static class ConfigManager
     /// Enregistre une sollicitation affichée : incrémente le compteur et pose la date.
     /// `reviewPromptDone` reste écrit pour qu'un retour arrière en v1.1 ne reparte pas
     /// de zéro.
+    ///
+    /// <paramref name="shownOn"/> est la date que l'appelant a déjà calculée pour ses
+    /// propres gardes, en heure locale. Cette date était écrite en UTC alors que tous
+    /// ses comparateurs travaillent en local : en UTC+2, une sollicitation affichée
+    /// entre 00 h et 02 h locales enregistrait la veille, et le plancher de 7 jours du
+    /// second essai s'ouvrait un jour trop tôt (R9 de l'audit v1.2.0). Recevoir la date
+    /// de l'appelant rend l'écart structurellement impossible, au lieu de le corriger
+    /// à deux endroits qui peuvent redivergier.
     /// </summary>
-    public static void RecordReviewPromptShown()
+    public static void RecordReviewPromptShown(DateOnly? shownOn = null)
     {
         lock (_lock)
         {
             var next = (uint)Math.Min(ReviewPromptCount + 1, 2);
             SetUInt("reviewPromptCount", next);
+            var date = shownOn ?? DateOnly.FromDateTime(DateTime.Now);
             SetString("reviewPromptLastShown",
-                DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+                date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
             SetBool("reviewPromptDone", true);
         }
     }

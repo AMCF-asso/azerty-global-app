@@ -86,8 +86,10 @@ sealed class TrayApplication : IDisposable
     private const int ReviewPromptSecondMinGapDays = 7;
     // Au-delà, l'utilisateur est considéré comme parti : on ne relance pas un absent.
     private const int ReviewPromptStaleDays = 3;
-    // Pas de sollicitation dans la foulée d'une erreur.
-    private const int ReviewPromptErrorCooldownHours = 48;
+    // Pas de sollicitation dans la foulée d'une erreur. Internal parce que
+    // ReviewSharePrompt applique le même silence au chemin partage : une seule source
+    // évite que les deux valeurs divergient.
+    internal const int ReviewPromptErrorCooldownHours = 48;
 
     // ── Menu flags ──────────────────────────────────────────────────
     private const uint MF_STRING = 0x0000;
@@ -1672,7 +1674,7 @@ sealed class TrayApplication : IDisposable
                     return false;
             }
 
-            ConfigManager.RecordReviewPromptShown();
+            ConfigManager.RecordReviewPromptShown(today);
             _reviewPromptShownDate = today; // l'avis prime sur le défi ce jour
             bool toStore = ConfigManager.IsPackaged;
             string title = L.Tray_ReviewPromptTitle(attempt);
@@ -1774,35 +1776,36 @@ sealed class TrayApplication : IDisposable
     /// promotion que le partage d'un résultat de défi (décision du 2026-08-17).</summary>
     private void OnStatsShared() => MaybeShowReviewAfterShare("stats");
 
+    /// <summary>
+    /// Un partage vient d'aboutir : ouvrir la boîte de notation Store si les gardes le
+    /// permettent. La règle de décision vit dans <see cref="ReviewSharePrompt"/>, pure et
+    /// testable sans fenêtre — R1 et R3 de l'audit v1.2.0 sont restés invisibles tant
+    /// qu'elle était mêlée à l'affichage.
+    /// </summary>
     private void MaybeShowReviewAfterShare(string source)
     {
         try
         {
-            if (!ConfigManager.IsPackaged) return;
-            if (ConfigManager.ReviewPromptClicked) return;
-            if (ConfigManager.ReviewPromptCount >= 2) return;
-
-            var lastError = ConfigManager.LastErrorUtc;
-            if (lastError.HasValue &&
-                DateTime.UtcNow - lastError.Value < TimeSpan.FromHours(ReviewPromptErrorCooldownHours))
-                return;
-
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            if (_reviewPromptShownDate == today) return;
+            var signals = ReviewSharePrompt.Snapshot();
+            if (!ReviewSharePrompt.ShouldPrompt(signals)) return;
 
             if (!StoreReview.TryShow(_hWnd, StoreReviewUrl)) return;
 
-            // Consommé seulement une fois la boîte réellement affichée : contrairement à la
-            // notification, dont l'échec est invisible, l'API répond ici tout de suite.
+            // Consommé une fois la boîte lancée. `TryShow` ne dit que « opération
+            // lancée » : la boîte a besoin de la boucle de messages de ce thread, donc
+            // rien ne l'attend (voir StoreReview) — mais ses deux chemins d'échec
+            // ouvrent le lien profond du Store, si bien qu'un essai n'est jamais
+            // consommé sans issue pour l'utilisateur.
             //
             // Un essai, pas la vie de l'installation (arbitrage du 2026-08-17). La boîte
             // s'est affichée, mais Windows ne dit jamais si l'utilisateur a déposé sa note :
             // poser aussi `reviewPromptClicked` faisait qu'un seul partage — même refermé
             // aussitôt sans rien noter — éteignait toute sollicitation ultérieure. Le
-            // plafond de deux essais, la règle « une seule par jour » et le silence de 48 h
-            // après une erreur restent les garde-fous.
-            ConfigManager.RecordReviewPromptShown();
-            _reviewPromptShownDate = today;
+            // plafond de deux essais, la règle « une seule par jour » sur la date
+            // persistée, les seuils d'usage et le silence de 48 h après une erreur
+            // restent les garde-fous, tous réunis dans ReviewSharePrompt.
+            ConfigManager.RecordReviewPromptShown(signals.Today);
+            _reviewPromptShownDate = signals.Today;
         }
         catch (Exception ex)
         {
