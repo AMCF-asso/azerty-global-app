@@ -4,7 +4,8 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap rescap desktop">
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap rescap desktop com">
 
   <Identity
     Name="AZERTYGlobal.AZERTYGlobal"
@@ -53,6 +54,29 @@
             TaskId="AZERTYGlobalStartup"
             Enabled="false"
             DisplayName="AZERTY Global" />
+        </desktop:Extension>
+
+        <!-- Activateur COM de toast (v1.2.0). Sans ces deux déclarations, Windows relance
+             l'exécutable au clic sur un toast au lieu de livrer l'activation au processus
+             vivant par INotificationActivationCallback : c'est le bloquant B2 de l'audit
+             v1.2.0 — src/ToastActivation.cs les exigeait en commentaire alors qu'aucune
+             extension com: n'existait ici. Le CLSID doit rester identique à
+             ToastActivation.ActivatorClsidString, et le test
+             ActivatorClsid_MatchesAppxManifestDeclaration lit ce fichier pour le vérifier.
+             Arguments est omis volontairement : la référence de schéma le donne optionnel,
+             et Program.Main ne lit aucun argument de lancement. -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="AZERTY Global.exe" DisplayName="AZERTY Global">
+              <com:Class Id="126A58B4-3200-43A6-9018-612C108F4A94"
+                DisplayName="AZERTY Global Toast Activator" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+
+        <desktop:Extension Category="windows.toastNotificationActivation">
+          <desktop:ToastNotificationActivation
+            ToastActivatorCLSID="126A58B4-3200-43A6-9018-612C108F4A94" />
         </desktop:Extension>
       </Extensions>
 

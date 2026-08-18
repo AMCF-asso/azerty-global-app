@@ -158,6 +158,18 @@ foreach ($arch in $architectures) {
     if (-not (Test-Path $publishExe)) {
         throw "Fichier requis introuvable: $publishExe"
     }
+
+    # Bloquant B1 de l'audit v1.2.0. Les verifications de version ci-dessus lisent toutes
+    # des fichiers source ; aucune ne lisait le binaire que Pack-MSIX va consommer. Le
+    # 2026-08-18, les deux publish/ portaient encore 1.1.2.0 alors que tout le depot
+    # declarait 1.2.0.0, et ce script passait cette etape sans rien dire. On compare les
+    # parties numeriques plutot que la chaine FileVersion, qui peut porter du texte libre.
+    $publishInfo = (Get-Item $publishExe).VersionInfo
+    $publishFileVersion = '{0}.{1}.{2}.{3}' -f $publishInfo.FileMajorPart, $publishInfo.FileMinorPart, $publishInfo.FileBuildPart, $publishInfo.FilePrivatePart
+    if ($publishFileVersion -ne $storeVersion) {
+        throw "FileVersion de l'exe publie $arch = $publishFileVersion, attendu $storeVersion. Republier: dotnet publish -c Release -r win-$arch"
+    }
+    Write-Host "FileVersion $arch : $publishFileVersion (publish = $storeVersion)"
 }
 
 if (-not (Test-Path $bundlePath)) {

@@ -85,7 +85,9 @@ public class ReviewPromptConfigTests : IDisposable
     {
         ConfigManager.RecordReviewPromptShown();
         Assert.Equal(1, ConfigManager.ReviewPromptCount);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow), ConfigManager.ReviewPromptLastShown);
+        // Heure locale, comme la comparaison du plancher de 7 jours (R9 de l'audit
+        // v1.2.0) : l'assertion en UtcNow épousait le bug au lieu de le voir.
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now), ConfigManager.ReviewPromptLastShown);
 
         // Persistance disque (survit à un redémarrage)
         ConfigManager.OverrideConfigPathForTests(_configPath);
@@ -100,6 +102,27 @@ public class ReviewPromptConfigTests : IDisposable
     {
         for (int i = 0; i < 5; i++) ConfigManager.RecordReviewPromptShown();
         Assert.Equal(2, ConfigManager.ReviewPromptCount);
+    }
+
+    /// <summary>
+    /// R9 de l'audit v1.2.0 : la date était écrite en UTC alors que toutes ses
+    /// comparaisons se font en heure locale, ce qui ouvrait le second essai un jour trop
+    /// tôt entre 00 h et 02 h locales. Elle vient désormais de l'appelant, qui a déjà
+    /// calculé sa date locale. Une date arbitraire est le seul témoin qui ne dépende pas
+    /// de l'heure à laquelle le test tourne.
+    /// </summary>
+    [Fact]
+    public void RecordReviewPromptShown_DateDeLAppelant_EstEcriteTelleQuelle()
+    {
+        var shownOn = new DateOnly(2026, 1, 2);
+        ConfigManager.RecordReviewPromptShown(shownOn);
+
+        Assert.Equal(shownOn, ConfigManager.ReviewPromptLastShown);
+        Assert.Contains("\"2026-01-02\"", File.ReadAllText(_configPath));
+
+        // Survit au redémarrage : c'est ce que relit la garde quotidienne de R1.
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+        Assert.Equal(shownOn, ConfigManager.ReviewPromptLastShown);
     }
 
     /// <summary>
