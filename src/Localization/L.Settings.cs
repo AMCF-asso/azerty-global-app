@@ -20,6 +20,11 @@ internal static partial class L
     public static string Settings_Notifications => T("Notifications", "Notifications");
     public static string Settings_OnboardingWindow => T("Fenêtre de bienvenue au démarrage", "Welcome window at startup");
 
+    /// <summary>Mention portée par un réglage imposé par une politique d'entreprise (lot C
+    /// du 2026-08-19). Formulation validée mot à mot par Antoine, fr et en : c'est celle que
+    /// Windows emploie dans ses propres Paramètres, donc déjà connue en parc.</summary>
+    public static string Settings_ManagedByOrganization => T("Géré par votre organisation", "Managed by your organization");
+
     public static string Settings_ResetVirtualKeyboard => T("Réinitialiser clavier virtuel", "Reset virtual keyboard");
     public static string Settings_ResetLessonsModule => T("Réinitialiser module Leçons", "Reset Lessons module");
 

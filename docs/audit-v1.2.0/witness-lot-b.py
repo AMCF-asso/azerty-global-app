@@ -9,6 +9,11 @@ Les mutations 5 et 6 sont attendues A ZERO ROUGE, et c'est le point : elles docu
 l'angle mort du lot B. Les deux liens Discord vivent dans des fenetres que la suite ne peut
 pas instancier, donc leur extinction n'est prouvee que par le smoke test du lot G.
 
+Ancres mises a jour le 2026-08-19 par le lot C : les quatre gardes 2, 3, 5 et 6 ne lisent
+plus AppChannel.CurrentIsSober mais PolicyManager.ExternalLinksEnabled, qui dit strictement
+plus (canal sobre par defaut, plus une politique d'entreprise qui peut eteindre aussi le
+canal Store). Le comportement garde est le meme ; seul le texte des ancres a bouge.
+
 Ce fichier est en ASCII pur comme les trois autres scripts de ce dossier (mesure), et
 restaure toujours l'etat d'origine, y compris en cas d'interruption : les octets exacts sont
 gardes en memoire et reecrits dans un finally, avec controle d'identite SHA-256.
@@ -39,13 +44,13 @@ MUTATIONS = [
     (
         "2. Le sous-menu sobre garde Soutenir le projet",
         "src/TrayApplication.cs", CRLF,
-        "            ? new[] { IDM_FEEDBACK, IDM_BUG }",
-        "            ? new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_BUG }",
+        "            : new[] { IDM_FEEDBACK, IDM_BUG };",
+        "            : new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_BUG };",
     ),
     (
         "3. Noter sur le Store revient sur tous les canaux",
         "src/TrayApplication.cs", CRLF,
-        "            ? Array.Empty<int>()\n            : new[] { IDM_RATE_STORE };",
+        "            ? new[] { IDM_RATE_STORE }\n            : Array.Empty<int>();",
         "            ? new[] { IDM_RATE_STORE }\n            : new[] { IDM_RATE_STORE };",
     ),
     (
@@ -57,13 +62,13 @@ MUTATIONS = [
     (
         "5. Le lien Discord des statistiques redevient inconditionnel (attendu : 0 rouge)",
         "src/UsageStatsWindow.cs", LF,
-        "        if (!AppChannel.CurrentIsSober) discordStyle |= Win32.WS_VISIBLE;",
+        "        if (PolicyManager.ExternalLinksEnabledNow) discordStyle |= Win32.WS_VISIBLE;",
         "        discordStyle |= Win32.WS_VISIBLE;",
     ),
     (
         "6. Le lien Discord de l'accueil redevient inconditionnel (attendu : 0 rouge)",
         "src/OnboardingWindow.cs", CRLF,
-        "        Win32.ShowWindow(_hWndLinkDiscord, AppChannel.CurrentIsSober ? 0 : step3Vis);",
+        "        Win32.ShowWindow(_hWndLinkDiscord, PolicyManager.ExternalLinksEnabledNow ? step3Vis : 0);",
         "        Win32.ShowWindow(_hWndLinkDiscord, step3Vis);",
     ),
 ]

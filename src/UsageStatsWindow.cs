@@ -182,7 +182,7 @@ sealed class UsageStatsWindow : IDisposable
         // tout obligerait à dénuller les huit sites qui le manipulent, pour un résultat
         // identique à l'écran.
         uint discordStyle = Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP;
-        if (!AppChannel.CurrentIsSober) discordStyle |= Win32.WS_VISIBLE;
+        if (PolicyManager.ExternalLinksEnabledNow) discordStyle |= Win32.WS_VISIBLE;
         _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkDiscord,
             discordStyle,
             0, 0, 0, 0,

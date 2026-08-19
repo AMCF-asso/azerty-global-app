@@ -414,15 +414,17 @@ static class UsageStats
     /// sobre (décision D5 du 2026-08-19), active partout ailleurs — le canal hors package
     /// garde le comportement d'aujourd'hui (D8).
     ///
-    /// Le lot C ajoutera par-dessus la politique HKLM <c>UsageStatsEnabled</c> et le réglage
-    /// utilisateur, avec la précédence politique &gt; config.json &gt; défaut de canal. Ce
-    /// point existe pour que cette couche s'insère à un seul endroit.
+    /// La politique HKLM <c>UsageStatsEnabled</c> prime depuis le lot C : elle éteint la
+    /// collecte sur un canal qui la ferait par défaut, et la rallume sur le canal sobre si
+    /// une structure le décide. Aucun réglage utilisateur n'existe entre les deux — la
+    /// précédence n'a donc ici que deux étages.
     ///
     /// Relue à chaque appel, jamais mise en cache : les tests forcent le canal par un scope,
     /// et un cache statique figerait la valeur au premier test de la suite — c'est
     /// exactement l'incident de dépendance à l'ordre du 2026-08-18.
     /// </summary>
-    internal static bool CollectionEnabled => !AppChannel.CurrentIsSober;
+    internal static bool CollectionEnabled =>
+        PolicyManager.UsageStatsEnabled(PolicyManager.Current.UsageStats, AppChannel.Current);
 
     /// <summary>
     /// Charge usage-stats.json en mémoire, à appeler au démarrage depuis le thread UI.
