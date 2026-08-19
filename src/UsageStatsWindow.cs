@@ -466,10 +466,17 @@ sealed class UsageStatsWindow : IDisposable
 
         Win32.SetTextColor(hdc, CLR_TEXT);
 
+        // Collecte éteinte : le dire, plutôt que d'afficher « vous n'avez pas encore tapé de
+        // caractère spécial » à chaque ouverture. Rien n'étant relu, cette phrase serait vraie
+        // au sens du fichier et fausse pour l'utilisateur, et un zéro ressemble à un bug.
+        bool collectionOff = !UsageStats.CollectionEnabled;
+
         var first = UsageStats.FirstRemapDate;
-        string headline = first.HasValue
-            ? L.Stats_HeadlineWithDate(L.FormatDate(first.Value))
-            : L.Stats_HeadlineNoData;
+        string headline = collectionOff
+            ? L.Stats_CollectionOffHeadline
+            : first.HasValue
+                ? L.Stats_HeadlineWithDate(L.FormatDate(first.Value))
+                : L.Stats_HeadlineNoData;
         y = DrawWrappedLine(hdc, _hFontText, headline, margin, y, cw - margin * 2, S(20));
 
         int activeDays = UsageStats.ActiveDaysCount;
@@ -511,7 +518,9 @@ sealed class UsageStatsWindow : IDisposable
 
         string reassurance = _showCopiedFeedback
             ? L.Stats_CopiedFeedback
-            : L.Stats_PrivacyReassurance;
+            : collectionOff
+                ? L.Stats_CollectionOffPrivacy
+                : L.Stats_PrivacyReassurance;
         Win32.SetTextColor(hdc, _showCopiedFeedback ? CLR_ACCENT : CLR_MUTED);
         DrawWrappedLine(hdc, _hFontMuted, reassurance, margin, y, cw - margin * 2, S(16));
 

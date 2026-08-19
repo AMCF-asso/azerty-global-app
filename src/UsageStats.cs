@@ -410,6 +410,21 @@ static class UsageStats
     // ═══════════════════════════════════════════════════════════════
 
     /// <summary>
+    /// La collecte est-elle active ? Défaut de canal de la v1.2.0 : éteinte sur le canal
+    /// sobre (décision D5 du 2026-08-19), active partout ailleurs — le canal hors package
+    /// garde le comportement d'aujourd'hui (D8).
+    ///
+    /// Le lot C ajoutera par-dessus la politique HKLM <c>UsageStatsEnabled</c> et le réglage
+    /// utilisateur, avec la précédence politique &gt; config.json &gt; défaut de canal. Ce
+    /// point existe pour que cette couche s'insère à un seul endroit.
+    ///
+    /// Relue à chaque appel, jamais mise en cache : les tests forcent le canal par un scope,
+    /// et un cache statique figerait la valeur au premier test de la suite — c'est
+    /// exactement l'incident de dépendance à l'ordre du 2026-08-18.
+    /// </summary>
+    internal static bool CollectionEnabled => !AppChannel.CurrentIsSober;
+
+    /// <summary>
     /// Charge usage-stats.json en mémoire, à appeler au démarrage depuis le thread UI.
     /// Garantit que la première frappe remappée ne déclenche pas le chargement paresseux :
     /// RecordEmittedText reste sans aucune I/O sur le chemin du hook clavier.
@@ -423,6 +438,13 @@ static class UsageStats
     {
         if (_loaded) return;
         _loaded = true;
+
+        // Collecte éteinte : on ne lit pas non plus. Les compteurs de la session partent de
+        // zéro et y retournent à la fermeture. Afficher des chiffres relus d'un fichier qu'on
+        // n'écrit plus contredirait ce que la fenêtre annonce, et ferait dépendre l'affichage
+        // d'un reliquat laissé par une installation précédente.
+        if (!CollectionEnabled) return;
+
         try
         {
             if (File.Exists(_statsPath))
@@ -487,6 +509,13 @@ static class UsageStats
 
     private static bool SaveLocked()
     {
+        // Collecte éteinte : aucun fichier créé, aucune écriture, pas même un JSON de zéros.
+        // Unique porte vers le disque de ce fichier, donc le seul endroit où ce test doit
+        // vivre : tout appelant présent ou futur y passe. Le <c>true</c> annonce « plus rien
+        // à écrire » et non « écrit » — un false ferait réessayer à chaque flush et laisserait
+        // _dirty armé pour toujours.
+        if (!CollectionEnabled) return true;
+
         string tempPath = _statsPath + ".tmp";
         try
         {
