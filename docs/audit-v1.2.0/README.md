@@ -21,6 +21,7 @@ declasses** en limitations argumentees, **3 citations du rapport brut corrigees*
 | `raw-release.md` | Versions, `Verify-Release.ps1`, tests, garde-fous |
 | `delta-textes-affine.md` | Delta du texte visible, mesure contre le binaire expedie |
 | `witness-baseline.py`, `delta-typographie.py` | Scripts rejouables des mesures ci-dessous |
+| `witness-lot-b.py`, `witness-lot-d.py` | Temoins de mutation des lots B et D du plan parc (2026-08-19) |
 | `AppxManifest.INSTALLED-1.1.0.0.xml` | Manifeste reel de la 1.1.0 servie par le Store |
 
 ## 1. Ce que cet audit peut affirmer, et pourquoi la base a du etre reconstruite
