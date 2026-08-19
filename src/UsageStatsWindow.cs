@@ -176,8 +176,15 @@ sealed class UsageStatsWindow : IDisposable
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
 
+        // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. Le contrôle
+        // est créé mais jamais affiché — il est le dernier de la ligne de liens, donc rien ne
+        // se déplace, et un STATIC invisible ne reçoit ni clic ni survol. Ne pas le créer du
+        // tout obligerait à dénuller les huit sites qui le manipulent, pour un résultat
+        // identique à l'écran.
+        uint discordStyle = Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP;
+        if (!AppChannel.CurrentIsSober) discordStyle |= Win32.WS_VISIBLE;
         _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkDiscord,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            discordStyle,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);

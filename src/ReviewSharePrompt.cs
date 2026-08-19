@@ -20,12 +20,18 @@
 //
 // La décision est pure et prend une photographie de signaux, comme AutoStartNudge et
 // TrainingReminders : testable sans fenêtre, sans Store et sans horloge réelle.
+//
+// Canal — lot B du 2026-08-19. La décision porte sur le canal de distribution et non plus
+// sur le seul fait d'être packagé, qui ne suffit plus depuis qu'un second paquet existe.
+// Ce chemin est le second point de sollicitation de l'application, et il est indépendant
+// de TrayApplication.MaybeShowReviewPrompt depuis la correction du 2026-08-18 : les
+// éteindre demande deux gardes, pas un. Le plan v1.2.0 supposait le contraire.
 
 namespace AZERTYGlobal;
 
 /// <summary>Photographie des signaux au moment de la décision (testable).</summary>
 readonly record struct ReviewSharePromptSignals(
-    bool IsPackaged,
+    DistributionChannel Channel,
     bool PromptClicked,
     int PromptCount,
     DateOnly? PromptLastShown,
@@ -50,8 +56,11 @@ static class ReviewSharePrompt
     /// à aucun état, n'affiche rien.</summary>
     public static bool ShouldPrompt(ReviewSharePromptSignals s)
     {
-        // Hors package, aucune fiche Store à noter : le canal n'existe pas.
-        if (!s.IsPackaged) return false;
+        // Seul le canal Store sollicite. Hors package, aucune fiche Store à noter : le canal
+        // n'existe pas. Sur le canal AMCF, la fiche existe mais on ne demande rien
+        // (décision D3 du 2026-08-19). Store implique packagé, donc ce test dit strictement
+        // plus que l'ancien « suis-je packagé » qu'il remplace.
+        if (s.Channel != DistributionChannel.Store) return false;
         // L'utilisateur a répondu à une sollicitation : on ne le relance plus, quel que
         // soit ce qu'il a fait ensuite sur le Store.
         if (s.PromptClicked) return false;
@@ -71,7 +80,7 @@ static class ReviewSharePrompt
 
     /// <summary>Photographie les signaux depuis ConfigManager et UsageStats.</summary>
     public static ReviewSharePromptSignals Snapshot() => new(
-        IsPackaged: ConfigManager.IsPackaged,
+        Channel: AppChannel.Current,
         PromptClicked: ConfigManager.ReviewPromptClicked,
         PromptCount: ConfigManager.ReviewPromptCount,
         PromptLastShown: ConfigManager.ReviewPromptLastShown,

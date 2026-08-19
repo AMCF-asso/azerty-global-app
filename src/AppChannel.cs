@@ -84,6 +84,22 @@ static class AppChannel
     }
 
     /// <summary>
+    /// Le canal AMCF est le seul canal sobre : ni sollicitation d'avis, ni « Soutenir le
+    /// projet », ni Discord (décision D3 du 2026-08-19). Trois fenêtres en dépendent, d'où
+    /// un prédicat ici plutôt qu'une comparaison recopiée.
+    ///
+    /// Le canal hors package garde le comportement d'aujourd'hui à l'identique (D8). Écrire
+    /// « ≠ Store » à la place éteindrait ses liens externes et trancherait D8 au passage, ce
+    /// que le plan v1.2.0 remet explicitement à plus tard — le lot B du plan emploie
+    /// pourtant cette formulation.
+    /// </summary>
+    internal static bool IsSober(DistributionChannel channel) =>
+        channel == DistributionChannel.Amcf;
+
+    /// <summary>Raccourci de <see cref="IsSober"/> pour le canal de cette instance.</summary>
+    internal static bool CurrentIsSober => IsSober(Current);
+
+    /// <summary>
     /// Hook de test : force le canal jusqu'au <c>Dispose</c>, qui restaure la valeur
     /// précédente — y compris quand le corps du <c>using</c> lève. À n'utiliser que dans le
     /// projet de tests via InternalsVisibleTo.

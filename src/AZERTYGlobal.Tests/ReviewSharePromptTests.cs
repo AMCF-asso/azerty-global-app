@@ -37,14 +37,14 @@ public class ReviewSharePromptTests : IDisposable
 
     /// <summary>Cas nominal : l'utilisateur a servi, il est revenu, il vient de partager.</summary>
     private static ReviewSharePromptSignals Nominal(
-        bool isPackaged = true,
+        DistributionChannel channel = DistributionChannel.Store,
         bool promptClicked = false,
         int promptCount = 0,
         DateOnly? promptLastShown = null,
         DateTime? lastErrorUtc = null,
         bool hasRemapped = true,
         int activeDaysCount = ReviewSharePrompt.MinActiveDays) =>
-        new(isPackaged,
+        new(channel,
             promptClicked,
             promptCount,
             promptLastShown,
@@ -63,7 +63,16 @@ public class ReviewSharePromptTests : IDisposable
     [Fact]
     public void ShouldPrompt_HorsPackage_ReturnsFalse()
     {
-        Assert.False(ReviewSharePrompt.ShouldPrompt(Nominal(isPackaged: false)));
+        Assert.False(ReviewSharePrompt.ShouldPrompt(Nominal(channel: DistributionChannel.Unpackaged)));
+    }
+
+    /// <summary>Canal AMCF : un partage ne sollicite pas davantage (D3). C'est le chemin que
+    /// la sortie tôt de MaybeShowReviewPrompt ne couvre pas — il a sa propre règle depuis le
+    /// 2026-08-18, et sans ce garde il restait grand ouvert sur le canal sobre.</summary>
+    [Fact]
+    public void ShouldPrompt_CanalAmcf_ReturnsFalse()
+    {
+        Assert.False(ReviewSharePrompt.ShouldPrompt(Nominal(channel: DistributionChannel.Amcf)));
     }
 
     [Fact]
@@ -171,7 +180,7 @@ public class ReviewSharePromptTests : IDisposable
         // suite entière, attrapé par l'assertion réciproque ci-dessous.
         var pinned = signals with
         {
-            IsPackaged = true,
+            Channel = DistributionChannel.Store,
             PromptClicked = false,
             PromptCount = 0,
             LastErrorUtc = null,
