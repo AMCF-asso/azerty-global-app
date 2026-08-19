@@ -102,11 +102,14 @@ sealed class SettingsWindow : IDisposable
         public Win32.RECT PreferencesPanel;
         public Win32.RECT AutoStartRect;
         public Win32.RECT NotificationsRect;
+        public Win32.RECT ManagedNotificationsRect;
         public Win32.RECT OnboardingRect;
+        public Win32.RECT ManagedOnboardingRect;
         public Win32.RECT TrainingRect;
         public Win32.RECT LanguagePanel;
         public Win32.RECT LanguageFrRect;
         public Win32.RECT LanguageEnRect;
+        public Win32.RECT ManagedLanguageRect;
         public Win32.RECT WindowsPanel;
         public Win32.RECT ResetVirtualKeyboardWindowRect;
         public Win32.RECT ResetLessonsWindowRect;
@@ -133,6 +136,19 @@ sealed class SettingsWindow : IDisposable
     private IntPtr _hWndRadioLangEn;
     private IntPtr _hWndLinkReset;
     private IntPtr _hWndValidation;
+    // Lignes « Géré par votre organisation » (lot C) : une par réglage sous politique.
+    private IntPtr _hWndManagedNotifications;
+    private IntPtr _hWndManagedOnboarding;
+    private IntPtr _hWndManagedLanguage;
+
+    // Politiques d'entreprise, lues une fois pour la vie du processus : ce qui est imposé
+    // ne change pas tant que l'application tourne, la mise en page peut donc s'y fier.
+    private readonly bool _managedNotifications =
+        PolicyManager.IsManaged(PolicyManager.Current.Notifications);
+    private readonly bool _managedOnboarding =
+        PolicyManager.IsOnboardingManaged(PolicyManager.Current.ShowOnboarding);
+    private readonly bool _managedLanguage =
+        PolicyManager.IsLanguageManaged(PolicyManager.Current.Language);
     // Section « Apps suspendues » (v1.2.0)
     private IntPtr _hWndCompatList;
     private IntPtr _hWndCompatAdd;
@@ -287,6 +303,9 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndRadioLangEn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkReset, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndValidation, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
+        Win32.SendMessageW(_hWndManagedNotifications, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
+        Win32.SendMessageW(_hWndManagedOnboarding, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
+        Win32.SendMessageW(_hWndManagedLanguage, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
         Win32.SendMessageW(_hWndCompatList, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
         Win32.SendMessageW(_hWndCompatAdd, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndCompatRemove, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
@@ -395,6 +414,16 @@ sealed class SettingsWindow : IDisposable
         if (ConfigManager.TrainingEnabled)
             Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
 
+        // Réglages sous politique d'entreprise (lot C) : le contrôle reste en place, grisé,
+        // et porte sous lui la ligne qui dit pourquoi. Le retirer se lirait comme une
+        // fonctionnalité disparue plutôt que comme une décision de la structure.
+        _hWndManagedNotifications = CreateManagedNotice(hInstance, _managedNotifications);
+        _hWndManagedOnboarding = CreateManagedNotice(hInstance, _managedOnboarding);
+        if (_managedNotifications)
+            Win32.EnableWindow(_hWndChkNotifications, false);
+        if (_managedOnboarding)
+            Win32.EnableWindow(_hWndChkOnboarding, false);
+
         // Noms de langue = endonymes, jamais traduits (un sélecteur de langue affiche
         // chaque langue dans elle-même : "Français" et "English" quelle que soit la langue active).
         _hWndRadioLangFr = Win32.CreateWindowExW(0, "BUTTON", "Français",
@@ -406,6 +435,13 @@ sealed class SettingsWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_LANG_EN, hInstance, IntPtr.Zero);
+        _hWndManagedLanguage = CreateManagedNotice(hInstance, _managedLanguage);
+        if (_managedLanguage)
+        {
+            Win32.EnableWindow(_hWndRadioLangFr, false);
+            Win32.EnableWindow(_hWndRadioLangEn, false);
+        }
+
         RefreshLanguageRadios();
 
         _hWndResetVirtualKeyboardWindow = Win32.CreateWindowExW(0, "BUTTON", L.Settings_ResetVirtualKeyboard,
@@ -502,10 +538,18 @@ sealed class SettingsWindow : IDisposable
             layout.NotificationsRect.left, layout.NotificationsRect.top,
             layout.NotificationsRect.right - layout.NotificationsRect.left,
             layout.NotificationsRect.bottom - layout.NotificationsRect.top, true);
+        Win32.MoveWindow(_hWndManagedNotifications,
+            layout.ManagedNotificationsRect.left, layout.ManagedNotificationsRect.top,
+            layout.ManagedNotificationsRect.right - layout.ManagedNotificationsRect.left,
+            layout.ManagedNotificationsRect.bottom - layout.ManagedNotificationsRect.top, true);
         Win32.MoveWindow(_hWndChkOnboarding,
             layout.OnboardingRect.left, layout.OnboardingRect.top,
             layout.OnboardingRect.right - layout.OnboardingRect.left,
             layout.OnboardingRect.bottom - layout.OnboardingRect.top, true);
+        Win32.MoveWindow(_hWndManagedOnboarding,
+            layout.ManagedOnboardingRect.left, layout.ManagedOnboardingRect.top,
+            layout.ManagedOnboardingRect.right - layout.ManagedOnboardingRect.left,
+            layout.ManagedOnboardingRect.bottom - layout.ManagedOnboardingRect.top, true);
         Win32.MoveWindow(_hWndChkTraining,
             layout.TrainingRect.left, layout.TrainingRect.top,
             layout.TrainingRect.right - layout.TrainingRect.left,
@@ -518,6 +562,10 @@ sealed class SettingsWindow : IDisposable
             layout.LanguageEnRect.left, layout.LanguageEnRect.top,
             layout.LanguageEnRect.right - layout.LanguageEnRect.left,
             layout.LanguageEnRect.bottom - layout.LanguageEnRect.top, true);
+        Win32.MoveWindow(_hWndManagedLanguage,
+            layout.ManagedLanguageRect.left, layout.ManagedLanguageRect.top,
+            layout.ManagedLanguageRect.right - layout.ManagedLanguageRect.left,
+            layout.ManagedLanguageRect.bottom - layout.ManagedLanguageRect.top, true);
         Win32.MoveWindow(_hWndResetVirtualKeyboardWindow,
             layout.ResetVirtualKeyboardWindowRect.left, layout.ResetVirtualKeyboardWindowRect.top,
             layout.ResetVirtualKeyboardWindowRect.right - layout.ResetVirtualKeyboardWindowRect.left,
@@ -607,9 +655,24 @@ sealed class SettingsWindow : IDisposable
                 contentWidth - panelPadX * 2, checkboxHeight);
             var notificationsRect = Rect(labelX, autoStartRect.bottom + checkboxGap,
                 contentWidth - panelPadX * 2, checkboxHeight);
-            var onboardingRect = Rect(labelX, notificationsRect.bottom + checkboxGap,
+            // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur de
+            // la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est imposé —
+            // la fenêtre est alors exactement celle d'avant le lot C.
+            int managedHeight = Math.Max(S(13), validationHeight);
+            int managedIndent = S(18);
+            int managedGap = S(2);
+            int managedWidth = contentWidth - panelPadX * 2 - managedIndent;
+            var managedNotificationsRect = Rect(labelX + managedIndent,
+                notificationsRect.bottom + managedGap, managedWidth,
+                _managedNotifications ? managedHeight : 0);
+            var onboardingRect = Rect(labelX,
+                (_managedNotifications ? managedNotificationsRect.bottom : notificationsRect.bottom) + checkboxGap,
                 contentWidth - panelPadX * 2, checkboxHeight);
-            var trainingRect = Rect(labelX, onboardingRect.bottom + checkboxGap,
+            var managedOnboardingRect = Rect(labelX + managedIndent,
+                onboardingRect.bottom + managedGap, managedWidth,
+                _managedOnboarding ? managedHeight : 0);
+            var trainingRect = Rect(labelX,
+                (_managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom) + checkboxGap,
                 contentWidth - panelPadX * 2, checkboxHeight);
 
             int languageTitleTop = trainingRect.bottom + S(18);
@@ -617,8 +680,12 @@ sealed class SettingsWindow : IDisposable
                 contentWidth - panelPadX * 2, checkboxHeight);
             var languageEnRect = Rect(labelX, languageFrRect.bottom + checkboxGap,
                 contentWidth - panelPadX * 2, checkboxHeight);
+            var managedLanguageRect = Rect(labelX + managedIndent,
+                languageEnRect.bottom + managedGap, managedWidth,
+                _managedLanguage ? managedHeight : 0);
 
-            int windowsTitleTop = languageEnRect.bottom + S(18);
+            int windowsTitleTop =
+                (_managedLanguage ? managedLanguageRect.bottom : languageEnRect.bottom) + S(18);
             int buttonHeight = S(28);
             var resetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + panelTitleHeight + S(9),
                 contentWidth - panelPadX * 2, buttonHeight);
@@ -669,11 +736,14 @@ sealed class SettingsWindow : IDisposable
                 PreferencesPanel = preferencesPanel,
                 AutoStartRect = autoStartRect,
                 NotificationsRect = notificationsRect,
+                ManagedNotificationsRect = managedNotificationsRect,
                 OnboardingRect = onboardingRect,
+                ManagedOnboardingRect = managedOnboardingRect,
                 TrainingRect = trainingRect,
                 LanguagePanel = languagePanel,
                 LanguageFrRect = languageFrRect,
                 LanguageEnRect = languageEnRect,
+                ManagedLanguageRect = managedLanguageRect,
                 WindowsPanel = windowsPanel,
                 ResetVirtualKeyboardWindowRect = resetVirtualKeyboardWindowRect,
                 ResetLessonsWindowRect = resetLessonsWindowRect,
@@ -763,11 +833,20 @@ sealed class SettingsWindow : IDisposable
         else if (autoStart != autoStartWasRegistered)
             AutoStartNudge.MarkPromptShown();
 
-        bool notifications = Win32.SendMessageW(_hWndChkNotifications, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
-        ConfigManager.SetNotifications(notifications);
+        // Un réglage imposé ne se réécrit pas dans config.json : la case affiche la valeur de
+        // la politique, la persister écraserait le choix de l'utilisateur, qui doit reprendre
+        // effet le jour où la politique est retirée.
+        if (!_managedNotifications)
+        {
+            bool notifications = Win32.SendMessageW(_hWndChkNotifications, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            ConfigManager.SetNotifications(notifications);
+        }
 
-        bool showOnboarding = Win32.SendMessageW(_hWndChkOnboarding, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
-        ConfigManager.SetShowOnboardingAtStartup(showOnboarding);
+        if (!_managedOnboarding)
+        {
+            bool showOnboarding = Win32.SendMessageW(_hWndChkOnboarding, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            ConfigManager.SetShowOnboardingAtStartup(showOnboarding);
+        }
 
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
@@ -897,6 +976,20 @@ sealed class SettingsWindow : IDisposable
                     Win32.SetTextColor(hdcStatic, (_keyboardValid && _searchValid) ? CLR_VALID : CLR_INVALID);
                     return _hPanelBrush;
                 }
+
+                // Lignes de politique, et cases ou radios grisées : Windows adresse
+                // WM_CTLCOLORSTATIC — et non WM_CTLCOLORBTN — à un bouton désactivé. Sans
+                // cette branche, ces contrôles reprendraient le fond système au milieu du
+                // panneau.
+                if (hCtrl == _hWndManagedNotifications || hCtrl == _hWndManagedOnboarding ||
+                    hCtrl == _hWndManagedLanguage ||
+                    hCtrl == _hWndChkNotifications || hCtrl == _hWndChkOnboarding ||
+                    hCtrl == _hWndRadioLangFr || hCtrl == _hWndRadioLangEn)
+                {
+                    Win32.SetBkMode(hdcStatic, 1);
+                    Win32.SetTextColor(hdcStatic, CLR_MUTED);
+                    return _hPanelBrush;
+                }
                 break;
             }
 
@@ -1008,6 +1101,21 @@ sealed class SettingsWindow : IDisposable
             _searchValid = valid;
     }
 
+    /// <summary>Crée la ligne « Géré par votre organisation » d'un réglage. Toujours créée,
+    /// visible seulement si le réglage est effectivement imposé : le contrôle existe donc
+    /// dans les deux cas, et la mise en page lui donne une hauteur nulle quand il est
+    /// masqué.</summary>
+    private IntPtr CreateManagedNotice(IntPtr hInstance, bool visible)
+    {
+        uint style = Win32.WS_CHILD;
+        if (visible)
+            style |= Win32.WS_VISIBLE;
+
+        return Win32.CreateWindowExW(0, "STATIC", L.Settings_ManagedByOrganization,
+            style, 0, 0, 0, 0,
+            _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+    }
+
     private void RefreshAutoStartCheckbox()
     {
         Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK,
@@ -1052,6 +1160,9 @@ sealed class SettingsWindow : IDisposable
         Win32.SetWindowTextW(_hWndChkAutoStart, L.Settings_AutoStart);
         Win32.SetWindowTextW(_hWndChkNotifications, L.Settings_Notifications);
         Win32.SetWindowTextW(_hWndChkOnboarding, L.Settings_OnboardingWindow);
+        Win32.SetWindowTextW(_hWndManagedNotifications, L.Settings_ManagedByOrganization);
+        Win32.SetWindowTextW(_hWndManagedOnboarding, L.Settings_ManagedByOrganization);
+        Win32.SetWindowTextW(_hWndManagedLanguage, L.Settings_ManagedByOrganization);
         Win32.SetWindowTextW(_hWndChkTraining, L.Challenge_OptIn);
         Win32.SetWindowTextW(_hWndResetVirtualKeyboardWindow, L.Settings_ResetVirtualKeyboard);
         Win32.SetWindowTextW(_hWndResetLessonsWindow, L.Settings_ResetLessonsModule);

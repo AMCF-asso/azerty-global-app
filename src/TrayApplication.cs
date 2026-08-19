@@ -1165,18 +1165,20 @@ sealed class TrayApplication : IDisposable
     /// La liste existe pour que le menu soit asservi à une donnée qu'un test peut lire. Trois
     /// AppendMenuW gardés par un if auraient donné un test qui vérifie que Store est Store.
     /// </summary>
-    internal static int[] FeedbackMenuEntries(DistributionChannel channel) =>
-        AppChannel.IsSober(channel)
-            ? new[] { IDM_FEEDBACK, IDM_BUG }
-            : new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_DISCORD, IDM_BUG };
+    internal static int[] FeedbackMenuEntries(DistributionChannel channel,
+        bool? externalLinksPolicy = null) =>
+        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+            ? new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_DISCORD, IDM_BUG }
+            : new[] { IDM_FEEDBACK, IDM_BUG };
 
     /// <summary>Entrées de premier niveau du bloc de retours : « Noter sur le Microsoft
     /// Store », absente du canal sobre (D3). Rendue comme liste pour la même raison que
     /// <see cref="FeedbackMenuEntries"/>.</summary>
-    internal static int[] FeedbackTopLevelEntries(DistributionChannel channel) =>
-        AppChannel.IsSober(channel)
-            ? Array.Empty<int>()
-            : new[] { IDM_RATE_STORE };
+    internal static int[] FeedbackTopLevelEntries(DistributionChannel channel,
+        bool? externalLinksPolicy = null) =>
+        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+            ? new[] { IDM_RATE_STORE }
+            : Array.Empty<int>();
 
     /// <summary>Libellé d'une entrée du bloc de retours. Séparé de la liste d'entrées : la
     /// liste est pure et se teste, les libellés dépendent de la langue chargée.</summary>
@@ -1231,13 +1233,14 @@ sealed class TrayApplication : IDisposable
 
         var hFeedbackMenu = Win32.CreatePopupMenu();
         var channel = AppChannel.Current;
-        foreach (int id in FeedbackMenuEntries(channel))
+        var externalLinksPolicy = PolicyManager.Current.ExternalLinks;
+        foreach (int id in FeedbackMenuEntries(channel, externalLinksPolicy))
             Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
         // « Noter sur le Microsoft Store » au premier niveau, sous « Retours et soutien »
         // (demande smoke test 2026-07-16) : l'action la plus utile au projet, en un clic.
         // Absente du canal sobre : rien n'y renvoie vers le Store (D3).
-        foreach (int id in FeedbackTopLevelEntries(channel))
+        foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy))
             Win32.AppendMenuW(hMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
@@ -1292,7 +1295,11 @@ sealed class TrayApplication : IDisposable
         // Bascule de langue directe juste avant Quitter (déplacée depuis le bloc
         // Configuration — demande smoke test 2026-07-16) : libellé dans la langue
         // cible, cf. L.Tray_MenuSwitchLanguage.
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_SWITCH_LANGUAGE, L.Tray_MenuSwitchLanguage);
+        // Langue imposée par une politique : l'entrée reste visible mais grisée, comme les
+        // autres entrées que l'état courant interdit. La retirer ferait croire à une
+        // fonctionnalité disparue plutôt qu'à une décision de la structure.
+        uint languageFlags = PolicyManager.LanguageIsManagedNow ? MF_STRING | MF_GRAYED : MF_STRING;
+        Win32.AppendMenuW(hMenu, languageFlags, IDM_SWITCH_LANGUAGE, L.Tray_MenuSwitchLanguage);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_QUIT, L.Tray_MenuQuit);
 
         Win32.GetCursorPos(out var pt);
@@ -1674,7 +1681,12 @@ sealed class TrayApplication : IDisposable
             // Canal sobre : aucune sollicitation d'avis (D3). Second garde nécessaire et non
             // redondant — le chemin par partage a le sien dans ReviewSharePrompt, les deux
             // sont séparés depuis le 2026-08-18, et éteindre celui-ci n'éteint pas l'autre.
-            if (AppChannel.CurrentIsSober) return false;
+            //
+            // Depuis le lot C, la condition est « les liens externes sont-ils permis » : elle
+            // dit strictement plus que le canal sobre, une politique pouvant aussi les
+            // éteindre sur le canal Store. Cette sollicitation ouvre la fiche Store, donc
+            // elle tombe avec eux.
+            if (!PolicyManager.ExternalLinksEnabledNow) return false;
             if (!ConfigManager.NotificationsEnabled) return false;
 
             int already = ConfigManager.ReviewPromptCount;

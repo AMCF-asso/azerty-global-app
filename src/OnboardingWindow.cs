@@ -549,8 +549,9 @@ sealed class OnboardingWindow : IDisposable
         Win32.ShowWindow(_hWndLinkFeedback, step3Vis);
         // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. C'est la
         // dernière ligne de la grille de liens de l'étape 3 : rien ne remonte, aucune place
-        // ne reste vide.
-        Win32.ShowWindow(_hWndLinkDiscord, AppChannel.CurrentIsSober ? 0 : step3Vis);
+        // ne reste vide. Depuis le lot C, une politique d'entreprise peut l'éteindre aussi
+        // sur les autres canaux.
+        Win32.ShowWindow(_hWndLinkDiscord, PolicyManager.ExternalLinksEnabledNow ? step3Vis : 0);
         Win32.ShowWindow(_hWndChkAutoStart, step3Vis);
         Win32.ShowWindow(_hWndChkDontShow, step3Vis);
         Win32.ShowWindow(_hWndChkTraining, step3Vis);
@@ -1159,20 +1160,30 @@ sealed class OnboardingWindow : IDisposable
         int flagH = S(BASE_FLAG_H);
         int flagLeft = cw - margin - flagW;
         int flagTop = y + S(6);
-        _flagRect = new Win32.RECT { left = flagLeft, top = flagTop, right = flagLeft + flagW, bottom = flagTop + flagH };
-        IntPtr flag = L.IsEnglish ? _gdipFlagFr : _gdipFlagEn;
-        if (flag != IntPtr.Zero)
+        // Langue imposée par une politique d'entreprise (lot C) : ni drapeau dessiné, ni zone
+        // cliquable. Un drapeau qui ne bascule rien se lit comme une panne. Le rect vide
+        // ferme aussi le hit-test du survol, qui lit le même champ.
+        if (PolicyManager.LanguageIsManagedNow)
         {
-            Win32.GdipDrawImageRectI(gfx, flag, flagLeft, flagTop, flagW, flagH);
+            _flagRect = default;
         }
         else
         {
-            // Repli si la ressource manque : endonyme court de la langue cible.
-            Win32.SelectObject(hdc, _hFontSmall);
-            Win32.SetTextColor(hdc, CLR_TEXT);
-            var flagFallbackRect = _flagRect;
-            Win32.DrawTextW(hdc, L.IsEnglish ? "FR" : "EN", -1, ref flagFallbackRect,
-                Win32.DT_CENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+            _flagRect = new Win32.RECT { left = flagLeft, top = flagTop, right = flagLeft + flagW, bottom = flagTop + flagH };
+            IntPtr flag = L.IsEnglish ? _gdipFlagFr : _gdipFlagEn;
+            if (flag != IntPtr.Zero)
+            {
+                Win32.GdipDrawImageRectI(gfx, flag, flagLeft, flagTop, flagW, flagH);
+            }
+            else
+            {
+                // Repli si la ressource manque : endonyme court de la langue cible.
+                Win32.SelectObject(hdc, _hFontSmall);
+                Win32.SetTextColor(hdc, CLR_TEXT);
+                var flagFallbackRect = _flagRect;
+                Win32.DrawTextW(hdc, L.IsEnglish ? "FR" : "EN", -1, ref flagFallbackRect,
+                    Win32.DT_CENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+            }
         }
 
         Win32.SelectObject(hdc, _hFontVersion);

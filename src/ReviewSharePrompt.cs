@@ -32,6 +32,7 @@ namespace AZERTYGlobal;
 /// <summary>Photographie des signaux au moment de la décision (testable).</summary>
 readonly record struct ReviewSharePromptSignals(
     DistributionChannel Channel,
+    bool ExternalLinks,
     bool PromptClicked,
     int PromptCount,
     DateOnly? PromptLastShown,
@@ -61,6 +62,10 @@ static class ReviewSharePrompt
         // (décision D3 du 2026-08-19). Store implique packagé, donc ce test dit strictement
         // plus que l'ancien « suis-je packagé » qu'il remplace.
         if (s.Channel != DistributionChannel.Store) return false;
+        // Liens externes éteints par une politique d'entreprise (lot C) : cette sollicitation
+        // ouvre la fiche Store, elle tombe avec eux. Garde distincte de celle du chemin par
+        // notification, qui a la sienne — les deux chemins restent indépendants.
+        if (!s.ExternalLinks) return false;
         // L'utilisateur a répondu à une sollicitation : on ne le relance plus, quel que
         // soit ce qu'il a fait ensuite sur le Store.
         if (s.PromptClicked) return false;
@@ -81,6 +86,7 @@ static class ReviewSharePrompt
     /// <summary>Photographie les signaux depuis ConfigManager et UsageStats.</summary>
     public static ReviewSharePromptSignals Snapshot() => new(
         Channel: AppChannel.Current,
+        ExternalLinks: PolicyManager.ExternalLinksEnabledNow,
         PromptClicked: ConfigManager.ReviewPromptClicked,
         PromptCount: ConfigManager.ReviewPromptCount,
         PromptLastShown: ConfigManager.ReviewPromptLastShown,

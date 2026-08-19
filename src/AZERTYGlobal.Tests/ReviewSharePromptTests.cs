@@ -38,6 +38,7 @@ public class ReviewSharePromptTests : IDisposable
     /// <summary>Cas nominal : l'utilisateur a servi, il est revenu, il vient de partager.</summary>
     private static ReviewSharePromptSignals Nominal(
         DistributionChannel channel = DistributionChannel.Store,
+        bool externalLinks = true,
         bool promptClicked = false,
         int promptCount = 0,
         DateOnly? promptLastShown = null,
@@ -45,6 +46,7 @@ public class ReviewSharePromptTests : IDisposable
         bool hasRemapped = true,
         int activeDaysCount = ReviewSharePrompt.MinActiveDays) =>
         new(channel,
+            externalLinks,
             promptClicked,
             promptCount,
             promptLastShown,

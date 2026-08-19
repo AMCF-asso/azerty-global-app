@@ -111,8 +111,19 @@ static class ConfigManager
     private static readonly object _lock = new();
     private static bool _loadFailed;
 
-    /// <summary>Vérifie si l'onboarding a déjà été affiché.</summary>
-    public static bool ShowOnboardingAtStartup
+    /// <summary>
+    /// La fenêtre de bienvenue doit-elle s'ouvrir au démarrage ? Une politique d'entreprise
+    /// à 0 la supprime ; à 1 elle autorise sans imposer, l'utilisateur gardant sa case
+    /// (décision d'Antoine du 2026-08-19). C'est le seul des cinq réglages sous politique
+    /// dont la valeur 1 ne verrouille rien : verrouiller la case à « cochée » ferait revenir
+    /// la fenêtre à chaque démarrage, y compris pour qui l'a déjà vue.
+    /// </summary>
+    public static bool ShowOnboardingAtStartup =>
+        PolicyManager.ShowOnboarding(PolicyManager.Current.ShowOnboarding, ShowOnboardingUserSetting);
+
+    /// <summary>Réglage utilisateur seul, sans la politique : ce que la case des Paramètres
+    /// écrit, et ce qui reprendrait effet si la politique était retirée.</summary>
+    internal static bool ShowOnboardingUserSetting
     {
         get
         {
@@ -165,8 +176,21 @@ static class ConfigManager
     /// <summary>Met à jour le cache de compatibilité du lancement automatique.</summary>
     public static void SetAutoStart(bool enabled) => SetBool("autoStartEnabled", enabled);
 
-    /// <summary>Vérifie si les notifications (balloons) sont activées. Défaut : true.</summary>
-    public static bool NotificationsEnabled
+    /// <summary>
+    /// Les notifications (balloons) sont-elles activées ? Défaut : true, sur les trois
+    /// canaux — la décision D3 n'a éteint que la sollicitation d'avis, et le canal AMCF
+    /// garde ses bulles de confirmation (décision d'Antoine du 2026-08-19). Une politique
+    /// d'entreprise prime sur le réglage utilisateur.
+    ///
+    /// Les bulles de sécurité ne passent pas par ici : <c>ShowSecurityBalloon</c> contourne
+    /// ce réglage, et la politique ne le referme pas — la DSI éteint le confort, pas
+    /// l'avertissement.
+    /// </summary>
+    public static bool NotificationsEnabled =>
+        PolicyManager.NotificationsEnabled(PolicyManager.Current.Notifications, NotificationsUserSetting);
+
+    /// <summary>Réglage utilisateur seul, sans la politique.</summary>
+    internal static bool NotificationsUserSetting
     {
         get
         {
@@ -182,8 +206,14 @@ static class ConfigManager
     /// <summary>Active ou désactive les notifications.</summary>
     public static void SetNotifications(bool enabled) => SetBool("notificationsEnabled", enabled);
 
-    /// <summary>Langue de l'interface : "fr" (défaut) ou "en". Toute autre valeur retombe sur "fr".</summary>
-    public static string AppLanguage
+    /// <summary>Langue de l'interface : "fr" (défaut) ou "en". Une politique d'entreprise
+    /// impose la langue et verrouille les trois surfaces qui la changent.</summary>
+    public static string AppLanguage =>
+        PolicyManager.AppLanguage(PolicyManager.Current.Language, AppLanguageUserSetting);
+
+    /// <summary>Réglage utilisateur seul, sans la politique. Toute autre valeur que "en"
+    /// retombe sur "fr".</summary>
+    internal static string AppLanguageUserSetting
     {
         get
         {
@@ -200,6 +230,10 @@ static class ConfigManager
     public static void SetAppLanguage(string lang)
     {
         if (lang != "fr" && lang != "en") return;
+        // Porte unique de la langue imposée. Trois surfaces la changent — les Paramètres, le
+        // menu tray et le drapeau de la fenêtre de bienvenue — et n'en griser qu'une laisse
+        // les deux autres écrire. Le garde est donc posé ici, pas dans les fenêtres.
+        if (PolicyManager.LanguageIsManagedNow) return;
         if (AppLanguage == lang) return;
         SetString("appLanguage", lang);
         AppLanguageChanged?.Invoke(lang);
