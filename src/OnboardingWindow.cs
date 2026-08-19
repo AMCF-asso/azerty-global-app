@@ -547,7 +547,10 @@ sealed class OnboardingWindow : IDisposable
         Win32.ShowWindow(_hWndLinkLessons, step3Vis);
         Win32.ShowWindow(_hWndLinkGuide, step3Vis);
         Win32.ShowWindow(_hWndLinkFeedback, step3Vis);
-        Win32.ShowWindow(_hWndLinkDiscord, step3Vis);
+        // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. C'est la
+        // dernière ligne de la grille de liens de l'étape 3 : rien ne remonte, aucune place
+        // ne reste vide.
+        Win32.ShowWindow(_hWndLinkDiscord, AppChannel.CurrentIsSober ? 0 : step3Vis);
         Win32.ShowWindow(_hWndChkAutoStart, step3Vis);
         Win32.ShowWindow(_hWndChkDontShow, step3Vis);
         Win32.ShowWindow(_hWndChkTraining, step3Vis);

@@ -27,11 +27,11 @@ sealed class TrayApplication : IDisposable
     private const int IDM_SITE = 1003;
     private const int IDM_KEYBOARD = 1006;
     private const int IDM_SEARCH = 1007;
-    private const int IDM_BUG = 1009;
+    internal const int IDM_BUG = 1009;
     private const int IDM_ONBOARDING = 1010;
     private const int IDM_SETTINGS = 1012;
-    private const int IDM_SUPPORT = 1013;
-    private const int IDM_FEEDBACK = 1014;
+    internal const int IDM_SUPPORT = 1013;
+    internal const int IDM_FEEDBACK = 1014;
     private const int IDM_ABOUT = 1016;
     private const int IDM_EXERCISES = 1023;
     private const int IDM_GUIDE_CHANGES = 1024;
@@ -39,9 +39,9 @@ sealed class TrayApplication : IDisposable
     private const int IDM_CARDS = 1026;
     private const int IDM_PAUSE = 1027;
     private const int IDM_PRIVACY = 1028;
-    private const int IDM_DISCORD = 1029;
+    internal const int IDM_DISCORD = 1029;
     private const int IDM_RELEASE_NOTES = 1030;
-    private const int IDM_RATE_STORE = 1031;
+    internal const int IDM_RATE_STORE = 1031;
     private const int IDM_STATS = 1032;
     private const int IDM_SWITCH_LANGUAGE = 1033;
     private const int IDM_QUIT = 1005;
@@ -1156,6 +1156,40 @@ sealed class TrayApplication : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Actions utilisateur
     // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Entrées du sous-menu « Retours et soutien », dans l'ordre d'affichage. Le canal sobre
+    /// perd « Soutenir le projet » et Discord (D3) et garde « Donner mon avis » et
+    /// « Signaler un bug » (D4) : deux entrées sur quatre, jamais un sous-menu vide.
+    ///
+    /// La liste existe pour que le menu soit asservi à une donnée qu'un test peut lire. Trois
+    /// AppendMenuW gardés par un if auraient donné un test qui vérifie que Store est Store.
+    /// </summary>
+    internal static int[] FeedbackMenuEntries(DistributionChannel channel) =>
+        AppChannel.IsSober(channel)
+            ? new[] { IDM_FEEDBACK, IDM_BUG }
+            : new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_DISCORD, IDM_BUG };
+
+    /// <summary>Entrées de premier niveau du bloc de retours : « Noter sur le Microsoft
+    /// Store », absente du canal sobre (D3). Rendue comme liste pour la même raison que
+    /// <see cref="FeedbackMenuEntries"/>.</summary>
+    internal static int[] FeedbackTopLevelEntries(DistributionChannel channel) =>
+        AppChannel.IsSober(channel)
+            ? Array.Empty<int>()
+            : new[] { IDM_RATE_STORE };
+
+    /// <summary>Libellé d'une entrée du bloc de retours. Séparé de la liste d'entrées : la
+    /// liste est pure et se teste, les libellés dépendent de la langue chargée.</summary>
+    private static string FeedbackMenuLabel(int id) => id switch
+    {
+        IDM_SUPPORT => L.Tray_MenuSupportProject,
+        IDM_FEEDBACK => L.Tray_MenuGiveFeedback,
+        IDM_DISCORD => L.Stats_LinkDiscord,
+        IDM_BUG => L.Tray_MenuReportBug,
+        IDM_RATE_STORE => L.Tray_MenuRateStore,
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
+    };
+
     private void ShowContextMenu()
     {
         var hMenu = Win32.CreatePopupMenu();
@@ -1196,14 +1230,15 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
 
         var hFeedbackMenu = Win32.CreatePopupMenu();
-        Win32.AppendMenuW(hFeedbackMenu, MF_STRING, IDM_SUPPORT, L.Tray_MenuSupportProject);
-        Win32.AppendMenuW(hFeedbackMenu, MF_STRING, IDM_FEEDBACK, L.Tray_MenuGiveFeedback);
-        Win32.AppendMenuW(hFeedbackMenu, MF_STRING, IDM_DISCORD, L.Stats_LinkDiscord);
-        Win32.AppendMenuW(hFeedbackMenu, MF_STRING, IDM_BUG, L.Tray_MenuReportBug);
+        var channel = AppChannel.Current;
+        foreach (int id in FeedbackMenuEntries(channel))
+            Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
         // « Noter sur le Microsoft Store » au premier niveau, sous « Retours et soutien »
         // (demande smoke test 2026-07-16) : l'action la plus utile au projet, en un clic.
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_RATE_STORE, L.Tray_MenuRateStore);
+        // Absente du canal sobre : rien n'y renvoie vers le Store (D3).
+        foreach (int id in FeedbackTopLevelEntries(channel))
+            Win32.AppendMenuW(hMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
         // Configuration
@@ -1636,6 +1671,10 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
+            // Canal sobre : aucune sollicitation d'avis (D3). Second garde nécessaire et non
+            // redondant — le chemin par partage a le sien dans ReviewSharePrompt, les deux
+            // sont séparés depuis le 2026-08-18, et éteindre celui-ci n'éteint pas l'autre.
+            if (AppChannel.CurrentIsSober) return false;
             if (!ConfigManager.NotificationsEnabled) return false;
 
             int already = ConfigManager.ReviewPromptCount;
