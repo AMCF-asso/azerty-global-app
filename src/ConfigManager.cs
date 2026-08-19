@@ -40,6 +40,9 @@ static class ConfigManager
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetCurrentPackageFullName(ref int packageFullNameLength, System.Text.StringBuilder? packageFullName);
 
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetCurrentPackageFamilyName(ref int packageFamilyNameLength, System.Text.StringBuilder? packageFamilyName);
+
     /// <summary>Indique si l'app tourne dans un package MSIX.</summary>
     public static bool IsPackaged { get; } = DetectPackaged();
 
@@ -49,6 +52,37 @@ static class ConfigManager
         {
             int length = 0;
             return GetCurrentPackageFullName(ref length, null) != APPMODEL_ERROR_NO_PACKAGE;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Family name du package courant (forme <c>&lt;Name&gt;_&lt;PublisherId&gt;</c>), par lequel
+    /// se reconnaît le canal de distribution. Renvoie false hors package, et aussi quand l'API
+    /// échoue autrement, sans distinguer les deux cas. L'appelant ne les confond pas pour
+    /// autant : il tient le fait « suis-je dans un package » de <see cref="IsPackaged"/>, qui
+    /// repose sur un appel séparé, et n'a donc rien à décider d'un family name illisible.
+    ///
+    /// Même patron que <see cref="DetectPackaged"/>, en deux appels : le premier donne la
+    /// longueur, le second le contenu.
+    /// </summary>
+    public static bool TryGetPackageFamilyName(out string? familyName)
+    {
+        familyName = null;
+        try
+        {
+            int length = 0;
+            if (GetCurrentPackageFamilyName(ref length, null) == APPMODEL_ERROR_NO_PACKAGE) return false;
+            if (length <= 0) return false;
+
+            var buffer = new System.Text.StringBuilder(length);
+            if (GetCurrentPackageFamilyName(ref length, buffer) != 0) return false;
+
+            familyName = buffer.ToString();
+            return familyName.Length > 0;
         }
         catch
         {
