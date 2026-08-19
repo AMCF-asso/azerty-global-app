@@ -40,6 +40,15 @@ internal static partial class L
         "Ces statistiques sont calculées et stockées uniquement sur votre appareil. Rien n’est transmis.",
         "These statistics are calculated and stored only on your device. Nothing is ever transmitted.");
 
+    // ── Collecte éteinte (canal sobre, décision D5 du 2026-08-19) ────
+    public static string Stats_CollectionOffHeadline => T(
+        "Les statistiques d’usage sont désactivées sur cette installation. Les compteurs ci-dessous ne durent que le temps de la session.",
+        "Usage statistics are turned off for this installation. The counters below last only for this session.");
+
+    public static string Stats_CollectionOffPrivacy => T(
+        "Rien n’est écrit sur le disque, rien n’est transmis.",
+        "Nothing is written to disk, nothing is transmitted.");
+
     // ── Export presse-papiers (UsageStats.BuildShareText) ────────────
     public static string Stats_ShareJustStarted => T(
         $"Je viens tout juste de commencer à utiliser {Product}.",
