@@ -31,10 +31,14 @@ SRC = Path(__file__).resolve().parent.parent / "src"
 # tête : depuis la conversion de Localization/, une régression prendrait la forme d'une
 # phrase traduite qui réécrit « AZERTY Global » au milieu, pas d'un littéral qui commence
 # par lui. Une ancre en tête n'aurait rien vu.
+# Même raison pour le family name de paquet : il s'écrit
+# « AZERTYGlobal.AZERTYGlobal_<PublisherId> », donc un motif ancré sur AZERTYGlobal_ en
+# tête de littéral ne le voyait pas. Mesuré le 2026-08-19 : le scanner rendait 0 alors que
+# ProductIdentity.cs venait d'en déclarer un.
 PATTERN = re.compile(
     r'"[^"\n]*AZERTY Global[^"\n]*"'
     r'|"[^"\n]*azerty\.global[^"\n]*"'
-    r'|"AZERTYGlobal_[^"]*"'
+    r'|"[^"\n]*AZERTYGlobal_[^"\n]*"'
     r'|"https://discord\.gg/[^"]*"'
     r'|"https://github\.com/[^"]*"'
     r'|9N4BTS43SSSZ'

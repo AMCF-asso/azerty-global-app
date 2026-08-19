@@ -54,6 +54,22 @@ static class ProductIdentity
     public const string StoreReviewUrl =
         "ms-windows-store://review/?ProductId=" + StoreProductId;
 
+    /// <summary>Package family name de l'identité Store, forme <c>&lt;Name&gt;_&lt;PublisherId&gt;</c>.
+    /// PublisherId n'est pas un identifiant attribué mais un condensé déterministe de la chaîne
+    /// d'éditeur du paquet : SHA-256 de cette chaîne en UTF-16LE, 8 premiers octets, base32
+    /// Crockford sur 13 caractères. Celui-ci est le condensé de
+    /// <c>CN=7FD049E3-1C58-42E0-A07F-A9712DE19E38</c>, l'éditeur du manifeste destiné au Store ;
+    /// il ne dépend donc pas de la façon dont le paquet installé a été signé.
+    ///
+    /// Remesure, par deux voies indépendantes qui doivent s'accorder : d'une part
+    /// <c>Get-AppxPackage -Name *AZERTY* | Select-Object PackageFamilyName</c> sur un poste où le
+    /// paquet est installé, d'autre part le condensé recalculé depuis l'attribut
+    /// <c>Publisher</c> de <c>msix/AppxManifest.xml</c>. Mesuré le 2026-08-19 : les deux donnent
+    /// cette valeur.
+    ///
+    /// Sert à reconnaître le canal de distribution, voir <see cref="AppChannel"/>.</summary>
+    public const string StorePackageFamilyName = "AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg";
+
     /// <summary>Mutex d'instance unique ; l'appelant y ajoute le SID de session.</summary>
     public const string SingleInstanceMutexName = Namespace + "SingleInstance";
 
