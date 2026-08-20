@@ -171,6 +171,26 @@ Commande type à adapter avec le vrai `metadata.json` local :
 signtool.exe sign /v /debug /fd SHA256 /tr "http://timestamp.acs.microsoft.com" /td SHA256 /dlib "<ArtifactSigningClient>\bin\x64\Azure.CodeSigning.Dlib.dll" /dmdf "metadata.json" "msix\AZERTYGlobal-<version>.msixbundle"
 ```
 
+### 9. Générer le `.appinstaller` du canal AMCF
+
+Lot E du plan v1.2.0, décision D7. Le fichier est **généré depuis le bundle signé**, jamais écrit à la main : son `Publisher` et sa version doivent égaler ceux du manifeste au caractère près, sinon la mise à jour boucle ou ne se déclenche jamais.
+
+À faire après l'étape 8, sur la copie signée au nom de l'AMCF — pas sur le bundle destiné au Store, que le script refuse :
+
+```powershell
+python scripts/gen-appinstaller.py --bundle "msix\AZERTYGlobal-<version>-amcf-signed.msixbundle" --out "msix\AZERTY_Global.appinstaller"
+```
+
+Puis relire le fichier produit contre le bundle, ce que fait aussi la vérification de release :
+
+```powershell
+python scripts/gen-appinstaller.py --bundle "msix\AZERTYGlobal-<version>-amcf-signed.msixbundle" --check "msix\AZERTY_Global.appinstaller"
+```
+
+Le script affiche l'identité lue, la liste des caractères non-ASCII du fichier, et rend un code de sortie non nul au premier écart. Il n'écrit rien sans `--out`.
+
+Publication : deux objets dans le bucket R2 servi par `download.azerty.global`, sous des noms stables et sans version — `AZERTY_Global.appinstaller` et `AZERTY_Global.msixbundle`. ⚠️ Le Worker `components/website/workers/download-msix/` applique aujourd'hui `Cache-Control: max-age=31536000, immutable` et `Content-Disposition: attachment` à **tous** ses fichiers : en l'état, le `.appinstaller` serait téléchargé au lieu d'être ouvert par App Installer, et la mise à jour ne serait jamais vue. Les quatre pièges et le détail des décisions : `docs/audit-v1.2.0/lot-e-appinstaller.md`.
+
 ## Notes importantes
 
 - Le dernier segment de version doit rester à `0` pour le Store (ex: `0.9.5.0`)
@@ -181,4 +201,4 @@ signtool.exe sign /v /debug /fd SHA256 /tr "http://timestamp.acs.microsoft.com" 
 
 ---
 
-*Dernière mise à jour : 2026-06-29 (v1.0.0 — publication Microsoft Store ; MSIX AMCF à produire)*
+*Dernière mise à jour : 2026-08-20 (v1.2.0 — étape 9, génération du `.appinstaller` du canal AMCF)*
