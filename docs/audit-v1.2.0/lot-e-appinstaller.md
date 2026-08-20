@@ -164,22 +164,47 @@ Deux tests portent la charge de preuve du reste :
 
 Le fichier vit sur `download.azerty.global`, servi par le Worker Cloudflare
 `components/website/workers/download-msix/`. **Rien n'a été modifié là** : le composant est
-revendiqué par une autre session, qui a reçu la demande. Deux objets à ajouter à `FILES` —
+revendiqué par la session `2026-08-19-audit-site-google-nonprofits`, qui a accepté le périmètre
+et prend la modification. Deux objets à ajouter à `FILES` —
 `AZERTY_Global.appinstaller` en `application/appinstaller`, et `AZERTY_Global.msixbundle`, nom
-stable. Quatre pièges mesurés dans ce Worker le 2026-08-20, avant toute édition.
+stable. Cinq pièges mesurés dans ce Worker le 2026-08-20, avant toute édition.
 
-1. **`CACHE_CONTROL = 'public, max-age=31536000, immutable'` est appliqué à tous les fichiers.**
-   Sur une URL stable, c'est fatal : App Installer relirait pendant un an un `.appinstaller`
-   périmé, et la mise à jour ne se déclencherait jamais. Ces deux entrées veulent un
-   `Cache-Control` court, propre à elles.
-2. **`Content-Disposition: attachment` est posé sur tous les fichiers.** Sur un `.appinstaller`,
-   cela force le téléchargement au lieu de le passer à App Installer — le symptôme même que le
-   plan attribue au seul type MIME. L'en-tête doit être omis pour cette entrée.
-3. **`sha256` et `expectedSize` sont codés en dur par fichier.** Un nom stable change de contenu
+1. **`CACHE_CONTROL = 'public, max-age=31536000, immutable'` (ligne 39) est appliqué à tous les
+   fichiers.** Sur une URL stable, c'est fatal : App Installer relirait pendant un an un
+   `.appinstaller` périmé, et la mise à jour ne se déclencherait jamais. Ces deux entrées veulent
+   un `Cache-Control` court, propre à elles.
+2. **Cette constante est appliquée à deux endroits, pas un** — ligne 93 sur la réponse du
+   fichier, et **ligne 115 sur la réponse texte des `.sha256`**. Un `.appinstaller` à nom stable
+   expose aussi `AZERTY_Global.appinstaller.sha256`, qui serait mis en cache un an lui aussi et
+   contredirait le fichier qu'il décrit. Piège relevé par la session `website`, pas par celle-ci,
+   qui avait lu `textResponse` sans en tirer la conséquence.
+3. **`Content-Disposition: attachment` (ligne 92) est posé sur tous les fichiers.** Sur un
+   `.appinstaller`, cela force le téléchargement au lieu de le passer à App Installer — le
+   symptôme même que le plan attribue au seul type MIME. L'en-tête doit être omis pour cette
+   entrée.
+4. **`sha256` et `expectedSize` sont codés en dur par fichier.** Un nom stable change de contenu
    à chaque release : les deux valeurs devront suivre, sinon l'en-tête `X-AZERTY-Global-SHA256`
    annonce un hash faux.
-4. Le `.appinstaller` n'existera qu'au lot G, avec le bundle signé. Rien ne doit être mis en
+5. Le `.appinstaller` n'existera qu'au lot G, avec le bundle signé. Rien ne doit être mis en
    ligne avant.
+
+**Arrangement arrêté par Antoine le 2026-08-20 : la modification du Worker se fait plus tard,
+quand le `.appinstaller` existe.** Motif : les points 4 et 5 se tiennent l'un l'autre — sans le
+fichier, ni empreinte ni taille ne peuvent être renseignées, et ajouter les entrées produirait
+deux clés répondant 503. La session `website` livrera alors en une passe les surcharges par
+fichier (`cacheControl` et `disposition`, intégrité optionnelle, **aux deux sites de la
+constante**) et les deux entrées, avec un test.
+
+**Ce qu'il faut lui envoyer, le jour où le bundle 1.2.0 est signé** : le contenu littéral du
+`.appinstaller` produit par `scripts/gen-appinstaller.py`, plus le SHA-256 et la taille en octets
+du `.msixbundle` de la release. Rien d'autre. L'arrangement est écrit dans
+`IA/sessions/active/2026-08-19-audit-site-google-nonprofits.md` et suivra son handoff de clôture.
+
+⚠️ **L'état du Worker a changé le 2026-08-20 après cette mesure** : `FILES` porte désormais
+**cinq** entrées et non deux, les ZIP Windows, macOS et Linux ayant été ajoutés, uploadés en R2
+et déployés le même jour. Les cinq pièges portent sur la structure du fichier, pas sur son
+inventaire, et restent valides — mais un diff écrit contre la version à deux entrées ne
+s'appliquera pas.
 
 ## Critère d'acceptation — non tenu à ce jour
 
