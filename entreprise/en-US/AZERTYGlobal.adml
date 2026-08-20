@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  English strings of the AZERTY Global administrative template.
+
+  Wording approved by Antoine on 2026-08-20, before it was written. None of it may be
+  reworded without going back to him: an IT department reads these strings in the Group Policy
+  console, at a moment when nobody from the project is there to clarify.
+
+  This file is deliberately not a literal translation of the French one where the product's own
+  wording differs: the menu entries quoted below are the English labels the application really
+  shows, not translations of the French labels.
+-->
+<policyDefinitionResources xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
+                           revision="1.0" schemaVersion="1.0">
+  <displayName>AZERTY Global</displayName>
+  <description>AZERTY Global settings an organization can enforce.</description>
+  <resources>
+    <stringTable>
+      <string id="AZERTYGlobal">AZERTY Global</string>
+      <string id="SUPPORTED_AZERTY_GLOBAL_1_2_0">AZERTY Global 1.2.0 or later</string>
+
+      <string id="NotificationsEnabled">Allow application notifications</string>
+      <string id="NotificationsEnabled_Explain">Enabled: the application may show its notifications, and the user keeps their own setting. Disabled: no comfort notification is shown, including the review prompt, and the user setting is locked. Security warnings are shown in every case. Not configured: the user decides.</string>
+
+      <string id="UsageStatsEnabled">Allow local usage statistics</string>
+      <string id="UsageStatsEnabled_Explain">Enabled: the application keeps its counters in %LocalAppData%\AZERTY Global\usage-stats.json. Disabled: no statistics file is created or updated. Not configured: on for the Microsoft Store version, off for the version distributed by the association. These counters never leave the machine.</string>
+
+      <string id="ExternalLinksEnabled">Allow external links</string>
+      <string id="ExternalLinksEnabled_Explain">Enabled: the “Support the project”, “Rate on the Microsoft Store” entries and the Discord link are visible. Disabled: they are hidden. “Give feedback” and “Report a bug” remain available in every case. Not configured: visible on the Microsoft Store version, hidden on the version distributed by the association.</string>
+
+      <string id="RemoveOnboarding">Remove the welcome window at startup</string>
+      <string id="RemoveOnboarding_Explain">Enabled: the welcome window no longer opens at startup, and the matching checkbox is locked. The “Welcome window” entry in the notification-area menu still opens it on demand. Disabled, or not configured: the window follows the user's setting.</string>
+
+      <string id="Language">Force the interface language</string>
+      <string id="Language_Explain">Forces the application language and locks the three places that can change it. Accepted values: fr, en. Any other value is ignored and traced in error.log, and the language stays the user's own. Not configured: the user chooses.</string>
+      <string id="Language_fr">French (fr)</string>
+      <string id="Language_en">English (en)</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="Language">
+        <dropdownList refId="Language" noSort="true" defaultItem="0">Enforced language</dropdownList>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

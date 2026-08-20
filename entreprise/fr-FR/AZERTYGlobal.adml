@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Libellés français du modèle d'administration d'AZERTY Global.
+
+  Textes validés mot à mot par Antoine le 2026-08-20, avant écriture. Aucun d'eux ne se
+  reformule sans repasser par lui : ils sont lus par une DSI dans la console de gestion des
+  stratégies de groupe, à un moment où personne du projet n'est là pour préciser.
+-->
+<policyDefinitionResources xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
+                           revision="1.0" schemaVersion="1.0">
+  <displayName>AZERTY Global</displayName>
+  <description>Réglages d'AZERTY Global imposables par une organisation.</description>
+  <resources>
+    <stringTable>
+      <string id="AZERTYGlobal">AZERTY Global</string>
+      <string id="SUPPORTED_AZERTY_GLOBAL_1_2_0">AZERTY Global 1.2.0 ou version ultérieure</string>
+
+      <string id="NotificationsEnabled">Autoriser les notifications de l'application</string>
+      <string id="NotificationsEnabled_Explain">Activé : l'application peut afficher ses notifications, et l'utilisateur garde son réglage. Désactivé : aucune notification de confort n'est affichée, sollicitation d'avis comprise, et le réglage utilisateur est verrouillé. Les avertissements de sécurité s'affichent dans tous les cas. Non configuré : l'utilisateur décide.</string>
+
+      <string id="UsageStatsEnabled">Autoriser les statistiques d'usage locales</string>
+      <string id="UsageStatsEnabled_Explain">Activé : l'application tient ses compteurs dans %LocalAppData%\AZERTY Global\usage-stats.json. Désactivé : aucun fichier de statistiques n'est créé ni mis à jour. Non configuré : activé sur la version du Microsoft Store, éteint sur la version distribuée par l'association. Ces compteurs ne quittent jamais le poste.</string>
+
+      <string id="ExternalLinksEnabled">Autoriser les liens externes</string>
+      <string id="ExternalLinksEnabled_Explain">Activé : les entrées « Soutenir le projet », « Noter sur le Microsoft Store » et le lien Discord sont visibles. Désactivé : elles sont masquées. « Donner mon avis » et « Signaler un bug » restent disponibles dans tous les cas. Non configuré : visibles sur la version du Microsoft Store, masquées sur la version distribuée par l'association.</string>
+
+      <string id="RemoveOnboarding">Supprimer la fenêtre de bienvenue au démarrage</string>
+      <string id="RemoveOnboarding_Explain">Activé : la fenêtre de bienvenue ne s'ouvre plus au démarrage, et la case correspondante est verrouillée. L'entrée « Fenêtre de bienvenue » du menu de la zone de notification continue de l'ouvrir à la demande. Désactivé, ou non configuré : la fenêtre suit le réglage de l'utilisateur.</string>
+
+      <string id="Language">Imposer la langue de l'interface</string>
+      <string id="Language_Explain">Impose la langue de l'application et verrouille les trois endroits qui permettent de la changer. Valeurs acceptées : fr, en. Une autre valeur est ignorée et tracée dans error.log, et la langue reste celle de l'utilisateur. Non configuré : l'utilisateur choisit.</string>
+      <string id="Language_fr">Français (fr)</string>
+      <string id="Language_en">Anglais (en)</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="Language">
+        <dropdownList refId="Language" noSort="true" defaultItem="0">Langue imposée</dropdownList>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>
