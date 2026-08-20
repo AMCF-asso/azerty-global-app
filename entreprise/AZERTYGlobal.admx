@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Modèle d'administration d'AZERTY Global — les cinq valeurs lues par src/PolicyManager.cs.
+
+  Ce fichier vit à côté du code qui lit ces valeurs, à dessein : un renommage de clé et un
+  modèle périmé apparaissent alors dans le même diff, et scripts/tests/test_admx_agreement.py
+  refuse tout écart entre les deux listes.
+
+  Racine : HKEY_LOCAL_MACHINE\SOFTWARE\Policies\AZERTYGlobal, vue 64 bits. Le produit lit avec
+  RRF_SUBKEY_WOW6464KEY, donc une écriture arrivée dans Wow6432Node ne serait pas vue.
+
+  La stratégie « Supprimer la fenêtre de bienvenue au démarrage » est délibérément inversée par
+  rapport au nom de sa valeur : ShowOnboarding à 1 autorise sans imposer, seul 0 contraint.
+  Activer la stratégie écrit donc 0. Décision du 2026-08-19 pour la valeur, du 2026-08-20 pour
+  le sens du libellé — les trois états de la console correspondent ainsi à trois comportements
+  réellement distincts.
+-->
+<policyDefinitions xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
+                   revision="1.0" schemaVersion="1.0">
+  <policyNamespaces>
+    <target prefix="azertyglobal" namespace="AMCF.Policies.AZERTYGlobal" />
+    <using prefix="windows" namespace="Microsoft.Policies.Windows" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <supportedOn>
+    <definitions>
+      <definition name="SUPPORTED_AZERTY_GLOBAL_1_2_0"
+                  displayName="$(string.SUPPORTED_AZERTY_GLOBAL_1_2_0)" />
+    </definitions>
+  </supportedOn>
+  <categories>
+    <category name="AZERTYGlobal" displayName="$(string.AZERTYGlobal)" />
+  </categories>
+  <policies>
+    <policy name="NotificationsEnabled" class="Machine"
+            displayName="$(string.NotificationsEnabled)"
+            explainText="$(string.NotificationsEnabled_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="NotificationsEnabled">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_2_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+    <policy name="UsageStatsEnabled" class="Machine"
+            displayName="$(string.UsageStatsEnabled)"
+            explainText="$(string.UsageStatsEnabled_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="UsageStatsEnabled">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_2_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+    <policy name="ExternalLinksEnabled" class="Machine"
+            displayName="$(string.ExternalLinksEnabled)"
+            explainText="$(string.ExternalLinksEnabled_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="ExternalLinksEnabled">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_2_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+    <!--
+      Inversion assumée : « Activé » supprime la fenêtre, donc écrit 0. Voir l'en-tête.
+    -->
+    <policy name="RemoveOnboarding" class="Machine"
+            displayName="$(string.RemoveOnboarding)"
+            explainText="$(string.RemoveOnboarding_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="ShowOnboarding">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_2_0" />
+      <enabledValue><decimal value="0" /></enabledValue>
+      <disabledValue><decimal value="1" /></disabledValue>
+    </policy>
+    <policy name="Language" class="Machine"
+            displayName="$(string.Language)"
+            explainText="$(string.Language_Explain)"
+            presentation="$(presentation.Language)"
+            key="SOFTWARE\Policies\AZERTYGlobal">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_2_0" />
+      <elements>
+        <enum id="Language" valueName="Language" required="true">
+          <item displayName="$(string.Language_fr)">
+            <value><string>fr</string></value>
+          </item>
+          <item displayName="$(string.Language_en)">
+            <value><string>en</string></value>
+          </item>
+        </enum>
+      </elements>
+    </policy>
+  </policies>
+</policyDefinitions>
