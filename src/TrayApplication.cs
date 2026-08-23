@@ -289,7 +289,7 @@ sealed class TrayApplication : IDisposable
             else if (!MaybeShowReviewPrompt() && !MaybeShowChallengeAnnouncement()
                      && !MaybeShowAutoStartNudge())
             {
-                ShowBalloon(ProductIdentity.DisplayName, L.Tray_ActiveBalloonBody);
+                ShowBalloon(L.Tray_ActiveTitle, L.Tray_ActiveBalloonBody);
             }
         }
         catch (Exception ex)
@@ -537,18 +537,18 @@ sealed class TrayApplication : IDisposable
                     if (ShouldProcessHook)
                         _characterSearch?.Toggle();
                     else if (IsPaused)
-                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_PausedBalloonBody);
+                        ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
                     else
-                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_DisabledBalloonBody);
+                        ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
                     return IntPtr.Zero;
 
                 case WM_APP_VKBD:
                     if (ShouldProcessHook)
                         _virtualKeyboard?.Toggle();
                     else if (IsPaused)
-                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_PausedBalloonBody);
+                        ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
                     else
-                        ShowBalloon(ProductIdentity.DisplayName, L.Tray_DisabledBalloonBody);
+                        ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
                     return IntPtr.Zero;
 
                 case Win32.WM_COMMAND:
@@ -1338,27 +1338,28 @@ sealed class TrayApplication : IDisposable
         if (!_enabled && _suspendedForCompatibility)
         {
             var procName = _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback;
+            var procDisplay = FormatProcessName(procName);
             var reason = _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.UnknownForeground;
             if (reason == CompatibilitySuspendReason.RemoteAccess)
             {
-                ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_ForceOnRemoteRefused(procName));
+                ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_ForceOnRemoteRefused);
                 ConfigManager.LogCompatCriticalEvent("RemoteAccessToggleRefused",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, attempted=enable");
             }
             else if (reason == CompatibilitySuspendReason.AntiCheat)
             {
-                ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_AntiCheatToggleRefused(procName));
+                ShowSecurityBalloon(L.Tray_ToggleRefusedTitle(procDisplay), L.Tray_AntiCheatRefusedBody);
                 // Audit sécu 2026-05 SEV-A1-02 : anonymisation du process name dans le log.
                 ConfigManager.LogCompatCriticalEvent("AntiCheatToggleRefused",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, attempted=enable");
             }
             else if (reason == CompatibilitySuspendReason.UserOverride)
             {
-                ShowBalloon(ProductIdentity.DisplayName, L.Tray_UserOverrideToggleRefused(procName));
+                ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_UserOverrideToggleRefused);
             }
             else
             {
-                ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_SuspendedUnknownForeground);
+                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.Tray_SuspendedUnknownForeground);
             }
             return;
         }
@@ -1430,7 +1431,7 @@ sealed class TrayApplication : IDisposable
         ApplyHookState();
         UpdateIcon();
         UpdateTooltip();
-        ShowBalloon(ProductIdentity.DisplayName, L.Tray_PausedForDuration(FormatDuration(totalMinutes)));
+        ShowBalloon(L.Tray_PausedForDurationTitle(FormatDuration(totalMinutes)), L.Tray_PausedForDuration);
     }
 
     private void StopPause(bool expired)
@@ -1443,8 +1444,18 @@ sealed class TrayApplication : IDisposable
         UpdateTooltip();
 
         if (wasPaused)
-            ShowBalloon(ProductIdentity.DisplayName, expired ? L.Tray_PauseEnded : L.Tray_PauseStopped);
+            ShowBalloon(expired ? L.Tray_PauseEndedTitle : L.Tray_PauseStoppedTitle, L.Tray_PauseOverBody);
     }
+
+    /// <summary>
+    /// Nom de process destiné à l'affichage : l'extension exécutable est retirée.
+    /// <c>ForegroundMonitor.CurrentProcessName</c> rend « Minecraft.Windows.exe » quand les
+    /// titres de notification doivent montrer « Minecraft.Windows ». La valeur brute reste
+    /// seule utilisée pour GameRegistry, les overrides de compatibilité et les journaux
+    /// anonymisés — la couper là fausserait une comparaison ou une empreinte.
+    /// </summary>
+    private static string FormatProcessName(string proc) =>
+        proc.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? proc[..^4] : proc;
 
     private static string FormatDuration(int totalMinutes)
     {
@@ -1901,6 +1912,7 @@ sealed class TrayApplication : IDisposable
         if (_foregroundMonitor == null || _hook == null || _mapper == null) return;
         var mode = _foregroundMonitor.CurrentMode;
         var procName = _foregroundMonitor.CurrentProcessName ?? "";
+        var procDisplay = FormatProcessName(procName);
         var reason = _foregroundMonitor.CurrentSuspendReason;
 
         if (mode == CompatibilityMode.DisabledAntiCheat && !_suspendedForCompatibility)
@@ -1918,21 +1930,21 @@ sealed class TrayApplication : IDisposable
             switch (reason)
             {
                 case CompatibilitySuspendReason.UnknownForeground:
-                    ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_SuspendedUnknownForeground);
+                    ShowSecurityBalloon(L.Tray_PrecautionTitle, L.Tray_SuspendedUnknownForeground);
                     ConfigManager.LogCompatCriticalEvent("UnknownForegroundSuspended", "action=disable");
                     break;
                 case CompatibilitySuspendReason.RemoteAccess:
-                    ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_DisabledForRemoteAccess(procName));
+                    ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), L.Tray_DisabledForRemoteAccess);
                     ConfigManager.LogCompatCriticalEvent("RemoteAccessDetected",
                         $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                     break;
                 case CompatibilitySuspendReason.UserOverride:
-                    ShowBalloon(ProductIdentity.DisplayName, L.Tray_DisabledByUserOverride(procName));
+                    ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledByUserOverride);
                     ConfigManager.LogCompatEvent("UserOverrideApplied",
                         $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                     break;
                 default:
-                    ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_DisabledForAntiCheat(procName));
+                    ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledForAntiCheat);
                     ConfigManager.LogCompatCriticalEvent("AntiCheatDetected",
                         $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                     break;
@@ -1945,7 +1957,7 @@ sealed class TrayApplication : IDisposable
             if (_wasEnabledBeforeAutoDisable && _enabled)
             {
                 ApplyHookState(syncWhenActive: true);
-                ShowBalloon(ProductIdentity.DisplayName, L.Tray_ActiveAgain);
+                ShowBalloon(L.Tray_ActiveAgainTitle, L.Tray_ActiveAgain);
             }
             else
             {
@@ -1971,13 +1983,13 @@ sealed class TrayApplication : IDisposable
 
         if (mode == "forceOn" && GameRegistry.IsRemoteAccessProcess(proc))
         {
-            ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_ForceOnRemoteRefused(proc));
+            ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_ForceOnRemoteRefused);
             return;
         }
 
         if (mode == "forceOn" && GameRegistry.IsAntiCheatProcess(proc, _foregroundMonitor?.CurrentFullPath))
         {
-            ShowSecurityBalloon(ProductIdentity.DisplayName, L.Tray_ForceOnRefused(proc));
+            ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_AntiCheatRefusedBody);
             return;
         }
 

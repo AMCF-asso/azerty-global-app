@@ -27,8 +27,8 @@ internal static partial class L
     // Rappel (balloon tray)
     public static string Challenge_ReminderTitle => T("Défi du jour", "Daily challenge");
     public static string Challenge_ReminderBody => T(
-        "Une séance courte vous attend : cliquez pour la lancer.",
-        "A short session is waiting: click to start it.");
+        $"Une séance courte vous attend dans {Product}. Cliquez pour la lancer.",
+        $"A short session is waiting in {Product}. Click to start it.");
 
     // Entrée du menu tray
     public static string Tray_MenuChallenge => T("Défi du jour", "Daily challenge");

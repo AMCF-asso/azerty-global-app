@@ -15,52 +15,78 @@ internal static partial class L
         $"If the problem persists, contact support: {ProductIdentity.Url("/soutien")}");
 
     // ── Balloons d'état ───────────────────────────────────────────────
+    // ── Titres des notifications (audit du 2026-08-23) ────────────────
+    // Le titre porte l'etat, le corps ne dit que l'action. Le nom du produit reste dans
+    // le corps : l'attribution systeme n'est documentee qu'a partir de Windows 11, et
+    // 569 des 1 604 installations du Store sont sous Windows 10.
+    public static string Tray_ActiveTitle => T("Actif", "Active");
+    public static string Tray_PausedTitle => T("En pause", "Paused");
+    public static string Tray_DisabledTitle => T("Désactivé", "Off");
+    public static string Tray_ActiveAgainTitle => T("De nouveau actif", "Active again");
+    public static string Tray_PausedForDurationTitle(string durationText) =>
+        T($"En pause pour {durationText}", $"Paused for {durationText}");
+    public static string Tray_PauseEndedTitle => T("Pause terminée", "Pause ended");
+    public static string Tray_PauseStoppedTitle => T("Pause arrêtée", "Pause stopped");
+    public static string Tray_PrecautionTitle => T("En pause par précaution", "Paused as a precaution");
+    public static string Tray_ToggleRefusedTitle(string proc) =>
+        T($"Activation refusée dans {proc}", $"Can't turn on in {proc}");
+    public static string Tray_SuspendedInTitle(string proc) =>
+        T($"Suspendu dans {proc}", $"Suspended in {proc}");
+    public static string Tray_SuspendedDuringTitle(string proc) =>
+        T($"Suspendu pendant {proc}", $"Suspended during {proc}");
+    public static string Tray_ForceRefusedTitle =>
+        T("Compatibilité forcée refusée", "Can't force compatibility");
     public static string Tray_ActiveBalloonBody => T(
-        "est actif.\nCtrl+Maj+Verr.Maj pour activer/désactiver.",
-        "is active.\nCtrl+Shift+Caps Lock to turn on/off.");
+        $"Ctrl+Maj+Verr. Maj pour activer ou désactiver {Product}.",
+        $"Ctrl+Shift+Caps Lock turns {Product} on and off.");
     public static string Tray_PausedBalloonBody => T(
-        "est en pause — Ctrl+Maj+Verr.Maj ou menu tray pour reprendre.",
-        "is paused — Ctrl+Shift+Caps Lock or tray menu to resume.");
+        $"Ctrl+Maj+Verr. Maj ou le menu de l’icône pour reprendre {Product}.",
+        $"Ctrl+Shift+Caps Lock or the icon menu resumes {Product}.");
     public static string Tray_DisabledBalloonBody => T(
-        "est désactivé — Ctrl+Maj+Verr.Maj pour réactiver.",
-        "is off — Ctrl+Shift+Caps Lock to turn back on.");
-    public static string Tray_ActiveAgain => T("est de nouveau actif.", "is active again.");
+        $"Ctrl+Maj+Verr. Maj pour réactiver {Product}.",
+        $"Ctrl+Shift+Caps Lock turns {Product} back on.");
+    public static string Tray_ActiveAgain => T(
+        $"L’application qui suspendait {Product} n’est plus au premier plan.",
+        $"The app that suspended {Product} is no longer in the foreground.");
 
     public static string Tray_GameCompatDisabledTitle => T("Compatibilité jeu désactivée", "Game compatibility disabled");
     public static string Tray_GameCompatDisabledBody(string list) => T(
-        $"{Product} a désactivé l’option de compatibilité pour : {list}. Ces jeux sont désormais protégés par un anti-cheat. {Product} se mettra automatiquement en pause quand ils seront ouverts.",
-        $"{Product} disabled the compatibility option for: {list}. These games are now protected by anti-cheat. {Product} will automatically pause itself when they are open.");
+        $"Ces jeux sont protégés par un anti-cheat : {list}. {Product} se mettra en pause à leur ouverture.",
+        $"These games are anti-cheat protected: {list}. {Product} will pause when they open.");
 
     public static string Tray_ThisGameFallback => T("ce jeu", "this game");
-    public static string Tray_AntiCheatToggleRefused(string procName) => T(
-        $"{Product} ne peut pas être activé pendant que {procName} tourne : son anti-cheat pourrait considérer cela comme de la triche et bannir votre compte.",
-        $"{Product} can't be turned on while {procName} is running: its anti-cheat could flag this as cheating and get your account banned.");
+    // Refus de bascule ET refus de compatibilite forcee : meme situation vue par
+    // l'utilisateur, deux chemins de code. Le nom du process vit dans le titre.
+    public static string Tray_AntiCheatRefusedBody => T(
+        $"L’anti-cheat du jeu peut y voir de la triche et bannir votre compte. {Product} reste désactivé.",
+        $"The game's anti-cheat could see it as cheating and ban your account. {Product} stays off.");
 
-    public static string Tray_PausedForDuration(string durationText) => T($"en pause pour {durationText}.", $"paused for {durationText}.");
-    public static string Tray_PauseEnded => T("pause terminée.", "pause ended.");
-    public static string Tray_PauseStopped => T("pause arrêtée.", "pause stopped.");
+    public static string Tray_PausedForDuration => T(
+        $"{Product} reprendra tout seul, ou par le menu de l’icône.",
+        $"{Product} will resume on its own, or from the icon menu.");
+    // Un seul corps pour les deux fins de pause : seul le titre les distingue.
+    public static string Tray_PauseOverBody => T(
+        $"{Product} est de nouveau actif.",
+        $"{Product} is active again.");
 
     public static string Tray_SuspendedUnknownForeground => T(
-        "mis en pause par précaution : l’application au premier plan n’a pas pu être identifiée.",
-        "paused as a precaution: the foreground application couldn't be identified.");
-    public static string Tray_DisabledForAntiCheat(string procName) => T(
-        $"désactivé temporairement pour {procName}\n(anti-cheat : injection de frappes interdite).",
-        $"temporarily disabled for {procName}\n(anti-cheat: keystroke injection not allowed).");
-    public static string Tray_DisabledForRemoteAccess(string procName) => T(
-        $"suspendu temporairement pendant l’utilisation de {procName} pour éviter un double remappage sur l’ordinateur distant.",
-        $"temporarily suspended while using {procName} to prevent double remapping on the remote computer.");
-    public static string Tray_DisabledByUserOverride(string procName) => T(
-        $"suspendu dans {procName} selon votre réglage de compatibilité.",
-        $"suspended in {procName} according to your compatibility setting.");
-    public static string Tray_ForceOnRefused(string proc) => T(
-        $"{Product} ne peut pas être activé sur {proc} : son anti-cheat pourrait considérer cela comme de la triche et bannir votre compte.",
-        $"{Product} can't be turned on for {proc}: its anti-cheat could flag this as cheating and get your account banned.");
-    public static string Tray_ForceOnRemoteRefused(string proc) => T(
-        $"{Product} reste suspendu sur {proc} pour éviter que les frappes soient transformées deux fois entre cet ordinateur et l’ordinateur distant.",
-        $"{Product} stays suspended for {proc} to prevent keystrokes from being transformed twice between this computer and the remote computer.");
-    public static string Tray_UserOverrideToggleRefused(string proc) => T(
-        $"{Product} reste suspendu dans {proc}. Choisissez « Auto » dans Compatibilité des applications pour retirer ce réglage.",
-        $"{Product} stays suspended in {proc}. Choose “Auto” under App compatibility to remove this setting.");
+        $"{Product} s’est suspendu : l’application au premier plan est inconnue.",
+        $"{Product} suspended itself: the foreground app is unknown.");
+    public static string Tray_DisabledForAntiCheat => T(
+        $"L’anti-cheat du jeu interdit l’injection de frappes. {Product} se désactive.",
+        $"The game's anti-cheat doesn't allow keystroke injection. {Product} turns itself off.");
+    public static string Tray_DisabledForRemoteAccess => T(
+        $"{Product} se suspend pour ne pas s’appliquer deux fois, ici et à distance.",
+        $"{Product} suspends itself so it doesn't apply twice, here and remotely.");
+    public static string Tray_DisabledByUserOverride => T(
+        $"Votre réglage de compatibilité suspend {Product} ici.",
+        $"Your compatibility setting suspends {Product} here.");
+    public static string Tray_ForceOnRemoteRefused => T(
+        $"{Product} reste suspendu : il s’appliquerait deux fois, ici et à distance.",
+        $"{Product} stays suspended: it would apply twice, here and remotely.");
+    public static string Tray_UserOverrideToggleRefused => T(
+        $"Choisissez « Auto » dans Compatibilité des applications pour réactiver {Product} ici.",
+        $"Choose “Auto” under App compatibility to turn {Product} back on here.");
 
     // ── Tooltip ────────────────────────────────────────────────────────
     public static string Tray_TooltipSuspendedCompat => T("Suspendu pour compatibilité", "Suspended for compatibility");
@@ -96,16 +122,16 @@ internal static partial class L
     // packagé vise toujours le Store, la page feedback ne sert plus qu'aux installations
     // hors Store, qui n'ont pas de fiche à noter.
     public static string Tray_ReviewPromptBodyStore(int attempt) => attempt >= 2
-        ? T("Le projet est gratuit et open source, porté par une association. Un avis sur le Microsoft Store est la façon la plus simple de le soutenir.\nCette notification ouvre la fenêtre de notation.",
-            "The project is free and open source, run by a nonprofit association. A review on the Microsoft Store is the simplest way to support it.\nThis notification opens the rating window.")
-        : T($"{Product} est gratuit et open source. Un avis sur le Microsoft Store est la façon la plus simple de soutenir le projet.\nCette notification ouvre la fenêtre de notation.",
-            $"{Product} is free and open source. A review on the Microsoft Store is the simplest way to support the project.\nThis notification opens the rating window.");
+        ? T("Gratuit, open source, porté par une association. Un avis sur le Store est le plus simple pour le soutenir.\nCette notification ouvre la fenêtre de notation.",
+            "Free, open source, run by a nonprofit. A review on the Store is the simplest way to support it.\nThis notification opens the rating window.")
+        : T("Le projet est gratuit et open source. Un avis sur le Store est le plus simple pour le soutenir.\nCette notification ouvre la fenêtre de notation.",
+            "The project is free and open source. A review on the Store is the simplest way to support it.\nThis notification opens the rating window.");
 
     public static string Tray_ReviewPromptBodyFeedback(int attempt) => attempt >= 2
-        ? T("Le projet est gratuit et open source, porté par une association. Votre avis est la façon la plus simple de le soutenir.\nCette notification ouvre la page d’avis.",
-            "The project is free and open source, run by a nonprofit association. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.")
-        : T($"{Product} est gratuit et open source. Votre avis est la façon la plus simple de soutenir le projet.\nCette notification ouvre la page d’avis.",
-            $"{Product} is free and open source. Your feedback is the simplest way to support the project.\nThis notification opens the feedback page.");
+        ? T("Gratuit, open source, porté par une association. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
+            "Free, open source, run by a nonprofit. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.")
+        : T("Le projet est gratuit et open source. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
+            "The project is free and open source. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.");
 
     // ── Menu tray ────────────────────────────────────────────────────
     public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr.Maj", "Turn off\tCtrl+Shift+Caps Lock");
@@ -133,23 +159,24 @@ internal static partial class L
     public static string Tray_MenuAutoStart => T("Lancer au démarrage de Windows", "Launch at Windows startup");
     public static string Tray_MenuSettings => T("Paramètres", "Settings");
     // Annonce unique du Défi du jour aux utilisateurs existants (v1.2.0, jamais réémise).
-    public static string Tray_ChallengeAnnounceTitle => T("Nouveau : Défi du jour", "New: Daily challenge");
+    public static string Tray_ChallengeAnnounceTitle =>
+        T("Nouveau : le Défi du jour", "New: the daily challenge");
     public static string Tray_ChallengeAnnounceBody => T(
-        "Un extrait à taper chaque jour, le même pour tout le monde. Cliquez pour ouvrir la séance du jour.",
-        "A passage to type every day, the same one for everyone. Click to open today’s session.");
+        $"Chaque jour, un extrait à taper dans {Product}, le même pour tout le monde. Cliquez pour ouvrir.",
+        $"Every day, a passage to type in {Product}, the same one for everyone. Click to open.");
     // Relance unique du lancement automatique (v1.2.0, jamais réémise).
     public static string Tray_AutoStartNudgeTitle => T(
         $"Lancer {Product} au démarrage ?",
         $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
-        "L’application ne démarre pas encore avec Windows : il faut la lancer à la main à chaque fois. Cliquez pour l’activer.",
-        "The app doesn’t start with Windows yet: you have to launch it manually every time. Click to turn it on.");
+        "L’application ne démarre pas encore avec Windows. Cliquez pour l’activer.",
+        "The app doesn't start with Windows yet. Click to turn it on.");
     public static string Tray_AutoStartEnabledTitle => T(
         "Lancement au démarrage activé",
         "Launch at startup enabled");
     public static string Tray_AutoStartEnabledBody => T(
-        $"{Product} démarrera désormais avec Windows. Vous pouvez revenir dessus depuis le menu ou les Paramètres.",
-        $"{Product} will now start with Windows. You can undo this from the menu or in Settings.");
+        $"{Product} démarrera avec Windows. Réversible depuis le menu ou les Paramètres.",
+        $"{Product} will start with Windows. You can undo this from the menu or Settings.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");
