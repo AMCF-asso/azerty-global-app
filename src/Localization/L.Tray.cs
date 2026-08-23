@@ -133,6 +133,11 @@ internal static partial class L
         : T("Le projet est gratuit et open source. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
             "The project is free and open source. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.");
 
+    // Boutons des toasts (audit du 2026-08-23). Ils remplacent la ligne « Cette
+    // notification ouvre… » que le corps portait faute d'element <actions>.
+    public static string Tray_ToastBtnRate => T("Noter", "Rate");
+    public static string Tray_ToastBtnEnable => T("Activer", "Turn on");
+
     // ── Menu tray ────────────────────────────────────────────────────
     public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr.Maj", "Turn off\tCtrl+Shift+Caps Lock");
     public static string Tray_MenuEnable => T("Activer\tCtrl+Maj+Verr.Maj", "Turn on\tCtrl+Shift+Caps Lock");
@@ -169,8 +174,8 @@ internal static partial class L
         $"Lancer {Product} au démarrage ?",
         $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
-        "L’application ne démarre pas encore avec Windows. Cliquez pour l’activer.",
-        "The app doesn't start with Windows yet. Click to turn it on.");
+        "L’application ne démarre pas encore avec Windows.\nCliquez pour l’activer.",
+        "The app doesn't start with Windows yet.\nClick to turn it on.");
     public static string Tray_AutoStartEnabledTitle => T(
         "Lancement au démarrage activé",
         "Launch at startup enabled");

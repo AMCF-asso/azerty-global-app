@@ -1075,7 +1075,7 @@ sealed class TrayApplication : IDisposable
 
             if (ConfigManager.IsPackaged && _toastActivatorRegistered &&
                 ToastActivation.TryShowToast(L.Tray_AutoStartNudgeTitle,
-                    L.Tray_AutoStartNudgeBody, "action=autostart"))
+                    L.Tray_AutoStartNudgeBody, L.Tray_ToastBtnEnable, "action=autostart"))
                 return true;
 
             ShowBalloon(L.Tray_AutoStartNudgeTitle, L.Tray_AutoStartNudgeBody);
@@ -1761,7 +1761,7 @@ sealed class TrayApplication : IDisposable
             // (clic livré au processus vivant, plus aucune seconde instance). Repli balloon
             // si l'enregistrement ou l'affichage échoue.
             if (ConfigManager.IsPackaged && _toastActivatorRegistered &&
-                ToastActivation.TryShowToast(title, body,
+                ToastActivation.TryShowToast(title, body, L.Tray_ToastBtnRate,
                     toStore ? "action=review&target=store" : "action=review&target=feedback"))
                 return true;
 
