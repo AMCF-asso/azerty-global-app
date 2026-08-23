@@ -66,6 +66,10 @@ sealed class TrayApplication : IDisposable
     private const uint NIF_INFO = 0x10;
     private const uint NIIF_INFO = 0x01;
     private const uint NIIF_WARNING = 0x02;
+    // Icone fournie par l'application plutot que glyphe systeme (NIIF_ICON_MASK).
+    private const uint NIIF_USER = 0x04;
+    // Sans ce drapeau, Windows prend la taille SM_CXSMICON et reduit l'icone 32x32.
+    private const uint NIIF_LARGE_ICON = 0x20;
     // Événements balloon reçus via uCallbackMessage (Shell32 ≥ 6.0, donc toujours sur Win10/11)
     private const uint NIN_BALLOONTIMEOUT = 0x0404;
     private const uint NIN_BALLOONUSERCLICK = 0x0405;
@@ -110,6 +114,9 @@ sealed class TrayApplication : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
     private IntPtr _hIcon;
+    // Handle distinct de _hIcon : UpdateIcon detruit celui du tray a chaque
+    // changement d'etat, ce qui invaliderait un hBalloonIcon pointant dessus.
+    private IntPtr _hBalloonIcon;
     private Win32.NOTIFYICONDATAW _nid;
     private readonly Win32.WNDPROC _wndProcDelegate; // prevent GC
     private KeyboardHook? _hook;
@@ -199,6 +206,9 @@ sealed class TrayApplication : IDisposable
 
         // Icône tray
         _hIcon = CreateTextIcon("AG", true);
+        // Etat actif fige : la bulle identifie l'application, elle ne rapporte pas
+        // l'etat courant — c'est le role du titre depuis l'audit du 2026-08-23.
+        _hBalloonIcon = CreateTextIcon("AG", true);
 
         _nid = new Win32.NOTIFYICONDATAW
         {
@@ -1561,6 +1571,11 @@ sealed class TrayApplication : IDisposable
             Win32.DestroyIcon(_hIcon);
             _hIcon = IntPtr.Zero;
         }
+        if (_hBalloonIcon != IntPtr.Zero)
+        {
+            Win32.DestroyIcon(_hBalloonIcon);
+            _hBalloonIcon = IntPtr.Zero;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1882,7 +1897,8 @@ sealed class TrayApplication : IDisposable
         _nid.uFlags = NIF_INFO;
         _nid.szInfoTitle = title;
         _nid.szInfo = text;
-        _nid.dwInfoFlags = NIIF_INFO;
+        _nid.hBalloonIcon = _hBalloonIcon;
+        _nid.dwInfoFlags = NIIF_USER | NIIF_LARGE_ICON;
         Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
     }
 
