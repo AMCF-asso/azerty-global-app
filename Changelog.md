@@ -76,6 +76,46 @@ Préparée et vérifiée dans ce dépôt ; **non encore soumise au Microsoft Sto
 - Les documents de parc perdent la prétention qu'une stratégie de groupe installe un MSIX : elle ne l'installe pas, elle lance le script qui l'installe. `Pilotes/Note informatique.md` conserve la mention exacte, précisée. Leurs liens de téléchargement passent aux URL stables du lot E.
 - Nouveau `scripts/check-doc-versions.py` : les documents de parc portent un bloc de suivi machine-lisible, et le scanner refuse une version déclarée périmée, une version inconnue dans le corps, une empreinte non déclarée ou une URL de téléchargement versionnée. C'est l'absence d'un tel garde qui avait laissé la note DSI en 1.1.0 pendant six semaines. 33 tests, et dix mutations rouges dans `docs/audit-v1.2.0/witness-lot-f-versions.py`.
 
+**Couches maintenables — grec, cyrillique, scientifique (décision du 2026-08-05, portée le 2026-08-24)**
+
+Fonctionnalité développée et validée le 2026-08-05 dans la copie de travail Codex (163/163 tests),
+restée dans un commit local jamais poussé, hors de la réconciliation du 2026-08-15. Portée dans ce
+dépôt le 2026-08-24 sur l'architecture extraite : machine d'état et détection sécurisée dans
+`TypingEngine.Windows`, fenêtres et service d'insertion dans l'application, chaînes bilingues dans
+`Localization/L.Layers.cs`. Désactivée par défaut, activation volontaire depuis le menu, entièrement hors ligne.
+
+- Les trois touches mortes `dk_greek` (Maj + *), `dk_cyrillic` (AltGr + *) et `dk_scientific` (AltGr + =)
+  gagnent trois modes sans changer leurs tables ni leurs emplacements : appui simple = touche morte
+  ponctuelle actuelle, déclencheur maintenu pendant une autre frappe = couche temporaire, double appui
+  = verrouillage dans l'application active.
+- Le verrouillage est associé à l'instance exacte du processus (PID + instant de création) : il survit
+  aux allers-retours entre applications, disparaît à la fermeture du processus et n'est jamais hérité
+  par un PID réutilisé. Déverrouillage par le même déclencheur ou par un premier Échap (absorbé) ; une
+  autre couche peut recouvrir temporairement la couche verrouillée, son double appui remplace le verrou.
+- Le Shift ou AltGr d'activation est consommé tant qu'il reste enfoncé ; un nouveau Shift ou le
+  Verr. Maj. produit les majuscules. Espace reste une espace normale en maintien et en verrouillage ;
+  une touche non définie dans la couche produit son caractère AZERTY Global ordinaire ; les 26 autres
+  touches mortes sont inchangées. Ctrl, Alt et Windows conservent leurs raccourcis pendant une couche active.
+- Nouvel indicateur discret près du curseur (couche active et mode), masqué dans les champs sécurisés
+  et quand le remapping est suspendu (jeux, pause).
+- Champs de mot de passe : le remapping ordinaire est conservé mais les couches, la recherche et
+  l'indicateur sont suspendus. Détection native `ES_PASSWORD` complétée par UI Automation pour les
+  navigateurs, exécutée sur un thread MTA dédié à attente bornée (30 ms) pour ne jamais ralentir le
+  hook clavier ; seul le booléen IsPassword est consulté, jamais le contenu du champ.
+- Recherche de caractères : `Entrée` insère désormais le caractère directement dans la fenêtre
+  d'origine (y compris à l'ouverture depuis le menu tray) ; en cas d'échec, repli sur la copie avec
+  notification explicite.
+- Réglages persistants (couches actives, délai du double appui 150-1000 ms, indicateur, consentement
+  diagnostics) via la nouvelle fenêtre « Couches maintenables » ; les configurations existantes migrent
+  avec la fonctionnalité désactivée.
+- Les mises à jour d'icône tray, d'infobulle et d'indicateur déclenchées depuis le hook clavier partent
+  désormais en différé coalescé sur la boucle de messages — plus aucun appel bloquant dans `WH_KEYBOARD_LL`.
+- Adaptations de portage vs la version Codex : le moteur ne lit aucune configuration (l'application
+  pousse ses réglages par `ApplyMaintainableLayerSettings`), les textes passent par `L.Layers.cs`
+  (FR/EN), le nom de classe fenêtre par `ProductIdentity.WindowClass`, et la garde Win s'appuie sur
+  l'état déjà suivi par `TrackModifiers`. Les trois suites passent à **18 + 107 + 287 = 412 tests**
+  (376 avant le portage, incluant les 21 tests de notifications du 2026-08-23).
+
 **Revue de release 1.2.0**
 
 - Version applicative portée de `1.1.2` à `1.2.0`, manifeste de packaging de `1.0.0.0` à `1.2.0.0` (le Store sert `1.1.0.0`). `Program.cs` et `AssemblyInfo.cs` étaient restés en `1.1.2` : l'infobulle du tray et les rapports de bug se seraient annoncés en 1.1.2, et `Verify-Release.ps1` bloquait dessus.

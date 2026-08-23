@@ -21,7 +21,8 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 - **Remapping clavier complet** — 48 touches, 8 couches par touche, 29 touches mortes
 - **Verrouillage Majuscule Intelligent** — N'affecte que les lettres : `É`, `È`, `Ç`, `À` en un appui
 - **Clavier virtuel** — Visualisation interactive de la disposition
-- **Recherche de caractères** — Trouvez n'importe quel caractère parmi les 1 000+ disponibles
+- **Recherche de caractères** — Trouvez n'importe quel caractère parmi les 1 000+ disponibles, avec insertion directe dans l'application d'origine
+- **Couches maintenables** *(désactivées par défaut)* — Grec, cyrillique et scientifique en maintien ou en verrouillage par application, sans changer les touches mortes existantes
 - **Module d'apprentissage** — Leçons interactives pour s'entraîner aux 5 améliorations
 - **Interface française et anglaise** — Changement de langue à chaud dans toute l'application
 - **Statistiques locales** — Compteurs agrégés conservés sur l'appareil, sans télémétrie réseau
@@ -62,7 +63,7 @@ dotnet test src/TypingEngine.Windows.Tests
 dotnet test src/TypingEngine.Core.Tests
 ```
 
-La suite comprend 169 tests applicatifs, 95 tests Windows et 18 tests portables, soit 282 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
+La suite comprend 287 tests applicatifs, 107 tests Windows et 18 tests portables, soit 412 tests. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
 
@@ -78,6 +79,9 @@ src/                              Code source C#
 ├── AzertyGlobalWindowsTypingHost.cs Adaptateur configuration/statistiques du produit
 ├── LayoutLoader.cs               Adaptateur de ressource vers le moteur commun
 ├── CharacterSearch.cs            Recherche de caractères
+├── TextInsertionService.cs       Insertion directe depuis la recherche
+├── MaintainableLayersWindow.cs   Réglages des couches maintenables
+├── LayerIndicatorWindow.cs       Indicateur de couche près du curseur
 ├── Localization/                 Textes français et anglais
 ├── UsageStats.cs                 Statistiques agrégées 100 % locales
 ├── UsageStatsWindow.cs           Interface des statistiques locales

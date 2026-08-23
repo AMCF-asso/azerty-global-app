@@ -6,6 +6,9 @@
     <RootNamespace>TypingEngine.Windows</RootNamespace>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+    <!-- SecureInputDetector : vtables COM UIA via function pointers unmanaged
+         (AOT-safe, aucun stub runtime) — nécessite unsafe. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TypingEngine.Core\TypingEngine.Core.csproj" />

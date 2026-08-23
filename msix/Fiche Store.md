@@ -58,7 +58,7 @@ Un clavier visuel interactif affiche les 4 couches de la disposition. Idéal pou
 
 
 🔍 RECHERCHE DE CARACTÈRES
-Vous cherchez un symbole ? Tapez son nom et l'application vous montre où il se trouve sur le clavier et le copie dans le presse-papiers.
+Vous cherchez un symbole ? Tapez son nom et l'application vous montre où il se trouve sur le clavier et l'insère directement dans votre document (copie en secours).
 
 
 🔒 RESPECT DE LA VIE PRIVÉE
@@ -77,6 +77,8 @@ Site web : https://azerty.global
 ### Nouveautés de cette version (notes de version)
 
 Version 1.2.0 :
+ • En option : maintenez une touche morte d'alphabet (grec, cyrillique, scientifique) pour écrire plusieurs caractères, ou verrouillez-la dans une application d'un double appui. Activation depuis le menu.
+ • La recherche de caractères insère désormais le caractère directement dans votre document.
  • Défi du jour accessible à tout moment depuis l'icône de la zone de notification : le même extrait pour tout le monde, chaque jour.
  • Nouveau bouton « Copier mon résultat » en fin de séance : vitesse, précision, durée et caractères qui ont posé problème, prêts à coller dans une conversation.
  • Votre record personnel est signalé quand une séance bat votre meilleur score.
@@ -190,7 +192,7 @@ An interactive visual keyboard displays all 4 layers of the layout. Perfect for 
 
 
 🔍 CHARACTER SEARCH
-Looking for a symbol? Type its name and the app shows where it is on the keyboard and copies it to your clipboard.
+Looking for a symbol? Type its name and the app shows where it is on the keyboard and inserts it directly into your document (clipboard fallback).
 
 
 🔒 PRIVACY-FIRST
@@ -209,6 +211,8 @@ Website: https://azerty.global
 ### What's new (release notes)
 
 Version 1.2.0:
+ • Optional: hold an alphabet dead key (Greek, Cyrillic, scientific) to type several characters, or lock it inside an application with a double press. Opt-in from the menu.
+ • Character search now inserts the character directly into your document.
  • Daily challenge available at any time from the notification area icon: the same passage for everyone, every day.
  • New “Copy my result” button at the end of a session: speed, accuracy, duration and the characters that gave you trouble, ready to paste into a conversation.
  • Your personal best is now highlighted when a session beats your previous record.
@@ -309,6 +313,12 @@ APIs additionnelles introduites v0.9.7 pour la couche compatibilité jeux (toujo
  • SetWinEventHook(EVENT_SYSTEM_FOREGROUND) — pour détecter le changement d'application au premier plan et adapter le mode d'injection en conséquence.
  • OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ) + EnumProcessModulesEx + GetModuleFileNameExW — pour identifier les frameworks gaming chargés (GLFW, SDL, Unity, etc.) et basculer en mode d'injection compatible. Échoue gracieusement (try/catch) sur les processus protégés par un anti-cheat — comportement attendu et géré.
  • Aucune écriture, aucune injection de DLL ou de code dans les processus externes. Lecture seule des noms de modules pour déterminer le mode d'injection à utiliser.
+
+APIs additionnelles introduites v1.2.0 pour les couches maintenables opt-in et la protection des champs de mot de passe :
+ • GetGUIThreadInfo + GetWindowLongW(GWL_STYLE) — identifier le contrôle focalisé et son style ES_PASSWORD, en lecture seule.
+ • UI Automation (CUIAutomation COM : GetFocusedElement, get_CurrentIsPassword) — détecter les champs de mot de passe des navigateurs depuis un thread dédié à attente bornée (30 ms), jamais dans le callback clavier. Seul le booléen IsPassword est consulté, jamais le contenu du champ, et il sert à SUSPENDRE les fonctions avancées (couches, recherche, indicateur) dans ces champs — le remapping ordinaire continue.
+ • SetWinEventHook(EVENT_OBJECT_FOCUS) — suivre les changements de focus pour cette suspension.
+ • GetProcessTimes — associer un verrouillage de couche à l'instance exacte du processus au premier plan (PID + instant de création). Aucun suivi d'usage : rien n'est journalisé ni transmis.
  • L'application se DÉSACTIVE automatiquement sur les jeux protégés par un anti-cheat kernel-level connu (Vanguard, EAC, BattlEye, RICOCHET, etc.) — politique de sécurité utilisateur pour éviter tout risque de bannissement.
 
 ### Note WACK — DPIAwarenessValidation
@@ -351,4 +361,4 @@ Les fichiers suivants sont dans `msix/Assets/` :
 
 ---
 
-*Dernière mise à jour : 2026-06-29 (v1.0.0 — publication Microsoft Store)*
+*Dernière mise à jour : 2026-08-24 (v1.2.0 — préparation, non soumise)*

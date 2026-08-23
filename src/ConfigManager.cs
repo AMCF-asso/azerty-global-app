@@ -206,6 +206,62 @@ static class ConfigManager
     /// <summary>Active ou désactive les notifications.</summary>
     public static void SetNotifications(bool enabled) => SetBool("notificationsEnabled", enabled);
 
+    // ── Couches maintenables ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Interrupteur volontaire principal. Défaut false pour ne modifier aucune
+    /// habitude lors d'une mise à jour depuis une version antérieure.
+    /// </summary>
+    public static bool MaintainableLayersEnabled => GetBool("maintainableLayersEnabled");
+
+    public static void SetMaintainableLayersEnabled(bool enabled) =>
+        SetBool("maintainableLayersEnabled", enabled);
+
+    // Les trois couches sont pré-sélectionnées dans le parcours d'activation,
+    // mais restent inactives tant que l'interrupteur principal est à false.
+    public static bool MaintainableGreekEnabled => GetBoolDefaultTrue("maintainableGreekEnabled");
+    public static bool MaintainableCyrillicEnabled => GetBoolDefaultTrue("maintainableCyrillicEnabled");
+    public static bool MaintainableScientificEnabled => GetBoolDefaultTrue("maintainableScientificEnabled");
+
+    public static void SetMaintainableGreekEnabled(bool enabled) =>
+        SetBool("maintainableGreekEnabled", enabled);
+    public static void SetMaintainableCyrillicEnabled(bool enabled) =>
+        SetBool("maintainableCyrillicEnabled", enabled);
+    public static void SetMaintainableScientificEnabled(bool enabled) =>
+        SetBool("maintainableScientificEnabled", enabled);
+
+    public static int MaintainableDoubleTapMilliseconds
+    {
+        get
+        {
+            uint configured = GetUInt("maintainableDoubleTapMilliseconds");
+            if (configured != 0)
+                return Math.Clamp((int)configured, 150, 1000);
+
+            try { return Math.Clamp((int)Win32.GetDoubleClickTime(), 150, 1000); }
+            catch { return 500; }
+        }
+    }
+
+    public static void SetMaintainableDoubleTapMilliseconds(int milliseconds) =>
+        SetUInt("maintainableDoubleTapMilliseconds", (uint)Math.Clamp(milliseconds, 150, 1000));
+
+    public static bool MaintainableVisualFeedbackEnabled =>
+        GetBoolDefaultTrue("maintainableVisualFeedbackEnabled");
+
+    public static void SetMaintainableVisualFeedbackEnabled(bool enabled) =>
+        SetBool("maintainableVisualFeedbackEnabled", enabled);
+
+    public static bool MaintainableTutorialCompleted => GetBool("maintainableTutorialCompleted");
+
+    public static void SetMaintainableTutorialCompleted(bool completed) =>
+        SetBool("maintainableTutorialCompleted", completed);
+
+    public static bool MaintainableDiagnosticsConsent => GetBool("maintainableDiagnosticsConsent");
+
+    public static void SetMaintainableDiagnosticsConsent(bool consent) =>
+        SetBool("maintainableDiagnosticsConsent", consent);
+
     /// <summary>Langue de l'interface : "fr" (défaut) ou "en". Une politique d'entreprise
     /// impose la langue et verrouille les trois surfaces qui la changent.</summary>
     public static string AppLanguage =>

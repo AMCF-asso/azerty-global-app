@@ -45,6 +45,8 @@ internal sealed class MockWin32Api : IWin32Api
     public string? ScriptedProcessName { get; set; }
     public string? ScriptedFullPath { get; set; }
     public uint ScriptedPid { get; set; } = 1234;
+    public long ScriptedProcessStartTime { get; set; } = 987654321;
+    public bool ScriptedSecureInput { get; set; }
     public string[]? ScriptedModules { get; set; }
     public bool ShouldFailForegroundInspection { get; set; }
 
@@ -116,6 +118,14 @@ internal sealed class MockWin32Api : IWin32Api
         moduleFileNames = ScriptedModules ?? Array.Empty<string>();
         return ScriptedModules != null;
     }
+
+    public bool TryGetProcessStartTime(uint pid, out long startTimeTicks)
+    {
+        startTimeTicks = ScriptedProcessStartTime;
+        return pid != 0 && startTimeTicks != 0;
+    }
+
+    public bool IsForegroundPasswordField() => ScriptedSecureInput;
 
     public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb)
     {

@@ -119,6 +119,8 @@ Permet à l'utilisateur de trouver comment taper n'importe quel caractère dispo
 - [x] **Résultat visuel** : montre la combinaison de touches sous forme lisible (ex: `AltGr + W → «`) et surligne la touche sur le clavier virtuel si celui-ci est ouvert
 - [x] **Données issues de `character-index.json`** : réutilise le fichier existant du site qui contient déjà `unicodeNameFr`, `frenchAliases`, `methods` avec flag `recommended` — pas besoin de reconstruire ces données
 - [x] **Méthode recommandée en priorité** : affiche d'abord la méthode marquée `"recommended": true` dans le JSON
+- [x] **Insertion directe** : `Entrée` restaure la fenêtre d'origine (mémorisée aussi à l'ouverture depuis le menu tray) et insère le caractère via le moteur d'émission ; en cas d'échec (fenêtre disparue, focus refusé), repli sur la copie avec notification explicite
+- [x] **Suspension dans les champs sécurisés** : le raccourci et l'entrée de menu sont inertes quand un champ de mot de passe a le focus
 
 ### 2.8 Fonctionnalités supplémentaires (v1)
 
@@ -135,7 +137,22 @@ L'application reste active dans les jeux pour permettre à l'utilisateur de cont
 - [x] **Override utilisateur par application** dans le menu de la zone de notification (`Auto`, `Forcer compatibilité jeu`, `Forcer désactivation`). Refus de l'override `forceOn` sur un jeu protégé par anti-cheat (sécurité utilisateur). Audit automatique au démarrage : un override `forceOn` sur un jeu nouvellement ajouté à la liste anti-cheat est supprimé avec bulle d'avertissement.
 - [x] **Filet de sécurité contre les "stuck keys"** : émission de keyup synthétiques pour toutes les touches en pass-through avant tout reset interne (toggle off/on, désactivation auto). Évite que le personnage continue à avancer après réactivation manuelle.
 
-### 2.10 Fonctionnalités v2+
+### 2.10 Couches maintenables — grec, cyrillique, scientifique
+
+Étend les trois touches mortes alphabétiques sans modifier leurs emplacements ni leurs tables (`AZERTY Global 2026.json` reste la source unique). Fonctionnalité désactivée par défaut, activation volontaire depuis le menu tray, entièrement hors ligne. Développée le 2026-08-05, portée sur l'architecture extraite le 2026-08-24.
+
+- [x] **Appui simple** : touche morte ponctuelle actuelle (comportement historique inchangé)
+- [x] **Déclencheur maintenu pendant une autre frappe** : couche temporaire immédiate, sans seuil temporel
+- [x] **Double appui** : verrouillage dans le processus actif ; délai configurable 150–1000 ms (défaut : double-clic système)
+- [x] **Déverrouillage** : même déclencheur ou premier Échap (absorbé) ; verrou associé au PID + instant de création (jamais hérité par un PID réutilisé, purgé à la mort du processus)
+- [x] **Substitution** : une autre couche recouvre temporairement la couche verrouillée ; son double appui remplace le verrou
+- [x] **Modificateurs** : Ctrl, Alt et Windows conservent les raccourcis ; le Shift/AltGr d'activation est consommé ; un nouveau Shift ou Verr. Maj. produit les majuscules
+- [x] **Espace** : espace normale en maintien et verrouillage ; touche non définie → caractère AZERTY Global ordinaire ; les 26 autres touches mortes inchangées
+- [x] **Indicateur visuel** près du caret (couche + mode), désactivable, masqué dans les champs sécurisés et quand le remapping est suspendu
+- [x] **Champs de mot de passe** : remappage ordinaire conservé, mais couches, recherche et indicateur suspendus — détection `ES_PASSWORD` + UI Automation (navigateurs) sur thread dédié, jamais dans le hook clavier
+- [x] **Réglages persistants** avec migration : configurations existantes conservées, couches désactivées
+
+### 2.11 Fonctionnalités v2+
 
 - [x] Auto-start au démarrage Windows (raccourci dans le dossier Startup, sans admin)
 - [ ] Détection de disposition native (éviter le double remapping)
@@ -263,6 +280,14 @@ L'application doit lire ce JSON au démarrage et construire ses tables de mappin
 - [x] L'application ne consomme pas de CPU au repos
 - [x] Latence de frappe imperceptible
 
+**Couches maintenables (validation manuelle avant publication de la fonctionnalité)** — à dérouler dans Word/Excel, Chrome, Edge, Firefox et VS Code :
+
+- [ ] Maj+* puis `a` → α ; maintien Maj+* + `abc` → αβγ ; double appui → verrou (indicateur « verrou »), Espace reste une espace, Échap déverrouille et est absorbé une seule fois
+- [ ] Pendant un verrou : Ctrl+C/V, Alt+Tab et Win+E restent intacts ; un nouveau Maj produit Α ; AltGr+* (cyrillique) recouvre temporairement le verrou grec
+- [ ] Champ de mot de passe (login réel dans les 3 navigateurs + `<input type="password">` local) : frappes remappées normalement, aucune couche, indicateur masqué, raccourci de recherche inerte
+- [ ] Recherche depuis le raccourci ET depuis le menu tray : Entrée insère au point d'insertion d'origine ; fenêtre cible fermée avant Entrée → notification « copié »
+- [ ] Verrou dans Word → VS Code (pas de couche) → retour Word (verrou revenu) → fermeture puis réouverture de Word (verrou disparu)
+
 ---
 
-*Dernière mise à jour : 2026-06-27*
+*Dernière mise à jour : 2026-08-24*

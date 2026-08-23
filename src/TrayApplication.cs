@@ -15,6 +15,8 @@ sealed class TrayApplication : IDisposable
     private const uint WM_TRAYICON = WM_APP + 1;
     private const uint WM_APP_SEARCH = WM_APP + 2;
     private const uint WM_APP_VKBD = WM_APP + 3;
+    private const uint WM_APP_STATE = WM_APP + 6;
+    private const uint WM_APP_SECURE_RECHECK = WM_APP + 7;
     // Activation de toast COM re-routée du thread RPC vers le thread UI (v1.2.0).
     // wParam = 1 : action=review, cible Store ; wParam = 2 : action=review, cible
     // page feedback (répartition tirée à l'affichage — un toast antérieur sans
@@ -41,6 +43,7 @@ sealed class TrayApplication : IDisposable
     private const int IDM_PRIVACY = 1028;
     internal const int IDM_DISCORD = 1029;
     private const int IDM_RELEASE_NOTES = 1030;
+    private const int IDM_MAINTAINABLE_LAYERS = 1040;
     internal const int IDM_RATE_STORE = 1031;
     private const int IDM_STATS = 1032;
     private const int IDM_SWITCH_LANGUAGE = 1033;
@@ -126,6 +129,8 @@ sealed class TrayApplication : IDisposable
     private CharacterSearch? _characterSearch;
     private OnboardingWindow? _onboarding;
     private SettingsWindow? _settings;
+    private MaintainableLayersWindow? _maintainableLayersWindow;
+    private LayerIndicatorWindow? _layerIndicator;
     private AboutWindow? _about;
     private UsageStatsWindow? _usageStats;
     private ToggleNotification? _toggleNotification;
@@ -335,10 +340,16 @@ sealed class TrayApplication : IDisposable
         // le hook. Sans ce sync, les frappes suivantes utilisent un etat modifs faux.
         _mapper.SyncState();
 
+        // Le moteur ne lit aucune configuration : lui pousser les réglages des
+        // couches maintenables au démarrage, puis à chaque enregistrement.
+        PushMaintainableLayerSettings();
+
         try
         {
-            _characterSearch = new CharacterSearch();
+            _characterSearch = new CharacterSearch(new TextInsertionService(_mapper.EmitText));
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;
+            _characterSearch.FallbackCopied += character =>
+                ShowBalloon(L.Layers_InsertFallbackTitle, L.Layers_InsertFallbackBody(character));
         }
         catch (Exception ex)
         {
@@ -356,6 +367,16 @@ sealed class TrayApplication : IDisposable
             _virtualKeyboard = null;
         }
 
+        try
+        {
+            _layerIndicator = new LayerIndicatorWindow();
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("Init LayerIndicator", ex);
+            _layerIndicator = null;
+        }
+
         Win32.SetForegroundWindow(_hWnd);
 
         // Compatibilité jeux : instancier le ForegroundMonitor APRÈS création de la
@@ -364,6 +385,9 @@ sealed class TrayApplication : IDisposable
         {
             _foregroundMonitor = new ForegroundMonitor(_win32Api, _hWnd, _typingHost);
             _foregroundMonitor.ForegroundChanged += OnForegroundChanged;
+            // Résultat UIA arrivé après le budget d'attente : le snapshot sécurisé
+            // est périmé, replanifier un Recompute sur la boucle de messages.
+            SecureInputDetector.ResultChangedLate += OnSecureInputLateResult;
             _mapper.SetForegroundMonitor(_foregroundMonitor);
             // Le ctor de ForegroundMonitor a deja calcule un snapshot initial avant
             // l'abonnement ci-dessus : appliquer cet etat au hook immediatement.
@@ -544,8 +568,10 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case WM_APP_SEARCH:
-                    if (ShouldProcessHook)
+                    if (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true)
                         _characterSearch?.Toggle();
+                    else if (_mapper?.AdvancedFeaturesSuppressed == true)
+                        ShowBalloon(L.Layers_SearchSecureTitle, L.Layers_SearchSecureBody);
                     else if (IsPaused)
                         ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
                     else
@@ -559,6 +585,17 @@ sealed class TrayApplication : IDisposable
                         ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
                     else
                         ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
+                    return IntPtr.Zero;
+
+                case WM_APP_STATE:
+                    Interlocked.Exchange(ref _stateRefreshQueued, 0);
+                    ApplyStateChange();
+                    return IntPtr.Zero;
+
+                case WM_APP_SECURE_RECHECK:
+                    // Recompute relit IsForegroundPasswordField (valeur UIA désormais
+                    // fraîche) et ne notifie que si l'état effectif change.
+                    _foregroundMonitor?.Recompute();
                     return IntPtr.Zero;
 
                 case Win32.WM_COMMAND:
@@ -579,11 +616,23 @@ sealed class TrayApplication : IDisposable
                             }
                             break;
                         case IDM_SEARCH:
-                            if (ShouldProcessHook || _characterSearch?.IsVisible == true)
-                                _characterSearch?.Toggle();
+                            if (_characterSearch?.IsVisible == true)
+                                _characterSearch.Hide();
+                            else if (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true)
+                                _characterSearch?.Show(_lastForegroundBeforeTrayMenu);
+                            else if (_mapper?.AdvancedFeaturesSuppressed == true)
+                                ShowBalloon(L.Layers_SearchSecureTitle, L.Layers_SearchSecureBody);
                             break;
                         case IDM_SETTINGS:
                             ShowSettingsWindow();
+                            break;
+                        case IDM_MAINTAINABLE_LAYERS:
+                            if (_maintainableLayersWindow == null)
+                            {
+                                _maintainableLayersWindow = new MaintainableLayersWindow();
+                                _maintainableLayersWindow.SettingsChanged += OnMaintainableLayerSettingsChanged;
+                            }
+                            _maintainableLayersWindow.Show();
                             break;
                         case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
                         case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
@@ -1216,8 +1265,11 @@ sealed class TrayApplication : IDisposable
         uint kbdFlags = ShouldProcessHook || _virtualKeyboard?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, kbdFlags, IDM_KEYBOARD,
             _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdKey) : L.Tray_MenuVirtualKeyboard(kbdKey));
-        uint searchFlags = ShouldProcessHook || _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
+        uint searchFlags = (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true) ||
+            _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchKey));
+        Win32.AppendMenuW(hMenu, MF_STRING, IDM_MAINTAINABLE_LAYERS,
+            ConfigManager.MaintainableLayersEnabled ? L.Layers_MenuEntry + " ✓" : L.Layers_MenuEntry + "…");
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_EXERCISES, L.Tray_MenuLessons);
         // Défi du jour : toujours visible depuis la décision du 2026-08-16. L'entrée était
         // conditionnée à `trainingEnabled`, qui vaut false par défaut : sur une installation
@@ -1491,14 +1543,38 @@ sealed class TrayApplication : IDisposable
     }
 
     private bool _lastCapsState;
+    private int _stateRefreshQueued;
+
+    /// <summary>
+    /// Déclenché depuis le callback WH_KEYBOARD_LL à chaque transition d'état
+    /// (touche morte, couche, CapsLock). Ne rien faire de coûteux ici :
+    /// Shell_NotifyIcon (tooltip) et SetWindowPos (indicateur) sont des appels
+    /// bloquants qui retarderaient le hook — tout part en différé, coalescé,
+    /// sur la boucle de messages.
+    /// </summary>
     private void OnStateChanged()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        if (Interlocked.Exchange(ref _stateRefreshQueued, 1) == 0)
+            Win32.PostMessageW(_hWnd, WM_APP_STATE, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    /// <summary>Travail UI réel de OnStateChanged, exécuté hors du hook.</summary>
+    private void ApplyStateChange()
     {
         bool caps = _mapper?.CapsLockActive == true;
         if (caps != _lastCapsState)
         {
             _lastCapsState = caps;
             UpdateIcon();
-            UpdateTooltip();
+        }
+        UpdateTooltip();
+        if (_mapper != null)
+        {
+            // Indicateur masqué dans les champs sécurisés ET quand le hook est
+            // suspendu (pause, anti-cheat) : la couche ne produirait rien.
+            _layerIndicator?.Update(_mapper.MaintainableLayerState,
+                _mapper.AdvancedFeaturesSuppressed || !ShouldProcessHook);
         }
         RefreshVirtualKeyboard();
     }
@@ -1506,11 +1582,42 @@ sealed class TrayApplication : IDisposable
     private void OnKeyPressed(uint scancode)
     {
         _virtualKeyboard?.NotifyKeyPress(scancode);
+        // Repositionnement de l'indicateur (le caret a bougé) : différé hors du
+        // hook via le même message coalescé que les changements d'état.
+        if (_mapper?.MaintainableLayerState.IsActive == true)
+            OnStateChanged();
     }
 
     private void OnSearchSelectionChanged(CharacterSearch.MethodData? method)
     {
         _virtualKeyboard?.HighlightMethod(method);
+    }
+
+    /// <summary>Lit les réglages des couches et les pousse au moteur.</summary>
+    private void PushMaintainableLayerSettings()
+    {
+        if (_mapper == null) return;
+        var enabledLayers = new List<string>(3);
+        if (ConfigManager.MaintainableGreekEnabled) enabledLayers.Add("dk_greek");
+        if (ConfigManager.MaintainableCyrillicEnabled) enabledLayers.Add("dk_cyrillic");
+        if (ConfigManager.MaintainableScientificEnabled) enabledLayers.Add("dk_scientific");
+        _mapper.ApplyMaintainableLayerSettings(
+            ConfigManager.MaintainableLayersEnabled,
+            enabledLayers,
+            ConfigManager.MaintainableDoubleTapMilliseconds);
+    }
+
+    private void OnMaintainableLayerSettingsChanged()
+    {
+        PushMaintainableLayerSettings();
+        ApplyStateChange();
+    }
+
+    /// <summary>Appelé depuis le thread de travail UIA — se limite à un PostMessage.</summary>
+    private void OnSecureInputLateResult()
+    {
+        if (_hWnd != IntPtr.Zero)
+            Win32.PostMessageW(_hWnd, WM_APP_SECURE_RECHECK, IntPtr.Zero, IntPtr.Zero);
     }
 
     private void RefreshVirtualKeyboard()
@@ -1553,12 +1660,15 @@ sealed class TrayApplication : IDisposable
         UsageStats.Flush(); // dernière sauvegarde avant fermeture
         Win32.WTSUnRegisterSessionNotification(_hWnd);
         _mapper?.ClearPassedThroughKeys();
+        SecureInputDetector.ResultChangedLate -= OnSecureInputLateResult;
         _foregroundMonitor?.Dispose(); _foregroundMonitor = null;
         _hook?.Dispose(); _hook = null;
         _virtualKeyboard?.Dispose(); _virtualKeyboard = null;
         _characterSearch?.Dispose(); _characterSearch = null;
         _onboarding?.Dispose(); _onboarding = null;
         _settings?.Dispose(); _settings = null;
+        _maintainableLayersWindow?.Dispose(); _maintainableLayersWindow = null;
+        _layerIndicator?.Dispose(); _layerIndicator = null;
         _about?.Dispose(); _about = null;
         _usageStats?.Dispose(); _usageStats = null;
         _toggleNotification?.Dispose(); _toggleNotification = null;
@@ -1628,6 +1738,9 @@ sealed class TrayApplication : IDisposable
                 parts.Add(L.Tray_TooltipCapsLock);
             if (_mapper?.ActiveDeadKey != null)
                 parts.Add(L.Tray_TooltipDeadKey(GetDeadKeySymbol(_mapper.ActiveDeadKey)));
+            var layerState = _mapper?.MaintainableLayerState ?? MaintainableLayerState.Inactive;
+            if (layerState.Mode is MaintainableLayerMode.Held or MaintainableLayerMode.Locked)
+                parts.Add(L.Layers_TooltipLayer(GetMaintainableLayerLabel(layerState.LayerId)));
         }
         _nid.szTip = string.Join(" — ", parts);
         _nid.uFlags = NIF_TIP;
@@ -1890,6 +2003,15 @@ sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>Libellé localisé d'une couche maintenable (indicateur, infobulle).</summary>
+    internal static string GetMaintainableLayerLabel(string? layerId) => layerId switch
+    {
+        "dk_greek" => L.Layers_LabelGreek,
+        "dk_cyrillic" => L.Layers_LabelCyrillic,
+        "dk_scientific" => L.Layers_LabelScientific,
+        _ => ""
+    };
+
     private void ShowBalloon(string title, string text)
     {
         if (!ConfigManager.NotificationsEnabled) return;
@@ -1926,6 +2048,7 @@ sealed class TrayApplication : IDisposable
     private void OnForegroundChanged()
     {
         if (_foregroundMonitor == null || _hook == null || _mapper == null) return;
+        _mapper.RefreshForegroundContext();
         var mode = _foregroundMonitor.CurrentMode;
         var procName = _foregroundMonitor.CurrentProcessName ?? "";
         var procDisplay = FormatProcessName(procName);
@@ -1986,6 +2109,10 @@ sealed class TrayApplication : IDisposable
             UpdateIcon();
             UpdateTooltip();
         }
+
+        // L'indicateur de couche dépend du process foreground, de l'état sécurisé
+        // et de ShouldProcessHook (modifié ci-dessus) : rafraîchir en dernier.
+        ApplyStateChange();
     }
 
     /// <summary>

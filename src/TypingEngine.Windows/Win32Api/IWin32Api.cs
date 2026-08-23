@@ -30,6 +30,15 @@ public interface IWin32Api
     /// </summary>
     bool TryGetForegroundProcess(out string? processName, out string? fullPath, out IntPtr hkl, out uint pid);
 
+    /// <summary>Retourne l'instant de création du processus en ticks FILETIME UTC.</summary>
+    bool TryGetProcessStartTime(uint pid, out long startTimeTicks);
+
+    /// <summary>
+    /// Détection légère du contrôle sécurisé actuellement focalisé. Cette méthode
+    /// est appelée par ForegroundMonitor, jamais depuis le callback clavier.
+    /// </summary>
+    bool IsForegroundPasswordField();
+
     /// <summary>
     /// Énumère les modules (DLL) chargés dans un process. Retourne false si OpenProcess
     /// échoue (process protégé par anti-cheat ou privilèges insuffisants).
