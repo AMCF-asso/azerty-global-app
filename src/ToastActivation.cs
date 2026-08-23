@@ -159,11 +159,25 @@ internal static partial class ToastActivation
     }
 
     /// <summary>
-    /// Affiche un toast ToastGeneric (titre + corps) portant des arguments de lancement.
+    /// Corps destine au toast : la premiere ligne seulement. La seconde ligne d'un corps de
+    /// notification n'existe que pour dire ce que le clic ouvre, et le bouton la remplace.
+    /// Le canal balloon n'a pas de bouton et garde donc le corps entier — d'ou une seule
+    /// chaine pour les deux canaux plutot qu'un doublon par notification.
+    /// Public pour que <c>ToastBodyTests</c> puisse l'eprouver sans runtime WinRT.
+    /// </summary>
+    public static string ToastBody(string body)
+    {
+        int i = body.IndexOf('\n');
+        return i < 0 ? body : body[..i];
+    }
+
+    /// <summary>
+    /// Affiche un toast ToastGeneric (titre, corps, bouton) portant des arguments de lancement.
     /// Contexte packagé uniquement (CreateToastNotifier s'appuie sur l'identité MSIX).
     /// Retourne false en cas d'échec — l'appelant retombe sur la balloon classique.
     /// </summary>
-    public static bool TryShowToast(string title, string body, string launchArgs)
+    public static bool TryShowToast(string title, string body, string buttonLabel,
+                                    string launchArgs)
     {
         try
         {
@@ -171,8 +185,15 @@ internal static partial class ToastActivation
                 $"<toast launch=\"{EscapeXml(launchArgs)}\" activationType=\"foreground\">" +
                 "<visual><binding template=\"ToastGeneric\">" +
                 $"<text>{EscapeXml(title)}</text>" +
-                $"<text>{EscapeXml(body)}</text>" +
-                "</binding></visual></toast>";
+                $"<text>{EscapeXml(ToastBody(body))}</text>" +
+                "</binding></visual>" +
+                "<actions>" +
+                $"<action content=\"{EscapeXml(buttonLabel)}\" activationType=\"foreground\"" +
+                $" arguments=\"{EscapeXml(launchArgs)}\" />" +
+                // content vide + activationType system : Windows met son propre libelle
+                // traduit, une chaine de moins a maintenir en deux langues.
+                "<action content=\"\" activationType=\"system\" arguments=\"dismiss\" />" +
+                "</actions></toast>";
 
             var doc = new Windows.Data.Xml.Dom.XmlDocument();
             doc.LoadXml(xml);

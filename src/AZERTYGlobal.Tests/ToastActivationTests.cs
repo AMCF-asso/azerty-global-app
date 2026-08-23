@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Xml.Linq;
 using AZERTYGlobal;
 using Xunit;
@@ -122,5 +123,59 @@ public class ToastActivationTests
 
         Assert.Equal(new[] { ToastActivation.ActivatorClsidString }, comClassIds);
         Assert.Equal(new[] { autre }, toastClsids);
+    }
+}
+
+/// <summary>
+/// <c>ToastActivation.ToastBody</c> ne garde que la premiere ligne d'un corps, parce que la
+/// seconde n'existe que pour dire ce que le clic ouvre et que le bouton du toast la remplace.
+/// La troncature n'est donc sure que tant que cette convention tient : ces tests la verrouillent
+/// sur les corps qui empruntent reellement le canal toast, au lieu de la supposer.
+/// </summary>
+public class ToastBodyTests
+{
+    /// <summary>Les corps du canal toast : sollicitation d'avis (4 variantes) et relance du
+    /// lancement automatique. Chacun doit porter exactement une ligne d'affordance.</summary>
+    public static TheoryData<string> CorpsDuCanalToast()
+    {
+        var data = new TheoryData<string>();
+        foreach (var langue in new[] { "fr", "en" })
+        {
+            L.Language = langue;
+            for (int essai = 1; essai <= 2; essai++)
+            {
+                data.Add(L.Tray_ReviewPromptBodyStore(essai));
+                data.Add(L.Tray_ReviewPromptBodyFeedback(essai));
+            }
+            data.Add(L.Tray_AutoStartNudgeBody);
+        }
+        L.Language = "fr";
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(CorpsDuCanalToast))]
+    public void UnCorpsDuCanalToast_NAQuUneLigneDAffordance(string corps)
+    {
+        Assert.Equal(1, corps.Count(c => c == '\n'));
+    }
+
+    [Theory]
+    [MemberData(nameof(CorpsDuCanalToast))]
+    public void ToastBody_RetireLAffordance_EtGardeLeReste(string corps)
+    {
+        var attendu = corps.Split('\n')[0];
+        Assert.Equal(attendu, ToastActivation.ToastBody(corps));
+        Assert.DoesNotContain("\n", ToastActivation.ToastBody(corps));
+        Assert.NotEmpty(ToastActivation.ToastBody(corps));
+    }
+
+    /// <summary>Reciproque : sans saut de ligne, le corps traverse intact. Sans cette
+    /// assertion, un ToastBody qui renverrait la chaine vide passerait les tests ci-dessus
+    /// pour un corps sans affordance.</summary>
+    [Fact]
+    public void ToastBody_SansSautDeLigne_RendLeCorpsIntact()
+    {
+        Assert.Equal("une seule ligne", ToastActivation.ToastBody("une seule ligne"));
     }
 }
