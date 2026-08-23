@@ -47,17 +47,20 @@ public sealed class ForegroundMonitor : IDisposable
     // Anti-GC : le delegate doit rester rooté tant que le hook est installé
     private Win32.WinEventDelegate? _winEventDelegate;
     private IntPtr _winEventHook = IntPtr.Zero;
+    private IntPtr _focusEventHook = IntPtr.Zero;
 
-    // Snapshot immuable atomique pour cohérence cross-thread. Les 4 champs (processName,
-    // fullPath, hkl, mode) sont mis à jour en une seule écriture de référence (atomique CLR
-    // pour les types ref). Évite que le hook thread lise des combinaisons mixtes (ex. nouveau
+    // Snapshot immuable atomique pour cohérence cross-thread. Tous les champs sont
+    // mis à jour en une seule écriture de référence (atomique CLR pour les types ref).
+    // Évite que le hook thread lise des combinaisons mixtes (ex. nouveau
     // processName / ancien hkl) pendant que le tray thread écrit séquentiellement.
     private sealed record class Snapshot(
         string? ProcessName,
         string? FullPath,
         IntPtr Hkl,
         CompatibilityMode Mode,
-        CompatibilitySuspendReason SuspendReason);
+        CompatibilitySuspendReason SuspendReason,
+        ForegroundProcessIdentity Identity,
+        bool SecureInput);
     private Snapshot? _snapshot;
 
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
@@ -75,6 +78,12 @@ public sealed class ForegroundMonitor : IDisposable
     /// <summary>Motif précis de la suspension, indépendant du mode d'injection.</summary>
     public CompatibilitySuspendReason CurrentSuspendReason =>
         _snapshot?.SuspendReason ?? CompatibilitySuspendReason.None;
+
+    /// <summary>Instance exacte du processus foreground (PID + création).</summary>
+    public ForegroundProcessIdentity CurrentIdentity => _snapshot?.Identity ?? default;
+
+    /// <summary>True lorsqu'un contrôle de mot de passe identifié possède le focus.</summary>
+    public bool IsSecureInput => _snapshot?.SecureInput == true;
 
     /// <summary>
     /// Audit sécu 2026-05 SEV-A2-05 : lecture atomique des deux champs critiques
@@ -111,12 +120,15 @@ public sealed class ForegroundMonitor : IDisposable
             _winEventDelegate = OnWinEvent;
             _winEventHook = _api.SetWinEventHook(
                 Win32.EVENT_SYSTEM_FOREGROUND, Win32.EVENT_SYSTEM_FOREGROUND, _winEventDelegate);
+            _focusEventHook = _api.SetWinEventHook(
+                Win32.EVENT_OBJECT_FOCUS, Win32.EVENT_OBJECT_FOCUS, _winEventDelegate);
             // Si retour IntPtr.Zero : mode dégradé. CurrentMode reste à Default.
         }
         catch (Exception ex)
         {
             _host.Log("ForegroundMonitor.ctor", ex);
             _winEventHook = IntPtr.Zero;
+            _focusEventHook = IntPtr.Zero;
         }
 
         // Premier calcul initial (synchrone)
@@ -169,6 +181,11 @@ public sealed class ForegroundMonitor : IDisposable
             IntPtr hkl = IntPtr.Zero;
             uint pid = 0;
             bool hasFg = _api.TryGetForegroundProcess(out processName, out fullPath, out hkl, out pid);
+            long startTimeTicks = 0;
+            if (hasFg && pid != 0)
+                _api.TryGetProcessStartTime(pid, out startTimeTicks);
+            var identity = new ForegroundProcessIdentity(pid, startTimeTicks);
+            bool secureInput = hasFg && _api.IsForegroundPasswordField();
 
             // Ignorer les transitions vers les process shell Windows : effets de bord du clic
             // sur l'icône tray ou de la touche Win (zone de notification = explorer.exe,
@@ -201,7 +218,7 @@ public sealed class ForegroundMonitor : IDisposable
             // Snapshot atomique : une seule écriture de référence (atomique CLR sur ref types).
             var oldSnapshot = _snapshot;
             CompatibilityMode oldMode = oldSnapshot?.Mode ?? CompatibilityMode.Default;
-            _snapshot = new Snapshot(processName, fullPath, hkl, mode, resolved.Reason);
+            _snapshot = new Snapshot(processName, fullPath, hkl, mode, resolved.Reason, identity, secureInput);
 
             if (oldMode != mode && _host.CompatibilityDebugLog)
             {
@@ -209,7 +226,9 @@ public sealed class ForegroundMonitor : IDisposable
                     $"{oldMode} → {mode} (process={_host.AnonymizeProcessName(processName)})");
             }
 
-            if (oldMode != mode || (oldMode == mode && processName != null))
+            if (oldMode != mode || oldSnapshot?.Identity != identity ||
+                oldSnapshot?.SecureInput != secureInput ||
+                (oldMode == mode && processName != null))
             {
                 // Toujours notifier sur changement effectif de process pour permettre à
                 // au produit hôte de mettre à jour son état UI (override changes, etc.)
@@ -271,6 +290,11 @@ public sealed class ForegroundMonitor : IDisposable
         {
             try { _api.UnhookWinEvent(_winEventHook); } catch { }
             _winEventHook = IntPtr.Zero;
+        }
+        if (_focusEventHook != IntPtr.Zero)
+        {
+            try { _api.UnhookWinEvent(_focusEventHook); } catch { }
+            _focusEventHook = IntPtr.Zero;
         }
         _winEventDelegate = null;
     }

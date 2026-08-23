@@ -194,7 +194,9 @@ public sealed class KeyboardHook : IDisposable
                 }
 
                 // Détecter Ctrl+Shift+<touche> → ouvrir/fermer la recherche de caractère
-                if (_vkSearch != 0 && _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode) && isKeyDown && _mapper.IsToggleShortcut())
+                if (!_mapper.AdvancedFeaturesSuppressed && _vkSearch != 0 &&
+                    _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode) &&
+                    isKeyDown && _mapper.IsToggleShortcut())
                 {
                     SearchRequested?.Invoke();
                     return (IntPtr)1;

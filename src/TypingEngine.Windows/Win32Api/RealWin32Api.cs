@@ -59,6 +59,59 @@ public sealed class RealWin32Api : IWin32Api
         }
     }
 
+    public bool TryGetProcessStartTime(uint pid, out long startTimeTicks)
+    {
+        startTimeTicks = 0;
+        if (pid == 0) return false;
+
+        IntPtr hProc = Win32.OpenProcess(Win32.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (hProc == IntPtr.Zero) return false;
+        try
+        {
+            if (!Win32.GetProcessTimes(hProc, out var creation, out _, out _, out _))
+                return false;
+            startTimeTicks = creation.ToLong();
+            return startTimeTicks != 0;
+        }
+        finally
+        {
+            Win32.CloseHandle(hProc);
+        }
+    }
+
+    public bool IsForegroundPasswordField()
+    {
+        IntPtr foreground = Win32.GetForegroundWindow();
+        if (foreground == IntPtr.Zero) return false;
+
+        uint threadId = Win32.GetWindowThreadProcessIdOut(foreground, out _);
+        if (threadId == 0) return false;
+
+        var info = new Win32.GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<Win32.GUITHREADINFO>() };
+        if (!Win32.GetGUIThreadInfo(threadId, ref info) || info.hwndFocus == IntPtr.Zero)
+            return false;
+
+        // ES_PASSWORD est la source native fiable pour EDIT et RichEdit. Pour les
+        // contrôles navigateur, SecureInputDetector complète cette détection hors hook.
+        int style = Win32.GetWindowLongW(info.hwndFocus, Win32.GWL_STYLE);
+        if ((style & Win32.ES_PASSWORD) != 0)
+        {
+            var className = new StringBuilder(64);
+            if (Win32.GetClassNameW(info.hwndFocus, className, className.Capacity) == 0)
+                return true; // style explicite : rester conservateur si la classe est inaccessible
+
+            string name = className.ToString();
+            if (name.Equals("Edit", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("RichEdit", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("Password", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        // Chromium, Firefox et plusieurs applications modernes exposent le champ
+        // sécurisé par UIA plutôt que par un HWND enfant avec ES_PASSWORD.
+        return SecureInputDetector.IsFocusedElementPassword();
+    }
+
     public bool TryEnumProcessModules(uint pid, out string[] moduleFileNames)
     {
         moduleFileNames = Array.Empty<string>();

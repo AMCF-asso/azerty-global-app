@@ -18,6 +18,7 @@ public sealed class KeyMapper
     private const uint VK_LMENU = 0xA4;      // Left Alt
     private const uint VK_RMENU = 0xA5;      // Right Alt (AltGr)
     private const uint VK_CAPITAL = 0x14;     // Caps Lock
+    private const uint VK_ESCAPE = 0x1B;
     private const uint VK_LWIN = 0x5B;
     private const uint VK_RWIN = 0x5C;
 
@@ -33,6 +34,7 @@ public sealed class KeyMapper
     private readonly CompositionEngine _composition;
     private readonly IWin32Api _api;
     private readonly IWindowsTypingHost _host;
+    private readonly MaintainableLayerManager _maintainableLayers = new();
     private ForegroundMonitor? _foregroundMonitor;
 
     private bool _capsLockState;
@@ -44,6 +46,11 @@ public sealed class KeyMapper
     private bool _rightCtrlDown;
     private bool _leftAltDown;
     private bool _rightAltDown; // AltGr
+
+    // Le modificateur ayant servi à atteindre le déclencheur ne doit pas modifier
+    // les caractères de la couche. Il redevient effectif après relâchement complet.
+    private bool _suppressShiftForLayer;
+    private bool _suppressAltGrForLayer;
     // Touches Windows : trackées uniquement pour laisser passer les raccourcis
     // Win+<touche> (Win+. emoji, Win+V…) sans remapping. Pas de notification UI.
     private bool _leftWinDown;
@@ -57,7 +64,12 @@ public sealed class KeyMapper
     private readonly object _passedThroughKeysLock = new();
 
     public bool CapsLockActive => _capsLockState;
-    public string? ActiveDeadKey => _composition.ActiveDeadKey;
+    public string? ActiveDeadKey => _composition.ActiveDeadKey ??
+        (_maintainableLayers.CurrentState.Mode == MaintainableLayerMode.OneShot
+            ? _maintainableLayers.CurrentState.LayerId
+            : null);
+    public MaintainableLayerState MaintainableLayerState => _maintainableLayers.CurrentState;
+    public bool AdvancedFeaturesSuppressed => _foregroundMonitor?.IsSecureInput == true;
     public bool ShiftDown => IsShiftDown;
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
@@ -81,6 +93,7 @@ public sealed class KeyMapper
         _composition = new CompositionEngine(layout);
         _api = api;
         _host = host ?? NullWindowsTypingHost.Instance;
+        _maintainableLayers.StateChanged += () => StateChanged?.Invoke();
         // Lire l'état initial du Caps Lock
         _capsLockState = (_api.GetKeyState(0x14) & 0x0001) != 0;
         // Vider le buffer de touche morte du layout Windows sous-jacent
@@ -93,7 +106,35 @@ public sealed class KeyMapper
     /// Null-safe : si non injecté, fallback Unicode (comportement v0.9.6).
     /// Appelé par le produit hôte après création de sa fenêtre principale.
     /// </summary>
-    public void SetForegroundMonitor(ForegroundMonitor? monitor) => _foregroundMonitor = monitor;
+    public void SetForegroundMonitor(ForegroundMonitor? monitor)
+    {
+        _foregroundMonitor = monitor;
+        RefreshForegroundContext();
+    }
+
+    /// <summary>
+    /// Applique les réglages des couches maintenables. Le moteur ne lit aucune
+    /// configuration : le produit hôte pousse les siens ici, au démarrage puis à
+    /// chaque modification depuis sa fenêtre de réglages.
+    /// </summary>
+    public void ApplyMaintainableLayerSettings(bool enabled, IEnumerable<string> enabledLayers, int doubleTapMilliseconds) =>
+        _maintainableLayers.ApplySettings(enabled, enabledLayers, doubleTapMilliseconds);
+
+    /// <summary>
+    /// Met à jour l'identité de processus et le statut sécurisé depuis le snapshot
+    /// du ForegroundMonitor. Appelé sur le thread UI, jamais depuis le hook LL.
+    /// </summary>
+    public void RefreshForegroundContext()
+    {
+        var identity = _foregroundMonitor?.CurrentIdentity ?? default;
+        bool secure = _foregroundMonitor?.IsSecureInput == true;
+        _maintainableLayers.SetForeground(identity, secure);
+
+        // Nettoyage opportuniste des verrouillages dont le processus a disparu.
+        _maintainableLayers.RemoveDeadProcessLocks(candidate =>
+            _api.TryGetProcessStartTime(candidate.ProcessId, out long start) &&
+            (candidate.StartTimeTicks == 0 || start == candidate.StartTimeTicks));
+    }
 
     /// <summary>
     /// Force la desactivation du Verr.Maj. si actuellement actif. Utilise par LearningModule
@@ -167,6 +208,9 @@ public sealed class KeyMapper
         // et l'etat interne reste a true alors que la touche est physiquement relachee.
         // Bug visible : virgule remplacee par un autre caractere dans l'exo 2.
         CleanupStaleModifiers();
+        _suppressShiftForLayer = false;
+        _suppressAltGrForLayer = false;
+        _maintainableLayers.ResetTransientState();
 
         // Vider le buffer de touche morte du layout Windows sous-jacent
         // (l'utilisateur a pu activer une DK système pendant que le remapping était désactivé)
@@ -311,6 +355,14 @@ public sealed class KeyMapper
                 else _leftAltDown = isKeyDown;
                 break;
         }
+
+        // Le modificateur d'activation d'une couche est consommé tant qu'il reste
+        // physiquement enfoncé ; dès son relâchement complet, un nouveau Shift ou
+        // AltGr redevient effectif (majuscules, symboles).
+        if (!IsShiftDown)
+            _suppressShiftForLayer = false;
+        if (!IsAltGrDown)
+            _suppressAltGrForLayer = false;
 
         // Notifier si l'état d'un modificateur a changé (pour le clavier virtuel)
         if (IsShiftDown != oldShift || IsAltGrDown != oldAltGr ||
@@ -476,11 +528,38 @@ public sealed class KeyMapper
             return false; // Laisser Windows gérer la LED
         }
 
-        // Backspace : annuler la touche morte active et laisser passer
-        if (vkCode == 0x08 && isKeyDown && _composition.Cancel())
+        // Échap : le premier appui déverrouille la couche du processus et est absorbé.
+        if (vkCode == VK_ESCAPE && _maintainableLayers.HandleEscape(isKeyDown))
+            return true;
+
+        // Backspace : annuler la touche morte / couche ponctuelle active et laisser passer
+        if (vkCode == 0x08 && isKeyDown)
         {
-            StateChanged?.Invoke();
-            return false; // Laisser Windows traiter le Backspace normalement
+            bool compositionCancelled = _composition.Cancel();
+            bool oneShotCancelled = _maintainableLayers.CancelOneShot();
+            if (compositionCancelled || oneShotCancelled)
+            {
+                StateChanged?.Invoke();
+                return false; // Laisser Windows traiter le Backspace normalement
+            }
+        }
+
+        // Relâchement du déclencheur : transforme l'accord en fin de maintien ou
+        // l'appui isolé en one-shot / double appui / déverrouillage. Traité avant
+        // les early-returns modificateurs : le keydown du déclencheur a été absorbé,
+        // laisser fuir son keyup (ex. si Alt a été enfoncé entre-temps) créerait un
+        // keyup orphelin côté application et un déclencheur fantôme côté machine d'état.
+        if (!isKeyDown && _maintainableLayers.EndTrigger(scanCode))
+            return true;
+
+        // Toute autre frappe pendant un déclencheur en attente le transforme
+        // immédiatement en couche temporaire — y compris quand la frappe part en
+        // raccourci (Ctrl, Alt, touches étendues) : sinon le relâchement du
+        // déclencheur armerait un one-shot que l'utilisateur n'a pas demandé.
+        if (isKeyDown && _maintainableLayers.PendingTriggerScanCode is uint pendingTrigger &&
+            pendingTrigger != scanCode)
+        {
+            _maintainableLayers.PromotePendingTriggerToHeld();
         }
 
         // Touches étendues (pavé numérique /, Enter, flèches, etc.) : laisser passer
@@ -582,17 +661,74 @@ public sealed class KeyMapper
         if (!_layout.Keys.TryGetValue(scanCode, out var keyDef))
             return false;
 
+        // Détecter les trois déclencheurs avec les modificateurs physiques bruts.
+        // La touche morte classique reste inchangée lorsque la fonctionnalité est off.
+        // Win enfoncé = raccourci système : jamais un déclencheur de couche.
+        string? triggerOutput = keyDef.GetOutput(IsShiftDown, IsAltGrDown, _capsLockState);
+        if (isKeyDown && _composition.ActiveDeadKey == null && !_leftWinDown && !_rightWinDown &&
+            triggerOutput != null &&
+            MaintainableLayerManager.SupportedLayers.Contains(triggerOutput, StringComparer.Ordinal) &&
+            _maintainableLayers.BeginTrigger(triggerOutput, scanCode))
+        {
+            _suppressShiftForLayer |= IsShiftDown;
+            _suppressAltGrForLayer |= IsAltGrDown;
+            return true;
+        }
+
         // Compensation DK système : si cette touche est une touche morte sur le layout
         // Windows sous-jacent (ex: ^ ou ¨ sur AZERTY trad), consommer l'état DK avant
         // de traiter notre propre logique. Cela évite qu'un état résiduel (dû à un
         // timeout du hook LL ou à une désactivation temporaire) ne corrompe la suite.
         CompensateSystemDeadKey(vkCode, scanCode);
 
-        // Obtenir le caractère selon les modificateurs
-        string? output = keyDef.GetOutput(IsShiftDown, IsAltGrDown, _capsLockState);
+        // Obtenir le caractère selon les modificateurs, en neutralisant celui qui a
+        // servi à activer la couche tant qu'il n'a pas été physiquement relâché.
+        bool effectiveShift = IsShiftDown && !_suppressShiftForLayer;
+        bool effectiveAltGr = IsAltGrDown && !_suppressAltGrForLayer;
+        string? output = keyDef.GetOutput(effectiveShift, effectiveAltGr, _capsLockState);
 
         if (output == null || output == "")
             return true; // Bloquer quand même pour éviter que le layout Windows sous-jacent ne produise un caractère
+
+        // Couche maintenue / ponctuelle / verrouillée. Les tables des touches mortes
+        // restent l'unique source de transformation. Win enfoncé = raccourci système :
+        // laisser la touche suivre le chemin ordinaire (pass-through), sinon Win+E
+        // serait remplacé par un caractère de couche.
+        var layerState = _maintainableLayers.CurrentState;
+        if (layerState.IsActive && !_leftWinDown && !_rightWinDown &&
+            _composition.ActiveDeadKey == null && !output.StartsWith("dk_", StringComparison.Ordinal))
+        {
+            var layer = _layout.DeadKeys.GetValueOrDefault(layerState.LayerId!);
+            bool oneShot = layerState.Mode == MaintainableLayerMode.OneShot;
+
+            if (output == " " && !oneShot)
+            {
+                EmitText(" ");
+                return true;
+            }
+
+            string? transformed = layer?.Apply(output);
+            if (transformed != null)
+            {
+                EmitText(transformed);
+            }
+            else if (oneShot)
+            {
+                var isolated = layer?.GetIsolated();
+                if (isolated != null)
+                    EmitText(isolated);
+                EmitText(output);
+            }
+            else
+            {
+                // Touche non mappée : sortie AZERTY Global ordinaire, couche conservée.
+                EmitText(output);
+            }
+
+            if (oneShot)
+                _maintainableLayers.ConsumeOneShot();
+            return true;
+        }
 
         // La composition est pure et portable ; l'émission reste dans l'adaptateur Windows.
         if (output.StartsWith("dk_", StringComparison.Ordinal) || _composition.ActiveDeadKey != null)
@@ -739,7 +875,7 @@ public sealed class KeyMapper
     /// Tous les events d'une chaîne sont concaténés en un INPUT[] global puis envoyés
     /// en un seul SendInput pour atomicité (cf. plan v0.9.7 § Limites SendInput).
     /// </summary>
-    internal void EmitText(string text)
+    public void EmitText(string text)
     {
         // Statistiques locales d'usage (v1.1) : compteurs en mémoire uniquement, aucune
         // I/O ici : l'hôte reçoit uniquement le texte émis pour ses compteurs locaux.

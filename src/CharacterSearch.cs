@@ -112,6 +112,8 @@ sealed class CharacterSearch : IDisposable
     private bool _showCopiedFeedback;
     private string _copiedChar = "";
     private bool _inputPaused;
+    private readonly TextInsertionService _insertionService;
+    private IntPtr _targetWindow;
     private IntPtr _hEditBgBrush;
     private IntPtr _hClassBgBrush; // Brush de fond passé à WNDCLASSEXW
 
@@ -188,6 +190,9 @@ sealed class CharacterSearch : IDisposable
     /// <summary>Événement déclenché quand la sélection dans les résultats change.</summary>
     public event Action<MethodData?>? SelectionChanged;
 
+    /// <summary>Déclenché quand l'insertion directe a dû retomber sur la copie.</summary>
+    public event Action<string>? FallbackCopied;
+
     public bool IsVisible => _hWnd != IntPtr.Zero && Win32.IsWindowVisible(_hWnd);
 
     public void SetInputPaused(bool paused)
@@ -209,8 +214,9 @@ sealed class CharacterSearch : IDisposable
         return names;
     }
 
-    public CharacterSearch()
+    public CharacterSearch(TextInsertionService insertionService)
     {
+        _insertionService = insertionService;
         _wndProcDelegate = WndProcCallback;
         _editSubclassProc = EditSubclassProc;
         LoadCharacterIndex();
@@ -846,16 +852,24 @@ sealed class CharacterSearch : IDisposable
     // Affichage / Masquage
     // ═══════════════════════════════════════════════════════════════
 
-    public void Toggle()
+    public void Toggle(IntPtr preferredTarget = default)
     {
         if (IsVisible)
             Hide();
         else
-            Show();
+            Show(preferredTarget);
     }
 
-    public void Show()
+    public void Show(IntPtr preferredTarget = default)
     {
+        // Mémoriser la fenêtre qui recevra l'insertion directe : celle passée par
+        // le menu tray (le foreground est déjà le menu) ou le foreground courant.
+        IntPtr foregroundBeforeSearch = preferredTarget != IntPtr.Zero
+            ? preferredTarget
+            : Win32.GetForegroundWindow();
+        if (foregroundBeforeSearch != _hWnd && Win32.IsWindow(foregroundBeforeSearch))
+            _targetWindow = foregroundBeforeSearch;
+
         // Signal Défi du jour (v1.2.0) : compteur GLOBAL d'ouvertures uniquement —
         // jamais le contenu des requêtes (décision 2026-07-22).
         UsageStats.RecordSearchOpened();
@@ -993,7 +1007,7 @@ sealed class CharacterSearch : IDisposable
 
                 case VK_RETURN:
                     NotifySelectionChanged();
-                    CopySelectedCharacter();
+                    InsertSelectedCharacter();
                     return IntPtr.Zero;
 
                 case VK_DOWN:
@@ -1096,7 +1110,7 @@ sealed class CharacterSearch : IDisposable
             {
                 _selectedIndex = i;
                 NotifySelectionChanged();
-                CopySelectedCharacter();
+                InsertSelectedCharacter();
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                 return;
             }
@@ -1108,17 +1122,22 @@ sealed class CharacterSearch : IDisposable
     // Copie dans le presse-papier
     // ═══════════════════════════════════════════════════════════════
 
-    private void CopySelectedCharacter()
+    private void InsertSelectedCharacter()
     {
         if (_selectedIndex < 0 || _selectedIndex >= _filteredResults.Count) return;
 
         var entry = _filteredResults[_selectedIndex];
+        IntPtr target = _targetWindow;
+        Hide();
+        if (_insertionService.TryInsert(target, entry.Character))
+            return;
+
         if (!ClipboardText.TrySet(_hWnd, entry.Character)) return;
 
-        // Feedback visuel "Copié !"
+        // Feedback visuel "Copié !" + notification, la fenêtre étant déjà masquée
         _showCopiedFeedback = true;
         _copiedChar = entry.Character;
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        FallbackCopied?.Invoke(entry.Character);
         Win32.SetTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK, 1500, IntPtr.Zero);
     }
 
