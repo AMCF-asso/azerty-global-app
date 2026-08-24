@@ -43,6 +43,10 @@ static class ConfigManager
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetCurrentPackageFamilyName(ref int packageFamilyNameLength, System.Text.StringBuilder? packageFamilyName);
 
+    // LANGID de l'interface Windows — sert au défaut de langue du premier lancement.
+    [DllImport("kernel32.dll")]
+    private static extern ushort GetUserDefaultUILanguage();
+
     /// <summary>Indique si l'app tourne dans un package MSIX.</summary>
     public static bool IsPackaged { get; } = DetectPackaged();
 
@@ -269,9 +273,27 @@ static class ConfigManager
         get
         {
             var raw = GetString("appLanguage");
+            if (raw == null)
+            {
+                // Aucun choix enregistré : suivre la langue d'affichage de Windows.
+                // Rien n'est écrit — un défaut dérivé n'est pas un choix, la clé
+                // n'apparaît que lorsque l'utilisateur bascule lui-même.
+                try { return DefaultAppLanguage(GetUserDefaultUILanguage()); }
+                catch { return "fr"; }
+            }
             return raw == "en" ? "en" : "fr";
         }
     }
+
+    /// <summary>« fr » quand le LANGID donné est francophone (langue primaire 0x0C,
+    /// toutes régions : fr-FR, fr-CA, fr-BE…), « en » sinon. Fonction pure : c'est
+    /// elle que les tests éprouvent, un poste de CI n'étant jamais francophone.</summary>
+    internal static string DefaultAppLanguage(ushort windowsUiLangId) =>
+        (windowsUiLangId & 0x3FF) == 0x0C ? "fr" : "en";
+
+    /// <summary>LANGID Windows réel du poste, exposé pour que le test d'intégration
+    /// du défaut de langue compare au même environnement que le getter.</summary>
+    internal static ushort WindowsUiLanguageIdForTests() => GetUserDefaultUILanguage();
 
     /// <summary>Déclenché après un changement effectif de langue (arg : nouvelle langue).
     /// Permet aux surfaces à texte persistant (tooltip du tray) de se rafraîchir.</summary>
