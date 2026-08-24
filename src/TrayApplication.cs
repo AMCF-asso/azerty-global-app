@@ -304,7 +304,7 @@ sealed class TrayApplication : IDisposable
             else if (!MaybeShowReviewPrompt() && !MaybeShowChallengeAnnouncement()
                      && !MaybeShowAutoStartNudge())
             {
-                ShowBalloon(L.Tray_ActiveTitle, L.Tray_ActiveBalloonBody);
+                Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
             }
         }
         catch (Exception ex)
@@ -456,6 +456,12 @@ sealed class TrayApplication : IDisposable
     private const uint TIMER_SINGLECLICK = 9010;
     private const uint TIMER_LAYOUT_CHECK = 9020;
     private const uint TIMER_PAUSE = 9030;
+    // Balloon « Actif » du démarrage : émis par timer one-shot, jamais dans la foulée
+    // du NIM_ADD — le shell jette en silence une bulle demandée pendant que l'entrée
+    // tray s'enregistre encore (constaté au smoke v1.2.0 du 2026-08-24 : cette bulle
+    // n'apparaissait jamais, quand les mêmes bulles émises plus tard s'affichent).
+    private const uint TIMER_STARTUP_BALLOON = 9040;
+    private const uint STARTUP_BALLOON_DELAY_MS = 1500;
 
     // Message TaskbarCreated (Explorer restart / chargement tardif au boot)
     private readonly uint _wmTaskbarCreated = Win32.RegisterWindowMessageW("TaskbarCreated");
@@ -756,6 +762,14 @@ sealed class TrayApplication : IDisposable
                             StopPause(expired: true);
                         else
                             UpdateTooltip();
+                    }
+                    else if (timerId == TIMER_STARTUP_BALLOON)
+                    {
+                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON);
+                        // Si l'état a bougé entre-temps (suspension, pause), la bulle
+                        // d'état correspondante est déjà passée : ne pas la recouvrir.
+                        if (ShouldProcessHook)
+                            ShowBalloon(L.Tray_ActiveTitle, L.Tray_ActiveBalloonBody);
                     }
                     else if (timerId == TIMER_HOOK_WATCHDOG)
                     {
