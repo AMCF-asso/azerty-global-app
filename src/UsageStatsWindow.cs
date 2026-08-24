@@ -20,7 +20,14 @@ sealed class UsageStatsWindow : IDisposable
     private const uint TIMER_COPY_FEEDBACK = 4210;
 
     private const int BASE_WIN_W = 460;
-    private const int BASE_WIN_H = 590; // 460 + 130 : section « Défi du jour » ajoutée en v1.2.0
+    private const int BASE_WIN_H = 460;
+    // Section « Défi du jour » ajoutée en v1.2.0 : la fenêtre ne réserve sa hauteur
+    // que lorsque la section se dessine (même prédicat que WM_PAINT, cf. plus bas).
+    private const int CHALLENGE_SECTION_H = 130;
+    private static bool ChallengeSectionVisible
+        => ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0;
+    private static int WinContentH
+        => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0);
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
     private const uint CLR_BG = 0x00DDDDDD;
@@ -144,7 +151,7 @@ sealed class UsageStatsWindow : IDisposable
         Win32.RegisterClassExW(ref wc);
 
         int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
+        int winH = S(WinContentH);
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
@@ -205,7 +212,7 @@ sealed class UsageStatsWindow : IDisposable
     private void ResizeWindow()
     {
         int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
+        int winH = S(WinContentH);
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
@@ -220,7 +227,7 @@ sealed class UsageStatsWindow : IDisposable
     private void RepositionControls()
     {
         int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
+        int winH = S(WinContentH);
         int margin = S(20);
 
         int btnH = S(32);
@@ -249,6 +256,10 @@ sealed class UsageStatsWindow : IDisposable
     public void Show()
     {
         _showCopiedFeedback = false;
+        // La visibilité de la section « Défi du jour » peut changer entre deux ouvertures :
+        // la hauteur se recalcule à chaque affichage.
+        ResizeWindow();
+        RepositionControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
@@ -513,7 +524,7 @@ sealed class UsageStatsWindow : IDisposable
 
         // Section « Défi du jour » : visible dès qu'il y a quelque chose à montrer — rappels
         // actifs, ou historique conservé même après désactivation des rappels (v1.2.0).
-        if (ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0)
+        if (ChallengeSectionVisible)
             y = DrawChallengeSection(hdc, margin, y, cw - margin);
 
         string reassurance = _showCopiedFeedback
