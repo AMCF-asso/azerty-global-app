@@ -1629,7 +1629,7 @@ sealed class TrayApplication : IDisposable
             _mapper.CtrlDown,
             _mapper.AltDown,
             _mapper.CapsLockActive,
-            _mapper.ActiveDeadKey);
+            _mapper.DisplayDeadKey);
     }
 
     private void OnReportBug()

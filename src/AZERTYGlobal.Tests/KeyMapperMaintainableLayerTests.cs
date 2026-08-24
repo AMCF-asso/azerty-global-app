@@ -12,6 +12,8 @@ public class KeyMapperMaintainableLayerTests : IDisposable
     private const uint VK_LSHIFT = 0xA0;
     private const uint VK_A = 0x41;
     private const uint VK_SPACE = 0x20;
+    private const uint SC_CIRCUMFLEX = 0x1A; // touche ^ — dk_circumflex sur AZERTY Global
+    private const uint VK_OEM_6 = 0xDD;
     private static readonly short KeyDown = unchecked((short)0x8000);
 
     private static readonly string[] AllLayers = { "dk_greek", "dk_cyrillic", "dk_scientific" };
@@ -124,6 +126,56 @@ public class KeyMapperMaintainableLayerTests : IDisposable
             monitor.Recompute();
             mapper.RefreshForegroundContext();
             Assert.Equal(MaintainableLayerMode.Locked, mapper.MaintainableLayerState.Mode);
+        }
+    }
+
+    [Fact]
+    public void GreekHeld_DisplayDeadKeyShowsLayer_WithoutActiveDeadKey()
+    {
+        var (mapper, mock, monitor) = CreateMapper();
+        using (monitor)
+        {
+            PressGreekTrigger(mapper, mock);
+            Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true));
+            Assert.Equal(MaintainableLayerMode.Held, mapper.MaintainableLayerState.Mode);
+
+            // Le clavier virtuel voit la couche ; ActiveDeadKey reste nul, l'infobulle
+            // du tray disant déjà la couche par sa ligne dédiée (QW-1, 2026-08-24).
+            Assert.Equal("dk_greek", mapper.DisplayDeadKey);
+            Assert.Null(mapper.ActiveDeadKey);
+        }
+    }
+
+    [Fact]
+    public void GreekLocked_DisplayDeadKeyShowsLayer_WithoutActiveDeadKey()
+    {
+        var (mapper, mock, monitor) = CreateMapper();
+        using (monitor)
+        {
+            TapGreekTrigger(mapper, mock);
+            TapGreekTrigger(mapper, mock);
+            Assert.Equal(MaintainableLayerMode.Locked, mapper.MaintainableLayerState.Mode);
+
+            Assert.Equal("dk_greek", mapper.DisplayDeadKey);
+            Assert.Null(mapper.ActiveDeadKey);
+        }
+    }
+
+    [Fact]
+    public void CompositionDeadKey_PrimesOverLockedLayer_InDisplayDeadKey()
+    {
+        var (mapper, mock, monitor) = CreateMapper();
+        using (monitor)
+        {
+            TapGreekTrigger(mapper, mock);
+            TapGreekTrigger(mapper, mock);
+            Assert.Equal(MaintainableLayerMode.Locked, mapper.MaintainableLayerState.Mode);
+
+            // Une composition prime sur la couche, comme dans le moteur : la couche
+            // ne s'applique jamais pendant qu'une touche morte classique est active.
+            Assert.True(mapper.ProcessKey(VK_OEM_6, SC_CIRCUMFLEX, 0, true));
+            Assert.Equal("dk_circumflex", mapper.DisplayDeadKey);
+            Assert.Equal("dk_circumflex", mapper.ActiveDeadKey);
         }
     }
 
