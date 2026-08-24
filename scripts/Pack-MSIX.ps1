@@ -14,11 +14,25 @@ $csprojPath = Join-Path $srcDir 'AZERTYGlobal.csproj'
 # Chemins de sortie
 $stableBundlePath = Join-Path $msixDir 'AZERTYGlobal.msixbundle'
 
+# Seuls les visuels que le manifeste référence entrent dans le package : les quatre
+# logos déclarés, plus leurs variantes .scale-200 résolues par convention de nommage.
+# Tout le reste de msix/Assets/ est du matériel de fiche Store (captures, posters,
+# gabarits HTML) : copié en bloc, il gonflait chaque .msix de 3,4 Mo — mesuré le
+# 2026-08-24 en ouvrant le bundle (audit v1.2.0, finding R-1).
+$packagedAssets = @(
+    'StoreLogo.png',
+    'Square44x44Logo.png',
+    'Square44x44Logo.scale-200.png',
+    'Square150x150Logo.png',
+    'Square150x150Logo.scale-200.png',
+    'Wide310x150Logo.png'
+)
+
 function Copy-DirectoryContent([string]$Source, [string]$Destination) {
     Get-ChildItem $Source -Force |
         Where-Object { $_.Name -notlike '*.msix' -and $_.Name -notlike '*.msixbundle' -and
                        $_.Name -notlike '*.exe' -and $_.Name -notlike '*.md' -and
-                       $_.Name -notlike 'wack-report*' } |
+                       $_.Name -notlike 'wack-report*' -and $_.Name -ne 'Assets' } |
         ForEach-Object {
             $target = Join-Path $Destination $_.Name
             if ($_.PSIsContainer) {
@@ -90,8 +104,18 @@ foreach ($arch in $architectures) {
     }
     New-Item -ItemType Directory -Path $stagingDir | Out-Null
 
-    # Copier le template msix/ (Assets, manifest, config)
+    # Copier le template msix/ (manifest, config) — Assets/ est exclu de la copie
+    # récursive et repeuplé ci-dessous par la liste blanche $packagedAssets.
     Copy-DirectoryContent $msixDir $stagingDir
+    $stagingAssets = Join-Path $stagingDir 'Assets'
+    New-Item -ItemType Directory -Path $stagingAssets | Out-Null
+    foreach ($asset in $packagedAssets) {
+        $assetSource = Join-Path (Join-Path $msixDir 'Assets') $asset
+        if (-not (Test-Path $assetSource)) {
+            throw "Asset packagé introuvable: $assetSource (référencé par AppxManifest.xml)"
+        }
+        Copy-Item $assetSource (Join-Path $stagingAssets $asset) -Force
+    }
 
     # Copier l'exécutable publié
     Copy-Item $publishExe (Join-Path $stagingDir 'AZERTY Global.exe') -Force
