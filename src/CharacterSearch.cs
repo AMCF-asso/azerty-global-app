@@ -1128,13 +1128,15 @@ sealed class CharacterSearch : IDisposable
 
         var entry = _filteredResults[_selectedIndex];
         IntPtr target = _targetWindow;
-        Hide();
+        // La fenêtre reste ouverte, comme en 1.1.0 : l'insertion rend le focus à la
+        // cible (la recherche est topmost, elle reste visible) et d'autres caractères
+        // peuvent suivre. Échap ou le raccourci la ferment.
         if (_insertionService.TryInsert(target, entry.Character))
             return;
 
         if (!ClipboardText.TrySet(_hWnd, entry.Character)) return;
 
-        // Feedback visuel "Copié !" + notification, la fenêtre étant déjà masquée
+        // Feedback visuel "Copié !" dans la fenêtre restée ouverte, plus la notification
         _showCopiedFeedback = true;
         _copiedChar = entry.Character;
         FallbackCopied?.Invoke(entry.Character);

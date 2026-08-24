@@ -105,7 +105,9 @@ dépôt le 2026-08-24 sur l'architecture extraite : machine d'état et détectio
   navigateurs, exécutée sur un thread MTA dédié à attente bornée (30 ms) pour ne jamais ralentir le
   hook clavier ; seul le booléen IsPassword est consulté, jamais le contenu du champ.
 - Recherche de caractères : `Entrée` insère désormais le caractère directement dans la fenêtre
-  d'origine (y compris à l'ouverture depuis le menu tray) ; en cas d'échec, repli sur la copie avec
+  d'origine (y compris à l'ouverture depuis le menu tray), et la fenêtre de recherche reste
+  ouverte comme en 1.1.0 pour enchaîner les insertions (retour du smoke test du 2026-08-24 —
+  la fermeture au premier caractère surprenait) ; en cas d'échec, repli sur la copie avec
   notification explicite.
 - Réglages persistants (couches actives, délai du double appui 150-1000 ms, indicateur) via la
   nouvelle fenêtre « Couches maintenables » ; les configurations existantes migrent avec la
