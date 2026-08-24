@@ -23,7 +23,6 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const int IDC_SCIENTIFIC = 5204;
     private const int IDC_VISUAL = 5205;
     private const int IDC_DELAY = 5206;
-    private const int IDC_DIAGNOSTICS = 5207;
     private const int IDC_SAVE = 5208;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -34,7 +33,6 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hScientific;
     private IntPtr _hVisual;
     private IntPtr _hDelay;
-    private IntPtr _hDiagnostics;
     private IntPtr _hFont;
     private IntPtr _hFontTitle;
     private bool _visible;
@@ -78,7 +76,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         Win32.RegisterClassExW(ref wc);
 
         const int clientW = 520;
-        const int clientH = 470;
+        const int clientH = 430;
         uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var rect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
         Win32.AdjustWindowRectEx(ref rect, style, false, 0);
@@ -117,11 +115,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
         SetFont(_hDelay, _hFont);
         CreateStatic(instance, L.Layers_DelayUnit, 290, 344, 145, 26, _hFont);
 
-        _hDiagnostics = CreateCheckbox(instance, IDC_DIAGNOSTICS, L.Layers_DiagnosticsCheckbox, 24, 379, 465, 26);
-
         IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Layers_SaveButton,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | BS_DEFPUSHBUTTON,
-            350, 419, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
+            350, 379, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
     }
 
@@ -152,7 +148,6 @@ internal sealed class MaintainableLayersWindow : IDisposable
         SetChecked(_hCyrillic, ConfigManager.MaintainableCyrillicEnabled);
         SetChecked(_hScientific, ConfigManager.MaintainableScientificEnabled);
         SetChecked(_hVisual, ConfigManager.MaintainableVisualFeedbackEnabled);
-        SetChecked(_hDiagnostics, ConfigManager.MaintainableDiagnosticsConsent);
         Win32.SetWindowTextW(_hDelay, ConfigManager.MaintainableDoubleTapMilliseconds.ToString());
         UpdateEnabledState();
     }
@@ -167,7 +162,6 @@ internal sealed class MaintainableLayersWindow : IDisposable
         ConfigManager.SetMaintainableCyrillicEnabled(IsChecked(_hCyrillic));
         ConfigManager.SetMaintainableScientificEnabled(IsChecked(_hScientific));
         ConfigManager.SetMaintainableVisualFeedbackEnabled(IsChecked(_hVisual));
-        ConfigManager.SetMaintainableDiagnosticsConsent(IsChecked(_hDiagnostics));
         ConfigManager.SetMaintainableDoubleTapMilliseconds(delay);
         ConfigManager.SetMaintainableLayersEnabled(enabled);
         if (enabled)

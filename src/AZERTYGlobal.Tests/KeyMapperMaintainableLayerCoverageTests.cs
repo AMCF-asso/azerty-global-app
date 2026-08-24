@@ -374,7 +374,6 @@ public class KeyMapperMaintainableLayerCoverageTests : IDisposable
         Assert.True(ConfigManager.MaintainableScientificEnabled);
         Assert.InRange(ConfigManager.MaintainableDoubleTapMilliseconds, 150, 1000);
         Assert.True(ConfigManager.MaintainableVisualFeedbackEnabled);
-        Assert.False(ConfigManager.MaintainableDiagnosticsConsent);
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
