@@ -119,7 +119,7 @@ Permet à l'utilisateur de trouver comment taper n'importe quel caractère dispo
 - [x] **Résultat visuel** : montre la combinaison de touches sous forme lisible (ex: `AltGr + W → «`) et surligne la touche sur le clavier virtuel si celui-ci est ouvert
 - [x] **Données issues de `character-index.json`** : réutilise le fichier existant du site qui contient déjà `unicodeNameFr`, `frenchAliases`, `methods` avec flag `recommended` — pas besoin de reconstruire ces données
 - [x] **Méthode recommandée en priorité** : affiche d'abord la méthode marquée `"recommended": true` dans le JSON
-- [x] **Insertion directe** : `Entrée` restaure la fenêtre d'origine (mémorisée aussi à l'ouverture depuis le menu tray) et insère le caractère via le moteur d'émission ; en cas d'échec (fenêtre disparue, focus refusé), repli sur la copie avec notification explicite
+- [x] **Insertion directe** : `Entrée` restaure la fenêtre d'origine (mémorisée aussi à l'ouverture depuis le menu tray) et insère le caractère via le moteur d'émission, la fenêtre de recherche restant ouverte comme en 1.1.0 pour enchaîner les insertions ; en cas d'échec (fenêtre disparue, focus refusé), repli sur la copie avec notification explicite
 - [x] **Suspension dans les champs sécurisés** : le raccourci et l'entrée de menu sont inertes quand un champ de mot de passe a le focus
 
 ### 2.8 Fonctionnalités supplémentaires (v1)
@@ -285,7 +285,7 @@ L'application doit lire ce JSON au démarrage et construire ses tables de mappin
 - [ ] Maj+* puis `a` → α ; maintien Maj+* + `abc` → αbc (l'accord vaut un appui simple, seule la première frappe est transformée) ; double appui → verrou (indicateur « verrou »), Espace reste une espace, Échap déverrouille et est absorbé une seule fois
 - [ ] Pendant un verrou : Ctrl+C/V, Alt+Tab et Win+E restent intacts ; un nouveau Maj produit Α ; un appui AltGr+* rend la frappe suivante cyrillique puis retombe sur le verrou grec ; un double appui AltGr+* bascule le verrou vers le cyrillique
 - [ ] Champ de mot de passe (login réel dans les 3 navigateurs + `<input type="password">` local) : frappes remappées normalement, aucune couche, indicateur masqué, raccourci de recherche inerte
-- [ ] Recherche depuis le raccourci ET depuis le menu tray : Entrée insère au point d'insertion d'origine ; fenêtre cible fermée avant Entrée → notification « copié »
+- [ ] Recherche depuis le raccourci ET depuis le menu tray : Entrée insère au point d'insertion d'origine et la fenêtre de recherche reste ouverte ; fenêtre cible fermée avant Entrée → notification « copié »
 - [ ] Verrou dans Word → VS Code (pas de couche) → retour Word (verrou revenu) → fermeture puis réouverture de Word (verrou disparu)
 
 ---
