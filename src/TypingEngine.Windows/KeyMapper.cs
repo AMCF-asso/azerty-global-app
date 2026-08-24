@@ -68,6 +68,14 @@ public sealed class KeyMapper
         (_maintainableLayers.CurrentState.Mode == MaintainableLayerMode.OneShot
             ? _maintainableLayers.CurrentState.LayerId
             : null);
+
+    /// <summary>Touche morte à visualiser sur le clavier virtuel : la composition en
+    /// cours, sinon la couche maintenable active — quel que soit son mode, les tables
+    /// des couches étant celles des touches mortes, le rendu existant s'applique tel
+    /// quel. Distincte d'<see cref="ActiveDeadKey"/>, qui alimente l'infobulle du
+    /// tray : celle-ci dit déjà la couche par sa ligne dédiée.</summary>
+    public string? DisplayDeadKey => _composition.ActiveDeadKey ??
+        (_maintainableLayers.CurrentState.IsActive ? _maintainableLayers.CurrentState.LayerId : null);
     public MaintainableLayerState MaintainableLayerState => _maintainableLayers.CurrentState;
     public bool AdvancedFeaturesSuppressed => _foregroundMonitor?.IsSecureInput == true;
     public bool ShiftDown => IsShiftDown;
