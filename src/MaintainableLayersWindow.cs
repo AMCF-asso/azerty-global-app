@@ -16,6 +16,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const uint BST_CHECKED = 1;
     private const uint ES_NUMBER = 0x2000;
     private const uint ES_CENTER = 0x0001;
+    // Même fond que SettingsWindow et UsageStatsWindow.
+    private const uint CLR_BG = 0x00DDDDDD;
 
     private const int IDC_MASTER = 5201;
     private const int IDC_GREEK = 5202;
@@ -35,6 +37,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hDelay;
     private IntPtr _hFont;
     private IntPtr _hFontTitle;
+    private IntPtr _hBgBrush;
     private bool _visible;
 
     public event Action? SettingsChanged;
@@ -71,6 +74,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
             lpfnWndProc = _wndProcDelegate,
             hInstance = instance,
             hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
+            // Sans brosse de classe, le fond n'est jamais effacé : au-dessus d'un jeu
+            // plein écran, la fenêtre laissait voir la scène et ses contrôles en double
+            // (constaté au smoke v1.2.0 du 2026-08-24, sous Trackmania).
+            hbrBackground = _hBgBrush = Win32.CreateSolidBrush(CLR_BG),
             lpszClassName = ProductIdentity.WindowClass("MaintainableLayers")
         };
         Win32.RegisterClassExW(ref wc);
@@ -221,6 +228,11 @@ internal sealed class MaintainableLayersWindow : IDisposable
                         return IntPtr.Zero;
                     }
                     break;
+                case Win32.WM_CTLCOLORSTATIC:
+                case Win32.WM_CTLCOLORBTN:
+                    // Statics et cases posent leur texte directement sur le fond de classe.
+                    Win32.SetBkMode(wParam, 1);
+                    return _hBgBrush;
                 case Win32.WM_CLOSE:
                     Hide();
                     return IntPtr.Zero;
@@ -260,5 +272,6 @@ internal sealed class MaintainableLayersWindow : IDisposable
         if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
         if (_hFontTitle != IntPtr.Zero) Win32.DeleteObject(_hFontTitle);
         Win32.UnregisterClassW(ProductIdentity.WindowClass("MaintainableLayers"), Win32.GetModuleHandleW(null));
+        if (_hBgBrush != IntPtr.Zero) Win32.DeleteObject(_hBgBrush);
     }
 }
