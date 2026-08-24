@@ -85,15 +85,17 @@ dépôt le 2026-08-24 sur l'architecture extraite : machine d'état et détectio
 `Localization/L.Layers.cs`. Désactivée par défaut, activation volontaire depuis le menu, entièrement hors ligne.
 
 - Les trois touches mortes `dk_greek` (Maj + *), `dk_cyrillic` (AltGr + *) et `dk_scientific` (AltGr + =)
-  gagnent trois modes sans changer leurs tables ni leurs emplacements : appui simple = touche morte
-  ponctuelle actuelle, déclencheur maintenu pendant une autre frappe = couche temporaire, double appui
-  = verrouillage dans l'application active.
+  gagnent deux modes sans changer leurs tables ni leurs emplacements : appui simple = touche morte
+  ponctuelle actuelle, double appui = verrouillage dans l'application active. Un déclencheur maintenu
+  pendant une autre frappe vaut un appui simple — le mode « maintien » du développement initial a été
+  retiré au smoke test du 2026-08-24, tenir le déclencheur en tapant du reste des doigts étant intenable.
 - Le verrouillage est associé à l'instance exacte du processus (PID + instant de création) : il survit
   aux allers-retours entre applications, disparaît à la fermeture du processus et n'est jamais hérité
   par un PID réutilisé. Déverrouillage par le même déclencheur ou par un premier Échap (absorbé) ; une
-  autre couche peut recouvrir temporairement la couche verrouillée, son double appui remplace le verrou.
+  autre couche peut transformer la frappe suivante par-dessus la couche verrouillée, son double appui
+  remplace le verrou.
 - Le Shift ou AltGr d'activation est consommé tant qu'il reste enfoncé ; un nouveau Shift ou le
-  Verr. Maj. produit les majuscules. Espace reste une espace normale en maintien et en verrouillage ;
+  Verr. Maj. produit les majuscules. Espace reste une espace normale en verrouillage ;
   une touche non définie dans la couche produit son caractère AZERTY Global ordinaire ; les 26 autres
   touches mortes sont inchangées. Ctrl, Alt et Windows conservent leurs raccourcis pendant une couche active.
 - Nouvel indicateur discret près du curseur (couche active et mode), masqué dans les champs sécurisés

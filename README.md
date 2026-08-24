@@ -22,7 +22,7 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 - **Verrouillage Majuscule Intelligent** — N'affecte que les lettres : `É`, `È`, `Ç`, `À` en un appui
 - **Clavier virtuel** — Visualisation interactive de la disposition
 - **Recherche de caractères** — Trouvez n'importe quel caractère parmi les 1 000+ disponibles, avec insertion directe dans l'application d'origine
-- **Couches maintenables** *(désactivées par défaut)* — Grec, cyrillique et scientifique en maintien ou en verrouillage par application, sans changer les touches mortes existantes
+- **Couches maintenables** *(désactivées par défaut)* — Grec, cyrillique et scientifique en appui simple ou en verrouillage par application, sans changer les touches mortes existantes
 - **Module d'apprentissage** — Leçons interactives pour s'entraîner aux 5 améliorations
 - **Interface française et anglaise** — Changement de langue à chaud dans toute l'application
 - **Statistiques locales** — Compteurs agrégés conservés sur l'appareil, sans télémétrie réseau

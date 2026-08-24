@@ -83,7 +83,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         Win32.RegisterClassExW(ref wc);
 
         const int clientW = 520;
-        const int clientH = 430;
+        const int clientH = 408;
         uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var rect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
         Win32.AdjustWindowRectEx(ref rect, style, false, 0);
@@ -104,27 +104,27 @@ internal sealed class MaintainableLayersWindow : IDisposable
         _hFontTitle = Win32.CreateFontW(-18, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
 
         CreateStatic(instance, L.Layers_Title, 24, 20, 470, 26, _hFontTitle);
-        // Chaque groupe de phrases wrappe sur deux lignes dans 470 px : réserver
-        // quatre lignes pleines pour ne rien tronquer.
-        CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 88, _hFont);
+        // Le second groupe de phrases wrappe sur deux lignes dans 470 px :
+        // réserver trois lignes pleines pour ne rien tronquer.
+        CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 66, _hFont);
 
-        _hMaster = CreateCheckbox(instance, IDC_MASTER, L.Layers_MasterCheckbox, 24, 156, 455, 28);
-        CreateStatic(instance, L.Layers_AvailableLabel, 45, 197, 250, 24, _hFont);
-        _hGreek = CreateCheckbox(instance, IDC_GREEK, L.Layers_GreekCheckbox, 45, 224, 210, 26);
-        _hCyrillic = CreateCheckbox(instance, IDC_CYRILLIC, L.Layers_CyrillicCheckbox, 270, 224, 220, 26);
-        _hScientific = CreateCheckbox(instance, IDC_SCIENTIFIC, L.Layers_ScientificCheckbox, 45, 256, 260, 26);
+        _hMaster = CreateCheckbox(instance, IDC_MASTER, L.Layers_MasterCheckbox, 24, 134, 455, 28);
+        CreateStatic(instance, L.Layers_AvailableLabel, 45, 175, 250, 24, _hFont);
+        _hGreek = CreateCheckbox(instance, IDC_GREEK, L.Layers_GreekCheckbox, 45, 202, 210, 26);
+        _hCyrillic = CreateCheckbox(instance, IDC_CYRILLIC, L.Layers_CyrillicCheckbox, 270, 202, 220, 26);
+        _hScientific = CreateCheckbox(instance, IDC_SCIENTIFIC, L.Layers_ScientificCheckbox, 45, 234, 260, 26);
 
-        _hVisual = CreateCheckbox(instance, IDC_VISUAL, L.Layers_VisualCheckbox, 24, 304, 360, 26);
-        CreateStatic(instance, L.Layers_DelayLabel, 24, 344, 185, 26, _hFont);
+        _hVisual = CreateCheckbox(instance, IDC_VISUAL, L.Layers_VisualCheckbox, 24, 282, 360, 26);
+        CreateStatic(instance, L.Layers_DelayLabel, 24, 322, 185, 26, _hFont);
         _hDelay = Win32.CreateWindowExW(0, "EDIT", "500",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | ES_NUMBER | ES_CENTER,
-            210, 339, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
+            210, 317, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
         SetFont(_hDelay, _hFont);
-        CreateStatic(instance, L.Layers_DelayUnit, 290, 344, 145, 26, _hFont);
+        CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
 
         IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Layers_SaveButton,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | BS_DEFPUSHBUTTON,
-            350, 379, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
+            350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
     }
 

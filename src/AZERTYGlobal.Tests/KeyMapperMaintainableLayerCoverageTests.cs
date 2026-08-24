@@ -68,19 +68,20 @@ public class KeyMapperMaintainableLayerCoverageTests : IDisposable
     }
 
     [Fact]
-    public void ScientificHeld_MapsSymbolsUntilRelease()
+    public void ScientificHeld_MapsOnlyTheFirstSymbol()
     {
         var (mapper, mock, monitor) = CreateMapper();
         using (monitor)
         {
-            // AltGr + = maintenu, puis frappe de 'a' → ∠ (couche temporaire)
+            // AltGr + = maintenu, puis frappe de 'a' → ∠ (accord = appui simple)
             PressAltGrTrigger(mapper, mock, VK_TRIGGER_SCIENTIFIC, SC_TRIGGER_SCIENTIFIC);
             mock.SendInputCalls.Clear();
 
             Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true));
-            Assert.Equal(MaintainableLayerMode.Held, mapper.MaintainableLayerState.Mode);
-            Assert.Equal("dk_scientific", mapper.MaintainableLayerState.LayerId);
             AssertUnicode(mock, '∠'); // ANGLE
+
+            // Consommé par sa propre frappe : rien ne colle au déclencheur enfoncé.
+            Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);
 
             ReleaseAltGrTrigger(mapper, mock, VK_TRIGGER_SCIENTIFIC, SC_TRIGGER_SCIENTIFIC);
             Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);

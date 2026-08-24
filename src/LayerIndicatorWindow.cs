@@ -55,7 +55,6 @@ internal sealed class LayerIndicatorWindow : IDisposable
         string suffix = state.Mode switch
         {
             MaintainableLayerMode.OneShot => " · 1",
-            MaintainableLayerMode.Held => L.Layers_IndicatorHeldSuffix,
             MaintainableLayerMode.Locked => L.Layers_IndicatorLockedSuffix,
             _ => ""
         };

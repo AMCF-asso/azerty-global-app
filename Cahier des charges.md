@@ -142,12 +142,12 @@ L'application reste active dans les jeux pour permettre à l'utilisateur de cont
 Étend les trois touches mortes alphabétiques sans modifier leurs emplacements ni leurs tables (`AZERTY Global 2026.json` reste la source unique). Fonctionnalité désactivée par défaut, activation volontaire depuis le menu tray, entièrement hors ligne. Développée le 2026-08-05, portée sur l'architecture extraite le 2026-08-24.
 
 - [x] **Appui simple** : touche morte ponctuelle actuelle (comportement historique inchangé)
-- [x] **Déclencheur maintenu pendant une autre frappe** : couche temporaire immédiate, sans seuil temporel
+- [x] **Déclencheur maintenu pendant une autre frappe** : vaut un appui simple — la première frappe est transformée, les suivantes redeviennent ordinaires (mode « maintien » retiré au smoke test du 2026-08-24 : tenir le déclencheur en tapant du reste des doigts était intenable)
 - [x] **Double appui** : verrouillage dans le processus actif ; délai configurable 150–1000 ms (défaut : double-clic système)
 - [x] **Déverrouillage** : même déclencheur ou premier Échap (absorbé) ; verrou associé au PID + instant de création (jamais hérité par un PID réutilisé, purgé à la mort du processus)
-- [x] **Substitution** : une autre couche recouvre temporairement la couche verrouillée ; son double appui remplace le verrou
+- [x] **Substitution** : pendant un verrou, l'appui simple d'une autre couche transforme la frappe suivante puis rend le verrou ; son double appui remplace le verrou
 - [x] **Modificateurs** : Ctrl, Alt et Windows conservent les raccourcis ; le Shift/AltGr d'activation est consommé ; un nouveau Shift ou Verr. Maj. produit les majuscules
-- [x] **Espace** : espace normale en maintien et verrouillage ; touche non définie → caractère AZERTY Global ordinaire ; les 26 autres touches mortes inchangées
+- [x] **Espace** : espace normale en verrouillage ; touche non définie → caractère AZERTY Global ordinaire ; les 26 autres touches mortes inchangées
 - [x] **Indicateur visuel** près du caret (couche + mode), désactivable, masqué dans les champs sécurisés et quand le remapping est suspendu
 - [x] **Champs de mot de passe** : remappage ordinaire conservé, mais couches, recherche et indicateur suspendus — détection `ES_PASSWORD` + UI Automation (navigateurs) sur thread dédié, jamais dans le hook clavier
 - [x] **Réglages persistants** avec migration : configurations existantes conservées, couches désactivées
@@ -282,8 +282,8 @@ L'application doit lire ce JSON au démarrage et construire ses tables de mappin
 
 **Couches maintenables (validation manuelle avant publication de la fonctionnalité)** — à dérouler dans Word/Excel, Chrome, Edge, Firefox et VS Code :
 
-- [ ] Maj+* puis `a` → α ; maintien Maj+* + `abc` → αβγ ; double appui → verrou (indicateur « verrou »), Espace reste une espace, Échap déverrouille et est absorbé une seule fois
-- [ ] Pendant un verrou : Ctrl+C/V, Alt+Tab et Win+E restent intacts ; un nouveau Maj produit Α ; AltGr+* (cyrillique) recouvre temporairement le verrou grec
+- [ ] Maj+* puis `a` → α ; maintien Maj+* + `abc` → αbc (l'accord vaut un appui simple, seule la première frappe est transformée) ; double appui → verrou (indicateur « verrou »), Espace reste une espace, Échap déverrouille et est absorbé une seule fois
+- [ ] Pendant un verrou : Ctrl+C/V, Alt+Tab et Win+E restent intacts ; un nouveau Maj produit Α ; un appui AltGr+* rend la frappe suivante cyrillique puis retombe sur le verrou grec ; un double appui AltGr+* bascule le verrou vers le cyrillique
 - [ ] Champ de mot de passe (login réel dans les 3 navigateurs + `<input type="password">` local) : frappes remappées normalement, aucune couche, indicateur masqué, raccourci de recherche inerte
 - [ ] Recherche depuis le raccourci ET depuis le menu tray : Entrée insère au point d'insertion d'origine ; fenêtre cible fermée avant Entrée → notification « copié »
 - [ ] Verrou dans Word → VS Code (pas de couche) → retour Word (verrou revenu) → fermeture puis réouverture de Word (verrou disparu)

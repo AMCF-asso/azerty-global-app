@@ -77,7 +77,7 @@ Site web : https://azerty.global
 ### Nouveautés de cette version (notes de version)
 
 Version 1.2.0 :
- • En option : maintenez une touche morte d'alphabet (grec, cyrillique, scientifique) pour écrire plusieurs caractères, ou verrouillez-la dans une application d'un double appui. Activation depuis le menu.
+ • En option : verrouillez une touche morte d'alphabet (grec, cyrillique, scientifique) dans une application d'un double appui. Activation depuis le menu.
  • La recherche de caractères insère désormais le caractère directement dans votre document.
  • Défi du jour accessible à tout moment depuis l'icône de la zone de notification : le même extrait pour tout le monde, chaque jour.
  • Nouveau bouton « Copier mon résultat » en fin de séance : vitesse, précision, durée et caractères qui ont posé problème, prêts à coller dans une conversation.
@@ -211,7 +211,7 @@ Website: https://azerty.global
 ### What's new (release notes)
 
 Version 1.2.0:
- • Optional: hold an alphabet dead key (Greek, Cyrillic, scientific) to type several characters, or lock it inside an application with a double press. Opt-in from the menu.
+ • Optional: lock an alphabet dead key (Greek, Cyrillic, scientific) inside an application with a double press. Opt-in from the menu.
  • Character search now inserts the character directly into your document.
  • Daily challenge available at any time from the notification area icon: the same passage for everyone, every day.
  • New “Copy my result” button at the end of a session: speed, accuracy, duration and the characters that gave you trouble, ready to paste into a conversation.

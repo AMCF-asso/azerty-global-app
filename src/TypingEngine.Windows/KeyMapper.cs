@@ -552,22 +552,23 @@ public sealed class KeyMapper
             }
         }
 
-        // Relâchement du déclencheur : transforme l'accord en fin de maintien ou
-        // l'appui isolé en one-shot / double appui / déverrouillage. Traité avant
+        // Relâchement du déclencheur : clôt l'accord, ou transforme l'appui
+        // isolé en one-shot / double appui / déverrouillage. Traité avant
         // les early-returns modificateurs : le keydown du déclencheur a été absorbé,
         // laisser fuir son keyup (ex. si Alt a été enfoncé entre-temps) créerait un
         // keyup orphelin côté application et un déclencheur fantôme côté machine d'état.
         if (!isKeyDown && _maintainableLayers.EndTrigger(scanCode))
             return true;
 
-        // Toute autre frappe pendant un déclencheur en attente le transforme
-        // immédiatement en couche temporaire — y compris quand la frappe part en
-        // raccourci (Ctrl, Alt, touches étendues) : sinon le relâchement du
-        // déclencheur armerait un one-shot que l'utilisateur n'a pas demandé.
+        // Toute autre frappe pendant un déclencheur en attente consomme l'accord
+        // comme un appui simple : un one-shot pour cette frappe, rien au-delà.
+        // Y compris quand la frappe part en raccourci (Ctrl, Alt, touches
+        // étendues) : sinon le relâchement armerait un one-shot non demandé —
+        // celui de l'accord est repris par EndTrigger s'il n'a pas servi.
         if (isKeyDown && _maintainableLayers.PendingTriggerScanCode is uint pendingTrigger &&
             pendingTrigger != scanCode)
         {
-            _maintainableLayers.PromotePendingTriggerToHeld();
+            _maintainableLayers.PromotePendingTriggerToOneShot();
         }
 
         // Touches étendues (pavé numérique /, Enter, flèches, etc.) : laisser passer
@@ -698,7 +699,7 @@ public sealed class KeyMapper
         if (output == null || output == "")
             return true; // Bloquer quand même pour éviter que le layout Windows sous-jacent ne produise un caractère
 
-        // Couche maintenue / ponctuelle / verrouillée. Les tables des touches mortes
+        // Couche ponctuelle ou verrouillée. Les tables des touches mortes
         // restent l'unique source de transformation. Win enfoncé = raccourci système :
         // laisser la touche suivre le chemin ordinaire (pass-through), sinon Win+E
         // serait remplacé par un caractère de couche.

@@ -6,9 +6,9 @@ internal static partial class L
     public static string Layers_WindowTitleSuffix => T("Couches maintenables", "Maintainable layers");
     public static string Layers_Title => T("Écrire plusieurs caractères dans un autre alphabet", "Type several characters in another alphabet");
     public static string Layers_Explainer => T(
-        "Appui simple : la prochaine frappe.   Maintien : tant que la touche reste enfoncée.\r\n" +
+        "Appui simple : la prochaine frappe.\r\n" +
         "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",
-        "Single press: the next keystroke.   Hold: as long as the key is held down.\r\n" +
+        "Single press: the next keystroke.\r\n" +
         "Double press: lock inside the active application.   Esc: unlock.");
     public static string Layers_MasterCheckbox => T("Activer les couches maintenables", "Enable maintainable layers");
     public static string Layers_AvailableLabel => T("Couches disponibles", "Available layers");
@@ -20,16 +20,15 @@ internal static partial class L
     public static string Layers_DelayUnit => T("ms (150 à 1000)", "ms (150 to 1000)");
     public static string Layers_SaveButton => T("Enregistrer", "Save");
     public static string Layers_ActivatedBody => T(
-        "Couches activées.\n\nAppui simple : une frappe.\nMaintien : plusieurs frappes.\n" +
+        "Couches activées.\n\nAppui simple : une frappe.\n" +
         "Double appui : verrouillage dans l’application.\nÉchap : déverrouiller.",
-        "Layers enabled.\n\nSingle press: one keystroke.\nHold: several keystrokes.\n" +
+        "Layers enabled.\n\nSingle press: one keystroke.\n" +
         "Double press: lock inside the application.\nEsc: unlock.");
 
     // ── Libellés des couches (indicateur, infobulle du tray) ─────────
     public static string Layers_LabelGreek => T("Grec", "Greek");
     public static string Layers_LabelCyrillic => T("Cyrillique", "Cyrillic");
     public static string Layers_LabelScientific => T("Scientifique", "Scientific");
-    public static string Layers_IndicatorHeldSuffix => T(" · maintien", " · hold");
     public static string Layers_IndicatorLockedSuffix => T(" · verrou", " · lock");
 
     // ── Entrées du menu et infobulle ──────────────────────────────────

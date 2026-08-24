@@ -3,8 +3,9 @@ using Xunit;
 namespace TypingEngine.Windows.Tests;
 
 /// <summary>
-/// Machine d'état pure des couches maintenables : modes ponctuel, maintien et
-/// verrou par processus, fenêtre de double appui, champs sécurisés, PID réutilisé.
+/// Machine d'état pure des couches maintenables : modes ponctuel et verrou par
+/// processus, accord consommé en appui simple, fenêtre de double appui, champs
+/// sécurisés, PID réutilisé.
 /// </summary>
 public class MaintainableLayerManagerTests
 {
@@ -34,14 +35,34 @@ public class MaintainableLayerManagerTests
     }
 
     [Fact]
-    public void Chord_IsHeldOnlyUntilTriggerRelease()
+    public void Chord_ArmsOneShotConsumedByItsOwnKeystroke()
     {
         var manager = CreateEnabledManager();
 
         manager.BeginTrigger("dk_greek", 0x2B);
-        Assert.True(manager.PromotePendingTriggerToHeld());
-        Assert.Equal(MaintainableLayerMode.Held, manager.CurrentState.Mode);
+        Assert.True(manager.PromotePendingTriggerToOneShot());
+        Assert.Equal(MaintainableLayerMode.OneShot, manager.CurrentState.Mode);
 
+        // La frappe de l'accord consomme le one-shot ; tant que le déclencheur
+        // reste enfoncé, les frappes suivantes redeviennent ordinaires.
+        manager.ConsumeOneShot();
+        Assert.False(manager.PromotePendingTriggerToOneShot());
+        Assert.Equal(MaintainableLayerMode.Inactive, manager.CurrentState.Mode);
+
+        manager.EndTrigger(0x2B);
+        Assert.Equal(MaintainableLayerMode.Inactive, manager.CurrentState.Mode);
+    }
+
+    [Fact]
+    public void Chord_UnusedOneShotDoesNotSurviveTriggerRelease()
+    {
+        var manager = CreateEnabledManager();
+
+        manager.BeginTrigger("dk_greek", 0x2B);
+        Assert.True(manager.PromotePendingTriggerToOneShot());
+
+        // La frappe de l'accord est partie en raccourci (Ctrl, Alt…) : le one-shot
+        // n'a jamais servi et ne doit pas surprendre la frappe suivante.
         manager.EndTrigger(0x2B);
         Assert.Equal(MaintainableLayerMode.Inactive, manager.CurrentState.Mode);
     }
@@ -84,16 +105,17 @@ public class MaintainableLayerManagerTests
     }
 
     [Fact]
-    public void OtherLayerHeld_TemporarilyOverridesLockedLayer()
+    public void OtherLayerChord_OneShotOverridesLockThenReturnsToIt()
     {
         var manager = CreateEnabledManager();
         Lock(manager, "dk_greek", 0x2B);
 
         manager.BeginTrigger("dk_scientific", 0x0D);
-        manager.PromotePendingTriggerToHeld();
+        manager.PromotePendingTriggerToOneShot();
         Assert.Equal("dk_scientific", manager.CurrentState.LayerId);
-        Assert.Equal(MaintainableLayerMode.Held, manager.CurrentState.Mode);
+        Assert.Equal(MaintainableLayerMode.OneShot, manager.CurrentState.Mode);
 
+        manager.ConsumeOneShot();
         manager.EndTrigger(0x0D);
         Assert.Equal("dk_greek", manager.CurrentState.LayerId);
         Assert.Equal(MaintainableLayerMode.Locked, manager.CurrentState.Mode);

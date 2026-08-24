@@ -1753,7 +1753,7 @@ sealed class TrayApplication : IDisposable
             if (_mapper?.ActiveDeadKey != null)
                 parts.Add(L.Tray_TooltipDeadKey(GetDeadKeySymbol(_mapper.ActiveDeadKey)));
             var layerState = _mapper?.MaintainableLayerState ?? MaintainableLayerState.Inactive;
-            if (layerState.Mode is MaintainableLayerMode.Held or MaintainableLayerMode.Locked)
+            if (layerState.Mode is MaintainableLayerMode.Locked)
                 parts.Add(L.Layers_TooltipLayer(GetMaintainableLayerLabel(layerState.LayerId)));
         }
         _nid.szTip = string.Join(" — ", parts);

@@ -55,7 +55,7 @@ public class KeyMapperMaintainableLayerTests : IDisposable
     }
 
     [Fact]
-    public void GreekHeld_MapsSeveralCharactersUntilRelease()
+    public void GreekHeld_MapsOnlyTheFirstKeystroke()
     {
         var (mapper, mock, monitor) = CreateMapper();
         using (monitor)
@@ -64,10 +64,11 @@ public class KeyMapperMaintainableLayerTests : IDisposable
             mock.SendInputCalls.Clear();
 
             Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true));
-            mapper.ProcessKey(VK_A, SC_A, 0, false);
-            Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true));
-            Assert.Equal(MaintainableLayerMode.Held, mapper.MaintainableLayerState.Mode);
-            Assert.Equal(2, mock.SendInputCalls.Count);
+            AssertUnicode(mock, 'α');
+
+            // L'accord vaut un appui simple : le one-shot est consommé par sa
+            // propre frappe, la couche ne colle plus au déclencheur enfoncé.
+            Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);
 
             ReleaseGreekTrigger(mapper, mock);
             Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);
@@ -130,19 +131,16 @@ public class KeyMapperMaintainableLayerTests : IDisposable
     }
 
     [Fact]
-    public void GreekHeld_DisplayDeadKeyShowsLayer_WithoutActiveDeadKey()
+    public void GreekOneShot_DisplayDeadKeyShowsLayer()
     {
         var (mapper, mock, monitor) = CreateMapper();
         using (monitor)
         {
-            PressGreekTrigger(mapper, mock);
-            Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true));
-            Assert.Equal(MaintainableLayerMode.Held, mapper.MaintainableLayerState.Mode);
+            TapGreekTrigger(mapper, mock);
+            Assert.Equal(MaintainableLayerMode.OneShot, mapper.MaintainableLayerState.Mode);
 
-            // Le clavier virtuel voit la couche ; ActiveDeadKey reste nul, l'infobulle
-            // du tray disant déjà la couche par sa ligne dédiée (QW-1, 2026-08-24).
+            // Le clavier virtuel voit la couche armée (QW-1, 2026-08-24).
             Assert.Equal("dk_greek", mapper.DisplayDeadKey);
-            Assert.Null(mapper.ActiveDeadKey);
         }
     }
 
