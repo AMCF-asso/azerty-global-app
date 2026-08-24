@@ -257,11 +257,6 @@ static class ConfigManager
     public static void SetMaintainableTutorialCompleted(bool completed) =>
         SetBool("maintainableTutorialCompleted", completed);
 
-    public static bool MaintainableDiagnosticsConsent => GetBool("maintainableDiagnosticsConsent");
-
-    public static void SetMaintainableDiagnosticsConsent(bool consent) =>
-        SetBool("maintainableDiagnosticsConsent", consent);
-
     /// <summary>Langue de l'interface : "fr" (défaut) ou "en". Une politique d'entreprise
     /// impose la langue et verrouille les trois surfaces qui la changent.</summary>
     public static string AppLanguage =>

@@ -18,9 +18,6 @@ internal static partial class L
     public static string Layers_VisualCheckbox => T("Afficher un indicateur près du curseur", "Show an indicator near the caret");
     public static string Layers_DelayLabel => T("Délai du double appui :", "Double-press delay:");
     public static string Layers_DelayUnit => T("ms (150 à 1000)", "ms (150 to 1000)");
-    public static string Layers_DiagnosticsCheckbox => T(
-        "Autoriser l’export volontaire de diagnostics techniques locaux",
-        "Allow voluntary export of local technical diagnostics");
     public static string Layers_SaveButton => T("Enregistrer", "Save");
     public static string Layers_ActivatedBody => T(
         "Couches activées.\n\nAppui simple : une frappe.\nMaintien : plusieurs frappes.\n" +
