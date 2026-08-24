@@ -110,6 +110,10 @@ internal sealed class LessonsWindow : IDisposable
     private LessonTypingSession _session;
     private bool _showSummary;
     private LessonAttemptStats? _lastCompletedStats;
+    // Métrique « Record » du récapitulatif (QW-4, 2026-08-24) : meilleur score de
+    // l'exercice, tentative courante comprise, et vrai si elle vient de l'établir.
+    private int? _summaryBestWpm;
+    private bool _summaryIsNewBest;
     // Partage du défi (v1.2.0) : non null uniquement quand la séance qui vient de s'achever
     // est le défi commun — les séances de prise en main dépendent de la progression
     // individuelle, deux personnes n'y tapent pas le même extrait.
@@ -1271,10 +1275,16 @@ internal sealed class LessonsWindow : IDisposable
         int metricY = summaryRect.top + S(48);
         int contentRight = summaryRect.right - S(18);
         int gap = S(28);
-        int metricW = Math.Max(S(80), (contentRight - x - gap * 2) / 3);
+        // « Record » (QW-4) : 4e colonne dès qu'un meilleur score existe — dès le
+        // premier passage réussi, la valeur étant relue après enregistrement.
+        int columns = _summaryBestWpm.HasValue ? 4 : 3;
+        int metricW = Math.Max(S(80), (contentRight - x - gap * (columns - 1)) / columns);
         DrawSummaryTextMetric(hdc, x, metricY, metricW, L.LessonsWin_MetricSpeed, FormatWpm(stats.Wpm), CLR_TEXT);
         DrawSummaryTextMetric(hdc, x + metricW + gap, metricY, metricW, L.LessonsWin_MetricAccuracy, FormatNullable(stats.AccuracyPercent, "%"), GetAccuracyColor(stats.AccuracyPercent));
         DrawSummaryTextMetric(hdc, x + (metricW + gap) * 2, metricY, metricW, L.LessonsWin_MetricErrors, stats.ErrorCount.ToString(), GetErrorColor(stats.ErrorCount));
+        if (_summaryBestWpm.HasValue)
+            DrawSummaryTextMetric(hdc, x + (metricW + gap) * 3, metricY, metricW, L.LessonsWin_MetricBest,
+                FormatWpm(_summaryBestWpm), _summaryIsNewBest ? CLR_ACCENT : CLR_TEXT);
 
         var hard = stats.GetHardestCharacters(3);
         int elapsedSecondsRounded = (int)Math.Round(stats.ElapsedSeconds);
@@ -2102,12 +2112,15 @@ internal sealed class LessonsWindow : IDisposable
                                _exerciseIndex == CurrentLesson.Exercises.Count - 1;
         // Le meilleur score doit être lu AVANT RecordSuccess, qui l'écrase par le résultat
         // de la tentative courante : après l'appel, toute séance est son propre record.
-        int? previousBestWpm = challengeFinale
-            ? _progress.GetValidProgress(CurrentExercise)?.BestWpm
-            : null;
+        int? previousBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
 
         _lastCompletedStats = _session.Stats;
         _progress.RecordSuccess(CurrentExercise, _session.Stats);
+        // Métrique « Record » (QW-4) : relue APRÈS RecordSuccess pour inclure la
+        // tentative courante ; « nouveau » seulement si un score antérieur est battu.
+        _summaryBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
+        _summaryIsNewBest = previousBestWpm.HasValue && _session.Stats.Wpm.HasValue &&
+                            _session.Stats.Wpm.Value > previousBestWpm.Value;
         _showSummary = true;
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         ClearHint();

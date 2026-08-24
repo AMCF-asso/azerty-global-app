@@ -30,6 +30,7 @@ internal static partial class L
     public static string LessonsWin_MetricSpeed => T("Vitesse", "Speed");
     public static string LessonsWin_MetricAccuracy => T("Précision", "Accuracy");
     public static string LessonsWin_MetricErrors => T("Erreurs", "Errors");
+    public static string LessonsWin_MetricBest => T("Record", "Best");
     public static string LessonsWin_DetailNoHardChar(int seconds) => T(
         $"Temps : {seconds}s    Aucun caractère difficile sur cette tentative.",
         $"Time: {seconds}s    No difficult character on this attempt.");
