@@ -386,25 +386,28 @@ public class PolicyTests : IDisposable
     /// Trois surfaces changent la langue — Paramètres, menu tray, drapeau de la fenêtre de
     /// bienvenue — et le garde est posé sur la porte unique qu'elles empruntent toutes.
     ///
-    /// La politique impose « fr » et l'appel demande « en », jamais l'inverse : « fr » étant
-    /// déjà le défaut du réglage utilisateur, une écriture de « fr » aurait été invisible et
-    /// ce test serait resté vert sans le garde. Mesuré — première version de ce test, témoin
-    /// de mutation à zéro rouge.
+    /// La politique impose le défaut du poste et l'appel demande la langue opposée, jamais
+    /// l'inverse : une écriture de la valeur par défaut serait invisible et ce test resterait
+    /// vert sans le garde (mesuré — première version, témoin de mutation à zéro rouge).
+    /// Depuis QW-2 le défaut dérive du Windows du poste : le lire au lieu de le coder en dur
+    /// garde le témoin rouge-capable sur un poste anglophone comme francophone.
     /// </summary>
     [Fact]
     public void SetAppLanguage_SousPolitique_NEcritRien()
     {
+        string derivedDefault = ConfigManager.AppLanguageUserSetting;
+        string opposite = derivedDefault == "fr" ? "en" : "fr";
         var lecteur = new LecteurEnregistreur(new Dictionary<string, object?>
         {
-            ["Language"] = "fr",
+            ["Language"] = derivedDefault,
         });
 
         using (PolicyManager.OverrideForTests(lecteur.Lire))
         {
-            ConfigManager.SetAppLanguage("en");
+            ConfigManager.SetAppLanguage(opposite);
 
-            Assert.Equal("fr", ConfigManager.AppLanguage);
-            Assert.Equal("fr", ConfigManager.AppLanguageUserSetting);
+            Assert.Equal(derivedDefault, ConfigManager.AppLanguage);
+            Assert.Equal(derivedDefault, ConfigManager.AppLanguageUserSetting);
         }
     }
 

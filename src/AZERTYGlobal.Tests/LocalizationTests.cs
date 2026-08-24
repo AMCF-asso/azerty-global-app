@@ -28,9 +28,25 @@ public class LocalizationTests : IDisposable
     }
 
     [Fact]
-    public void AppLanguage_DefaultsToFr()
+    public void AppLanguage_SansCle_DeriveDeLaLangueWindows()
     {
-        Assert.Equal("fr", ConfigManager.AppLanguage);
+        // Sans clé ni politique, le défaut suit l'interface Windows (QW-2, 2026-08-24).
+        // Comparé au LANGID réel du poste : sur une CI anglophone le défaut devient
+        // « en », et un « fr » codé en dur y rougirait.
+        Assert.Equal(
+            ConfigManager.DefaultAppLanguage(ConfigManager.WindowsUiLanguageIdForTests()),
+            ConfigManager.AppLanguage);
+    }
+
+    [Theory]
+    [InlineData((ushort)0x040C, "fr")] // fr-FR
+    [InlineData((ushort)0x0C0C, "fr")] // fr-CA
+    [InlineData((ushort)0x080C, "fr")] // fr-BE
+    [InlineData((ushort)0x0409, "en")] // en-US
+    [InlineData((ushort)0x0407, "en")] // de-DE — tout non-francophone retombe sur « en »
+    public void DefaultAppLanguage_DeriveDuLangId(ushort langId, string expected)
+    {
+        Assert.Equal(expected, ConfigManager.DefaultAppLanguage(langId));
     }
 
     [Fact]
