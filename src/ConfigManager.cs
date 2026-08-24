@@ -272,15 +272,11 @@ static class ConfigManager
     {
         get
         {
+            // Une clé absente signifie « config existante d'avant la dérivation » :
+            // une installation neuve reçoit sa clé dès le premier chargement
+            // (EnsureLoaded), donc une mise à jour ne change jamais de langue
+            // (décision d'Antoine, 2026-08-24).
             var raw = GetString("appLanguage");
-            if (raw == null)
-            {
-                // Aucun choix enregistré : suivre la langue d'affichage de Windows.
-                // Rien n'est écrit — un défaut dérivé n'est pas un choix, la clé
-                // n'apparaît que lorsque l'utilisateur bascule lui-même.
-                try { return DefaultAppLanguage(GetUserDefaultUILanguage()); }
-                catch { return "fr"; }
-            }
             return raw == "en" ? "en" : "fr";
         }
     }
@@ -938,6 +934,22 @@ static class ConfigManager
         {
             _loadFailed = true;
             Log("ConfigManager.EnsureLoaded", ex);
+        }
+
+        // Installation neuve (aucun fichier) : la langue initiale suit l'interface
+        // Windows et s'écrit tout de suite — un défaut qui changerait d'une session à
+        // l'autre serait pire qu'un choix. Une config existante sans clé garde le
+        // « fr » historique : une mise à jour ne bascule jamais de langue (décision
+        // d'Antoine, 2026-08-24). Jamais après un échec de lecture : Save() refuse
+        // déjà d'écraser un fichier existant non chargé.
+        if (!_loadFailed && _cache.Count == 0 && !File.Exists(_configPath))
+        {
+            string derived;
+            try { derived = DefaultAppLanguage(GetUserDefaultUILanguage()); }
+            catch { derived = "fr"; }
+            using var doc = JsonDocument.Parse($"\"{derived}\"");
+            _cache["appLanguage"] = doc.RootElement.Clone();
+            Save();
         }
     }
 

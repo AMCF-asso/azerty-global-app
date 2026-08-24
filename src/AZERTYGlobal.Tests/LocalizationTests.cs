@@ -28,14 +28,32 @@ public class LocalizationTests : IDisposable
     }
 
     [Fact]
-    public void AppLanguage_SansCle_DeriveDeLaLangueWindows()
+    public void InstallationNeuve_EcritLaLangueDeriveDeWindows()
     {
-        // Sans clé ni politique, le défaut suit l'interface Windows (QW-2, 2026-08-24).
-        // Comparé au LANGID réel du poste : sur une CI anglophone le défaut devient
+        // Fichier absent = installation neuve : la langue suit l'interface Windows
+        // (QW-2) et s'écrit immédiatement pour rester stable d'une session à l'autre.
+        // Comparée au LANGID réel du poste : sur une CI anglophone le défaut est
         // « en », et un « fr » codé en dur y rougirait.
-        Assert.Equal(
-            ConfigManager.DefaultAppLanguage(ConfigManager.WindowsUiLanguageIdForTests()),
-            ConfigManager.AppLanguage);
+        string derived = ConfigManager.DefaultAppLanguage(ConfigManager.WindowsUiLanguageIdForTests());
+        Assert.Equal(derived, ConfigManager.AppLanguage);
+        Assert.Equal(derived, ConfigManager.AppLanguageUserSetting);
+
+        // Persistée : un rechargement du même fichier relit la clé écrite.
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+        Assert.Equal(derived, ConfigManager.AppLanguageUserSetting);
+    }
+
+    [Fact]
+    public void ConfigExistanteSansCle_ResteEnFrancais()
+    {
+        // Une config d'avant la dérivation (mise à jour v1.1 → v1.2) n'a pas de clé :
+        // elle garde le « fr » historique quel que soit le Windows du poste — la
+        // dérivation ne vaut que pour les installations neuves (Antoine, 2026-08-24).
+        File.WriteAllText(_configPath, "{\"showOnboardingAtStartup\":true}");
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+
+        Assert.Equal("fr", ConfigManager.AppLanguage);
+        Assert.Equal("fr", ConfigManager.AppLanguageUserSetting);
     }
 
     [Theory]
