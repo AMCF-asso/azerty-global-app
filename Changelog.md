@@ -105,9 +105,10 @@ dépôt le 2026-08-24 sur l'architecture extraite : machine d'état et détectio
 - Recherche de caractères : `Entrée` insère désormais le caractère directement dans la fenêtre
   d'origine (y compris à l'ouverture depuis le menu tray) ; en cas d'échec, repli sur la copie avec
   notification explicite.
-- Réglages persistants (couches actives, délai du double appui 150-1000 ms, indicateur, consentement
-  diagnostics) via la nouvelle fenêtre « Couches maintenables » ; les configurations existantes migrent
-  avec la fonctionnalité désactivée.
+- Réglages persistants (couches actives, délai du double appui 150-1000 ms, indicateur) via la
+  nouvelle fenêtre « Couches maintenables » ; les configurations existantes migrent avec la
+  fonctionnalité désactivée. La case « export volontaire de diagnostics » de la version Codex
+  n'est pas reprise : aucun code ne consommait ce consentement (audit du 2026-08-24).
 - Les mises à jour d'icône tray, d'infobulle et d'indicateur déclenchées depuis le hook clavier partent
   désormais en différé coalescé sur la boucle de messages — plus aucun appel bloquant dans `WH_KEYBOARD_LL`.
 - Adaptations de portage vs la version Codex : le moteur ne lit aucune configuration (l'application
@@ -119,9 +120,10 @@ dépôt le 2026-08-24 sur l'architecture extraite : machine d'état et détectio
 **Revue de release 1.2.0**
 
 - Version applicative portée de `1.1.2` à `1.2.0`, manifeste de packaging de `1.0.0.0` à `1.2.0.0` (le Store sert `1.1.0.0`). `Program.cs` et `AssemblyInfo.cs` étaient restés en `1.1.2` : l'infobulle du tray et les rapports de bug se seraient annoncés en 1.1.2, et `Verify-Release.ps1` bloquait dessus.
-- 282 tests xUnit passent sur les trois suites — 169 applicatifs, 95 moteur Windows, 18 moteur portable. Le chiffre de 250 annoncé le 17 août avait été figé avant huit tests ajoutés le même jour au parseur de disposition : le total réel était déjà de 258. Les 24 suivants viennent de l'audit de release et de ses correctifs — lots d'émission des touches mortes, touche morte orpheline, décision de sollicitation après partage, et lecture réelle du manifeste par le test de l'activateur COM. Build Release : 0 avertissement, 0 erreur.
+- 412 tests xUnit passent sur les trois suites — 287 applicatifs, 107 moteur Windows, 18 moteur portable (mesure du 2026-08-24). Le chiffre de 250 annoncé le 17 août avait été figé avant huit tests ajoutés le même jour au parseur de disposition ; l'audit de release et ses correctifs l'ont porté à 282, puis les lots de déployabilité en parc, la refonte des notifications et le portage des couches maintenables à 412. Build Release : 0 avertissement, 0 erreur.
 - Quatre tests comparent `Program.Version` aux attributs d'assembly à chaque exécution de la suite. La dérive qui a bloqué les portes de release ce jour-là ne se voyait que dans `Verify-Release.ps1`, une levée à la fois et au moment du packaging ; elle apparaît désormais en CI, avant. Le csproj et `AppxManifest.xml` restent couverts par le script, hors de portée d'un test qui ne connaît que l'assembly compilé.
-- Artefacts du 2026-08-21 : publication Native AOT x64 et ARM64 sans un avertissement, bundle `AZERTYGlobal-1.2.0.0.msixbundle` reconstruit à partir de ces binaires — donc incluant les lots A à F, ce que ne faisait pas le bundle du 18 août — et vérifié par `Verify-Release.ps1` (empreinte `B0E76D0A…`, 13 201 074 octets). Le bundle **n'est pas signé** : ni WACK, ni signature AMCF, ni soumission Partner Center à cette date.
+- Le package n'embarque plus les visuels de la fiche Store : `Pack-MSIX.ps1` copie désormais une liste blanche — les quatre logos que le manifeste référence et leurs variantes `.scale-200` — au lieu du dossier `Assets/` entier. Chaque `.msix` perd 3,4 Mo de captures, posters et gabarits internes (audit du 2026-08-24).
+- Artefacts du 2026-08-24 : bundle `AZERTYGlobal-1.2.0.0.msixbundle` reconstruit à partir des publications AOT du portage des couches et vérifié par `Verify-Release.ps1` — empreinte `C7621B01…`, 6 735 511 octets, soit 6,5 Mo de moins que le bundle du 2026-08-21 (`B0E76D0A…`), qui précédait la refonte des notifications et les couches. Le bundle **n'est pas signé** : ni WACK, ni signature AMCF, ni soumission Partner Center à cette date, et la validation manuelle §7 du cahier des charges reste due avant tout envoi.
 - ⚠️ Trois vérifications de `Verify-Release.ps1` se sautent en silence dans ce dépôt — TO-DO, contexte app et contexte projet, tous hors dépôt. Un avertissement, pas un échec : le script ne garantit donc que ce qu'il a réellement lu.
 
 ## Version 1.1.0 — 23 juillet 2026
