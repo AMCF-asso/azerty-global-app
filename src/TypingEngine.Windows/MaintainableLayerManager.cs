@@ -4,7 +4,6 @@ public enum MaintainableLayerMode
 {
     Inactive,
     OneShot,
-    Held,
     Locked
 }
 
@@ -55,8 +54,6 @@ internal sealed class MaintainableLayerManager
     private ForegroundProcessIdentity _pressedOwner;
     private bool _pressedUsedAsChord;
 
-    private string? _heldLayer;
-    private ForegroundProcessIdentity _heldOwner;
     private string? _oneShotLayer;
     private ForegroundProcessIdentity _oneShotOwner;
 
@@ -159,8 +156,6 @@ internal sealed class MaintainableLayerManager
         _pressedScanCode = 0;
         _pressedOwner = default;
         _pressedUsedAsChord = false;
-        _heldLayer = null;
-        _heldOwner = default;
 
         if (!wasChord && owner == _foreground && !_secureInput)
         {
@@ -198,6 +193,14 @@ internal sealed class MaintainableLayerManager
         }
         else if (wasChord)
         {
+            // Un one-shot armé par l'accord et jamais consommé (la frappe est partie
+            // en raccourci) ne survit pas au relâchement du déclencheur.
+            if (_oneShotLayer != null && _oneShotOwner == owner &&
+                string.Equals(_oneShotLayer, layer, StringComparison.Ordinal))
+            {
+                _oneShotLayer = null;
+                _oneShotOwner = default;
+            }
             ClearTapHistory();
         }
 
@@ -206,18 +209,22 @@ internal sealed class MaintainableLayerManager
     }
 
     /// <summary>
-    /// Transforme un déclencheur maintenu en couche temporaire dès la première
-    /// autre frappe. Retourne true lorsqu'un accord est désormais actif.
+    /// Première autre frappe pendant un déclencheur enfoncé : l'accord vaut un
+    /// appui simple — il arme un one-shot que cette frappe consomme, puis les
+    /// suivantes redeviennent ordinaires même si le déclencheur reste enfoncé.
+    /// Retourne true lorsque l'accord vient d'armer ce one-shot.
     /// </summary>
-    public bool PromotePendingTriggerToHeld()
+    public bool PromotePendingTriggerToOneShot()
     {
         if (_pressedLayer == null || _pressedOwner != _foreground || _secureInput)
+            return false;
+        if (_pressedUsedAsChord)
             return false;
 
         var before = CurrentState;
         _pressedUsedAsChord = true;
-        _heldLayer = _pressedLayer;
-        _heldOwner = _pressedOwner;
+        _oneShotLayer = _pressedLayer;
+        _oneShotOwner = _pressedOwner;
         ClearTapHistory();
         NotifyIfChanged(before);
         return true;
@@ -227,9 +234,6 @@ internal sealed class MaintainableLayerManager
     {
         if (!_enabled || _secureInput || !identity.IsValid || identity != _foreground)
             return MaintainableLayerState.Inactive;
-
-        if (_heldLayer != null && _heldOwner == identity)
-            return new(_heldLayer, MaintainableLayerMode.Held, identity);
 
         if (_oneShotLayer != null && _oneShotOwner == identity)
             return new(_oneShotLayer, MaintainableLayerMode.OneShot, identity);
@@ -320,8 +324,6 @@ internal sealed class MaintainableLayerManager
         _pressedScanCode = 0;
         _pressedOwner = default;
         _pressedUsedAsChord = false;
-        _heldLayer = null;
-        _heldOwner = default;
         _oneShotLayer = null;
         _oneShotOwner = default;
     }
