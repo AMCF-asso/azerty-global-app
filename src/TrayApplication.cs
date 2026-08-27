@@ -73,6 +73,9 @@ sealed class TrayApplication : IDisposable
     private const uint NIIF_USER = 0x04;
     // Sans ce drapeau, Windows prend la taille SM_CXSMICON et reduit l'icone 32x32.
     private const uint NIIF_LARGE_ICON = 0x20;
+
+    // GetSystemMetrics : taille d'icône système « large », suit l'échelle d'affichage.
+    private const int SM_CXICON = 11;
     // Événements balloon reçus via uCallbackMessage (Shell32 ≥ 6.0, donc toujours sur Win10/11)
     private const uint NIN_BALLOONTIMEOUT = 0x0404;
     private const uint NIN_BALLOONUSERCLICK = 0x0405;
@@ -211,9 +214,9 @@ sealed class TrayApplication : IDisposable
 
         // Icône tray
         _hIcon = CreateTextIcon("AG", true);
-        // Etat actif fige : la bulle identifie l'application, elle ne rapporte pas
-        // l'etat courant — c'est le role du titre depuis l'audit du 2026-08-23.
-        _hBalloonIcon = CreateTextIcon("AG", true);
+        // L'icône balloon (logo produit) se crée à chaque émission, jamais ici :
+        // NIIF_LARGE_ICON exige la taille SM_CXICON du moment, qui suit l'échelle
+        // d'affichage (F6 du smoke v1.2.0 — 32 px codé en dur = bulle rejetée à 125 %).
 
         _nid = new Win32.NOTIFYICONDATAW
         {
@@ -2030,12 +2033,68 @@ sealed class TrayApplication : IDisposable
     {
         if (!ConfigManager.NotificationsEnabled) return;
         _pendingBalloon = PendingBalloonKind.None; // toute nouvelle balloon remplace la précédente
+        RefreshBalloonIcon();
         _nid.uFlags = NIF_INFO;
         _nid.szInfoTitle = title;
         _nid.szInfo = text;
         _nid.hBalloonIcon = _hBalloonIcon;
         _nid.dwInfoFlags = NIIF_USER | NIIF_LARGE_ICON;
         Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+    }
+
+    /// <summary>
+    /// (Re)crée l'icône balloon à la taille SM_CXICON du moment. NIIF_LARGE_ICON fait
+    /// rejeter Shell_NotifyIconW en silence quand l'icône n'a pas exactement cette
+    /// taille, qui suit l'échelle d'affichage — 40 px à 125 % (F6, smoke v1.2.0).
+    /// Recréation à chaque bulle : l'échelle peut changer en cours de session.
+    /// </summary>
+    private void RefreshBalloonIcon()
+    {
+        int size = Win32.GetSystemMetrics(SM_CXICON);
+        var fresh = CreateLogoIcon(size);
+        if (fresh == IntPtr.Zero)
+            fresh = CreateTextIcon("AG", true, size: size);
+        if (_hBalloonIcon != IntPtr.Zero)
+            Win32.DestroyIcon(_hBalloonIcon);
+        _hBalloonIcon = fresh;
+    }
+
+    /// <summary>Logo du produit (favicon embarqué) en HICON à la taille demandée, fond
+    /// transparent — même recette GDI+ que l'icône de fenêtre d'AboutWindow. Zéro si un
+    /// maillon échoue : l'appelant retombe sur l'icône texte.</summary>
+    private static IntPtr CreateLogoIcon(int size)
+    {
+        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
+        if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) != 0)
+            return IntPtr.Zero;
+        IntPtr logo = IntPtr.Zero, bmp32 = IntPtr.Zero;
+        try
+        {
+            logo = GdiImageLoader.LoadFromEmbeddedResource(typeof(TrayApplication), ProductIdentity.LogoResourceName);
+            if (logo == IntPtr.Zero) return IntPtr.Zero;
+            if (Win32.GdipCreateBitmapFromScan0(size, size, 0, 0x0026200A, IntPtr.Zero, out bmp32) != 0) return IntPtr.Zero;
+            if (Win32.GdipGetImageGraphicsContext(bmp32, out IntPtr g) != 0) return IntPtr.Zero;
+            Win32.GdipSetSmoothingMode(g, 4);
+            Win32.GdipSetInterpolationMode(g, 7);
+            Win32.GdipDrawImageRectI(g, logo, 0, 0, size, size);
+            Win32.GdipDeleteGraphics(g);
+            if (Win32.GdipCreateHBITMAPFromBitmap(bmp32, out IntPtr hBmp, 0x00000000) != 0) return IntPtr.Zero;
+            // Lignes du masque 1 bpp alignées au mot : 6 octets par ligne à 40 px, pas 5.
+            int maskStride = (size + 15) / 16 * 2;
+            var maskBits = new byte[maskStride * size];
+            IntPtr hMask = Win32.CreateBitmap(size, size, 1, 1, maskBits);
+            var iconInfo = new Win32.ICONINFO { fIcon = true, hbmMask = hMask, hbmColor = hBmp };
+            IntPtr hIcon = Win32.CreateIconIndirect(ref iconInfo);
+            Win32.DeleteObject(hMask);
+            Win32.DeleteObject(hBmp);
+            return hIcon;
+        }
+        finally
+        {
+            if (bmp32 != IntPtr.Zero) Win32.GdipDisposeImage(bmp32);
+            if (logo != IntPtr.Zero) Win32.GdipDisposeImage(logo);
+            Win32.GdiplusShutdown(token);
+        }
     }
 
     /// <summary>
@@ -2158,9 +2217,8 @@ sealed class TrayApplication : IDisposable
     /// Crée une icône 32x32 avec texte sur fond coloré.
     /// Bleu = actif, gris = inactif. Barre orange en bas si CapsLock.
     /// </summary>
-    private static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false)
+    private static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
     {
-        const int size = 32;
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         var hdc = Win32.CreateCompatibleDC(hdcScreen);
@@ -2193,7 +2251,7 @@ sealed class TrayApplication : IDisposable
         }
 
         // Adapter la taille de police : plus petite pour les symboles longs, plus grande pour "AG"
-        int fontSize = text.Length <= 2 ? 22 : 18;
+        int fontSize = (text.Length <= 2 ? 22 : 18) * size / 32;
         // Remonter légèrement le texte si la barre CapsLock est présente
         var textRect = capsLock
             ? new Win32.RECT { left = 0, top = 0, right = size, bottom = size - 4 }
