@@ -350,7 +350,7 @@ static class Theme
 
     private static readonly Dictionary<uint, IntPtr> BrushCache = new();
     private static readonly Dictionary<(uint Color, int Width), IntPtr> PenCache = new();
-    private static readonly Dictionary<(FontRole Role, int Dpi), IntPtr> FontCache = new();
+    private static readonly Dictionary<(FontRole Role, int Dpi, bool Underlined), IntPtr> FontCache = new();
 
     /// <summary>
     /// Brosse pleine d'une couleur de la palette, partagée et vivante jusqu'à la fin du processus.
@@ -398,12 +398,16 @@ static class Theme
     /// texte flou sur le second écran. Le cache est borné par le nombre d'échelles réellement
     /// rencontrées, soit une ou deux sur un poste ordinaire.
     /// </summary>
-    internal static IntPtr Font(FontRole role, int dpi)
+    /// <param name="underlined">Souligne le tracé. Ce n'est pas un rôle de plus : c'est le
+    /// même rôle, décoré. Un lien rendu par un contrôle STATIC est peint par le système, donc
+    /// on ne peut pas lui dessiner de filet comme le fait ThemeControls.DrawLink — le survol
+    /// d'un tel lien passe par cette police-là.</param>
+    internal static IntPtr Font(FontRole role, int dpi, bool underlined = false)
     {
         if (dpi <= 0)
             dpi = 96;
 
-        var key = (role, dpi);
+        var key = (role, dpi, underlined);
         if (FontCache.TryGetValue(key, out var existing))
             return existing;
 
@@ -411,7 +415,8 @@ static class Theme
         int height = -(int)Math.Round(size * dpi / 96.0, MidpointRounding.AwayFromZero);
 
         // Qualité 5 = CLEARTYPE_QUALITY, comme partout ailleurs dans l'application.
-        var font = Win32.CreateFontW(height, 0, 0, 0, weight, 0, 0, 0, 0, 0, 0, 5, 0, face);
+        var font = Win32.CreateFontW(height, 0, 0, 0, weight, 0, underlined ? 1u : 0u, 0,
+            0, 0, 0, 5, 0, face);
         FontCache[key] = font;
         return font;
     }
