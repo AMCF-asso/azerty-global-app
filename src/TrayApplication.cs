@@ -795,6 +795,22 @@ sealed class TrayApplication : IDisposable
                     }
                     return IntPtr.Zero;
 
+                case Win32.WM_SETTINGCHANGE:
+                case Win32.WM_THEMECHANGED:
+                    // Bascule de thème de Windows. Cette fenêtre est message-only : elle reçoit
+                    // le message même quand aucune fenêtre visible n'est ouverte, et c'est ce
+                    // qui rend la bascule à chaud possible sans qu'une fenêtre soit à l'écran.
+                    //
+                    // WM_SETTINGCHANGE passe par un filtre : Windows le diffuse pour des
+                    // dizaines de réglages sans rapport, et relire le registre à chaque fois
+                    // ferait une lecture par changement de résolution, de police système ou de
+                    // fuseau horaire. WM_THEMECHANGED, lui, ne parle que de ça. Les deux sont
+                    // traités parce que selon la version de Windows et la voie du changement,
+                    // l'un des deux seulement arrive.
+                    if (msg == Win32.WM_THEMECHANGED || Theme.IsThemeSettingChange(wParam, lParam))
+                        Theme.Refresh();
+                    break; // laisser DefWindowProc traiter aussi
+
                 case Win32.WM_INPUTLANGCHANGE:
                     // Le layout système a changé (ex: Win+Espace) → invalider le cache HKL
                     _foregroundMonitor?.Recompute();
