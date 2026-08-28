@@ -21,6 +21,7 @@ un état mutant indistinguable d'un travail en cours.
 Usage : python docs/refonte-ui/witness-theme-ch0.py
 """
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -79,12 +80,13 @@ def suite_verdict():
         if stripped.startswith("Failed ") or stripped.startswith("  Failed "):
             tombes.append(stripped)
         if "Failed:" in line and "Passed:" in line and "Total:" in line:
-            for chunk in line.split(","):
-                chunk = chunk.strip()
-                if chunk.startswith("Failed:"):
-                    failed = int(chunk.split(":")[1])
-                elif chunk.startswith("Passed:"):
-                    passed = int(chunk.split(":")[1])
+            # Regex plutot qu'un decoupage sur les virgules : le premier compteur est colle
+            # au verdict (« Passed!  - Failed:     0, ... »), donc le premier morceau ne
+            # commence pas par « Failed: ».
+            compteurs = re.search(r"Failed:\s*(\d+).*?Passed:\s*(\d+)", line)
+            if compteurs is not None:
+                failed = int(compteurs.group(1))
+                passed = int(compteurs.group(2))
 
     if failed is None:
         print(out[-2000:])
