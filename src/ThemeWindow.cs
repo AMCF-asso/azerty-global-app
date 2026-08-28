@@ -268,9 +268,46 @@ static class ThemeWindow
     // DPI
     // ═══════════════════════════════════════════════════════════════
 
+    private static int? _dpiOverride;
+
+    /// <summary>
+    /// Force l'échelle rendue par <see cref="DpiOf"/> jusqu'au Dispose, qui restaure la
+    /// précédente. Sert au banc de captures : rendre la matrice 100/125/150 % sans toucher aux
+    /// réglages d'affichage du poste, qui déconnecteraient la session.
+    ///
+    /// Toutes les fenêtres passent par DpiOf pour adopter l'échelle de l'écran où elles
+    /// naissent, donc ce seul crochet les couvre toutes.
+    /// </summary>
+    internal static IDisposable OverrideDpiForTests(int dpi)
+    {
+        var scope = new DpiScope(_dpiOverride);
+        _dpiOverride = dpi;
+        return scope;
+    }
+
+    private sealed class DpiScope : IDisposable
+    {
+        private readonly int? _previous;
+        private bool _disposed;
+
+        internal DpiScope(int? previous) => _previous = previous;
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            _dpiOverride = _previous;
+        }
+    }
+
     /// <summary>Échelle d'une fenêtre, 96 par défaut quand elle est illisible.</summary>
     internal static int DpiOf(IntPtr hwnd)
     {
+        if (_dpiOverride is int forced)
+            return forced;
+
         if (hwnd == IntPtr.Zero)
             return 96;
 

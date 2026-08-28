@@ -197,6 +197,21 @@ sealed partial class PauseDurationDialog
     // Messages
     // ═══════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Ouvre la fenêtre sans sa boucle modale, pour le banc de captures uniquement. ShowModal
+    /// pompe les messages jusqu'à la fermeture : un banc qui l'appellerait ne rendrait jamais la
+    /// main. Rien d'autre ne diffère — c'est la même fenêtre, créée par le même chemin.
+    /// </summary>
+    internal IntPtr OpenForCapture()
+    {
+        CreateWindow(IntPtr.Zero);
+        if (_hWnd == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        Win32.ShowWindow(_hWnd, 1);
+        return _hWnd;
+    }
+
     private IntPtr ButtonSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
