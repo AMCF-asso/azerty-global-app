@@ -183,6 +183,12 @@ static class Win32
     public const uint WM_GETTEXTLENGTH = 0x000E;
     public const uint WM_DRAWITEM = 0x002B;
     public const uint BS_OWNERDRAW = 0x000B;
+
+    // États rendus dans DRAWITEMSTRUCT.itemState. Le survol n'y figure pas : Windows ne le
+    // suit pas pour un bouton, c'est à la fenêtre de le pister par TrackMouseEvent.
+    public const uint ODS_SELECTED = 0x0001;
+    public const uint ODS_DISABLED = 0x0004;
+    public const uint ODS_FOCUS = 0x0010;
     public const int NULL_BRUSH = 5;  // GetStockObject index
 
     [StructLayout(LayoutKind.Sequential)]
