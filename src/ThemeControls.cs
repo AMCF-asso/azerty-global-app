@@ -272,8 +272,8 @@ static class ThemeControls
         var upper = new Win32.RECT { left = rect.left, top = rect.top, right = rect.right, bottom = middle };
         var lower = new Win32.RECT { left = rect.left, top = middle, right = rect.right, bottom = rect.bottom };
 
-        DrawSpinnerHalf(hdc, upper, up, palette, dpi, pointingUp: true);
-        DrawSpinnerHalf(hdc, lower, down, palette, dpi, pointingUp: false);
+        DrawSpinnerButton(hdc, upper, up, palette, dpi, pointingUp: true);
+        DrawSpinnerButton(hdc, lower, down, palette, dpi, pointingUp: false);
     }
 
     /// <summary>
@@ -500,7 +500,12 @@ static class ThemeControls
         Win32.SelectObject(hdc, oldPen);
     }
 
-    private static void DrawSpinnerHalf(IntPtr hdc, Win32.RECT rect, ControlState state,
+    /// <summary>
+    /// Une moitié de compteur. Publique parce que certaines fenêtres portent leurs deux
+    /// flèches comme deux contrôles distincts, chacun avec son propre état de survol : le
+    /// dialogue de durée de pause en est le cas.
+    /// </summary>
+    internal static void DrawSpinnerButton(IntPtr hdc, Win32.RECT rect, ControlState state,
         Palette palette, int dpi, bool pointingUp)
     {
         var paint = ButtonPaint(ButtonKind.Secondary, state, palette);
