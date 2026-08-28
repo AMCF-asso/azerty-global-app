@@ -997,6 +997,37 @@ static class Win32
     private static extern int RegGetValueDword(IntPtr hkey, string lpSubKey, string lpValue,
         uint dwFlags, IntPtr pdwType, out int pvData, ref uint pcbData);
 
+    // ══════════════════════════════════════════════════════════════
+    // Banc de captures — employé par la suite de tests, jamais par le produit
+    //
+    // Smart App Control refuse de lancer l'exécutable fraîchement compilé, faute de réputation,
+    // mais laisse `dotnet test` charger les DLL. Les contrôles visuels des chantiers passent
+    // donc par un banc qui rend les fenêtres dans le processus de test.
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>Rend une fenêtre dans un DC. Le drapeau PW_RENDERFULLCONTENT est ce qui ramène
+    /// le cadre composé par DWM — donc la barre de titre, dont la couleur est justement ce
+    /// qu'un contrôle visuel doit vérifier.</summary>
+    [DllImport("user32.dll")]
+    public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+
+    public const uint PW_RENDERFULLCONTENT = 0x00000002;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int PeekMessageW(out MSG lpMsg, IntPtr hWnd, uint min, uint max, uint remove);
+
+    public const uint PM_REMOVE = 0x0001;
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreateBitmapFromHBITMAP(IntPtr hbm, IntPtr hpal, out IntPtr bitmap);
+
+    [DllImport("gdiplus.dll", CharSet = CharSet.Unicode)]
+    public static extern int GdipSaveImageToFile(IntPtr image, string filename,
+        ref Guid clsidEncoder, IntPtr encoderParams);
+
+    /// <summary>Encodeur PNG de GDI+. Valeur publiée par la documentation Windows.</summary>
+    public static readonly Guid PngEncoderClsid = new("557cf406-1a04-11d3-9a73-0000f81ef32e");
+
     /// <summary>
     /// Lit un REG_DWORD sous HKCU. Rend false quand la valeur est absente, d'un autre type ou
     /// illisible — l'appelant décide alors de son repli, la fonction n'en invente pas.

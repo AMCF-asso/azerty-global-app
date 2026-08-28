@@ -246,6 +246,12 @@ sealed partial class PauseDurationDialog : IDisposable
                 case Win32.WM_CTLCOLORSTATIC:
                     return OnCtlColorStatic(wParam);
 
+                case Win32.WM_CTLCOLORBTN:
+                    // Windows efface le fond d'un bouton owner-draw avec la brosse rendue
+                    // ici, avant d'envoyer WM_DRAWITEM. Sans reponse, il prend
+                    // COLOR_BTNFACE, et la marge de focus reste grise sur fond sombre.
+                    return OnCtlColorStatic(wParam);
+
                 case Win32.WM_CTLCOLOREDIT:
                     return OnCtlColorEdit(wParam);
 

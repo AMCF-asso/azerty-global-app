@@ -1,0 +1,222 @@
+using System;
+using System.IO;
+using System.Threading;
+using AZERTYGlobal;
+using Xunit;
+
+namespace AZERTYGlobal.Tests;
+
+/// <summary>
+/// Banc de captures des fenêtres refondues — chantiers CH1 à CH5.
+///
+/// Il existe parce que Smart App Control refuse de lancer l'exécutable fraîchement compilé,
+/// faute de réputation : mesuré le 2026-08-28, la notification « we can't confirm who published
+/// AZERTY Global.exe » remplace le lancement. Le même jour, `dotnet test -c Release` a chargé
+/// cette DLL et exécuté 351 tests. Le contrôle visuel passe donc par le processus de test, qui
+/// est la seule voie ouverte sur ce poste sans désactiver une protection irréversible.
+///
+/// ⚠️ Ce n'est pas un test : il n'assert rien qu'un humain ne doive regarder. Il ne s'exécute
+/// que si la variable d'environnement <c>AZERTY_CAPTURE</c> nomme un dossier de sortie, ce qui
+/// le laisse hors de la CI et hors des trois compteurs de la suite.
+///
+/// PowerShell :
+/// <code>
+/// $env:AZERTY_CAPTURE = "D:\captures"
+/// dotnet test src\AZERTYGlobal.Tests\AZERTYGlobal.Tests.csproj -c Release --filter FullyQualifiedName~CaptureBench
+/// </code>
+/// </summary>
+public class CaptureBench
+{
+    // ⚠️ Une seule cellule par processus. Mesuré le 2026-08-28 : dans un même processus, seule
+    // la première AboutWindow crée sa fenêtre, les suivantes rendent un handle nul. Ni l'échelle,
+    // ni une pompe à messages de 600 ms, ni la libération explicite de la classe de fenêtre n'y
+    // changent rien, et PauseDurationDialog ne montre pas le défaut. La cause n'est pas établie :
+    // le banc la contourne, il ne la masque pas. AZERTY_CAPTURE_THEME et AZERTY_CAPTURE_DPI
+    // restreignent le rendu à une cellule, et l'appelant boucle sur les six.
+    private const string GateVariable = "AZERTY_CAPTURE";
+
+    /// <summary>Les trois échelles de la matrice d'arrêt visuel, en DPI et en pourcentage.</summary>
+    private static (int Dpi, int Percent)[] Scales
+    {
+        get
+        {
+            string? only = Environment.GetEnvironmentVariable("AZERTY_CAPTURE_DPI");
+            if (string.IsNullOrWhiteSpace(only))
+                return new[] { (96, 100), (120, 125), (144, 150) };
+
+            var list = new System.Collections.Generic.List<(int, int)>();
+            foreach (var part in only.Split(','))
+            {
+                if (int.TryParse(part.Trim(), out int dpi) && dpi > 0)
+                    list.Add((dpi, dpi * 100 / 96));
+            }
+            return list.ToArray();
+        }
+    }
+
+    [Fact]
+    public void RendLaMatriceDesFenetresTemoins()
+    {
+        string? outDir = Environment.GetEnvironmentVariable(GateVariable);
+        if (string.IsNullOrWhiteSpace(outDir))
+            return;
+
+        Directory.CreateDirectory(outDir);
+
+        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
+        Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero);
+
+        int written = 0;
+        var failures = new System.Collections.Generic.List<string>();
+        try
+        {
+            string? onlyTheme = Environment.GetEnvironmentVariable("AZERTY_CAPTURE_THEME");
+
+            foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+            {
+                string theme = variant == ThemeVariant.Light ? "clair" : "sombre";
+                if (!string.IsNullOrWhiteSpace(onlyTheme)
+                    && !string.Equals(onlyTheme, theme, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var (dpi, percent) in Scales)
+                {
+                    // Le DPI est forcé plutôt que réglé sur le poste : changer l'échelle
+                    // d'affichage de Windows déconnecterait la session en cours.
+                    using (Theme.OverrideForTests(variant))
+                    using (ThemeWindow.OverrideDpiForTests(dpi))
+                    {
+                        foreach (var attempt in new Func<bool>[]
+                                 { () => CaptureAbout(outDir, theme, percent),
+                                   () => CapturePause(outDir, theme, percent) })
+                        {
+                            try
+                            {
+                                written += attempt() ? 1 : 0;
+                            }
+                            catch (Exception ex)
+                            {
+                                failures.Add(ex.Message);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (token != IntPtr.Zero)
+                Win32.GdiplusShutdown(token);
+        }
+
+        Assert.True(failures.Count == 0,
+            $"{written} capture(s) ecrite(s), {failures.Count} echec(s) :" +
+            Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    private static bool CaptureAbout(string outDir, string theme, int percent)
+    {
+        var window = new AboutWindow();
+        try
+        {
+            window.Show();
+            return Capture(window.Handle, Path.Combine(outDir, $"a-propos-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(window);
+        }
+    }
+
+    private static bool CapturePause(string outDir, string theme, int percent)
+    {
+        var dialog = new PauseDurationDialog();
+        try
+        {
+            IntPtr hwnd = dialog.OpenForCapture();
+            return Capture(hwnd, Path.Combine(outDir, $"duree-de-pause-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(dialog);
+        }
+    }
+
+    /// <summary>
+    /// Detruit la fenetre, puis laisse la file de messages se vider avant la suivante. Chaque
+    /// fenetre desenregistre sa classe dans son Dispose, et une classe ne se libere que lorsque
+    /// la derniere fenetre qui la porte a fini d etre detruite : sans cette pompe, la fenetre
+    /// suivante trouve la classe encore prise et CreateWindowExW rend un handle nul.
+    /// </summary>
+    private static void Teardown(IDisposable window)
+    {
+        window.Dispose();
+        Pump(5);
+    }
+
+    /// <summary>
+    /// Rend la fenêtre entière, cadre compris. PrintWindow avec PW_RENDERFULLCONTENT est ce qui
+    /// ramène la composition DWM : sans ce drapeau, la barre de titre revient vide, et c'est
+    /// justement sa couleur qu'un contrôle visuel doit juger.
+    /// </summary>
+    private static bool Capture(IntPtr hwnd, string file)
+    {
+        if (hwnd == IntPtr.Zero)
+            throw new InvalidOperationException($"{file} : handle nul");
+
+        Pump(20);
+
+        if (!Win32.GetWindowRect(hwnd, out var rect))
+            throw new InvalidOperationException($"{file} : GetWindowRect a echoue");
+
+        int w = rect.right - rect.left;
+        int h = rect.bottom - rect.top;
+        if (w <= 0 || h <= 0)
+            throw new InvalidOperationException($"{file} : taille {w}x{h}");
+
+        IntPtr hdcScreen = Win32.GetDC(IntPtr.Zero);
+        IntPtr hdc = Win32.CreateCompatibleDC(hdcScreen);
+        IntPtr hBitmap = Win32.CreateCompatibleBitmap(hdcScreen, w, h);
+        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+
+        IntPtr previous = Win32.SelectObject(hdc, hBitmap);
+        bool rendered = Win32.PrintWindow(hwnd, hdc, Win32.PW_RENDERFULLCONTENT);
+        Win32.SelectObject(hdc, previous);
+
+        bool saved = false;
+        if (rendered
+            && Win32.GdipCreateBitmapFromHBITMAP(hBitmap, IntPtr.Zero, out IntPtr image) == 0
+            && image != IntPtr.Zero)
+        {
+            var encoder = Win32.PngEncoderClsid;
+            saved = Win32.GdipSaveImageToFile(image, file, ref encoder, IntPtr.Zero) == 0;
+            Win32.GdipDisposeImage(image);
+        }
+
+        Win32.DeleteObject(hBitmap);
+        Win32.DeleteDC(hdc);
+        if (!saved)
+            throw new InvalidOperationException($"{file} : PrintWindow={rendered}, taille {w}x{h}");
+        return saved;
+    }
+
+    /// <summary>
+    /// Laisse la fenêtre se peindre. Une boucle GetMessage bloquerait : la fenêtre ne se ferme
+    /// pas d'elle-même, et rien ne posterait le WM_QUIT qui en sortirait.
+    /// </summary>
+    private static void Pump(int rounds)
+    {
+        for (int i = 0; i < rounds; i++)
+        {
+            while (Win32.PeekMessageW(out var msg, IntPtr.Zero, 0, 0, Win32.PM_REMOVE) != 0)
+            {
+                Win32.TranslateMessage(ref msg);
+                Win32.DispatchMessageW(ref msg);
+            }
+
+            Thread.Sleep(15);
+        }
+    }
+}

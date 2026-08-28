@@ -78,6 +78,11 @@ sealed class AboutWindow : IDisposable
 
     public bool IsVisible => _visible;
 
+    /// <summary>Handle de la fenêtre. Interne, et pour le seul banc de captures : Smart App
+    /// Control refusant de lancer l'exécutable, le contrôle visuel des chantiers passe par le
+    /// processus de test, qui a besoin de savoir quoi rendre.</summary>
+    internal IntPtr Handle => _hWnd;
+
     /// <summary>Langue de l'UI à la création : titre, liens et bouton sont figés au
     /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
     public string UiLanguage { get; } = L.Language;
@@ -378,6 +383,12 @@ sealed class AboutWindow : IDisposable
                     }
                     break;
                 }
+
+                case Win32.WM_CTLCOLORBTN:
+                    // Fond du bouton owner-draw, effacé par Windows avant WM_DRAWITEM.
+                    Win32.SetBkMode(wParam, Win32.TRANSPARENT);
+                    Win32.SetTextColor(wParam, Theme.Current.Ink);
+                    return BgBrush;
 
                 case Win32.WM_SETCURSOR:
                     if (wParam == _hWndLinkSite || wParam == _hWndLinkGithub || wParam == _hWndLinkLicense || wParam == _hWndLinkAmcf)
