@@ -860,4 +860,119 @@ static class Win32
 
     [DllImport("wtsapi32.dll")]
     public static extern bool WTSUnRegisterSessionNotification(IntPtr hWnd);
+
+    // ═══════════════════════════════════════════════════════════════
+    // Socle de thème — refonte graphique v1.2.0, chantier CH0
+    //
+    // Tout ce bloc sert Theme.cs, qui est la seule source de couleur de l'application.
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>Diffusé quand un réglage système change. lParam vaut « ImmersiveColorSet »
+    /// quand c'est le thème, et wParam vaut SPI_SETHIGHCONTRAST quand c'est le contraste
+    /// élevé — le filtre est dans Theme.IsThemeSettingChange.</summary>
+    public const uint WM_SETTINGCHANGE = 0x001A;
+
+    /// <summary>Diffusé quand le thème visuel change. Doublé avec WM_SETTINGCHANGE à dessein :
+    /// selon la version de Windows et la voie du changement, l'un des deux seulement
+    /// arrive.</summary>
+    public const uint WM_THEMECHANGED = 0x031A;
+
+    /// <summary>Style de stylo plein. CreatePen prend son style en premier argument, et aucune
+    /// constante ne le nommait dans ce fichier.</summary>
+    public const int PS_SOLID = 0;
+
+    // Indices de couleur système. Ils ne servent qu'au mode Contraste élevé, où la palette du
+    // produit s'efface entièrement devant le schéma choisi par l'utilisateur.
+    public const int COLOR_WINDOW = 5;
+    public const int COLOR_WINDOWFRAME = 6;
+    public const int COLOR_WINDOWTEXT = 8;
+    public const int COLOR_HIGHLIGHT = 13;
+    public const int COLOR_HIGHLIGHTTEXT = 14;
+    public const int COLOR_HOTLIGHT = 26;
+
+    [DllImport("user32.dll")]
+    public static extern uint GetSysColor(int nIndex);
+
+    // Contraste élevé — SystemParametersInfo(SPI_GETHIGHCONTRAST).
+    public const uint SPI_GETHIGHCONTRAST = 0x0042;
+    public const uint SPI_SETHIGHCONTRAST = 0x0043;
+    public const uint HCF_HIGHCONTRASTON = 0x00000001;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct HIGHCONTRAST
+    {
+        public uint cbSize;
+        public uint dwFlags;
+        public IntPtr lpszDefaultScheme;
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool SystemParametersInfoW(uint uiAction, uint uiParam,
+        ref HIGHCONTRAST pvParam, uint fWinIni);
+
+    /// <summary>
+    /// Mode Contraste élevé de Windows. Échec de lecture = false : mieux vaut peindre la
+    /// palette du produit sur un poste en contraste élevé non détecté que d'effacer les
+    /// couleurs de toute l'application sur un poste ordinaire dont l'appel a échoué.
+    /// </summary>
+    public static bool IsHighContrastActive()
+    {
+        var info = new HIGHCONTRAST { cbSize = (uint)Marshal.SizeOf<HIGHCONTRAST>() };
+        try
+        {
+            if (!SystemParametersInfoW(SPI_GETHIGHCONTRAST, info.cbSize, ref info, 0))
+                return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        return (info.dwFlags & HCF_HIGHCONTRASTON) != 0;
+    }
+
+    // Brosse de fond de classe — reposée à chaque bascule de thème. Les classes de fenêtre de
+    // l'application inscrivent leur hbrBackground à l'enregistrement ; sans cette re-pose, une
+    // bascule à chaud laisse Windows effacer le fond à l'ancienne couleur avant chaque
+    // WM_PAINT. SetClassLongPtrW n'existe que sur 64 bits, ce qui suffit : le produit ne
+    // publie que win-x64 et win-arm64.
+    public const int GCLP_HBRBACKGROUND = -10;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr SetClassLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    // Repeinture complète — cadre compris, ce qu'InvalidateRect ne fait pas.
+    public const uint RDW_INVALIDATE = 0x0001;
+    public const uint RDW_ERASE = 0x0004;
+    public const uint RDW_ALLCHILDREN = 0x0080;
+    public const uint RDW_UPDATENOW = 0x0100;
+    public const uint RDW_FRAME = 0x0400;
+
+    [DllImport("user32.dll")]
+    public static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate,
+        uint flags);
+
+    // Lecture du thème sous HKCU. Même choix que PolicyManager : RegGetValueW ouvre, lit et
+    // referme la clé en un appel, et le binaire AOT n'embarque pas Microsoft.Win32.Registry
+    // pour deux lectures. Pas de drapeau WOW6464 ici, contrairement aux politiques HKLM : la
+    // clé Themes de HKCU n'est pas redirigée.
+    public static readonly IntPtr HKEY_CURRENT_USER = new IntPtr(unchecked((int)0x80000001));
+    public const uint RRF_RT_REG_DWORD = 0x00000010;
+    public const int ERROR_SUCCESS = 0;
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, EntryPoint = "RegGetValueW")]
+    private static extern int RegGetValueDword(IntPtr hkey, string lpSubKey, string lpValue,
+        uint dwFlags, IntPtr pdwType, out int pvData, ref uint pcbData);
+
+    /// <summary>
+    /// Lit un REG_DWORD sous HKCU. Rend false quand la valeur est absente, d'un autre type ou
+    /// illisible — l'appelant décide alors de son repli, la fonction n'en invente pas.
+    /// </summary>
+    public static bool TryReadCurrentUserDword(string keyPath, string valueName, out int value)
+    {
+        uint size = sizeof(int);
+        int result = RegGetValueDword(HKEY_CURRENT_USER, keyPath, valueName,
+            RRF_RT_REG_DWORD, IntPtr.Zero, out value, ref size);
+        return result == ERROR_SUCCESS;
+    }
 }
