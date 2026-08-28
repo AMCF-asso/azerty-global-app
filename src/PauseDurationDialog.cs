@@ -3,7 +3,7 @@ using System.Text;
 
 namespace AZERTYGlobal;
 
-sealed class PauseDurationDialog : IDisposable
+sealed partial class PauseDurationDialog : IDisposable
 {
     private static readonly string ClassName = ProductIdentity.WindowClass("PauseDuration");
     private const int IDOK = 1;
@@ -18,8 +18,8 @@ sealed class PauseDurationDialog : IDisposable
     private const uint ES_AUTOHSCROLL = 0x0080;
     private const uint ES_CENTER = 0x0001;
     private const uint ES_NUMBER = 0x2000;
-    private const uint BS_DEFPUSHBUTTON = 0x0001;
-    private const uint BS_PUSHBUTTON = 0x0000;
+    private const uint BS_DEFPUSHBUTTON = Win32.BS_OWNERDRAW;  // le relief système disparaît
+    private const uint BS_PUSHBUTTON = Win32.BS_OWNERDRAW;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
@@ -30,14 +30,14 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hMinutes;
     private IntPtr _hBtnOk;
     private IntPtr _hBtnCancel;
-    private IntPtr _hFont;
+    private IntPtr _hFont => Theme.Font(FontRole.Body, _dpi);
     private Action<string>? _onAppLanguageChanged;
     private bool _done;
     private TimeSpan? _result;
 
     public PauseDurationDialog()
     {
-        _wndProcDelegate = WndProc;
+        _wndProcDelegate = WndProc; InitDpi();
     }
 
     public static TimeSpan? Show(IntPtr owner)
@@ -95,9 +95,9 @@ sealed class PauseDurationDialog : IDisposable
         };
         Win32.RegisterClassExW(ref wc);
 
-        int clientW = 330;
-        int clientH = 154;
-        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        int clientW = S(ClientW);
+        int clientH = S(ClientH);
+        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_CLIPCHILDREN;
         var windowRect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
         Win32.AdjustWindowRectEx(ref windowRect, style, false, 0);
         int windowW = windowRect.right - windowRect.left;
@@ -110,9 +110,9 @@ sealed class PauseDurationDialog : IDisposable
         _hWnd = Win32.CreateWindowExW(0, ClassName, L.Pause_WindowTitle,
             style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
 
-        _hFont = Win32.CreateFontW(-14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        AdoptWindowDpi();
         CreateControls(hInstance);
-        Win32.EnableDarkTitleBar(_hWnd);
+        ApplyThemeToWindow();
 
         // La pop-up est modale mais l'icône tray reste accessible : un changement de
         // langue via le menu tray pendant qu'elle est ouverte doit la retraduire sur
@@ -151,19 +151,19 @@ sealed class PauseDurationDialog : IDisposable
 
     private void CreateControls(IntPtr hInstance)
     {
-        _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 16, 280, 22);
-        _hHours = CreateStatic(hInstance, L.Pause_Hours, 28, 60, 72, 22);
-        _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 150, 60, 82, 22);
+        _hLabel = CreateStatic(hInstance, L.Pause_Label, 0, 0, 0, 0);
+        _hHours = CreateStatic(hInstance, L.Pause_Hours, 0, 0, 0, 0);
+        _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 0, 0, 0, 0);
 
-        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 82, 54, 50, 26);
-        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 218, 54, 50, 26);
-        CreateButton(hInstance, IDC_HOURS_UP, "▲", 82, 38, 50, 15, BS_PUSHBUTTON);
-        CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 82, 81, 50, 15, BS_PUSHBUTTON);
-        CreateButton(hInstance, IDC_MINUTES_UP, "▲", 218, 38, 50, 15, BS_PUSHBUTTON);
-        CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 218, 81, 50, 15, BS_PUSHBUTTON);
+        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 0, 0, 0, 0);
+        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 0, 0, 0, 0);
+        _hHoursUp = CreateButton(hInstance, IDC_HOURS_UP, "▲", 0, 0, 0, 0, BS_PUSHBUTTON);
+        _hHoursDown = CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 0, 0, 0, 0, BS_PUSHBUTTON);
+        _hMinutesUp = CreateButton(hInstance, IDC_MINUTES_UP, "▲", 0, 0, 0, 0, BS_PUSHBUTTON);
+        _hMinutesDown = CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 0, 0, 0, 0, BS_PUSHBUTTON);
 
-        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 96, 106, 120, 32, BS_DEFPUSHBUTTON);
-        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 224, 106, 84, 32, BS_PUSHBUTTON);
+        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 0, 0, 0, 0, BS_DEFPUSHBUTTON);
+        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 0, 0, 0, 0, BS_PUSHBUTTON);
     }
 
     private IntPtr CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h)
@@ -178,7 +178,7 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr CreateEdit(IntPtr hInstance, int id, string text, int x, int y, int w, int h)
     {
         var hwnd = Win32.CreateWindowExW(0, "EDIT", text,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP |
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP |
             ES_AUTOHSCROLL | ES_CENTER | ES_NUMBER,
             x, y, w, h, _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
@@ -235,6 +235,29 @@ sealed class PauseDurationDialog : IDisposable
                     }
                     break;
                 }
+                case Win32.WM_PAINT:
+                    return OnPaint();
+
+                case Win32.WM_ERASEBKGND:
+                    // Le fond est peint par WM_PAINT. Laisser Windows l'effacer d'abord ferait
+                    // clignoter la fenetre a chaque frappe dans un champ.
+                    return (IntPtr)1;
+
+                case Win32.WM_CTLCOLORSTATIC:
+                    return OnCtlColorStatic(wParam);
+
+                case Win32.WM_CTLCOLOREDIT:
+                    return OnCtlColorEdit(wParam);
+
+                case Win32.WM_DRAWITEM:
+                    if (TryDrawItem(lParam))
+                        return (IntPtr)1;
+                    break;
+
+                case Win32.WM_DPICHANGED:
+                    OnDpiChanged(wParam, lParam);
+                    return IntPtr.Zero;
+
                 case Win32.WM_KEYDOWN:
                     if (wParam == (IntPtr)0x1B)
                     {
@@ -327,11 +350,7 @@ sealed class PauseDurationDialog : IDisposable
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
-        if (_hFont != IntPtr.Zero)
-        {
-            Win32.DeleteObject(_hFont);
-            _hFont = IntPtr.Zero;
-        }
+        DisposeTheme();
         Win32.UnregisterClassW(ClassName, Win32.GetModuleHandleW(null));
     }
 }
