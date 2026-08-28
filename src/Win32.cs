@@ -886,6 +886,7 @@ static class Win32
     public const int COLOR_WINDOW = 5;
     public const int COLOR_WINDOWFRAME = 6;
     public const int COLOR_WINDOWTEXT = 8;
+    public const int COLOR_GRAYTEXT = 17;
     public const int COLOR_HIGHLIGHT = 13;
     public const int COLOR_HIGHLIGHTTEXT = 14;
     public const int COLOR_HOTLIGHT = 26;

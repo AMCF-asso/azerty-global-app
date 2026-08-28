@@ -171,7 +171,7 @@ public class ThemeTests
             palette.Paper, palette.Surface, palette.Ink, palette.TextSecondary, palette.Border,
             palette.Action, palette.Success, palette.Warning, palette.Error,
             palette.SuccessFill, palette.WarningFill, palette.ErrorFill, palette.ActionFill,
-            palette.OnAction, palette.OnActionFill,
+            palette.OnAction, palette.OnActionFill, palette.Disabled,
         }.ToHashSet();
 
         Assert.Equal(13, employees.Count);
@@ -198,6 +198,19 @@ public class ThemeTests
     {
         Assert.Equal(Theme.LightPalette.Ink, Theme.LightPalette.OnActionFill);
         Assert.Equal(Theme.DarkPalette.Ink, Theme.DarkPalette.OnActionFill);
+    }
+
+    /// <summary>
+    /// Disabled vaut le texte secondaire dans les deux thèmes de la charte : ce n'est pas une
+    /// couleur de plus. Il n'existe en propre qu'en Contraste élevé, où le schéma système
+    /// confond la surface avec le fond et le secondaire avec l'encre — un contrôle inactif y
+    /// perdrait sinon ses deux signaux à la fois.
+    /// </summary>
+    [Fact]
+    public void Disabled_NEstPasUneCouleurDePlus()
+    {
+        Assert.Equal(Theme.LightPalette.TextSecondary, Theme.LightPalette.Disabled);
+        Assert.Equal(Theme.DarkPalette.TextSecondary, Theme.DarkPalette.Disabled);
     }
 
     /// <summary>
@@ -347,7 +360,11 @@ public class ThemeTests
         Assert.Equal(texte, p.Success);
         Assert.Equal(texte, p.Warning);
         Assert.Equal(texte, p.Error);
-        Assert.NotEqual(Temoin(17), p.TextSecondary);  // 17 = COLOR_GRAYTEXT
+
+        // Le gris système est la couleur de l'inactif, et de lui seul : le texte secondaire
+        // peint avec se lirait comme un contrôle inerte.
+        Assert.NotEqual(Temoin(Win32.COLOR_GRAYTEXT), p.TextSecondary);
+        Assert.Equal(Temoin(Win32.COLOR_GRAYTEXT), p.Disabled);
     }
 
     /// <summary>

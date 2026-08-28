@@ -106,6 +106,12 @@ internal enum FontRole
 /// pas une couleur de plus : au thème clair c'est <paramref name="Surface"/> (6,96:1), au sombre
 /// c'est <paramref name="Paper"/> (7,64:1). L'asymétrie est celle du site, elle n'est pas un
 /// oubli.</param>
+/// <param name="Disabled">Texte et bordure d'un contrôle inactif. Vaut
+/// <paramref name="TextSecondary"/> dans les deux thèmes de la charte — ce n'est pas une
+/// couleur de plus. Il existe pour le mode Contraste élevé : le schéma système y confond
+/// Surface avec Paper et le texte secondaire avec l'encre, si bien qu'un contrôle désactivé
+/// perdrait à la fois sa différence de fond et sa différence de texte. COLOR_GRAYTEXT est la
+/// seule couleur qu'un tel schéma réserve à l'inactif.</param>
 /// <param name="OnActionFill">Texte posé sur <paramref name="ActionFill"/>. Toujours
 /// <paramref name="Ink"/> : 14,60:1 au clair, 14,45:1 au sombre. Il existe parce qu'en Contraste
 /// élevé, ActionFill devient la couleur de sélection du système, dont le texte lisible est
@@ -126,7 +132,8 @@ internal sealed record Palette(
     uint ErrorFill,
     uint ActionFill,
     uint OnAction,
-    uint OnActionFill);
+    uint OnActionFill,
+    uint Disabled);
 
 /// <summary>
 /// Palette courante, caches GDI et suivi du thème de Windows.
@@ -175,7 +182,9 @@ static class Theme
         // Blanc sur bleu : 6,96:1. C'est Surface, pas une quatorzième couleur.
         OnAction: Rgb(0xFF, 0xFF, 0xFF),
         // Encre sur action-fond : 14,60:1.
-        OnActionFill: Rgb(0x1B, 0x18, 0x13));
+        OnActionFill: Rgb(0x1B, 0x18, 0x13),
+        // Texte-2, tel quel : 6,95:1 sur le papier.
+        Disabled: Rgb(0x5B, 0x55, 0x4A));
 
     /// <summary>Thème sombre — négatif chaud calculé pour le site le 2026-08-27.</summary>
     internal static Palette DarkPalette { get; } = new(
@@ -196,7 +205,9 @@ static class Theme
         // Poser Ink ici — la crème — donnerait 1,4:1, soit un bouton primaire illisible.
         OnAction: Rgb(0x1B, 0x18, 0x13),
         // Encre sur action-fond : 14,45:1.
-        OnActionFill: Rgb(0xFA, 0xF8, 0xF1));
+        OnActionFill: Rgb(0xFA, 0xF8, 0xF1),
+        // Texte-2, tel quel : 7,61:1 sur le fond.
+        Disabled: Rgb(0xB3, 0xA9, 0x96));
 
     /// <summary>Palette d'une variante. Fonction pure — c'est elle que les tests éprouvent.</summary>
     internal static Palette ForVariant(ThemeVariant variant) =>
@@ -234,7 +245,8 @@ static class Theme
             ErrorFill: window,
             ActionFill: systemColor(Win32.COLOR_HIGHLIGHT),
             OnAction: systemColor(Win32.COLOR_HIGHLIGHTTEXT),
-            OnActionFill: systemColor(Win32.COLOR_HIGHLIGHTTEXT));
+            OnActionFill: systemColor(Win32.COLOR_HIGHLIGHTTEXT),
+            Disabled: systemColor(Win32.COLOR_GRAYTEXT));
     }
 
     // ═══════════════════════════════════════════════════════════════
