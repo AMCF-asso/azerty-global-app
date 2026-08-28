@@ -443,19 +443,45 @@ static class Win32
     [DllImport("dwmapi.dll")]
     public static extern int DwmSetWindowAttribute(IntPtr hwnd, uint dwAttribute, ref int pvAttribute, uint cbAttribute);
 
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out int pvAttribute, uint cbAttribute);
+
     public const uint DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
+    // Couleurs de chrome, Windows 11 build 22000 et au-delà. Elles prennent un COLORREF, soit
+    // exactement ce que rendent les jetons de Theme. DWMWA_BORDER_COLOR (34) existe aussi et
+    // n'est délibérément pas posé : la charte ne dit rien du contour extérieur d'une fenêtre,
+    // et le jeton décoratif y serait quasi invisible sur un bureau clair.
+    public const uint DWMWA_CAPTION_COLOR = 35;
+    public const uint DWMWA_TEXT_COLOR = 36;
+
+    /// <summary>Valeur qui rend un attribut de couleur DWM au système. Sert au mode Contraste
+    /// élevé, où aucune couleur du produit ne s'applique.</summary>
+    public const uint DWMWA_COLOR_DEFAULT = 0xFFFFFFFF;
+
+    /// <summary>Force DWM à recalculer la zone non cliente. Sans ce drapeau, un attribut posé
+    /// avant le premier affichage peut n'être pris en compte qu'au prochain recalcul du cadre,
+    /// et un MoveWindow intermédiaire suffit à le perdre.</summary>
+    public const uint SWP_FRAMECHANGED = 0x0020;
+
+    // Icône de fenêtre. Les deux tailles se lisent aux métriques système au moment de la pose,
+    // jamais en dur : elles suivent l'échelle d'affichage.
+    public const uint WM_SETICON = 0x0080;
+    public const int ICON_SMALL = 0;
+    public const int ICON_BIG = 1;
+    public const int SM_CXICON = 11;
+    public const int SM_CYICON = 12;
+    public const int SM_CXSMICON = 49;
+    public const int SM_CYSMICON = 50;
+
     /// <summary>
-    /// Active la barre de titre sombre sur Windows 11 (no-op sur Win10 1809-, fail-safe).
-    /// À appeler juste après CreateWindowExW pour chaque fenêtre custom.
+    /// Chrome de fenêtre. Le nom dit encore « dark » parce que dix fenêtres l'appellent et
+    /// qu'elles migreront vers ThemeWindow.ApplyChrome une par une, aux chantiers CH1 à CH5 ;
+    /// le corps, lui, ne force plus rien. Il forçait l'attribut à 1 quel que soit le thème de
+    /// Windows, ce qui posait une barre de titre sombre au-dessus d'un corps clair sur tout
+    /// poste en thème clair.
     /// </summary>
-    public static void EnableDarkTitleBar(IntPtr hwnd)
-    {
-        if (hwnd == IntPtr.Zero) return;
-        int useDarkMode = 1;
-        try { DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int)); }
-        catch { /* Win10 1809- ou DWMWA non supporté — silent fallback */ }
-    }
+    public static void EnableDarkTitleBar(IntPtr hwnd) => ThemeWindow.ApplyChrome(hwnd);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr LoadCursorW(IntPtr hInstance, IntPtr lpCursorName);
