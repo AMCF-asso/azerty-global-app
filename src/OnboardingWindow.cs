@@ -54,37 +54,28 @@ sealed class OnboardingWindow : IDisposable
     private const int STEP_CARD_MIN_H = 78;
     private const int FEATURE_CARD_MIN_H = 73;
 
-    // ── Colors (COLORREF = 0x00BBGGRR) ───────────────────────────────
-    private const uint CLR_BG = 0x00DDDDDD;
-    private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_FEATURE_TITLE = 0x00D47800;
-    private const uint CLR_TEXT = 0x00333333;
-    private const uint CLR_LINK = 0x00D47800;
-    private const uint CLR_LINK_HOVER = 0x00FF9830;
-    private const uint CLR_BANNER_BG = 0x00E8E8E8;
-    private const uint CLR_BANNER_BORDER = 0x000078D4;
-    private const uint CLR_BANNER_TEXT = 0x00333333;
-    private const uint CLR_BANNER_TITLE = 0x000078D4;
-    private const uint CLR_STEP_TITLE = 0x00D47800;
-    private const uint CLR_HIGHLIGHT = 0x000078D4;
-    private const uint CLR_PROGRESS_ACTIVE = 0x00D47800;
-    private const uint CLR_PROGRESS_INACTIVE = 0x00C8C8C8;
-    private const uint CLR_SECTION = 0x00D47800;
-    private const uint CLR_PANEL_BG = 0x00EEEEEE;
-    private const uint CLR_PANEL_BORDER = 0x00D1D1D1;
-    private const uint CLR_NOTE_BG = 0x00D8F4FF;
-    private const uint CLR_NOTE_BORDER = 0x007BC2EB;
-    private const uint CLR_NOTE_ACCENT = 0x002A98E2;
-    private const uint CLR_BADGE_BG = 0x00D47800;
-    private const uint CLR_BADGE_TEXT = 0x00FFFFFF;
-    private const uint CLR_PILL_BG = 0x00FBECD8;
-    private const uint CLR_PILL_TEXT = 0x00201C18;
-    private const uint CLR_WARNING_TEXT = 0x00174D6E;
-    private const uint CLR_INLINE_HIGHLIGHT = 0x000078D4;
-    private const uint CLR_SEPARATOR = 0x00D0D0D0;
-    private const uint CLR_REASSURE = 0x00666666;
-    private const uint ARGB_STEP_CIRCLE = 0xFF0078D4;
-    private const uint ARGB_WHITE = 0xFFFFFFFF;
+    // ── Les jetons de la charte, relus a chaque peinture ─────────────
+    // Treize noms ont disparu ici, tous mesures a zero usage : les quatre de l'encadre note et
+    // du texte d'avertissement, les trois de la banniere autres que son fond, le titre de
+    // fonctionnalite, la surbrillance, la section, le separateur et les deux couleurs GDI+ du
+    // cercle d'etape. CLR_LINK_HOVER part avec eux : le survol d'un lien reste porte par le
+    // soulignement et le curseur main, comme la fenetre Statistiques l'a tranche au 6f296f9.
+    private static uint CLR_BG => Theme.Current.Paper;
+    private static uint CLR_TITLE => Theme.Current.Ink;
+    private static uint CLR_TEXT => Theme.Current.Ink;
+    private static uint CLR_LINK => Theme.Current.Action;
+    private static uint CLR_BANNER_BG => Theme.Current.Surface;
+    private static uint CLR_STEP_TITLE => Theme.Current.Action;
+    private static uint CLR_PROGRESS_ACTIVE => Theme.Current.Action;
+    private static uint CLR_PROGRESS_INACTIVE => Theme.Current.Border;
+    private static uint CLR_PANEL_BG => Theme.Current.Surface;
+    private static uint CLR_PANEL_BORDER => Theme.Current.Border;
+    private static uint CLR_BADGE_BG => Theme.Current.Action;
+    private static uint CLR_BADGE_TEXT => Theme.Current.OnAction;
+    private static uint CLR_PILL_BG => Theme.Current.ActionFill;
+    private static uint CLR_PILL_TEXT => Theme.Current.Ink;
+    private static uint CLR_INLINE_HIGHLIGHT => Theme.Current.Action;
+    private static uint CLR_REASSURE => Theme.Current.TextSecondary;
 
     // ── Colors ARGB pour GDI+ (0xAARRGGBB) ──────────────────────────
 
@@ -161,9 +152,9 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _hoveredLink;
 
     // GDI resources
-    private readonly IntPtr _hBgBrush;
-    private readonly IntPtr _hBannerBgBrush;
-    private readonly IntPtr _hPanelBrush;
+    private static IntPtr _hBgBrush => Theme.Brush(CLR_BG);
+    private static IntPtr _hBannerBgBrush => Theme.Brush(CLR_BANNER_BG);
+    private static IntPtr _hPanelBrush => Theme.Brush(CLR_PANEL_BG);
 
     // GDI+ resources
     private IntPtr _gdipToken;
@@ -174,6 +165,8 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _hIcon;
 
     private bool _visible;
+
+    private Action? _themeChanged;
 
     // DPI scaling — mutable, recalculé sur WM_DPICHANGED
     private float _dpiScale;
@@ -203,9 +196,8 @@ sealed class OnboardingWindow : IDisposable
         _wndProcDelegate = WndProc;
         _linkSubclassProc = LinkSubclassProc;
         _buttonArrowSubclassProc = ButtonArrowSubclassProc;
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
-        _hBannerBgBrush = Win32.CreateSolidBrush(CLR_BANNER_BG);
-        _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
+        // Les brosses viennent du cache de Theme et lui appartiennent : cette fenetre
+        // n'en detruit aucune, et aucune n'est inscrite en fond de classe.
 
         // DPI initial (moniteur principal — sera corrigé par GetDpiForWindow après création)
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
@@ -370,7 +362,10 @@ sealed class OnboardingWindow : IDisposable
             lpfnWndProc = _wndProcDelegate,
             hInstance = hInstance,
             hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = _hBgBrush,
+            // hbrBackground = IntPtr.Zero : une brosse inscrite ici appartient au systeme,
+            // qui la detruit au desenregistrement de la classe. ApplyClassBackground en
+            // pose une apres coup, que Theme garde dans son cache.
+            hbrBackground = IntPtr.Zero,
             lpszClassName = className
         };
         Win32.RegisterClassExW(ref wc);
@@ -396,7 +391,17 @@ sealed class OnboardingWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(dwExStyle, className, ProductIdentity.DisplayName,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        Win32.EnableDarkTitleBar(_hWnd);
+        ThemeWindow.ApplyChrome(_hWnd);
+        ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+
+        _themeChanged = () =>
+        {
+            if (_hWnd == IntPtr.Zero)
+                return;
+            ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+            ThemeWindow.ApplyChrome(_hWnd);
+        };
+        Theme.Changed += _themeChanged;
 
         CreateControls();
         SetWindowIcon();
@@ -793,14 +798,14 @@ sealed class OnboardingWindow : IDisposable
                 {
                     Win32.SetBkMode(hdcStatic, 1);
                     bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                    Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
+                    Win32.SetTextColor(hdcStatic, CLR_LINK);
                     return _hPanelBrush;
                 }
                 if (hCtrl == _hWndLinkFeedbackBanner)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
                     bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                    Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
+                    Win32.SetTextColor(hdcStatic, CLR_LINK);
                     return _hBannerBgBrush;
                 }
                 if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkDontShow || hCtrl == _hWndChkTraining)
@@ -1234,10 +1239,11 @@ sealed class OnboardingWindow : IDisposable
         int headerBottom = Math.Max(logoY + logoSize, Math.Max(subtitleRect.bottom, versionRect.bottom)) + S(2);
         y = headerBottom;
 
-        var sepBrush = Win32.CreateSolidBrush(0x00D0D0D0);
+        var sepBrush = Theme.Brush(Theme.Current.Border);
         var sepRect = new Win32.RECT { left = margin, top = y + S(12), right = cw - margin, bottom = y + S(13) };
+        // La brosse appartient au cache de Theme : la detruire laisserait un handle mort
+        // a toutes les fenetres qui demanderont la meme couleur.
         Win32.FillRect(hdc, ref sepRect, sepBrush);
-        Win32.DeleteObject(sepBrush);
         y += S(14);
     }
 
@@ -1698,9 +1704,11 @@ sealed class OnboardingWindow : IDisposable
         if (_gdipFlagFr != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagFr); _gdipFlagFr = IntPtr.Zero; }
         if (_gdipToken != IntPtr.Zero) { Win32.GdiplusShutdown(_gdipToken); _gdipToken = IntPtr.Zero; }
         DestroyFonts();
-        Win32.DeleteObject(_hBgBrush);
-        Win32.DeleteObject(_hBannerBgBrush);
-        Win32.DeleteObject(_hPanelBrush);
+        if (_themeChanged != null)
+        {
+            Theme.Changed -= _themeChanged;
+            _themeChanged = null;
+        }
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
         Win32.UnregisterClassW(ProductIdentity.WindowClass("Onboarding"), Win32.GetModuleHandleW(null));
