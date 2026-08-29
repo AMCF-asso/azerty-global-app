@@ -46,26 +46,29 @@ sealed partial class PauseDurationDialog
     // Contrôles
     // ═══════════════════════════════════════════════════════════════
 
-    private IntPtr _hHoursUp;
-    private IntPtr _hHoursDown;
-    private IntPtr _hMinutesUp;
-    private IntPtr _hMinutesDown;
+    private IntPtr _hHoursPlus;
+    private IntPtr _hHoursMinus;
+    private IntPtr _hMinutesPlus;
+    private IntPtr _hMinutesMinus;
 
     private Win32.SUBCLASSPROC? _buttonSubclassProc;
     private Action? _themeChanged;
     private IntPtr _hoveredButton;
 
-    private IntPtr[] Buttons => new[] { _hHoursUp, _hHoursDown, _hMinutesUp, _hMinutesDown, _hBtnOk, _hBtnCancel };
+    private IntPtr[] Buttons => new[] { _hHoursMinus, _hHoursPlus, _hMinutesMinus, _hMinutesPlus, _hBtnOk, _hBtnCancel };
 
     // Géométrie à 96 DPI. Deux rangées plutôt qu'une : les spinners passent à droite de leur
     // champ, comme tout compteur de Windows, au lieu de l'encadrer par le haut et par le bas.
     private const int Margin = 24;
     private const int LabelW = 76;
-    private const int FieldX = 108;
+    // Le compteur, le champ et le compteur se suivent sur l'échelle d'espacement : 4 px entre
+    // chaque, et un bouton carré de la hauteur du champ de part et d'autre.
+    private const int MinusX = 104;
+    private const int StepW = 28;
+    private const int FieldX = 140;
     private const int FieldW = 64;
     private const int FieldH = 28;
-    private const int SpinX = 176;
-    private const int SpinW = 26;
+    private const int PlusX = 212;
     private const int Row1Y = 58;
     private const int Row2Y = 102;
     private const int ButtonW = 120;
@@ -87,13 +90,13 @@ sealed partial class PauseDurationDialog
 
         Move(_hHours, Margin, Row1Y + 4, LabelW, 24);
         Move(_hEditHours, FieldX, Row1Y, FieldW, FieldH);
-        Move(_hHoursUp, SpinX, Row1Y, SpinW, FieldH / 2);
-        Move(_hHoursDown, SpinX, Row1Y + FieldH / 2, SpinW, FieldH / 2);
+        MoveButton(_hHoursMinus, MinusX, Row1Y, StepW, FieldH, focus);
+        MoveButton(_hHoursPlus, PlusX, Row1Y, StepW, FieldH, focus);
 
         Move(_hMinutes, Margin, Row2Y + 4, LabelW, 24);
         Move(_hEditMinutes, FieldX, Row2Y, FieldW, FieldH);
-        Move(_hMinutesUp, SpinX, Row2Y, SpinW, FieldH / 2);
-        Move(_hMinutesDown, SpinX, Row2Y + FieldH / 2, SpinW, FieldH / 2);
+        MoveButton(_hMinutesMinus, MinusX, Row2Y, StepW, FieldH, focus);
+        MoveButton(_hMinutesPlus, PlusX, Row2Y, StepW, FieldH, focus);
 
         // Les deux boutons sont agrandis de la marge de focus de chaque côté : l'anneau se
         // dessine dans le DC du contrôle, donc tout ce qui déborde de son rectangle client est
@@ -321,15 +324,15 @@ sealed partial class PauseDurationDialog
 
         var rect = dis.rcItem;
 
-        if (dis.hwndItem == _hHoursUp || dis.hwndItem == _hMinutesUp)
+        if (dis.hwndItem == _hHoursPlus || dis.hwndItem == _hMinutesPlus)
         {
-            ThemeControls.DrawSpinnerButton(dis.hDC, rect, state, Theme.Current, _dpi, pointingUp: true);
+            ThemeControls.DrawStepperButton(dis.hDC, rect, state, Theme.Current, _dpi, adding: true);
             return true;
         }
 
-        if (dis.hwndItem == _hHoursDown || dis.hwndItem == _hMinutesDown)
+        if (dis.hwndItem == _hHoursMinus || dis.hwndItem == _hMinutesMinus)
         {
-            ThemeControls.DrawSpinnerButton(dis.hDC, rect, state, Theme.Current, _dpi, pointingUp: false);
+            ThemeControls.DrawStepperButton(dis.hDC, rect, state, Theme.Current, _dpi, adding: false);
             return true;
         }
 

@@ -10,10 +10,10 @@ sealed partial class PauseDurationDialog : IDisposable
     private const int IDCANCEL = 2;
     private const int IDC_EDIT_HOURS = 4301;
     private const int IDC_EDIT_MINUTES = 4302;
-    private const int IDC_HOURS_UP = 4303;
-    private const int IDC_HOURS_DOWN = 4304;
-    private const int IDC_MINUTES_UP = 4305;
-    private const int IDC_MINUTES_DOWN = 4306;
+    private const int IDC_HOURS_PLUS = 4303;
+    private const int IDC_HOURS_MINUS = 4304;
+    private const int IDC_MINUTES_PLUS = 4305;
+    private const int IDC_MINUTES_MINUS = 4306;
 
     private const uint ES_AUTOHSCROLL = 0x0080;
     private const uint ES_CENTER = 0x0001;
@@ -155,12 +155,16 @@ sealed partial class PauseDurationDialog : IDisposable
         _hHours = CreateStatic(hInstance, L.Pause_Hours, 0, 0, 0, 0);
         _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 0, 0, 0, 0);
 
+        // L'ordre de création est l'ordre de tabulation : chaque rangée se parcourt comme
+        // elle se lit, moins puis champ puis plus. Le texte des boutons n'est jamais peint
+        // — ils sont owner-draw — mais il reste ce qu'un lecteur d'écran annonce.
+        _hHoursMinus = CreateButton(hInstance, IDC_HOURS_MINUS, "−", 0, 0, 0, 0, BS_PUSHBUTTON);
         _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 0, 0, 0, 0);
+        _hHoursPlus = CreateButton(hInstance, IDC_HOURS_PLUS, "+", 0, 0, 0, 0, BS_PUSHBUTTON);
+
+        _hMinutesMinus = CreateButton(hInstance, IDC_MINUTES_MINUS, "−", 0, 0, 0, 0, BS_PUSHBUTTON);
         _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 0, 0, 0, 0);
-        _hHoursUp = CreateButton(hInstance, IDC_HOURS_UP, "▲", 0, 0, 0, 0, BS_PUSHBUTTON);
-        _hHoursDown = CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 0, 0, 0, 0, BS_PUSHBUTTON);
-        _hMinutesUp = CreateButton(hInstance, IDC_MINUTES_UP, "▲", 0, 0, 0, 0, BS_PUSHBUTTON);
-        _hMinutesDown = CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 0, 0, 0, 0, BS_PUSHBUTTON);
+        _hMinutesPlus = CreateButton(hInstance, IDC_MINUTES_PLUS, "+", 0, 0, 0, 0, BS_PUSHBUTTON);
 
         _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 0, 0, 0, 0, BS_DEFPUSHBUTTON);
         _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 0, 0, 0, 0, BS_PUSHBUTTON);
@@ -208,22 +212,22 @@ sealed partial class PauseDurationDialog : IDisposable
                         ValidateAndClose();
                         return IntPtr.Zero;
                     }
-                    if (id == IDC_HOURS_UP)
+                    if (id == IDC_HOURS_PLUS)
                     {
                         AdjustHours(1);
                         return IntPtr.Zero;
                     }
-                    if (id == IDC_HOURS_DOWN)
+                    if (id == IDC_HOURS_MINUS)
                     {
                         AdjustHours(-1);
                         return IntPtr.Zero;
                     }
-                    if (id == IDC_MINUTES_UP)
+                    if (id == IDC_MINUTES_PLUS)
                     {
                         AdjustMinutes(1);
                         return IntPtr.Zero;
                     }
-                    if (id == IDC_MINUTES_DOWN)
+                    if (id == IDC_MINUTES_MINUS)
                     {
                         AdjustMinutes(-1);
                         return IntPtr.Zero;
