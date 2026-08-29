@@ -362,4 +362,38 @@ public class ThemeControlsTests
         int b = (int)((colorRef >> 16) & 0xFF);
         return 0.2126 * Canal(r) + 0.7152 * Canal(g) + 0.0722 * Canal(b);
     }
+    // ═══════════════════════════════════════════════════════════════
+    // Cadre d'un champ
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Le contour d'un champ doit tomber entièrement hors du contrôle. DrawOutline trace à
+    /// right - 1 et bottom - 1 : un cadre posé sur editRect ± width y ramenait ses bords droit
+    /// et bas, que WS_CLIPCHILDREN écrête ensuite. Mesuré le 2026-08-29 sur Couches maintenables,
+    /// où seuls les bords haut et gauche survivaient.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void CadreDeChamp_TombeEntierementHorsDuControle(int width)
+    {
+        var champ = new Win32.RECT { left = 270, top = 405, right = 360, bottom = 440 };
+        var cadre = ThemeControls.FieldFrameRect(champ, width);
+
+        // Les quatre traits que DrawOutline dessine réellement. Deux décalages se cumulent sur
+        // les bords droit et bas : DrawOutline passe right - inset - 1 à RoundRect, et RoundRect
+        // trace son contour jusqu'à r - 1. Le premier jet de ce témoin n'en comptait qu'un et
+        // restait vert quand on retirait le pixel corrigé.
+        int inset = width / 2;
+        int gauche = cadre.left + inset;
+        int haut = cadre.top + inset;
+        int droite = cadre.right - inset - 2;
+        int bas = cadre.bottom - inset - 2;
+
+        Assert.True(gauche < champ.left, $"bord gauche à {gauche}, champ à {champ.left}");
+        Assert.True(haut < champ.top, $"bord haut à {haut}, champ à {champ.top}");
+        Assert.True(droite >= champ.right, $"bord droit à {droite}, champ jusqu'à {champ.right - 1}");
+        Assert.True(bas >= champ.bottom, $"bord bas à {bas}, champ jusqu'à {champ.bottom - 1}");
+    }
+
 }

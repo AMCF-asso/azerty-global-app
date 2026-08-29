@@ -90,7 +90,8 @@ public class CaptureBench
                     {
                         foreach (var attempt in new Func<bool>[]
                                  { () => CaptureAbout(outDir, theme, percent),
-                                   () => CapturePause(outDir, theme, percent) })
+                                   () => CapturePause(outDir, theme, percent),
+                                   () => CaptureLayers(outDir, theme, percent) })
                         {
                             try
                             {
@@ -141,6 +142,20 @@ public class CaptureBench
         finally
         {
             Teardown(dialog);
+        }
+    }
+
+    private static bool CaptureLayers(string outDir, string theme, int percent)
+    {
+        var window = new MaintainableLayersWindow();
+        try
+        {
+            window.Show();
+            return Capture(window.Handle, Path.Combine(outDir, $"couches-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(window);
         }
     }
 
