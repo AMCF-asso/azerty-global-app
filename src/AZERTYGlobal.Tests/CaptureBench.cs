@@ -92,7 +92,8 @@ public class CaptureBench
                                  { () => CaptureAbout(outDir, theme, percent),
                                    () => CapturePause(outDir, theme, percent),
                                    () => CaptureLayers(outDir, theme, percent),
-                                   () => CaptureStats(outDir, theme, percent) })
+                                   () => CaptureStats(outDir, theme, percent),
+                                   () => CaptureConflict(outDir, theme, percent) })
                         {
                             try
                             {
@@ -143,6 +144,21 @@ public class CaptureBench
         finally
         {
             Teardown(dialog);
+        }
+    }
+
+    private static bool CaptureConflict(string outDir, string theme, int percent)
+    {
+        // Les deux actions ne sont jamais declenchees : le banc rend la fenetre, il ne clique pas.
+        var window = new LayoutConflictWindow(isAtStartup: true, () => { }, () => { });
+        try
+        {
+            window.Show();
+            return Capture(window.Handle, Path.Combine(outDir, $"conflit-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(window);
         }
     }
 
