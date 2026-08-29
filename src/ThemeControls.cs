@@ -321,17 +321,25 @@ static class ThemeControls
         Palette palette, int dpi)
     {
         var paint = FieldPaint(state, palette);
-        int width = Scale(paint.BorderWidth, dpi);
-        var frame = new Win32.RECT
-        {
-            left = editRect.left - width,
-            top = editRect.top - width,
-            right = editRect.right + width,
-            bottom = editRect.bottom + width,
-        };
-
-        DrawOutline(hdc, frame, paint.Border, width, Scale(BaseRadius, dpi));
+        DrawOutline(hdc, FieldFrameRect(editRect, Scale(paint.BorderWidth, dpi)),
+            paint.Border, Scale(paint.BorderWidth, dpi), Scale(BaseRadius, dpi));
     }
+
+    /// <summary>
+    /// Rectangle du cadre d'un champ. Il faut un pixel de plus à droite et en bas que la simple
+    /// symétrie ne le suggère : <see cref="DrawOutline"/> trace son contour à
+    /// <c>right - 1</c> et <c>bottom - 1</c>, si bien qu'un cadre posé sur
+    /// <c>editRect ± width</c> ramenait ces deux traits sur la frontière du contrôle, où
+    /// WS_CLIPCHILDREN les écrête. Mesuré le 2026-08-29 sur Couches maintenables : bord haut
+    /// 89 px, bord gauche 34 px, bords droit et bas absents.
+    /// </summary>
+    internal static Win32.RECT FieldFrameRect(Win32.RECT editRect, int width) => new()
+    {
+        left = editRect.left - width,
+        top = editRect.top - width,
+        right = editRect.right + width + 1,
+        bottom = editRect.bottom + width + 1,
+    };
 
     /// <summary>
     /// Anneau de focus : 2 px d'accent, à 2 px d'écart du contrôle. Il remplace le rectangle
