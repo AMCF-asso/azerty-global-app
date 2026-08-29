@@ -233,7 +233,10 @@ sealed class OnboardingWindow : IDisposable
         // Corriger le DPI avec le vrai DPI du moniteur où la fenêtre est apparue
         try
         {
-            int realDpi = Win32.GetDpiForWindow(_hWnd);
+            // Le DPI passe par ThemeWindow : seul ce point honore l'override du banc de
+            // captures. Lu en direct, la fenêtre rend toujours à l'échelle du poste et sa
+            // matrice n'est qu'un rendu répété.
+            int realDpi = ThemeWindow.DpiOf(_hWnd);
             if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
             {
                 _dpiScale = realDpi / 96f;
@@ -242,7 +245,7 @@ sealed class OnboardingWindow : IDisposable
                 ResizeWindow();
             }
         }
-        catch { /* GetDpiForWindow non disponible (Windows 8.1-) */ }
+        catch { /* DpiOf absorbe déjà l'échec ; le filet reste par prudence */ }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -627,6 +630,9 @@ sealed class OnboardingWindow : IDisposable
 
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
+
+    /// <summary>Pour le banc de captures : la fenêtre est rendue, elle n'est pas pilotée.</summary>
+    internal IntPtr Handle => _hWnd;
 
     public void Show()
     {
