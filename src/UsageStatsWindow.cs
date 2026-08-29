@@ -96,7 +96,10 @@ sealed class UsageStatsWindow : IDisposable
 
         try
         {
-            int realDpi = Win32.GetDpiForWindow(_hWnd);
+            // Le DPI passe par ThemeWindow : seul ce point honore l'override du banc
+            // de captures. Lu en direct, la fenêtre rendait toujours à l'échelle du
+            // poste, et ses six cellules n'étaient qu'un rendu répété trois fois.
+            int realDpi = ThemeWindow.DpiOf(_hWnd);
             if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
             {
                 _dpiScale = realDpi / 96f;
@@ -105,7 +108,7 @@ sealed class UsageStatsWindow : IDisposable
                 RepositionControls();
             }
         }
-        catch { /* GetDpiForWindow non disponible (Windows 8.1-) */ }
+        catch { /* DpiOf absorbe déjà l'échec ; le filet reste par prudence */ }
     }
 
     private void ApplyFontsToControls()
