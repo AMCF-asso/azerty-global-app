@@ -64,6 +64,12 @@ internal enum FontRole
     /// <summary>Secondaire, légendes, sous-étiquettes. 13 pt, graisse 400.</summary>
     Secondary,
 
+    /// <summary>Corps mis en avant. 15 pt, graisse 600 — la même taille que le corps, ce
+    /// qui n'ajoute rien à l'échelle typographique arrêtée à CH1 : seule la graisse
+    /// change. Les statistiques en ont besoin pour leurs lignes saillantes, que la charte
+    /// rendait jusque-là en titre de section, deux crans trop gros.</summary>
+    BodyStrong,
+
     /// <summary>Titre de section. 18 pt, graisse 600.</summary>
     SectionTitle,
 
@@ -429,6 +435,7 @@ static class Theme
     {
         FontRole.Body => (15, 400, SegoeUi),
         FontRole.Secondary => (13, 400, SegoeUi),
+        FontRole.BodyStrong => (15, 600, SegoeUi),
         FontRole.SectionTitle => (18, 600, SegoeUi),
         FontRole.WindowTitle => (24, 600, SegoeUi),
         FontRole.StatNumber => (28, 600, SegoeUi),

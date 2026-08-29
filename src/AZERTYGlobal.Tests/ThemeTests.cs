@@ -562,15 +562,22 @@ public class ThemeTests
         {
             (FontRole.Body, 15, 400, "Segoe UI"),
             (FontRole.Secondary, 13, 400, "Segoe UI"),
+            (FontRole.BodyStrong, 15, 600, "Segoe UI"),
             (FontRole.SectionTitle, 18, 600, "Segoe UI"),
             (FontRole.WindowTitle, 24, 600, "Segoe UI"),
             (FontRole.StatNumber, 28, 600, "Segoe UI"),
             (FontRole.Mono, 14, 400, "Consolas"),
         };
 
-        // Les six rôles de l'énumération sont couverts : un rôle ajouté sans taille rend ce
-        // test rouge, plutôt que de tomber en silence sur le repli de Metrics.
+        // Tous les rôles de l'énumération sont couverts : un rôle ajouté sans taille rend ce
+        // test rouge, plutôt que de tomber en silence sur le repli de Metrics. C'est ce qui est
+        // arrivé le 2026-08-29 à l'ajout de BodyStrong, et c'est le comportement voulu.
         Assert.Equal(Enum.GetValues<FontRole>().Length, charte.Length);
+
+        // L'échelle des tailles ne bouge pas : BodyStrong reprend celle du corps et n'en change
+        // que la graisse. Cinq tailles, celles qu'Antoine a arrêtées au chantier CH1.
+        Assert.Equal(new[] { 13, 14, 15, 18, 24, 28 },
+            charte.Select(c => c.Size).Distinct().OrderBy(s => s).ToArray());
 
         foreach (var (role, size, weight, face) in charte)
         {

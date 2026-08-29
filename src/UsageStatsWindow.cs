@@ -29,15 +29,17 @@ sealed class UsageStatsWindow : IDisposable
     private static int WinContentH
         => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0);
 
-    // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
-    private const uint CLR_BG = 0x00DDDDDD;
-    private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_TEXT = 0x00333333;
-    private const uint CLR_MUTED = 0x00888888;
-    private const uint CLR_ACCENT = 0x00D47800;
-    private const uint CLR_SEPARATOR = 0x00D7D7D7;
-    private const uint CLR_LINK = 0x00D47800;
-    private const uint CLR_LINK_HOVER = 0x000078D4;
+    // ── Couleurs : les jetons de la charte, relus à chaque bascule de thème ──────
+    // L'accent et la couleur de lien de cette fenêtre étaient l'orange 0x00D47800, qui est le
+    // bleu 0x000078D4 à octets inversés — le piège COLORREF dont l'orange fantôme du parc est
+    // né. Les deux disparaissent au profit du seul accent de la charte.
+    private static uint CLR_BG => Theme.Current.Paper;
+    private static uint CLR_TITLE => Theme.Current.Ink;
+    private static uint CLR_TEXT => Theme.Current.Ink;
+    private static uint CLR_MUTED => Theme.Current.TextSecondary;
+    private static uint CLR_ACCENT => Theme.Current.Action;
+    private static uint CLR_SEPARATOR => Theme.Current.Border;
+    private static uint CLR_LINK => Theme.Current.Action;
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnCopy;
@@ -48,22 +50,31 @@ sealed class UsageStatsWindow : IDisposable
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Win32.SUBCLASSPROC _linkSubclassProc;
     private IntPtr _hoveredLink;
-    private readonly IntPtr _hBgBrush;
 
     private bool _visible;
     private bool _showCopiedFeedback;
+    private Action? _themeChanged;
 
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
 
-    private IntPtr _hFontTitle;
-    private IntPtr _hFontText;
-    private IntPtr _hFontMuted;
-    private IntPtr _hFontBold;
-    private IntPtr _hFontButton;
-    private IntPtr _hFontLink;
+    /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.
+    /// _dpiScale reste la mesure de travail de cette fenêtre, qui multiplie des dizaines de
+    /// coordonnées : les deux disent la même chose.</summary>
+    private int _dpi => (int)Math.Round(96 * _dpiScale);
+
+    private IntPtr _hFontTitle => Theme.Font(FontRole.WindowTitle, _dpi);
+    private IntPtr _hFontText => Theme.Font(FontRole.Body, _dpi);
+    private IntPtr _hFontMuted => Theme.Font(FontRole.Secondary, _dpi);
+    private IntPtr _hFontBold => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontButton => Theme.Font(FontRole.Body, _dpi);
+    private IntPtr _hFontLink => Theme.Font(FontRole.Body, _dpi);
+    private IntPtr _hFontLinkHovered => Theme.Font(FontRole.Body, _dpi, underlined: true);
 
     public bool IsVisible => _visible;
+
+    /// <summary>Pour le banc de captures : la fenêtre est rendue, elle n'est pas pilotée.</summary>
+    internal IntPtr Handle => _hWnd;
 
     /// <summary>Langue de l'UI à la création : titre, boutons et liens sont figés au
     /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
@@ -73,14 +84,12 @@ sealed class UsageStatsWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         _linkSubclassProc = LinkSubclassProc;
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
         _dpiScale = dpi / 96f;
 
-        CreateFonts();
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
@@ -91,39 +100,12 @@ sealed class UsageStatsWindow : IDisposable
             if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
             {
                 _dpiScale = realDpi / 96f;
-                RecreateFonts();
+                ApplyFontsToControls();
                 ResizeWindow();
                 RepositionControls();
             }
         }
         catch { /* GetDpiForWindow non disponible (Windows 8.1-) */ }
-    }
-
-    private void CreateFonts()
-    {
-        _hFontTitle = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontMuted = Win32.CreateFontW(-S(12), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(14), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLink = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
-    }
-
-    private void DestroyFonts()
-    {
-        Win32.DeleteObject(_hFontTitle);
-        Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontMuted);
-        Win32.DeleteObject(_hFontBold);
-        Win32.DeleteObject(_hFontButton);
-        Win32.DeleteObject(_hFontLink);
-    }
-
-    private void RecreateFonts()
-    {
-        DestroyFonts();
-        CreateFonts();
-        ApplyFontsToControls();
     }
 
     private void ApplyFontsToControls()
@@ -145,7 +127,10 @@ sealed class UsageStatsWindow : IDisposable
             lpfnWndProc = _wndProcDelegate,
             hInstance = hInstance,
             hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = _hBgBrush,
+            // hbrBackground = IntPtr.Zero : une brosse inscrite ici appartient au système,
+            // qui la détruit au désenregistrement de la classe. ApplyClassBackground en
+            // pose une dédiée, que ce helper est seul à libérer.
+            hbrBackground = IntPtr.Zero,
             lpszClassName = className
         };
         Win32.RegisterClassExW(ref wc);
@@ -170,7 +155,18 @@ sealed class UsageStatsWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(0, className, L.Stats_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        Win32.EnableDarkTitleBar(_hWnd);
+        ThemeWindow.ApplyChrome(_hWnd);
+        ThemeWindow.ApplyProductIcon(_hWnd);
+        ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+
+        _themeChanged = () =>
+        {
+            if (_hWnd == IntPtr.Zero)
+                return;
+            ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+            ThemeWindow.ApplyChrome(_hWnd);
+        };
+        Theme.Changed += _themeChanged;
     }
 
     private void CreateControls()
@@ -196,15 +192,19 @@ sealed class UsageStatsWindow : IDisposable
             _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
+        // BS_OWNERDRAW remplace le bouton à relief du système : c'est le grand écart entre
+        // ces deux générations de contrôles que la refonte supprime.
         _hWndBtnCopy = Win32.CreateWindowExW(0, "BUTTON", L.Stats_BtnCopy,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_COPY, hInstance, IntPtr.Zero);
+        Win32.SetWindowSubclass(_hWndBtnCopy, _linkSubclassProc, (UIntPtr)3, IntPtr.Zero);
 
         _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
+        Win32.SetWindowSubclass(_hWndBtnClose, _linkSubclassProc, (UIntPtr)4, IntPtr.Zero);
 
         RepositionControls();
     }
@@ -308,7 +308,7 @@ sealed class UsageStatsWindow : IDisposable
                     int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
                     if (newDpi > 0)
                         _dpiScale = newDpi / 96f;
-                    RecreateFonts();
+                    ApplyFontsToControls();
                     var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
                     Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
                         suggested.right - suggested.left, suggested.bottom - suggested.top, true);
@@ -347,12 +347,26 @@ sealed class UsageStatsWindow : IDisposable
                     if (hCtrl == _hWndLinkFeedback || hCtrl == _hWndLinkDiscord)
                     {
                         Win32.SetBkMode(hdcStatic, 1);
-                        bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                        Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
-                        return _hBgBrush;
+                        // La même couleur dans tous les états : c'est la police qui souligne.
+                        // Deux teintes de lien demanderaient une seconde nuance d'accent, que la
+                        // charte n'a pas — et c'est de ce survol qu'était né l'orange fantôme.
+                        Win32.SetTextColor(hdcStatic, CLR_LINK);
+                        return Theme.Brush(CLR_BG);
                     }
                     break;
                 }
+
+                case Win32.WM_CTLCOLORBTN:
+                    // Windows efface le fond d'un bouton owner-draw avec la brosse rendue ici,
+                    // avant d'envoyer WM_DRAWITEM.
+                    Win32.SetBkMode(wParam, Win32.TRANSPARENT);
+                    Win32.SetTextColor(wParam, CLR_TEXT);
+                    return Theme.Brush(CLR_BG);
+
+                case Win32.WM_DRAWITEM:
+                    if (TryDrawItem(lParam))
+                        return (IntPtr)1;
+                    break;
 
                 case Win32.WM_SETCURSOR:
                     if (wParam == _hWndLinkFeedback || wParam == _hWndLinkDiscord)
@@ -392,6 +406,43 @@ sealed class UsageStatsWindow : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
+    /// <summary>Un contrôle STATIC est peint par le système : on ne peut pas lui dessiner de
+    /// filet, seule sa police peut le souligner. Les boutons, eux, ne sont pas des liens et
+    /// gardent la leur.</summary>
+    private void ApplyLinkFont(IntPtr hWnd, bool underlined)
+    {
+        if (hWnd != _hWndLinkFeedback && hWnd != _hWndLinkDiscord)
+            return;
+        Win32.SendMessageW(hWnd, Win32.WM_SETFONT,
+            underlined ? _hFontLinkHovered : _hFontLink, (IntPtr)1);
+    }
+
+    /// <summary>
+    /// Les deux boutons de la fenêtre. « Copier » est l'action qu'elle propose, donc le seul
+    /// primaire de l'écran ; « Fermer » est un congé, comme dans À propos.
+    /// </summary>
+    private bool TryDrawItem(IntPtr lParam)
+    {
+        var dis = Marshal.PtrToStructure<Win32.DRAWITEMSTRUCT>(lParam);
+        if (dis.hwndItem != _hWndBtnCopy && dis.hwndItem != _hWndBtnClose)
+            return false;
+
+        var state = ControlState.None;
+        if ((dis.itemState & Win32.ODS_DISABLED) != 0) state |= ControlState.Disabled;
+        if ((dis.itemState & Win32.ODS_SELECTED) != 0) state |= ControlState.Pressed;
+        if ((dis.itemState & Win32.ODS_FOCUS) != 0) state |= ControlState.Focused;
+        if (_hoveredLink == dis.hwndItem) state |= ControlState.Hovered;
+
+        var full = dis.rcItem;
+        Win32.FillRect(dis.hDC, ref full, Theme.Brush(CLR_BG));
+
+        bool copy = dis.hwndItem == _hWndBtnCopy;
+        ThemeControls.DrawButton(dis.hDC, dis.rcItem, copy ? L.Stats_BtnCopy : L.Common_Close,
+            _hFontButton, copy ? ButtonKind.Primary : ButtonKind.Secondary,
+            state, Theme.Current, _dpi);
+        return true;
+    }
+
     private IntPtr LinkSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
     {
         switch (msg)
@@ -400,6 +451,7 @@ sealed class UsageStatsWindow : IDisposable
                 if (_hoveredLink != hWnd)
                 {
                     _hoveredLink = hWnd;
+                    ApplyLinkFont(hWnd, underlined: true);
                     Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                     var tme = new Win32.TRACKMOUSEEVENT
                     {
@@ -414,6 +466,7 @@ sealed class UsageStatsWindow : IDisposable
                 if (_hoveredLink == hWnd)
                 {
                     _hoveredLink = IntPtr.Zero;
+                    ApplyLinkFont(hWnd, underlined: false);
                     Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 }
                 break;
@@ -463,7 +516,7 @@ sealed class UsageStatsWindow : IDisposable
         var hBmpOld = Win32.SelectObject(hdc, hBmp);
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
 
-        Win32.FillRect(hdc, ref clientRect, _hBgBrush);
+        Win32.FillRect(hdc, ref clientRect, Theme.Brush(CLR_BG));
         Win32.SetBkMode(hdc, 1);
 
         int margin = S(20);
@@ -632,14 +685,26 @@ sealed class UsageStatsWindow : IDisposable
             Win32.RemoveWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)1);
         if (_hWndLinkDiscord != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2);
+        if (_hWndBtnCopy != IntPtr.Zero)
+            Win32.RemoveWindowSubclass(_hWndBtnCopy, _linkSubclassProc, (UIntPtr)3);
+        if (_hWndBtnClose != IntPtr.Zero)
+            Win32.RemoveWindowSubclass(_hWndBtnClose, _linkSubclassProc, (UIntPtr)4);
+
+        if (_themeChanged != null)
+        {
+            Theme.Changed -= _themeChanged;
+            _themeChanged = null;
+        }
+
         if (_hWnd != IntPtr.Zero)
         {
+            ThemeWindow.ForgetClassBackground(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
 
-        DestroyFonts();
-        Win32.DeleteObject(_hBgBrush);
+        // Ni police ni brosse à libérer : les unes appartiennent au cache de Theme, l'autre au
+        // système, qui la détruit avec la classe.
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
         Win32.UnregisterClassW(ProductIdentity.WindowClass("UsageStats"), Win32.GetModuleHandleW(null));

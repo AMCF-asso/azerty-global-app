@@ -91,7 +91,8 @@ public class CaptureBench
                         foreach (var attempt in new Func<bool>[]
                                  { () => CaptureAbout(outDir, theme, percent),
                                    () => CapturePause(outDir, theme, percent),
-                                   () => CaptureLayers(outDir, theme, percent) })
+                                   () => CaptureLayers(outDir, theme, percent),
+                                   () => CaptureStats(outDir, theme, percent) })
                         {
                             try
                             {
@@ -142,6 +143,20 @@ public class CaptureBench
         finally
         {
             Teardown(dialog);
+        }
+    }
+
+    private static bool CaptureStats(string outDir, string theme, int percent)
+    {
+        var window = new UsageStatsWindow();
+        try
+        {
+            window.Show();
+            return Capture(window.Handle, Path.Combine(outDir, $"statistiques-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(window);
         }
     }
 
