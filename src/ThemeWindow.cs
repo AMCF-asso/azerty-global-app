@@ -132,6 +132,11 @@ static class ThemeWindow
     // Fond de classe
     // ═══════════════════════════════════════════════════════════════
 
+    /// <summary>Brosses posées par <see cref="ApplyClassBackground"/>, par fenêtre. Ce sont
+    /// les seules que ce helper ait le droit de détruire : celle qu'une fenêtre non migrée
+    /// inscrit elle-même à l'enregistrement de sa classe lui appartient encore.</summary>
+    private static readonly Dictionary<IntPtr, IntPtr> ClassBrushes = new();
+
     /// <summary>
     /// Repose la brosse de fond de la classe de la fenêtre, puis redessine cadre et enfants.
     ///
@@ -139,18 +144,39 @@ static class ThemeWindow
     /// c'est avec lui que Windows efface le fond avant chaque WM_PAINT. Sans cette re-pose, une
     /// bascule de thème laisse un éclair de l'ancienne couleur à chaque repeint, indéfiniment.
     ///
-    /// La brosse vient du cache de <see cref="Theme"/> : elle survit à la fenêtre, ce qui est
-    /// exactement ce que demande une brosse de classe, et il ne faut jamais la détruire.
+    /// La brosse est créée pour cette fenêtre et pour elle seule. Une brosse du cache de
+    /// <see cref="Theme"/> ne convient pas : posée en fond de classe elle appartient au
+    /// système, qui la détruit au désenregistrement de la classe. Le cache servirait alors un
+    /// handle mort à toutes les fenêtres suivantes, dont le fond resterait blanc et les
+    /// étiquettes grises — c'est le défaut mesuré sur Durée de pause le 2026-08-29, où
+    /// GetObjectType tombe de 2 à 0 au Dispose de la fenêtre précédente.
     /// </summary>
     internal static void ApplyClassBackground(IntPtr hwnd, uint color)
     {
         if (hwnd == IntPtr.Zero)
             return;
 
-        Win32.SetClassLongPtrW(hwnd, Win32.GCLP_HBRBACKGROUND, Theme.Brush(color));
+        IntPtr fresh = Win32.CreateSolidBrush(color);
+        Win32.SetClassLongPtrW(hwnd, Win32.GCLP_HBRBACKGROUND, fresh);
+
+        if (ClassBrushes.TryGetValue(hwnd, out var previous) && previous != IntPtr.Zero)
+            Win32.DeleteObject(previous);
+        ClassBrushes[hwnd] = fresh;
+
         Win32.RedrawWindow(hwnd, IntPtr.Zero, IntPtr.Zero,
             Win32.RDW_INVALIDATE | Win32.RDW_ERASE | Win32.RDW_FRAME | Win32.RDW_ALLCHILDREN
             | Win32.RDW_UPDATENOW);
+    }
+
+    /// <summary>
+    /// Oublie la brosse d'une fenêtre qui se détruit, sans la libérer : elle est celle de la
+    /// classe, et c'est le système qui la détruit au désenregistrement. Sans cet oubli, une
+    /// fenêtre rouverte sur un handle recyclé verrait ApplyClassBackground appeler
+    /// DeleteObject sur une brosse déjà morte.
+    /// </summary>
+    internal static void ForgetClassBackground(IntPtr hwnd)
+    {
+        ClassBrushes.Remove(hwnd);
     }
 
     // ═══════════════════════════════════════════════════════════════

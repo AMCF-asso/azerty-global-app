@@ -353,6 +353,7 @@ sealed partial class PauseDurationDialog : IDisposable
         }
         if (_hWnd != IntPtr.Zero)
         {
+            ThemeWindow.ForgetClassBackground(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
