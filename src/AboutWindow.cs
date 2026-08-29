@@ -179,7 +179,12 @@ sealed class AboutWindow : IDisposable
             lpfnWndProc = _wndProcDelegate,
             hInstance = hInstance,
             hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = BgBrush,
+            // hbrBackground = IntPtr.Zero : une brosse inscrite ici appartient au système,
+            // qui la détruit au UnregisterClassW du Dispose. BgBrush vient du cache de Theme,
+            // que toutes les autres fenêtres partagent — il ne doit pas y passer. Le fond est
+            // effacé côté instance (WM_ERASEBKGND puis OnPaint), et ApplyClassBackground pose
+            // une brosse dédiée.
+            hbrBackground = IntPtr.Zero,
             lpszClassName = className
         };
         Win32.RegisterClassExW(ref wc);
@@ -657,6 +662,7 @@ sealed class AboutWindow : IDisposable
         Theme.Changed -= _themeChanged;
         if (_hWnd != IntPtr.Zero)
         {
+            ThemeWindow.ForgetClassBackground(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }

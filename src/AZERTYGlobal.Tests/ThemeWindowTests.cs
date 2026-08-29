@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using AZERTYGlobal;
 using Xunit;
 
@@ -160,5 +161,61 @@ public class ThemeWindowTests
     public void EnableDarkTitleBar_SansFenetre_NeLevePas()
     {
         Win32.EnableDarkTitleBar(IntPtr.Zero);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Fond de classe
+    // ═══════════════════════════════════════════════════════════════
+
+    private const uint OBJ_BRUSH = 2;
+
+    [DllImport("gdi32.dll")]
+    private static extern uint GetObjectType(IntPtr h);
+
+    /// <summary>Garde le délégué en vie aussi longtemps que la classe de fenêtre du témoin.</summary>
+    private static readonly Win32.WNDPROC TestWndProc = Win32.DefWindowProcW;
+
+    /// <summary>
+    /// Une brosse posée en fond de classe appartient au système, qui la détruit au
+    /// désenregistrement de la classe. Le socle la prenait dans le cache de <see cref="Theme"/> :
+    /// la fenêtre suivante recevait alors un handle mort, son fond restait blanc et ses étiquettes
+    /// grises — mesuré sur Durée de pause le 2026-08-29, où GetObjectType tombe de 2 à 0. Le cache
+    /// doit survivre au cycle complet d'une fenêtre.
+    /// </summary>
+    [Fact]
+    public void FondDeClasse_NeConsommePasLaBrosseDuCacheDeTheme()
+    {
+        uint couleur = Theme.LightPalette.Paper;
+        IntPtr brosse = Theme.Brush(couleur);
+        Assert.Equal(OBJ_BRUSH, GetObjectType(brosse));
+
+        const string classe = "AZERTYGlobal.Tests.FondDeClasse";
+        IntPtr hInstance = Win32.GetModuleHandleW(null);
+        var wc = new Win32.WNDCLASSEXW
+        {
+            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
+            lpfnWndProc = TestWndProc,
+            hInstance = hInstance,
+            lpszClassName = classe,
+        };
+        Win32.RegisterClassExW(ref wc);
+
+        IntPtr hwnd = Win32.CreateWindowExW(0, classe, string.Empty, Win32.WS_OVERLAPPED,
+            0, 0, 10, 10, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        Assert.NotEqual(IntPtr.Zero, hwnd);
+
+        try
+        {
+            ThemeWindow.ApplyClassBackground(hwnd, couleur);
+            ThemeWindow.ForgetClassBackground(hwnd);
+        }
+        finally
+        {
+            Win32.DestroyWindow(hwnd);
+            Win32.UnregisterClassW(classe, hInstance);
+        }
+
+        Assert.Equal(OBJ_BRUSH, GetObjectType(brosse));
+        Assert.Equal(brosse, Theme.Brush(couleur));
     }
 }

@@ -27,12 +27,12 @@ namespace AZERTYGlobal.Tests;
 /// </summary>
 public class CaptureBench
 {
-    // ⚠️ Une seule cellule par processus. Mesuré le 2026-08-28 : dans un même processus, seule
-    // la première AboutWindow crée sa fenêtre, les suivantes rendent un handle nul. Ni l'échelle,
-    // ni une pompe à messages de 600 ms, ni la libération explicite de la classe de fenêtre n'y
-    // changent rien, et PauseDurationDialog ne montre pas le défaut. La cause n'est pas établie :
-    // le banc la contourne, il ne la masque pas. AZERTY_CAPTURE_THEME et AZERTY_CAPTURE_DPI
-    // restreignent le rendu à une cellule, et l'appelant boucle sur les six.
+    // La cellule unique par processus n'est plus nécessaire. Le handle nul de la seconde
+    // fenêtre et le fond blanc de Durée de pause étaient un seul défaut, corrigé le 2026-08-29 :
+    // la brosse du cache de Theme, posée en fond de classe, était détruite par le système au
+    // désenregistrement de la classe de la fenêtre précédente, et RegisterClassExW échouait
+    // ensuite sur ce handle mort. Les six cellules se rendent désormais d'un seul processus.
+    // AZERTY_CAPTURE_THEME et AZERTY_CAPTURE_DPI restent utiles pour n'en rejouer qu'une.
     private const string GateVariable = "AZERTY_CAPTURE";
 
     /// <summary>Les trois échelles de la matrice d'arrêt visuel, en DPI et en pourcentage.</summary>
