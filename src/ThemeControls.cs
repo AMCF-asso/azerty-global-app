@@ -538,4 +538,51 @@ static class ThemeControls
         Win32.SelectObject(hdc, oldPen);
         Win32.SelectObject(hdc, oldBrush);
     }
+
+    /// <summary>
+    /// Compteur d'une valeur : un trait pour retrancher, une croix pour ajouter. Il remplace la
+    /// paire de flèches empilées, qui ne pouvait pas dépasser la moitié de la hauteur de son
+    /// champ — 26 × 14 px à 96 DPI, là où Windows demande 24 × 24 sous la souris. À pleine
+    /// hauteur, de part et d'autre du champ, la même fenêtre offre quatre fois la cible, et
+    /// « moins » et « plus » disent ce que le bouton fait d'une durée quand « haut » et « bas »
+    /// décrivaient un déplacement dans une liste.
+    /// </summary>
+    internal static void DrawStepperButton(IntPtr hdc, Win32.RECT rect, ControlState state,
+        Palette palette, int dpi, bool adding)
+    {
+        var paint = ButtonPaint(ButtonKind.Secondary, state, palette);
+        DrawRoundedBox(hdc, rect, paint, Scale(BaseRadius, dpi), dpi);
+
+        // Un compteur est WS_TABSTOP : sans anneau, on tabule dessus sans voir où l'on est.
+        // Les flèches empilées qu'il remplace n'en portaient pas non plus.
+        if (state.HasFlag(ControlState.Focused) && !state.HasFlag(ControlState.Disabled))
+            DrawFocusRing(hdc, rect, palette, dpi);
+
+        int arm = Math.Max(3, Math.Min(rect.right - rect.left, rect.bottom - rect.top) / 4);
+        int centerX = rect.left + (rect.right - rect.left) / 2;
+        int centerY = rect.top + (rect.bottom - rect.top) / 2;
+        int thickness = Math.Max(1, Scale(2, dpi));
+        IntPtr ink = Theme.Brush(paint.Text);
+
+        var bar = new Win32.RECT
+        {
+            left = centerX - arm,
+            top = centerY - thickness / 2,
+            right = centerX + arm,
+            bottom = centerY - thickness / 2 + thickness,
+        };
+        Win32.FillRect(hdc, ref bar, ink);
+
+        if (!adding)
+            return;
+
+        var stem = new Win32.RECT
+        {
+            left = centerX - thickness / 2,
+            top = centerY - arm,
+            right = centerX - thickness / 2 + thickness,
+            bottom = centerY + arm,
+        };
+        Win32.FillRect(hdc, ref stem, ink);
+    }
 }

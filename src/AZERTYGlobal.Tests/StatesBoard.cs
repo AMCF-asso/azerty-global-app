@@ -74,6 +74,7 @@ public class StatesBoard
             "Case à cocher",
             "Case cochée",
             "Bouton radio",
+            "Compteur — et +",
             "Lien",
         };
 
@@ -138,6 +139,14 @@ public class StatesBoard
                             state | (c == 0 ? ControlState.Checked : ControlState.None),
                             palette, Dpi);
                         break;
+                    case 5:
+                        // Les deux compteurs partagent la cellule : ils se lisent en paire, et
+                        // c'est leur taille l'un par rapport au champ qui est en jeu.
+                        ThemeControls.DrawStepperButton(hdc, Square(cell, 0), state, palette,
+                            Dpi, adding: false);
+                        ThemeControls.DrawStepperButton(hdc, Square(cell, 1), state, palette,
+                            Dpi, adding: true);
+                        break;
                     default:
                         ThemeControls.DrawLink(hdc, cell, "Code source GitHub", body,
                             state, palette, Dpi);
@@ -166,6 +175,16 @@ public class StatesBoard
         top = Margin + RowHeight * row,
         right = Margin + LabelWidth + CellWidth * (column + 1),
         bottom = Margin + RowHeight * (row + 1),
+    };
+
+    /// <summary>Un carré de la hauteur d'un champ, place <paramref name="index"/> dans la
+    /// cellule — c'est la taille réelle d'un compteur à 96 DPI.</summary>
+    private static Win32.RECT Square(Win32.RECT cell, int index) => new()
+    {
+        left = cell.left + 6 + index * 44,
+        top = cell.top,
+        right = cell.left + 6 + index * 44 + 28,
+        bottom = cell.top + 28,
     };
 
     /// <summary>L'anneau de focus déborde de 4 px : la cellule lui réserve sa marge.</summary>
