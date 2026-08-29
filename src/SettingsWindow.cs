@@ -21,7 +21,7 @@ sealed class SettingsWindow : IDisposable
     private const int DLGC_WANTALLKEYS = 0x0004;
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
-    private const uint CLR_KEY_BORDER_FOCUS = 0x000078D4;
+    private static uint CLR_KEY_BORDER_FOCUS => Theme.Current.Action;
     private static string ShortcutCaptureHint => L.Settings_ShortcutCaptureHint;
 
     private const int IDC_EDIT_KEYBOARD = 3101;
@@ -60,24 +60,25 @@ sealed class SettingsWindow : IDisposable
     private const int BASE_WIN_W = 300;
     private const int BASE_WIN_H = 680;
 
-    private const uint CLR_BG = 0x00DDDDDD;
-    private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_TEXT = 0x00333333;
-    private const uint CLR_MUTED = 0x00666666;
-    private const uint CLR_VERSION = 0x00888888;
-    private const uint CLR_PANEL_BG = 0x00EEEEEE;
-    private const uint CLR_PANEL_BORDER = 0x00D1D1D1;
-    private const uint CLR_PANEL_ACCENT = 0x00D47800;
-    private const uint CLR_LINK = 0x00D47800;
-    private const uint CLR_LINK_HOVER = 0x000078D4;
-    private const uint CLR_INLINE_HIGHLIGHT = 0x000078D4;
-    private const uint CLR_VALID = 0x00228B22;
-    private const uint CLR_INVALID = 0x000000CC;
-    private const uint CLR_KEY_BG = 0x00FAFAFA;
-    private const uint CLR_KEY_BORDER = 0x00CBCBCB;
-    private const uint CLR_KEY_BORDER_INVALID = 0x00A8A8FF;
-    private const uint CLR_SEPARATOR = 0x00D7D7D7;
-    private const uint CLR_SUBTITLE = 0x003A342E;
+    // Les jetons de la charte, relus a chaque peinture : une bascule de theme n'a donc rien a
+    // recalculer ici. Trois noms ont disparu — CLR_PANEL_ACCENT et CLR_SUBTITLE ne peignaient
+    // rien (zero usage mesure), et CLR_LINK_HOVER portait l'orange fantome, le survol restant
+    // marque par le soulignement du lien et le curseur main.
+    private static uint CLR_BG => Theme.Current.Paper;
+    private static uint CLR_TITLE => Theme.Current.Ink;
+    private static uint CLR_TEXT => Theme.Current.Ink;
+    private static uint CLR_MUTED => Theme.Current.TextSecondary;
+    private static uint CLR_VERSION => Theme.Current.TextSecondary;
+    private static uint CLR_PANEL_BG => Theme.Current.Surface;
+    private static uint CLR_PANEL_BORDER => Theme.Current.Border;
+    private static uint CLR_LINK => Theme.Current.Action;
+    private static uint CLR_INLINE_HIGHLIGHT => Theme.Current.Action;
+    private static uint CLR_VALID => Theme.Current.Success;
+    private static uint CLR_INVALID => Theme.Current.Error;
+    private static uint CLR_KEY_BG => Theme.Current.Surface;
+    private static uint CLR_KEY_BORDER => Theme.Current.Border;
+    private static uint CLR_KEY_BORDER_INVALID => Theme.Current.Error;
+    private static uint CLR_SEPARATOR => Theme.Current.Border;
 
     private struct LayoutInfo
     {
@@ -165,9 +166,11 @@ sealed class SettingsWindow : IDisposable
     private IntPtr _hoveredLink;
     private IntPtr _focusedShortcut;
 
-    private readonly IntPtr _hBgBrush;
-    private readonly IntPtr _hPanelBrush;
-    private readonly IntPtr _hKeyBrush;
+    // Les brosses viennent du cache de Theme et lui appartiennent : cette fenetre n'en
+    // detruit aucune, et aucune n'est inscrite en fond de classe (voir CreateMainWindow).
+    private static IntPtr _hBgBrush => Theme.Brush(CLR_BG);
+    private static IntPtr _hPanelBrush => Theme.Brush(CLR_PANEL_BG);
+    private static IntPtr _hKeyBrush => Theme.Brush(CLR_KEY_BG);
 
     private IntPtr _gdipToken;
     private IntPtr _gdipLogo;
@@ -181,20 +184,27 @@ sealed class SettingsWindow : IDisposable
     private bool _showCaptureHint;
     private string _validationMessage = string.Empty;
 
+    private Action? _themeChanged;
+
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
 
-    private IntPtr _hFontTitle;
-    private IntPtr _hFontVersion;
-    private IntPtr _hFontSubtitle;
-    private IntPtr _hFontPanelTitle;
-    private IntPtr _hFontText;
-    private IntPtr _hFontBold;
-    private IntPtr _hFontEdit;
-    private IntPtr _hFontLink;
-    private IntPtr _hFontLinkStrong;
-    private IntPtr _hFontSmall;
-    private IntPtr _hFontButton;
+    /// <summary>L'echelle en points par pouce, dont Theme a besoin pour ses polices. _dpiScale
+    /// reste la mesure de travail de cette fenetre, qui multiplie des dizaines de coordonnees :
+    /// les deux disent la meme chose.</summary>
+    private int _dpi => (int)Math.Round(96 * _dpiScale);
+
+    private IntPtr _hFontTitle => Theme.Font(FontRole.WindowTitle, _dpi);
+    private IntPtr _hFontVersion => Theme.Font(FontRole.Mono, _dpi);
+    private IntPtr _hFontSubtitle => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontPanelTitle => Theme.Font(FontRole.SectionTitle, _dpi);
+    private IntPtr _hFontText => Theme.Font(FontRole.Body, _dpi);
+    private IntPtr _hFontBold => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontEdit => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontLink => Theme.Font(FontRole.Body, _dpi, underlined: true);
+    private IntPtr _hFontLinkStrong => Theme.Font(FontRole.BodyStrong, _dpi, underlined: true);
+    private IntPtr _hFontSmall => Theme.Font(FontRole.Secondary, _dpi);
+    private IntPtr _hFontButton => Theme.Font(FontRole.Body, _dpi);
 
     public bool IsVisible => _visible;
     public Action? ShortcutChanged;
@@ -211,10 +221,6 @@ sealed class SettingsWindow : IDisposable
         _wndProcDelegate = WndProc;
         _linkSubclassProc = LinkSubclassProc;
         _shortcutSubclassProc = ShortcutSubclassProc;
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
-        _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
-        _hKeyBrush = Win32.CreateSolidBrush(CLR_KEY_BG);
-
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
@@ -225,7 +231,6 @@ sealed class SettingsWindow : IDisposable
         _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(SettingsWindow), ProductIdentity.LogoResourceName);
         LoadShortcutStateFromConfig();
 
-        CreateFonts();
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
@@ -238,11 +243,14 @@ sealed class SettingsWindow : IDisposable
 
         try
         {
-            int realDpi = Win32.GetDpiForWindow(_hWnd);
+            // Le DPI passe par ThemeWindow : seul ce point honore l'override du banc de
+            // captures. Lu en direct, la fenêtre rend toujours à l'échelle du poste et sa
+            // matrice n'est qu'un rendu répété.
+            int realDpi = ThemeWindow.DpiOf(_hWnd);
             if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
             {
                 _dpiScale = realDpi / 96f;
-                RecreateFonts();
+                ApplyFontsToControls();
                 ResizeWindow();
                 RepositionControls();
             }
@@ -250,43 +258,6 @@ sealed class SettingsWindow : IDisposable
         catch
         {
         }
-    }
-
-    private void CreateFonts()
-    {
-        _hFontTitle = Win32.CreateFontW(-S(18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontVersion = Win32.CreateFontW(-S(9), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSubtitle = Win32.CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontPanelTitle = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(11), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontEdit = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLink = Win32.CreateFontW(-S(11), 0, 0, 0, 400, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLinkStrong = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSmall = Win32.CreateFontW(-S(9), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-    }
-
-    private void DestroyFonts()
-    {
-        Win32.DeleteObject(_hFontTitle);
-        Win32.DeleteObject(_hFontVersion);
-        Win32.DeleteObject(_hFontSubtitle);
-        Win32.DeleteObject(_hFontPanelTitle);
-        Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontBold);
-        Win32.DeleteObject(_hFontEdit);
-        Win32.DeleteObject(_hFontLink);
-        Win32.DeleteObject(_hFontLinkStrong);
-        Win32.DeleteObject(_hFontSmall);
-        Win32.DeleteObject(_hFontButton);
-    }
-
-    private void RecreateFonts()
-    {
-        DestroyFonts();
-        CreateFonts();
-        ApplyFontsToControls();
     }
 
     private void ApplyFontsToControls()
@@ -325,7 +296,10 @@ sealed class SettingsWindow : IDisposable
             lpfnWndProc = _wndProcDelegate,
             hInstance = hInstance,
             hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = _hBgBrush,
+            // hbrBackground = IntPtr.Zero : une brosse inscrite ici appartient au systeme,
+            // qui la detruit au desenregistrement de la classe. ApplyClassBackground en
+            // pose une apres coup, que Theme garde dans son cache.
+            hbrBackground = IntPtr.Zero,
             lpszClassName = className
         };
         Win32.RegisterClassExW(ref wc);
@@ -350,7 +324,18 @@ sealed class SettingsWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(0, className, L.Settings_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        Win32.EnableDarkTitleBar(_hWnd);
+        ThemeWindow.ApplyChrome(_hWnd);
+        ThemeWindow.ApplyProductIcon(_hWnd);
+        ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+
+        _themeChanged = () =>
+        {
+            if (_hWnd == IntPtr.Zero)
+                return;
+            ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+            ThemeWindow.ApplyChrome(_hWnd);
+        };
+        Theme.Changed += _themeChanged;
     }
 
     private void CreateControls()
@@ -773,6 +758,9 @@ sealed class SettingsWindow : IDisposable
         };
     }
 
+    /// <summary>Pour le banc de captures : la fenêtre est rendue, elle n'est pas pilotée.</summary>
+    internal IntPtr Handle => _hWnd;
+
     public void Show()
     {
         LoadShortcutStateFromConfig();
@@ -873,7 +861,7 @@ sealed class SettingsWindow : IDisposable
                 int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
                 if (newDpi > 0)
                     _dpiScale = newDpi / 96f;
-                RecreateFonts();
+                ApplyFontsToControls();
                 var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
                 Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
                     suggested.right - suggested.left, suggested.bottom - suggested.top, true);
@@ -966,7 +954,7 @@ sealed class SettingsWindow : IDisposable
                 if (hCtrl == _hWndLinkReset)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
-                    Win32.SetTextColor(hdcStatic, _hoveredLink == hCtrl ? CLR_LINK_HOVER : CLR_LINK);
+                    Win32.SetTextColor(hdcStatic, CLR_LINK);
                     return _hPanelBrush;
                 }
 
@@ -1785,10 +1773,11 @@ sealed class SettingsWindow : IDisposable
             _hWnd = IntPtr.Zero;
         }
 
-        DestroyFonts();
-        Win32.DeleteObject(_hBgBrush);
-        Win32.DeleteObject(_hPanelBrush);
-        Win32.DeleteObject(_hKeyBrush);
+        if (_themeChanged != null)
+        {
+            Theme.Changed -= _themeChanged;
+            _themeChanged = null;
+        }
 
         if (_gdipLogo != IntPtr.Zero)
         {
