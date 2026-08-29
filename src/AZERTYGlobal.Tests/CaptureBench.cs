@@ -93,7 +93,9 @@ public class CaptureBench
                                    () => CapturePause(outDir, theme, percent),
                                    () => CaptureLayers(outDir, theme, percent),
                                    () => CaptureStats(outDir, theme, percent),
-                                   () => CaptureConflict(outDir, theme, percent) })
+                                   () => CaptureConflict(outDir, theme, percent),
+                                   () => CaptureSettings(outDir, theme, percent),
+                                   () => CaptureOnboarding(outDir, theme, percent) })
                         {
                             try
                             {
@@ -169,6 +171,34 @@ public class CaptureBench
         {
             window.Show();
             return Capture(window.Handle, Path.Combine(outDir, $"statistiques-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(window);
+        }
+    }
+
+    private static bool CaptureSettings(string outDir, string theme, int percent)
+    {
+        var window = new SettingsWindow();
+        try
+        {
+            window.Show();
+            return Capture(window.Handle, Path.Combine(outDir, $"parametres-{theme}-{percent}.png"));
+        }
+        finally
+        {
+            Teardown(window);
+        }
+    }
+
+    private static bool CaptureOnboarding(string outDir, string theme, int percent)
+    {
+        var window = new OnboardingWindow();
+        try
+        {
+            window.Show();
+            return Capture(window.Handle, Path.Combine(outDir, $"onboarding-{theme}-{percent}.png"));
         }
         finally
         {
