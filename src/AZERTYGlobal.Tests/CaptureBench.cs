@@ -178,13 +178,26 @@ public class CaptureBench
         }
     }
 
+    /// <summary>
+    /// Les trois onglets de Paramètres, un fichier chacun. Depuis le 2026-08-30 la fenêtre est
+    /// onglétée : ne capturer que l'onglet ouvert par défaut laisserait deux tiers de son
+    /// contenu hors du contrôle visuel.
+    /// </summary>
     private static bool CaptureSettings(string outDir, string theme, int percent)
     {
         var window = new SettingsWindow();
         try
         {
             window.Show();
-            return Capture(window.Handle, Path.Combine(outDir, $"parametres-{theme}-{percent}.png"));
+            bool all = true;
+            for (int tab = 0; tab < SettingsWindow.CaptureTabCount; tab++)
+            {
+                window.ShowTabForCapture(tab);
+                all &= Capture(window.Handle,
+                    Path.Combine(outDir,
+                        $"parametres-{SettingsWindow.TabSlug(tab)}-{theme}-{percent}.png"));
+            }
+            return all;
         }
         finally
         {

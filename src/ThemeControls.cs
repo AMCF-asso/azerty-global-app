@@ -97,6 +97,13 @@ static class ThemeControls
     internal const int BaseButtonHeight = 32;
     internal const int BaseButtonPadding = 16;
 
+    /// <summary>Rembourrage d'un onglet, et l'épaisseur du trait qui marque l'actif. Le trait
+    /// vaut 2 px comme l'anneau de focus : à 1 px il disparaît sur un écran à 150 %, à 3 px il
+    /// pèse plus que la bordure d'un bouton primaire.</summary>
+    internal const int BaseTabPaddingX = 14;
+    internal const int BaseTabPaddingY = 8;
+    internal const int BaseTabUnderline = 2;
+
     /// <summary>
     /// Met une dimension de la charte à l'échelle d'un écran. Le minimum de 1 vaut pour les
     /// largeurs de trait : un trait arrondi à 0 disparaît, et une bordure absente est le seul
@@ -375,6 +382,68 @@ static class ThemeControls
     internal static int MeasureButtonHeight(IntPtr hdc, IntPtr font, int dpi) =>
         Math.Max(Scale(BaseButtonHeight, dpi),
             GdiHelpers.MeasureSingleLineHeight(hdc, font) + Scale(BaseButtonPadding, dpi));
+
+    /// <summary>
+    /// Un onglet. Quatrième forme de contrôle de la charte, et aucune couleur de plus :
+    ///
+    ///   - actif : fond de surface, encre, et un trait d'accent sur toute sa largeur en bas ;
+    ///   - inactif : fond de papier, texte secondaire, pas de trait ;
+    ///   - survolé et inactif : le fond passe à action-fond, la même transition qu'un bouton
+    ///     secondaire survolé, pour que le clic se devine avant d'être tenté ;
+    ///   - désactivé : texte à <c>Disabled</c>, jamais de survol.
+    ///
+    /// L'anneau de focus est celui de tous les autres contrôles : la barre d'onglets se
+    /// parcourt au clavier comme le reste de la fenêtre.
+    /// </summary>
+    internal static void DrawTab(IntPtr hdc, Win32.RECT rect, string text, IntPtr font,
+        bool active, ControlState state, Palette palette, int dpi)
+    {
+        bool disabled = state.HasFlag(ControlState.Disabled);
+        uint fill = active ? palette.Surface
+            : (!disabled && state.HasFlag(ControlState.Hovered)) ? palette.ActionFill
+            : palette.Paper;
+        uint ink = disabled ? palette.Disabled
+            : active ? palette.Ink
+            : palette.TextSecondary;
+
+        GdiHelpers.FillSolidRect(hdc, rect, fill);
+        DrawCenteredText(hdc, rect, text, font, ink);
+
+        if (active)
+        {
+            int thickness = Scale(BaseTabUnderline, dpi);
+            GdiHelpers.FillSolidRect(hdc, new Win32.RECT
+            {
+                left = rect.left,
+                top = rect.bottom - thickness,
+                right = rect.right,
+                bottom = rect.bottom,
+            }, disabled ? palette.Disabled : palette.Action);
+        }
+
+        if (state.HasFlag(ControlState.Focused) && !disabled)
+        {
+            int inset = FocusMargin(dpi);
+            DrawFocusRing(hdc, new Win32.RECT
+            {
+                left = rect.left + inset,
+                top = rect.top + inset,
+                right = rect.right - inset,
+                bottom = rect.bottom - inset,
+            }, palette, dpi);
+        }
+    }
+
+    /// <summary>Largeur d'un onglet : son libellé et son rembourrage. Les onglets ne sont pas
+    /// à largeur égale — un intitulé court n'a aucune raison d'occuper la place du plus
+    /// long.</summary>
+    internal static int MeasureTabWidth(IntPtr hdc, IntPtr font, string text, int dpi) =>
+        GdiHelpers.MeasureSingleLineWidth(hdc, font, text) + 2 * Scale(BaseTabPaddingX, dpi);
+
+    /// <summary>Hauteur d'une barre d'onglets, trait de l'actif compris.</summary>
+    internal static int MeasureTabHeight(IntPtr hdc, IntPtr font, int dpi) =>
+        GdiHelpers.MeasureSingleLineHeight(hdc, font) + 2 * Scale(BaseTabPaddingY, dpi)
+            + Scale(BaseTabUnderline, dpi);
 
     /// <summary>Largeur qu'une case ou une radio doit avoir pour porter son libellé sans le
     /// tronquer : l'anneau de focus des deux côtés, la boîte, son écart au libellé, et le texte.
