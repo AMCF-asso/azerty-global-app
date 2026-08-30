@@ -211,7 +211,16 @@ public class CaptureBench
         try
         {
             window.Show();
-            return Capture(window.Handle, Path.Combine(outDir, $"onboarding-{theme}-{percent}.png"));
+            // Les trois étapes, un fichier chacune. Ne capturer que la première laissait les
+            // quatre plus gros rôles typographiques hors du contrôle visuel.
+            bool all = true;
+            for (int step = 0; step < OnboardingWindow.StepCountForCapture; step++)
+            {
+                window.ShowStepForCapture(step);
+                all &= Capture(window.Handle,
+                    Path.Combine(outDir, $"onboarding-etape{step + 1}-{theme}-{percent}.png"));
+            }
+            return all;
         }
         finally
         {

@@ -76,6 +76,17 @@ internal enum FontRole
     /// <summary>Titre de fenêtre dessiné dans le corps, pas la barre système. 24 pt, graisse 600.</summary>
     WindowTitle,
 
+    /// <summary>
+    /// Titre d'accueil, plus grand que celui d'une fenêtre ordinaire. 26 px, graisse 700.
+    ///
+    /// Septième rôle, ajouté le 2026-08-30 sur arbitrage d'Antoine, et le seul depuis que
+    /// l'échelle a été figée à CH1. Motif : la fenêtre de bienvenue portait deux titres à 28 et
+    /// 26 px pour 700 de graisse ; les faire tomber sur WindowTitle (24/600) leur retirait le
+    /// poids qui distingue l'accueil du reste de l'application. Une taille de plus, pas une
+    /// famille : c'est le même Segoe UI, et rien d'autre ne l'emploie.
+    /// </summary>
+    Display,
+
     /// <summary>Chiffre de statistique. 28 pt, graisse 600.</summary>
     StatNumber,
 
@@ -438,6 +449,7 @@ static class Theme
         FontRole.BodyStrong => (15, 600, SegoeUi),
         FontRole.SectionTitle => (18, 600, SegoeUi),
         FontRole.WindowTitle => (24, 600, SegoeUi),
+        FontRole.Display => (26, 700, SegoeUi),
         FontRole.StatNumber => (28, 600, SegoeUi),
         FontRole.Mono => (14, 400, Consolas),
         _ => (15, 400, SegoeUi),

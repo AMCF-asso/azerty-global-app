@@ -41,7 +41,6 @@ sealed class OnboardingWindow : IDisposable
     // Drapeau de bascule de langue dans le header (proportions 3:2 du site, +50 % : 45×30)
     private const int BASE_FLAG_W = 45;
     private const int BASE_FLAG_H = 30;
-    private const float ONBOARDING_UI_SCALE = 0.75f;
     private const int BASE_MARGIN = 28;
     private const int BASE_BOTTOM_MARGIN = 52;
     private const int BASE_LINK_H = 24;
@@ -170,24 +169,38 @@ sealed class OnboardingWindow : IDisposable
 
     // DPI scaling — mutable, recalculé sur WM_DPICHANGED
     private float _dpiScale;
-    private int S(int val) => (int)(val * _dpiScale * ONBOARDING_UI_SCALE);
 
-    // Fonts — recréés sur changement de DPI
-    private IntPtr _hFontTitle;
-    private IntPtr _hFontSubtitle;
-    private IntPtr _hFontText;
-    private IntPtr _hFontFeatureDesc;
-    private IntPtr _hFontBold;
-    private IntPtr _hFontLink;
-    private IntPtr _hFontSmall;
-    private IntPtr _hFontReassure; // mention vie privée étape 1 — plus petite que _hFontSmall pour tenir sur une ligne en 175% DPI
-    private IntPtr _hFontVersion; // numéro de version sous le drapeau de langue (header)
-    private IntPtr _hFontButton;
-    private IntPtr _hFontBannerBold;
-    private IntPtr _hFontStepSummary;
-    private IntPtr _hFontSection;
-    private IntPtr _hFontPageTitle;
-    private IntPtr _hFontLinkStrong;
+    // ONBOARDING_UI_SCALE, la constante 0,75 qui multipliait ces 139 dimensions, a été
+    // supprimée le 2026-08-30 sur arbitrage d'Antoine. Elle rendait le corps de texte de
+    // cette fenêtre à 12,75 px quand le reste de l'application est à 15, et ses « 28 px »
+    // de titre à 21 : la fenêtre de bienvenue était la seule à ne pas être à l'échelle de
+    // l'application, sans que rien ne le dise. Tout grandit d'un tiers.
+    private int S(int val) => (int)(val * _dpiScale);
+
+    /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.</summary>
+    private int _dpi => (int)Math.Round(96 * _dpiScale);
+
+    // Polices — quinze handles pour dix tailles distinctes jusqu'au 2026-08-30, six rôles de
+    // la charte depuis. Ce ne sont plus des champs : Theme tient le cache, indexé par rôle et
+    // par DPI, et une bascule d'échelle n'a donc plus rien à recréer ici.
+    private IntPtr _hFontTitle => Theme.Font(FontRole.Display, _dpi);
+    private IntPtr _hFontPageTitle => Theme.Font(FontRole.Display, _dpi);
+    private IntPtr _hFontSubtitle => Theme.Font(FontRole.SectionTitle, _dpi);
+    private IntPtr _hFontBannerBold => Theme.Font(FontRole.SectionTitle, _dpi);
+    private IntPtr _hFontStepSummary => Theme.Font(FontRole.SectionTitle, _dpi);
+    private IntPtr _hFontText => Theme.Font(FontRole.Body, _dpi);
+    private IntPtr _hFontFeatureDesc => Theme.Font(FontRole.Body, _dpi);
+    private IntPtr _hFontBold => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontButton => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontSection => Theme.Font(FontRole.BodyStrong, _dpi);
+    private IntPtr _hFontLink => Theme.Font(FontRole.Body, _dpi, underlined: true);
+    private IntPtr _hFontLinkStrong => Theme.Font(FontRole.BodyStrong, _dpi, underlined: true);
+    // L'italique de ces deux-là est perdu : la charte n'a pas de jeton d'italique, et
+    // Paramètres rend déjà son message de validation droit. _hFontReassure perd en plus sa
+    // taille sur mesure — 9,7 px, calibrés pour tenir sur une ligne à 175 %.
+    private IntPtr _hFontSmall => Theme.Font(FontRole.Secondary, _dpi);
+    private IntPtr _hFontReassure => Theme.Font(FontRole.Secondary, _dpi);
+    private IntPtr _hFontVersion => Theme.Font(FontRole.Mono, _dpi);
 
     public bool IsVisible => _visible;
 
@@ -213,7 +226,6 @@ sealed class OnboardingWindow : IDisposable
         _gdipDiscord = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "discord-icon.png");
         _gdipFlagEn = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-en.png");
         _gdipFlagFr = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-fr.png");
-        CreateFonts();
         CreateMainWindow();
         ApplyFontsToControls();
 
@@ -243,50 +255,36 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Polices
     // ═══════════════════════════════════════════════════════════════
-    private void CreateFonts()
+    // CreateFonts et DestroyFonts ont disparu le 2026-08-30 : les polices viennent du cache
+    // de Theme, indexé par rôle et par DPI, et ce cache n'appartient pas à cette fenêtre.
+    // Les détruire ici les retirerait sous les autres.
+
+    /// <summary>
+    /// Rejoue l'envoi des polices aux contrôles après un changement d'échelle. Elle ne
+    /// recrée plus rien depuis le 2026-08-30 : le cache de Theme est indexé par rôle et par
+    /// DPI, donc les propriétés rendent déjà la bonne police. Mais un contrôle Win32 détient
+    /// le handle qu'on lui a envoyé par WM_SETFONT, pas une référence au cache — sans ce
+    /// renvoi, il garderait la police de l'ancienne échelle.
+    /// </summary>
+    /// <summary>
+    /// Pour le banc de captures : la fenêtre montre l'étape demandée. Le banc ne clique pas,
+    /// et sans ce point d'entrée son contrôle visuel ne verrait jamais que l'étape 1 — alors
+    /// que les quatre plus gros rôles typographiques ne servent qu'aux étapes 2 et 3.
+    /// </summary>
+    internal void ShowStepForCapture(int step)
     {
-        _hFontTitle = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSubtitle = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(17), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontFeatureDesc = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(17), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLink = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSmall = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontVersion = Win32.CreateFontW(-S(21), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        // Scaling proportionnel calibre sur 17 a 175% (taille validee visuellement).
-        // 17 / 1.75 = 9.71 logique → 10 a 100%, 12 a 125%, 15 a 150%, 17 a 175%, 19 a 200%.
-        _hFontReassure = Win32.CreateFontW(-(int)Math.Round(17.0 * _dpiScale / 1.75), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(17), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBannerBold = Win32.CreateFontW(-S(21), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontStepSummary = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSection = Win32.CreateFontW(-S(15), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontPageTitle = Win32.CreateFontW(-S(26), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLinkStrong = Win32.CreateFontW(-S(16), 0, 0, 0, 700, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _currentStep = Math.Clamp(step, 0, StepCountForCapture - 1);
+        if (_currentStep == 2)
+            _step3Reached = true;
+        UpdateStepVisibility();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
-    private void DestroyFonts()
-    {
-        Win32.DeleteObject(_hFontTitle);
-        Win32.DeleteObject(_hFontSubtitle);
-        Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontFeatureDesc);
-        Win32.DeleteObject(_hFontBold);
-        Win32.DeleteObject(_hFontLink);
-        Win32.DeleteObject(_hFontSmall);
-        Win32.DeleteObject(_hFontVersion);
-        Win32.DeleteObject(_hFontReassure);
-        Win32.DeleteObject(_hFontButton);
-        Win32.DeleteObject(_hFontBannerBold);
-        Win32.DeleteObject(_hFontStepSummary);
-        Win32.DeleteObject(_hFontSection);
-        Win32.DeleteObject(_hFontPageTitle);
-        Win32.DeleteObject(_hFontLinkStrong);
-    }
+    /// <summary>Nombre d'étapes, pour le banc.</summary>
+    internal const int StepCountForCapture = 3;
 
     private void RecreateFonts()
     {
-        DestroyFonts();
-        CreateFonts();
         ApplyFontsToControls();
     }
 
@@ -1703,7 +1701,6 @@ sealed class OnboardingWindow : IDisposable
         if (_gdipFlagEn != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagEn); _gdipFlagEn = IntPtr.Zero; }
         if (_gdipFlagFr != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagFr); _gdipFlagFr = IntPtr.Zero; }
         if (_gdipToken != IntPtr.Zero) { Win32.GdiplusShutdown(_gdipToken); _gdipToken = IntPtr.Zero; }
-        DestroyFonts();
         if (_themeChanged != null)
         {
             Theme.Changed -= _themeChanged;
