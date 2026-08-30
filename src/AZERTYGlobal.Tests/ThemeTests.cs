@@ -566,6 +566,7 @@ public class ThemeTests
             (FontRole.SectionTitle, 18, 600, "Segoe UI"),
             (FontRole.WindowTitle, 24, 600, "Segoe UI"),
             (FontRole.StatNumber, 28, 600, "Segoe UI"),
+            (FontRole.Display, 26, 700, "Segoe UI"),
             (FontRole.Mono, 14, 400, "Consolas"),
         };
 
@@ -574,9 +575,11 @@ public class ThemeTests
         // arrivé le 2026-08-29 à l'ajout de BodyStrong, et c'est le comportement voulu.
         Assert.Equal(Enum.GetValues<FontRole>().Length, charte.Length);
 
-        // L'échelle des tailles ne bouge pas : BodyStrong reprend celle du corps et n'en change
-        // que la graisse. Cinq tailles, celles qu'Antoine a arrêtées au chantier CH1.
-        Assert.Equal(new[] { 13, 14, 15, 18, 24, 28 },
+        // Sept tailles : les six arrêtées par Antoine au chantier CH1 — BodyStrong reprenant
+        // celle du corps et n'en changeant que la graisse — plus le 26 de Display, arrêté le
+        // 2026-08-30 pour les deux titres de la fenêtre de bienvenue, que WindowTitle (24/600)
+        // aplatissait. Le commentaire annonçait « cinq » pour six depuis l'origine.
+        Assert.Equal(new[] { 13, 14, 15, 18, 24, 26, 28 },
             charte.Select(c => c.Size).Distinct().OrderBy(s => s).ToArray());
 
         foreach (var (role, size, weight, face) in charte)
