@@ -54,11 +54,25 @@ sealed class SettingsWindow : IDisposable
     private const uint WS_VSCROLL = 0x00200000;
     private const uint WS_BORDER = 0x00800000;
 
-    // 240 → 300 le 2026-07-16 (smoke test) : « Virtual keyboard » était tronqué en EN
-    // et la fenêtre était disproportionnée (deux fois plus haute que large).
-    // 470 → 680 le 2026-07-30 : section « Apps suspendues » + opt-in Défi du jour (v1.2.0).
+    // Plancher, et non plus taille de la fenêtre : MeasureRequiredClientSize mesure ce que le
+    // contenu réclame à ce DPI et dans cette langue, la fenêtre prend le plus grand des deux.
+    //
+    // Ces deux nombres sont l'histoire du défaut que la mesure supprime. 240 → 300 le
+    // 2026-07-16 (smoke test) : « Virtual keyboard » était tronqué en EN. 470 → 680 le
+    // 2026-07-30 : section « Apps suspendues » + opt-in Défi du jour (v1.2.0). Puis la charte
+    // a remplacé les polices d'origine par de plus grandes, et 300 × 680 a coupé quatre
+    // libellés de case, le lien « Valeurs par défaut » et la dernière ligne de la fenêtre,
+    // aux trois échelles — mesuré le 2026-08-30. Une troisième constante aurait tenu jusqu'au
+    // libellé suivant.
     private const int BASE_WIN_W = 300;
     private const int BASE_WIN_H = 680;
+
+    /// <summary>Style de la fenêtre, un seul endroit pour les trois qui en avaient besoin.
+    /// <c>WS_THICKFRAME</c> depuis le 2026-08-30, sur demande d'Antoine : la taille calculée
+    /// n'est qu'un plancher, l'utilisateur peut agrandir. Ni minimiser ni maximiser — une
+    /// fenêtre de réglages n'a rien à faire dans la barre des tâches ni en plein écran.</summary>
+    private const uint WindowStyle =
+        Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_THICKFRAME;
 
     // Les jetons de la charte, relus a chaque peinture : une bascule de theme n'a donc rien a
     // recalculer ici. Trois noms ont disparu — CLR_PANEL_ACCENT et CLR_SUBTITLE ne peignaient
@@ -304,9 +318,8 @@ sealed class SettingsWindow : IDisposable
         };
         Win32.RegisterClassExW(ref wc);
 
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var (winW, winH) = MeasureRequiredClientSize();
+        uint dwStyle = WindowStyle;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
         int windowW = adjustRect.right - adjustRect.left;
@@ -478,9 +491,8 @@ sealed class SettingsWindow : IDisposable
 
     private void ResizeWindow()
     {
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var (winW, winH) = MeasureRequiredClientSize();
+        uint dwStyle = WindowStyle;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
         int windowW = adjustRect.right - adjustRect.left;
@@ -493,9 +505,12 @@ sealed class SettingsWindow : IDisposable
 
     private void RepositionControls()
     {
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
-        LayoutInfo layout = GetLayout(winW, winH);
+        // La taille réelle fait foi depuis que la fenêtre est redimensionnable. Tant que ces
+        // deux lignes lisaient les constantes, l'agrandir laissait les contrôles à leur ancienne
+        // place pendant que la peinture, elle, suivait déjà le client (OnPaint lit
+        // GetClientRect depuis toujours).
+        Win32.GetClientRect(_hWnd, out var clientRect);
+        LayoutInfo layout = GetLayout(clientRect.right, clientRect.bottom);
 
         Win32.MoveWindow(_hWndEditKeyboard,
             layout.KeyboardEditRect.left, layout.KeyboardEditRect.top,
@@ -611,7 +626,12 @@ sealed class SettingsWindow : IDisposable
             int validationHeight = MeasureSingleLineHeight(hdc, _hFontSmall);
 
             int labelX = margin + panelPadX;
-            int labelWidth = S(120); // assez pour « Virtual keyboard » sans troncature
+            // Mesurée, pas constante : les 120 px dataient des polices d'avant la charte, et
+            // le commentaire qui les justifiait — « assez pour "Virtual keyboard" » — avait
+            // cessé d'être vrai sans que rien ne le dise.
+            int labelWidth = Math.Max(
+                MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelKeyboard),
+                MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelSearch)) + S(6);
             int keyOuterW = S(28);
             int keyOuterH = S(24);
             int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
@@ -626,7 +646,11 @@ sealed class SettingsWindow : IDisposable
             var keyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, keyOuterH - 2);
             var searchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, keyOuterH - 2);
             int resetY = searchRowY + Math.Max(S(20), textLineHeight + S(7));
-            var resetRect = Rect(labelX, resetY, S(118), Math.Max(S(18), linkHeight));
+            // S(118) rendait « Valeurs par défaut » en « Valeurs par » : la police soulignée de
+            // la charte est plus large que celle d'origine, et un lien tronqué ne se voit pas
+            // comme un libellé tronqué — il se lit comme un autre lien.
+            int resetWidth = MeasureSingleLineWidth(hdc, _hFontLinkStrong, L.Settings_LinkResetDefaults);
+            var resetRect = Rect(labelX, resetY, resetWidth, Math.Max(S(18), linkHeight));
 
             bool showValidation = !string.IsNullOrEmpty(_validationMessage);
             int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
@@ -747,6 +771,93 @@ sealed class SettingsWindow : IDisposable
         }
     }
 
+    /// <summary>
+    /// Taille de client où rien n'est tronqué, à ce DPI et dans cette langue. Elle sert de
+    /// taille d'ouverture et de plancher au redimensionnement (<c>WM_GETMINMAXINFO</c>).
+    ///
+    /// La largeur est celle du plus large bloc qui ne peut pas se replier : l'en-tête, la ligne
+    /// de raccourci, le lien, les neuf cases et radios, les quatre boutons. La hauteur vient du
+    /// bas du dernier contrôle que <see cref="GetLayout"/> place, majorée de la ligne de
+    /// validation quand elle n'est pas affichée : sans cette réserve, saisir un raccourci
+    /// invalide ferait grandir la fenêtre sous le curseur.
+    ///
+    /// Les cases se mesurent à l'anatomie de la charte (<see cref="ThemeControls.MeasureBoxRowWidth"/>)
+    /// et non à celle du contrôle Windows qui les peint encore : c'est la cible du lot suivant,
+    /// et sa boîte est la plus large des deux.
+    /// </summary>
+    private (int Width, int Height) MeasureRequiredClientSize()
+    {
+        int margin = S(8);
+        int panelPadX = S(9);
+        int logoSize = S(24);
+        int width;
+        int reserve;
+
+        IntPtr hdc = Win32.GetDC(_hWnd);
+        try
+        {
+            int Box(string text) =>
+                ThemeControls.MeasureBoxRowWidth(hdc, _hFontBold, text, _dpi);
+            int Button(string text) =>
+                ThemeControls.MeasureButtonWidth(hdc, _hFontButton, text, _dpi);
+
+            // En-tête : logo, titre, numéro de version. Il occupe toute la largeur de client,
+            // pas l'intérieur d'un panneau.
+            string version = $"v{Program.Version}";
+            int headerWidth = margin + logoSize + S(6)
+                + MeasureSingleLineWidth(hdc, _hFontTitle, ProductIdentity.DisplayName) + S(8)
+                + MeasureSingleLineWidth(hdc, _hFontVersion, version) + S(24) + S(6) + margin;
+
+            // Ligne de raccourci : étiquette, préfixe « Ctrl + Maj + », boîte de touche.
+            int labelWidth = Math.Max(
+                MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelKeyboard),
+                MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelSearch)) + S(6);
+            int prefixWidth = 0;
+            foreach (var (text, _, font) in GetShortcutPrefixRuns())
+                prefixWidth += MeasureSingleLineWidth(hdc, font, text);
+            int shortcutRow = labelWidth + S(6) + prefixWidth + S(8) + S(28);
+
+            int inner = shortcutRow;
+            inner = Math.Max(inner,
+                MeasureSingleLineWidth(hdc, _hFontLinkStrong, L.Settings_LinkResetDefaults));
+            inner = Math.Max(inner, Box(L.Settings_AutoStart));
+            inner = Math.Max(inner, Box(L.Settings_Notifications));
+            inner = Math.Max(inner, Box(L.Settings_OnboardingWindow));
+            inner = Math.Max(inner, Box(L.Challenge_OptIn));
+            inner = Math.Max(inner, Box("Français"));
+            inner = Math.Max(inner, Box("English"));
+            inner = Math.Max(inner, Box(L.Settings_CompatModeAuto));
+            inner = Math.Max(inner, Box(L.Settings_CompatModeForceOn));
+            inner = Math.Max(inner, Box(L.Settings_CompatModeForceOff));
+            inner = Math.Max(inner, Button(L.Settings_ResetVirtualKeyboard));
+            inner = Math.Max(inner, Button(L.Settings_ResetLessonsModule));
+            inner = Math.Max(inner,
+                Button(L.Settings_CompatAdd) + S(6) + Button(L.Settings_CompatRemove));
+
+            // Les lignes « Géré par votre organisation » sont indentées sous leur case.
+            inner = Math.Max(inner, S(18)
+                + MeasureSingleLineWidth(hdc, _hFontSmall, L.Settings_ManagedByOrganization));
+
+            width = Math.Max(S(BASE_WIN_W),
+                Math.Max(headerWidth, inner + panelPadX * 2 + margin * 2));
+
+            // Réserve de la ligne de validation, que GetLayout n'insère que lorsqu'un message
+            // est en cours. La fenêtre ne doit pas changer de taille pour un message.
+            reserve = string.IsNullOrEmpty(_validationMessage)
+                ? S(5) + Math.Max(S(15), MeasureSingleLineHeight(hdc, _hFontSmall))
+                : 0;
+        }
+        finally
+        {
+            Win32.ReleaseDC(_hWnd, hdc);
+        }
+
+        // GetLayout prend son propre DC : le nôtre est rendu avant de l'appeler.
+        LayoutInfo layout = GetLayout(width, 0);
+        int height = layout.CompatForceOffRect.bottom + S(12) + margin + reserve;
+        return (width, Math.Max(S(BASE_WIN_H), height));
+    }
+
     private static Win32.RECT Rect(int left, int top, int width, int height)
     {
         return new Win32.RECT
@@ -855,6 +966,31 @@ sealed class SettingsWindow : IDisposable
 
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
+
+            case Win32.WM_SIZE:
+                // _hWnd est encore nul pendant CreateWindowExW, qui envoie déjà ce message :
+                // les contrôles n'existent pas, il n'y a rien à replacer.
+                if (_hWnd != IntPtr.Zero)
+                {
+                    RepositionControls();
+                    Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                }
+                return IntPtr.Zero;
+
+            case Win32.WM_GETMINMAXINFO:
+            {
+                // Recalculé à chaque demande plutôt que mémorisé : la langue et le DPI changent
+                // tous les deux en cours de vie de la fenêtre, et un plancher périmé laisserait
+                // l'utilisateur réduire la fenêtre sous la taille de son propre contenu.
+                var (minW, minH) = MeasureRequiredClientSize();
+                var frame = new Win32.RECT { left = 0, top = 0, right = minW, bottom = minH };
+                Win32.AdjustWindowRectEx(ref frame, WindowStyle, false, 0);
+                var mmi = Marshal.PtrToStructure<Win32.MINMAXINFO>(lParam);
+                mmi.ptMinTrackSize.x = frame.right - frame.left;
+                mmi.ptMinTrackSize.y = frame.bottom - frame.top;
+                Marshal.StructureToPtr(mmi, lParam, false);
+                return IntPtr.Zero;
+            }
 
             case Win32.WM_DPICHANGED:
             {
@@ -1560,7 +1696,8 @@ sealed class SettingsWindow : IDisposable
             left = layout.HeaderTitleX,
             top = layout.HeaderTitleY,
             right = titleRight,
-            bottom = layout.HeaderTitleY + S(20)
+            // S(20) pour une police de 24 px : le titre était écrasé en haut et en bas.
+            bottom = layout.HeaderTitleY + titleHeight
         };
         Win32.DrawTextW(hdc, title, -1, ref titleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
@@ -1590,7 +1727,7 @@ sealed class SettingsWindow : IDisposable
             left = titleX,
             top = titleY,
             right = layout.ShortcutsPanel.right - S(12),
-            bottom = titleY + S(20)
+            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
         Win32.DrawTextW(hdc, L.Settings_SectionShortcuts, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
@@ -1618,7 +1755,7 @@ sealed class SettingsWindow : IDisposable
             left = titleX,
             top = titleY,
             right = layout.ShortcutsPanel.right - S(12),
-            bottom = titleY + S(20)
+            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
         Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
@@ -1638,7 +1775,7 @@ sealed class SettingsWindow : IDisposable
             left = titleX,
             top = titleY,
             right = layout.LanguagePanel.right - S(12),
-            bottom = titleY + S(20)
+            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
         Win32.DrawTextW(hdc, L.Settings_SectionLanguage, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
@@ -1658,7 +1795,7 @@ sealed class SettingsWindow : IDisposable
             left = titleX,
             top = titleY,
             right = layout.WindowsPanel.right - S(12),
-            bottom = titleY + S(20)
+            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
         Win32.DrawTextW(hdc, L.Settings_SectionWindows, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
@@ -1678,7 +1815,7 @@ sealed class SettingsWindow : IDisposable
             left = titleX,
             top = titleY,
             right = layout.CompatPanel.right - S(12),
-            bottom = titleY + S(20)
+            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
         Win32.DrawTextW(hdc, L.Settings_SectionCompat, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }

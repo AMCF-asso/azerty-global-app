@@ -376,6 +376,15 @@ static class ThemeControls
         Math.Max(Scale(BaseButtonHeight, dpi),
             GdiHelpers.MeasureSingleLineHeight(hdc, font) + Scale(BaseButtonPadding, dpi));
 
+    /// <summary>Largeur qu'une case ou une radio doit avoir pour porter son libellé sans le
+    /// tronquer : l'anneau de focus des deux côtés, la boîte, son écart au libellé, et le texte.
+    /// Compagnon de <see cref="MeasureButtonWidth"/>. Sans elle, une mise en page ne peut pas se
+    /// dimensionner sur ses cases et retombe sur une constante, qui ment dès que la police ou la
+    /// langue change — c'est exactement ce qui a tronqué quatre libellés de Paramètres.</summary>
+    internal static int MeasureBoxRowWidth(IntPtr hdc, IntPtr font, string text, int dpi) =>
+        2 * FocusMargin(dpi) + Scale(BaseBoxSize, dpi) + Scale(BaseBoxLabelGap, dpi)
+            + GdiHelpers.MeasureSingleLineWidth(hdc, font, text);
+
     /// <summary>Place que l'anneau de focus réclame de chaque côté d'un contrôle. La mise en
     /// page doit la réserver, sinon l'anneau mord sur le voisin.</summary>
     internal static int FocusMargin(int dpi) => Scale(BaseFocusGap, dpi) + Scale(BaseFocusRing, dpi);
