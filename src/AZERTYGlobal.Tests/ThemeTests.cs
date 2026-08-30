@@ -556,6 +556,21 @@ public class ThemeTests
     /// une dérive.
     /// </summary>
     [Fact]
+    public void LesDeuxFacteursGlobaux_SontCeuxQuAntoineAArretes()
+    {
+        // Décision du 2026-08-30, sur mesure : aucune fenêtre ne doit dépasser un écran
+        // 1920 × 1080, même à 175 % d'échelle Windows. À 1,00 Onboarding rendait 1 089 px et
+        // Paramètres 1 011, pour 996 de zone de travail. 0,92 passait de justesse, 0,90 laisse
+        // 28 px de marge sur la plus critique.
+        //
+        // Ce garde n'existe pas pour empêcher de changer ces valeurs, mais pour qu'on ne les
+        // change pas sans le savoir : elles pilotent la taille de sept fenêtres depuis un seul
+        // point, et rien d'autre dans la suite ne rougirait.
+        Assert.Equal(0.90f, ThemeControls.Density);
+        Assert.Equal(0.90f, Theme.TypeScale);
+    }
+
+    [Fact]
     public void EchelleTypographique_EstCelleDeLaCharte()
     {
         var charte = new (FontRole Role, int Size, int Weight, string Face)[]

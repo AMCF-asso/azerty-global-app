@@ -367,7 +367,7 @@ static class Theme
 
     private static readonly Dictionary<uint, IntPtr> BrushCache = new();
     private static readonly Dictionary<(uint Color, int Width), IntPtr> PenCache = new();
-    private static readonly Dictionary<(FontRole Role, int Dpi, bool Underlined), IntPtr> FontCache = new();
+    private static readonly Dictionary<(FontRole Role, int Dpi, bool Underlined, float TypeScale), IntPtr> FontCache = new();
 
     /// <summary>
     /// Brosse pleine d'une couleur de la palette, partagée et vivante jusqu'à la fin du processus.
@@ -424,12 +424,14 @@ static class Theme
         if (dpi <= 0)
             dpi = 96;
 
-        var key = (role, dpi, underlined);
+        // L'échelle entre dans la clé : deux échelles rendues dans le même processus se
+        // serviraient sinon l'une dans les polices de l'autre.
+        var key = (role, dpi, underlined, TypeScale);
         if (FontCache.TryGetValue(key, out var existing))
             return existing;
 
         var (size, weight, face) = Metrics(role);
-        int height = -(int)Math.Round(size * dpi / 96.0, MidpointRounding.AwayFromZero);
+        int height = -(int)Math.Round(size * TypeScale * dpi / 96.0, MidpointRounding.AwayFromZero);
 
         // Qualité 5 = CLEARTYPE_QUALITY, comme partout ailleurs dans l'application.
         var font = Win32.CreateFontW(height, 0, 0, 0, weight, 0, underlined ? 1u : 0u, 0,
@@ -454,6 +456,47 @@ static class Theme
         FontRole.Mono => (14, 400, Consolas),
         _ => (15, 400, SegoeUi),
     };
+
+    /// <summary>
+    /// Échelle typographique de l'application : un facteur global sur la **taille du texte**,
+    /// jamais sur la géométrie. Son pendant est <see cref="ThemeControls.Density"/>, qui fait
+    /// l'inverse.
+    ///
+    /// Les deux leviers ne touchent pas les mêmes fenêtres. Celles qui posent leurs dimensions en
+    /// constantes — Onboarding, Statistiques, À propos — ne bougent qu'avec la densité. Celle qui
+    /// mesure son contenu — Paramètres depuis 3d158aa — ne bouge qu'avec l'échelle typographique.
+    ///
+    /// À 1, valeur par défaut, la rampe est celle que <c>Metrics</c> écrit, et le garde
+    /// <c>ThemeTests.EchelleTypographique_EstCelleDeLaCharte</c> la vérifie telle quelle.
+    /// </summary>
+    internal static float TypeScale { get; private set; } = 0.90f;
+
+    /// <summary>
+    /// Force l'échelle typographique jusqu'au <c>Dispose</c>, qui restaure la précédente. Même
+    /// crochet que <c>ThemeWindow.OverrideDpiForTests</c>, pour le même usage : le banc.
+    /// </summary>
+    internal static IDisposable OverrideTypeScaleForTests(float scale)
+    {
+        var scope = new TypeScaleScope(TypeScale);
+        TypeScale = scale <= 0 ? 1.0f : scale;
+        return scope;
+    }
+
+    private sealed class TypeScaleScope : IDisposable
+    {
+        private readonly float _previous;
+        private bool _disposed;
+
+        internal TypeScaleScope(float previous) => _previous = previous;
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+            TypeScale = _previous;
+        }
+    }
 
     private const string SegoeUi = "Segoe UI";
     private const string Consolas = "Consolas";

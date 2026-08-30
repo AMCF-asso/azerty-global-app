@@ -35,6 +35,55 @@ public class CaptureBench
     // AZERTY_CAPTURE_THEME et AZERTY_CAPTURE_DPI restent utiles pour n'en rejouer qu'une.
     private const string GateVariable = "AZERTY_CAPTURE";
 
+    /// <summary>
+    /// Densité demandée, 1 par défaut. Un facteur global sur la géométrie, jamais sur le texte —
+    /// voir <see cref="ThemeControls.Density"/>. Le banc est le seul endroit qui la force, comme
+    /// il est le seul à forcer le DPI et le thème.
+    /// </summary>
+    private static float Density
+    {
+        get
+        {
+            string? raw = Environment.GetEnvironmentVariable("AZERTY_CAPTURE_DENSITY");
+            if (string.IsNullOrWhiteSpace(raw))
+                return ThemeControls.Density;
+            return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out float value) && value > 0
+                ? value
+                : ThemeControls.Density;
+        }
+    }
+
+    /// <summary>
+    /// Suffixe de nom de fichier de la densité : vide à 1, <c>-d85</c> à 0,85. Deux densités
+    /// rendues dans le même dossier ne doivent pas s'écraser — c'est tout l'usage de la variable.
+    /// </summary>
+    private static string DensitySuffix =>
+        Math.Abs(Density - ThemeControls.Density) < 0.001f
+            ? ""
+            : $"-d{(int)Math.Round(Density * 100)}";
+
+    /// <summary>Échelle typographique demandée, 1 par défaut. Voir <see cref="Theme.TypeScale"/>.</summary>
+    private static float TypeScale
+    {
+        get
+        {
+            string? raw = Environment.GetEnvironmentVariable("AZERTY_CAPTURE_TYPE");
+            if (string.IsNullOrWhiteSpace(raw))
+                return Theme.TypeScale;
+            return float.TryParse(raw, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out float value) && value > 0
+                ? value
+                : Theme.TypeScale;
+        }
+    }
+
+    /// <summary>Suffixe de nom de fichier de l'échelle typographique : vide à 1, <c>-t85</c> à 0,85.</summary>
+    private static string TypeSuffix =>
+        Math.Abs(TypeScale - Theme.TypeScale) < 0.001f
+            ? ""
+            : $"-t{(int)Math.Round(TypeScale * 100)}";
+
     /// <summary>Les trois échelles de la matrice d'arrêt visuel, en DPI et en pourcentage.</summary>
     private static (int Dpi, int Percent)[] Scales
     {
@@ -87,6 +136,8 @@ public class CaptureBench
                     // d'affichage de Windows déconnecterait la session en cours.
                     using (Theme.OverrideForTests(variant))
                     using (ThemeWindow.OverrideDpiForTests(dpi))
+                    using (ThemeControls.OverrideDensityForTests(Density))
+                    using (Theme.OverrideTypeScaleForTests(TypeScale))
                     {
                         foreach (var attempt in new Func<bool>[]
                                  { () => CaptureAbout(outDir, theme, percent),
@@ -127,7 +178,7 @@ public class CaptureBench
         try
         {
             window.Show();
-            return Capture(window.Handle, Path.Combine(outDir, $"a-propos-{theme}-{percent}.png"));
+            return Capture(window.Handle, Path.Combine(outDir, $"a-propos-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
         }
         finally
         {
@@ -141,7 +192,7 @@ public class CaptureBench
         try
         {
             IntPtr hwnd = dialog.OpenForCapture();
-            return Capture(hwnd, Path.Combine(outDir, $"duree-de-pause-{theme}-{percent}.png"));
+            return Capture(hwnd, Path.Combine(outDir, $"duree-de-pause-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
         }
         finally
         {
@@ -156,7 +207,7 @@ public class CaptureBench
         try
         {
             window.Show();
-            return Capture(window.Handle, Path.Combine(outDir, $"conflit-{theme}-{percent}.png"));
+            return Capture(window.Handle, Path.Combine(outDir, $"conflit-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
         }
         finally
         {
@@ -170,7 +221,7 @@ public class CaptureBench
         try
         {
             window.Show();
-            return Capture(window.Handle, Path.Combine(outDir, $"statistiques-{theme}-{percent}.png"));
+            return Capture(window.Handle, Path.Combine(outDir, $"statistiques-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
         }
         finally
         {
@@ -195,7 +246,7 @@ public class CaptureBench
                 window.ShowTabForCapture(tab);
                 all &= Capture(window.Handle,
                     Path.Combine(outDir,
-                        $"parametres-{SettingsWindow.TabSlug(tab)}-{theme}-{percent}.png"));
+                        $"parametres-{SettingsWindow.TabSlug(tab)}-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
             }
             return all;
         }
@@ -218,7 +269,7 @@ public class CaptureBench
             {
                 window.ShowStepForCapture(step);
                 all &= Capture(window.Handle,
-                    Path.Combine(outDir, $"onboarding-etape{step + 1}-{theme}-{percent}.png"));
+                    Path.Combine(outDir, $"onboarding-etape{step + 1}-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
             }
             return all;
         }
@@ -234,7 +285,7 @@ public class CaptureBench
         try
         {
             window.Show();
-            return Capture(window.Handle, Path.Combine(outDir, $"couches-{theme}-{percent}.png"));
+            return Capture(window.Handle, Path.Combine(outDir, $"couches-{theme}-{percent}{DensitySuffix}{TypeSuffix}.png"));
         }
         finally
         {

@@ -154,6 +154,37 @@ sealed partial class OnboardingWindow
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // Anatomie d'une carte
+    // ═══════════════════════════════════════════════════════════════
+    //
+    // Les trois peintres de carte — DrawStepCard, DrawStepCardWithRuns, DrawToggleStepCard —
+    // portaient chacun leur copie de ces quatre valeurs, toutes en dur : titre de 24 px, pastille
+    // de 34 × 24, interligne de 22, et un plancher de carte de 73 ou 78. Mesuré le 2026-08-30 :
+    // ce plancher **était** la hauteur d'Onboarding. Cinq cartes à 73 font 365 px sur 724, et
+    // c'est pourquoi réduire la taille du texte ne changeait rien — les cartes restaient à leur
+    // plancher, avec juste plus de vide dedans.
+    //
+    // Elles se mesurent désormais sur les polices qu'elles rendent. Le seul plancher qui reste
+    // est la pastille : une carte ne peut pas être plus courte que le numéro qu'elle porte.
+
+    /// <summary>Hauteur de la ligne de titre d'une carte.</summary>
+    private int CardTitleHeight(IntPtr hdc) => MeasureSingleLineHeight(hdc, _hFontBold) + S(4);
+
+    /// <summary>Interligne des descriptions en fragments colorés.</summary>
+    private int CardRunLineHeight(IntPtr hdc) => MeasureSingleLineHeight(hdc, _hFontText) + S(2);
+
+    /// <summary>Pastille du numéro : deux chiffres de large, une ligne de haut.</summary>
+    private int BadgeWidth(IntPtr hdc) => MeasureSingleLineWidth(hdc, _hFontSmall, "88") + S(14);
+
+    private int BadgeHeight(IntPtr hdc) => MeasureSingleLineHeight(hdc, _hFontSmall) + S(6);
+
+    /// <summary>
+    /// Plancher d'une carte : sa pastille et le rembourrage vertical qui l'entoure. C'est le seul
+    /// qui subsiste, et il n'est pas arbitraire — en dessous, la pastille sortirait de la carte.
+    /// </summary>
+    private int CardFloor(IntPtr hdc) => S(12) * 2 + BadgeHeight(hdc);
+
+    // ═══════════════════════════════════════════════════════════════
     // Survol
     // ═══════════════════════════════════════════════════════════════
 
@@ -257,8 +288,11 @@ sealed partial class OnboardingWindow
     /// </summary>
     private string ControlText(IntPtr control)
     {
+        // StepResources et non « 2 » : cette ligne est la douzième du fichier d'à côté, et la
+        // seule que le passage à quatre étapes du 2026-08-30 avait oubliée. Le rendu l'a montrée
+        // — le bouton de la dernière étape annonçait « Suivant » au lieu de « C'est parti ! ».
         if (control == _hWndBtnNext)
-            return _currentStep == 2 ? L.Onboarding_LetsGo : L.Onboarding_Next;
+            return _currentStep == StepResources ? L.Onboarding_LetsGo : L.Onboarding_Next;
         if (control == _hWndBtnPrev) return L.Onboarding_Prev;
         if (control == _hWndBtnTry) return L.Onboarding_TryNow;
         if (control == _hWndChkAutoStart) return L.Onboarding_ChkAutoStart;

@@ -56,7 +56,7 @@ sealed class UsageStatsWindow : IDisposable
     private Action? _themeChanged;
 
     private float _dpiScale;
-    private int S(int val) => (int)(val * _dpiScale);
+    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
 
     /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.
     /// _dpiScale reste la mesure de travail de cette fenêtre, qui multiplie des dizaines de
