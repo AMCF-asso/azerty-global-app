@@ -40,6 +40,10 @@ sealed partial class SettingsWindow : IDisposable
     private const int IDC_RADIO_COMPAT_AUTO = 3115;
     private const int IDC_RADIO_COMPAT_FORCEON = 3116;
     private const int IDC_RADIO_COMPAT_FORCEOFF = 3117;
+    // Barre d'onglets (2026-08-30)
+    private const int IDC_TAB_SHORTCUTS = 3119;
+    private const int IDC_TAB_PREFERENCES = 3120;
+    private const int IDC_TAB_COMPAT = 3121;
 
     // Listbox Win32 (section Apps suspendues)
     private const uint LBS_NOTIFY = 0x0001;
@@ -105,7 +109,14 @@ sealed partial class SettingsWindow : IDisposable
         public int HeaderTitleY;
         public int HeaderDividerY;
         public Win32.RECT LogoRect;
-        public Win32.RECT ShortcutsPanel;
+        // Onglet visible, ses trois rectangles de barre, et le panneau qui porte son contenu.
+        // Les cinq « Panel » d'avant les onglets ont disparu : ils décrivaient cinq sections
+        // empilées dans un seul panneau, qui vivent désormais dans trois.
+        public int Tab;
+        public Win32.RECT[] TabRects;
+        public int TabStripBottom;
+        public Win32.RECT ContentPanel;
+        public int PanelBottom;
         public int ShortcutsLabelX;
         public int ShortcutsLabelWidth;
         public int ShortcutsShortcutX;
@@ -118,21 +129,19 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT SearchEditRect;
         public Win32.RECT ValidationRect;
         public Win32.RECT ResetRect;
-        public Win32.RECT PreferencesPanel;
         public Win32.RECT AutoStartRect;
         public Win32.RECT NotificationsRect;
         public Win32.RECT ManagedNotificationsRect;
         public Win32.RECT OnboardingRect;
         public Win32.RECT ManagedOnboardingRect;
         public Win32.RECT TrainingRect;
-        public Win32.RECT LanguagePanel;
+        public int LanguageTitleTop;
         public Win32.RECT LanguageFrRect;
         public Win32.RECT LanguageEnRect;
         public Win32.RECT ManagedLanguageRect;
-        public Win32.RECT WindowsPanel;
+        public int WindowsTitleTop;
         public Win32.RECT ResetVirtualKeyboardWindowRect;
         public Win32.RECT ResetLessonsWindowRect;
-        public Win32.RECT CompatPanel;
         public Win32.RECT CompatListRect;
         public Win32.RECT CompatAddRect;
         public Win32.RECT CompatRemoveRect;
@@ -169,6 +178,8 @@ sealed partial class SettingsWindow : IDisposable
     private readonly bool _managedLanguage =
         PolicyManager.IsLanguageManaged(PolicyManager.Current.Language);
     // Section « Apps suspendues » (v1.2.0)
+    private readonly IntPtr[] _hWndTabs = new IntPtr[TabCount];
+    private int _activeTab = TabShortcuts;
     private IntPtr _hWndCompatList;
     private IntPtr _hWndCompatAdd;
     private IntPtr _hWndCompatRemove;
@@ -306,6 +317,8 @@ sealed partial class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndRadioCompatAuto, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndRadioCompatForceOn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndRadioCompatForceOff, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        for (int i = 0; i < TabCount; i++)
+            Win32.SendMessageW(_hWndTabs[i], Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
     }
 
     private void CreateMainWindow()
@@ -356,6 +369,8 @@ sealed partial class SettingsWindow : IDisposable
                 return;
             ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
             ThemeWindow.ApplyChrome(_hWnd);
+            InvalidateOwnerDrawControls();
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         };
         Theme.Changed += _themeChanged;
     }
@@ -363,6 +378,22 @@ sealed partial class SettingsWindow : IDisposable
     private void CreateControls()
     {
         var hInstance = Win32.GetModuleHandleW(null);
+
+        // La barre d'onglets, créée avant tout le reste : Windows construit l'ordre de
+        // tabulation dans l'ordre de création des enfants, et les onglets doivent venir en
+        // premier — c'est par eux qu'on choisit ce qu'on va régler.
+        //
+        // Des BUTTON BS_OWNERDRAW plutôt qu'un SysTabControl32 : le contrôle système ne connaît
+        // aucun jeton de la charte, et un bouton rend gratuitement le focus, l'espace, l'entrée
+        // et WM_COMMAND.
+        int[] tabIds = { IDC_TAB_SHORTCUTS, IDC_TAB_PREFERENCES, IDC_TAB_COMPAT };
+        for (int i = 0; i < TabCount; i++)
+        {
+            _hWndTabs[i] = Win32.CreateWindowExW(0, "BUTTON", TabLabel(i),
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)tabIds[i], hInstance, IntPtr.Zero);
+        }
 
         _hWndEditKeyboard = Win32.CreateWindowExW(0, "EDIT",
             ConfigManager.GetShortcutDisplayName(_keyboardVk),
@@ -609,9 +640,92 @@ sealed partial class SettingsWindow : IDisposable
             layout.CompatForceOffRect.left, layout.CompatForceOffRect.top,
             layout.CompatForceOffRect.right - layout.CompatForceOffRect.left,
             layout.CompatForceOffRect.bottom - layout.CompatForceOffRect.top, true);
+
+        for (int i = 0; i < TabCount; i++)
+        {
+            var r = layout.TabRects[i];
+            Win32.MoveWindow(_hWndTabs[i], r.left, r.top, r.right - r.left, r.bottom - r.top, true);
+        }
+
+        ApplyTabVisibility(layout.Tab);
     }
 
-    private LayoutInfo GetLayout(int winW, int winH)
+    /// <summary>
+    /// Montre les contrôles de l'onglet visible et cache les autres. Cacher suffit : Windows
+    /// retire un contrôle invisible du parcours de tabulation, ce qui évite d'avoir à toucher
+    /// aux styles WS_TABSTOP à chaque changement d'onglet.
+    /// </summary>
+    private void ApplyTabVisibility(int tab)
+    {
+        Show(_hWndEditKeyboard, tab == TabShortcuts);
+        Show(_hWndEditSearch, tab == TabShortcuts);
+        Show(_hWndLinkReset, tab == TabShortcuts);
+        Show(_hWndValidation, tab == TabShortcuts);
+
+        Show(_hWndChkAutoStart, tab == TabPreferences);
+        Show(_hWndChkNotifications, tab == TabPreferences);
+        Show(_hWndChkOnboarding, tab == TabPreferences);
+        Show(_hWndChkTraining, tab == TabPreferences);
+        Show(_hWndRadioLangFr, tab == TabPreferences);
+        Show(_hWndRadioLangEn, tab == TabPreferences);
+        Show(_hWndResetVirtualKeyboardWindow, tab == TabPreferences);
+        Show(_hWndResetLessonsWindow, tab == TabPreferences);
+        Show(_hWndManagedNotifications, tab == TabPreferences && _managedNotifications);
+        Show(_hWndManagedOnboarding, tab == TabPreferences && _managedOnboarding);
+        Show(_hWndManagedLanguage, tab == TabPreferences && _managedLanguage);
+
+        Show(_hWndCompatList, tab == TabCompat);
+        Show(_hWndCompatAdd, tab == TabCompat);
+        Show(_hWndCompatRemove, tab == TabCompat);
+        Show(_hWndRadioCompatAuto, tab == TabCompat);
+        Show(_hWndRadioCompatForceOn, tab == TabCompat);
+        Show(_hWndRadioCompatForceOff, tab == TabCompat);
+    }
+
+    private static void Show(IntPtr control, bool visible)
+    {
+        if (control != IntPtr.Zero)
+            Win32.ShowWindow(control, visible ? 5 : 0); // SW_SHOW / SW_HIDE
+    }
+
+    /// <summary>
+    /// Change d'onglet. La fenêtre ne change pas de taille : MeasureRequiredClientSize prend
+    /// déjà le plus grand des trois, pour qu'un changement d'onglet ne fasse pas sauter la
+    /// fenêtre sous le curseur.
+    /// </summary>
+    private void SetActiveTab(int tab)
+    {
+        if (tab < 0 || tab >= TabCount || tab == _activeTab)
+            return;
+
+        _activeTab = tab;
+        RepositionControls();
+        InvalidateOwnerDrawControls();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>Les trois onglets, arrêtés par Antoine le 2026-08-30.</summary>
+    private const int TabCount = 3;
+    private const int TabShortcuts = 0;
+    private const int TabPreferences = 1;
+    private const int TabCompat = 2;
+
+    private static string TabLabel(int tab) => tab switch
+    {
+        TabShortcuts => L.Settings_SectionShortcuts,
+        TabCompat => L.Settings_SectionCompat,
+        _ => L.Settings_SectionPreferences,
+    };
+
+    private LayoutInfo GetLayout(int winW, int winH) => GetLayout(winW, winH, _activeTab);
+
+    /// <summary>
+    /// Mise en page d'un onglet. Les trois flux partent du même haut de panneau : seul celui de
+    /// l'onglet demandé décide de la hauteur du panneau, les deux autres sont calculés quand
+    /// même — <see cref="MeasureRequiredClientSize"/> en a besoin pour que la fenêtre ne change
+    /// pas de taille quand on change d'onglet.
+    /// </summary>
+    private LayoutInfo GetLayout(int winW, int winH, int tab)
     {
         int margin = S(8);
         int contentWidth = winW - margin * 2;
@@ -629,7 +743,6 @@ sealed partial class SettingsWindow : IDisposable
             int headerTitleY = headerTop + Math.Max(0, (headerLineHeight - titleHeight) / 2);
             int headerBottom = headerTop + headerLineHeight + S(9);
 
-            int shortcutsPanelTop = headerBottom + S(7);
             int panelTitleHeight = MeasureSingleLineHeight(hdc, _hFontPanelTitle);
             int textLineHeight = MeasureSingleLineHeight(hdc, _hFontText);
             // + la marge de focus des deux côtés : l'anneau se dessine à l'extérieur du
@@ -637,92 +750,108 @@ sealed partial class SettingsWindow : IDisposable
             int focusMargin = ThemeControls.FocusMargin(_dpi);
             int checkboxHeight = Math.Max(S(18), MeasureSingleLineHeight(hdc, _hFontBold))
                 + focusMargin * 2;
+            int buttonHeight = ThemeControls.MeasureButtonHeight(hdc, _hFontButton, _dpi)
+                + focusMargin * 2;
             int linkHeight = MeasureSingleLineHeight(hdc, _hFontLinkStrong);
             int validationHeight = MeasureSingleLineHeight(hdc, _hFontSmall);
 
+            // ── Barre d'onglets ─────────────────────────────────────────
+            // Largeurs inégales, chacune celle de son libellé : un intitulé court n'a aucune
+            // raison d'occuper la place du plus long, et la traduction anglaise ne les aligne
+            // pas non plus.
+            int tabHeight = ThemeControls.MeasureTabHeight(hdc, _hFontBold, _dpi);
+            int tabTop = headerBottom + S(6);
+            var tabRects = new Win32.RECT[TabCount];
+            int tabX = margin;
+            for (int i = 0; i < TabCount; i++)
+            {
+                int tabW = ThemeControls.MeasureTabWidth(hdc, _hFontBold, TabLabel(i), _dpi);
+                tabRects[i] = Rect(tabX, tabTop, tabW, tabHeight);
+                tabX += tabW;
+            }
+
+            int panelTop = tabTop + tabHeight;
             int labelX = margin + panelPadX;
-            // Mesurée, pas constante : les 120 px dataient des polices d'avant la charte, et
-            // le commentaire qui les justifiait — « assez pour "Virtual keyboard" » — avait
-            // cessé d'être vrai sans que rien ne le dise.
+            int innerWidth = contentWidth - panelPadX * 2;
+            int cursor = panelTop + S(12);
+
+            // ── Onglet Raccourcis ───────────────────────────────────────
             int labelWidth = Math.Max(
                 MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelKeyboard),
                 MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelSearch)) + S(6);
             int keyOuterW = S(28);
             int keyOuterH = S(24);
-            int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
             int shortcutX = labelX + labelWidth + S(6);
-            int shortcutWidth = keyOuterX - shortcutX - S(8);
+            // La boîte suit le préfixe « Ctrl + Maj + » au lieu de fuir au bord droit : depuis
+            // que la fenêtre s'élargit avec son contenu, la coller à droite laissait la touche
+            // à cinquante pixels du « + » qu'elle complète.
+            int shortcutWidth = 0;
+            foreach (var (runText, _, runFont) in GetShortcutPrefixRuns())
+                shortcutWidth += MeasureSingleLineWidth(hdc, runFont, runText);
+            int keyOuterX = shortcutX + shortcutWidth + S(4);
 
-            int keyboardRowY = shortcutsPanelTop + S(30);
+            int keyboardRowY = cursor;
             int searchRowY = keyboardRowY + Math.Max(S(28), textLineHeight + S(11));
 
             var keyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, keyOuterH);
             var searchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, keyOuterH);
             var keyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, keyOuterH - 2);
             var searchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, keyOuterH - 2);
+
             int resetY = searchRowY + Math.Max(S(20), textLineHeight + S(7));
-            // S(118) rendait « Valeurs par défaut » en « Valeurs par » : la police soulignée de
-            // la charte est plus large que celle d'origine, et un lien tronqué ne se voit pas
-            // comme un libellé tronqué — il se lit comme un autre lien.
             int resetWidth = MeasureSingleLineWidth(hdc, _hFontLinkStrong, L.Settings_LinkResetDefaults);
             var resetRect = Rect(labelX, resetY, resetWidth, Math.Max(S(18), linkHeight));
 
             bool showValidation = !string.IsNullOrEmpty(_validationMessage);
             int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
             int currentValidationHeight = showValidation ? Math.Max(S(15), validationHeight) : 0;
-            var validationRect = Rect(labelX, validationTop,
-                contentWidth - panelPadX * 2, currentValidationHeight);
+            var validationRect = Rect(labelX, validationTop, innerWidth, currentValidationHeight);
+            int shortcutsBottom = validationRect.bottom;
 
-            int prefsTitleTop = (showValidation ? validationRect.bottom : resetRect.bottom) + S(10);
+            // ── Onglet Préférences ──────────────────────────────────────
             int checkboxGap = S(6);
-            var autoStartRect = Rect(labelX, prefsTitleTop + panelTitleHeight + S(9),
-                contentWidth - panelPadX * 2, checkboxHeight);
-            var notificationsRect = Rect(labelX, autoStartRect.bottom + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
-            // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur de
-            // la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est imposé —
-            // la fenêtre est alors exactement celle d'avant le lot C.
             int managedHeight = Math.Max(S(13), validationHeight);
             int managedIndent = S(18);
             int managedGap = S(2);
-            int managedWidth = contentWidth - panelPadX * 2 - managedIndent;
+            int managedWidth = innerWidth - managedIndent;
+
+            var autoStartRect = Rect(labelX, cursor, innerWidth, checkboxHeight);
+            var notificationsRect = Rect(labelX, autoStartRect.bottom + checkboxGap,
+                innerWidth, checkboxHeight);
+            // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur de
+            // la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est imposé.
             var managedNotificationsRect = Rect(labelX + managedIndent,
                 notificationsRect.bottom + managedGap, managedWidth,
                 _managedNotifications ? managedHeight : 0);
             var onboardingRect = Rect(labelX,
                 (_managedNotifications ? managedNotificationsRect.bottom : notificationsRect.bottom) + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
+                innerWidth, checkboxHeight);
             var managedOnboardingRect = Rect(labelX + managedIndent,
                 onboardingRect.bottom + managedGap, managedWidth,
                 _managedOnboarding ? managedHeight : 0);
             var trainingRect = Rect(labelX,
                 (_managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom) + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
+                innerWidth, checkboxHeight);
 
             int languageTitleTop = trainingRect.bottom + S(18);
             var languageFrRect = Rect(labelX, languageTitleTop + panelTitleHeight + S(9),
-                contentWidth - panelPadX * 2, checkboxHeight);
+                innerWidth, checkboxHeight);
             var languageEnRect = Rect(labelX, languageFrRect.bottom + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
+                innerWidth, checkboxHeight);
             var managedLanguageRect = Rect(labelX + managedIndent,
                 languageEnRect.bottom + managedGap, managedWidth,
                 _managedLanguage ? managedHeight : 0);
 
             int windowsTitleTop =
                 (_managedLanguage ? managedLanguageRect.bottom : languageEnRect.bottom) + S(18);
-            int buttonHeight = ThemeControls.MeasureButtonHeight(hdc, _hFontButton, _dpi)
-                + focusMargin * 2;
             var resetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + panelTitleHeight + S(9),
-                contentWidth - panelPadX * 2, buttonHeight);
+                innerWidth, buttonHeight);
             var resetLessonsWindowRect = Rect(labelX, resetVirtualKeyboardWindowRect.bottom + S(7),
-                contentWidth - panelPadX * 2, buttonHeight);
+                innerWidth, buttonHeight);
+            int preferencesBottom = resetLessonsWindowRect.bottom;
 
-            // Section « Apps suspendues » (v1.2.0) : liste des overrides par process,
-            // boutons Ajouter/Retirer, radio du mode pour l'entrée sélectionnée.
-            int compatTitleTop = resetLessonsWindowRect.bottom + S(18);
-            int innerWidth = contentWidth - panelPadX * 2;
-            var compatListRect = Rect(labelX, compatTitleTop + panelTitleHeight + S(9),
-                innerWidth, S(58));
+            // ── Onglet Apps suspendues ──────────────────────────────────
+            var compatListRect = Rect(labelX, cursor, innerWidth, S(58));
             int compatBtnW = (innerWidth - S(6)) / 2;
             var compatAddRect = Rect(labelX, compatListRect.bottom + S(6), compatBtnW, buttonHeight);
             var compatRemoveRect = Rect(labelX + compatBtnW + S(6), compatListRect.bottom + S(6),
@@ -730,13 +859,21 @@ sealed partial class SettingsWindow : IDisposable
             var compatAutoRect = Rect(labelX, compatAddRect.bottom + S(8), innerWidth, checkboxHeight);
             var compatForceOnRect = Rect(labelX, compatAutoRect.bottom + S(4), innerWidth, checkboxHeight);
             var compatForceOffRect = Rect(labelX, compatForceOnRect.bottom + S(4), innerWidth, checkboxHeight);
+            int compatBottom = compatForceOffRect.bottom;
 
-            int panelBottom = compatForceOffRect.bottom + S(12);
-            var shortcutsPanel = Rect(margin, shortcutsPanelTop, contentWidth, panelBottom - shortcutsPanelTop);
-            var preferencesPanel = Rect(margin, prefsTitleTop, contentWidth, panelBottom - prefsTitleTop);
-            var languagePanel = Rect(margin, languageTitleTop, contentWidth, panelBottom - languageTitleTop);
-            var windowsPanel = Rect(margin, windowsTitleTop, contentWidth, panelBottom - windowsTitleTop);
-            var compatPanel = Rect(margin, compatTitleTop, contentWidth, panelBottom - compatTitleTop);
+            int activeBottom = tab switch
+            {
+                TabShortcuts => shortcutsBottom,
+                TabCompat => compatBottom,
+                _ => preferencesBottom,
+            };
+            // Le panneau descend jusqu'au bas de la fenêtre quand celle-ci est plus haute que
+            // son contenu — ce qui est le cas dès qu'on ouvre un onglet court, la fenêtre étant
+            // dimensionnée sur le plus haut des trois, et dès que l'utilisateur l'agrandit.
+            // PanelBottom garde la hauteur mesurée : c'est elle que MeasureRequiredClientSize
+            // additionne, pas celle du panneau étiré.
+            int panelBottom = activeBottom + S(12);
+            int panelDrawBottom = Math.Max(panelBottom, winH - margin);
 
             return new LayoutInfo
             {
@@ -745,7 +882,11 @@ sealed partial class SettingsWindow : IDisposable
                 HeaderTitleY = headerTitleY,
                 HeaderDividerY = headerBottom,
                 LogoRect = Rect(margin, logoY, logoSize, logoSize),
-                ShortcutsPanel = shortcutsPanel,
+                Tab = tab,
+                TabRects = tabRects,
+                TabStripBottom = panelTop,
+                ContentPanel = Rect(margin, panelTop, contentWidth, panelDrawBottom - panelTop),
+                PanelBottom = panelBottom,
                 ShortcutsLabelX = labelX,
                 ShortcutsLabelWidth = labelWidth,
                 ShortcutsShortcutX = shortcutX,
@@ -758,21 +899,19 @@ sealed partial class SettingsWindow : IDisposable
                 SearchEditRect = searchEditRect,
                 ValidationRect = validationRect,
                 ResetRect = resetRect,
-                PreferencesPanel = preferencesPanel,
                 AutoStartRect = autoStartRect,
                 NotificationsRect = notificationsRect,
                 ManagedNotificationsRect = managedNotificationsRect,
                 OnboardingRect = onboardingRect,
                 ManagedOnboardingRect = managedOnboardingRect,
                 TrainingRect = trainingRect,
-                LanguagePanel = languagePanel,
+                LanguageTitleTop = languageTitleTop,
                 LanguageFrRect = languageFrRect,
                 LanguageEnRect = languageEnRect,
                 ManagedLanguageRect = managedLanguageRect,
-                WindowsPanel = windowsPanel,
+                WindowsTitleTop = windowsTitleTop,
                 ResetVirtualKeyboardWindowRect = resetVirtualKeyboardWindowRect,
                 ResetLessonsWindowRect = resetLessonsWindowRect,
-                CompatPanel = compatPanel,
                 CompatListRect = compatListRect,
                 CompatAddRect = compatAddRect,
                 CompatRemoveRect = compatRemoveRect,
@@ -825,6 +964,13 @@ sealed partial class SettingsWindow : IDisposable
                 + MeasureSingleLineWidth(hdc, _hFontTitle, ProductIdentity.DisplayName) + S(8)
                 + MeasureSingleLineWidth(hdc, _hFontVersion, version) + S(24) + S(6) + margin;
 
+            // La barre d'onglets ne se replie pas : les trois intitulés bout à bout sont un
+            // plancher de largeur au même titre que l'en-tête.
+            int tabStripWidth = margin * 2;
+            for (int i = 0; i < TabCount; i++)
+                tabStripWidth += ThemeControls.MeasureTabWidth(hdc, _hFontBold, TabLabel(i), _dpi);
+            headerWidth = Math.Max(headerWidth, tabStripWidth);
+
             // Ligne de raccourci : étiquette, préfixe « Ctrl + Maj + », boîte de touche.
             int labelWidth = Math.Max(
                 MeasureSingleLineWidth(hdc, _hFontText, L.Settings_ShortcutLabelKeyboard),
@@ -869,10 +1015,14 @@ sealed partial class SettingsWindow : IDisposable
             Win32.ReleaseDC(_hWnd, hdc);
         }
 
-        // GetLayout prend son propre DC : le nôtre est rendu avant de l'appeler.
-        LayoutInfo layout = GetLayout(width, 0);
-        int height = layout.CompatForceOffRect.bottom + S(12) + margin + reserve;
-        return (width, Math.Max(S(BASE_WIN_H), height));
+        // GetLayout prend son propre DC : le nôtre est rendu avant de l'appeler. La hauteur
+        // est celle du plus haut des trois onglets, pas celle de l'onglet visible : changer
+        // d'onglet ne doit pas faire sauter la fenêtre sous le curseur.
+        int height = 0;
+        for (int tab = 0; tab < TabCount; tab++)
+            height = Math.Max(height, GetLayout(width, 0, tab).PanelBottom);
+
+        return (width, height + margin + reserve);
     }
 
     private static Win32.RECT Rect(int left, int top, int width, int height)
@@ -1088,6 +1238,15 @@ sealed partial class SettingsWindow : IDisposable
                     // le fait à sa place. Les trois dernières n'avaient aucun cas — leur valeur
                     // n'était lue qu'à la fermeture de la fenêtre, ce qui suffisait tant que
                     // Windows la tenait.
+                    case IDC_TAB_SHORTCUTS:
+                        if (code == 0) SetActiveTab(TabShortcuts);
+                        break;
+                    case IDC_TAB_PREFERENCES:
+                        if (code == 0) SetActiveTab(TabPreferences);
+                        break;
+                    case IDC_TAB_COMPAT:
+                        if (code == 0) SetActiveTab(TabCompat);
+                        break;
                     case IDC_CHK_TRAINING:
                         if (code == 0)
                         {
@@ -1688,12 +1847,21 @@ sealed partial class SettingsWindow : IDisposable
         }
 
         DrawHeader(hdc, gfx, layout, cw);
-        GdiHelpers.DrawPanel(hdc, layout.ShortcutsPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, 0, 0);
-        PaintShortcutPanel(hdc, layout);
-        PaintPreferencesPanel(hdc, layout);
-        PaintLanguagePanel(hdc, layout);
-        PaintWindowsPanel(hdc, layout);
-        PaintCompatPanel(hdc, layout);
+        // Le fond de la barre d'onglets appartient au papier : les trois boutons se peignent
+        // eux-mêmes et WS_CLIPCHILDREN les découpe de ce tampon.
+        GdiHelpers.DrawPanel(hdc, layout.ContentPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, 0, 0);
+        switch (layout.Tab)
+        {
+            case TabShortcuts:
+                PaintShortcutTab(hdc, layout);
+                break;
+            case TabCompat:
+                PaintCompatTab(hdc, layout);
+                break;
+            default:
+                PaintPreferencesTab(hdc, layout);
+                break;
+        }
 
         if (gfx != IntPtr.Zero)
             Win32.GdipDeleteGraphics(gfx);
@@ -1755,21 +1923,33 @@ sealed partial class SettingsWindow : IDisposable
         GdiHelpers.FillSolidRect(hdc, Rect(layout.Margin, layout.HeaderDividerY, cw - layout.Margin * 2, 1), CLR_SEPARATOR);
     }
 
-    private void PaintShortcutPanel(IntPtr hdc, LayoutInfo layout)
+    /// <summary>
+    /// Titre d'un bloc à l'intérieur d'un onglet, précédé de son filet. Le **premier** bloc d'un
+    /// onglet n'en reçoit pas : l'onglet le nomme déjà, et répéter « Raccourcis » sous l'onglet
+    /// « Raccourcis » ne dit rien de plus. Seuls Langue et Fenêtres en portent un, parce qu'ils
+    /// partagent l'onglet Préférences.
+    /// </summary>
+    private void PaintSectionTitle(IntPtr hdc, LayoutInfo layout, int top, string title)
     {
-        int titleX = layout.ShortcutsPanel.left + S(12);
-        int titleY = layout.ShortcutsPanel.top + S(8);
+        int left = layout.ContentPanel.left + S(12);
+        int right = layout.ContentPanel.right - S(12);
+        GdiHelpers.FillSolidRect(hdc, Rect(left, top - S(8), right - left, 1), CLR_SEPARATOR);
+
         Win32.SelectObject(hdc, _hFontPanelTitle);
         Win32.SetTextColor(hdc, CLR_LINK);
         var titleRect = new Win32.RECT
         {
-            left = titleX,
-            top = titleY,
-            right = layout.ShortcutsPanel.right - S(12),
-            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
+            left = left,
+            top = top,
+            right = right,
+            bottom = top + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
-        Win32.DrawTextW(hdc, L.Settings_SectionShortcuts, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, title, -1, ref titleRect,
+            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+    }
 
+    private void PaintShortcutTab(IntPtr hdc, LayoutInfo layout)
+    {
         DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.KeyboardRowY,
             L.Settings_ShortcutLabelKeyboard, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
         DrawKeyBox(hdc, layout.KeyboardBoxRect, _keyboardValid, _focusedShortcut == _hWndEditKeyboard);
@@ -1777,89 +1957,20 @@ sealed partial class SettingsWindow : IDisposable
         DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.SearchRowY,
             L.Settings_ShortcutLabelSearch, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
         DrawKeyBox(hdc, layout.SearchBoxRect, _searchValid, _focusedShortcut == _hWndEditSearch);
-
-        int dividerY = layout.PreferencesPanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
     }
 
-    private void PaintPreferencesPanel(IntPtr hdc, LayoutInfo layout)
+    private void PaintPreferencesTab(IntPtr hdc, LayoutInfo layout)
     {
-        int titleX = layout.PreferencesPanel.left + S(12);
-        int titleY = layout.PreferencesPanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.ShortcutsPanel.right - S(12),
-            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        PaintSectionTitle(hdc, layout, layout.LanguageTitleTop, L.Settings_SectionLanguage);
+        PaintSectionTitle(hdc, layout, layout.WindowsTitleTop, L.Settings_SectionWindows);
     }
 
-    private void PaintLanguagePanel(IntPtr hdc, LayoutInfo layout)
+    private void PaintCompatTab(IntPtr hdc, LayoutInfo layout)
     {
-        int dividerY = layout.LanguagePanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
-
-        int titleX = layout.LanguagePanel.left + S(12);
-        int titleY = layout.LanguagePanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.LanguagePanel.right - S(12),
-            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionLanguage, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
-    private void PaintWindowsPanel(IntPtr hdc, LayoutInfo layout)
-    {
-        int dividerY = layout.WindowsPanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
-
-        int titleX = layout.WindowsPanel.left + S(12);
-        int titleY = layout.WindowsPanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.WindowsPanel.right - S(12),
-            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionWindows, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
-    private void PaintCompatPanel(IntPtr hdc, LayoutInfo layout)
-    {
-        int dividerY = layout.CompatPanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
-
-        int titleX = layout.CompatPanel.left + S(12);
-        int titleY = layout.CompatPanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.CompatPanel.right - S(12),
-            bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionCompat, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-
         // Le cadre de la liste, que WS_BORDER dessinait aux couleurs du système. Même primitive
         // que les champs de raccourci : une liste est un champ, du point de vue de la charte.
+        ThemeControls.DrawFieldFrame(hdc, layout.CompatListRect, ControlState.None,
+            Theme.Current, _dpi);
         ThemeControls.DrawFieldFrame(hdc, layout.CompatListRect, ControlState.None,
             Theme.Current, _dpi);
     }

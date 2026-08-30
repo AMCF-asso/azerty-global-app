@@ -57,7 +57,7 @@ sealed partial class SettingsWindow
     private Win32.SUBCLASSPROC? _hoverSubclassProc;
 
     /// <summary>
-    /// Les treize contrôles que cette fenêtre peint elle-même, dans un ordre stable : l'indice
+    /// Les seize contrôles que cette fenêtre peint elle-même, dans un ordre stable : l'indice
     /// sert d'identifiant de sous-classe, et le détachement doit retrouver le même.
     /// </summary>
     private IntPtr[] OwnerDrawControls => new[]
@@ -67,7 +67,37 @@ sealed partial class SettingsWindow
         _hWndResetVirtualKeyboardWindow, _hWndResetLessonsWindow,
         _hWndCompatAdd, _hWndCompatRemove,
         _hWndRadioCompatAuto, _hWndRadioCompatForceOn, _hWndRadioCompatForceOff,
+        _hWndTabs[0], _hWndTabs[1], _hWndTabs[2],
     };
+
+    /// <summary>
+    /// Pour le banc de captures : la fenêtre montre l'onglet demandé. Le banc ne clique pas,
+    /// et sans ce point d'entrée son contrôle visuel ne verrait jamais que le premier onglet —
+    /// soit un tiers de la fenêtre depuis le 2026-08-30.
+    /// </summary>
+    internal void ShowTabForCapture(int tab) => SetActiveTab(tab);
+
+    /// <summary>Nom de fichier de l'onglet, pour le banc.</summary>
+    internal static string TabSlug(int tab) => tab switch
+    {
+        TabShortcuts => "raccourcis",
+        TabCompat => "apps",
+        _ => "preferences",
+    };
+
+    /// <summary>Nombre d'onglets, pour le banc.</summary>
+    internal static int CaptureTabCount => TabCount;
+
+    /// <summary>Rang de l'onglet que porte ce handle, ou -1 si ce n'en est pas un.</summary>
+    private int TabIndexOf(IntPtr control)
+    {
+        for (int i = 0; i < TabCount; i++)
+        {
+            if (control != IntPtr.Zero && control == _hWndTabs[i])
+                return i;
+        }
+        return -1;
+    }
 
     private bool GetCheck(IntPtr control) =>
         control != IntPtr.Zero && _checkedState.TryGetValue(control, out bool value) && value;
@@ -84,6 +114,28 @@ sealed partial class SettingsWindow
     }
 
     private void ToggleCheck(IntPtr control) => SetCheck(control, !GetCheck(control));
+
+    /// <summary>
+    /// Rafraîchit tous les contrôles que la fenêtre peint elle-même.
+    ///
+    /// <c>InvalidateRect</c> sur la fenêtre n'atteint pas ses enfants — et depuis que
+    /// <c>WS_CLIPCHILDREN</c> est posé, la peinture du parent ne passe même plus dessus. Deux
+    /// changements les concernent tous et ne viennent d'aucun d'eux : la bascule d'onglet, qui
+    /// déplace le trait d'accent, et la bascule de thème de Windows, qui change chaque jeton.
+    /// Sans ce rafraîchissement, l'onglet actif restait souligné à son ancienne place et les
+    /// contrôles gardaient les couleurs du thème précédent.
+    /// </summary>
+    private void InvalidateOwnerDrawControls()
+    {
+        foreach (var control in OwnerDrawControls)
+        {
+            if (control != IntPtr.Zero)
+                Win32.InvalidateRect(control, IntPtr.Zero, true);
+        }
+
+        if (_hWndCompatList != IntPtr.Zero)
+            Win32.InvalidateRect(_hWndCompatList, IntPtr.Zero, true);
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // Survol
@@ -185,7 +237,8 @@ sealed partial class SettingsWindow
         if (control == _hWndRadioCompatAuto) return L.Settings_CompatModeAuto;
         if (control == _hWndRadioCompatForceOn) return L.Settings_CompatModeForceOn;
         if (control == _hWndRadioCompatForceOff) return L.Settings_CompatModeForceOff;
-        return string.Empty;
+        int tab = TabIndexOf(control);
+        return tab >= 0 ? TabLabel(tab) : string.Empty;
     }
 
     private bool TryDrawItem(IntPtr lParam)
@@ -204,6 +257,16 @@ sealed partial class SettingsWindow
         if ((dis.itemState & Win32.ODS_FOCUS) != 0) state |= ControlState.Focused;
         if (_hoveredControl == dis.hwndItem) state |= ControlState.Hovered;
         if (GetCheck(dis.hwndItem)) state |= ControlState.Checked;
+
+        // Un onglet occupe tout son rectangle et pose son propre fond : contrairement aux
+        // autres contrôles, il n'est pas posé sur le panneau, il est ce qui le surmonte.
+        int tabIndex = TabIndexOf(dis.hwndItem);
+        if (tabIndex >= 0)
+        {
+            ThemeControls.DrawTab(dis.hDC, dis.rcItem, TabLabel(tabIndex), _hFontBold,
+                tabIndex == _activeTab, state, Theme.Current, _dpi);
+            return true;
+        }
 
         // La marge de focus appartient au fond du panneau : l'effacer avant de rendre le
         // contrôle, faute de quoi l'anneau se dessinerait sur un fond non peint. Surface et
