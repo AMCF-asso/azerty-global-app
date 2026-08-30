@@ -182,6 +182,8 @@ static class Win32
     public const uint WM_GETTEXT = 0x000D;
     public const uint WM_GETTEXTLENGTH = 0x000E;
     public const uint WM_DRAWITEM = 0x002B;
+    public const uint WM_MEASUREITEM = 0x002C;
+    public const uint WM_CTLCOLORLISTBOX = 0x0134;
     public const uint BS_OWNERDRAW = 0x000B;
 
     // États rendus dans DRAWITEMSTRUCT.itemState. Le survol n'y figure pas : Windows ne le
@@ -189,6 +191,13 @@ static class Win32
     public const uint ODS_SELECTED = 0x0001;
     public const uint ODS_DISABLED = 0x0004;
     public const uint ODS_FOCUS = 0x0010;
+
+    // Type du contrôle qui demande sa peinture ou sa mesure, dans DRAWITEMSTRUCT.CtlType
+    // et MEASUREITEMSTRUCT.CtlType. Une fenêtre qui peint plusieurs sortes de contrôles
+    // doit trier dessus : le handle seul ne dit pas si l'appel vient d'un bouton ou d'une
+    // ligne de liste, et les deux n'ont pas le même contrat.
+    public const uint ODT_LISTBOX = 2;
+    public const uint ODT_BUTTON = 4;
     public const int NULL_BRUSH = 5;  // GetStockObject index
 
     [StructLayout(LayoutKind.Sequential)]
@@ -216,6 +225,22 @@ static class Win32
         public IntPtr hwndItem;
         public IntPtr hDC;
         public RECT rcItem;
+        public IntPtr itemData;
+    }
+
+    /// <summary>
+    /// Hauteur d'une ligne owner-draw. Une LISTBOX LBS_OWNERDRAWFIXED ne pose la question
+    /// qu'une fois, à sa création : sur changement d'échelle la réponse est périmée, et
+    /// c'est LB_SETITEMHEIGHT qui la remet à jour.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEASUREITEMSTRUCT
+    {
+        public uint CtlType;
+        public uint CtlID;
+        public uint itemID;
+        public uint itemWidth;
+        public uint itemHeight;
         public IntPtr itemData;
     }
 

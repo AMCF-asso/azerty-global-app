@@ -2,14 +2,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 namespace AZERTYGlobal;
 
-sealed class SettingsWindow : IDisposable
+sealed partial class SettingsWindow : IDisposable
 {
-    private const uint BS_AUTOCHECKBOX = 0x0003;
-    private const uint BS_AUTORADIOBUTTON = 0x0009;
+    // BS_AUTOCHECKBOX, BS_AUTORADIOBUTTON, BM_GETCHECK, BM_SETCHECK et BST_CHECKED ont
+    // disparu avec le passage en owner-draw : Windows ne tient plus l'état coché, et le
+    // demander à un contrôle BS_OWNERDRAW rendrait toujours zéro. Voir SettingsWindow.Theme.cs.
     private const uint WS_GROUP = 0x00020000;
-    private const uint BM_GETCHECK = 0x00F0;
-    private const uint BM_SETCHECK = 0x00F1;
-    private const uint BST_CHECKED = 0x0001;
     private const uint SS_NOTIFY = 0x0100;
     private const uint ES_AUTOHSCROLL = 0x0080;
     private const uint ES_CENTER = 0x0001;
@@ -52,7 +50,6 @@ sealed class SettingsWindow : IDisposable
     private const uint LB_GETCURSEL = 0x0188;
     private const int LBN_SELCHANGE = 1;
     private const uint WS_VSCROLL = 0x00200000;
-    private const uint WS_BORDER = 0x00800000;
 
     // Plancher, et non plus taille de la fenêtre : MeasureRequiredClientSize mesure ce que le
     // contenu réclame à ce DPI et dans cette langue, la fenêtre prend le plus grand des deux.
@@ -71,8 +68,15 @@ sealed class SettingsWindow : IDisposable
     /// <c>WS_THICKFRAME</c> depuis le 2026-08-30, sur demande d'Antoine : la taille calculée
     /// n'est qu'un plancher, l'utilisateur peut agrandir. Ni minimiser ni maximiser — une
     /// fenêtre de réglages n'a rien à faire dans la barre des tâches ni en plein écran.</summary>
+    /// <c>WS_CLIPCHILDREN</c> depuis le 2026-08-30, et il n'est pas décoratif : sans lui,
+    /// OnPaint recopie son tampon sur tout le client, zones des enfants comprises, et efface
+    /// les contrôles owner-draw qui s'étaient déjà peints. Mesuré sur la matrice — treize
+    /// contrôles absents d'une cellule, présents dans la suivante, aucune règle. Les fenêtres
+    /// déjà migrées le portent toutes ; celle-ci ne l'avait pas parce que Windows repeignait
+    /// lui-même ses contrôles natifs après chaque WM_PAINT du parent.
     private const uint WindowStyle =
-        Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_THICKFRAME;
+        Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_THICKFRAME
+        | Win32.WS_CLIPCHILDREN;
 
     // Les jetons de la charte, relus a chaque peinture : une bascule de theme n'a donc rien a
     // recalculer ici. Trois noms ont disparu — CLR_PANEL_ACCENT et CLR_SUBTITLE ne peignaient
@@ -247,6 +251,7 @@ sealed class SettingsWindow : IDisposable
 
         CreateMainWindow();
         CreateControls();
+        AttachHoverTracking();
         ApplyFontsToControls();
         RepositionControls();
 
@@ -292,6 +297,10 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndManagedOnboarding, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
         Win32.SendMessageW(_hWndManagedLanguage, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
         Win32.SendMessageW(_hWndCompatList, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        // LBS_OWNERDRAWFIXED ne demande sa hauteur de ligne qu'une fois, à la création : à la
+        // bascule d'échelle, c'est ici qu'elle se remet au DPI courant.
+        if (_hWndCompatList != IntPtr.Zero)
+            Win32.SendMessageW(_hWndCompatList, LB_SETITEMHEIGHT, IntPtr.Zero, (IntPtr)CompatItemHeight());
         Win32.SendMessageW(_hWndCompatAdd, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndCompatRemove, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndRadioCompatAuto, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -383,34 +392,34 @@ sealed class SettingsWindow : IDisposable
         Win32.SetWindowSubclass(_hWndLinkReset, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
         _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Settings_AutoStart,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
         RefreshAutoStartCheckbox();
 
         _hWndChkNotifications = Win32.CreateWindowExW(0, "BUTTON", L.Settings_Notifications,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_NOTIFICATIONS, hInstance, IntPtr.Zero);
         if (ConfigManager.NotificationsEnabled)
-            Win32.SendMessageW(_hWndChkNotifications, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+            SetCheck(_hWndChkNotifications, true);
 
         _hWndChkOnboarding = Win32.CreateWindowExW(0, "BUTTON", L.Settings_OnboardingWindow,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_ONBOARDING, hInstance, IntPtr.Zero);
         if (ConfigManager.ShowOnboardingAtStartup)
-            Win32.SendMessageW(_hWndChkOnboarding, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+            SetCheck(_hWndChkOnboarding, true);
 
         // Opt-in Défi du jour (v1.2.0) — décoché par défaut, appliqué immédiatement au
         // clic (pas à la fermeture) : l'entrée du menu tray et le module des leçons
         // dépendent de cet état.
         _hWndChkTraining = Win32.CreateWindowExW(0, "BUTTON", L.Challenge_OptIn,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
         if (ConfigManager.TrainingEnabled)
-            Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+            SetCheck(_hWndChkTraining, true);
 
         // Réglages sous politique d'entreprise (lot C) : le contrôle reste en place, grisé,
         // et porte sous lui la ligne qui dit pourquoi. Le retirer se lirait comme une
@@ -425,12 +434,12 @@ sealed class SettingsWindow : IDisposable
         // Noms de langue = endonymes, jamais traduits (un sélecteur de langue affiche
         // chaque langue dans elle-même : "Français" et "English" quelle que soit la langue active).
         _hWndRadioLangFr = Win32.CreateWindowExW(0, "BUTTON", "Français",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | WS_GROUP | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_LANG_FR, hInstance, IntPtr.Zero);
 
         _hWndRadioLangEn = Win32.CreateWindowExW(0, "BUTTON", "English",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_LANG_EN, hInstance, IntPtr.Zero);
         _hWndManagedLanguage = CreateManagedNotice(hInstance, _managedLanguage);
@@ -443,46 +452,48 @@ sealed class SettingsWindow : IDisposable
         RefreshLanguageRadios();
 
         _hWndResetVirtualKeyboardWindow = Win32.CreateWindowExW(0, "BUTTON", L.Settings_ResetVirtualKeyboard,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RESET_VIRTUAL_KEYBOARD_WINDOW, hInstance, IntPtr.Zero);
 
         _hWndResetLessonsWindow = Win32.CreateWindowExW(0, "BUTTON", L.Settings_ResetLessonsModule,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RESET_LESSONS_WINDOW, hInstance, IntPtr.Zero);
 
         // ── Section « Apps suspendues » (v1.2.0) ─────────────────────
         _hWndCompatList = Win32.CreateWindowExW(0, "LISTBOX", "",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP |
-            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER,
+            // WS_BORDER retiré : le cadre système ne connaît aucun jeton, et la charte le
+            // remplace par celui d'un champ, peint par PaintCompatPanel.
+            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LIST_COMPAT, hInstance, IntPtr.Zero);
 
         _hWndCompatAdd = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatAdd,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_COMPAT_ADD, hInstance, IntPtr.Zero);
 
         _hWndCompatRemove = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatRemove,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_COMPAT_REMOVE, hInstance, IntPtr.Zero);
 
         // WS_GROUP obligatoire sur le premier radio : termine le groupe Langue,
         // sinon cocher un mode décocherait Français/English.
         _hWndRadioCompatAuto = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeAuto,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | WS_GROUP | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_AUTO, hInstance, IntPtr.Zero);
 
         _hWndRadioCompatForceOn = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeForceOn,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEON, hInstance, IntPtr.Zero);
 
         _hWndRadioCompatForceOff = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeForceOff,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEOFF, hInstance, IntPtr.Zero);
 
@@ -621,7 +632,11 @@ sealed class SettingsWindow : IDisposable
             int shortcutsPanelTop = headerBottom + S(7);
             int panelTitleHeight = MeasureSingleLineHeight(hdc, _hFontPanelTitle);
             int textLineHeight = MeasureSingleLineHeight(hdc, _hFontText);
-            int checkboxHeight = Math.Max(S(18), MeasureSingleLineHeight(hdc, _hFontBold));
+            // + la marge de focus des deux côtés : l'anneau se dessine à l'extérieur du
+            // contrôle, donc TryDrawItem rend le libellé dans un rectangle rentré d'autant.
+            int focusMargin = ThemeControls.FocusMargin(_dpi);
+            int checkboxHeight = Math.Max(S(18), MeasureSingleLineHeight(hdc, _hFontBold))
+                + focusMargin * 2;
             int linkHeight = MeasureSingleLineHeight(hdc, _hFontLinkStrong);
             int validationHeight = MeasureSingleLineHeight(hdc, _hFontSmall);
 
@@ -695,7 +710,8 @@ sealed class SettingsWindow : IDisposable
 
             int windowsTitleTop =
                 (_managedLanguage ? managedLanguageRect.bottom : languageEnRect.bottom) + S(18);
-            int buttonHeight = S(28);
+            int buttonHeight = ThemeControls.MeasureButtonHeight(hdc, _hFontButton, _dpi)
+                + focusMargin * 2;
             var resetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + panelTitleHeight + S(9),
                 contentWidth - panelPadX * 2, buttonHeight);
             var resetLessonsWindowRect = Rect(labelX, resetVirtualKeyboardWindowRect.bottom + S(7),
@@ -708,9 +724,9 @@ sealed class SettingsWindow : IDisposable
             var compatListRect = Rect(labelX, compatTitleTop + panelTitleHeight + S(9),
                 innerWidth, S(58));
             int compatBtnW = (innerWidth - S(6)) / 2;
-            var compatAddRect = Rect(labelX, compatListRect.bottom + S(6), compatBtnW, S(24));
+            var compatAddRect = Rect(labelX, compatListRect.bottom + S(6), compatBtnW, buttonHeight);
             var compatRemoveRect = Rect(labelX + compatBtnW + S(6), compatListRect.bottom + S(6),
-                innerWidth - compatBtnW - S(6), S(24));
+                innerWidth - compatBtnW - S(6), buttonHeight);
             var compatAutoRect = Rect(labelX, compatAddRect.bottom + S(8), innerWidth, checkboxHeight);
             var compatForceOnRect = Rect(labelX, compatAutoRect.bottom + S(4), innerWidth, checkboxHeight);
             var compatForceOffRect = Rect(labelX, compatForceOnRect.bottom + S(4), innerWidth, checkboxHeight);
@@ -799,7 +815,8 @@ sealed class SettingsWindow : IDisposable
             int Box(string text) =>
                 ThemeControls.MeasureBoxRowWidth(hdc, _hFontBold, text, _dpi);
             int Button(string text) =>
-                ThemeControls.MeasureButtonWidth(hdc, _hFontButton, text, _dpi);
+                ThemeControls.MeasureButtonWidth(hdc, _hFontButton, text, _dpi)
+                    + ThemeControls.FocusMargin(_dpi) * 2;
 
             // En-tête : logo, titre, numéro de version. Il occupe toute la largeur de client,
             // pas l'intérieur d'un panneau.
@@ -881,15 +898,12 @@ sealed class SettingsWindow : IDisposable
         // dernière ouverture : resynchroniser la section Apps suspendues.
         RefreshCompatList(SelectedCompatProcess());
         // L'opt-in Défi du jour a pu changer via l'onboarding.
-        Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK,
-            ConfigManager.TrainingEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkNotifications, BM_SETCHECK,
-            ConfigManager.NotificationsEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndChkTraining, ConfigManager.TrainingEnabled);
+        SetCheck(_hWndChkNotifications, ConfigManager.NotificationsEnabled);
         // Re-synchroniser la checkbox onboarding a chaque ouverture : l'utilisateur a pu
         // modifier l'etat via la case « Ne plus afficher » du wizard depuis la derniere
         // fermeture des Settings.
-        Win32.SendMessageW(_hWndChkOnboarding, BM_SETCHECK,
-            ConfigManager.ShowOnboardingAtStartup ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndChkOnboarding, ConfigManager.ShowOnboardingAtStartup);
         RefreshLanguageRadios();
         SetValidationMessage(string.Empty);
         _keyboardValid = true;
@@ -919,7 +933,7 @@ sealed class SettingsWindow : IDisposable
 
     public void Close()
     {
-        bool autoStart = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+        bool autoStart = GetCheck(_hWndChkAutoStart);
         bool autoStartWasRegistered = AutoStart.IsRegistered;
         bool autoStartSaved = AutoStart.Set(autoStart);
         RefreshAutoStartCheckbox();
@@ -937,13 +951,13 @@ sealed class SettingsWindow : IDisposable
         // effet le jour où la politique est retirée.
         if (!_managedNotifications)
         {
-            bool notifications = Win32.SendMessageW(_hWndChkNotifications, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            bool notifications = GetCheck(_hWndChkNotifications);
             ConfigManager.SetNotifications(notifications);
         }
 
         if (!_managedOnboarding)
         {
-            bool showOnboarding = Win32.SendMessageW(_hWndChkOnboarding, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            bool showOnboarding = GetCheck(_hWndChkOnboarding);
             ConfigManager.SetShowOnboardingAtStartup(showOnboarding);
         }
 
@@ -1006,6 +1020,21 @@ sealed class SettingsWindow : IDisposable
                 return IntPtr.Zero;
             }
 
+            case Win32.WM_DRAWITEM:
+                if (TryDrawItem(lParam))
+                    return (IntPtr)1;
+                break;
+
+            case Win32.WM_MEASUREITEM:
+                if (TryMeasureItem(lParam))
+                    return (IntPtr)1;
+                break;
+
+            case Win32.WM_CTLCOLORLISTBOX:
+                // La liste peint ses lignes, pas la bande que Windows laisse sous la dernière.
+                Win32.SetBkColor(wParam, CLR_PANEL_BG);
+                return Theme.Brush(CLR_PANEL_BG);
+
             case Win32.WM_COMMAND:
             {
                 int id = wParam.ToInt32() & 0xFFFF;
@@ -1054,12 +1083,26 @@ sealed class SettingsWindow : IDisposable
                     case IDC_RADIO_LANG_EN:
                         if (code == 0) ApplyLanguageChange("en");
                         break;
+                    // Les quatre cases basculent ici depuis qu'elles sont owner-draw :
+                    // BS_AUTOCHECKBOX le faisait avant d'envoyer BN_CLICKED, plus personne ne
+                    // le fait à sa place. Les trois dernières n'avaient aucun cas — leur valeur
+                    // n'était lue qu'à la fermeture de la fenêtre, ce qui suffisait tant que
+                    // Windows la tenait.
                     case IDC_CHK_TRAINING:
                         if (code == 0)
                         {
-                            bool enabled = Win32.SendMessageW(_hWndChkTraining, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
-                            ConfigManager.SetTrainingEnabled(enabled);
+                            ToggleCheck(_hWndChkTraining);
+                            ConfigManager.SetTrainingEnabled(GetCheck(_hWndChkTraining));
                         }
+                        break;
+                    case IDC_CHK_AUTOSTART:
+                        if (code == 0) ToggleCheck(_hWndChkAutoStart);
+                        break;
+                    case IDC_CHK_NOTIFICATIONS:
+                        if (code == 0) ToggleCheck(_hWndChkNotifications);
+                        break;
+                    case IDC_CHK_ONBOARDING:
+                        if (code == 0) ToggleCheck(_hWndChkOnboarding);
                         break;
                     case IDC_LIST_COMPAT:
                         if (code == LBN_SELCHANGE) RefreshCompatSelectionUi();
@@ -1242,15 +1285,14 @@ sealed class SettingsWindow : IDisposable
 
     private void RefreshAutoStartCheckbox()
     {
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK,
-            AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndChkAutoStart, AutoStart.IsRegistered);
     }
 
     private void RefreshLanguageRadios()
     {
         bool isEnglish = ConfigManager.AppLanguage == "en";
-        Win32.SendMessageW(_hWndRadioLangFr, BM_SETCHECK, isEnglish ? IntPtr.Zero : (IntPtr)BST_CHECKED, IntPtr.Zero);
-        Win32.SendMessageW(_hWndRadioLangEn, BM_SETCHECK, isEnglish ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndRadioLangFr, !isEnglish);
+        SetCheck(_hWndRadioLangEn, isEnglish);
     }
 
     /// <summary>
@@ -1359,12 +1401,9 @@ sealed class SettingsWindow : IDisposable
         Win32.EnableWindow(_hWndRadioCompatForceOn, hasSelection);
         Win32.EnableWindow(_hWndRadioCompatForceOff, hasSelection);
 
-        Win32.SendMessageW(_hWndRadioCompatAuto, BM_SETCHECK,
-            hasSelection && mode == null ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndRadioCompatForceOn, BM_SETCHECK,
-            mode == "forceOn" ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndRadioCompatForceOff, BM_SETCHECK,
-            mode == "forceOff" ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndRadioCompatAuto, hasSelection && mode == null);
+        SetCheck(_hWndRadioCompatForceOn, mode == "forceOn");
+        SetCheck(_hWndRadioCompatForceOff, mode == "forceOff");
     }
 
     /// <summary>
@@ -1818,6 +1857,11 @@ sealed class SettingsWindow : IDisposable
             bottom = titleY + MeasureSingleLineHeight(hdc, _hFontPanelTitle)
         };
         Win32.DrawTextW(hdc, L.Settings_SectionCompat, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        // Le cadre de la liste, que WS_BORDER dessinait aux couleurs du système. Même primitive
+        // que les champs de raccourci : une liste est un champ, du point de vue de la charte.
+        ThemeControls.DrawFieldFrame(hdc, layout.CompatListRect, ControlState.None,
+            Theme.Current, _dpi);
     }
 
     private void DrawShortcutRow(IntPtr hdc, int labelX, int labelWidth, int rowY,
@@ -1904,6 +1948,7 @@ sealed class SettingsWindow : IDisposable
             Win32.RemoveWindowSubclass(_hWndEditSearch, _shortcutSubclassProc, (UIntPtr)4);
         if (_hWndLinkReset != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndLinkReset, _linkSubclassProc, (UIntPtr)2);
+        DetachHoverTracking();
         if (_hWnd != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hWnd);
