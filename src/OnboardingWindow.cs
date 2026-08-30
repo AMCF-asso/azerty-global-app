@@ -10,13 +10,24 @@ namespace AZERTYGlobal;
 ///   3. Ressources, communauté et préférences
 /// DPI-aware per-monitor v2 : recalcule polices et layout sur WM_DPICHANGED.
 /// </summary>
-sealed class OnboardingWindow : IDisposable
+sealed partial class OnboardingWindow : IDisposable
 {
     // ── Window constants ─────────────────────────────────────────────
-    private const uint BS_AUTOCHECKBOX = 0x0003;
-    private const uint BM_GETCHECK = 0x00F0;
-    private const uint BM_SETCHECK = 0x00F1;
-    private const uint BST_CHECKED = 0x0001;
+    // BS_AUTOCHECKBOX, BM_GETCHECK, BM_SETCHECK et BST_CHECKED sont partis le 2026-08-30 :
+    // une case peinte par la fenêtre ne peut pas être cochée par Windows. L'état vit dans
+    // OnboardingWindow.Theme.cs, et SetCheck / GetCheck ont pris leurs cinq sites d'appel.
+
+    /// <summary>
+    /// Style de la fenêtre, un seul nom pour ses deux lecteurs : la création et
+    /// <c>ResizeWindow</c>, qui en déduit le cadre à chaque changement de DPI. Ils portaient la
+    /// même expression recopiée, et le 2026-08-30 n'en a d'abord modifié qu'une.
+    ///
+    /// <c>WS_CLIPCHILDREN</c> depuis cette date : sans lui, <c>OnPaint</c> recopie son tampon
+    /// par-dessus les enfants et efface ceux qui se sont déjà peints. Windows repeignait ses
+    /// contrôles natifs après coup et le masquait ; owner-draw n'a pas ce secours.
+    /// </summary>
+    private const uint WindowStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU
+        | Win32.WS_CLIPCHILDREN;
     private const uint SS_NOTIFY = 0x0100;
     private const uint SS_CENTER = 0x0001;
 
@@ -310,7 +321,7 @@ sealed class OnboardingWindow : IDisposable
     {
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        uint dwStyle = WindowStyle;
         uint dwExStyle = Win32.WS_EX_TOPMOST;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, dwExStyle);
@@ -335,7 +346,7 @@ sealed class OnboardingWindow : IDisposable
         // Navigation : btnPrev seulement ici (position fixe a gauche).
         // btnNext et btnTry sont positionnes dans UpdateStepVisibility selon les 3 etats
         // possibles a l'etape 1 (jamais essaye / essaye non complete / complete).
-        Win32.MoveWindow(_hWndBtnPrev, margin, bottomY, S(BASE_BTN_W_PREV), S(BASE_BTN_H), true);
+        MoveButton(_hWndBtnPrev, margin, bottomY, ButtonRowWidth(L.Onboarding_Prev, BASE_BTN_W_PREV));
 
         // Étape 3 — liens dans une grille fixe
         Win32.MoveWindow(_hWndLinkLessons, linksX, linkStartY, linksWidth, linkControlHeight, true);
@@ -370,7 +381,7 @@ sealed class OnboardingWindow : IDisposable
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        uint dwStyle = WindowStyle;
         uint dwExStyle = Win32.WS_EX_TOPMOST;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, dwExStyle);
@@ -398,10 +409,15 @@ sealed class OnboardingWindow : IDisposable
                 return;
             ThemeWindow.ApplyClassBackground(_hWnd, CLR_BG);
             ThemeWindow.ApplyChrome(_hWnd);
+            // InvalidateRect sur la fenetre n'atteint pas ses enfants, et depuis
+            // WS_CLIPCHILDREN le parent ne peint meme plus dessus : sans cette ligne les six
+            // controles garderaient la palette du theme precedent.
+            InvalidateOwnerDrawControls();
         };
         Theme.Changed += _themeChanged;
 
         CreateControls();
+        AttachHoverTracking();
         SetWindowIcon();
     }
 
@@ -444,15 +460,17 @@ sealed class OnboardingWindow : IDisposable
         int linkH = S(28);
 
         // ══ Navigation ══ (largeur initiale = minimum ; ajustée dynamiquement dans UpdateStepVisibility)
+        // BS_OWNERDRAW remplace BS_DEFPUSHBUTTON (0x0001) : sans boucle IsDialogMessage,
+        // ce drapeau n'epaississait qu'une bordure systeme, et Entree n'a jamais valide ici.
         _hWndBtnNext = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_Next,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | 0x0001 | Win32.WS_TABSTOP,
-            winW - margin - S(BASE_BTN_W_NEXT_MIN), bottomY, S(BASE_BTN_W_NEXT_MIN), S(BASE_BTN_H),
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
+            winW - margin - S(BASE_BTN_W_NEXT_MIN), bottomY, S(BASE_BTN_W_NEXT_MIN), ButtonRowHeight(),
             _hWnd, (IntPtr)IDC_BTN_NEXT, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnNext, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
         _hWndBtnPrev = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_Prev,
-            Win32.WS_CHILD | Win32.WS_TABSTOP,
-            margin, bottomY, S(BASE_BTN_W_PREV), S(BASE_BTN_H),
+            Win32.WS_CHILD | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
+            margin, bottomY, S(BASE_BTN_W_PREV), ButtonRowHeight(),
             _hWnd, (IntPtr)IDC_BTN_PREV, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnPrev, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
@@ -461,8 +479,8 @@ sealed class OnboardingWindow : IDisposable
         // bouton « Suivant », pour que l'utilisateur puisse choisir : essayer maintenant OU
         // passer directement a l'etape 2.
         _hWndBtnTry = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_TryNow,
-            Win32.WS_CHILD | Win32.WS_TABSTOP,
-            0, bottomY, S(BASE_BTN_W_NEXT_MIN), S(BASE_BTN_H),
+            Win32.WS_CHILD | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
+            0, bottomY, S(BASE_BTN_W_NEXT_MIN), ButtonRowHeight(),
             _hWnd, (IntPtr)IDC_BTN_TRY, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnTry, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
@@ -509,14 +527,14 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)5, IntPtr.Zero);
 
         _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkAutoStart,
-            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         RefreshAutoStartCheckbox();
 
         _hWndChkDontShow = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkDontShow,
-            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             margin, y, S(280), S(26),
             _hWnd, (IntPtr)IDC_CHK_DONT_SHOW, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -525,7 +543,7 @@ sealed class OnboardingWindow : IDisposable
         // ConfigManager.TrainingEnabled à chaque affichage de l'étape 3 (cf. UpdateStepVisibility),
         // au cas où l'utilisateur l'aurait déjà activée depuis les Paramètres.
         _hWndChkTraining = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkTraining,
-            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.BS_OWNERDRAW | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -566,10 +584,14 @@ sealed class OnboardingWindow : IDisposable
             // Resynchronisation à chaque affichage de l'étape 3 : l'utilisateur a pu
             // activer/désactiver l'opt-in depuis les Paramètres pendant que l'onboarding
             // est ouvert (même principe que RefreshAutoStartCheckbox pour l'autostart).
-            Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK,
-                ConfigManager.TrainingEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+            SetCheck(_hWndChkTraining, ConfigManager.TrainingEnabled);
         }
 
+        // Place avant d'etre montre : RepositionControls, qui portait seule ce placement, ne
+        // court qu'au changement de DPI et a l'etape 3. A l'etape 2, « Precedent » s'affichait
+        // donc a sa geometrie de creation, et la largeur mesuree de son libelle n'y arrivait pas.
+        MoveButton(_hWndBtnPrev, S(BASE_MARGIN), S(BASE_WIN_H) - S(BASE_BOTTOM_MARGIN),
+            ButtonRowWidth(L.Onboarding_Prev, BASE_BTN_W_PREV));
         Win32.ShowWindow(_hWndBtnPrev, _currentStep > 0 ? 1 : 0);
 
         // 3 etats sur l'etape 1 :
@@ -579,6 +601,10 @@ sealed class OnboardingWindow : IDisposable
         // Etapes 2/3 : seul « Suivant » / « C'est parti ! » a la position habituelle.
         bool isStep1NotAttempted = _currentStep == 0 && !_learningModuleAttempted && !_learningModuleDone; // etat A
         bool isStep1Attempted    = _currentStep == 0 &&  _learningModuleAttempted && !_learningModuleDone; // etat B
+        // L'accent va a « Essayer maintenant » tant qu'il est la (arbitrage du 2026-08-30), a
+        // « Suivant » sinon. KindOf lit ce champ et non IsWindowVisible, qui rend faux pour tout
+        // enfant d'une fenetre que le banc n'a pas encore montree.
+        _tryButtonShown = isStep1NotAttempted || isStep1Attempted;
         // etat C = _currentStep == 0 && _learningModuleDone (ou etapes 2/3) → comportement standard
 
         string nextText = _currentStep == 2 ? L.Onboarding_LetsGo : L.Onboarding_Next;
@@ -593,14 +619,9 @@ sealed class OnboardingWindow : IDisposable
             // Etat A : seul « Essayer maintenant », position droite. « Suivant » cache.
             Win32.ShowWindow(_hWndBtnNext, 0);
             Win32.ShowWindow(_hWndBtnTry, 1);
-            string tryText = L.Onboarding_TryNow;
-            IntPtr hdc = Win32.GetDC(_hWnd);
-            int tryTextW;
-            try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
-            finally { Win32.ReleaseDC(_hWnd, hdc); }
-            int tryWidth = Math.Max(S(BASE_BTN_W_NEXT_MIN), tryTextW + S(BASE_BTN_TEXT_PAD * 2));
+            int tryWidth = ButtonRowWidth(L.Onboarding_TryNow, BASE_BTN_W_NEXT_MIN);
             int tryX = btnWinW - btnMargin - tryWidth;
-            Win32.MoveWindow(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H), true);
+            MoveButton(_hWndBtnTry, tryX, btnBottomY, tryWidth);
         }
         else if (isStep1Attempted)
         {
@@ -608,16 +629,11 @@ sealed class OnboardingWindow : IDisposable
             Win32.ShowWindow(_hWndBtnNext, 1);
             Win32.ShowWindow(_hWndBtnTry, 1);
             var nextGeomB = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
-            Win32.MoveWindow(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width, S(BASE_BTN_H), true);
+            MoveButton(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width);
 
-            string tryText = L.Onboarding_TryNow;
-            IntPtr hdc = Win32.GetDC(_hWnd);
-            int tryTextW;
-            try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
-            finally { Win32.ReleaseDC(_hWnd, hdc); }
-            int tryWidth = Math.Max(S(BASE_BTN_W_NEXT_MIN), tryTextW + S(BASE_BTN_TEXT_PAD * 2));
+            int tryWidth = ButtonRowWidth(L.Onboarding_TryNow, BASE_BTN_W_NEXT_MIN);
             int tryX = nextGeomB.x - S(12) - tryWidth;
-            Win32.MoveWindow(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H), true);
+            MoveButton(_hWndBtnTry, tryX, btnBottomY, tryWidth);
         }
         else
         {
@@ -625,12 +641,13 @@ sealed class OnboardingWindow : IDisposable
             Win32.ShowWindow(_hWndBtnTry, 0);
             Win32.ShowWindow(_hWndBtnNext, 1);
             var nextGeomC = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
-            Win32.MoveWindow(_hWndBtnNext, nextGeomC.x, btnBottomY, nextGeomC.width, S(BASE_BTN_H), true);
+            MoveButton(_hWndBtnNext, nextGeomC.x, btnBottomY, nextGeomC.width);
         }
 
         if (_currentStep == 2)
             RepositionControls();
 
+        InvalidateOwnerDrawControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
@@ -645,8 +662,8 @@ sealed class OnboardingWindow : IDisposable
         // UNCHECKED par defaut (v0.9.7.1) -> l'opt-out doit etre explicite. Avant, la default-checked
         // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
         // declenchait un opt-out permanent, meme si l'utilisateur n'avait jamais atteint l'etape 3.
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkDontShow, BM_SETCHECK, IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndChkAutoStart, true);
+        SetCheck(_hWndChkDontShow, false);
         // Sync bidirectionnel des flags avec la progression persistee. Seuils alignes avec
         // la condition d'auto-show ([TrayApplication.cs] : LearningMaxStepCompleted < 3) :
         //   - 0 exo               -> etat A (« Essayer maintenant » seul)
@@ -687,11 +704,9 @@ sealed class OnboardingWindow : IDisposable
         // defaut dans Show(), mais ne deviennent un choix utilisateur qu'une fois visibles.
         if (_step3Reached)
         {
-            var checkState = Win32.SendMessageW(_hWndChkDontShow, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
-            ConfigManager.SetShowOnboardingAtStartup(checkState != (IntPtr)BST_CHECKED);
+            ConfigManager.SetShowOnboardingAtStartup(!GetCheck(_hWndChkDontShow));
 
-            var autoStartState = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
-            bool autoStart = autoStartState == (IntPtr)BST_CHECKED;
+            bool autoStart = GetCheck(_hWndChkAutoStart);
             bool autoStartWasRegistered = AutoStart.IsRegistered;
             bool autoStartSaved = AutoStart.Set(autoStart);
             RefreshAutoStartCheckbox();
@@ -730,6 +745,11 @@ sealed class OnboardingWindow : IDisposable
 
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
+
+            case Win32.WM_DRAWITEM:
+                if (TryDrawItem(lParam))
+                    return (IntPtr)1;
+                break;
 
             case Win32.WM_DPICHANGED:
             {
@@ -774,13 +794,22 @@ sealed class OnboardingWindow : IDisposable
                         if (code == 0) OpenLink(ProductIdentity.DiscordInviteUrl); break;
                     case IDC_LINK_LESSONS:
                         if (code == 0) OpenLessonsRequested?.Invoke(); break;
+                    // Un contrôle owner-draw ne bascule plus tout seul. « Lancer au démarrage »
+                    // et « Ne plus afficher » n'avaient aucun cas ici — leur valeur n'était lue
+                    // qu'à la fermeture, dans Close() — et en gagnent un.
+                    case IDC_CHK_AUTOSTART:
+                        if (code == 0) ToggleCheck(_hWndChkAutoStart);
+                        break;
+                    case IDC_CHK_DONT_SHOW:
+                        if (code == 0) ToggleCheck(_hWndChkDontShow);
+                        break;
                     case IDC_CHK_TRAINING:
                         // Applique immédiatement (pas à la fermeture du wizard) — même pattern
                         // que IDC_CHK_TRAINING dans SettingsWindow.cs.
                         if (code == 0)
                         {
-                            bool trainingEnabled = Win32.SendMessageW(_hWndChkTraining, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
-                            ConfigManager.SetTrainingEnabled(trainingEnabled);
+                            ToggleCheck(_hWndChkTraining);
+                            ConfigManager.SetTrainingEnabled(GetCheck(_hWndChkTraining));
                         }
                         break;
                 }
@@ -898,8 +927,7 @@ sealed class OnboardingWindow : IDisposable
 
     private void RefreshAutoStartCheckbox()
     {
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK,
-            AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        SetCheck(_hWndChkAutoStart, AutoStart.IsRegistered);
     }
 
     /// <summary>Curseur au-dessus du drapeau de langue du header (coordonnées client) ?</summary>
@@ -1286,7 +1314,10 @@ sealed class OnboardingWindow : IDisposable
 
             checkboxX = margin + panelPaddingX;
             checkboxWidth = panelWidth - panelPaddingX * 2;
-            checkboxHeight = Math.Max(S(26), MeasureSingleLineHeight(hdc, _hFontBold) + S(10));
+            // + la marge de focus des deux cotes : l'anneau se dessine a l'exterieur du
+            // controle, donc TryDrawItem rend le libelle dans un rectangle rentre d'autant.
+            checkboxHeight = Math.Max(S(26), MeasureSingleLineHeight(hdc, _hFontBold) + S(10))
+                + ThemeControls.FocusMargin(_dpi) * 2;
             int prefsTitleHeight = MeasureSingleLineHeight(hdc, _hFontPageTitle);
             int prefsTop = resourcesPanel.bottom + panelGap + prefsTitleHeight + S(8);
             checkboxY = prefsTop + prefsPaddingTop;
@@ -1325,18 +1356,8 @@ sealed class OnboardingWindow : IDisposable
     /// </summary>
     private (int x, int width) ComputeNextButtonGeometry(string text, int winW, int margin)
     {
-        IntPtr hdc = Win32.GetDC(_hWnd);
-        try
-        {
-            int textWidth = MeasureSingleLineWidth(hdc, _hFontButton, text);
-            int width = Math.Max(S(BASE_BTN_W_NEXT_MIN), textWidth + S(BASE_BTN_TEXT_PAD * 2));
-            int x = winW - margin - width;
-            return (x, width);
-        }
-        finally
-        {
-            Win32.ReleaseDC(_hWnd, hdc);
-        }
+        int width = ButtonRowWidth(text, BASE_BTN_W_NEXT_MIN);
+        return (winW - margin - width, width);
     }
 
     private int MeasureSingleLineHeight(IntPtr hdc, IntPtr hFont)
@@ -1693,6 +1714,7 @@ sealed class OnboardingWindow : IDisposable
         if (_hWndBtnNext != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnNext, _buttonArrowSubclassProc, (UIntPtr)20);
         if (_hWndBtnPrev != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnPrev, _buttonArrowSubclassProc, (UIntPtr)21);
         if (_hWndBtnTry != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnTry, _buttonArrowSubclassProc, (UIntPtr)22);
+        DetachHoverTracking();
 
         if (_hWnd != IntPtr.Zero) { Win32.DestroyWindow(_hWnd); _hWnd = IntPtr.Zero; }
         if (_hIcon != IntPtr.Zero) { Win32.DestroyIcon(_hIcon); _hIcon = IntPtr.Zero; }
