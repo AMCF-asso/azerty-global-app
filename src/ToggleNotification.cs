@@ -24,7 +24,7 @@ internal sealed class ToggleNotification : IDisposable
 
     private bool _currentActivated;
     private float _dpiScale;
-    private int S(int v) => (int)(v * _dpiScale);
+    private int S(int v) => (int)(v * _dpiScale * ThemeControls.Density);
 
     public ToggleNotification()
     {

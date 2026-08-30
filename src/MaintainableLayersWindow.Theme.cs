@@ -56,7 +56,7 @@ internal sealed partial class MaintainableLayersWindow
     /// STATIC ne le rapportent nulle part.</summary>
     private bool _secondaryEnabled = true;
 
-    private int S(int value) => value * _dpi / 96;
+    private int S(int value) => (int)(value * _dpi * ThemeControls.Density) / 96;
 
     // ═══════════════════════════════════════════════════════════════
     // État des contrôles owner-draw

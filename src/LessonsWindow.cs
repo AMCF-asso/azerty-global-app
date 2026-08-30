@@ -301,7 +301,7 @@ internal sealed class LessonsWindow : IDisposable
     }
 
     private int D(int value) => (int)Math.Round(value * _dpiScale);
-    private int S(int value) => (int)Math.Round(value * _dpiScale * _windowScale);
+    private int S(int value) => (int)Math.Round(value * _dpiScale * _windowScale * ThemeControls.Density);
 
     private LessonModule CurrentModule => _catalog.Modules[_moduleIndex];
     private LessonLesson CurrentLesson => CurrentModule.Lessons[_lessonIndex];

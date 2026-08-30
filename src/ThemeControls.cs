@@ -114,8 +114,50 @@ static class ThemeControls
         if (dpi <= 0)
             dpi = 96;
 
-        int scaled = (int)Math.Round(value * dpi / 96.0, MidpointRounding.AwayFromZero);
+        int scaled = (int)Math.Round(value * dpi * Density / 96.0, MidpointRounding.AwayFromZero);
         return value > 0 ? Math.Max(1, scaled) : scaled;
+    }
+
+    /// <summary>
+    /// Densité de l'application : un facteur global sur la **géométrie**, jamais sur le texte.
+    ///
+    /// Les polices viennent de <c>Theme.Font(role, dpi)</c>, qui ne passe pas par cette classe :
+    /// baisser la densité resserre les marges, les hauteurs et l'anatomie des contrôles sans
+    /// toucher à la taille des caractères. C'est la différence avec <c>ONBOARDING_UI_SCALE</c>,
+    /// le facteur 0,75 par fenêtre supprimé le 2026-08-30, qui multipliait aussi les polices et
+    /// rendait l'accueil illisible par rapport au reste de l'application.
+    ///
+    /// À 1, valeur par défaut, chaque expression du dépôt rend l'entier qu'elle rendait avant que
+    /// ce champ existe.
+    /// </summary>
+    internal static float Density { get; private set; } = 0.90f;
+
+    /// <summary>
+    /// Force la densité jusqu'au <c>Dispose</c>, qui restaure la précédente. Sert au banc de
+    /// captures, comme <c>ThemeWindow.OverrideDpiForTests</c> : rendre la matrice à plusieurs
+    /// densités sans toucher aux réglages du poste.
+    /// </summary>
+    internal static IDisposable OverrideDensityForTests(float density)
+    {
+        var scope = new DensityScope(Density);
+        Density = density <= 0 ? 1.0f : density;
+        return scope;
+    }
+
+    private sealed class DensityScope : IDisposable
+    {
+        private readonly float _previous;
+        private bool _disposed;
+
+        internal DensityScope(float previous) => _previous = previous;
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+            Density = _previous;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════

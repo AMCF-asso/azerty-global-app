@@ -216,7 +216,7 @@ sealed partial class SettingsWindow : IDisposable
     private Action? _themeChanged;
 
     private float _dpiScale;
-    private int S(int val) => (int)(val * _dpiScale);
+    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
 
     /// <summary>L'echelle en points par pouce, dont Theme a besoin pour ses polices. _dpiScale
     /// reste la mesure de travail de cette fenetre, qui multiplie des dizaines de coordonnees :

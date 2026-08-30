@@ -50,7 +50,7 @@ sealed class LayoutConflictWindow : IDisposable
     private readonly Action _onKeep;
 
     private float _dpiScale;
-    private int S(int val) => (int)(val * _dpiScale);
+    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
 
     /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.</summary>
     private int _dpi => (int)Math.Round(96 * _dpiScale);

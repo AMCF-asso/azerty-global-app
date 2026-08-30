@@ -344,7 +344,7 @@ sealed class LearningModule : IDisposable
 
     // DPI
     private float _dpiScale = 1f;
-    private int S(int val) => (int)(val * _dpiScale);
+    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
 
     // Polices
     private IntPtr _hFontTitle;

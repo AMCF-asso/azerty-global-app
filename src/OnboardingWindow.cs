@@ -46,9 +46,16 @@ sealed partial class OnboardingWindow : IDisposable
 
     // Dimensions de base (96 DPI)
     private const int BASE_WIN_W = 560;
-    // +90 (v1.2.0) pour la 3e case « Défi du jour » + son texte descriptif sur 2 lignes,
-    // ajoutés au panneau Préférences de l'étape 3 (cf. GetStep3Layout).
-    private const int BASE_WIN_H = 763;
+
+    /// <summary>
+    /// Écart entre le bas du contenu le plus long et le haut de la barre de navigation.
+    ///
+    /// BASE_WIN_H = 763 vivait ici jusqu'au 2026-08-30. C'était la hauteur du client, posée en
+    /// dur : la fenêtre faisait 763 × échelle × densité quel que soit son contenu, et aucune
+    /// réduction de la taille du texte ne pouvait la faire maigrir. Elle se mesure désormais,
+    /// et cette constante-ci est la seule qui reste de son ancienne mise en page.
+    /// </summary>
+    private const int BASE_NAV_GAP = 14;
     // Drapeau de bascule de langue dans le header (proportions 3:2 du site, +50 % : 45×30)
     private const int BASE_FLAG_W = 45;
     private const int BASE_FLAG_H = 30;
@@ -61,8 +68,10 @@ sealed partial class OnboardingWindow : IDisposable
     private const int BASE_BTN_W_PREV = 120;
     private const int BASE_LINK_BANNER_W = 160;
     private const int BASE_BTN_TEXT_PAD = 28;
-    private const int STEP_CARD_MIN_H = 78;
-    private const int FEATURE_CARD_MIN_H = 73;
+    // STEP_CARD_MIN_H = 78 et FEATURE_CARD_MIN_H = 73 sont partis le 2026-08-30. Ils étaient
+    // la vraie hauteur de cette fenêtre — cinq cartes de l'étape 1 à 73 px, soit 365 sur 724 —
+    // et ils rendaient l'échelle typographique sans effet : le texte rétrécissait, la carte non.
+    // Le plancher est désormais la pastille, mesurée, dans OnboardingWindow.Theme.cs.
 
     // ── Les jetons de la charte, relus a chaque peinture ─────────────
     // Treize noms ont disparu ici, tous mesures a zero usage : les quatre de l'encadre note et
@@ -101,12 +110,19 @@ sealed partial class OnboardingWindow : IDisposable
     // mais on respecte explicitement le principe : ne persister un opt-out que si l'utilisateur
     // a effectivement vu et touche a l'option. Avant v0.9.7.1, la default-checked + persist
     // inconditionnel rendait l'opt-out implicite des l'ouverture de la fenetre.
-    private bool _step3Reached;
+    private bool _prefsScreenSeen;
     // Vrai des qu'on lance le LM une premiere fois. Distincte de _learningModuleDone (qui
     // n'est mis a true qu'a la complete reussite des 6 exercices). Etat B (essaye non complete)
     // sert a afficher « Suivant » a cote de « Essayer maintenant » sur l'etape 1.
     private bool _learningModuleAttempted;
     private bool _inputPaused;
+
+    /// <summary>
+    /// Hauteur du client, mesurée sur le plus long des trois écrans et plafonnée à la zone de
+    /// travail. Vaut 0 tant que <see cref="MeasureClientHeight"/> n'a pas tourné, ce qui
+    /// n'arrive qu'avant la création de la fenêtre.
+    /// </summary>
+    private int _clientH;
     private LearningModule? _learningModule;
 
     // Références passées par TrayApplication pour le LearningModule
@@ -186,7 +202,7 @@ sealed partial class OnboardingWindow : IDisposable
     // cette fenêtre à 12,75 px quand le reste de l'application est à 15, et ses « 28 px »
     // de titre à 21 : la fenêtre de bienvenue était la seule à ne pas être à l'échelle de
     // l'application, sans que rien ne le dise. Tout grandit d'un tiers.
-    private int S(int val) => (int)(val * _dpiScale);
+    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
 
     /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.</summary>
     private int _dpi => (int)Math.Round(96 * _dpiScale);
@@ -285,14 +301,26 @@ sealed partial class OnboardingWindow : IDisposable
     internal void ShowStepForCapture(int step)
     {
         _currentStep = Math.Clamp(step, 0, StepCountForCapture - 1);
-        if (_currentStep == 2)
-            _step3Reached = true;
+        if (_currentStep == StepPreferences)
+            _prefsScreenSeen = true;
         UpdateStepVisibility();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
+    // ── Les quatre étapes ────────────────────────────────────────────
+    // Coupées en quatre le 2026-08-30 : les cinq améliorations tenaient sur un seul écran de
+    // 719 px dont elles occupaient 420, et la fenêtre ne pouvait pas tenir sur un 1080p à 175 %.
+    // Trois puis deux. Les indices étaient onze littéraux dispersés — « == 2 » voulant dire
+    // « la dernière » sans le dire — et les décaler à la main aurait oublié l'un d'eux.
+    private const int StepFeaturesA = 0;
+    private const int StepFeaturesB = 1;
+    private const int StepUsage = 2;
+    private const int StepResources = 3;
+    private const int StepPreferences = 4;
+    private const int StepCount = 5;
+
     /// <summary>Nombre d'étapes, pour le banc.</summary>
-    internal const int StepCountForCapture = 3;
+    internal const int StepCountForCapture = StepCount;
 
     private void RecreateFonts()
     {
@@ -315,12 +343,93 @@ sealed partial class OnboardingWindow : IDisposable
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // Mesure
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Hauteur de client que réclame le plus long des trois écrans, barre de navigation comprise,
+    /// plafonnée à la zone de travail de l'écran où la fenêtre va naître.
+    ///
+    /// La mise en page de cette fenêtre **est** son code de peinture : il n'en existe pas de
+    /// seconde version, et en écrire une la ferait diverger au premier changement. La mesure
+    /// rejoue donc la peinture une fois par étape dans un DC de rebut et lit le bas rendu. Le
+    /// coût est de trois rendus hors écran, à la création et au changement de DPI.
+    ///
+    /// Le plafond n'est pas cosmétique : la barre de navigation est ancrée sur le bas du client,
+    /// donc plafonner la garde atteignable. Sans lui, la fenêtre à 200 % dépassait l'écran par le
+    /// bas et ses boutons devenaient inaccessibles — mesuré le 2026-08-30.
+    /// </summary>
+    private int MeasureClientHeight()
+    {
+        int cw = S(BASE_WIN_W);
+        int required = 0;
+
+        IntPtr hdcScreen = Win32.GetDC(IntPtr.Zero);
+        IntPtr hdc = Win32.CreateCompatibleDC(hdcScreen);
+        IntPtr bmp = Win32.CreateCompatibleBitmap(hdcScreen, Math.Max(cw, 1), 8);
+        IntPtr previous = Win32.SelectObject(hdc, bmp);
+        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+        Win32.SetBkMode(hdc, 1);
+        Win32.GdipCreateFromHDC(hdc, out IntPtr gfx);
+
+        try
+        {
+            for (int step = 0; step < StepCountForCapture; step++)
+            {
+                int y = S(10);
+                DrawHeader(hdc, gfx, cw, ref y);
+                DrawProgressBar(hdc, cw, ref y);
+                int bottom = step switch
+                {
+                    StepFeaturesA => PaintStep1A(hdc, cw, 0, y),
+                    StepFeaturesB => PaintStep1B(hdc, cw, 0, y),
+                    StepUsage => PaintStep2(hdc, gfx, cw, 0, y),
+                    StepResources => PaintStep3(hdc, gfx, cw, 0, y),
+                    _ => PaintStep4(hdc, gfx, cw, 0, y),
+                };
+                required = Math.Max(required, bottom);
+            }
+        }
+        finally
+        {
+            if (gfx != IntPtr.Zero)
+                Win32.GdipDeleteGraphics(gfx);
+            Win32.SelectObject(hdc, previous);
+            Win32.DeleteObject(bmp);
+            Win32.DeleteDC(hdc);
+        }
+
+        required += S(BASE_NAV_GAP) + S(BASE_BOTTOM_MARGIN);
+        return Math.Min(required, MaxClientHeight());
+    }
+
+    /// <summary>
+    /// Plus grande hauteur de client que l'écran laisse, cadre déduit. L'écran est celui sous le
+    /// curseur, comme celui que <see cref="CreateMainWindow"/> choisit pour se centrer.
+    /// </summary>
+    private int MaxClientHeight()
+    {
+        Win32.GetCursorPos(out var cursor);
+        var monitor = Win32.MonitorFromPoint(cursor, 0x00000001);
+        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        if (!Win32.GetMonitorInfo(monitor, ref info))
+            return int.MaxValue;
+
+        int work = info.rcWork.bottom - info.rcWork.top;
+        var frame = new Win32.RECT { left = 0, top = 0, right = 100, bottom = 100 };
+        Win32.AdjustWindowRectEx(ref frame, WindowStyle, false, Win32.WS_EX_TOPMOST);
+        int chrome = (frame.bottom - frame.top) - 100;
+        return Math.Max(S(200), work - chrome);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // Redimensionnement et repositionnement
     // ═══════════════════════════════════════════════════════════════
     private void ResizeWindow()
     {
+        _clientH = MeasureClientHeight();
         int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
+        int winH = _clientH;
         uint dwStyle = WindowStyle;
         uint dwExStyle = Win32.WS_EX_TOPMOST;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
@@ -337,11 +446,12 @@ sealed partial class OnboardingWindow : IDisposable
     {
         int margin = S(BASE_MARGIN);
         int winW = S(BASE_WIN_W);
-        int bottomY = S(BASE_WIN_H) - S(BASE_BOTTOM_MARGIN);
-        GetStep3Layout(_contentY, winW, out _, out _,
-            out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out int linkControlHeight,
-            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out int checkboxHeight,
-            out int checkboxTrainingY, out _, out _);
+        int bottomY = _clientH - S(BASE_BOTTOM_MARGIN);
+        GetResourcesLayout(_contentY, winW, out _,
+            out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out int linkControlHeight);
+        GetPrefsLayout(_contentY, winW, out _,
+            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing,
+            out int checkboxHeight, out int checkboxTrainingY, out _, out _);
 
         // Navigation : btnPrev seulement ici (position fixe a gauche).
         // btnNext et btnTry sont positionnes dans UpdateStepVisibility selon les 3 etats
@@ -379,8 +489,9 @@ sealed partial class OnboardingWindow : IDisposable
         };
         Win32.RegisterClassExW(ref wc);
 
+        _clientH = MeasureClientHeight();
         int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
+        int winH = _clientH;
         uint dwStyle = WindowStyle;
         uint dwExStyle = Win32.WS_EX_TOPMOST;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
@@ -456,7 +567,7 @@ sealed partial class OnboardingWindow : IDisposable
         var hInstance = Win32.GetModuleHandleW(null);
         int margin = S(BASE_MARGIN);
         int winW = S(BASE_WIN_W);
-        int bottomY = S(BASE_WIN_H) - S(BASE_BOTTOM_MARGIN);
+        int bottomY = _clientH - S(BASE_BOTTOM_MARGIN);
         int linkH = S(28);
 
         // ══ Navigation ══ (largeur initiale = minimum ; ajustée dynamiquement dans UpdateStepVisibility)
@@ -567,19 +678,21 @@ sealed partial class OnboardingWindow : IDisposable
 
         Win32.ShowWindow(_hWndLinkFeedbackBanner, 0);
 
-        int step3Vis = _currentStep == 2 ? 1 : 0;
-        Win32.ShowWindow(_hWndLinkLessons, step3Vis);
-        Win32.ShowWindow(_hWndLinkGuide, step3Vis);
-        Win32.ShowWindow(_hWndLinkFeedback, step3Vis);
+        int linksVis = _currentStep == StepResources ? 1 : 0;
+        int prefsVis = _currentStep == StepPreferences ? 1 : 0;
+        int step3Vis = linksVis;
+        Win32.ShowWindow(_hWndLinkLessons, linksVis);
+        Win32.ShowWindow(_hWndLinkGuide, linksVis);
+        Win32.ShowWindow(_hWndLinkFeedback, linksVis);
         // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. C'est la
         // dernière ligne de la grille de liens de l'étape 3 : rien ne remonte, aucune place
         // ne reste vide. Depuis le lot C, une politique d'entreprise peut l'éteindre aussi
         // sur les autres canaux.
         Win32.ShowWindow(_hWndLinkDiscord, PolicyManager.ExternalLinksEnabledNow ? step3Vis : 0);
-        Win32.ShowWindow(_hWndChkAutoStart, step3Vis);
-        Win32.ShowWindow(_hWndChkDontShow, step3Vis);
-        Win32.ShowWindow(_hWndChkTraining, step3Vis);
-        if (step3Vis == 1)
+        Win32.ShowWindow(_hWndChkAutoStart, prefsVis);
+        Win32.ShowWindow(_hWndChkDontShow, prefsVis);
+        Win32.ShowWindow(_hWndChkTraining, prefsVis);
+        if (prefsVis == 1)
         {
             // Resynchronisation à chaque affichage de l'étape 3 : l'utilisateur a pu
             // activer/désactiver l'opt-in depuis les Paramètres pendant que l'onboarding
@@ -590,7 +703,7 @@ sealed partial class OnboardingWindow : IDisposable
         // Place avant d'etre montre : RepositionControls, qui portait seule ce placement, ne
         // court qu'au changement de DPI et a l'etape 3. A l'etape 2, « Precedent » s'affichait
         // donc a sa geometrie de creation, et la largeur mesuree de son libelle n'y arrivait pas.
-        MoveButton(_hWndBtnPrev, S(BASE_MARGIN), S(BASE_WIN_H) - S(BASE_BOTTOM_MARGIN),
+        MoveButton(_hWndBtnPrev, S(BASE_MARGIN), _clientH - S(BASE_BOTTOM_MARGIN),
             ButtonRowWidth(L.Onboarding_Prev, BASE_BTN_W_PREV));
         Win32.ShowWindow(_hWndBtnPrev, _currentStep > 0 ? 1 : 0);
 
@@ -607,12 +720,12 @@ sealed partial class OnboardingWindow : IDisposable
         _tryButtonShown = isStep1NotAttempted || isStep1Attempted;
         // etat C = _currentStep == 0 && _learningModuleDone (ou etapes 2/3) → comportement standard
 
-        string nextText = _currentStep == 2 ? L.Onboarding_LetsGo : L.Onboarding_Next;
+        string nextText = _currentStep == StepPreferences ? L.Onboarding_LetsGo : L.Onboarding_Next;
         Win32.SetWindowTextW(_hWndBtnNext, nextText);
 
         int btnWinW = S(BASE_WIN_W);
         int btnMargin = S(BASE_MARGIN);
-        int btnBottomY = S(BASE_WIN_H) - S(BASE_BOTTOM_MARGIN);
+        int btnBottomY = _clientH - S(BASE_BOTTOM_MARGIN);
 
         if (isStep1NotAttempted)
         {
@@ -644,7 +757,7 @@ sealed partial class OnboardingWindow : IDisposable
             MoveButton(_hWndBtnNext, nextGeomC.x, btnBottomY, nextGeomC.width);
         }
 
-        if (_currentStep == 2)
+        if (_currentStep == StepResources || _currentStep == StepPreferences)
             RepositionControls();
 
         InvalidateOwnerDrawControls();
@@ -657,7 +770,7 @@ sealed partial class OnboardingWindow : IDisposable
     public void Show()
     {
         _currentStep = 0;
-        _step3Reached = false; // sera mis a true a la 1ere transition vers l'etape 3
+        _prefsScreenSeen = false; // sera mis a true a la 1ere transition vers l'etape 3
         // Etape 3 : « Lancer au demarrage » coche par defaut (recommandation), « Ne plus afficher »
         // UNCHECKED par defaut (v0.9.7.1) -> l'opt-out doit etre explicite. Avant, la default-checked
         // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
@@ -688,7 +801,7 @@ sealed partial class OnboardingWindow : IDisposable
         _currentStep = 0;
         _learningModuleDone = false;
         _learningModuleAttempted = false;
-        _step3Reached = false;
+        _prefsScreenSeen = false;
         ConfigManager.SetShowOnboardingAtStartup(true);
 
         // Si la fenetre des exercices est ouverte, la fermer proprement.
@@ -702,7 +815,7 @@ sealed partial class OnboardingWindow : IDisposable
         // Sinon, fermer le wizard a l'etape 1 ou 2 (croix, Esc, Quitter) ne touche ni
         // ShowOnboardingAtStartup ni l'autostart. Les checkboxes sont initialisees par
         // defaut dans Show(), mais ne deviennent un choix utilisateur qu'une fois visibles.
-        if (_step3Reached)
+        if (_prefsScreenSeen)
         {
             ConfigManager.SetShowOnboardingAtStartup(!GetCheck(_hWndChkDontShow));
 
@@ -712,7 +825,7 @@ sealed partial class OnboardingWindow : IDisposable
             RefreshAutoStartCheckbox();
             if (!autoStartSaved)
                 ShowAutoStartError();
-            // Ce bloc n'est atteint que si _step3Reached : la case a donc été vue, et la
+            // Ce bloc n'est atteint que si _prefsScreenSeen : la case a donc été vue, et la
             // modifier est un choix, qui éteint la relance dans un sens comme dans
             // l'autre (R2 de l'audit v1.2.0). Une case jamais vue reste hors de ce
             // chemin, la décision v0.9.7.1 est intacte.
@@ -774,7 +887,7 @@ sealed partial class OnboardingWindow : IDisposable
                     case IDC_BTN_NEXT:
                         // Etape 1 ou 2 : passer a la suivante. Etape 3 : fermer l'onboarding.
                         // (Le bouton « Essayer maintenant » est un controle distinct IDC_BTN_TRY.)
-                        if (_currentStep < 2) { _currentStep++; if (_currentStep == 2) _step3Reached = true; UpdateStepVisibility(); }
+                        if (_currentStep < StepPreferences) { _currentStep++; if (_currentStep == StepPreferences) _prefsScreenSeen = true; UpdateStepVisibility(); }
                         else Close();
                         break;
                     case IDC_BTN_TRY:
@@ -890,10 +1003,10 @@ sealed partial class OnboardingWindow : IDisposable
                 {
                     if (_currentStep == 0 && !_learningModuleDone)
                         LaunchLearningModule();
-                    else if (_currentStep < 2)
+                    else if (_currentStep < StepPreferences)
                     {
                         _currentStep++;
-                        if (_currentStep == 2) _step3Reached = true;
+                        if (_currentStep == StepPreferences) _prefsScreenSeen = true;
                         UpdateStepVisibility();
                     }
                     else
@@ -1130,9 +1243,12 @@ sealed partial class OnboardingWindow : IDisposable
 
         switch (_currentStep)
         {
-            case 0: PaintStep1(hdc, cw, ch, y); break;
-            case 1: PaintStep2(hdc, gfx, cw, ch, y); break;
-            case 2: PaintStep3(hdc, gfx, cw, ch, y); break;
+            case StepFeaturesA: PaintStep1A(hdc, cw, ch, y); break;
+            case StepFeaturesB: PaintStep1B(hdc, cw, ch, y); break;
+            case StepUsage: PaintStep2(hdc, gfx, cw, ch, y); break;
+            case StepResources: PaintStep3(hdc, gfx, cw, ch, y); break;
+            case StepPreferences: PaintStep4(hdc, gfx, cw, ch, y); break;
+            // Le bas rendu ne sert qu'à MeasureClientHeight ; en peinture il est déjà connu.
         }
 
         Win32.GdipDeleteGraphics(gfx);
@@ -1152,16 +1268,16 @@ sealed partial class OnboardingWindow : IDisposable
         int barY = y + S(8);
         int barH = S(4);
         int barW = cw - margin * 2;
-        int segW = barW / 3;
+        int segW = barW / StepCount;
 
         var trackRect = new Win32.RECT { left = margin, top = barY, right = margin + barW, bottom = barY + barH };
         GdiHelpers.FillSolidRect(hdc, trackRect, CLR_PROGRESS_INACTIVE);
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < StepCount; i++)
         {
             if (i > _currentStep) continue;
             int left = margin + i * segW + (i > 0 ? 1 : 0);
-            int right = (i == 2) ? margin + barW : margin + (i + 1) * segW;
+            int right = (i == StepCount - 1) ? margin + barW : margin + (i + 1) * segW;
             var rect = new Win32.RECT { left = left, top = barY, right = right, bottom = barY + barH };
             GdiHelpers.FillSolidRect(hdc, rect, CLR_PROGRESS_ACTIVE);
         }
@@ -1276,20 +1392,20 @@ sealed partial class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Étape 1 — Les 5 améliorations
     // ═══════════════════════════════════════════════════════════════
-    private void GetStep3Layout(int topY, int winW,
-        out Win32.RECT resourcesPanel, out Win32.RECT prefsPanel,
-        out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out int linkControlHeight,
-        out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out int checkboxHeight,
-        out int checkboxTrainingY, out int trainingDescY, out int trainingDescHeight)
+    /// <summary>
+    /// Mise en page du panneau des ressources, posé sous le titre de **son** écran.
+    ///
+    /// Il partageait un seul calcul avec le panneau des préférences, qui se plaçait sous lui.
+    /// Depuis la coupe du 2026-08-30 ils sont sur deux écrans, et chacun part du haut du sien.
+    /// </summary>
+    private void GetResourcesLayout(int topY, int winW,
+        out Win32.RECT panel,
+        out int linksX, out int linksWidth, out int linkStartY, out int linkRowH,
+        out int linkControlHeight)
     {
         int margin = S(BASE_MARGIN);
         int panelWidth = winW - margin * 2;
         int panelPaddingX = S(18);
-        int resourcePaddingTop = S(16);
-        int resourcePaddingBottom = S(12);
-        int prefsPaddingTop = S(16);
-        int prefsPaddingBottom = S(16);
-        int panelGap = S(14);
 
         IntPtr hdc = Win32.GetDC(_hWnd);
         try
@@ -1297,20 +1413,42 @@ sealed partial class OnboardingWindow : IDisposable
             int pageTitleHeight = MeasureSingleLineHeight(hdc, _hFontPageTitle);
             linkControlHeight = Math.Max(S(28), MeasureSingleLineHeight(hdc, _hFontLinkStrong) + S(6));
             linkRowH = linkControlHeight + S(2);
-            int resourcesHeight = resourcePaddingTop + linkRowH * 4 + resourcePaddingBottom;
-            int panelTop = topY + pageTitleHeight + S(12);
+            int height = S(16) + linkRowH * 4 + S(12);
+            int top = topY + pageTitleHeight + S(12);
 
-            resourcesPanel = new Win32.RECT
+            panel = new Win32.RECT
             {
                 left = margin,
-                top = panelTop,
+                top = top,
                 right = margin + panelWidth,
-                bottom = panelTop + resourcesHeight
+                bottom = top + height
             };
-
-            linksX = resourcesPanel.left + panelPaddingX;
+            linksX = panel.left + panelPaddingX;
             linksWidth = panelWidth - panelPaddingX * 2;
-            linkStartY = resourcesPanel.top + resourcePaddingTop;
+            linkStartY = panel.top + S(16);
+        }
+        finally
+        {
+            Win32.ReleaseDC(_hWnd, hdc);
+        }
+    }
+
+    /// <summary>Mise en page du panneau des préférences, posé sous le titre de son écran.</summary>
+    private void GetPrefsLayout(int topY, int winW,
+        out Win32.RECT panel,
+        out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing,
+        out int checkboxHeight, out int checkboxTrainingY,
+        out int trainingDescY, out int trainingDescHeight)
+    {
+        int margin = S(BASE_MARGIN);
+        int panelWidth = winW - margin * 2;
+        int panelPaddingX = S(18);
+
+        IntPtr hdc = Win32.GetDC(_hWnd);
+        try
+        {
+            int pageTitleHeight = MeasureSingleLineHeight(hdc, _hFontPageTitle);
+            int top = topY + pageTitleHeight + S(12);
 
             checkboxX = margin + panelPaddingX;
             checkboxWidth = panelWidth - panelPaddingX * 2;
@@ -1318,22 +1456,19 @@ sealed partial class OnboardingWindow : IDisposable
             // controle, donc TryDrawItem rend le libelle dans un rectangle rentre d'autant.
             checkboxHeight = Math.Max(S(26), MeasureSingleLineHeight(hdc, _hFontBold) + S(10))
                 + ThemeControls.FocusMargin(_dpi) * 2;
-            int prefsTitleHeight = MeasureSingleLineHeight(hdc, _hFontPageTitle);
-            int prefsTop = resourcesPanel.bottom + panelGap + prefsTitleHeight + S(8);
-            checkboxY = prefsTop + prefsPaddingTop;
+            checkboxY = top + S(16);
             checkboxSpacing = checkboxHeight + S(10);
-            // 3e case « Défi du jour » (v1.2.0) + son texte descriptif sur 1-2 lignes,
-            // sous les 2 cases existantes (même colonne, même largeur).
             checkboxTrainingY = checkboxY + checkboxSpacing * 2;
             trainingDescY = checkboxTrainingY + checkboxHeight + S(2);
             trainingDescHeight = MeasureTextHeight(hdc, _hFontReassure, L.Onboarding_ChkTrainingDesc, checkboxWidth);
-            int prefsHeight = prefsPaddingTop + checkboxHeight * 3 + S(10) * 2 + S(2) + trainingDescHeight + prefsPaddingBottom;
-            prefsPanel = new Win32.RECT
+
+            int height = S(16) + checkboxHeight * 3 + S(10) * 2 + S(2) + trainingDescHeight + S(16);
+            panel = new Win32.RECT
             {
                 left = margin,
-                top = prefsTop,
+                top = top,
                 right = margin + panelWidth,
-                bottom = prefsTop + prefsHeight
+                bottom = top + height
             };
         }
         finally
@@ -1363,19 +1498,15 @@ sealed partial class OnboardingWindow : IDisposable
     private int MeasureSingleLineHeight(IntPtr hdc, IntPtr hFont)
         => GdiHelpers.MeasureSingleLineHeight(hdc, hFont);
 
-    private void PaintStep1(IntPtr hdc, int cw, int ch, int y)
+    /// <summary>
+    /// Premier écran des améliorations : les trois premières. Le titre coiffe les deux écrans —
+    /// ils sont deux moitiés d'une même liste, et aucune chaîne n'a été ajoutée pour l'occasion.
+    /// </summary>
+    private int PaintStep1A(IntPtr hdc, int cw, int ch, int y)
     {
         int margin = S(BASE_MARGIN);
-        y += S(18);
+        y = DrawFeaturesTitle(hdc, margin, cw, y);
 
-        // ── Titre ──
-        Win32.SelectObject(hdc, _hFontStepSummary);
-        Win32.SetTextColor(hdc, CLR_TITLE);
-        var stepTitleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(28) };
-        Win32.DrawTextW(hdc, L.Onboarding_Step1Title, -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-        y += S(40);
-
-        // ── Les 5 améliorations ──
         DrawFeatureWithHighlight(hdc, margin, cw, ref y, "1",
             L.Onboarding_Feature1Title,
             "");
@@ -1385,6 +1516,18 @@ sealed partial class OnboardingWindow : IDisposable
         DrawFeature(hdc, margin, cw, ref y, "3",
             L.Onboarding_Feature3Title,
             L.Onboarding_Feature3Desc);
+        return y;
+    }
+
+    /// <summary>
+    /// Second écran des améliorations : les deux dernières, et la ligne sur la vie privée, qui
+    /// clôt la présentation — donc qui suit la dernière carte, pas la troisième.
+    /// </summary>
+    private int PaintStep1B(IntPtr hdc, int cw, int ch, int y)
+    {
+        int margin = S(BASE_MARGIN);
+        y = DrawFeaturesTitle(hdc, margin, cw, y);
+
         DrawFeatureWithHighlight(hdc, margin, cw, ref y, "4",
             L.Onboarding_Feature4Title,
             "");
@@ -1392,25 +1535,36 @@ sealed partial class OnboardingWindow : IDisposable
             L.Onboarding_Feature5Title,
             "");
 
-        // ── Mention rassurante (vie privée) ──
         y += S(8);
         Win32.SelectObject(hdc, _hFontReassure);
         Win32.SetTextColor(hdc, CLR_REASSURE);
-        string reassure = L.Onboarding_PrivacyReassurance;
         var reassureRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(18) };
-        Win32.DrawTextW(hdc, reassure, -1, ref reassureRect,
+        Win32.DrawTextW(hdc, L.Onboarding_PrivacyReassurance, -1, ref reassureRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        return reassureRect.bottom;
+    }
+
+    /// <summary>Titre commun aux deux écrans d'améliorations, et le <c>y</c> d'après.</summary>
+    private int DrawFeaturesTitle(IntPtr hdc, int margin, int cw, int y)
+    {
+        y += S(18);
+        Win32.SelectObject(hdc, _hFontStepSummary);
+        Win32.SetTextColor(hdc, CLR_TITLE);
+        var rect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(28) };
+        Win32.DrawTextW(hdc, L.Onboarding_Step1Title, -1, ref rect,
+            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        return y + S(40);
     }
 
     private void DrawFeature(IntPtr hdc, int margin, int cw, ref int y, string number, string title, string description)
     {
-        DrawStepCard(hdc, margin, cw, ref y, number, title, description, FEATURE_CARD_MIN_H);
+        DrawStepCard(hdc, margin, cw, ref y, number, title, description);
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Étape 2
     // ═══════════════════════════════════════════════════════════════
-    private void PaintStep2(IntPtr hdc, IntPtr gfx, int cw, int ch, int y)
+    private int PaintStep2(IntPtr hdc, IntPtr gfx, int cw, int ch, int y)
     {
         int margin = S(BASE_MARGIN);
 
@@ -1433,6 +1587,7 @@ sealed partial class OnboardingWindow : IDisposable
         DrawStepCardWithRuns(hdc, margin, cw, ref y, "4",
             L.Onboarding_Card4Title,
             GetShortcutRuns(null, $"Ctrl + {L.Settings_ShortcutModifier2} + W", L.Onboarding_Card4Suffix));
+        return y;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1440,8 +1595,8 @@ sealed partial class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private void DrawBadge(IntPtr hdc, int x, int y, string number)
     {
-        int badgeW = S(34);
-        int badgeH = S(24);
+        int badgeW = BadgeWidth(hdc);
+        int badgeH = BadgeHeight(hdc);
         var badgeRect = new Win32.RECT { left = x, top = y, right = x + badgeW, bottom = y + badgeH };
         GdiHelpers.FillSolidRect(hdc, badgeRect, CLR_BADGE_BG);
 
@@ -1515,26 +1670,22 @@ sealed partial class OnboardingWindow : IDisposable
         return runs.ToArray();
     }
 
+    // La surcharge de transfert qui vivait ici ne servait qu'à poser le plancher par défaut.
+    // Sans plancher, elle a la signature de celle qu'elle appelait.
     private void DrawStepCardWithRuns(IntPtr hdc, int margin, int cw, ref int y, string number, string title,
         params (string Text, uint Color, IntPtr Font)[] descriptionRuns)
-    {
-        DrawStepCardWithRuns(hdc, margin, cw, ref y, number, title, STEP_CARD_MIN_H, descriptionRuns);
-    }
-
-    private void DrawStepCardWithRuns(IntPtr hdc, int margin, int cw, ref int y, string number, string title,
-        int minCardHeight, params (string Text, uint Color, IntPtr Font)[] descriptionRuns)
     {
         int cardTop = y;
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        int badgeW = S(34);
+        int badgeW = BadgeWidth(hdc);
         int badgeGap = S(16);
         int contentWidth = cw - margin * 2;
         int textX = margin + cardPaddingX + badgeW + badgeGap;
         int textWidth = contentWidth - cardPaddingX * 2 - badgeW - badgeGap;
-        int titleHeight = S(24);
-        int descHeight = GdiHelpers.MeasureColoredRunsHeight(hdc, textWidth, S(22), descriptionRuns);
-        int cardHeight = Math.Max(S(minCardHeight), cardPaddingY * 2 + titleHeight + descHeight + S(4));
+        int titleHeight = CardTitleHeight(hdc);
+        int descHeight = GdiHelpers.MeasureColoredRunsHeight(hdc, textWidth, CardRunLineHeight(hdc), descriptionRuns);
+        int cardHeight = Math.Max(CardFloor(hdc), cardPaddingY * 2 + titleHeight + descHeight + S(4));
 
         var cardRect = new Win32.RECT { left = margin, top = cardTop, right = cw - margin, bottom = cardTop + cardHeight };
         GdiHelpers.DrawPanel(hdc, cardRect, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
@@ -1551,29 +1702,30 @@ sealed partial class OnboardingWindow : IDisposable
         };
         Win32.DrawTextW(hdc, title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
-        GdiHelpers.DrawColoredRuns(hdc, textX, cardTop + cardPaddingY + titleHeight, textWidth, S(22), descriptionRuns);
+        GdiHelpers.DrawColoredRuns(hdc, textX, cardTop + cardPaddingY + titleHeight, textWidth,
+            CardRunLineHeight(hdc), descriptionRuns);
 
         y += cardHeight + S(10);
     }
 
     private void DrawFeatureWithHighlight(IntPtr hdc, int margin, int cw, ref int y, string number, string title, string description)
     {
-        DrawStepCardWithRuns(hdc, margin, cw, ref y, number, title, FEATURE_CARD_MIN_H, GetStyledDescriptionRuns(number, description));
+        DrawStepCardWithRuns(hdc, margin, cw, ref y, number, title, GetStyledDescriptionRuns(number, description));
     }
 
-    private void DrawStepCard(IntPtr hdc, int margin, int cw, ref int y, string number, string title, string description, int minCardHeight = STEP_CARD_MIN_H)
+    private void DrawStepCard(IntPtr hdc, int margin, int cw, ref int y, string number, string title, string description)
     {
         int cardTop = y;
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        int badgeW = S(34);
+        int badgeW = BadgeWidth(hdc);
         int badgeGap = S(16);
         int contentWidth = cw - margin * 2;
         int textX = margin + cardPaddingX + badgeW + badgeGap;
         int textWidth = contentWidth - cardPaddingX * 2 - badgeW - badgeGap;
-        int titleHeight = S(24);
+        int titleHeight = CardTitleHeight(hdc);
         int descHeight = MeasureTextHeight(hdc, _hFontText, description, textWidth);
-        int cardHeight = Math.Max(S(minCardHeight), cardPaddingY * 2 + titleHeight + descHeight + S(4));
+        int cardHeight = Math.Max(CardFloor(hdc), cardPaddingY * 2 + titleHeight + descHeight + S(4));
 
         var cardRect = new Win32.RECT { left = margin, top = cardTop, right = cw - margin, bottom = cardTop + cardHeight };
         GdiHelpers.DrawPanel(hdc, cardRect, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
@@ -1609,15 +1761,15 @@ sealed partial class OnboardingWindow : IDisposable
         int cardTop = y;
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        int badgeW = S(34);
+        int badgeW = BadgeWidth(hdc);
         int badgeGap = S(16);
         int contentWidth = cw - margin * 2;
         int textX = margin + cardPaddingX + badgeW + badgeGap;
         int textWidth = contentWidth - cardPaddingX * 2 - badgeW - badgeGap;
-        int titleHeight = S(24);
+        int titleHeight = CardTitleHeight(hdc);
         var shortcutRuns = GetShortcutRuns(L.Onboarding_Card2ShortcutPrefix, $"Ctrl + {L.Settings_ShortcutModifier2} + {L.Onboarding_CapsLockWord}");
-        int shortcutHeight = GdiHelpers.MeasureColoredRunsHeight(hdc, textWidth, S(22), shortcutRuns);
-        int cardHeight = Math.Max(S(78), cardPaddingY * 2 + titleHeight + shortcutHeight + S(10));
+        int shortcutHeight = GdiHelpers.MeasureColoredRunsHeight(hdc, textWidth, CardRunLineHeight(hdc), shortcutRuns);
+        int cardHeight = Math.Max(CardFloor(hdc), cardPaddingY * 2 + titleHeight + shortcutHeight + S(10));
 
         var cardRect = new Win32.RECT { left = margin, top = cardTop, right = cw - margin, bottom = cardTop + cardHeight };
         GdiHelpers.DrawPanel(hdc, cardRect, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
@@ -1641,32 +1793,20 @@ sealed partial class OnboardingWindow : IDisposable
         y += cardHeight + S(10);
     }
 
-    private void PaintStep3(IntPtr hdc, IntPtr gfx, int cw, int ch, int y)
+    private int PaintStep3(IntPtr hdc, IntPtr gfx, int cw, int ch, int y)
     {
         int margin = S(BASE_MARGIN);
-        GetStep3Layout(y, cw, out var resourcesPanel, out var prefsPanel,
-            out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out _,
-            out int checkboxX, out int checkboxWidth, out int checkboxY, out int checkboxSpacing, out _,
-            out _, out int trainingDescY, out int trainingDescHeight);
+        GetResourcesLayout(y, cw, out var panel,
+            out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out _);
 
         Win32.SelectObject(hdc, _hFontPageTitle);
         Win32.SetTextColor(hdc, CLR_TITLE);
-        var stepTitleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = resourcesPanel.top - S(12) };
-        Win32.DrawTextW(hdc, L.Onboarding_SectionResources, -1, ref stepTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        var titleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = panel.top - S(12) };
+        Win32.DrawTextW(hdc, L.Onboarding_SectionResources, -1, ref titleRect,
+            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
-        var prefsTitleRect = new Win32.RECT
-        {
-            left = margin,
-            top = resourcesPanel.bottom + S(14),
-            right = cw - margin,
-            bottom = prefsPanel.top - S(8)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref prefsTitleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        GdiHelpers.DrawPanel(hdc, panel, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
 
-        GdiHelpers.DrawPanel(hdc, resourcesPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
-        GdiHelpers.DrawPanel(hdc, prefsPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
-
-        // Séparateurs entre les liens
         for (int row = 1; row < 4; row++)
         {
             var rowSep = new Win32.RECT
@@ -1679,20 +1819,44 @@ sealed partial class OnboardingWindow : IDisposable
             GdiHelpers.FillSolidRect(hdc, rowSep, 0x00E3E3E3);
         }
 
-        // Texte descriptif sous la case « Défi du jour » (3e case du panneau Préférences) —
-        // simple texte dessiné (comme la mention vie privée de l'étape 1), pas de contrôle
-        // STATIC dédié : pas besoin d'interaction, juste une précision sous le libellé de la case.
+        return panel.bottom;
+    }
+
+    /// <summary>
+    /// Écran des préférences, séparé de celui des ressources le 2026-08-30. Les deux panneaux
+    /// empilés faisaient de l'ancienne étape 3 la plus haute des quatre, et donc la hauteur de
+    /// toute la fenêtre.
+    /// </summary>
+    private int PaintStep4(IntPtr hdc, IntPtr gfx, int cw, int ch, int y)
+    {
+        int margin = S(BASE_MARGIN);
+        GetPrefsLayout(y, cw, out var panel,
+            out int checkboxX, out int checkboxWidth, out _, out _, out _, out _,
+            out int trainingDescY, out int trainingDescHeight);
+
+        Win32.SelectObject(hdc, _hFontPageTitle);
+        Win32.SetTextColor(hdc, CLR_TITLE);
+        var titleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = panel.top - S(12) };
+        Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref titleRect,
+            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        GdiHelpers.DrawPanel(hdc, panel, CLR_PANEL_BG, CLR_PANEL_BORDER, CLR_BADGE_BG, S(4));
+
+        // Texte descriptif sous la case « Défi du jour » — simple texte dessiné, pas de contrôle
+        // STATIC : pas d'interaction, juste une précision sous le libellé de la case.
         Win32.SelectObject(hdc, _hFontReassure);
         Win32.SetTextColor(hdc, CLR_REASSURE);
-        var trainingDescRect = new Win32.RECT
+        var descRect = new Win32.RECT
         {
             left = checkboxX,
             top = trainingDescY,
             right = checkboxX + checkboxWidth,
             bottom = trainingDescY + trainingDescHeight
         };
-        Win32.DrawTextW(hdc, L.Onboarding_ChkTrainingDesc, -1, ref trainingDescRect,
+        Win32.DrawTextW(hdc, L.Onboarding_ChkTrainingDesc, -1, ref descRect,
             Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
+
+        return Math.Max(panel.bottom, descRect.bottom);
     }
 
     // ═══════════════════════════════════════════════════════════════
