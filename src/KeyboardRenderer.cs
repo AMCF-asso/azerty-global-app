@@ -28,20 +28,9 @@ internal readonly record struct KeyboardHitTestResult(uint Scancode, string Labe
 
 internal static class KeyboardRenderer
 {
-    private const uint CLR_KEY = 0x003A3A3A;
-    private const uint CLR_KEY_CONTEXT = 0x002D2D2D;
-    private const uint CLR_KEY_BORDER = 0x00555555;
-    private const uint CLR_KEY_PRESSED = 0x006A4A2A;
-    private const uint CLR_KEY_DISABLED = 0x002A2A2A;
-    private const uint CLR_MOD_ACTIVE = 0x009A5A1A;
-    private const uint CLR_KEY_HIGHLIGHT_BORDER = 0x0064C800;
-    private const uint CLR_CTX_TEXT = 0x00E0E0E0;
-    private const uint CLR_KEY_LABEL = 0x0080D0F0;
-    private const uint CLR_CHAR_ACTIVE_BLUE = 0x00FFB366;
-    private const uint CLR_CHAR_DIM = 0x00999999;
-    private const uint CLR_DK_CHAR = 0x006666FF;
-    private const uint CLR_DK_ACTIVE_TEXT = 0x000080FF;
-    private const uint CLR_CAPS_BAR = 0x0000A5FF;
+    // Aucune couleur ici : elles sortent de KeyboardTheme et de la palette courante,
+    // depuis le chantier CH4. Les quatorze constantes CLR_ qui vivaient a cet endroit
+    // portaient onze valeurs identiques au bit pres a celles de LearningModule.
 
     private static readonly HashSet<uint> LetterKeyScancodes = new()
     {
@@ -370,20 +359,21 @@ internal static class KeyboardRenderer
         bool disabledBackspace = profile == KeyboardRenderProfile.Onboarding && key.IsContextual && key.Scancode == 0x0E;
         bool isoEnter = key.Scancode == 0x1C && key.H > VirtualKeyboard.KEY_H;
 
-        uint fill = key.IsContextual ? CLR_KEY_CONTEXT : CLR_KEY;
-        uint border = CLR_KEY_BORDER;
-        int borderWidth = 1;
-        if (disabledBackspace)
-            fill = CLR_KEY_DISABLED;
-        if (highlighted)
-        {
-            border = CLR_KEY_HIGHLIGHT_BORDER;
-            borderWidth = 2;
-        }
-        if (pressed)
-            fill = CLR_KEY_PRESSED;
-        else if (modifierActive)
-            fill = CLR_MOD_ACTIVE;
+        KeyState keyState =
+            disabledBackspace ? KeyState.Disabled :
+            pressed ? KeyState.Pressed :
+            modifierActive ? KeyState.ModifierActive :
+            highlighted ? KeyState.Pressed :
+            KeyState.Rest;
+        var palette = Theme.Current;
+        var paint = KeyboardTheme.Paint(keyState, palette);
+
+        // Une touche contextuelle au repos s'enfonce d'un cran — fond de fenetre plutot
+        // que surface. C'est le seul ecart a la table d'etats, et il tient la place du
+        // CLR_KEY_CONTEXT d'avant, plus sombre que CLR_KEY pour cette meme raison.
+        uint fill = keyState == KeyState.Rest && key.IsContextual ? palette.Paper : paint.Fill;
+        uint border = paint.Border;
+        int borderWidth = paint.BorderWidth;
 
         var brush = Win32.CreateSolidBrush(fill);
         var pen = Win32.CreatePen(0, borderWidth, border);
@@ -404,14 +394,14 @@ internal static class KeyboardRenderer
         {
             int barH = Math.Max(2, (rect.bottom - rect.top) / 18);
             var barRect = new Win32.RECT { left = rect.left, top = rect.bottom - barH, right = rect.right, bottom = rect.bottom };
-            var barBrush = Win32.CreateSolidBrush(CLR_CAPS_BAR);
+            var barBrush = Win32.CreateSolidBrush(paint.Label);
             Win32.FillRect(hdc, ref barRect, barBrush);
             Win32.DeleteObject(barBrush);
         }
 
         if (key.IsContextual || key.Scancode == 0 || !layout.Keys.TryGetValue(key.Scancode, out var def))
         {
-            DrawContextKeyLabel(hdc, rect, key, isoEnter, disabledBackspace, hFontContext);
+            DrawContextKeyLabel(hdc, rect, key, isoEnter, paint.Label, hFontContext);
             return;
         }
 
@@ -452,7 +442,7 @@ internal static class KeyboardRenderer
         Win32.RECT rect,
         VirtualKeyboard.VisualKey key,
         bool isoEnter,
-        bool disabled,
+        uint textColor,
         IntPtr hFont)
     {
         var labelRect = rect;
@@ -460,7 +450,7 @@ internal static class KeyboardRenderer
             labelRect.left = rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
 
         Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, disabled ? 0x00606060u : CLR_CTX_TEXT);
+        Win32.SetTextColor(hdc, textColor);
         Win32.DrawTextW(hdc, key.Label, -1, ref labelRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
     }
@@ -519,7 +509,7 @@ internal static class KeyboardRenderer
         if (!string.IsNullOrEmpty(display))
         {
             var oldFont = Win32.SelectObject(hdc, hFontMain);
-            Win32.SetTextColor(hdc, CLR_CTX_TEXT);
+            Win32.SetTextColor(hdc, Theme.Current.Ink);
             Win32.DrawTextW(hdc, display, display.Length, ref charRect,
                 Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP | Win32.DT_END_ELLIPSIS);
             Win32.SelectObject(hdc, oldFont);
@@ -527,7 +517,7 @@ internal static class KeyboardRenderer
 
         var labelRect = new Win32.RECT { left = rect.left + 2, top = rect.bottom - labelH - 2, right = rect.right - 2, bottom = rect.bottom - 1 };
         var oldLabelFont = Win32.SelectObject(hdc, hFontTiny);
-        Win32.SetTextColor(hdc, CLR_KEY_LABEL);
+        Win32.SetTextColor(hdc, Theme.Current.TextSecondary);
         Win32.DrawTextW(hdc, key.Label, key.Label.Length, ref labelRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
         Win32.SelectObject(hdc, oldLabelFont);
@@ -572,7 +562,7 @@ internal static class KeyboardRenderer
         string text = L.Keyboard_ActiveDeadKeyStatus(name);
         var textRect = new Win32.RECT { left = rect.left, top = rect.top, right = rect.right - 4, bottom = rect.bottom };
         var oldFont = Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, CLR_DK_ACTIVE_TEXT);
+        Win32.SetTextColor(hdc, Theme.Current.Action);
         Win32.DrawTextW(hdc, text, text.Length, ref textRect,
             Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
         Win32.SelectObject(hdc, oldFont);
@@ -734,13 +724,11 @@ internal static class KeyboardRenderer
         var disp = GetDisplayChar(chr, showInvisibleMarkers);
         if (string.IsNullOrEmpty(disp)) return;
 
-        uint color = (isDeadKey, isActive) switch
-        {
-            (true, true) => CLR_DK_CHAR,
-            (true, false) => CLR_DK_CHAR,
-            (false, true) => CLR_CHAR_ACTIVE_BLUE,
-            (false, false) => CLR_CHAR_DIM
-        };
+        // Deux jetons de texte seulement, la ou l'application en employait quatre :
+        // l'encre pour la couche que la frappe produira, texte-2 pour les autres. Une
+        // touche morte garde ce rang et se signale par son cercle pointille, pas par une
+        // couleur de plus — la charte n'en offre aucune, et l'inventer est interdit.
+        uint color = isActive ? Theme.Current.Ink : Theme.Current.TextSecondary;
         IntPtr hFont = useMainFont ? hFontMain : hFontSmall;
         var oldFont = Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, color);
