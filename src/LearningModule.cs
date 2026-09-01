@@ -315,10 +315,9 @@ sealed class LearningModule : IDisposable
     // Le module d'initiation doit rester positionnel, meme si le layout Windows sous-jacent
     // laisse passer ponctuellement un caractere natif (ex: QWERTY US D01 -> q). RawKeyDown
     // arrive avant l'emission de caractere : on y capture le texte AZERTY Global attendu.
-    private string? _pendingPhysicalText;
-    private int _pendingPhysicalTextIndex;
-    private long _pendingPhysicalTextTick;
     private const int PENDING_PHYSICAL_TEXT_TIMEOUT_MS = 1000;
+    private readonly PhysicalTextInputBuffer _pendingPhysicalText =
+        new(PENDING_PHYSICAL_TEXT_TIMEOUT_MS);
 
     // Highlight du prochain caractère
     private readonly HashSet<uint> _highlightedScancodes = new();
@@ -1147,8 +1146,6 @@ sealed class LearningModule : IDisposable
 
     private void CaptureExpectedTextForPhysicalKey(uint scancode)
     {
-        ClearPendingPhysicalText();
-
         if (!_hasFocus || _completed || _inTransition || _awaitingChoice) return;
         if (!_layout.Keys.TryGetValue(scancode, out var keyDef)) return;
 
@@ -1188,15 +1185,14 @@ sealed class LearningModule : IDisposable
 
         if (string.IsNullOrEmpty(expectedText)) return;
 
-        _pendingPhysicalText = expectedText;
-        _pendingPhysicalTextTick = Environment.TickCount64;
+        _pendingPhysicalText.Enqueue(expectedText);
     }
 
     private void ClearPendingPhysicalText()
     {
-        _pendingPhysicalText = null;
-        _pendingPhysicalTextIndex = 0;
-        _pendingPhysicalTextTick = 0;
+        // Certains tests de compatibilité construisent le module sans exécuter son
+        // constructeur afin d'isoler la logique Retour arrière.
+        _pendingPhysicalText?.Clear();
     }
 
     private void OnMouseMove(IntPtr lParam)
@@ -1538,27 +1534,7 @@ sealed class LearningModule : IDisposable
 
     private char ResolveTypedCharacter(char received)
     {
-        if (string.IsNullOrEmpty(_pendingPhysicalText))
-            return received;
-
-        if (Environment.TickCount64 - _pendingPhysicalTextTick > PENDING_PHYSICAL_TEXT_TIMEOUT_MS)
-        {
-            ClearPendingPhysicalText();
-            return received;
-        }
-
-        if (_pendingPhysicalTextIndex >= _pendingPhysicalText.Length)
-        {
-            ClearPendingPhysicalText();
-            return received;
-        }
-
-        char expected = _pendingPhysicalText[_pendingPhysicalTextIndex++];
-        if (_pendingPhysicalTextIndex >= _pendingPhysicalText.Length)
-        {
-            ClearPendingPhysicalText();
-        }
-        return expected;
+        return _pendingPhysicalText.Resolve(received);
     }
 
     private void OnBackspace()

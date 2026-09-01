@@ -156,6 +156,14 @@ internal sealed class LessonTypingSession
         return Mode == LessonTypingMode.Strict ? TypeStrict(c) : TypeFlexible(c);
     }
 
+    public LessonInputResult TypeCharAndAdvanceLine(char c)
+    {
+        var result = TypeChar(c);
+        if (result.LineCompleted && !result.ExerciseCompleted)
+            AdvanceCompletedLine();
+        return result;
+    }
+
     public LessonInputResult Backspace()
     {
         if (IsExerciseComplete || IsLineComplete) return IgnoredResult();
