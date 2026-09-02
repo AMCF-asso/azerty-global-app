@@ -2,7 +2,7 @@ name: CI build + audit sécu
 
 on:
   push:
-    branches: [main, release/**]
+    branches: [main, release/**, ci/**]
   pull_request:
     branches: [main]
   workflow_dispatch:
