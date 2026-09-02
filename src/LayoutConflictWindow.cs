@@ -50,7 +50,7 @@ sealed class LayoutConflictWindow : IDisposable
     private readonly Action _onKeep;
 
     private float _dpiScale;
-    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
+    private int S(int val) => ThemeControls.Scale(val, _dpi);
 
     /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.</summary>
     private int _dpi => (int)Math.Round(96 * _dpiScale);
@@ -183,7 +183,12 @@ sealed class LayoutConflictWindow : IDisposable
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        // WS_CLIPCHILDREN : sans lui, le BitBlt plein client d'OnPaint recopie le tampon
+        // sur les zones des enfants et efface les controles owner-draw deja peints. Meme
+        // mecanisme que SettingsWindow, mesure le 2026-08-30. Le dwStyle de ResizeWindow ne
+        // le porte pas : il ne sert qu'a AdjustWindowRectEx.
+        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU
+            | Win32.WS_CLIPCHILDREN;
         uint dwExStyle = Win32.WS_EX_TOPMOST;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, dwExStyle);

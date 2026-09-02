@@ -202,7 +202,7 @@ sealed partial class OnboardingWindow : IDisposable
     // cette fenêtre à 12,75 px quand le reste de l'application est à 15, et ses « 28 px »
     // de titre à 21 : la fenêtre de bienvenue était la seule à ne pas être à l'échelle de
     // l'application, sans que rien ne le dise. Tout grandit d'un tiers.
-    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
+    private int S(int val) => ThemeControls.Scale(val, _dpi);
 
     /// <summary>L'échelle en points par pouce, dont Theme a besoin pour ses polices.</summary>
     private int _dpi => (int)Math.Round(96 * _dpiScale);
@@ -524,6 +524,7 @@ sealed partial class OnboardingWindow : IDisposable
             // WS_CLIPCHILDREN le parent ne peint meme plus dessus : sans cette ligne les six
             // controles garderaient la palette du theme precedent.
             InvalidateOwnerDrawControls();
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         };
         Theme.Changed += _themeChanged;
 
@@ -937,14 +938,12 @@ sealed partial class OnboardingWindow : IDisposable
                     hCtrl == _hWndLinkFeedback || hCtrl == _hWndLinkDiscord)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
-                    bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
                     Win32.SetTextColor(hdcStatic, CLR_LINK);
                     return _hPanelBrush;
                 }
                 if (hCtrl == _hWndLinkFeedbackBanner)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
-                    bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
                     Win32.SetTextColor(hdcStatic, CLR_LINK);
                     return _hBannerBgBrush;
                 }
@@ -955,7 +954,7 @@ sealed partial class OnboardingWindow : IDisposable
                     return _hPanelBrush;
                 }
                 Win32.SetBkMode(hdcStatic, 1);
-                Win32.SetTextColor(hdcStatic, 0x00888888);
+                Win32.SetTextColor(hdcStatic, CLR_REASSURE);
                 return _hBgBrush;
             }
 
@@ -1340,7 +1339,7 @@ sealed partial class OnboardingWindow : IDisposable
         }
 
         Win32.SelectObject(hdc, _hFontVersion);
-        Win32.SetTextColor(hdc, 0x00888888);
+        Win32.SetTextColor(hdc, CLR_REASSURE);
         string versionText = "v" + Program.Version;
         var versionRect = new Win32.RECT
         {
@@ -1816,7 +1815,7 @@ sealed partial class OnboardingWindow : IDisposable
                 right = linksX + linksWidth,
                 bottom = linkStartY + row * linkRowH - S(5)
             };
-            GdiHelpers.FillSolidRect(hdc, rowSep, 0x00E3E3E3);
+            GdiHelpers.FillSolidRect(hdc, rowSep, CLR_PANEL_BORDER);
         }
 
         return panel.bottom;

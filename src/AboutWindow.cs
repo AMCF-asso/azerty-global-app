@@ -191,7 +191,12 @@ sealed class AboutWindow : IDisposable
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        // WS_CLIPCHILDREN : sans lui, le BitBlt plein client d'OnPaint recopie le tampon
+        // sur les zones des enfants et efface les contrôles owner-draw déjà peints. Même
+        // mécanisme que SettingsWindow, mesuré le 2026-08-30. Le dwStyle de ResizeWindow ne
+        // le porte pas : il ne sert qu'à AdjustWindowRectEx.
+        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU
+            | Win32.WS_CLIPCHILDREN;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
         int windowW = adjustRect.right - adjustRect.left;

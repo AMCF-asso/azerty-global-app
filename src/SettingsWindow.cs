@@ -216,7 +216,7 @@ sealed partial class SettingsWindow : IDisposable
     private Action? _themeChanged;
 
     private float _dpiScale;
-    private int S(int val) => (int)(val * _dpiScale * ThemeControls.Density);
+    private int S(int val) => ThemeControls.Scale(val, _dpi);
 
     /// <summary>L'echelle en points par pouce, dont Theme a besoin pour ses polices. _dpiScale
     /// reste la mesure de travail de cette fenetre, qui multiplie des dizaines de coordonnees :
@@ -1969,8 +1969,6 @@ sealed partial class SettingsWindow : IDisposable
     {
         // Le cadre de la liste, que WS_BORDER dessinait aux couleurs du système. Même primitive
         // que les champs de raccourci : une liste est un champ, du point de vue de la charte.
-        ThemeControls.DrawFieldFrame(hdc, layout.CompatListRect, ControlState.None,
-            Theme.Current, _dpi);
         ThemeControls.DrawFieldFrame(hdc, layout.CompatListRect, ControlState.None,
             Theme.Current, _dpi);
     }
