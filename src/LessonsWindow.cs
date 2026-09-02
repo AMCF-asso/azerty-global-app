@@ -279,6 +279,27 @@ internal sealed class LessonsWindow : IDisposable
         return false;
     }
 
+    /// <summary>
+    /// Porte non modale du banc de captures (CH4a, décision S4-1) : même fenêtre que
+    /// <see cref="Show"/>, sans premier plan, sans focus, sans toucher au verrou majuscule ni à
+    /// la position mémorisée. Choisit l'exercice s'il est nommé, affiche l'indice si demandé,
+    /// rend le handle pour PrintWindow. Le mapper et le hook reçus au constructeur restent
+    /// inertes : aucun hook n'est posé.
+    /// </summary>
+    internal IntPtr OpenForCapture(string? moduleId, string? lessonId, int exerciseIndex, bool withHint)
+    {
+        if (moduleId != null && lessonId != null)
+            SelectExercise(moduleId, lessonId, exerciseIndex, savePosition: false);
+        CenterOnActiveMonitor();
+        UpdateRenderScaleFromCurrentClient(force: true);
+        _visible = true;
+        Win32.ShowWindow(_hWnd, 1);
+        if (withHint)
+            ShowHintCore(automatic: true);
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        return _hWnd;
+    }
+
     public void Show()
     {
         if (!RestoreSavedBoundsIfVisible())
@@ -298,7 +319,12 @@ internal sealed class LessonsWindow : IDisposable
     }
 
     private int D(int value) => (int)Math.Round(value * _dpiScale);
-    private int S(int value) => (int)Math.Round(value * _dpiScale * _windowScale * ThemeControls.Density);
+    private int S(int value)
+    {
+        // Plancher d'un pixel, comme ThemeControls.Scale : S(1) rendait 0 sous 96 DPI (audit A1 §3.6).
+        int scaled = (int)Math.Round(value * _dpiScale * _windowScale * ThemeControls.Density);
+        return value > 0 ? Math.Max(1, scaled) : scaled;
+    }
 
     private LessonModule CurrentModule => _catalog.Modules[_moduleIndex];
     private LessonLesson CurrentLesson => CurrentModule.Lessons[_lessonIndex];
@@ -2266,6 +2292,13 @@ internal sealed class LessonsWindow : IDisposable
             state.LessonVisibleCharacters.Add(_hintMethod.DeadKeyToken);
 
         var step = LessonHintProvider.GetCurrentStep(_hintMethod, _mapper.ActiveDeadKey);
+        // Rôle de la frappe attendue (CH4a, S4-3) : directe, armement d'une touche morte, ou
+        // seconde frappe. Sans table dans le profil d'affichage, le moteur peint comme avant.
+        bool armingDeadKey = _hintMethod.IsDeadKey
+            && !string.Equals(_mapper.ActiveDeadKey, _hintMethod.DeadKey, StringComparison.Ordinal);
+        state.HighlightRole = !_hintMethod.IsDeadKey ? KeyHighlight.Direct
+            : armingDeadKey ? KeyHighlight.DeadKeyActivation
+            : KeyHighlight.Step2;
         AddHintStepHighlight(state, step);
     }
 
