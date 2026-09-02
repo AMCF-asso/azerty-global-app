@@ -41,6 +41,7 @@ public class ThemeTests
         ("WarningFill", "#F7EDDC"),
         ("ErrorFill", "#F9E9E6"),
         ("ActionFill", "#E3E9FC"),
+        ("KeyFace", "#FFFFFF"),
     };
 
     private static readonly (string Name, string Hex)[] DarkCharte =
@@ -58,6 +59,7 @@ public class ThemeTests
         ("WarningFill", "#2C2212"),
         ("ErrorFill", "#2D1A16"),
         ("ActionFill", "#1F2438"),
+        ("KeyFace", "#3E382F"),
     };
 
     private static IReadOnlyDictionary<string, uint> Tokens(Palette p) => new Dictionary<string, uint>
@@ -75,6 +77,7 @@ public class ThemeTests
         ["WarningFill"] = p.WarningFill,
         ["ErrorFill"] = p.ErrorFill,
         ["ActionFill"] = p.ActionFill,
+        ["KeyFace"] = p.KeyFace,
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -146,12 +149,14 @@ public class ThemeTests
     // ═══════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Treize jetons, et treize valeurs distinctes : les deux membres « On… » ne portent aucune
-    /// couleur propre. Ce test tombe aussi bien si quelqu'un invente une nuance que s'il fait
-    /// dériver un OnAction vers une valeur qui n'est plus celle d'un jeton.
+    /// Quatorze jetons depuis CH4a (S4-4, 2026-09-02), et autant de valeurs distinctes que la charte
+    /// en compte : treize en clair, où le jeton « touche » est Surface, quatorze en sombre. Les deux
+    /// membres « On… » ne portent aucune couleur propre. Ce test tombe aussi bien si quelqu'un
+    /// invente une nuance que s'il fait dériver un OnAction vers une valeur qui n'est plus celle
+    /// d'un jeton.
     /// </summary>
     [Fact]
-    public void UnePalette_NAQueLesTreizeCouleursDeLaCharte()
+    public void UnePalette_NAQueLesCouleursDeLaCharte()
     {
         AsserteFermeture(ThemeVariant.Light);
         AsserteFermeture(ThemeVariant.Dark);
@@ -164,17 +169,18 @@ public class ThemeTests
             .Select(t => Tokens(palette)[t.Name])
             .ToHashSet();
 
-        Assert.Equal(13, charte.Count);
+        int attendu = variant == ThemeVariant.Dark ? 14 : 13;
+        Assert.Equal(attendu, charte.Count);
 
         var employees = new[]
         {
             palette.Paper, palette.Surface, palette.Ink, palette.TextSecondary, palette.Border,
             palette.Action, palette.Success, palette.Warning, palette.Error,
             palette.SuccessFill, palette.WarningFill, palette.ErrorFill, palette.ActionFill,
-            palette.OnAction, palette.OnActionFill, palette.Disabled,
+            palette.OnAction, palette.OnActionFill, palette.Disabled, palette.KeyFace,
         }.ToHashSet();
 
-        Assert.Equal(13, employees.Count);
+        Assert.Equal(attendu, employees.Count);
         Assert.True(employees.SetEquals(charte),
             $"Le thème {variant} emploie une couleur absente de la charte : " +
             string.Join(", ", employees.Except(charte).Select(c => $"0x{c:X8}")));

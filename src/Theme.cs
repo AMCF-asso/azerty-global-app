@@ -150,7 +150,13 @@ internal sealed record Palette(
     uint ActionFill,
     uint OnAction,
     uint OnActionFill,
-    uint Disabled);
+    uint Disabled,
+    /// <summary>
+    /// Fond d'une touche de clavier au repos — décision S4-4 du 2026-09-02 (CH4a). En clair c'est
+    /// Surface : le trait délimite. En sombre, Surface ne se détachait du fond que de 1,15:1 sur
+    /// 105 surfaces adjacentes ; ce jeton rend 1,53:1, la valeur exacte que l'app 1.x posait.
+    /// </summary>
+    uint KeyFace);
 
 /// <summary>
 /// Palette courante, caches GDI et suivi du thème de Windows.
@@ -201,7 +207,9 @@ static class Theme
         // Encre sur action-fond : 14,60:1.
         OnActionFill: Rgb(0x1B, 0x18, 0x13),
         // Texte-2, tel quel : 6,95:1 sur le papier.
-        Disabled: Rgb(0x5B, 0x55, 0x4A));
+        Disabled: Rgb(0x5B, 0x55, 0x4A),
+        // Touche au repos = Surface : blanc sur papier, 1,06:1, le trait délimite (CH4a, S4-4).
+        KeyFace: Rgb(0xFF, 0xFF, 0xFF));
 
     /// <summary>Thème sombre — négatif chaud calculé pour le site le 2026-08-27.</summary>
     internal static Palette DarkPalette { get; } = new(
@@ -224,7 +232,9 @@ static class Theme
         // Encre sur action-fond : 14,45:1.
         OnActionFill: Rgb(0xFA, 0xF8, 0xF1),
         // Texte-2, tel quel : 7,61:1 sur le fond.
-        Disabled: Rgb(0xB3, 0xA9, 0x96));
+        Disabled: Rgb(0xB3, 0xA9, 0x96),
+        // Touche au repos : 1,53:1 sur le fond, encre 10,9, texte-2 5,0, action 5,0 (CH4a, S4-4).
+        KeyFace: Rgb(0x3E, 0x38, 0x2F));
 
     /// <summary>Palette d'une variante. Fonction pure — c'est elle que les tests éprouvent.</summary>
     internal static Palette ForVariant(ThemeVariant variant) =>
@@ -263,7 +273,8 @@ static class Theme
             ActionFill: systemColor(Win32.COLOR_HIGHLIGHT),
             OnAction: systemColor(Win32.COLOR_HIGHLIGHTTEXT),
             OnActionFill: systemColor(Win32.COLOR_HIGHLIGHTTEXT),
-            Disabled: systemColor(Win32.COLOR_GRAYTEXT));
+            Disabled: systemColor(Win32.COLOR_GRAYTEXT),
+            KeyFace: window);
     }
 
     // ═══════════════════════════════════════════════════════════════

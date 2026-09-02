@@ -11,8 +11,8 @@ namespace AZERTYGlobal.Tests;
 /// La table d'états du §6 de l'audit est marquée « candidate, arrêt sur pièces à CH4 », et
 /// l'audit lui-même n'avait pas d'axe pour ce que les trois claviers actuels colorent en
 /// réalité : le rang d'une frappe dans une séquence. Trois tables candidates existent donc
-/// dans <see cref="HighlightScheme"/>, et cette planche les rend côte à côte pour qu'une
-/// seule survive.
+/// dans le code jusqu'au 2026-09-02 ; l'arrêt visuel de CH4a a retenu la table B (direct vs
+/// séquence), et cette planche ne rend plus que celle-là.
 ///
 /// ⚠️ Ce n'est pas un test : il n'assert rien qu'un humain ne doive regarder. Fermé par
 /// <c>AZERTY_KEYS</c>, comme le banc l'est par <c>AZERTY_CAPTURE</c> — donc hors CI et hors
@@ -81,12 +81,6 @@ public class KeyboardStatesBoard
         ("étape 2 de 2", KeyHighlight.Step2),
     };
 
-    private static readonly (string Label, HighlightScheme Scheme)[] Schemes =
-    {
-        ("A — par étape", HighlightScheme.ParEtape),
-        ("B — direct vs séquence", HighlightScheme.DirectVsSequence),
-        ("C — rôle unique numéroté", HighlightScheme.RoleUniqueNumerote),
-    };
 
     /// <summary>Les six états de la charte, sur une touche de lettre puis sur un modifieur.</summary>
     private static void RenderStates(Palette palette, string file)
@@ -118,11 +112,11 @@ public class KeyboardStatesBoard
         });
     }
 
-    /// <summary>Les trois tables candidates de surlignage, une par ligne.</summary>
+    /// <summary>La table B de surlignage, arrêtée le 2026-09-02, sur une ligne.</summary>
     private static void RenderHighlights(Palette palette, string file)
     {
         int width = Margin * 2 + LabelWidth + CellWidth * (Highlights.Length + 1);
-        int height = Margin * 2 + RowHeight * (Schemes.Length + 1);
+        int height = Margin * 2 + RowHeight * 2;
 
         Render(file, width, height, palette, (hdc, label, caption, mono) =>
         {
@@ -130,9 +124,9 @@ public class KeyboardStatesBoard
             for (int c = 0; c < Highlights.Length; c++)
                 Text(hdc, Cell(c + 1, 0), Highlights[c].Label, caption, palette.TextSecondary);
 
-            for (int r = 0; r < Schemes.Length; r++)
+            for (int r = 0; r < 1; r++)
             {
-                Text(hdc, RowLabel(r), Schemes[r].Label, caption, palette.TextSecondary);
+                Text(hdc, RowLabel(r), "B — direct vs séquence", caption, palette.TextSecondary);
 
                 KeyboardTheme.DrawKeyCap(hdc, KeyRect(0, r + 1),
                     KeyboardTheme.Paint(KeyState.Rest, palette), "E", "€", mono, caption, Dpi);
@@ -140,15 +134,8 @@ public class KeyboardStatesBoard
                 for (int c = 0; c < Highlights.Length; c++)
                 {
                     var highlight = Highlights[c].Highlight;
-                    var paint = KeyboardTheme.HighlightPaint(highlight, palette, Schemes[r].Scheme);
-                    var rect = KeyRect(c + 1, r + 1);
-                    bool badge = KeyboardTheme.ShowsRankBadge(Schemes[r].Scheme)
-                        && KeyboardTheme.RankOf(highlight) > 0;
-                    KeyboardTheme.DrawKeyCap(hdc, rect, paint, "E", "€", mono, caption, Dpi,
-                        badge ? KeyboardTheme.BadgeSize(Dpi) : 0);
-                    if (badge)
-                        KeyboardTheme.DrawRankBadge(hdc, rect, KeyboardTheme.RankOf(highlight),
-                            palette, caption, Dpi);
+                    var paint = KeyboardTheme.HighlightPaint(highlight, palette);
+                    KeyboardTheme.DrawKeyCap(hdc, KeyRect(c + 1, r + 1), paint, "E", "€", mono, caption, Dpi);
                 }
             }
         });
