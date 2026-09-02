@@ -1,0 +1,12 @@
+# Décision S4-5 (2026-09-02) : les fichiers neufs naissent en LF, les 40 fichiers CRLF ou mixtes
+# existants ne sont pas renormalisés avant la sortie 2.0.0. Un `.gitattributes` `*.cs text eol=lf`
+# ferait l'inverse : il convertirait chaque fichier CRLF au commit qui le touche, puis laisserait
+# l'arbre de travail en désaccord permanent avec l'index (fantôme dans `git status`). Ici, seul
+# l'éditeur est guidé ; git ne convertit rien. La règle §7.1 de la roadmap (terminaison déduite
+# de la région de l'ancre) reste la seule barrière sur les fichiers existants.
+root = true
+
+[*.cs]
+end_of_line = lf
+charset = utf-8
+insert_final_newline = true

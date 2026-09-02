@@ -228,6 +228,12 @@ sealed class VirtualKeyboard : IDisposable
     // Champs d'instance
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
+
+    /// <summary>
+    /// Handle de la fenêtre. Le banc de captures l'affiche par ShowWindow plutôt que par
+    /// <see cref="Show"/>, qui compte une ouverture dans les statistiques d'usage.
+    /// </summary>
+    internal IntPtr Handle => _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Layout _layout;
     private readonly Dictionary<string, (string Fr, string En)> _charNames; // char → noms FR/EN (tooltip selon L.IsEnglish)

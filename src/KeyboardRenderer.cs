@@ -22,12 +22,26 @@ internal sealed class KeyboardRenderState
     public HashSet<string> LessonVisibleCharacters { get; } = new(StringComparer.Ordinal);
     public string? HintCharacter { get; init; }
     public bool ShowInvisibleMarkers { get; init; } = true;
+
+    /// <summary>
+    /// Rôle de la frappe attendue dans sa séquence, porté par les touches de
+    /// <see cref="HighlightedScancodes"/> (CH4a, décision S4-3). <c>None</c> garde la peinture
+    /// « enfoncée » d'avant CH4a ; la table qui colore un rôle vient du
+    /// <see cref="KeyboardDisplayProfile"/> en vigueur.
+    /// </summary>
+    public KeyHighlight HighlightRole { get; set; } = KeyHighlight.None;
 }
 
 internal readonly record struct KeyboardHitTestResult(uint Scancode, string Label, Win32.RECT Rect);
 
 internal static class KeyboardRenderer
 {
+    /// <summary>
+    /// Profil d'affichage de la passe en cours, posé par <see cref="Draw"/>. Une seule interface,
+    /// un seul thread : un champ suffit, et il évite de traverser douze signatures privées.
+    /// </summary>
+    private static KeyboardDisplayProfile _display = KeyboardDisplayProfile.Default;
+
     // Aucune couleur ici : elles sortent de KeyboardTheme et de la palette courante,
     // depuis le chantier CH4. Les quatorze constantes CLR_ qui vivaient a cet endroit
     // portaient onze valeurs identiques au bit pres a celles de LearningModule.
@@ -143,8 +157,10 @@ internal static class KeyboardRenderer
         IntPtr hFontDeadKey,
         IntPtr hFontSmall,
         IntPtr hFontTiny,
-        IntPtr hFontContext)
+        IntPtr hFontContext,
+        KeyboardDisplayProfile? display = null)
     {
+        _display = display ?? KeyboardDisplayProfile.Current;
         var visualKeys = VisualKeys;
         float maxRight = visualKeys.Max(k => k.X + k.W);
         float maxBottom = visualKeys.Max(k => k.Y + k.H);
@@ -368,11 +384,21 @@ internal static class KeyboardRenderer
         var palette = Theme.Current;
         var paint = KeyboardTheme.Paint(keyState, palette);
 
+        // S4-3 : quand l'état nomme le rôle de la frappe attendue et que le profil porte une
+        // table, c'est elle qui colore la touche ; sinon la peinture « enfoncée » reste.
+        if (highlighted && !pressed && !modifierActive && !disabledBackspace
+            && state.HighlightRole != KeyHighlight.None && _display.Highlight is HighlightScheme scheme)
+            paint = KeyboardTheme.HighlightPaint(state.HighlightRole, palette, scheme);
+
         // Une touche contextuelle au repos s'enfonce d'un cran — fond de fenetre plutot
         // que surface. C'est le seul ecart a la table d'etats, et il tient la place du
         // CLR_KEY_CONTEXT d'avant, plus sombre que CLR_KEY pour cette meme raison.
-        uint fill = keyState == KeyState.Rest && key.IsContextual ? palette.Paper : paint.Fill;
-        uint border = paint.Border;
+        uint fill = keyState == KeyState.Rest
+            ? (key.IsContextual ? palette.Paper : KeyboardDisplayProfile.RestFillColor(_display.RestFill, palette))
+            : paint.Fill;
+        uint border = keyState == KeyState.Rest
+            ? KeyboardDisplayProfile.RestBorderColor(_display.RestFill, palette)
+            : paint.Border;
         int borderWidth = paint.BorderWidth;
 
         var brush = Win32.CreateSolidBrush(fill);
@@ -407,6 +433,16 @@ internal static class KeyboardRenderer
 
         var filtered = FilterKeyForProfile(def, key.Scancode, profile, state);
         DrawKeyCharacters(hdc, rect, key, filtered, layout, state, hFontMain, hFontDeadKey, hFontSmall, hFontTiny);
+
+        // S4-3, table C : le rang de la frappe en pastille, sur la seule touche de la séquence.
+        if (highlighted && !pressed && !modifierActive && key.Scancode != 0
+            && state.HighlightedScancodes.Contains(key.Scancode)
+            && _display.Highlight is HighlightScheme badgeScheme && KeyboardTheme.ShowsRankBadge(badgeScheme))
+        {
+            int rank = KeyboardTheme.RankOf(state.HighlightRole);
+            int keyDpi = Math.Max(96, (rect.bottom - rect.top) * 96 / 44);
+            KeyboardTheme.DrawRankBadge(hdc, rect, rank, palette, hFontTiny, keyDpi);
+        }
     }
 
     private static void DrawRectKey(IntPtr hdc, Win32.RECT rect, IntPtr brush)
@@ -691,17 +727,19 @@ internal static class KeyboardRenderer
         int bottom = ky + kh - Math.Max(8, pad);
         int lineH = Math.Max(14, Math.Min(20, kh / 3));
         int gap = Math.Max(1, kh / 28);
+        // Un libellé de touche reste dans la petite police quel que soit son état (plan §18) :
+        // la barre d'espace passe hFontTiny aux deux emplacements.
 
         if (!string.IsNullOrEmpty(keyDef.ShiftAltGr))
         {
             DrawCharAt(hdc, left, bottom - (lineH * 2) - gap, right, bottom - lineH - gap,
-                keyDef.ShiftAltGr, state.AltGr && state.Shift, IsDeadKeyRef(keyDef.ShiftAltGr), false, false, state.ShowInvisibleMarkers, hFontMain, hFontTiny);
+                keyDef.ShiftAltGr, state.AltGr && state.Shift, IsDeadKeyRef(keyDef.ShiftAltGr), false, false, state.ShowInvisibleMarkers, hFontTiny, hFontTiny);
         }
 
         if (!string.IsNullOrEmpty(keyDef.AltGr))
         {
             DrawCharAt(hdc, left, bottom - lineH, right, bottom,
-                keyDef.AltGr, state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.AltGr), false, false, state.ShowInvisibleMarkers, hFontMain, hFontTiny);
+                keyDef.AltGr, state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.AltGr), false, false, state.ShowInvisibleMarkers, hFontTiny, hFontTiny);
         }
     }
 
@@ -729,7 +767,9 @@ internal static class KeyboardRenderer
         // touche morte garde ce rang et se signale par son cercle pointille, pas par une
         // couleur de plus — la charte n'en offre aucune, et l'inventer est interdit.
         uint color = isActive ? Theme.Current.Ink : Theme.Current.TextSecondary;
-        IntPtr hFont = useMainFont ? hFontMain : hFontSmall;
+        // S4-2 : la grande police suit la position (comportement d'origine) ou la couche active,
+        // selon le profil — c'est le levier mesuré au plan §18, à trancher sur le banc.
+        IntPtr hFont = (_display.FontFollowsActiveLayer ? isActive : useMainFont) ? hFontMain : hFontSmall;
         var oldFont = Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, color);
         var r = new Win32.RECT { left = left, top = top, right = right, bottom = bottom };
