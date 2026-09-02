@@ -49,36 +49,6 @@ internal enum KeyHighlight
 }
 
 /// <summary>
-/// Les trois tables candidates de surlignage, rendues côte à côte par la planche
-/// <c>KeyboardStatesBoard</c> pour l'arrêt visuel de CH4. Deux d'entre elles disparaissent
-/// aussitôt qu'Antoine a tranché : garder un choix mort dans le produit, c'est garder une
-/// couleur que personne ne peut plus expliquer.
-/// </summary>
-internal enum HighlightScheme
-{
-    /// <summary>
-    /// Le rang seul décide : étape 1 en avertissement, étape 2 en action. L'accès direct, qui
-    /// est aussi une frappe finale, retombe donc sur la même couleur que l'étape 2 — et
-    /// l'activation de touche morte sur celle de l'étape 1. Deux collisions assumées.
-    /// </summary>
-    ParEtape,
-
-    /// <summary>
-    /// Trois rôles distincts : une frappe suffit (succès), la séquence commence
-    /// (avertissement), la séquence se termine (action). L'activation de touche morte est le
-    /// début d'une séquence, donc identique à l'étape 1 — une seule collision, et elle dit vrai.
-    /// </summary>
-    DirectVsSequence,
-
-    /// <summary>
-    /// Un seul rôle coloré — action — et le rang s'écrit en chiffre sur la touche. C'est la
-    /// règle des fondations appliquée à la lettre : le texte porte l'information, la couleur
-    /// renforce. Prix à payer : un chiffre de plus à lire sur une touche déjà chargée.
-    /// </summary>
-    RoleUniqueNumerote,
-}
-
-/// <summary>
 /// Les cinq couleurs qui décrivent une touche. Séparée du rendu pour la même raison que
 /// <see cref="ControlPaint"/> : la table s'éprouve sans fenêtre ni DC, état par état.
 /// </summary>
@@ -116,65 +86,29 @@ static class KeyboardTheme
     /// </summary>
     internal static KeyPaint Paint(KeyState state, Palette p) => state switch
     {
-        KeyState.Rest => new(p.Surface, p.Border, 1, p.Ink, p.TextSecondary),
+        KeyState.Rest => new(p.KeyFace, p.Border, 1, p.Ink, p.TextSecondary),
         KeyState.Hovered => new(p.ActionFill, p.Border, 1, p.OnActionFill, p.TextSecondary),
         KeyState.Pressed => new(p.ActionFill, p.Action, StateBorderWidth, p.OnActionFill, p.TextSecondary),
         KeyState.ModifierActive => new(p.Action, p.Action, 1, p.OnAction, p.OnAction),
         KeyState.Error => new(p.ErrorFill, p.Error, StateBorderWidth, p.Error, p.Error),
         KeyState.Disabled => new(p.Paper, p.Border, 1, p.Disabled, p.Disabled),
-        _ => new(p.Surface, p.Border, 1, p.Ink, p.TextSecondary),
+        _ => new(p.KeyFace, p.Border, 1, p.Ink, p.TextSecondary),
     };
 
     /// <summary>
-    /// Peinture d'une touche surlignée, selon la table candidate demandée. Le contour porte
-    /// toujours l'état : un surlignage qui ne tiendrait qu'au fond disparaîtrait en contraste
-    /// élevé, où la palette entière bascule sur celle du système.
+    /// Peinture d'une touche surlignée — table B « direct vs séquence », arrêtée par Antoine le
+    /// 2026-09-02 (CH4a, S4-3) parmi trois candidates. Trois rôles : une frappe suffit (succès),
+    /// la séquence commence (avertissement), la séquence se termine (action). L'armement d'une
+    /// touche morte est le début d'une séquence, donc identique à l'étape 1 — une seule
+    /// collision, et elle dit vrai. Le contour porte toujours l'état : un surlignage qui ne
+    /// tiendrait qu'au fond disparaîtrait en contraste élevé.
     /// </summary>
-    internal static KeyPaint HighlightPaint(KeyHighlight highlight, Palette p, HighlightScheme scheme)
+    internal static KeyPaint HighlightPaint(KeyHighlight highlight, Palette p) => highlight switch
     {
-        if (highlight == KeyHighlight.None)
-            return Paint(KeyState.Rest, p);
-
-        if (scheme == HighlightScheme.RoleUniqueNumerote)
-            return Action(p);
-
-        if (scheme == HighlightScheme.ParEtape)
-        {
-            return highlight switch
-            {
-                KeyHighlight.Step1 or KeyHighlight.DeadKeyActivation => Warning(p),
-                _ => Action(p),
-            };
-        }
-
-        return highlight switch
-        {
-            KeyHighlight.Direct => Success(p),
-            KeyHighlight.Step1 or KeyHighlight.DeadKeyActivation => Warning(p),
-            _ => Action(p),
-        };
-    }
-
-    /// <summary>
-    /// Vrai quand la table demandée écrit le rang de la frappe en chiffre sur la touche. Une
-    /// seule table le fait, et c'est tout son propos.
-    /// </summary>
-    internal static bool ShowsRankBadge(HighlightScheme scheme) =>
-        scheme == HighlightScheme.RoleUniqueNumerote;
-
-    /// <summary>
-    /// Largeur que la pastille de rang retire au caractère principal, marge comprise.
-    /// Une seule table l'emploie, mais la mesure vaut pour toutes : c'est elle que
-    /// <c>DrawKeyCap</c> reçoit en <c>labelLeftInset</c>.
-    /// </summary>
-    internal static int BadgeSize(int dpi) => ThemeControls.Scale(16, dpi);
-
-    /// <summary>Rang à écrire dans le badge, ou 0 quand le surlignage n'en a pas.</summary>
-    internal static int RankOf(KeyHighlight highlight) => highlight switch
-    {
-        KeyHighlight.Step1 or KeyHighlight.DeadKeyActivation => 1,
-        KeyHighlight.Step2 => 2,
-        _ => 0,
+        KeyHighlight.None => Paint(KeyState.Rest, p),
+        KeyHighlight.Direct => Success(p),
+        KeyHighlight.Step1 or KeyHighlight.DeadKeyActivation => Warning(p),
+        _ => Action(p),
     };
 
     private static KeyPaint Action(Palette p) =>
@@ -233,43 +167,6 @@ static class KeyboardTheme
                 Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         }
 
-        Win32.SelectObject(hdc, oldFont);
-    }
-
-    /// <summary>
-    /// Pastille chiffrée du rang, en haut à gauche de la touche. N'existe que pour la table
-    /// <see cref="HighlightScheme.RoleUniqueNumerote"/>.
-    /// </summary>
-    internal static void DrawRankBadge(IntPtr hdc, Win32.RECT rect, int rank, Palette p,
-        IntPtr font, int dpi)
-    {
-        if (rank <= 0)
-            return;
-
-        int size = BadgeSize(dpi);
-        int pad = ThemeControls.Scale(3, dpi);
-        var badge = new Win32.RECT
-        {
-            left = rect.left + pad,
-            top = rect.top + pad,
-            right = rect.left + pad + size,
-            bottom = rect.top + pad + size,
-        };
-
-        IntPtr brush = Theme.Brush(p.Action);
-        IntPtr pen = Theme.Pen(p.Action, 1);
-        IntPtr oldBrush = Win32.SelectObject(hdc, brush);
-        IntPtr oldPen = Win32.SelectObject(hdc, pen);
-        Win32.Ellipse(hdc, badge.left, badge.top, badge.right, badge.bottom);
-        Win32.SelectObject(hdc, oldPen);
-        Win32.SelectObject(hdc, oldBrush);
-
-        string text = rank.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        IntPtr oldFont = Win32.SelectObject(hdc, font);
-        Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-        Win32.SetTextColor(hdc, p.OnAction);
-        Win32.DrawTextW(hdc, text, text.Length, ref badge,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         Win32.SelectObject(hdc, oldFont);
     }
 }

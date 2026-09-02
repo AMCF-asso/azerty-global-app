@@ -12,14 +12,18 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Banc de CH4a (décision S4 du 2026-09-02) : rend les trois fenêtres qui portent un clavier —
 /// Leçons, Clavier virtuel, Module d'essai — entières, dans les deux thèmes, à la police réelle du
-/// produit, puis fait varier sur la fenêtre Leçons les trois axes que l'arrêt visuel doit trancher :
-/// la police qui suit la couche active (S4-2), la table de surlignage (S4-3), le fond de touche au
-/// repos (S4-4). Le Clavier virtuel et le Module d'essai sont rendus tels qu'ils sont, avec leur
-/// peinture propre (décision S4-1) : ils ne passent pas par le moteur, ils donnent le contexte.
+/// produit. La fenêtre Leçons est rendue dans les trois états de modifieur et sur les deux cas
+/// d'indice que la table de surlignage distingue (frappe directe, armement d'une touche morte).
+/// Le Clavier virtuel et le Module d'essai sont rendus tels qu'ils sont, avec leur peinture
+/// propre (décision S4-1) : ils ne passent pas par le moteur, ils donnent le contexte, et ils
+/// migrent à CH4b et F1a.
+///
+/// Les variantes que l'arrêt visuel du 2026-09-02 a tranchées (police par position, tables A et C,
+/// fonds `surface` et papier) ne sont plus rendues : le produit n'en connaît plus qu'une.
 ///
 /// Le DPI est celui du poste : ces trois fenêtres lisent GetDeviceCaps directement, le crochet
-/// <c>ThemeWindow.OverrideDpiForTests</c> ne les atteint pas (elles migrent à CH4b et F1a).
-/// Le nom du fichier porte l'échelle mesurée.
+/// <c>ThemeWindow.OverrideDpiForTests</c> ne les atteint pas. Le nom du fichier porte l'échelle
+/// mesurée.
 ///
 /// Fermé par variable d'environnement, comme <see cref="CaptureBench"/> : hors CI, hors compteurs.
 ///
@@ -33,11 +37,11 @@ public class KeyboardContextBench
 {
     private const string GateVariable = "AZERTY_CONTEXTE";
 
-    // Cas « frappe directe » : É, Maj + 2 sur AZERTY Global — l'indice surligne la touche et Maj.
+    // Cas « frappe directe » : É, Verr. Maj + 2 sur AZERTY Global — l'indice surligne la touche et le verrou.
     private const string DirectModule = "majuscules-accentuees";
     private const string DirectLesson = "caps-e-acute";
 
-    // Cas « touche morte » : ñ s'obtient par la touche morte tilde puis n — l'indice surligne
+    // Cas « touche morte » : ñ s'obtient par la touche morte circonflexe puis n — l'indice surligne
     // d'abord l'armement (rang 1).
     private const string DeadKeyModule = "langues-etrangeres";
     private const string DeadKeyLesson = "espagnol";
@@ -87,50 +91,26 @@ public class KeyboardContextBench
 
                 using (Theme.OverrideForTests(variant))
                 {
-                    var attempts = new List<(string Name, Func<bool> Run)>();
-
-                    // Base : les trois fenêtres telles qu'elles sont, profil du produit.
-                    attempts.Add(($"lecons-base-{theme}", () => CaptureLessons(outDir, $"lecons-base-{theme}-{percent}.png",
-                        layout, mapper, hook, DirectModule, DirectLesson, withHint: true, shift: false, altGr: false, display: null)));
-                    attempts.Add(($"clavier-virtuel-{theme}", () => CaptureVirtualKeyboard(outDir, $"clavier-virtuel-{theme}-{percent}.png", layout)));
-                    attempts.Add(($"module-essai-{theme}", () => CaptureLearningModule(outDir, $"module-essai-{theme}-{percent}.png", layout, mapper, hook)));
-
-                    // Axe S4-2 : police par position (origine) ou par couche active, trois états.
-                    foreach (var (policeNom, follows) in new[] { ("position", false), ("active", true) })
+                    var attempts = new List<(string Name, Func<bool> Run)>
                     {
-                        foreach (var (modifNom, shift, altGr) in new[] { ("aucun", false, false), ("maj", true, false), ("altgr", false, true) })
-                        {
-                            string file = $"lecons-police-{policeNom}-{modifNom}-{theme}-{percent}.png";
-                            var display = KeyboardDisplayProfile.Default with { FontFollowsActiveLayer = follows };
-                            attempts.Add((file, () => CaptureLessons(outDir, file, layout, mapper, hook,
-                                DirectModule, DirectLesson, withHint: false, shift, altGr, display)));
-                        }
+                        ($"clavier-virtuel-{theme}", () => CaptureVirtualKeyboard(outDir, $"clavier-virtuel-{theme}-{percent}.png", layout)),
+                        ($"module-essai-{theme}", () => CaptureLearningModule(outDir, $"module-essai-{theme}-{percent}.png", layout, mapper, hook)),
+                    };
+
+                    // Leçons : les trois états de modifieur, sans indice.
+                    foreach (var (modifNom, shift, altGr) in new[] { ("aucun", false, false), ("maj", true, false), ("altgr", false, true) })
+                    {
+                        string file = $"lecons-etat-{modifNom}-{theme}-{percent}.png";
+                        attempts.Add((file, () => CaptureLessons(outDir, file, layout, mapper, hook,
+                            DirectModule, DirectLesson, withHint: false, shift, altGr)));
                     }
 
-                    // Axe S4-3 : trois tables × { frappe directe, armement d'une touche morte }.
-                    foreach (var (tableNom, scheme) in new[]
-                             { ("A", HighlightScheme.ParEtape), ("B", HighlightScheme.DirectVsSequence), ("C", HighlightScheme.RoleUniqueNumerote) })
+                    // Leçons : les deux cas d'indice que la table de surlignage distingue.
+                    foreach (var (casNom, module, lesson) in new[] { ("direct", DirectModule, DirectLesson), ("etape1", DeadKeyModule, DeadKeyLesson) })
                     {
-                        foreach (var (casNom, module, lesson) in new[] { ("direct", DirectModule, DirectLesson), ("etape1", DeadKeyModule, DeadKeyLesson) })
-                        {
-                            string file = $"lecons-surlignage-{tableNom}-{casNom}-{theme}-{percent}.png";
-                            var display = KeyboardDisplayProfile.Default with { Highlight = scheme };
-                            attempts.Add((file, () => CaptureLessons(outDir, file, layout, mapper, hook,
-                                module, lesson, withHint: true, shift: false, altGr: false, display)));
-                        }
-                    }
-
-                    // Axe S4-4 : fond de touche au repos, thème sombre seulement (c'est là que surface se fond).
-                    if (variant == ThemeVariant.Dark)
-                    {
-                        foreach (var (fondNom, fill) in new[]
-                                 { ("surface", KeyRestFill.Surface), ("touche", KeyRestFill.KeyFace), ("papier", KeyRestFill.PaperBordered) })
-                        {
-                            string file = $"lecons-fond-{fondNom}-{theme}-{percent}.png";
-                            var display = KeyboardDisplayProfile.Default with { RestFill = fill };
-                            attempts.Add((file, () => CaptureLessons(outDir, file, layout, mapper, hook,
-                                DirectModule, DirectLesson, withHint: false, shift: false, altGr: false, display)));
-                        }
+                        string file = $"lecons-indice-{casNom}-{theme}-{percent}.png";
+                        attempts.Add((file, () => CaptureLessons(outDir, file, layout, mapper, hook,
+                            module, lesson, withHint: true, shift: false, altGr: false)));
                     }
 
                     foreach (var (name, run) in attempts)
@@ -159,7 +139,7 @@ public class KeyboardContextBench
     }
 
     private static bool CaptureLessons(string outDir, string file, Layout layout, KeyMapper mapper, KeyboardHook hook,
-        string moduleId, string lessonId, bool withHint, bool shift, bool altGr, KeyboardDisplayProfile? display)
+        string moduleId, string lessonId, bool withHint, bool shift, bool altGr)
     {
         var window = new LessonsWindow(layout, mapper, hook);
         try
@@ -169,11 +149,8 @@ public class KeyboardContextBench
             if (shift) mapper.TrackModifiers(VK_LSHIFT, 0x2A, 0, isKeyDown: true);
             if (altGr) mapper.TrackModifiers(VK_RMENU, 0x38, LLKHF_EXTENDED, isKeyDown: true);
 
-            using (display == null ? NoScope.Instance : KeyboardDisplayProfile.OverrideForTests(display))
-            {
-                IntPtr hwnd = window.OpenForCapture(moduleId, lessonId, 0, withHint);
-                return Capture(hwnd, Path.Combine(outDir, file));
-            }
+            IntPtr hwnd = window.OpenForCapture(moduleId, lessonId, 0, withHint);
+            return Capture(hwnd, Path.Combine(outDir, file));
         }
         finally
         {
@@ -275,11 +252,5 @@ public class KeyboardContextBench
 
             Thread.Sleep(15);
         }
-    }
-
-    private sealed class NoScope : IDisposable
-    {
-        internal static readonly NoScope Instance = new();
-        public void Dispose() { }
     }
 }
