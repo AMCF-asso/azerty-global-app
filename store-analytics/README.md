@@ -28,6 +28,13 @@ Les données collectées couvrent :
 - variantes agrégées fiables et variantes détaillées par marché, appareil,
   système et version lorsque l'API le permet.
 
+L'API `appchannelconversions` renvoie `conversionCount` à 0 quelle que soit
+la forme de la requête, y compris agrégée sans `groupby` : 1416 clics cumulés
+pour 0 conversion entre le 23 mars et le 3 août 2026, alors que
+`appacquisitions` remonte bien 777 acquisitions sur la même période. Vérifié le
+2026-08-03 par un run dédié. La limite est côté Microsoft, pas dans le
+collecteur : seul `clickCount` est exploitable pour ce jeu de données.
+
 Microsoft limite actuellement l'utilisation quotidienne et mensuelle aux
 90 derniers jours et les erreurs aux 30 derniers jours. Le passage quotidien
 de la pipeline constitue donc l'historique durable qui manquerait autrement.
@@ -88,6 +95,11 @@ microsoft-store/azerty-global/
         ├── manifest.json
         └── *.json
 ```
+
+L'identité fédérée n'autorise que la branche `main`. Un `workflow_dispatch`
+lancé depuis une autre branche collecte bien les données et publie l'artefact de
+diagnostic, puis échoue à l'étape de connexion à Azure par OIDC sans rien
+archiver. Constaté le 2026-08-03.
 
 ## 3. Premier lancement et backfill
 
