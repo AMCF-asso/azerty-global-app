@@ -21,7 +21,8 @@ readonly record struct TrainingSignals(
     DateOnly? LastActiveDate,       // dernière frappe remappée (UsageStats)
     DateOnly? LastSpecialCharDate,  // dernier caractère enrichi tapé
     int CurrentStreak,
-    long HelperOpens);              // recherche + clavier virtuel (compteurs globaux)
+    long HelperOpens,               // recherche + clavier virtuel (compteurs globaux)
+    DateOnly? ReviewPromptLastShown); // date persistée de la dernière sollicitation d'avis
 
 static class TrainingReminders
 {
@@ -40,17 +41,22 @@ static class TrainingReminders
 
     /// <summary>
     /// Décision pure : faut-il émettre un rappel maintenant ? Ne touche à aucun état.
-    /// <paramref name="reviewPromptShownToday"/> : la sollicitation d'avis J+7 a été
-    /// émise aujourd'hui → priorité à l'avis, aucun rappel (décision 2026-07-29).
+    /// La priorité de l'avis J+7 (décision 2026-07-29) se lit dans les signaux, sur la
+    /// date persistée par ConfigManager : elle était auparavant passée en paramètre par
+    /// TrayApplication, qui la calculait depuis un champ d'instance nul à chaque
+    /// démarrage du processus — même défaut que R1, au même endroit, un cran plus loin.
+    /// Photographiée comme les autres, la garde survit au redémarrage et personne ne
+    /// peut plus l'alimenter depuis un état volatil.
     /// </summary>
-    public static bool ShouldRemind(DateTime now, TrainingSignals s, bool reviewPromptShownToday)
+    public static bool ShouldRemind(DateTime now, TrainingSignals s)
     {
         if (!s.Enabled) return false;
         if (s.IgnoredCount >= MaxIgnored) return false;         // arrêt définitif
-        if (reviewPromptShownToday) return false;               // l'avis J+7 prime
-        if (now.Hour < EarliestHour) return false;
 
         var today = DateOnly.FromDateTime(now);
+        if (s.ReviewPromptLastShown == today) return false;     // l'avis J+7 prime
+        if (now.Hour < EarliestHour) return false;
+
         if (s.LastReminderDate == today) return false;          // un rappel par jour max
         if (s.LastSessionDate == today) return false;           // séance déjà faite
 
@@ -91,7 +97,8 @@ static class TrainingReminders
             LastActiveDate: UsageStats.LastActiveDate,
             LastSpecialCharDate: UsageStats.LastSpecialCharDate,
             CurrentStreak: UsageStats.CurrentStreak,
-            HelperOpens: UsageStats.SearchOpenCount + UsageStats.VirtualKeyboardOpenCount);
+            HelperOpens: UsageStats.SearchOpenCount + UsageStats.VirtualKeyboardOpenCount,
+            ReviewPromptLastShown: ConfigManager.ReviewPromptLastShown);
     }
 
     /// <summary>Marque le rappel du jour comme émis (avant l'affichage de la balloon).</summary>

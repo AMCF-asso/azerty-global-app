@@ -106,7 +106,8 @@ public class TrainingRemindersTests
         LastActiveDate: null,
         LastSpecialCharDate: today,                    // caractère enrichi tapé aujourd'hui
         CurrentStreak: 0,
-        HelperOpens: 0);
+        HelperOpens: 0,
+        ReviewPromptLastShown: null);
 
     private static readonly DateOnly Today = new(2026, 8, 15);
     private static readonly DateTime Evening = new(2026, 8, 15, 18, 0, 0);
@@ -116,31 +117,34 @@ public class TrainingRemindersTests
     public void NoReminder_WhenDisabledOrStopped()
     {
         var s = Base(Today) with { SequenceIndex = 0 };
-        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { Enabled = false }, false));
-        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { IgnoredCount = TrainingReminders.MaxIgnored }, false));
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { Enabled = false }));
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { IgnoredCount = TrainingReminders.MaxIgnored }));
     }
 
     [Fact]
     public void NoReminder_BeforeEveningWindow()
     {
         var s = Base(Today) with { SequenceIndex = 0 };
-        Assert.False(TrainingReminders.ShouldRemind(Morning, s, false));
-        Assert.True(TrainingReminders.ShouldRemind(Evening, s, false));
+        Assert.False(TrainingReminders.ShouldRemind(Morning, s));
+        Assert.True(TrainingReminders.ShouldRemind(Evening, s));
     }
 
     [Fact]
     public void NoReminder_WhenReviewPromptShownToday()
     {
         var s = Base(Today) with { SequenceIndex = 0 };
-        Assert.False(TrainingReminders.ShouldRemind(Evening, s, reviewPromptShownToday: true));
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { ReviewPromptLastShown = Today }));
+        // La veille ne prime pas : la garde porte sur le jour même, pas sur l'historique.
+        Assert.True(TrainingReminders.ShouldRemind(Evening,
+            s with { ReviewPromptLastShown = Today.AddDays(-1) }));
     }
 
     [Fact]
     public void NoReminder_TwiceSameDay_OrAfterTodaysSession()
     {
         var s = Base(Today) with { SequenceIndex = 0 };
-        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { LastReminderDate = Today }, false));
-        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { LastSessionDate = Today }, false));
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { LastReminderDate = Today }));
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { LastSessionDate = Today }));
     }
 
     [Fact]
@@ -152,26 +156,94 @@ public class TrainingRemindersTests
             LastActiveDate = Today.AddDays(-1),
             LastSpecialCharDate = Today.AddDays(-1),
         };
-        Assert.True(TrainingReminders.ShouldRemind(Evening, s, false));
+        Assert.True(TrainingReminders.ShouldRemind(Evening, s));
         // Série d'un seul jour : pas un signal.
-        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { CurrentStreak = 1 }, false));
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { CurrentStreak = 1 }));
     }
 
     [Fact]
     public void Reminds_AfterDaysWithoutSpecialChars()
     {
         var s = Base(Today) with { LastSpecialCharDate = Today.AddDays(-TrainingReminders.StaleSpecialCharDays) };
-        Assert.True(TrainingReminders.ShouldRemind(Evening, s, false));
+        Assert.True(TrainingReminders.ShouldRemind(Evening, s));
         Assert.False(TrainingReminders.ShouldRemind(Evening,
-            s with { LastSpecialCharDate = Today.AddDays(-1) }, false));
+            s with { LastSpecialCharDate = Today.AddDays(-1) }));
     }
 
     [Fact]
     public void Reminds_OnHeavyHelperUse_OnlyBeforeFirstSession()
     {
         var s = Base(Today) with { HelperOpens = TrainingReminders.HelperOpensThreshold };
-        Assert.True(TrainingReminders.ShouldRemind(Evening, s, false));
+        Assert.True(TrainingReminders.ShouldRemind(Evening, s));
         Assert.False(TrainingReminders.ShouldRemind(Evening,
-            s with { LastSessionDate = Today.AddDays(-1) }, false));
+            s with { LastSessionDate = Today.AddDays(-1) }));
+    }
+}
+
+/// <summary>
+/// Le test qui aurait attrapé le cas resté ouvert après R1 : la priorité « l'avis J+7
+/// prime sur le rappel Défi du jour » se lisait dans un champ d'instance de
+/// TrayApplication, nul à chaque démarrage du processus. Un utilisateur sollicité le
+/// matin, qui redémarrait l'application dans la journée, recevait quand même la balloon
+/// Défi du jour le soir — deux sollicitations le même jour, ce que la décision du
+/// 2026-07-29 interdit. Le garde ne vaut donc que si les signaux le lisent sur la date
+/// persistée : c'est ce que vérifie ce test, en simulant le redémarrage comme le fait
+/// <see cref="ReviewPromptConfigTests"/>.
+/// </summary>
+public class TrainingReminderReviewPriorityTests : IDisposable
+{
+    private readonly string _tempDir;
+    private readonly string _configPath;
+
+    public TrainingReminderReviewPriorityTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), "AZGTests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tempDir);
+        _configPath = Path.Combine(_tempDir, "config.json");
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_tempDir, true); } catch { }
+    }
+
+    [Fact]
+    public void Snapshot_ReadsReviewPromptDate_FromPersistedConfig()
+    {
+        Assert.Null(TrainingReminders.Snapshot().ReviewPromptLastShown);
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        ConfigManager.RecordReviewPromptShown(today);
+
+        Assert.Equal(today, TrainingReminders.Snapshot().ReviewPromptLastShown);
+    }
+
+    [Fact]
+    public void ReviewPriority_SurvivesProcessRestart()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        ConfigManager.RecordReviewPromptShown(today);
+
+        // Redémarrage de l'application : cache vidé, relecture depuis le disque. C'est
+        // exactement ce qui remettait l'ancien champ d'instance à null.
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+
+        var evening = today.ToDateTime(new TimeOnly(TrainingReminders.EarliestHour + 1, 0));
+        var signals = TrainingReminders.Snapshot() with
+        {
+            Enabled = true,
+            IgnoredCount = 0,
+            SequenceIndex = 0,        // séquence inachevée : signal 1 actif, rappel dû
+            LastSessionDate = null,
+            LastReminderDate = null,
+        };
+
+        Assert.Equal(today, signals.ReviewPromptLastShown);
+        Assert.False(TrainingReminders.ShouldRemind(evening, signals));
+        // Témoin : sans la sollicitation du jour, ce même soir donne bien un rappel —
+        // sinon l'assertion ci-dessus passerait pour une raison quelconque.
+        Assert.True(TrainingReminders.ShouldRemind(evening,
+            signals with { ReviewPromptLastShown = null }));
     }
 }

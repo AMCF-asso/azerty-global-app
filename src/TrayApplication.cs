@@ -163,10 +163,6 @@ sealed class TrayApplication : IDisposable
     // toast transporte sa cible dans ses propres args, survivant au redémarrage).
     private bool _reviewTargetIsStore;
 
-    // La sollicitation d'avis J+7 a été émise aujourd'hui → priorité à l'avis, aucun
-    // rappel Défi du jour le même jour (décision 2026-07-29).
-    private DateOnly? _reviewPromptShownDate;
-
     // Serveur COM d'activation de toast enregistré (packagé uniquement). Si false,
     // la sollicitation d'avis reste une balloon classique (comportement v1.1.0).
     private bool _toastActivatorRegistered;
@@ -1231,8 +1227,7 @@ sealed class TrayApplication : IDisposable
         {
             if (!ConfigManager.NotificationsEnabled) return;
             var now = DateTime.Now;
-            bool reviewToday = _reviewPromptShownDate == DateOnly.FromDateTime(now);
-            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot(), reviewToday))
+            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot()))
                 return;
 
             TrainingReminders.MarkReminderShown(DateOnly.FromDateTime(now));
@@ -1897,8 +1892,9 @@ sealed class TrayApplication : IDisposable
                     return false;
             }
 
+            // La date persistée ici est aussi ce qui fait primer l'avis sur le rappel
+            // Défi du jour : TrainingReminders la relit dans ses signaux.
             ConfigManager.RecordReviewPromptShown(today);
-            _reviewPromptShownDate = today; // l'avis prime sur le défi ce jour
             bool toStore = ConfigManager.IsPackaged;
             string title = L.Tray_ReviewPromptTitle(attempt);
             string body = toStore ? L.Tray_ReviewPromptBodyStore(attempt) : L.Tray_ReviewPromptBodyFeedback(attempt);
@@ -2028,7 +2024,6 @@ sealed class TrayApplication : IDisposable
             // persistée, les seuils d'usage et le silence de 48 h après une erreur
             // restent les garde-fous, tous réunis dans ReviewSharePrompt.
             ConfigManager.RecordReviewPromptShown(signals.Today);
-            _reviewPromptShownDate = signals.Today;
         }
         catch (Exception ex)
         {
