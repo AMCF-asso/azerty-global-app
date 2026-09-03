@@ -480,9 +480,9 @@ tests.
 | 1 | Sauvegarder `config.json` et `usage-stats.json` du dossier package | copie hors du dossier avant tout lancement |
 | 2 | Republier les deux cibles AOT (`vswhere` dans le PATH), puis relancer `Verify-Release.ps1` | `FileVersion 1.2.0.0` sur les deux `publish/`, script au vert jusqu'au bundle |
 | 3 | Build local non package, etat vierge : verifier les 104 chaines neuves du delta | textes FR et EN corrects, aucune cle manquante affichee brute |
-| 4 | Non package, jour 1 : terminer le Defi du jour, cliquer « Copier mon resultat » | R3 : la boite de notation apparait-elle des le jour 1 ? |
-| 5 | Non package : partager, redemarrer l'app, repartager le meme jour | R1 : deuxieme sollicitation le meme jour ? |
-| 6 | Non package : activer le lancement automatique, le desactiver depuis Parametres, simuler deux jours d'usage | R2 : la relance revient-elle ? |
+| 4 | Non package, jour 1 : terminer le Defi du jour, cliquer « Copier mon resultat » | aucune boite de notation. Hors package le canal sort a la premiere garde (`src/ReviewSharePrompt.cs:64`, via `AppChannel.cs:70`) ; sur le canal Store le jour 1 echouerait de toute facon aux seuils R3 (`:81-82`, `FirstRemapDate == null` puis `ActiveDaysCount < 2`) |
+| 5 | Non package : partager, redemarrer l'app, repartager le meme jour | aucune sollicitation, ni avant ni apres le redemarrage (meme garde de canal). Sur le canal Store, la garde « une par jour » lit la date **persistee** (`src/ReviewSharePrompt.cs:79`, `s.PromptLastShown == s.Today`, alimentee par `ConfigManager.ReviewPromptLastShown`) : le redemarrage ne la remet plus a zero |
+| 6 | Non package : activer le lancement automatique, le desactiver depuis Parametres, simuler deux jours d'usage | la relance ne revient pas : un changement reel de la case marque la proposition (`src/SettingsWindow.cs:1097`, et `src/OnboardingWindow.cs:834` pour l'accueil), et `ShouldPrompt` sort sur `NudgeDone` (`src/AutoStartNudge.cs:40`) |
 | 7 | Non package : entree « Defi du jour » du menu tray sur installation neuve | toujours visible, meme avec `trainingEnabled` a `false` |
 | 8 | Non package : les trois cases de l'accueil, fermeture a l'etape 1 puis a l'etape 3 | la case « Defi du jour » s'applique au clic, les deux autres a la fermeture |
 | 9 | **MSIX installe par-dessus la 1.1.0** : premier demarrage | essai 2 attendu ; verifier si le toast passe ou si le repli balloon prend (B2) |
@@ -490,6 +490,16 @@ tests.
 | 11 | MSIX : verifier que le lancement automatique de la v1.1 survit a la mise a jour | tache toujours enregistree, `State: 2` |
 | 12 | MSIX : touches mortes, `Verr. Maj.` + lettre identique, `K` sur YouTube | R6, R7, R8 : composition et pass-through inchanges |
 | 13 | MSIX : selecteur manuel d'application, liste des suspensions, message d'acces distant | fonctions non documentees, a valider avant de les documenter |
+
+**Etapes 4, 5 et 6 recalees le 2026-09-03.** Elles etaient ecrites en questions
+(« la boite apparait-elle ? ») tant que R1, R2 et R3 etaient ouverts : la reponse
+attendue etait alors « oui, et c'est le defaut ». Les trois findings sont corriges,
+et les reponses attendues sont donc inversees. Une seconde raison s'est ajoutee
+depuis pour les etapes 4 et 5 : le lot B du 2026-08-19 a remplace la garde
+« suis-je packagee » par une garde de **canal**, si bien qu'un build hors package
+ne sollicite plus du tout. Ces deux etapes verifient desormais ce silence, pas les
+gardes de R1 et R3 elles-memes — celles-la ne s'observent que sur le canal Store,
+c'est-a-dire aux etapes 9 et 10.
 
 ## 9. Limites de cet audit
 
