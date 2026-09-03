@@ -46,7 +46,7 @@ static class ProductIdentity
     public const string SiteDomain = "azerty.global";
     public const string SiteBaseUrl = "https://" + SiteDomain;
     public const string DiscordInviteUrl = "https://discord.gg/nYknqshJz3";
-    public const string RepositoryUrl = "https://github.com/AZERTYGlobal/app";
+    public const string RepositoryUrl = "https://github.com/AMCF-asso/azerty-global-app";
     public const string LogoResourceName = "favicon-azerty-global.png";
 
     /// <summary>Volet d'avis du Store. Concaténation de constantes, donc utilisable là où
