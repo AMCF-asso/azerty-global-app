@@ -1,6 +1,12 @@
 # Cahier des charges — AZERTY Global pour Windows
 
-> Application Windows .NET 8 AOT distribuée via Microsoft Store (MSIX bundle x64 + ARM64) et, à partir de la v1.0.0, via MSIX hors Store signé au nom de l'AMCF. Sans dépendance externe, sans droits administrateur pour l'application Store ou MSIX.
+> **Cible : version 2.0.0**, première livraison du programme v2. Application Windows .NET 8 AOT distribuée via Microsoft Store (MSIX bundle x64 + ARM64) et, depuis la v1.0.0, via MSIX hors Store signé au nom de l'AMCF. Sans dépendance externe, sans droits administrateur pour l'application Store ou MSIX.
+
+**Portée.** Ce document décrit ce que la 2.0.0 doit faire. Il ne constate aucune livraison : la publication reste conditionnelle à la validation des exigences ci-dessous et à l'acceptation du Store.
+
+**Convention des cases.** `[x]` = comportement présent dans le code au 2026-08-24 (publié en 1.1.0, ou terminé en 1.2.0 sans être packagé). `[ ]` = attendu pour la 2.0.0 et non livré. Une case cochée n'est pas une preuve de test.
+
+**Décisions intégrées** (arrêtées les 2 et 5 septembre 2026, non rouvertes ici) : canaux de distribution et mentions par canal ; menu de la zone de notification ; parcours d'accueil et fusion du module d'essai dans les Leçons ; charte du clavier ; compagnon complet sur la disposition Windows native. Ce qui relève des étapes ultérieures du programme v2 est listé au §2.13.
 
 ---
 
@@ -14,6 +20,14 @@ Permettre à n'importe quel utilisateur Windows d'utiliser AZERTY Global **immé
 - Étudiant sur un PC d'école/université
 - Utilisateur qui veut tester avant d'installer
 - Démo lors d'événements (CIC Innovation Awards, salons, conférences)
+- **Utilisateur qui a déjà installé la disposition AZERTY Global native** dans les paramètres de langue de Windows et veut garder les outils de l'application
+
+### Deux configurations prises en charge, sans perte de fonction
+
+1. **AZERTY Windows traditionnel + remapping de l'application** : l'application produit les caractères d'AZERTY Global.
+2. **AZERTY Global natif actif dans Windows + application en compagnon** : Windows produit la frappe de base, l'application garde tous ses outils (§2.12).
+
+Aucune fonction n'est perdue du seul fait que la disposition native est active. La seconde configuration est un mode normal et complet du produit, pas un mode dégradé.
 
 ---
 
@@ -51,17 +65,41 @@ C'est la fonctionnalité signature d'AZERTY Global, elle doit être **parfaite**
 
 ### 2.4 Interface utilisateur
 
-L'interface est entièrement en **français** (public cible = francophones).
+L'interface est **bilingue français / anglais**, le français étant la langue par défaut du public cible. Chaque texte visible existe dans les deux langues ; la langue se change depuis le menu et depuis Paramètres › Préférences, et se verrouille par la politique `Language`.
 
 - [x] **Icône dans la zone de notification** (system tray) avec distinction visuelle actif/inactif
 - [x] **Double-clic sur l'icône** : ouvre le clavier virtuel (geste le plus naturel)
-- [x] **Clic droit** sur l'icône : menu contextuel avec :
-  - Activer / Désactiver le remapping
-  - Clavier virtuel (voir §2.5)
-  - Rechercher un caractère (voir §2.6)
-  - Ouvrir le site azerty.global
-  - À propos (version, licence EUPL 1.2)
-  - Quitter
+- [ ] **Clic droit** sur l'icône : menu contextuel organisé en **quatre blocs par intention** — *État*, *Outils*, *Apprendre*, *Réglages et infos* — puis la langue et Quitter. Ordre cible (18 entrées de premier niveau) :
+
+  ```
+  Désactiver / Activer                     Ctrl+Maj+Verr.Maj
+  Mettre en pause… / Reprendre maintenant
+  ────────
+  Clavier virtuel                          (raccourci affiché)
+  Rechercher un caractère                  (raccourci affiché)
+  Couches ▸   [Grec ☐ · Cyrillique ☐ · Scientifique ☐ · ── · Configurer…]
+  ────────
+  Leçons
+  Défi du jour
+  Revoir l'accueil
+  ────────
+  Paramètres
+  Compatibilité des applications ▸         (grisée sans application détectée)
+  Confidentialité & sécurité
+  Statistiques
+  Ressources ▸
+  Retours et soutien ▸                     (canal AMCF : avis + bug seulement)
+  Noter sur le Microsoft Store             (canal Store seulement)
+  À propos
+  ────────
+  Switch to English / Passer en français   (grisée sous politique)
+  Quitter
+  ```
+
+- [ ] **Trois raccourcis affichés seulement** : activer/désactiver, clavier virtuel, rechercher un caractère
+- [ ] **« Compatibilité des applications » toujours visible** : sans application détectée au premier plan, les trois modes sont grisés et « Comprendre la compatibilité… » reste actif
+- [ ] **« Lancer au démarrage de Windows » quitte le menu** : le réglage vit dans Paramètres › Préférences
+- [ ] **À propos affiche le canal après la version**, sur les trois canaux : « Version 2.0.0 · Microsoft Store » / « · AMCF » / « · hors paquet »
 - [x] **Raccourci clavier** pour activer/désactiver rapidement : Ctrl+Maj+Verr.Maj
 - [x] **Notification au lancement** : bulle discrète confirmant l'activation
 - [x] **Notification Caps Lock** : retour visuel discret quand Caps Lock change d'état (bulle ou changement d'icône tray), car le Smart Caps Lock modifie le comportement attendu
@@ -71,26 +109,33 @@ L'interface est entièrement en **français** (public cible = francophones).
 
 ### 2.5 Première utilisation (onboarding)
 
-L'utilisateur grand public qui double-clique sur l'exe doit comprendre immédiatement ce qui se passe et tenir le rôle d'**écran de consentement** au regard de la politique Microsoft Store 10.2.8 (apps qui modifient le comportement système).
+L'utilisateur qui lance l'application pour la première fois doit comprendre immédiatement ce qui se passe. L'accueil tient le rôle d'**écran de consentement** au regard de la politique Microsoft Store 10.2.8 (apps qui modifient le comportement système).
 
-L'onboarding actuel s'organise en deux niveaux :
+**Un seul parcours d'exercices en 2.0.0.** Le module d'essai autonome disparaît : ses 6 exercices deviennent la **séance 0** de la fenêtre Leçons, qui est désormais le seul moteur d'exercices de l'application.
 
-#### Wizard d'accueil — 3 étapes
+#### Deux séquences d'accueil, une par canal
 
-- [x] **Étape 1** : présentation des 5 améliorations + mention de confidentialité « Cette application améliore votre clavier. Aucune frappe n'est enregistrée ni transmise. » + bouton « Essayer maintenant ».
-- [x] **Étape 2** : « Comment utiliser AZERTY Global » — 4 cards : icône tray, activation/désactivation (`Ctrl+Maj+Verr.Maj`), clavier virtuel (`Ctrl+Maj+Q`), recherche de caractère (`Ctrl+Maj+W`).
-- [x] **Étape 3** : ressources & communauté — 3 liens (Guide, Donner son avis, Discord) + préférences (lancer au démarrage, ne plus afficher).
-- [x] **Bouton « Essayer maintenant »** dans l'étape 1 lance les exercices interactifs (sans avancer silencieusement à l'étape 2). À la sortie, le bouton se transforme en « Suivant ».
-- [x] **Esc + croix X** pour fermer.
+- [ ] **Canal Store (et hors paquet) — 3 écrans** : ① ce que change l'application + consentement 10.2.8, les 5 changements sur un seul écran → ② essayer la séance 0, ou passer → ③ préférences (langue, démarrage automatique, ne plus afficher)
+- [ ] **Canal AMCF — 4 écrans, consentement en tête** : ① consentement dédié (« installée par votre organisation, voici ce que l'application change sur vos touches », bouton « J'ai compris ») → ② les 5 changements → ③ essayer la séance 0, ou passer → ④ préférences, grisées sous politique
+- [ ] **Les ressources sortent de l'accueil** : elles vivent dans le menu (§2.4)
+- [ ] **« Essayer maintenant » ouvre la fenêtre Leçons sur la séance 0 et ferme l'accueil** ; « Revoir l'accueil » permet d'y revenir depuis le menu
+- [ ] **« Passer » mène à l'écran des préférences**, en lien discret sous « Essayer maintenant »
+- [x] **Esc et la croix** ferment l'accueil
+- [ ] **Réaffichage au démarrage** tant que moins de 3 exercices de la séance 0 sont faits et que « ne plus afficher » est décochée ; politique `ShowOnboarding` inchangée
+- [x] **Sélecteur de langue** dans l'en-tête, décliné dans les deux thèmes, avec un nom accessible sur le contrôle
 
-#### Module d'exercices intégré — 6 exercices
+#### Séance 0 — 6 exercices, dans la fenêtre Leçons
 
-- [x] 4 exercices obligatoires (premier É, ponctuation, e-mail, typographie française).
-- [x] 2 exercices bonus (skippables) : ligne de code, mots étrangers — identifiés par une pill « Bonus » à côté du titre.
-- [x] Bouton « Passer cet exercice » disponible sur les bonus.
-- [x] Page de félicitations en fin de parcours : titre « Bravo ! » + sous-titre « Vous maîtrisez les bases d'AZERTY Global. » + bouton « Terminer ».
-- [x] Clavier virtuel intégré : caractère principal + AltGr discret en bas-droite pour les lettres ; grille 2×2 (Maj/Maj+AltGr/Base/AltGr) pour les symboles ; AltGr en accent bleu (cohérence avec le testeur du site).
-- [x] Légende footer : « Maj. — Verr. Maj. — AltGr — Touche morte » avec leurs codes couleur.
+- [x] 4 exercices obligatoires (premier É, ponctuation, e-mail, typographie française)
+- [x] 2 exercices bonus, passables (ligne de code, mots étrangers), signalés par une pastille « Bonus »
+- [ ] **Page de fin dédiée**, distincte du récapitulatif standard des leçons : ① les 3 gestes du quotidien avec leurs raccourcis (désactiver, clavier virtuel, rechercher un caractère) ; ② incitation au « Défi du jour » et, si la case est décochée, au lancement au démarrage ; ③ le guide utilisateur imprimable en premier, puis les liens `/guide`, `/faq` et `/compatibilite` du site
+- [x] Clavier intégré : caractère principal, AltGr discret pour les lettres, grille 2×2 pour les symboles
+- [x] Légende : « Maj. — Verr. Maj. — AltGr — Touche morte » avec leurs codes couleur
+
+#### Migration depuis les versions 1.x
+
+- [ ] Une progression 1.x de N exercices (0 à 6) marque **les N premiers exercices de la séance 0 comme faits** ; l'ancien compteur n'est plus jamais écrit, seulement lu
+- [ ] Une installation 1.x ayant terminé les 6 exercices ne se voit **jamais re-proposer** la séance 0 ; une installation à 0 ou sans valeur n'est pas affectée
 
 ### 2.6 Clavier virtuel (visualiseur de disposition)
 
@@ -137,7 +182,9 @@ L'application reste active dans les jeux pour permettre à l'utilisateur de cont
 - [x] **Override utilisateur par application** dans le menu de la zone de notification (`Auto`, `Forcer compatibilité jeu`, `Forcer désactivation`). Refus de l'override `forceOn` sur un jeu protégé par anti-cheat (sécurité utilisateur). Audit automatique au démarrage : un override `forceOn` sur un jeu nouvellement ajouté à la liste anti-cheat est supprimé avec bulle d'avertissement.
 - [x] **Filet de sécurité contre les "stuck keys"** : émission de keyup synthétiques pour toutes les touches en pass-through avant tout reset interne (toggle off/on, désactivation auto). Évite que le personnage continue à avancer après réactivation manuelle.
 
-### 2.10 Couches maintenables — grec, cyrillique, scientifique
+### 2.10 Couches supplémentaires — grec, cyrillique, scientifique
+
+> Ces couches ont **deux modes : ponctuel et verrou**. Le mode « maintien physique » a été retiré au smoke test du 2026-08-24 et n'est pas réintroduit en 2.0.0 ; le terme « couches maintenables » employé jusque-là ne le remet pas au programme.
 
 Étend les trois touches mortes alphabétiques sans modifier leurs emplacements ni leurs tables (`AZERTY Global 2026.json` reste la source unique). Fonctionnalité désactivée par défaut, activation volontaire depuis le menu tray, entièrement hors ligne. Développée le 2026-08-05, portée sur l'architecture extraite le 2026-08-24.
 
@@ -152,13 +199,43 @@ L'application reste active dans les jeux pour permettre à l'utilisateur de cont
 - [x] **Champs de mot de passe** : remappage ordinaire conservé, mais couches, recherche et indicateur suspendus — détection `ES_PASSWORD` + UI Automation (navigateurs) sur thread dédié, jamais dans le hook clavier
 - [x] **Réglages persistants** avec migration : configurations existantes conservées, couches désactivées
 
-### 2.11 Fonctionnalités v2+
+### 2.11 Accessibilité
 
-- [x] Auto-start au démarrage Windows (raccourci dans le dossier Startup, sans admin)
-- [ ] Détection de disposition native (éviter le double remapping)
-- [ ] Profils : charger d'autres dispositions (QWERTY Français, QWERTY Globale) depuis des JSON
-- [ ] Vérification de mise à jour optionnelle post-publication Store / MSIX signé AMCF
-- [ ] Mise à jour de la liste anti-cheat sans recompilation (fichier JSON téléchargé périodiquement)
+L'accessibilité fait partie des exigences de la 2.0.0, pas d'un lot ultérieur. Des captures d'écran ne la prouvent pas : la validation se fait au clavier et au lecteur d'écran (§7).
+
+- [ ] **Tout se fait au clavier** sur les fenêtres livrées : ordre de tabulation cohérent, aucune souris obligatoire, Échap ferme
+- [ ] **Focus toujours visible**, y compris sur les contrôles peints à la main
+- [ ] **Nom accessible** sur chaque contrôle interactif, en particulier ceux qui n'affichent qu'une image
+- [ ] **Contraste** conforme sur les deux thèmes ; thème contraste élevé de Windows pris en charge
+- [ ] **Mise à l'échelle** : 100 %, 125 % et au-delà sans texte coupé ni contrôle inatteignable
+- [ ] **Thème clair/sombre suivant le système**, icône de la zone de notification comprise
+
+### 2.12 Compagnon complet sur la disposition Windows native
+
+Exigence produit centrale de la 2.0.0 : **aucune fonction n'est perdue quand la disposition AZERTY Global native est active dans Windows.**
+
+- [ ] **Saisie ordinaire :** Windows produit les caractères de la disposition native ; l'application ne les remappe pas une seconde fois, y compris Maj, AltGr, Verr. Maj et les séquences de touches mortes
+- [ ] **Outils conservés :** clavier virtuel, recherche, insertion et copie, aide aux séquences, leçons, progression, statistiques et réglages fonctionnent à l'identique. Arrêter le remapping de base ne vaut pas arrêter l'observation nécessaire aux fonctions activées
+- [ ] **Couches supplémentaires :** grec, cyrillique et scientifique restent disponibles en ponctuel et en verrou, sans doublon et sans laisser une touche morte native en attente à la sortie d'une couche
+- [ ] **Détection de la disposition** de la fenêtre de premier plan, suivie après Win+Espace, après un changement dans les Paramètres Windows et après un changement d'application
+- [ ] **État affiché distinguant trois choses** : la disposition système active, le remapping de base et les fonctions supplémentaires. La présence de la disposition native n'est pas un conflit bloquant, et le mode compagnon ne s'affiche pas comme un simple « Désactivé »
+- [ ] **Transitions propres :** changement de fenêtre, bascule de disposition, pause et fermeture laissent un état cohérent ; fermer l'application laisse la disposition native utilisable
+
+Les restrictions des écrans protégés (fenêtres élevées, anti-triche, Raw Input) restent documentées comme limites du système : elles ne justifient pas de griser des outils qui fonctionnent sans injection.
+
+### 2.13 Hors périmètre de la 2.0.0
+
+Ces sujets ne sont pas abandonnés ; ils relèvent des étapes suivantes du programme v2, et aucune date n'est prise ici.
+
+| Sujet | Statut |
+|---|---|
+| Atelier typographique, recherche enrichie et favoris, exercices adaptatifs | Étape 2 |
+| Profils : charger d'autres dispositions (QWERTY Français, QWERTY Global) ; Compose personnel ; extraits de texte ; couches de navigation et pavé numérique ; couches personnelles | Étape 3, sur le format d'échange OKLM |
+| Panneau scientifique (formules structurées, exports LaTeX / MathML / UnicodeMath) | Étape 4 |
+| Applications macOS et Linux | Étape 5 |
+| **Vérification de mise à jour** | **Abandonnée pour la 2.0.0** (décision du 2026-09-02) : le Store met à jour seul, l'appinstaller couvre le canal AMCF, et la 2.0.0 ne fait **aucun appel réseau** |
+| **Liste anti-cheat téléchargée périodiquement** | **Abandonnée** : elle imposerait un appel réseau ; la liste reste embarquée et mise à jour à chaque version |
+| Service en ligne, compte obligatoire, synchronisation automatique, IA générative, scripts ou extensions exécutables | Hors engagement du produit |
 
 ---
 
@@ -170,7 +247,7 @@ L'application reste active dans les jeux pour permettre à l'utilisateur de cont
 - [ ] **Réduire les alertes SmartScreen / Smart App Control** : signature AMCF via Artifact Signing opérationnelle, réputation éditeur/fichier à construire
 - [ ] **Zéro faux positif antivirus** (choix de technologie non flaggée + soumission aux éditeurs AV)
 - [x] **Pas de keylogger** : l'application ne doit jamais enregistrer, stocker ou transmettre les frappes
-- [x] **Pas d'accès réseau** sauf vérification de mise à jour optionnelle
+- [ ] **Aucun accès réseau** : la 2.0.0 n'émet aucune requête. Les seuls liens sortants sont ceux que l'utilisateur clique lui-même (site, guide, dépôt), ouverts dans son navigateur
 - [x] **Open source** (EUPL 1.2) : le code est auditable
 
 ### 3.2 Performance
@@ -191,7 +268,9 @@ L'application reste active dans les jeux pour permettre à l'utilisateur de cont
 
 - [x] **Microsoft Store** : MSIX bundle x64 + ARM64 (~11 Mo bundle, ~5 Mo par architecture)
 - [x] **MSIX hors Store signé AMCF** via Microsoft Artifact Signing pour les environnements sans accès Microsoft Store — produit et signé le 2026-06-30
-- [ ] **Installeur EXE autonome classique signé AMCF** à produire si le canal EXE reste nécessaire
+- [x] **Mise à jour du canal AMCF par `.appinstaller`** ; le canal Store est mis à jour par le Store
+- [ ] **Un seul binaire pour les trois canaux**, le canal étant reconnu à l'exécution ; le canal AMCF ne sollicite ni avis, ni don, ni Discord
+- [ ] **L'installeur EXE signé AMCF installe la *disposition* Windows**, pas l'application : les deux produits restent distincts
 - [x] Le JSON `AZERTY Global 2026.json` est embarqué dans le binaire comme ressource, synchronisée depuis la disposition actuelle
 
 ---
@@ -274,13 +353,43 @@ L'application doit lire ce JSON au démarrage et construire ses tables de mappin
 - [x] Le clavier virtuel réagit aux modificateurs (Shift, AltGr, Caps)
 - [x] Le clavier virtuel réagit aux touches mortes actives
 - [x] La recherche de caractère fonctionne (par caractère et par nom)
-- [x] L'onboarding s'affiche au premier lancement uniquement
+- [ ] L'accueil se réaffiche au démarrage tant que moins de 3 exercices de la séance 0 sont faits et que « ne plus afficher » est décochée (§2.5)
 
 **Performance :**
 - [x] L'application ne consomme pas de CPU au repos
 - [x] Latence de frappe imperceptible
 
-**Couches maintenables (validation manuelle avant publication de la fonctionnalité)** — à dérouler dans Word/Excel, Chrome, Edge, Firefox et VS Code :
+**Compagnon sur la disposition native (2.0.0)** — chaque scénario est comparé dans les deux configurations du §1, sur une machine où la disposition native est réellement installée. Les tests de moteur et la comparaison de fichiers ne suffisent pas :
+
+- [ ] Frappe ordinaire, accents, symboles, Maj/AltGr/Verr. Maj → résultat conforme à la définition canonique, sans caractère doublé, perdu ou transformé deux fois
+- [ ] Touche morte native enchaînée avec une couche supplémentaire → composition correcte, aucun état résiduel après désactivation de la couche
+- [ ] Recherche, copie et insertion dans la fenêtre cible → insertion unique, au bon point d'insertion
+- [ ] Clavier virtuel et aide aux séquences → modificateurs, touche morte active et méthode proposée cohérents avec la saisie réelle
+- [ ] Leçons et progression → la saisie native est reconnue ; réussite, vitesse et précision évaluées selon les mêmes règles
+- [ ] Statistiques → activité comptée selon les mêmes règles, sans dépendre du nombre de caractères réinjectés
+- [ ] Couches grecque, cyrillique et scientifique → activation ponctuelle, verrou, sortie et raccourcis
+- [ ] Bascule de fenêtre et de disposition, pause, fermeture → aucune double transformation ; la saisie native reste correcte après fermeture
+
+**Accueil, fusion et migration (2.0.0) :**
+
+- [ ] L'accueil affiche la séquence du canal courant (3 écrans Store, 4 écrans AMCF), dans les deux langues
+- [ ] « Essayer maintenant » ouvre les Leçons sur la séance 0 et ferme l'accueil ; « Passer » mène aux préférences
+- [ ] Une configuration 1.x à 6 exercices ne re-propose jamais la séance 0 ; une configuration à 0 ou absente n'est pas affectée
+- [ ] La page de fin de séance 0 affiche les 3 gestes, l'incitation et les liens prévus
+
+**Accessibilité (2.0.0)** — sur les fenêtres livrées, au clavier et au lecteur d'écran, pas sur des captures :
+
+- [ ] Parcours complet au clavier de chaque fenêtre, focus visible à chaque étape
+- [ ] Passe Accessibility Insights et lecture au Narrateur sans défaut bloquant
+- [ ] Rendu correct en thème clair, sombre et contraste élevé, à 100 % et 125 %
+
+**Canaux et installation (2.0.0) :**
+
+- [ ] Installation, mise à niveau depuis une 1.x, conservation des réglages et retour à une version utilisable, sur les deux canaux
+- [ ] À propos affiche le bon canal ; le canal AMCF n'affiche ni sollicitation d'avis, ni don, ni Discord
+- [ ] La version affichée correspond au paquet réellement servi (empreinte, taille, notes de version)
+
+**Couches supplémentaires (validation manuelle avant publication de la fonctionnalité)** — à dérouler dans Word/Excel, Chrome, Edge, Firefox et VS Code :
 
 - [ ] Maj+* puis `a` → α ; maintien Maj+* + `abc` → αbc (l'accord vaut un appui simple, seule la première frappe est transformée) ; double appui → verrou (indicateur « verrou »), Espace reste une espace, Échap déverrouille et est absorbé une seule fois
 - [ ] Pendant un verrou : Ctrl+C/V, Alt+Tab et Win+E restent intacts ; un nouveau Maj produit Α ; un appui AltGr+* rend la frappe suivante cyrillique puis retombe sur le verrou grec ; un double appui AltGr+* bascule le verrou vers le cyrillique
@@ -290,4 +399,4 @@ L'application doit lire ce JSON au démarrage et construire ses tables de mappin
 
 ---
 
-*Dernière mise à jour : 2026-08-24*
+*Dernière mise à jour : 2026-09-05 — mise au niveau du programme v2, cible 2.0.0.*
