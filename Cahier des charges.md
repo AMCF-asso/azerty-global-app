@@ -388,6 +388,9 @@ L'application doit lire ce JSON au démarrage et construire ses tables de mappin
 - [ ] Installation, mise à niveau depuis une 1.x, conservation des réglages et retour à une version utilisable, sur les deux canaux
 - [ ] À propos affiche le bon canal ; le canal AMCF n'affiche ni sollicitation d'avis, ni don, ni Discord
 - [ ] La version affichée correspond au paquet réellement servi (empreinte, taille, notes de version)
+- [ ] `Verify-Release.ps1` PASS et **WACK PASS** sur le bundle final, avant toute soumission
+- [ ] **Installation par `.appinstaller` sur une machine propre**, sans droits administrateur, puis mise à jour par ce même canal
+- [ ] **Smoke test sur un vrai paquet AMCF**, pas seulement en tests unitaires : aucune sollicitation d'avis, de don ni de Discord, statistiques éteintes par défaut, et les réglages imposés par une stratégie de groupe apparaissent **grisés** avec la mention qui l'explique
 
 **Couches supplémentaires (validation manuelle avant publication de la fonctionnalité)** — à dérouler dans Word/Excel, Chrome, Edge, Firefox et VS Code :
 
