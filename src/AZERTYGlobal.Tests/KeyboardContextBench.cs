@@ -99,18 +99,22 @@ public class KeyboardContextBench
                         ($"clavier-virtuel-actif-{theme}", () => CaptureVirtualKeyboard(
                             outDir, $"clavier-virtuel-actif-{theme}-{percent}.png", layout,
                             KeyboardRenderProfile.VirtualKeyboard)),
-                        // Planche de calibrage du glyphe principal, sous-glyphes fixes a
-                        // 0,26 : 0,40 (rendu du 2026-09-07, trop timide), 0,52, 0,62.
+                        // Planche de calibrage des sous-glyphes, principal fige a 0,62
+                        // (taille du glyphe actif validee par Antoine le 2026-09-07) :
+                        // 0,26 rendu et juge trop petit, puis 0,34, 0,40, 0,46.
                         // A retirer des que la taille est tranchee.
-                        ($"clavier-virtuel-carte-040-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-carte-040-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.40f)),
-                        ($"clavier-virtuel-carte-052-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-carte-052-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.52f)),
-                        ($"clavier-virtuel-carte-062-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-carte-062-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.62f)),
+                        ($"clavier-virtuel-sub026-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-sub026-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.62f, 0.26f)),
+                        ($"clavier-virtuel-sub034-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-sub034-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.62f, 0.34f)),
+                        ($"clavier-virtuel-sub040-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-sub040-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.62f, 0.40f)),
+                        ($"clavier-virtuel-sub046-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-sub046-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.62f, 0.46f)),
                         ($"module-essai-{theme}", () => CaptureLearningModule(outDir, $"module-essai-{theme}-{percent}.png", layout, mapper, hook)),
                     };
 
@@ -179,10 +183,10 @@ public class KeyboardContextBench
 
     private static bool CaptureVirtualKeyboard(
         string outDir, string file, Layout layout, KeyboardRenderProfile profile,
-        float? mainGlyphRatio = null)
+        float? mainGlyphRatio = null, float? subGlyphRatio = null)
     {
         using var profileScope = VirtualKeyboard.OverrideProfileForTests(profile);
-        using var ratioScope = VirtualKeyboard.OverrideMainGlyphRatioForTests(mainGlyphRatio);
+        using var ratioScope = VirtualKeyboard.OverrideGlyphRatiosForTests(mainGlyphRatio, subGlyphRatio);
         var keyboard = new VirtualKeyboard(layout);
         try
         {

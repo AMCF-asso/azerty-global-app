@@ -258,6 +258,7 @@ sealed class VirtualKeyboard : IDisposable
     private int _cachedCh;
     private KeyboardRenderProfile? _cachedProfile;
     private float? _cachedMainRatio;
+    private float? _cachedSubRatio;
 
     /// <summary>
     /// Rapport entre la police du glyphe principal et l'echelle du clavier, en profil
@@ -266,25 +267,39 @@ sealed class VirtualKeyboard : IDisposable
     /// </summary>
     private static float? _mainGlyphRatio;
 
-    internal static IDisposable OverrideMainGlyphRatioForTests(float? ratio)
+    /// <summary>
+    /// Rapport entre la police des sous-glyphes (couches AltGr et Maj+AltGr) et
+    /// l'echelle du clavier, en profil carte. Ce sont eux qui portent les symboles de
+    /// programmation de la rangee du milieu.
+    /// </summary>
+    private static float? _subGlyphRatio;
+
+    internal static IDisposable OverrideGlyphRatiosForTests(float? main, float? sub)
     {
-        var previous = _mainGlyphRatio;
-        _mainGlyphRatio = ratio;
-        return new RatioScope(previous);
+        var scope = new RatioScope(_mainGlyphRatio, _subGlyphRatio);
+        _mainGlyphRatio = main;
+        _subGlyphRatio = sub;
+        return scope;
     }
 
     private sealed class RatioScope : IDisposable
     {
-        private readonly float? _previous;
+        private readonly float? _previousMain;
+        private readonly float? _previousSub;
         private bool _disposed;
 
-        internal RatioScope(float? previous) => _previous = previous;
+        internal RatioScope(float? previousMain, float? previousSub)
+        {
+            _previousMain = previousMain;
+            _previousSub = previousSub;
+        }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
-            _mainGlyphRatio = _previous;
+            _mainGlyphRatio = _previousMain;
+            _subGlyphRatio = _previousSub;
         }
     }
 
@@ -367,7 +382,7 @@ sealed class VirtualKeyboard : IDisposable
     private void EnsureFonts(int cw, int ch)
     {
         if (cw == _cachedCw && ch == _cachedCh && _cachedProfile == _profile
-            && _cachedMainRatio == _mainGlyphRatio
+            && _cachedMainRatio == _mainGlyphRatio && _cachedSubRatio == _subGlyphRatio
             && _hCharFont != IntPtr.Zero && _hActiveDeadKeyCharFont != IntPtr.Zero)
             return;
 
@@ -393,9 +408,11 @@ sealed class VirtualKeyboard : IDisposable
         int activeDeadKeyCharFontSize = Math.Max(12, (int)(charFontSize * 0.85f));
         int labelFontSize = Math.Max(9, (int)(geo.Scale * (carte ? 0.24f : 0.30f)));
         int ctxFontSize = Math.Max(10, (int)(geo.Scale * (carte ? 0.30f : 0.35f)));
-        // Sous-glyphes : 0,26 en carte (un quart de touche) ; hors carte ils ne sont pas
-        // dessines, la valeur ne sert qu'a fournir un handle valide au moteur.
-        int subFontSize = Math.Max(9, (int)(geo.Scale * (carte ? 0.26f : 0.51f)));
+        // Sous-glyphes : ils portent les couches AltGr et Maj+AltGr, donc les symboles
+        // de programmation. Hors carte ils ne sont pas dessines, la valeur ne sert qu'a
+        // fournir un handle valide au moteur.
+        float subRatio = carte ? (_subGlyphRatio ?? 0.26f) : 0.51f;
+        int subFontSize = Math.Max(9, (int)(geo.Scale * subRatio));
 
         _hCharFont = Win32.CreateFontW(charFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hActiveDeadKeyCharFont = Win32.CreateFontW(activeDeadKeyCharFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
@@ -407,6 +424,7 @@ sealed class VirtualKeyboard : IDisposable
         _cachedCh = ch;
         _cachedProfile = _profile;
         _cachedMainRatio = _mainGlyphRatio;
+        _cachedSubRatio = _subGlyphRatio;
     }
 
     public VirtualKeyboard(Layout layout, Dictionary<string, (string Fr, string En)>? charNames = null)
