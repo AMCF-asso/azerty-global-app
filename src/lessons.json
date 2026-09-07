@@ -945,6 +945,100 @@
           ]
         }
       ]
+    },
+    {
+      "id": "vingt-millions",
+      "title": "Édition spéciale : la course aux 30 millions",
+      "titleEn": "Special: the race to 30 million",
+      "description": "Trois textes au choix, à taper en entier. Découvrez des caractères à votre rythme, avec une aide à chaque touche.",
+      "descriptionEn": "Choose a complete text to type at your own pace, with help for every key.",
+      "icon": "✨",
+      "lessons": [
+        {
+          "id": "course-20-millions",
+          "title": "Le français en grand",
+          "titleEn": "French in capitals",
+          "description": "Un thème du défi facultatif, sans chronomètre.",
+          "descriptionEn": "An optional theme, with no timer.",
+          "characters": [
+            "É",
+            "È",
+            "À",
+            "Ç",
+            "«",
+            "»",
+            "œ",
+            "Œ",
+            "æ",
+            "—",
+            "…"
+          ],
+          "exercises": [
+            {
+              "type": "practice",
+              "instruction": "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+              "instructionEn": "Type the complete text; the help shows the next key.",
+              "content": "« Ça y est ! À Montpellier, dès ce soir, l'équipe au grand cœur vise le record — Élan collectif, Ère nouvelle, Œuvre commune… ex æquo ou mieux. »",
+              "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
+            }
+          ]
+        },
+        {
+          "id": "course-20-millions-voyage",
+          "title": "Un tour d’Europe",
+          "titleEn": "Around Europe",
+          "description": "Un thème du défi facultatif, sans chronomètre.",
+          "descriptionEn": "An optional theme, with no timer.",
+          "characters": [
+            "ñ",
+            "¿",
+            "¡",
+            "ß",
+            "ø",
+            "å"
+          ],
+          "exercises": [
+            {
+              "type": "practice",
+              "instruction": "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+              "instructionEn": "Type the complete text; the help shows the next key.",
+              "content": "¡Vamos España! De København à Skåne, puis jusqu'à la Bahnhofstraße : tout le monde donne, ¿y tú?",
+              "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
+            }
+          ]
+        },
+        {
+          "id": "course-20-millions-symboles",
+          "title": "Des symboles à découvrir",
+          "titleEn": "Discover symbols",
+          "description": "Un thème du défi facultatif, sans chronomètre.",
+          "descriptionEn": "An optional theme, with no timer.",
+          "characters": [
+            "×",
+            "≠",
+            "≤",
+            "→",
+            "°",
+            "±",
+            "≈",
+            "©",
+            "™",
+            "½",
+            "¼",
+            "²",
+            "³"
+          ],
+          "exercises": [
+            {
+              "type": "practice",
+              "instruction": "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+              "instructionEn": "Type the complete text; the help shows the next key.",
+              "content": "Four à 180 °C ± 5, ½ citron, ¼ d'oignon → 2 × 20 min ≈ 40 min, ≤ 1 h. 10³ mercis ≠ 10² © ™",
+              "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
+            }
+          ]
+        }
+      ]
     }
   ]
 }
