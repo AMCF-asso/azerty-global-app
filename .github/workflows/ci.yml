@@ -129,3 +129,46 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: binskim-sarif
+
+  # Arret visuel : le banc KeyboardContextBench rend les fenetres qui portent un
+  # clavier et remonte les PNG. Il existe parce que Smart App Control bloque
+  # AZERTY Global.dll des qu'elle est reconstruite sur le poste fixe, ce qui prive
+  # les sessions de toute preuve visuelle locale (mesure du 2026-09-07 : 341 echecs
+  # sur 349, cause unique 0x800711C7, en Debug comme en Release).
+  maquettes:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Le banc est ferme par sa variable : sans elle il rend 0 capture et sort vert.
+      - name: Rendre les fenetres a clavier
+        env:
+          AZERTY_CONTEXTE: ${{ github.workspace }}\maquettes
+        run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --filter FullyQualifiedName~KeyboardContextBench
+
+      # Compter les fichiers, jamais le code de retour : le banc sort vert quand il
+      # n'ecrit rien, et un runner sans bureau utilisable est exactement ce cas.
+      - name: Compter les captures
+        if: always()
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:GITHUB_WORKSPACE 'maquettes'
+          if (-not (Test-Path $dir)) { Write-Host 'aucun dossier de sortie'; exit 0 }
+          $png = Get-ChildItem -LiteralPath $dir -Filter *.png -ErrorAction SilentlyContinue
+          Write-Host ("captures ecrites : {0}" -f $png.Count)
+          $png | ForEach-Object { Write-Host ("  {0} ({1} octets)" -f $_.Name, $_.Length) }
+
+      - name: Upload maquettes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maquettes-clavier
+          path: maquettes/*.png
+          if-no-files-found: warn
+          retention-days: 30
