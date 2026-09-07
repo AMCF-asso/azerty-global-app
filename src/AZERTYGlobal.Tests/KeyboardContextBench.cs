@@ -99,9 +99,18 @@ public class KeyboardContextBench
                         ($"clavier-virtuel-actif-{theme}", () => CaptureVirtualKeyboard(
                             outDir, $"clavier-virtuel-actif-{theme}-{percent}.png", layout,
                             KeyboardRenderProfile.VirtualKeyboard)),
-                        ($"clavier-virtuel-carte-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-carte-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full)),
+                        // Planche de calibrage du glyphe principal, sous-glyphes fixes a
+                        // 0,26 : 0,40 (rendu du 2026-09-07, trop timide), 0,52, 0,62.
+                        // A retirer des que la taille est tranchee.
+                        ($"clavier-virtuel-carte-040-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-carte-040-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.40f)),
+                        ($"clavier-virtuel-carte-052-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-carte-052-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.52f)),
+                        ($"clavier-virtuel-carte-062-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-carte-062-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full, 0.62f)),
                         ($"module-essai-{theme}", () => CaptureLearningModule(outDir, $"module-essai-{theme}-{percent}.png", layout, mapper, hook)),
                     };
 
@@ -169,9 +178,11 @@ public class KeyboardContextBench
     }
 
     private static bool CaptureVirtualKeyboard(
-        string outDir, string file, Layout layout, KeyboardRenderProfile profile)
+        string outDir, string file, Layout layout, KeyboardRenderProfile profile,
+        float? mainGlyphRatio = null)
     {
         using var profileScope = VirtualKeyboard.OverrideProfileForTests(profile);
+        using var ratioScope = VirtualKeyboard.OverrideMainGlyphRatioForTests(mainGlyphRatio);
         var keyboard = new VirtualKeyboard(layout);
         try
         {

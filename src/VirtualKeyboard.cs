@@ -257,6 +257,36 @@ sealed class VirtualKeyboard : IDisposable
     private int _cachedCw; // Largeur client quand les polices ont été créées
     private int _cachedCh;
     private KeyboardRenderProfile? _cachedProfile;
+    private float? _cachedMainRatio;
+
+    /// <summary>
+    /// Rapport entre la police du glyphe principal et l'echelle du clavier, en profil
+    /// carte. Seul le banc le force, le temps de calibrer : le premier rendu debordait
+    /// a 0,72 et le second etait trop timide a 0,40 (maquettes du 2026-09-07).
+    /// </summary>
+    private static float? _mainGlyphRatio;
+
+    internal static IDisposable OverrideMainGlyphRatioForTests(float? ratio)
+    {
+        var previous = _mainGlyphRatio;
+        _mainGlyphRatio = ratio;
+        return new RatioScope(previous);
+    }
+
+    private sealed class RatioScope : IDisposable
+    {
+        private readonly float? _previous;
+        private bool _disposed;
+
+        internal RatioScope(float? previous) => _previous = previous;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _mainGlyphRatio = _previous;
+        }
+    }
 
     // Tooltip
     private IntPtr _hTooltip;
@@ -337,6 +367,7 @@ sealed class VirtualKeyboard : IDisposable
     private void EnsureFonts(int cw, int ch)
     {
         if (cw == _cachedCw && ch == _cachedCh && _cachedProfile == _profile
+            && _cachedMainRatio == _mainGlyphRatio
             && _hCharFont != IntPtr.Zero && _hActiveDeadKeyCharFont != IntPtr.Zero)
             return;
 
@@ -357,7 +388,8 @@ sealed class VirtualKeyboard : IDisposable
         // sous-glyphes a 0,26 dans un quart de touche.
         bool carte = _profile != KeyboardRenderProfile.VirtualKeyboard;
 
-        int charFontSize = Math.Max(12, (int)(geo.Scale * (carte ? 0.40f : 0.72f)));
+        float mainRatio = carte ? (_mainGlyphRatio ?? 0.40f) : 0.72f;
+        int charFontSize = Math.Max(12, (int)(geo.Scale * mainRatio));
         int activeDeadKeyCharFontSize = Math.Max(12, (int)(charFontSize * 0.85f));
         int labelFontSize = Math.Max(9, (int)(geo.Scale * (carte ? 0.24f : 0.30f)));
         int ctxFontSize = Math.Max(10, (int)(geo.Scale * (carte ? 0.30f : 0.35f)));
@@ -374,6 +406,7 @@ sealed class VirtualKeyboard : IDisposable
         _cachedCw = cw;
         _cachedCh = ch;
         _cachedProfile = _profile;
+        _cachedMainRatio = _mainGlyphRatio;
     }
 
     public VirtualKeyboard(Layout layout, Dictionary<string, (string Fr, string En)>? charNames = null)
