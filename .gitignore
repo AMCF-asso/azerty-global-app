@@ -37,3 +37,7 @@ Thumbs.db
 TO-DO.md
 Publication Microsoft Store.md
 Distribution Entreprises.md
+
+# Archives locales : signature et msix precedents, jamais versionnes
+# (commit 1013d2b : les archives Store restent en stockage prive)
+Archives/
