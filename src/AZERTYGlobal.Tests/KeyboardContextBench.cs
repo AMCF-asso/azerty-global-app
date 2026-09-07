@@ -93,7 +93,15 @@ public class KeyboardContextBench
                 {
                     var attempts = new List<(string Name, Func<bool> Run)>
                     {
-                        ($"clavier-virtuel-{theme}", () => CaptureVirtualKeyboard(outDir, $"clavier-virtuel-{theme}-{percent}.png", layout)),
+                        // CH4b : les deux profils, pour l'arbitrage sur maquettes. « actif »
+                        // rend un glyphe par touche (celui que la frappe produira), « carte »
+                        // rend les trois couches comme la fenetre Lecons.
+                        ($"clavier-virtuel-actif-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-actif-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.VirtualKeyboard)),
+                        ($"clavier-virtuel-carte-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-carte-{theme}-{percent}.png", layout,
+                            KeyboardRenderProfile.Full)),
                         ($"module-essai-{theme}", () => CaptureLearningModule(outDir, $"module-essai-{theme}-{percent}.png", layout, mapper, hook)),
                     };
 
@@ -160,8 +168,10 @@ public class KeyboardContextBench
         }
     }
 
-    private static bool CaptureVirtualKeyboard(string outDir, string file, Layout layout)
+    private static bool CaptureVirtualKeyboard(
+        string outDir, string file, Layout layout, KeyboardRenderProfile profile)
     {
+        using var profileScope = VirtualKeyboard.OverrideProfileForTests(profile);
         var keyboard = new VirtualKeyboard(layout);
         try
         {
