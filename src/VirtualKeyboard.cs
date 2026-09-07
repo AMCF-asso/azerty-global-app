@@ -256,6 +256,7 @@ sealed class VirtualKeyboard : IDisposable
     private IntPtr _hSubFont; // sous-couches AltGr et Maj+AltGr, profil Full seulement
     private int _cachedCw; // Largeur client quand les polices ont été créées
     private int _cachedCh;
+    private KeyboardRenderProfile? _cachedProfile;
 
     // Tooltip
     private IntPtr _hTooltip;
@@ -335,7 +336,8 @@ sealed class VirtualKeyboard : IDisposable
     /// <summary>Crée ou recrée les polices selon la taille client actuelle.</summary>
     private void EnsureFonts(int cw, int ch)
     {
-        if (cw == _cachedCw && ch == _cachedCh && _hCharFont != IntPtr.Zero && _hActiveDeadKeyCharFont != IntPtr.Zero)
+        if (cw == _cachedCw && ch == _cachedCh && _cachedProfile == _profile
+            && _hCharFont != IntPtr.Zero && _hActiveDeadKeyCharFont != IntPtr.Zero)
             return;
 
         // Libérer les anciennes polices
@@ -347,13 +349,21 @@ sealed class VirtualKeyboard : IDisposable
 
         var geo = GetKeyboardGeometry(cw, ch);
 
-        int charFontSize = Math.Max(14, (int)(geo.Scale * 0.72f));
+        // Le profil carte fait tenir trois glyphes dans une touche : le principal dans
+        // sa moitie gauche, AltGr et Maj+AltGr dans la moitie droite. Une police calibree
+        // pour un glyphe centre y deborde — constate par Antoine sur les maquettes du
+        // 2026-09-07. La touche fait environ une unite de large, donc la demi-touche vaut
+        // 0,5 x l'echelle : le glyphe principal se cale a 0,40 pour garder sa marge, les
+        // sous-glyphes a 0,26 dans un quart de touche.
+        bool carte = _profile != KeyboardRenderProfile.VirtualKeyboard;
+
+        int charFontSize = Math.Max(12, (int)(geo.Scale * (carte ? 0.40f : 0.72f)));
         int activeDeadKeyCharFontSize = Math.Max(12, (int)(charFontSize * 0.85f));
-        int labelFontSize = Math.Max(9, (int)(geo.Scale * 0.30f));
-        int ctxFontSize = Math.Max(10, (int)(geo.Scale * 0.35f));
-        // 0,51 = le rapport petite/grande police du moteur (20/28 sur la fenetre Lecons),
-        // applique a la grande police de cette fenetre-ci, qui suit sa geometrie.
-        int subFontSize = Math.Max(10, (int)(geo.Scale * 0.51f));
+        int labelFontSize = Math.Max(9, (int)(geo.Scale * (carte ? 0.24f : 0.30f)));
+        int ctxFontSize = Math.Max(10, (int)(geo.Scale * (carte ? 0.30f : 0.35f)));
+        // Sous-glyphes : 0,26 en carte (un quart de touche) ; hors carte ils ne sont pas
+        // dessines, la valeur ne sert qu'a fournir un handle valide au moteur.
+        int subFontSize = Math.Max(9, (int)(geo.Scale * (carte ? 0.26f : 0.51f)));
 
         _hCharFont = Win32.CreateFontW(charFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hActiveDeadKeyCharFont = Win32.CreateFontW(activeDeadKeyCharFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
@@ -363,6 +373,7 @@ sealed class VirtualKeyboard : IDisposable
 
         _cachedCw = cw;
         _cachedCh = ch;
+        _cachedProfile = _profile;
     }
 
     public VirtualKeyboard(Layout layout, Dictionary<string, (string Fr, string En)>? charNames = null)
