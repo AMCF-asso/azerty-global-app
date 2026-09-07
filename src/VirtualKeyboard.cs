@@ -256,52 +256,15 @@ sealed class VirtualKeyboard : IDisposable
     private IntPtr _hSubFont; // sous-couches AltGr et Maj+AltGr, profil Full seulement
     private int _cachedCw; // Largeur client quand les polices ont été créées
     private int _cachedCh;
-    private KeyboardRenderProfile? _cachedProfile;
-    private float? _cachedMainRatio;
-    private float? _cachedSubRatio;
-
     /// <summary>
-    /// Rapport entre la police du glyphe principal et l'echelle du clavier, en profil
-    /// carte. Seul le banc le force, le temps de calibrer : le premier rendu debordait
-    /// a 0,72 et le second etait trop timide a 0,40 (maquettes du 2026-09-07).
+    /// Rapports entre les polices du clavier et son echelle, arbitres par Antoine sur
+    /// les planches du 2026-09-07. La carte fait tenir trois glyphes dans une touche :
+    /// le principal dans sa moitie gauche, AltGr et Maj+AltGr dans la moitie droite.
+    /// 0,72 debordait, 0,40 effacait le caractere actif ; 0,26 rendait illisibles les
+    /// symboles de programmation de la rangee du milieu, tous en couche AltGr.
     /// </summary>
-    private static float? _mainGlyphRatio;
-
-    /// <summary>
-    /// Rapport entre la police des sous-glyphes (couches AltGr et Maj+AltGr) et
-    /// l'echelle du clavier, en profil carte. Ce sont eux qui portent les symboles de
-    /// programmation de la rangee du milieu.
-    /// </summary>
-    private static float? _subGlyphRatio;
-
-    internal static IDisposable OverrideGlyphRatiosForTests(float? main, float? sub)
-    {
-        var scope = new RatioScope(_mainGlyphRatio, _subGlyphRatio);
-        _mainGlyphRatio = main;
-        _subGlyphRatio = sub;
-        return scope;
-    }
-
-    private sealed class RatioScope : IDisposable
-    {
-        private readonly float? _previousMain;
-        private readonly float? _previousSub;
-        private bool _disposed;
-
-        internal RatioScope(float? previousMain, float? previousSub)
-        {
-            _previousMain = previousMain;
-            _previousSub = previousSub;
-        }
-
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-            _mainGlyphRatio = _previousMain;
-            _subGlyphRatio = _previousSub;
-        }
-    }
+    private const float MainGlyphRatio = 0.62f;
+    private const float SubGlyphRatio = 0.42f;
 
     // Tooltip
     private IntPtr _hTooltip;
@@ -309,34 +272,12 @@ sealed class VirtualKeyboard : IDisposable
     public bool IsVisible => _visible;
 
     /// <summary>
-    /// Profil de rendu de la fenetre. <see cref="KeyboardRenderProfile.VirtualKeyboard"/>
-    /// rend un glyphe par touche, celui que la frappe produira ;
-    /// <see cref="KeyboardRenderProfile.Full"/> rend la carte des trois couches. Le banc
-    /// des maquettes est le seul a le forcer, comme il est le seul a forcer le theme.
+    /// La fenetre rend la carte des trois couches : base et Maj en haut a gauche, AltGr
+    /// en bas a droite, Maj+AltGr en haut a droite, l'active en grande police (S4-2).
+    /// Arbitre par Antoine le 2026-09-07 sur maquettes, contre un profil a glyphe
+    /// unique qui a ete rendu puis supprime.
     /// </summary>
-    private static KeyboardRenderProfile _profile = KeyboardRenderProfile.VirtualKeyboard;
-
-    internal static IDisposable OverrideProfileForTests(KeyboardRenderProfile profile)
-    {
-        var scope = new ProfileScope(_profile);
-        _profile = profile;
-        return scope;
-    }
-
-    private sealed class ProfileScope : IDisposable
-    {
-        private readonly KeyboardRenderProfile _previous;
-        private bool _disposed;
-
-        internal ProfileScope(KeyboardRenderProfile previous) => _previous = previous;
-
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-            _profile = _previous;
-        }
-    }
+    private const KeyboardRenderProfile Profile = KeyboardRenderProfile.Full;
 
     // ── Géométrie du clavier (partagée entre EnsureFonts, PaintContent, OnMouseMove) ──
 
@@ -381,8 +322,7 @@ sealed class VirtualKeyboard : IDisposable
     /// <summary>Crée ou recrée les polices selon la taille client actuelle.</summary>
     private void EnsureFonts(int cw, int ch)
     {
-        if (cw == _cachedCw && ch == _cachedCh && _cachedProfile == _profile
-            && _cachedMainRatio == _mainGlyphRatio && _cachedSubRatio == _subGlyphRatio
+        if (cw == _cachedCw && ch == _cachedCh
             && _hCharFont != IntPtr.Zero && _hActiveDeadKeyCharFont != IntPtr.Zero)
             return;
 
@@ -395,24 +335,11 @@ sealed class VirtualKeyboard : IDisposable
 
         var geo = GetKeyboardGeometry(cw, ch);
 
-        // Le profil carte fait tenir trois glyphes dans une touche : le principal dans
-        // sa moitie gauche, AltGr et Maj+AltGr dans la moitie droite. Une police calibree
-        // pour un glyphe centre y deborde — constate par Antoine sur les maquettes du
-        // 2026-09-07. La touche fait environ une unite de large, donc la demi-touche vaut
-        // 0,5 x l'echelle : le glyphe principal se cale a 0,40 pour garder sa marge, les
-        // sous-glyphes a 0,26 dans un quart de touche.
-        bool carte = _profile != KeyboardRenderProfile.VirtualKeyboard;
-
-        float mainRatio = carte ? (_mainGlyphRatio ?? 0.40f) : 0.72f;
-        int charFontSize = Math.Max(12, (int)(geo.Scale * mainRatio));
+        int charFontSize = Math.Max(12, (int)(geo.Scale * MainGlyphRatio));
         int activeDeadKeyCharFontSize = Math.Max(12, (int)(charFontSize * 0.85f));
-        int labelFontSize = Math.Max(9, (int)(geo.Scale * (carte ? 0.24f : 0.30f)));
-        int ctxFontSize = Math.Max(10, (int)(geo.Scale * (carte ? 0.30f : 0.35f)));
-        // Sous-glyphes : ils portent les couches AltGr et Maj+AltGr, donc les symboles
-        // de programmation. Hors carte ils ne sont pas dessines, la valeur ne sert qu'a
-        // fournir un handle valide au moteur.
-        float subRatio = carte ? (_subGlyphRatio ?? 0.26f) : 0.51f;
-        int subFontSize = Math.Max(9, (int)(geo.Scale * subRatio));
+        int labelFontSize = Math.Max(9, (int)(geo.Scale * 0.24f));
+        int ctxFontSize = Math.Max(10, (int)(geo.Scale * 0.30f));
+        int subFontSize = Math.Max(9, (int)(geo.Scale * SubGlyphRatio));
 
         _hCharFont = Win32.CreateFontW(charFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hActiveDeadKeyCharFont = Win32.CreateFontW(activeDeadKeyCharFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
@@ -422,9 +349,7 @@ sealed class VirtualKeyboard : IDisposable
 
         _cachedCw = cw;
         _cachedCh = ch;
-        _cachedProfile = _profile;
-        _cachedMainRatio = _mainGlyphRatio;
-        _cachedSubRatio = _subGlyphRatio;
+
     }
 
     public VirtualKeyboard(Layout layout, Dictionary<string, (string Fr, string En)>? charNames = null)
@@ -1102,7 +1027,7 @@ sealed class VirtualKeyboard : IDisposable
             hdc,
             GetRenderBounds(cw, ch),
             _layout,
-            _profile,
+            Profile,
             BuildRenderState(),
             _activeDeadKey != null && _hActiveDeadKeyCharFont != IntPtr.Zero
                 ? _hActiveDeadKeyCharFont

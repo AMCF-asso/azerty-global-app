@@ -4,15 +4,10 @@ internal enum KeyboardRenderProfile
 {
     Full,
     Onboarding,
-    Lesson,
-
-    /// <summary>
-    /// Fenetre Clavier virtuel (CH4b) : toutes les touches, mais <em>un seul glyphe
-    /// par touche</em> — celui que la frappe produira dans l'etat de modifieur
-    /// courant, centre. Le profil ne filtre aucune touche ; il change la densite du
-    /// glyphe, pas la visibilite. <see cref="Full"/> rend la carte des trois couches.
-    /// </summary>
-    VirtualKeyboard
+    // La fenetre Clavier virtuel emploie Full depuis CH4b : Antoine a retenu la carte
+    // des trois couches le 2026-09-07, contre un profil a glyphe unique qui a ete
+    // rendu, compare, puis supprime.
+    Lesson
 }
 
 internal sealed class KeyboardRenderState
@@ -134,8 +129,7 @@ internal static class KeyboardRenderer
         string? hintCharacter = null)
     {
         if (string.IsNullOrEmpty(value)) return false;
-        if (profile == KeyboardRenderProfile.Full
-            || profile == KeyboardRenderProfile.VirtualKeyboard) return true;
+        if (profile == KeyboardRenderProfile.Full) return true;
 
         if (profile == KeyboardRenderProfile.Onboarding)
             return IsOnboardingSlotVisible(scancode, layer, value);
@@ -428,7 +422,7 @@ internal static class KeyboardRenderer
         }
 
         var filtered = FilterKeyForProfile(def, key.Scancode, profile, state);
-        DrawKeyCharacters(hdc, rect, key, filtered, layout, profile, state, hFontMain, hFontDeadKey, hFontSmall, hFontTiny);
+        DrawKeyCharacters(hdc, rect, key, filtered, layout, state, hFontMain, hFontDeadKey, hFontSmall, hFontTiny);
     }
 
     private static void DrawRectKey(IntPtr hdc, Win32.RECT rect, IntPtr brush)
@@ -483,7 +477,6 @@ internal static class KeyboardRenderer
         VirtualKeyboard.VisualKey key,
         KeyDefinition keyDef,
         Layout layout,
-        KeyboardRenderProfile profile,
         KeyboardRenderState state,
         IntPtr hFontMain,
         IntPtr hFontDeadKey,
@@ -502,12 +495,6 @@ internal static class KeyboardRenderer
         if (state.ActiveDeadKey != null)
         {
             DrawActiveDeadKeyCharacter(hdc, rect, key, keyDef, layout, state, hFontDeadKey, hFontTiny);
-            return;
-        }
-
-        if (profile == KeyboardRenderProfile.VirtualKeyboard)
-        {
-            PaintActiveGlyphOnly(hdc, rect, keyDef, state, hFontMain);
             return;
         }
 
@@ -595,27 +582,6 @@ internal static class KeyboardRenderer
         Win32.DrawTextW(hdc, text, text.Length, ref textRect,
             Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
         Win32.SelectObject(hdc, oldFont);
-    }
-
-    /// <summary>
-    /// Profil <see cref="KeyboardRenderProfile.VirtualKeyboard"/> : le seul caractere que
-    /// la frappe produira, centre dans la touche. Il est toujours actif par construction,
-    /// donc il prend l'encre et la grande police — la regle S4-2 (« la grande police suit la
-    /// couche active ») se reduit ici a un seul cas.
-    /// </summary>
-    private static void PaintActiveGlyphOnly(
-        IntPtr hdc,
-        Win32.RECT rect,
-        KeyDefinition keyDef,
-        KeyboardRenderState state,
-        IntPtr hFontMain)
-    {
-        string? output = keyDef.GetOutput(state.Shift, state.AltGr, state.CapsLock);
-        if (string.IsNullOrEmpty(output)) return;
-
-        DrawCharAt(hdc, rect.left, rect.top, rect.right, rect.bottom,
-            output, isActive: true, IsDeadKeyRef(output), alignLeft: false, useMainFont: true,
-            state.ShowInvisibleMarkers, hFontMain, hFontMain);
     }
 
     private static void PaintLetterKey(
@@ -801,8 +767,7 @@ internal static class KeyboardRenderer
         KeyboardRenderProfile profile,
         KeyboardRenderState state)
     {
-        if (profile == KeyboardRenderProfile.Full
-            || profile == KeyboardRenderProfile.VirtualKeyboard) return key;
+        if (profile == KeyboardRenderProfile.Full) return key;
 
         return new KeyDefinition
         {

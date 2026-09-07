@@ -93,28 +93,11 @@ public class KeyboardContextBench
                 {
                     var attempts = new List<(string Name, Func<bool> Run)>
                     {
-                        // CH4b : les deux profils, pour l'arbitrage sur maquettes. « actif »
-                        // rend un glyphe par touche (celui que la frappe produira), « carte »
-                        // rend les trois couches comme la fenetre Lecons.
-                        ($"clavier-virtuel-actif-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-actif-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.VirtualKeyboard)),
-                        // Planche de calibrage des sous-glyphes, principal fige a 0,62
-                        // (taille du glyphe actif validee par Antoine le 2026-09-07) :
-                        // 0,26 rendu et juge trop petit, puis 0,34, 0,40, 0,46.
-                        // A retirer des que la taille est tranchee.
-                        ($"clavier-virtuel-sub026-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-sub026-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.62f, 0.26f)),
-                        ($"clavier-virtuel-sub034-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-sub034-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.62f, 0.34f)),
-                        ($"clavier-virtuel-sub040-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-sub040-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.62f, 0.40f)),
-                        ($"clavier-virtuel-sub046-{theme}", () => CaptureVirtualKeyboard(
-                            outDir, $"clavier-virtuel-sub046-{theme}-{percent}.png", layout,
-                            KeyboardRenderProfile.Full, 0.62f, 0.46f)),
+                        // CH4b clos : la fenetre porte le profil carte et ses deux rapports
+                        // en dur. Les planches de calibrage sont parties avec les crochets
+                        // qui les servaient.
+                        ($"clavier-virtuel-{theme}", () => CaptureVirtualKeyboard(
+                            outDir, $"clavier-virtuel-{theme}-{percent}.png", layout)),
                         ($"module-essai-{theme}", () => CaptureLearningModule(outDir, $"module-essai-{theme}-{percent}.png", layout, mapper, hook)),
                     };
 
@@ -181,12 +164,8 @@ public class KeyboardContextBench
         }
     }
 
-    private static bool CaptureVirtualKeyboard(
-        string outDir, string file, Layout layout, KeyboardRenderProfile profile,
-        float? mainGlyphRatio = null, float? subGlyphRatio = null)
+    private static bool CaptureVirtualKeyboard(string outDir, string file, Layout layout)
     {
-        using var profileScope = VirtualKeyboard.OverrideProfileForTests(profile);
-        using var ratioScope = VirtualKeyboard.OverrideGlyphRatiosForTests(mainGlyphRatio, subGlyphRatio);
         var keyboard = new VirtualKeyboard(layout);
         try
         {
