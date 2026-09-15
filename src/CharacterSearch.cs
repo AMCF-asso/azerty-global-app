@@ -192,6 +192,7 @@ sealed class CharacterSearch : IDisposable
 
     /// <summary>Déclenché quand l'insertion directe a dû retomber sur la copie.</summary>
     public event Action<string>? FallbackCopied;
+    public event Action? InsertionIncomplete;
 
     public bool IsVisible => _hWnd != IntPtr.Zero && Win32.IsWindowVisible(_hWnd);
 
@@ -1098,6 +1099,7 @@ sealed class CharacterSearch : IDisposable
 
     private void HandleClick(int mouseY)
     {
+        if (_inputPaused) return;
         int searchH = Scale(BASE_SEARCH_H) + Scale(8) * 2;
         if (mouseY < searchH) return; // Clic dans la zone de recherche
 
@@ -1124,6 +1126,7 @@ sealed class CharacterSearch : IDisposable
 
     private void InsertSelectedCharacter()
     {
+        if (_inputPaused) return;
         if (_selectedIndex < 0 || _selectedIndex >= _filteredResults.Count) return;
 
         var entry = _filteredResults[_selectedIndex];
@@ -1131,7 +1134,11 @@ sealed class CharacterSearch : IDisposable
         // La fenêtre reste ouverte, comme en 1.1.0 : l'insertion rend le focus à la
         // cible (la recherche est topmost, elle reste visible) et d'autres caractères
         // peuvent suivre. Échap ou le raccourci la ferment.
-        if (_insertionService.TryInsert(target, entry.Character))
+        var outcome = _insertionService.Insert(target, entry.Character);
+        if (outcome == TextInsertionOutcome.Partial)
+            InsertionIncomplete?.Invoke();
+        // Seul un échec sans événement envoyé autorise la copie de secours.
+        if (outcome != TextInsertionOutcome.NotInserted)
             return;
 
         if (!ClipboardText.TrySet(_hWnd, entry.Character)) return;

@@ -130,8 +130,8 @@ public class ForegroundMonitorMockedTests
         var mock = new MockWin32Api { ShouldFailSetWinEventHook = true };
         using var fm = new ForegroundMonitor(mock, IntPtr.Zero, _host);
         Assert.False(fm.IsHookInstalled);
-        // Recompute fonctionne quand même (mode dégradé : juste pas d'updates auto)
-        Assert.Equal(CompatibilityMode.Default, fm.CurrentMode);
+        // Un snapshot initial sans suivi fiable ne permet pas de continuer à émettre.
+        Assert.Equal(CompatibilityMode.DisabledAntiCheat, fm.CurrentMode);
     }
 
     [Fact]

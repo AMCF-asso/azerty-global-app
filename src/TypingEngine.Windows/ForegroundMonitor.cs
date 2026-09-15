@@ -4,15 +4,14 @@
 // - SetWinEventHook(EVENT_SYSTEM_FOREGROUND) au démarrage (après création de la fenêtre tray)
 // - Le callback est routé vers le thread de la boucle de messages (WINEVENT_OUTOFCONTEXT
 //   sur le thread qui a appelé SetWinEventHook, soit notre thread principal)
-// - Debounce 100 ms via SetTimer sur la fenêtre tray (pour absorber les rafales d'alt-tab)
-// - À l'expiration du timer, le produit hôte appelle Recompute() qui :
+// - Recalcul immédiat sur le thread UI à chaque changement de fenêtre ou de contrôle.
+// - Recompute() :
 //   1. lit le process foreground via IWin32Api.TryGetForegroundProcess
 //   2. énumère les modules du process via IWin32Api.TryEnumProcessModules
 //   3. calcule CurrentMode selon la liste anti-cheat / DLL signatures / overrides utilisateur
 //   4. déclenche ForegroundChanged
 //
-// Mode dégradé : si SetWinEventHook retourne IntPtr.Zero (env MSIX restrictif rare),
-// CurrentMode reste à Default et l'app fonctionne en comportement v0.9.6.
+// Si le suivi foreground/focus n'est pas disponible, suspendre les émissions jusqu'au redémarrage.
 
 namespace TypingEngine.Windows;
 
@@ -39,7 +38,6 @@ public sealed class ForegroundMonitor : IDisposable
 {
     private readonly IWin32Api _api;
     private readonly IWindowsTypingHost _host;
-    private readonly IntPtr _trayHwnd;
 
     /// <summary>ID du timer Win32 utilisé pour le debounce. Doit être unique côté wndproc.</summary>
     public const uint TIMER_FOREGROUND_DEBOUNCE = 0xF00100;
@@ -54,6 +52,7 @@ public sealed class ForegroundMonitor : IDisposable
     // Évite que le hook thread lise des combinaisons mixtes (ex. nouveau
     // processName / ancien hkl) pendant que le tray thread écrit séquentiellement.
     private sealed record class Snapshot(
+        IntPtr Window,
         string? ProcessName,
         string? FullPath,
         IntPtr Hkl,
@@ -62,6 +61,11 @@ public sealed class ForegroundMonitor : IDisposable
         ForegroundProcessIdentity Identity,
         bool SecureInput);
     private Snapshot? _snapshot;
+    private Snapshot? _lastApplication;
+
+    /// <summary>Dernière application hors shell, destinée uniquement au menu de compatibilité.</summary>
+    public string? LastApplicationProcessName => _lastApplication?.ProcessName;
+    public string? LastApplicationFullPath => _lastApplication?.FullPath;
 
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
     public string? CurrentProcessName => _snapshot?.ProcessName;
@@ -95,25 +99,27 @@ public sealed class ForegroundMonitor : IDisposable
     public (CompatibilityMode Mode, IntPtr Hkl) GetEmitContext()
     {
         var snap = _snapshot;  // capture atomique
+        if (!IsTrackingAvailable || snap == null || snap.Window != _api.GetForegroundWindow())
+            return (CompatibilityMode.DisabledAntiCheat, IntPtr.Zero);
         return (snap?.Mode ?? CompatibilityMode.Default, snap?.Hkl ?? IntPtr.Zero);
     }
 
-    /// <summary>Indique si le hook WinEvent a pu être installé. Si false, mode dégradé permanent (Default).</summary>
+    /// <summary>Indique si le suivi des changements de fenêtre a pu être installé.</summary>
     public bool IsHookInstalled => _winEventHook != IntPtr.Zero;
+    public bool IsTrackingAvailable => IsHookInstalled && _focusEventHook != IntPtr.Zero;
 
     /// <summary>Déclenché à chaque changement effectif de mode (pas à chaque event foreground).</summary>
     public event Action? ForegroundChanged;
 
     /// <summary>
     /// Crée le monitor et installe le WinEventHook foreground.
-    /// trayHwnd = HWND de la fenêtre tray (utilisé pour le SetTimer debounce). IntPtr.Zero
-    /// désactive le debounce (utile pour les tests qui invoquent Recompute() directement).
+    /// trayHwnd est conservé pour compatibilité avec les hôtes existants.
+    /// Le recalcul se fait immédiatement, hors callback clavier.
     /// </summary>
     public ForegroundMonitor(IWin32Api api, IntPtr trayHwnd, IWindowsTypingHost? host = null)
     {
         _api = api;
         _host = host ?? NullWindowsTypingHost.Instance;
-        _trayHwnd = trayHwnd;
 
         try
         {
@@ -122,13 +128,12 @@ public sealed class ForegroundMonitor : IDisposable
                 Win32.EVENT_SYSTEM_FOREGROUND, Win32.EVENT_SYSTEM_FOREGROUND, _winEventDelegate);
             _focusEventHook = _api.SetWinEventHook(
                 Win32.EVENT_OBJECT_FOCUS, Win32.EVENT_OBJECT_FOCUS, _winEventDelegate);
-            // Si retour IntPtr.Zero : mode dégradé. CurrentMode reste à Default.
+            // Un échec de l'un des deux suivis impose une suspension de précaution.
         }
         catch (Exception ex)
         {
             _host.Log("ForegroundMonitor.ctor", ex);
-            _winEventHook = IntPtr.Zero;
-            _focusEventHook = IntPtr.Zero;
+            // Conserver tout handle déjà installé pour le libérer dans Dispose.
         }
 
         // Premier calcul initial (synchrone)
@@ -138,33 +143,9 @@ public sealed class ForegroundMonitor : IDisposable
     private void OnWinEvent(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
         int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
-        // Programmer le debounce 100 ms si on a un HWND tray, sinon recompute immédiat (tests)
-        if (_trayHwnd != IntPtr.Zero)
-        {
-            // Bascule anti-cheat sans attendre le debounce : si le nouveau foreground est
-            // un process anti-cheat connu, recalculer immédiatement pour réduire la fenêtre
-            // pendant laquelle des frappes seraient encore traitées (audit 2026-07 m4).
-            // Coût : une inspection de process par event, déjà payée dans Recompute() ensuite.
-            try
-            {
-                if (_api.TryGetForegroundProcess(out var fgName, out var fgPath, out _, out _) &&
-                    (GameRegistry.IsAntiCheatProcess(fgName, fgPath) ||
-                     GameRegistry.IsRemoteAccessProcess(fgName)))
-                {
-                    Recompute();
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                _host.Log("ForegroundMonitor.OnWinEvent", ex);
-            }
-            Win32.SetTimer(_trayHwnd, (UIntPtr)TIMER_FOREGROUND_DEBOUNCE, 100, IntPtr.Zero);
-        }
-        else
-        {
-            Recompute();
-        }
+        // Le snapshot de frappe suit aussi le focus dans une même fenêtre
+        // (champ de mot de passe), sans garder l'identité précédente pendant 100 ms.
+        Recompute();
     }
 
     /// <summary>
@@ -180,6 +161,7 @@ public sealed class ForegroundMonitor : IDisposable
             string? fullPath = null;
             IntPtr hkl = IntPtr.Zero;
             uint pid = 0;
+            IntPtr window = _api.GetForegroundWindow();
             bool hasFg = _api.TryGetForegroundProcess(out processName, out fullPath, out hkl, out pid);
             long startTimeTicks = 0;
             if (hasFg && pid != 0)
@@ -187,38 +169,25 @@ public sealed class ForegroundMonitor : IDisposable
             var identity = new ForegroundProcessIdentity(pid, startTimeTicks);
             bool secureInput = hasFg && _api.IsForegroundPasswordField();
 
-            // Ignorer les transitions vers les process shell Windows : effets de bord du clic
-            // sur l'icône tray ou de la touche Win (zone de notification = explorer.exe,
-            // recherche Windows = SearchHost.exe, menu Démarrer = StartMenuExperienceHost.exe,
-            // etc.). Sans ça, le sous-menu « Compatibilité » afficherait ces process au lieu
-            // du jeu/app qui était au foreground avant le clic. On conserve l'ancien snapshot
-            // tant qu'on a déjà une valeur précédente. Note : on N'ignore PAS notre propre PID
-            // — quand notre app (LearningModule, Settings, etc.) prend le focus, on veut le
-            // mode Default pour nos propres frappes, sinon un mode NativeCombo hérité d'un jeu
-            // antérieur ferait passer la saisie par combo native (avec dead keys natives qui
-            // consommeraient '~' '^' etc.).
+            // Le menu conserve la dernière application utile ; la frappe suit toujours
+            // la vraie cible, y compris Explorer, la recherche Windows et nos fenêtres.
             bool isTransientShell = hasFg && processName != null && (
                 string.Equals(processName, "explorer.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "SearchHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "StartMenuExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "ShellExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "TextInputHost.exe", StringComparison.OrdinalIgnoreCase));
-            // Exception : ne JAMAIS conserver un snapshot DisabledAntiCheat au retour sur le
-            // shell (Alt+Tab jeu → bureau) — sinon l'app resterait « Suspendu pour
-            // compatibilité » sur le bureau tant qu'aucune autre app ne prend le focus
-            // (audit 2026-07 m8). L'injection cible le foreground : réactiver sur le shell
-            // est sans risque pour le jeu resté en arrière-plan.
-            if (isTransientShell && _snapshot != null && !string.IsNullOrEmpty(_snapshot.ProcessName)
-                && _snapshot.Mode != CompatibilityMode.DisabledAntiCheat)
-                return;
-
-            var resolved = ResolveState(processName, fullPath, pid, hasFg);
+            var resolved = IsTrackingAvailable && window == _api.GetForegroundWindow()
+                ? ResolveState(processName, fullPath, pid, hasFg)
+                : (Mode: CompatibilityMode.DisabledAntiCheat, Reason: CompatibilitySuspendReason.UnknownForeground);
             CompatibilityMode mode = resolved.Mode;
 
             // Snapshot atomique : une seule écriture de référence (atomique CLR sur ref types).
             var oldSnapshot = _snapshot;
             CompatibilityMode oldMode = oldSnapshot?.Mode ?? CompatibilityMode.Default;
-            _snapshot = new Snapshot(processName, fullPath, hkl, mode, resolved.Reason, identity, secureInput);
+            _snapshot = new Snapshot(window, processName, fullPath, hkl, mode, resolved.Reason, identity, secureInput);
+            if (hasFg && !isTransientShell && pid != (uint)Environment.ProcessId)
+                _lastApplication = _snapshot;
 
             if (oldMode != mode && _host.CompatibilityDebugLog)
             {
@@ -237,7 +206,10 @@ public sealed class ForegroundMonitor : IDisposable
         }
         catch (Exception ex)
         {
+            _snapshot = new Snapshot(IntPtr.Zero, null, null, IntPtr.Zero,
+                CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UnknownForeground, default, true);
             _host.Log("ForegroundMonitor.Recompute", ex);
+            ForegroundChanged?.Invoke();
         }
     }
 

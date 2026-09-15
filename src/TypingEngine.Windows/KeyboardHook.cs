@@ -71,7 +71,7 @@ public sealed class KeyboardHook : IDisposable
     /// En mode pass-through « pause volontaire » (pas anti-cheat), autorise la seule
     /// détection des raccourcis (Ctrl+Maj+Verr.Maj / recherche / clavier virtuel)
     /// pour que l'utilisateur puisse reprendre au clavier. Aucun remapping n'a lieu.
-    /// Doit rester false en désactivation anti-cheat (inertie totale voulue).
+    /// Doit rester false en suspension de compatibilité : aucun raccourci n'y est exécuté.
     /// </summary>
     public bool ShortcutsWhilePassThrough { get; set; }
 
@@ -134,6 +134,13 @@ public sealed class KeyboardHook : IDisposable
         return true;
     }
 
+    internal static void ObserveSuspendedModifiers(KeyMapper mapper, uint vk, uint scan, uint flags, bool down)
+    {
+        mapper.TrackPassThroughKey(scan, flags, down);
+        if (IsModifierKey(vk) || vk == Win32.VK_NUMLOCK)
+            mapper.TrackModifiers(vk, scan, flags, down, notify: false);
+    }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         // Audit sécu 2026-05 SEV-A2-04 : try/catch défensif. Une exception remontant
@@ -150,16 +157,19 @@ public sealed class KeyboardHook : IDisposable
             if (hookStruct.dwExtraInfo == INJECTED_FLAG)
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
-            // Pass-through total (anti-cheat) : inertie complète. En pause volontaire
-            // (ShortcutsWhilePassThrough), on continue vers la détection des raccourcis
-            // pour permettre la reprise au clavier — ProcessKey reste inatteignable
-            // (_enabled est false) et RawKeyDown est neutralisé plus bas.
-            if (_passThroughAll && !ShortcutsWhilePassThrough)
-                return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
-
             int msg = wParam.ToInt32();
             bool isKeyDown = msg == (int)Win32.WM_KEYDOWN || msg == (int)Win32.WM_SYSKEYDOWN;
             bool isKeyUp = msg == (int)Win32.WM_KEYUP || msg == (int)Win32.WM_SYSKEYUP;
+
+            // Suspension : aucun remappage, raccourci, notification ni émission.
+            // Garder les modificateurs physiques et l'association down/up pour la reprise ;
+            // nos injections ont déjà été exclues ci-dessus.
+            if (_passThroughAll && !ShortcutsWhilePassThrough)
+            {
+                if (isKeyDown || isKeyUp)
+                    ObserveSuspendedModifiers(_mapper, hookStruct.vkCode, hookStruct.scanCode, hookStruct.flags, isKeyDown);
+                return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
+            }
 
             if (isKeyDown || isKeyUp)
             {
@@ -223,6 +233,10 @@ public sealed class KeyboardHook : IDisposable
 
                     if (handled)
                         return (IntPtr)1; // Bloquer la touche originale
+                }
+                else
+                {
+                    _mapper.TrackPassThroughKey(hookStruct.scanCode, hookStruct.flags, isKeyDown);
                 }
             }
         }

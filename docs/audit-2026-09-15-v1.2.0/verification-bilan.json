@@ -1,0 +1,17 @@
+{
+  "captured_utc": "2026-09-15T14:38:40.112707+00:00",
+  "tests_passed": 609,
+  "source_hashes_verified": 32,
+  "native_hashes_verified": 2,
+  "local_links_verified": 30,
+  "artifacts": [
+    {
+      "path": "corrections.md",
+      "sha256": "8f2fb74253b9c8278f502af578dfb5f7fda69cd1f4fa4670fd53d540349cabb5"
+    },
+    {
+      "path": "recette-vm.md",
+      "sha256": "4bf81f22b07b12fd3bed7e8d09a80aa26d2d219cd8d6087271aee6365a329389"
+    }
+  ]
+}

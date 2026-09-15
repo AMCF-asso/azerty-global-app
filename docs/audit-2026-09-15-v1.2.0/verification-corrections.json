@@ -1,0 +1,421 @@
+{
+  "captured_utc": "2026-09-15T12:05:53.957438+00:00",
+  "checks": [
+    {
+      "check": "diff-corrections",
+      "command": [
+        "git",
+        "-c",
+        "safe.directory=D:/My files/Keyboard Layouts/projects/azerty-global/components/microsoft-store",
+        "-c",
+        "core.whitespace=cr-at-eol",
+        "diff",
+        "--check"
+      ],
+      "exit": 0
+    },
+    {
+      "check": "layout-corrections",
+      "command": [
+        "C:\\Users\\antoi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "scripts/validate-layout.py"
+      ],
+      "exit": 0
+    },
+    {
+      "check": "identite-corrections",
+      "command": [
+        "C:\\Users\\antoi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "scripts/list-identity-literals.py"
+      ],
+      "exit": 0
+    },
+    {
+      "check": "documents-corrections",
+      "command": [
+        "C:\\Users\\antoi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "scripts/check-doc-versions.py",
+        "--release"
+      ],
+      "exit": 1
+    },
+    {
+      "check": "scripts-complets",
+      "command": [
+        "C:\\Users\\antoi\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/tests",
+        "-q"
+      ],
+      "exit": 0
+    },
+    {
+      "check": "environnement-corrections",
+      "command": [
+        "C:\\Program Files\\dotnet\\dotnet.EXE",
+        "--info"
+      ],
+      "exit": 0
+    },
+    {
+      "check": "compilation-native-x64",
+      "command": [
+        "C:\\Program Files\\dotnet\\dotnet.EXE",
+        "publish",
+        "src/AZERTYGlobal.csproj",
+        "-c",
+        "Release",
+        "-r",
+        "win-x64",
+        "--no-restore"
+      ],
+      "exit": 0
+    },
+    {
+      "check": "compilation-native-arm64",
+      "command": [
+        "C:\\Program Files\\dotnet\\dotnet.EXE",
+        "publish",
+        "src/AZERTYGlobal.csproj",
+        "-c",
+        "Release",
+        "-r",
+        "win-arm64",
+        "--no-restore"
+      ],
+      "exit": 0
+    }
+  ],
+  "tests_dotnet": {
+    "core-complet": {
+      "total": "18",
+      "executed": "18",
+      "passed": "18",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "windows-complet": {
+      "total": "152",
+      "executed": "152",
+      "passed": "152",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "application-complet": {
+      "total": "323",
+      "executed": "323",
+      "passed": "323",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    }
+  },
+  "audit_baseline": "8775489fc1170e31e7e08a2a2d9a9fa77f5a21ea",
+  "changed_from_audit": [
+    "msix/Fiche Store.md",
+    "msix/README.md",
+    "scripts/Pack-MSIX.ps1",
+    "src/AZERTYGlobal.Tests/TextInsertionServiceTests.cs",
+    "src/CharacterSearch.cs",
+    "src/ConfigManager.cs",
+    "src/GdiHelpers.cs",
+    "src/LessonProgressStore.cs",
+    "src/Localization/L.Layers.cs",
+    "src/TestSupport/MockWin32Api.cs",
+    "src/TextInsertionService.cs",
+    "src/TrayApplication.cs",
+    "src/TypingEngine.Windows.Tests/ForegroundMonitorMockedTests.cs",
+    "src/TypingEngine.Windows/ForegroundMonitor.cs",
+    "src/TypingEngine.Windows/KeyMapper.cs",
+    "src/TypingEngine.Windows/KeyboardHook.cs",
+    "src/TypingEngine.Windows/MaintainableLayerManager.cs",
+    "src/TypingEngine.Windows/Win32Api/IWin32Api.cs",
+    "src/TypingEngine.Windows/Win32Api/RealWin32Api.cs"
+  ],
+  "unchanged_from_audit": 152,
+  "sources": [
+    {
+      "path": "README.md",
+      "sha256": "849bb16097a30fc2b2044fa71868b197331bb6d774d45f08ee311a1479244408",
+      "crlf": 100,
+      "lf": 30,
+      "bom": false
+    },
+    {
+      "path": "msix/Fiche Store.md",
+      "sha256": "57db1da80c1266cb5c898110f461583ea16cbafa359b6f64702528b21f2860fd",
+      "crlf": 363,
+      "lf": 1,
+      "bom": false
+    },
+    {
+      "path": "msix/README.md",
+      "sha256": "01d58e542c80c6168109fa638d2d8e3316846307239ca09355562f32023c7a2a",
+      "crlf": 204,
+      "lf": 0,
+      "bom": false
+    },
+    {
+      "path": "scripts/Archive-StableBundle.ps1",
+      "sha256": "4e8c5f5efdd3a374c8bad2b2c3016585fcd01759d31be8be5bceb8b0380f5c3d",
+      "crlf": 0,
+      "lf": 58,
+      "bom": false
+    },
+    {
+      "path": "scripts/Pack-MSIX.ps1",
+      "sha256": "a5e7481e4b437ff3d9b3783ef8d6e69c33e7e2011568f79f561345b2744ad7fc",
+      "crlf": 0,
+      "lf": 185,
+      "bom": false
+    },
+    {
+      "path": "scripts/tests/Invoke-ArchiveTest.ps1",
+      "sha256": "c7de8a29a9809d77921a70c9f0011cbd3022da0a7eaf990a4dbc3665fc16300e",
+      "crlf": 0,
+      "lf": 10,
+      "bom": false
+    },
+    {
+      "path": "scripts/tests/test_archive_stable_bundle.py",
+      "sha256": "436687f4cf83cfb499842ddb10b35cef4cdcc5f8d44a8362fe4a1a2dec558b2d",
+      "crlf": 0,
+      "lf": 86,
+      "bom": false
+    },
+    {
+      "path": "src/AZERTYGlobal.Tests/Audit120BitmapTests.cs",
+      "sha256": "bf0fbda2f4a5d8d4bb257970ad7f93392f19e8fd88d8323a65782f11c6f14566",
+      "crlf": 0,
+      "lf": 17,
+      "bom": false
+    },
+    {
+      "path": "src/AZERTYGlobal.Tests/Audit120InsertionTests.cs",
+      "sha256": "b0b2eab525058ba77e3ee1b5f9e58e3e76aa08c369ee75d545eb4f012cdf1833",
+      "crlf": 0,
+      "lf": 66,
+      "bom": false
+    },
+    {
+      "path": "src/AZERTYGlobal.Tests/Audit120PersistenceTests.cs",
+      "sha256": "1ee8571d7d4c4371dd26e4ee7c9cc275b0ecf1213773d92eaa7653f0ebe6a845",
+      "crlf": 0,
+      "lf": 67,
+      "bom": false
+    },
+    {
+      "path": "src/AZERTYGlobal.Tests/TextInsertionServiceTests.cs",
+      "sha256": "ead1750857568a3ce133ddf5fe4e1c31323a61643c8b80cb4530d359797c3aab",
+      "crlf": 0,
+      "lf": 58,
+      "bom": false
+    },
+    {
+      "path": "src/CharacterSearch.cs",
+      "sha256": "1d67a286a5f0397c713bae2c215472afa10a561a042ecddf0414ed14c13619ca",
+      "crlf": 1540,
+      "lf": 0,
+      "bom": false
+    },
+    {
+      "path": "src/ConfigManager.cs",
+      "sha256": "1d8e0c615272c17f1c4fc9d9a7577b66cb78548935f467c9a6d5f9c166e59a0d",
+      "crlf": 651,
+      "lf": 372,
+      "bom": false
+    },
+    {
+      "path": "src/GdiHelpers.cs",
+      "sha256": "cd1197288ce425781ad2dcbcda47d5a77a520c4cab5cb417330a10ec1eaf98cb",
+      "crlf": 0,
+      "lf": 212,
+      "bom": false
+    },
+    {
+      "path": "src/LessonProgressStore.cs",
+      "sha256": "8b51b17b6544a6c1642f4e6177063ce9b4760018f2a4c480047a07f22538c38a",
+      "crlf": 0,
+      "lf": 399,
+      "bom": false
+    },
+    {
+      "path": "src/Localization/L.Layers.cs",
+      "sha256": "3ea3b30ea648730c961137ed163b60e6293642a1535c215ffc75363c77f16e0a",
+      "crlf": 0,
+      "lf": 51,
+      "bom": false
+    },
+    {
+      "path": "src/TestSupport/MockWin32Api.cs",
+      "sha256": "edfffe02ac584984a4d89fdc1ffa8d069e08adc0dc199558c7c359578882fd95",
+      "crlf": 0,
+      "lf": 185,
+      "bom": false
+    },
+    {
+      "path": "src/TextInsertionService.cs",
+      "sha256": "5801169ffcbadfd18e00bca0eea5dc8ca13370c550d7c9d9c291590e59c117ea",
+      "crlf": 0,
+      "lf": 64,
+      "bom": false
+    },
+    {
+      "path": "src/TrayApplication.cs",
+      "sha256": "7626a1b28213e229d438d8de1ceba20a89f5e1fc4dcacfeb4ef9e0519c62e4e8",
+      "crlf": 2305,
+      "lf": 0,
+      "bom": true
+    },
+    {
+      "path": "src/TypingEngine.Windows.Tests/Audit120RecoveryTests.cs",
+      "sha256": "794c1c0166bd829ecee950e87c8863f59a9f97be2cec6ba7d2e8b80f608fb457",
+      "crlf": 0,
+      "lf": 142,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows.Tests/Audit120RegressionTests.cs",
+      "sha256": "6b0d0a21ad05e9bb5fc7a3a02d5e4102e59805dd3177508df4942e31876abfc4",
+      "crlf": 0,
+      "lf": 155,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows.Tests/Audit120ResumeTests.cs",
+      "sha256": "383bc348f139ae2a7092674f375bac0dc2f094795fa085caf8918920a28d76d6",
+      "crlf": 0,
+      "lf": 129,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows.Tests/Audit120SuspensionTests.cs",
+      "sha256": "231ba71229aa648447bb2ac621ffca19ae7869b8e1458bf0ec15e50d89c119e3",
+      "crlf": 0,
+      "lf": 80,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows.Tests/ForegroundMonitorMockedTests.cs",
+      "sha256": "a6f3ac301b01ab9d6101a5c08ecc41c13ade9bedb12e8f3794183df7a76be0b5",
+      "crlf": 0,
+      "lf": 162,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/ForegroundMonitor.cs",
+      "sha256": "d95ffac7fde454741b0ae9ecab44078c8bba15f471530728a074e6104c50d6ee",
+      "crlf": 0,
+      "lf": 273,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/InputRecovery.cs",
+      "sha256": "ec911e7ec3998eed6343e0414680c858e708aed09d39b3ce6417b41645a5612d",
+      "crlf": 0,
+      "lf": 69,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/KeyMapper.cs",
+      "sha256": "c78e538427c5a6268e08af0fdf084fc032efc2528fc9cbe25c70f697b6987fcc",
+      "crlf": 1039,
+      "lf": 371,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/KeyboardHook.cs",
+      "sha256": "77b01e5b2d9ac42da8d009b35b3395ab6ab51005a55744e5217213e3478b33dd",
+      "crlf": 194,
+      "lf": 76,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/MaintainableLayerManager.cs",
+      "sha256": "b671c19ae3b54de84e4529903f56bbd1e0792e34926027bc47ecfcfa004839a3",
+      "crlf": 0,
+      "lf": 364,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/TextEmissionResult.cs",
+      "sha256": "c7813d2f318005ad6abe9117c8c4c66d7d6f344925bcc378bc78f55681f1339d",
+      "crlf": 0,
+      "lf": 7,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/Win32Api/IWin32Api.cs",
+      "sha256": "6a37679a0786340e2376ca408df2168ece63a82af82937e357990101a8109207",
+      "crlf": 0,
+      "lf": 53,
+      "bom": false
+    },
+    {
+      "path": "src/TypingEngine.Windows/Win32Api/RealWin32Api.cs",
+      "sha256": "f1c288cef161aa39f190458a7c1e6ef9edffa3d0bff6a1eae551b732fd601c53",
+      "crlf": 0,
+      "lf": 166,
+      "bom": false
+    }
+  ],
+  "native_outputs": [
+    {
+      "path": "src/bin/Release/net8.0-windows10.0.17763.0/win-x64/publish/AZERTY Global.exe",
+      "architecture": "x64",
+      "machine": "0x8664",
+      "bytes": 8172544,
+      "sha256": "d6c4b4b7e5aae3af167d1b58b862869d4109b6022d4078c507cd259e2f78af93"
+    },
+    {
+      "path": "src/bin/Release/net8.0-windows10.0.17763.0/win-arm64/publish/AZERTY Global.exe",
+      "architecture": "arm64",
+      "machine": "0xaa64",
+      "bytes": 8528896,
+      "sha256": "a8a322207f2ad1e53ce7c2e07028cf37adc3747ee6a36f16055f5a0ed5cfffbf"
+    }
+  ],
+  "resolved_product_libraries": [
+    "Microsoft.DotNet.ILCompiler/8.0.29",
+    "Microsoft.NET.ILLink.Tasks/8.0.29",
+    "runtime.win-arm64.Microsoft.DotNet.ILCompiler/8.0.29",
+    "runtime.win-x64.Microsoft.DotNet.ILCompiler/8.0.29",
+    "TypingEngine.Core/1.0.0",
+    "TypingEngine.Windows/1.0.0"
+  ]
+}

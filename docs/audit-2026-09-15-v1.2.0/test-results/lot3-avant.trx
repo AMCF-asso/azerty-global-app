@@ -1,0 +1,548 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="a27701b2-7048-4a25-a297-505dcad695df" name="antoi@AZERTY_GLOBAL 2026-09-15 13:20:41" runUser="AZERTY_GLOBAL\CodexSandboxOffline" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-15T13:20:41.5063950+02:00" queuing="2026-09-15T13:20:41.5063953+02:00" start="2026-09-15T13:20:39.0025576+02:00" finish="2026-09-15T13:20:41.5965560+02:00" />
+  <TestSettings name="default" id="cad34e4e-48a0-40a4-96ae-391381223835">
+    <Deployment runDeploymentRoot="antoi_AZERTY_GLOBAL_2026-09-15_13_20_41" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b0192762-34ee-445e-906f-f4aa06a81e4e" testId="572cf87f-069a-23b5-014d-84a7d022ac30" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 0, blocked: True, expected: 3)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000017" startTime="2026-09-15T13:20:41.4967462+02:00" endTime="2026-09-15T13:20:41.4967464+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b0192762-34ee-445e-906f-f4aa06a81e4e" />
+    <UnitTestResult executionId="1c3aa969-c846-40b1-96d2-179b1f970a05" testId="f9d5c465-b73d-9ba6-d1a2-7ad34534366c" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:2,\&quot;donneeFuture\&quot;:\&quot;à conserver\&quot;}&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0059658" startTime="2026-09-15T13:20:41.5553026+02:00" endTime="2026-09-15T13:20:41.5553027+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1c3aa969-c846-40b1-96d2-179b1f970a05">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Strings differ&#xD;
+            ↓ (pos 1)&#xD;
+Expected: "{"version":2,"donneeFuture":"à conserver""···&#xD;
+Actual:   "{\r\n  "version": 1,\r\n  "lastModuleId": "m""···&#xD;
+            ↑ (pos 1)</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 52&#xD;
+   at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="73b57065-8218-4ba4-ac88-a5ecf49a75f8" testId="3c252966-8547-9982-bf31-5565841a0a05" testName="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_InvalidInput_DoesNotActivate(hwnd: 42, text: &quot;&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001310" startTime="2026-09-15T13:20:41.4886967+02:00" endTime="2026-09-15T13:20:41.4886968+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73b57065-8218-4ba4-ac88-a5ecf49a75f8" />
+    <UnitTestResult executionId="4faba802-9153-4bf7-9449-4a3e85e3fed8" testId="b3763168-518b-fff2-bb7a-918215a82583" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{}&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0154025" startTime="2026-09-15T13:20:41.5470161+02:00" endTime="2026-09-15T13:20:41.5470163+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4faba802-9153-4bf7-9449-4a3e85e3fed8">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Strings differ&#xD;
+            ↓ (pos 1)&#xD;
+Expected: "{}"&#xD;
+Actual:   "{\r\n  "version": 1,\r\n  "lastModuleId": "m""···&#xD;
+            ↑ (pos 1)</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 52&#xD;
+   at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="01c17386-060b-4f32-b9a4-a233b48b27db" testId="c15e7a9f-5aec-239b-e19a-6e382c052ea2" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RechercheEnPause_RefuseAvantToutAccesAuxResultats(methodName: &quot;InsertSelectedCharacter&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001832" startTime="2026-09-15T13:20:41.4969639+02:00" endTime="2026-09-15T13:20:41.4969639+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="01c17386-060b-4f32-b9a4-a233b48b27db" />
+    <UnitTestResult executionId="cf8058a7-f918-419e-bc27-d030ee4ec0f7" testId="2c4cc6f5-c9c3-e34f-48ef-290621bc5cd1" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;[]&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0015077" startTime="2026-09-15T13:20:41.5221762+02:00" endTime="2026-09-15T13:20:41.5221763+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cf8058a7-f918-419e-bc27-d030ee4ec0f7">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Null() Failure: Value is not null&#xD;
+Expected: null&#xD;
+Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'Array'.&#xD;
+   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+   at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+   at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+   at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+   at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 25&#xD;
+   at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="93448878-3ab6-45bb-870a-c1c0be9b7186" testId="bec29230-518b-1a58-85ae-c0c25ecde954" testName="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_FocusFailure_DoesNotEmit" computerName="AZERTY_GLOBAL" duration="00:00:00.0001042" startTime="2026-09-15T13:20:41.4889249+02:00" endTime="2026-09-15T13:20:41.4889249+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93448878-3ab6-45bb-870a-c1c0be9b7186" />
+    <UnitTestResult executionId="f248ba44-3265-4164-9a75-cb4064baffdf" testId="099629ff-8f0d-814b-1295-6b685d286e68" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;\&quot;texte\&quot;&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0010449" startTime="2026-09-15T13:20:41.5234197+02:00" endTime="2026-09-15T13:20:41.5234198+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f248ba44-3265-4164-9a75-cb4064baffdf">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Null() Failure: Value is not null&#xD;
+Expected: null&#xD;
+Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'String'.&#xD;
+   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+   at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+   at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+   at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+   at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 25&#xD;
+   at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="cedeb2b9-02fa-4282-9163-96df87bcaeab" testId="852452dd-a611-8d9b-96b4-c39f2f262da9" testName="AZERTYGlobal.Tests.Audit120InsertionTests.PauseAvantOuApresFocus_InterditEmission(pauseAfterFocus: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0006267" startTime="2026-09-15T13:20:41.4968337+02:00" endTime="2026-09-15T13:20:41.4968337+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cedeb2b9-02fa-4282-9163-96df87bcaeab" />
+    <UnitTestResult executionId="2741e503-6c13-4855-bd1d-ad84acff2fcc" testId="dfbf8613-418a-0321-5423-65a541acdf3d" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 1, blocked: False, expected: 2)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001912" startTime="2026-09-15T13:20:41.4914916+02:00" endTime="2026-09-15T13:20:41.4914917+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2741e503-6c13-4855-bd1d-ad84acff2fcc" />
+    <UnitTestResult executionId="2cab8238-ff7d-4d69-87f1-13bf2c3155ce" testId="b856b797-c4ce-25cf-39c1-4e38f4ba39f9" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RechercheEnPause_RefuseAvantToutAccesAuxResultats(methodName: &quot;HandleClick&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0005555" startTime="2026-09-15T13:20:41.4969264+02:00" endTime="2026-09-15T13:20:41.4969264+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2cab8238-ff7d-4d69-87f1-13bf2c3155ce" />
+    <UnitTestResult executionId="332d8664-10a0-4cb9-b118-3825cdf067ad" testId="909b6c19-8e33-0356-2d56-8aedf91daa89" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 0, blocked: False, expected: 1)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000023" startTime="2026-09-15T13:20:41.4915698+02:00" endTime="2026-09-15T13:20:41.4915698+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="332d8664-10a0-4cb9-b118-3825cdf067ad" />
+    <UnitTestResult executionId="3fbaebc0-034e-404c-a5c3-391da6761524" testId="64710caa-b46f-623e-228a-9b0ea1b848b1" testName="AZERTYGlobal.Tests.Audit120InsertionTests.PauseAvantOuApresFocus_InterditEmission(pauseAfterFocus: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001522" startTime="2026-09-15T13:20:41.4968736+02:00" endTime="2026-09-15T13:20:41.4968737+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3fbaebc0-034e-404c-a5c3-391da6761524" />
+    <UnitTestResult executionId="4db0024d-95a0-41d5-9b5e-8021df76cfc9" testId="ba73f72c-b153-aafa-075a-81daeff7455d" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;42&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0010252" startTime="2026-09-15T13:20:41.5243659+02:00" endTime="2026-09-15T13:20:41.5243660+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4db0024d-95a0-41d5-9b5e-8021df76cfc9">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Null() Failure: Value is not null&#xD;
+Expected: null&#xD;
+Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'Number'.&#xD;
+   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+   at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+   at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+   at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+   at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 25&#xD;
+   at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e2e56caf-bab4-4b65-9de0-629239a96690" testId="9fb740ce-48cc-9741-2c3f-3736091ef95a" testName="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_ActivatesTargetBeforeEmission" computerName="AZERTY_GLOBAL" duration="00:00:00.0038985" startTime="2026-09-15T13:20:41.4889678+02:00" endTime="2026-09-15T13:20:41.4889678+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e2e56caf-bab4-4b65-9de0-629239a96690" />
+    <UnitTestResult executionId="9a2188d2-49b9-49e8-9a8e-e4a250f63671" testId="68aa2816-25a7-2700-2cb3-cdd1814e7648" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RecalculDeCible_PrecedeEmission" computerName="AZERTY_GLOBAL" duration="00:00:00.0001948" startTime="2026-09-15T13:20:41.4967960+02:00" endTime="2026-09-15T13:20:41.4967961+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9a2188d2-49b9-49e8-9a8e-e4a250f63671" />
+    <UnitTestResult executionId="8d1a73bc-653e-4869-8851-6b6a85dab835" testId="12943d30-2d49-4b16-affa-30dbe8c51ab7" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 4, blocked: False, expected: 0)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000059" startTime="2026-09-15T13:20:41.4915315+02:00" endTime="2026-09-15T13:20:41.4915316+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8d1a73bc-653e-4869-8851-6b6a85dab835" />
+    <UnitTestResult executionId="fce95d66-5079-426a-aa3f-656481f4234c" testId="058e34a3-802b-bf68-2601-574cbb6a256e" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;null&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0009581" startTime="2026-09-15T13:20:41.5312843+02:00" endTime="2026-09-15T13:20:41.5312843+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fce95d66-5079-426a-aa3f-656481f4234c">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : The requested operation requires an element of type 'Object', but the target element has type 'Null'.</Message>
+          <StackTrace>   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonDocument.TryGetNamedPropertyValue(Int32 index, ReadOnlySpan`1 propertyName, JsonElement&amp; value)&#xD;
+   at System.Text.Json.JsonElement.TryGetProperty(String propertyName, JsonElement&amp; value)&#xD;
+   at AZERTYGlobal.LessonProgressStore.Load() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 186&#xD;
+   at AZERTYGlobal.LessonProgressStore..ctor(String path) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 18&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 49&#xD;
+   at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a62a6629-0781-4769-a4d4-d686e6506f8e" testId="7737198a-cc8d-554e-987f-fcfcab12905a" testName="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_TargetWindowGone_ReportsFailureForFallback" computerName="AZERTY_GLOBAL" duration="00:00:00.0003085" startTime="2026-09-15T13:20:41.4890054+02:00" endTime="2026-09-15T13:20:41.4890054+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a62a6629-0781-4769-a4d4-d686e6506f8e" />
+    <UnitTestResult executionId="efd8c34c-402c-487d-8509-5a0d35a82e25" testId="298c364a-8337-48f8-1349-95642900d4df" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:\&quot;2\&quot;}&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0018035" startTime="2026-09-15T13:20:41.5489750+02:00" endTime="2026-09-15T13:20:41.5489751+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="efd8c34c-402c-487d-8509-5a0d35a82e25">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : The requested operation requires an element of type 'Number', but the target element has type 'String'.</Message>
+          <StackTrace>   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonDocument.TryGetValue(Int32 index, Int32&amp; value)&#xD;
+   at System.Text.Json.JsonElement.GetInt32()&#xD;
+   at AZERTYGlobal.LessonProgressStore.Load() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 186&#xD;
+   at AZERTYGlobal.LessonProgressStore..ctor(String path) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 18&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 49&#xD;
+   at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="b9ddddff-9a3e-4aa4-9570-235bd9f77d2a" testId="de7215ec-638a-299c-a2be-968cc503505d" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;null&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0057346" startTime="2026-09-15T13:20:41.5213855+02:00" endTime="2026-09-15T13:20:41.5213856+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b9ddddff-9a3e-4aa4-9570-235bd9f77d2a">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Null() Failure: Value is not null&#xD;
+Expected: null&#xD;
+Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'Null'.&#xD;
+   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+   at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+   at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+   at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+   at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 25&#xD;
+   at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="070230e5-805f-4c0b-82a8-4d1819c6674f" testId="fff212f7-3c64-0309-a1ba-32b83307d6c9" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:999999999999}&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0039573" startTime="2026-09-15T13:20:41.5286329+02:00" endTime="2026-09-15T13:20:41.5286330+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="070230e5-805f-4c0b-82a8-4d1819c6674f">
+      <Output>
+        <ErrorInfo>
+          <Message>System.FormatException : One of the identified items was in an invalid format.</Message>
+          <StackTrace>   at System.Text.Json.ThrowHelper.ThrowFormatException()&#xD;
+   at System.Text.Json.JsonElement.GetInt32()&#xD;
+   at AZERTYGlobal.LessonProgressStore.Load() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 186&#xD;
+   at AZERTYGlobal.LessonProgressStore..ctor(String path) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 18&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 49&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="ed6b6aa0-0064-40e2-9417-8aa6857cab82" testId="62d4e7d4-9390-3a37-d616-c7208960dfea" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;[]&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0011052" startTime="2026-09-15T13:20:41.5302583+02:00" endTime="2026-09-15T13:20:41.5302584+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ed6b6aa0-0064-40e2-9417-8aa6857cab82">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : The requested operation requires an element of type 'Object', but the target element has type 'Array'.</Message>
+          <StackTrace>   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonDocument.TryGetNamedPropertyValue(Int32 index, ReadOnlySpan`1 propertyName, JsonElement&amp; value)&#xD;
+   at System.Text.Json.JsonElement.TryGetProperty(String propertyName, JsonElement&amp; value)&#xD;
+   at AZERTYGlobal.LessonProgressStore.Load() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 186&#xD;
+   at AZERTYGlobal.LessonProgressStore..ctor(String path) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs:line 18&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 49&#xD;
+   at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="f95f692f-e25e-489d-b54c-1a8b47c253cc" testId="0e45ddbb-c70a-c62b-41e6-14a547c65038" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;true&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0192256" startTime="2026-09-15T13:20:41.5209168+02:00" endTime="2026-09-15T13:20:41.5209169+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f95f692f-e25e-489d-b54c-1a8b47c253cc">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Null() Failure: Value is not null&#xD;
+Expected: null&#xD;
+Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'True'.&#xD;
+   at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+   at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+   at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+   at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+   at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+   at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+   at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 25&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="313e6b89-1a3d-431f-b21d-b2df0e807d08" testId="2c66ab45-b6f1-630d-df95-50b31a032185" testName="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_InvalidInput_DoesNotActivate(hwnd: 0, text: &quot;α&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0037099" startTime="2026-09-15T13:20:41.4873398+02:00" endTime="2026-09-15T13:20:41.4873493+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="313e6b89-1a3d-431f-b21d-b2df0e807d08" />
+    <UnitTestResult executionId="55203936-91c8-4fb6-bdf8-e6159a2f0ca5" testId="c7b80fdc-a005-30b8-e34b-ee251e3ba2e2" testName="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:-1}&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0051126" startTime="2026-09-15T13:20:41.5609527+02:00" endTime="2026-09-15T13:20:41.5609531+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="55203936-91c8-4fb6-bdf8-e6159a2f0ca5">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Strings differ&#xD;
+            ↓ (pos 1)&#xD;
+Expected: "{"version":-1}"&#xD;
+Actual:   "{\r\n  "version": 1,\r\n  "lastModuleId": "m""···&#xD;
+            ↑ (pos 1)</Message>
+          <StackTrace>   at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 52&#xD;
+   at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="911eceea-f7c8-44d3-8f3d-8596823d6995" testId="9d15e7bf-f5f6-b64c-af96-fe20e02e33d0" testName="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 3, blocked: False, expected: 2)" computerName="AZERTY_GLOBAL" duration="00:00:00.0012253" startTime="2026-09-15T13:20:41.4912597+02:00" endTime="2026-09-15T13:20:41.4912597+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="911eceea-f7c8-44d3-8f3d-8596823d6995" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;null&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="058e34a3-802b-bf68-2601-574cbb6a256e">
+      <Execution id="fce95d66-5079-426a-aa3f-656481f4234c" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_InvalidInput_DoesNotActivate(hwnd: 0, text: &quot;α&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="2c66ab45-b6f1-630d-df95-50b31a032185">
+      <Execution id="313e6b89-1a3d-431f-b21d-b2df0e807d08" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.TextInsertionServiceTests" name="TryInsert_InvalidInput_DoesNotActivate" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 4, blocked: False, expected: 0)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="12943d30-2d49-4b16-affa-30dbe8c51ab7">
+      <Execution id="8d1a73bc-653e-4869-8851-6b6a85dab835" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RetourWindows_PropageSansReessayer" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;42&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="ba73f72c-b153-aafa-075a-81daeff7455d">
+      <Execution id="4db0024d-95a0-41d5-9b5e-8021df76cfc9" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ConfigRacineInvalide_DemarreSansEcraser" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RechercheEnPause_RefuseAvantToutAccesAuxResultats(methodName: &quot;InsertSelectedCharacter&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="c15e7a9f-5aec-239b-e19a-6e382c052ea2">
+      <Execution id="01c17386-060b-4f32-b9a4-a233b48b27db" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RechercheEnPause_RefuseAvantToutAccesAuxResultats" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;\&quot;texte\&quot;&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="099629ff-8f0d-814b-1295-6b685d286e68">
+      <Execution id="f248ba44-3265-4164-9a75-cb4064baffdf" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ConfigRacineInvalide_DemarreSansEcraser" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 0, blocked: True, expected: 3)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="572cf87f-069a-23b5-014d-84a7d022ac30">
+      <Execution id="b0192762-34ee-445e-906f-f4aa06a81e4e" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RetourWindows_PropageSansReessayer" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_ActivatesTargetBeforeEmission" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="9fb740ce-48cc-9741-2c3f-3736091ef95a">
+      <Execution id="e2e56caf-bab4-4b65-9de0-629239a96690" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.TextInsertionServiceTests" name="TryInsert_ActivatesTargetBeforeEmission" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 0, blocked: False, expected: 1)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="909b6c19-8e33-0356-2d56-8aedf91daa89">
+      <Execution id="332d8664-10a0-4cb9-b118-3825cdf067ad" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RetourWindows_PropageSansReessayer" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.PauseAvantOuApresFocus_InterditEmission(pauseAfterFocus: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="852452dd-a611-8d9b-96b4-c39f2f262da9">
+      <Execution id="cedeb2b9-02fa-4282-9163-96df87bcaeab" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="PauseAvantOuApresFocus_InterditEmission" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RecalculDeCible_PrecedeEmission" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="68aa2816-25a7-2700-2cb3-cdd1814e7648">
+      <Execution id="9a2188d2-49b9-49e8-9a8e-e4a250f63671" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RecalculDeCible_PrecedeEmission" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:-1}&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="c7b80fdc-a005-30b8-e34b-ee251e3ba2e2">
+      <Execution id="55203936-91c8-4fb6-bdf8-e6159a2f0ca5" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:\&quot;2\&quot;}&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="298c364a-8337-48f8-1349-95642900d4df">
+      <Execution id="efd8c34c-402c-487d-8509-5a0d35a82e25" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:2,\&quot;donneeFuture\&quot;:\&quot;à conserver\&quot;}&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="f9d5c465-b73d-9ba6-d1a2-7ad34534366c">
+      <Execution id="1c3aa969-c846-40b1-96d2-179b1f970a05" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 1, blocked: False, expected: 2)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="dfbf8613-418a-0321-5423-65a541acdf3d">
+      <Execution id="2741e503-6c13-4855-bd1d-ad84acff2fcc" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RetourWindows_PropageSansReessayer" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RechercheEnPause_RefuseAvantToutAccesAuxResultats(methodName: &quot;HandleClick&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="b856b797-c4ce-25cf-39c1-4e38f4ba39f9">
+      <Execution id="2cab8238-ff7d-4d69-87f1-13bf2c3155ce" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RechercheEnPause_RefuseAvantToutAccesAuxResultats" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;[]&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="62d4e7d4-9390-3a37-d616-c7208960dfea">
+      <Execution id="ed6b6aa0-0064-40e2-9417-8aa6857cab82" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_InvalidInput_DoesNotActivate(hwnd: 42, text: &quot;&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="3c252966-8547-9982-bf31-5565841a0a05">
+      <Execution id="73b57065-8218-4ba4-ac88-a5ecf49a75f8" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.TextInsertionServiceTests" name="TryInsert_InvalidInput_DoesNotActivate" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;true&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="0e45ddbb-c70a-c62b-41e6-14a547c65038">
+      <Execution id="f95f692f-e25e-489d-b54c-1a8b47c253cc" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ConfigRacineInvalide_DemarreSansEcraser" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_TargetWindowGone_ReportsFailureForFallback" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="7737198a-cc8d-554e-987f-fcfcab12905a">
+      <Execution id="a62a6629-0781-4769-a4d4-d686e6506f8e" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.TextInsertionServiceTests" name="TryInsert_TargetWindowGone_ReportsFailureForFallback" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.PauseAvantOuApresFocus_InterditEmission(pauseAfterFocus: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="64710caa-b46f-623e-228a-9b0ea1b848b1">
+      <Execution id="3fbaebc0-034e-404c-a5c3-391da6761524" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="PauseAvantOuApresFocus_InterditEmission" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120InsertionTests.RetourWindows_PropageSansReessayer(sent: 3, blocked: False, expected: 2)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="9d15e7bf-f5f6-b64c-af96-fe20e02e33d0">
+      <Execution id="911eceea-f7c8-44d3-8f3d-8596823d6995" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120InsertionTests" name="RetourWindows_PropageSansReessayer" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;null&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="de7215ec-638a-299c-a2be-968cc503505d">
+      <Execution id="b9ddddff-9a3e-4aa4-9570-235bd9f77d2a" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ConfigRacineInvalide_DemarreSansEcraser" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: &quot;[]&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="2c4cc6f5-c9c3-e34f-48ef-290621bc5cd1">
+      <Execution id="cf8058a7-f918-419e-bc27-d030ee4ec0f7" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ConfigRacineInvalide_DemarreSansEcraser" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{}&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="b3763168-518b-fff2-bb7a-918215a82583">
+      <Execution id="4faba802-9153-4bf7-9449-4a3e85e3fed8" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: &quot;{\&quot;version\&quot;:999999999999}&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="fff212f7-3c64-0309-a1ba-32b83307d6c9">
+      <Execution id="070230e5-805f-4c0b-82a8-4d1819c6674f" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.Audit120PersistenceTests" name="ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation" />
+    </UnitTest>
+    <UnitTest name="AZERTYGlobal.Tests.TextInsertionServiceTests.TryInsert_FocusFailure_DoesNotEmit" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\azertyglobal.tests\bin\release\net8.0-windows10.0.17763.0\azertyglobal.tests.dll" id="bec29230-518b-1a58-85ae-c0c25ecde954">
+      <Execution id="93448878-3ab6-45bb-870a-c1c0be9b7186" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AZERTYGlobal.Tests.TextInsertionServiceTests" name="TryInsert_FocusFailure_DoesNotEmit" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="572cf87f-069a-23b5-014d-84a7d022ac30" executionId="b0192762-34ee-445e-906f-f4aa06a81e4e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f9d5c465-b73d-9ba6-d1a2-7ad34534366c" executionId="1c3aa969-c846-40b1-96d2-179b1f970a05" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3c252966-8547-9982-bf31-5565841a0a05" executionId="73b57065-8218-4ba4-ac88-a5ecf49a75f8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b3763168-518b-fff2-bb7a-918215a82583" executionId="4faba802-9153-4bf7-9449-4a3e85e3fed8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c15e7a9f-5aec-239b-e19a-6e382c052ea2" executionId="01c17386-060b-4f32-b9a4-a233b48b27db" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2c4cc6f5-c9c3-e34f-48ef-290621bc5cd1" executionId="cf8058a7-f918-419e-bc27-d030ee4ec0f7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bec29230-518b-1a58-85ae-c0c25ecde954" executionId="93448878-3ab6-45bb-870a-c1c0be9b7186" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="099629ff-8f0d-814b-1295-6b685d286e68" executionId="f248ba44-3265-4164-9a75-cb4064baffdf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="852452dd-a611-8d9b-96b4-c39f2f262da9" executionId="cedeb2b9-02fa-4282-9163-96df87bcaeab" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dfbf8613-418a-0321-5423-65a541acdf3d" executionId="2741e503-6c13-4855-bd1d-ad84acff2fcc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b856b797-c4ce-25cf-39c1-4e38f4ba39f9" executionId="2cab8238-ff7d-4d69-87f1-13bf2c3155ce" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="909b6c19-8e33-0356-2d56-8aedf91daa89" executionId="332d8664-10a0-4cb9-b118-3825cdf067ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="64710caa-b46f-623e-228a-9b0ea1b848b1" executionId="3fbaebc0-034e-404c-a5c3-391da6761524" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ba73f72c-b153-aafa-075a-81daeff7455d" executionId="4db0024d-95a0-41d5-9b5e-8021df76cfc9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9fb740ce-48cc-9741-2c3f-3736091ef95a" executionId="e2e56caf-bab4-4b65-9de0-629239a96690" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="68aa2816-25a7-2700-2cb3-cdd1814e7648" executionId="9a2188d2-49b9-49e8-9a8e-e4a250f63671" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="12943d30-2d49-4b16-affa-30dbe8c51ab7" executionId="8d1a73bc-653e-4869-8851-6b6a85dab835" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="058e34a3-802b-bf68-2601-574cbb6a256e" executionId="fce95d66-5079-426a-aa3f-656481f4234c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7737198a-cc8d-554e-987f-fcfcab12905a" executionId="a62a6629-0781-4769-a4d4-d686e6506f8e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="298c364a-8337-48f8-1349-95642900d4df" executionId="efd8c34c-402c-487d-8509-5a0d35a82e25" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="de7215ec-638a-299c-a2be-968cc503505d" executionId="b9ddddff-9a3e-4aa4-9570-235bd9f77d2a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fff212f7-3c64-0309-a1ba-32b83307d6c9" executionId="070230e5-805f-4c0b-82a8-4d1819c6674f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="62d4e7d4-9390-3a37-d616-c7208960dfea" executionId="ed6b6aa0-0064-40e2-9417-8aa6857cab82" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0e45ddbb-c70a-c62b-41e6-14a547c65038" executionId="f95f692f-e25e-489d-b54c-1a8b47c253cc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2c66ab45-b6f1-630d-df95-50b31a032185" executionId="313e6b89-1a3d-431f-b21d-b2df0e807d08" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7b80fdc-a005-30b8-e34b-ee251e3ba2e2" executionId="55203936-91c8-4fb6-bdf8-e6159a2f0ca5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9d15e7bf-f5f6-b64c-af96-fe20e02e33d0" executionId="911eceea-f7c8-44d3-8f3d-8596823d6995" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="27" executed="27" passed="15" failed="12" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.0.1+5ebf84cd75 (64-bit .NET 8.0.29)&#xD;
+[xUnit.net 00:00:01.06]   Discovering: AZERTYGlobal.Tests&#xD;
+[xUnit.net 00:00:02.18]   Discovered:  AZERTYGlobal.Tests&#xD;
+[xUnit.net 00:00:02.18]   Starting:    AZERTYGlobal.Tests&#xD;
+[xUnit.net 00:00:02.24]       Assert.Null() Failure: Value is not null&#xD;
+[xUnit.net 00:00:02.24]       Expected: null&#xD;
+[xUnit.net 00:00:02.24]       Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'True'.&#xD;
+[xUnit.net 00:00:02.24]          at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.24]          at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+[xUnit.net 00:00:02.24]          at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25&#xD;
+[xUnit.net 00:00:02.24]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.24]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(25,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original)&#xD;
+[xUnit.net 00:00:02.24]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:02.24]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:02.24]       Assert.Null() Failure: Value is not null&#xD;
+[xUnit.net 00:00:02.24]       Expected: null&#xD;
+[xUnit.net 00:00:02.24]       Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'Null'.&#xD;
+[xUnit.net 00:00:02.24]          at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.24]          at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+[xUnit.net 00:00:02.24]          at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25&#xD;
+[xUnit.net 00:00:02.24]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.24]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(25,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original)&#xD;
+[xUnit.net 00:00:02.24]            at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.24]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.24]       Assert.Null() Failure: Value is not null&#xD;
+[xUnit.net 00:00:02.24]       Expected: null&#xD;
+[xUnit.net 00:00:02.24]       Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'Array'.&#xD;
+[xUnit.net 00:00:02.24]          at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.24]          at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+[xUnit.net 00:00:02.24]          at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+[xUnit.net 00:00:02.24]          at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25&#xD;
+[xUnit.net 00:00:02.24]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.24]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(25,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original)&#xD;
+[xUnit.net 00:00:02.24]            at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.24]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.25]       Assert.Null() Failure: Value is not null&#xD;
+[xUnit.net 00:00:02.25]       Expected: null&#xD;
+[xUnit.net 00:00:02.25]       Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'String'.&#xD;
+[xUnit.net 00:00:02.25]          at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.25]          at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+[xUnit.net 00:00:02.25]          at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25&#xD;
+[xUnit.net 00:00:02.25]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(25,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original)&#xD;
+[xUnit.net 00:00:02.25]            at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.25]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.25]       Assert.Null() Failure: Value is not null&#xD;
+[xUnit.net 00:00:02.25]       Expected: null&#xD;
+[xUnit.net 00:00:02.25]       Actual:   System.InvalidOperationException: The requested operation requires an element of type 'Object', but the target element has type 'Number'.&#xD;
+[xUnit.net 00:00:02.25]          at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.25]          at System.Text.Json.JsonElement.EnumerateObject()&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.ConfigManager.EnsureLoaded() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 912&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.ConfigManager.SetBool(String key, Boolean value) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 846&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.ConfigManager.SetNotifications(Boolean enabled) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\ConfigManager.cs:line 211&#xD;
+[xUnit.net 00:00:02.25]          at AZERTYGlobal.Tests.Audit120PersistenceTests.&lt;&gt;c.&lt;ConfigRacineInvalide_DemarreSansEcraser&gt;b__2_0() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs:line 28&#xD;
+[xUnit.net 00:00:02.25]          at Xunit.Record.Exception(Action testCode) in /_/src/xunit.core/Record.cs:line 25&#xD;
+[xUnit.net 00:00:02.25]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(25,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(String original)&#xD;
+[xUnit.net 00:00:02.25]            at InvokeStub_Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.25]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.25]       System.FormatException : One of the identified items was in an invalid format.&#xD;
+[xUnit.net 00:00:02.25]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.ThrowHelper.ThrowFormatException()&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.JsonElement.GetInt32()&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(186,0): at AZERTYGlobal.LessonProgressStore.Load()&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(18,0): at AZERTYGlobal.LessonProgressStore..ctor(String path)&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(49,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.25]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:02.25]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:02.25]       System.InvalidOperationException : The requested operation requires an element of type 'Object', but the target element has type 'Array'.&#xD;
+[xUnit.net 00:00:02.25]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.JsonDocument.TryGetNamedPropertyValue(Int32 index, ReadOnlySpan`1 propertyName, JsonElement&amp; value)&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.JsonElement.TryGetProperty(String propertyName, JsonElement&amp; value)&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(186,0): at AZERTYGlobal.LessonProgressStore.Load()&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(18,0): at AZERTYGlobal.LessonProgressStore..ctor(String path)&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(49,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.25]            at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.25]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.25]       System.InvalidOperationException : The requested operation requires an element of type 'Object', but the target element has type 'Null'.&#xD;
+[xUnit.net 00:00:02.25]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.JsonDocument.TryGetNamedPropertyValue(Int32 index, ReadOnlySpan`1 propertyName, JsonElement&amp; value)&#xD;
+[xUnit.net 00:00:02.25]            at System.Text.Json.JsonElement.TryGetProperty(String propertyName, JsonElement&amp; value)&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(186,0): at AZERTYGlobal.LessonProgressStore.Load()&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(18,0): at AZERTYGlobal.LessonProgressStore..ctor(String path)&#xD;
+[xUnit.net 00:00:02.25]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(49,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.25]            at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.25]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.27]       Assert.Equal() Failure: Strings differ&#xD;
+[xUnit.net 00:00:02.27]                   ↓ (pos 1)&#xD;
+[xUnit.net 00:00:02.27]       Expected: "{}"&#xD;
+[xUnit.net 00:00:02.27]       Actual:   "{\r\n  "version": 1,\r\n  "lastModuleId": "m""···&#xD;
+[xUnit.net 00:00:02.27]                   ↑ (pos 1)&#xD;
+[xUnit.net 00:00:02.27]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.27]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(52,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.27]            at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.27]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.27]       System.InvalidOperationException : The requested operation requires an element of type 'Number', but the target element has type 'String'.&#xD;
+[xUnit.net 00:00:02.27]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.27]            at System.Text.Json.ThrowHelper.ThrowJsonElementWrongTypeException(JsonTokenType expectedType, JsonTokenType actualType)&#xD;
+[xUnit.net 00:00:02.27]            at System.Text.Json.JsonDocument.TryGetValue(Int32 index, Int32&amp; value)&#xD;
+[xUnit.net 00:00:02.27]            at System.Text.Json.JsonElement.GetInt32()&#xD;
+[xUnit.net 00:00:02.27]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(186,0): at AZERTYGlobal.LessonProgressStore.Load()&#xD;
+[xUnit.net 00:00:02.27]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\LessonProgressStore.cs(18,0): at AZERTYGlobal.LessonProgressStore..ctor(String path)&#xD;
+[xUnit.net 00:00:02.27]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(49,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.27]            at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.27]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.28]       Assert.Equal() Failure: Strings differ&#xD;
+[xUnit.net 00:00:02.28]                   ↓ (pos 1)&#xD;
+[xUnit.net 00:00:02.28]       Expected: "{"version":2,"donneeFuture":"à conserver""···&#xD;
+[xUnit.net 00:00:02.28]       Actual:   "{\r\n  "version": 1,\r\n  "lastModuleId": "m""···&#xD;
+[xUnit.net 00:00:02.28]                   ↑ (pos 1)&#xD;
+[xUnit.net 00:00:02.28]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.28]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(52,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.28]            at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.28]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.28]       Assert.Equal() Failure: Strings differ&#xD;
+[xUnit.net 00:00:02.28]                   ↓ (pos 1)&#xD;
+[xUnit.net 00:00:02.28]       Expected: "{"version":-1}"&#xD;
+[xUnit.net 00:00:02.28]       Actual:   "{\r\n  "version": 1,\r\n  "lastModuleId": "m""···&#xD;
+[xUnit.net 00:00:02.28]                   ↑ (pos 1)&#xD;
+[xUnit.net 00:00:02.28]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.28]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\Audit120PersistenceTests.cs(52,0): at AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(String original)&#xD;
+[xUnit.net 00:00:02.28]            at InvokeStub_Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(Object, Span`1)&#xD;
+[xUnit.net 00:00:02.28]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:02.28]   Finished:    AZERTYGlobal.Tests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5200911+02:00">
+        <Text>[xUnit.net 00:00:02.24]     AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: "true") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5211536+02:00">
+        <Text>[xUnit.net 00:00:02.24]     AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: "null") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5219368+02:00">
+        <Text>[xUnit.net 00:00:02.24]     AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: "[]") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5240458+02:00">
+        <Text>[xUnit.net 00:00:02.25]     AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: "\"texte\"") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5241975+02:00">
+        <Text>[xUnit.net 00:00:02.25]     AZERTYGlobal.Tests.Audit120PersistenceTests.ConfigRacineInvalide_DemarreSansEcraser(original: "42") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5287100+02:00">
+        <Text>[xUnit.net 00:00:02.25]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "{\"version\":999999999999}") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5301454+02:00">
+        <Text>[xUnit.net 00:00:02.25]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "[]") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5311454+02:00">
+        <Text>[xUnit.net 00:00:02.25]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "null") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5470076+02:00">
+        <Text>[xUnit.net 00:00:02.27]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "{}") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5488668+02:00">
+        <Text>[xUnit.net 00:00:02.27]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "{\"version\":\"2\"}") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5552586+02:00">
+        <Text>[xUnit.net 00:00:02.28]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "{\"version\":2,\"donneeFuture\":\"à conserver\"}") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:20:41.5609530+02:00">
+        <Text>[xUnit.net 00:00:02.28]     AZERTYGlobal.Tests.Audit120PersistenceTests.ProgressionVersionInconnue_ConserveOriginalEtAnnuleLaMutation(original: "{\"version\":-1}") [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

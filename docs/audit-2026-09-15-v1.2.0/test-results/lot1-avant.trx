@@ -1,0 +1,426 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="769ec3ea-aceb-46cf-9d35-b2b2e11bb2f4" name="antoi@AZERTY_GLOBAL 2026-09-15 13:11:17" runUser="AZERTY_GLOBAL\CodexSandboxOffline" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-15T13:11:17.5179147+02:00" queuing="2026-09-15T13:11:17.5179151+02:00" start="2026-09-15T13:11:15.5039788+02:00" finish="2026-09-15T13:11:17.5527931+02:00" />
+  <TestSettings name="default" id="3d2ad188-407e-420d-a51c-398e27066602">
+    <Deployment runDeploymentRoot="antoi_AZERTY_GLOBAL_2026-09-15_13_11_17" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="5d41eded-39f7-4613-a459-f15bfce79cec" testId="30ce2ab0-4597-6ae4-051c-95b821684a1e" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: True, needsShift: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001440" startTime="2026-09-15T13:11:17.5022695+02:00" endTime="2026-09-15T13:11:17.5022695+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5d41eded-39f7-4613-a459-f15bfce79cec">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 80&#xD;
+   at TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean needsShift) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 46&#xD;
+   at InvokeStub_Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="43d558cd-4e91-46c3-8121-1b99ed67e0d4" testId="2685e820-1019-b32e-e004-4c40aee27486" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: True, needsShift: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000567" startTime="2026-09-15T13:11:17.5077899+02:00" endTime="2026-09-15T13:11:17.5077900+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="43d558cd-4e91-46c3-8121-1b99ed67e0d4">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 80&#xD;
+   at TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean needsShift) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 46&#xD;
+   at InvokeStub_Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="665410fb-de35-49c1-a252-67b0c49123e0" testId="f430844a-f734-55bb-77e2-c669b4ac34fb" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(released: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0136627" startTime="2026-09-15T13:11:17.4946472+02:00" endTime="2026-09-15T13:11:17.4946580+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="665410fb-de35-49c1-a252-67b0c49123e0">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.False() Failure&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(Boolean released) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 143&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="bc34fb87-9bee-4c11-954a-81169ef2b77d" testId="5e08024c-6a0c-70df-ab2a-8c724b85d7ed" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 91)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000368" startTime="2026-09-15T13:11:17.5086599+02:00" endTime="2026-09-15T13:11:17.5086599+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bc34fb87-9bee-4c11-954a-81169ef2b77d">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(UInt32 modifier) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 23&#xD;
+   at InvokeStub_Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="df51d831-2422-4743-bf59-abf783f3a714" testId="9bf54c57-3773-b1fc-e36d-07d725b984b7" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: False, numLock: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0005829" startTime="2026-09-15T13:11:17.5013403+02:00" endTime="2026-09-15T13:11:17.5013405+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="df51d831-2422-4743-bf59-abf783f3a714" />
+    <UnitTestResult executionId="2e4214a5-b6dd-4b91-b509-d981dd8aa6e2" testId="cd3af2f9-f041-3ccb-3f8c-1c3ee951b9f4" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: True, numLock: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0060300" startTime="2026-09-15T13:11:17.5004092+02:00" endTime="2026-09-15T13:11:17.5004093+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2e4214a5-b6dd-4b91-b509-d981dd8aa6e2">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 80&#xD;
+   at TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean numLock) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 63&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1536417c-7343-4078-a739-294205195cc2" testId="2a4dd16b-8084-e800-4b11-5677012fbe09" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.SondesLayout_PreserventEtatToucheMorte_EtCapsLock" computerName="AZERTY_GLOBAL" duration="00:00:00.0072209" startTime="2026-09-15T13:11:17.5144580+02:00" endTime="2026-09-15T13:11:17.5144582+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1536417c-7343-4078-a739-294205195cc2">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.All() Failure: 3 out of 3 items in the collection did not pass.&#xD;
+[0]: Item:  1&#xD;
+     Error: Assert.Equal() Failure: Values differ&#xD;
+            Expected: 4&#xD;
+            Actual:   1&#xD;
+[1]: Item:  1&#xD;
+     Error: Assert.Equal() Failure: Values differ&#xD;
+            Expected: 4&#xD;
+            Actual:   1&#xD;
+[2]: Item:  1&#xD;
+     Error: Assert.Equal() Failure: Values differ&#xD;
+            Expected: 4&#xD;
+            Actual:   1</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.SondesLayout_PreserventEtatToucheMorte_EtCapsLock() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 100&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="1f46c7cf-3fe0-4788-be76-2d97ea37bfa5" testId="14615589-1731-1b15-5bcf-57d78516bee1" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: False, needsShift: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000031" startTime="2026-09-15T13:11:17.5075243+02:00" endTime="2026-09-15T13:11:17.5075243+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1f46c7cf-3fe0-4788-be76-2d97ea37bfa5" />
+    <UnitTestResult executionId="49d84d88-e9f2-4869-99cf-5a755a3dc99a" testId="ea97c98c-77d6-c58d-c16c-bb15793c804f" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: False, needsShift: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000032" startTime="2026-09-15T13:11:17.5075116+02:00" endTime="2026-09-15T13:11:17.5075116+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="49d84d88-e9f2-4869-99cf-5a755a3dc99a" />
+    <UnitTestResult executionId="c4dec959-a3e9-4871-8122-868ed9d51474" testId="43f5ee13-b5df-bef7-7f4d-13ce3eca89a9" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: True, needsShift: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000101" startTime="2026-09-15T13:11:17.5074752+02:00" endTime="2026-09-15T13:11:17.5074753+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c4dec959-a3e9-4871-8122-868ed9d51474" />
+    <UnitTestResult executionId="99aa5ffe-e2a3-4b33-b3ed-406b04aa4967" testId="8935637d-13c0-6159-f0de-6f01c2df629c" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: False, needsShift: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000160" startTime="2026-09-15T13:11:17.5074987+02:00" endTime="2026-09-15T13:11:17.5074988+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="99aa5ffe-e2a3-4b33-b3ed-406b04aa4967" />
+    <UnitTestResult executionId="c1923bbc-fb0d-462c-95f6-eb6ea35b12c4" testId="10c2031f-016c-0ca6-8223-f6c1ba60f61c" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 92)" computerName="AZERTY_GLOBAL" duration="00:00:00.0002109" startTime="2026-09-15T13:11:17.5083384+02:00" endTime="2026-09-15T13:11:17.5083385+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c1923bbc-fb0d-462c-95f6-eb6ea35b12c4">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(UInt32 modifier) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 23&#xD;
+   at InvokeStub_Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="7c915a17-9ef8-419d-94e0-f732569363f7" testId="860871a5-0f3b-8d9d-a26c-ef5bfdf7422f" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: True, numLock: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001923" startTime="2026-09-15T13:11:17.5017173+02:00" endTime="2026-09-15T13:11:17.5017174+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7c915a17-9ef8-419d-94e0-f732569363f7">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 80&#xD;
+   at TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean numLock) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 63&#xD;
+   at InvokeStub_Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="080a802b-3f15-4d6b-9390-e5fbb412c4fc" testId="db1804fc-c268-1a6e-7d1b-6e5d37ca35af" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeVerrousEtHistorique_SansEffacerAutresCouches" computerName="AZERTY_GLOBAL" duration="00:00:00.0020988" startTime="2026-09-15T13:11:17.5165424+02:00" endTime="2026-09-15T13:11:17.5165427+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="080a802b-3f15-4d6b-9390-e5fbb412c4fc">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.False() Failure&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeVerrousEtHistorique_SansEffacerAutresCouches() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 125&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="625fa5bf-824c-4940-bd40-5342d7de8cf1" testId="1c6a1e6d-2208-07f1-fb3f-362ab0051381" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: True, needsShift: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0002685" startTime="2026-09-15T13:11:17.5017536+02:00" endTime="2026-09-15T13:11:17.5017537+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="625fa5bf-824c-4940-bd40-5342d7de8cf1" />
+    <UnitTestResult executionId="524a2ca6-9e8b-4c22-8b13-aa6a77dcb7e3" testId="1b78c05c-71d3-a80d-aade-12eaddd922cb" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: False, needsShift: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0001297" startTime="2026-09-15T13:11:17.5018135+02:00" endTime="2026-09-15T13:11:17.5018137+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="524a2ca6-9e8b-4c22-8b13-aa6a77dcb7e3" />
+    <UnitTestResult executionId="ee6e54b5-1ca3-4879-b1c5-8c8bef5ca106" testId="c158eeca-1e77-c6ad-3ca9-64ec070b0c05" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 164)" computerName="AZERTY_GLOBAL" duration="00:00:00.0035553" startTime="2026-09-15T13:11:17.5079725+02:00" endTime="2026-09-15T13:11:17.5079726+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ee6e54b5-1ca3-4879-b1c5-8c8bef5ca106">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(UInt32 modifier) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 23&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e9dcc152-a1fe-4860-a888-6ff2512ed8f7" testId="21c8b837-4cc8-2233-3d2a-ff6dc80354cb" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(released: False)" computerName="AZERTY_GLOBAL" duration="00:00:00.0014071" startTime="2026-09-15T13:11:17.4963840+02:00" endTime="2026-09-15T13:11:17.4963841+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e9dcc152-a1fe-4860-a888-6ff2512ed8f7">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Null() Failure: Value of type 'Nullable&lt;uint&gt;' has a value&#xD;
+Expected: null&#xD;
+Actual:   10</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(Boolean released) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 144&#xD;
+   at InvokeStub_Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6c34b390-dca2-4742-b1b8-3402edd06e38" testId="cca83ef9-d59a-5f79-9ee6-88df80cc3cb3" testName="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: False, right: True, numLock: True)" computerName="AZERTY_GLOBAL" duration="00:00:00.0002717" startTime="2026-09-15T13:11:17.5006269+02:00" endTime="2026-09-15T13:11:17.5006270+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6c34b390-dca2-4742-b1b8-3402edd06e38">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 80&#xD;
+   at TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean numLock) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs:line 63&#xD;
+   at InvokeStub_Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: False, needsShift: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="14615589-1731-1b15-5bcf-57d78516bee1">
+      <Execution id="1f46c7cf-3fe0-4788-be76-2d97ea37bfa5" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: True, needsShift: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="1c6a1e6d-2208-07f1-fb3f-362ab0051381">
+      <Execution id="625fa5bf-824c-4940-bd40-5342d7de8cf1" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: True, needsShift: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="30ce2ab0-4597-6ae4-051c-95b821684a1e">
+      <Execution id="5d41eded-39f7-4613-a459-f15bfce79cec" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeVerrousEtHistorique_SansEffacerAutresCouches" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="db1804fc-c268-1a6e-7d1b-6e5d37ca35af">
+      <Execution id="080a802b-3f15-4d6b-9390-e5fbb412c4fc" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="RetirerCouche_PurgeVerrousEtHistorique_SansEffacerAutresCouches" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: True, needsShift: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="2685e820-1019-b32e-e004-4c40aee27486">
+      <Execution id="43d558cd-4e91-46c3-8121-1b99ed67e0d4" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: False, needsShift: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="ea97c98c-77d6-c58d-c16c-bb15793c804f">
+      <Execution id="49d84d88-e9f2-4869-99cf-5a755a3dc99a" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: False, right: True, numLock: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="cca83ef9-d59a-5f79-9ee6-88df80cc3cb3">
+      <Execution id="6c34b390-dca2-4742-b1b8-3402edd06e38" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="AltCode_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(released: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="f430844a-f734-55bb-77e2-c669b4ac34fb">
+      <Execution id="665410fb-de35-49c1-a252-67b0c49123e0" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="RetirerCouche_PurgeDeclencheurEtOneShot" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 92)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="10c2031f-016c-0ca6-8223-f6c1ba60f61c">
+      <Execution id="c1923bbc-fb0d-462c-95f6-eb6ea35b12c4" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 91)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="5e08024c-6a0c-70df-ab2a-8c724b85d7ed">
+      <Execution id="bc34fb87-9bee-4c11-954a-81169ef2b77d" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 164)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="c158eeca-1e77-c6ad-3ca9-64ec070b0c05">
+      <Execution id="ee6e54b5-1ca3-4879-b1c5-8c8bef5ca106" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: True, numLock: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="cd3af2f9-f041-3ccb-3f8c-1c3ee951b9f4">
+      <Execution id="2e4214a5-b6dd-4b91-b509-d981dd8aa6e2" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="AltCode_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: False, needsShift: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="1b78c05c-71d3-a80d-aade-12eaddd922cb">
+      <Execution id="524a2ca6-9e8b-4c22-8b13-aa6a77dcb7e3" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: True, numLock: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="860871a5-0f3b-8d9d-a26c-ef5bfdf7422f">
+      <Execution id="7c915a17-9ef8-419d-94e0-f732569363f7" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="AltCode_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: False, needsShift: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="8935637d-13c0-6159-f0de-6f01c2df629c">
+      <Execution id="99aa5ffe-e2a3-4b33-b3ed-406b04aa4967" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: False, numLock: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="9bf54c57-3773-b1fc-e36d-07d725b984b7">
+      <Execution id="df51d831-2422-4743-bf59-abf783f3a714" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="AltCode_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.SondesLayout_PreserventEtatToucheMorte_EtCapsLock" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="2a4dd16b-8084-e800-4b11-5677012fbe09">
+      <Execution id="1536417c-7343-4078-a739-294205195cc2" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="SondesLayout_PreserventEtatToucheMorte_EtCapsLock" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: True, needsShift: True)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="43f5ee13-b5df-bef7-7f4d-13ce3eca89a9">
+      <Execution id="c4dec959-a3e9-4871-8122-868ed9d51474" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="Combo_RestaureChaqueMajPhysique" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(released: False)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="21c8b837-4cc8-2233-3d2a-ff6dc80354cb">
+      <Execution id="e9dcc152-a1fe-4860-a888-6ff2512ed8f7" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120RegressionTests" name="RetirerCouche_PurgeDeclencheurEtOneShot" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="30ce2ab0-4597-6ae4-051c-95b821684a1e" executionId="5d41eded-39f7-4613-a459-f15bfce79cec" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2685e820-1019-b32e-e004-4c40aee27486" executionId="43d558cd-4e91-46c3-8121-1b99ed67e0d4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f430844a-f734-55bb-77e2-c669b4ac34fb" executionId="665410fb-de35-49c1-a252-67b0c49123e0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5e08024c-6a0c-70df-ab2a-8c724b85d7ed" executionId="bc34fb87-9bee-4c11-954a-81169ef2b77d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9bf54c57-3773-b1fc-e36d-07d725b984b7" executionId="df51d831-2422-4743-bf59-abf783f3a714" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cd3af2f9-f041-3ccb-3f8c-1c3ee951b9f4" executionId="2e4214a5-b6dd-4b91-b509-d981dd8aa6e2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2a4dd16b-8084-e800-4b11-5677012fbe09" executionId="1536417c-7343-4078-a739-294205195cc2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="14615589-1731-1b15-5bcf-57d78516bee1" executionId="1f46c7cf-3fe0-4788-be76-2d97ea37bfa5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ea97c98c-77d6-c58d-c16c-bb15793c804f" executionId="49d84d88-e9f2-4869-99cf-5a755a3dc99a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="43f5ee13-b5df-bef7-7f4d-13ce3eca89a9" executionId="c4dec959-a3e9-4871-8122-868ed9d51474" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8935637d-13c0-6159-f0de-6f01c2df629c" executionId="99aa5ffe-e2a3-4b33-b3ed-406b04aa4967" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="10c2031f-016c-0ca6-8223-f6c1ba60f61c" executionId="c1923bbc-fb0d-462c-95f6-eb6ea35b12c4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="860871a5-0f3b-8d9d-a26c-ef5bfdf7422f" executionId="7c915a17-9ef8-419d-94e0-f732569363f7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="db1804fc-c268-1a6e-7d1b-6e5d37ca35af" executionId="080a802b-3f15-4d6b-9390-e5fbb412c4fc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1c6a1e6d-2208-07f1-fb3f-362ab0051381" executionId="625fa5bf-824c-4940-bd40-5342d7de8cf1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1b78c05c-71d3-a80d-aade-12eaddd922cb" executionId="524a2ca6-9e8b-4c22-8b13-aa6a77dcb7e3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c158eeca-1e77-c6ad-3ca9-64ec070b0c05" executionId="ee6e54b5-1ca3-4879-b1c5-8c8bef5ca106" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="21c8b837-4cc8-2233-3d2a-ff6dc80354cb" executionId="e9dcc152-a1fe-4860-a888-6ff2512ed8f7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cca83ef9-d59a-5f79-9ee6-88df80cc3cb3" executionId="6c34b390-dca2-4742-b1b8-3402edd06e38" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="19" executed="19" passed="7" failed="12" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.0.1+5ebf84cd75 (64-bit .NET 8.0.29)&#xD;
+[xUnit.net 00:00:01.64]   Discovering: TypingEngine.Windows.Tests&#xD;
+[xUnit.net 00:00:01.67]   Discovered:  TypingEngine.Windows.Tests&#xD;
+[xUnit.net 00:00:01.68]   Starting:    TypingEngine.Windows.Tests&#xD;
+[xUnit.net 00:00:01.72]       Assert.False() Failure&#xD;
+[xUnit.net 00:00:01.72]       Expected: False&#xD;
+[xUnit.net 00:00:01.72]       Actual:   True&#xD;
+[xUnit.net 00:00:01.72]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.72]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(143,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(Boolean released)&#xD;
+[xUnit.net 00:00:01.72]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:01.72]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.72]       Assert.Null() Failure: Value of type 'Nullable&lt;uint&gt;' has a value&#xD;
+[xUnit.net 00:00:01.72]       Expected: null&#xD;
+[xUnit.net 00:00:01.72]       Actual:   10&#xD;
+[xUnit.net 00:00:01.72]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.72]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(144,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(Boolean released)&#xD;
+[xUnit.net 00:00:01.72]            at InvokeStub_Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.72]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.73]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.73]       Expected: False&#xD;
+[xUnit.net 00:00:01.73]       Actual:   True&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(80,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad)&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(63,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean numLock)&#xD;
+[xUnit.net 00:00:01.73]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.73]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.73]       Expected: False&#xD;
+[xUnit.net 00:00:01.73]       Actual:   True&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(80,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad)&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(63,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean numLock)&#xD;
+[xUnit.net 00:00:01.73]            at InvokeStub_Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.73]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.73]       Expected: False&#xD;
+[xUnit.net 00:00:01.73]       Actual:   True&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(80,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad)&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(63,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean numLock)&#xD;
+[xUnit.net 00:00:01.73]            at InvokeStub_Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.73]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.73]       Expected: False&#xD;
+[xUnit.net 00:00:01.73]       Actual:   True&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(80,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad)&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(46,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean needsShift)&#xD;
+[xUnit.net 00:00:01.73]            at InvokeStub_Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.73]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.73]       Expected: False&#xD;
+[xUnit.net 00:00:01.73]       Actual:   True&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(80,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.AssertShiftState(List`1 inputs, Boolean left, Boolean right, Boolean expectedDuring, UInt16 scanCode, Boolean numpad)&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(46,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Boolean left, Boolean right, Boolean needsShift)&#xD;
+[xUnit.net 00:00:01.73]            at InvokeStub_Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.73]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:01.73]       Expected: True&#xD;
+[xUnit.net 00:00:01.73]       Actual:   False&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(23,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(UInt32 modifier)&#xD;
+[xUnit.net 00:00:01.73]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.73]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:01.73]       Expected: True&#xD;
+[xUnit.net 00:00:01.73]       Actual:   False&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(23,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(UInt32 modifier)&#xD;
+[xUnit.net 00:00:01.73]            at InvokeStub_Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.73]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:01.73]       Expected: True&#xD;
+[xUnit.net 00:00:01.73]       Actual:   False&#xD;
+[xUnit.net 00:00:01.73]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.73]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(23,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(UInt32 modifier)&#xD;
+[xUnit.net 00:00:01.73]            at InvokeStub_Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(Object, Span`1)&#xD;
+[xUnit.net 00:00:01.73]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:01.74]       Assert.All() Failure: 3 out of 3 items in the collection did not pass.&#xD;
+[xUnit.net 00:00:01.74]       [0]: Item:  1&#xD;
+[xUnit.net 00:00:01.74]            Error: Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.74]                   Expected: 4&#xD;
+[xUnit.net 00:00:01.74]                   Actual:   1&#xD;
+[xUnit.net 00:00:01.74]       [1]: Item:  1&#xD;
+[xUnit.net 00:00:01.74]            Error: Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.74]                   Expected: 4&#xD;
+[xUnit.net 00:00:01.74]                   Actual:   1&#xD;
+[xUnit.net 00:00:01.74]       [2]: Item:  1&#xD;
+[xUnit.net 00:00:01.74]            Error: Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:01.74]                   Expected: 4&#xD;
+[xUnit.net 00:00:01.74]                   Actual:   1&#xD;
+[xUnit.net 00:00:01.74]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.74]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(100,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.SondesLayout_PreserventEtatToucheMorte_EtCapsLock()&#xD;
+[xUnit.net 00:00:01.74]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:01.74]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.74]       Assert.False() Failure&#xD;
+[xUnit.net 00:00:01.74]       Expected: False&#xD;
+[xUnit.net 00:00:01.74]       Actual:   True&#xD;
+[xUnit.net 00:00:01.74]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.74]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120RegressionTests.cs(125,0): at TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeVerrousEtHistorique_SansEffacerAutresCouches()&#xD;
+[xUnit.net 00:00:01.74]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:01.74]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.74]   Finished:    TypingEngine.Windows.Tests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.4934205+02:00">
+        <Text>[xUnit.net 00:00:01.72]     TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(released: True) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.4963936+02:00">
+        <Text>[xUnit.net 00:00:01.72]     TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeDeclencheurEtOneShot(released: False) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5004147+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: True, numLock: True) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5005651+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: False, right: True, numLock: True) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5016680+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.AltCode_RestaureChaqueMajPhysique(left: True, right: True, numLock: False) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5021660+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: False, right: True, needsShift: False) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5236889+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.Combo_RestaureChaqueMajPhysique(left: True, right: True, needsShift: False) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5237241+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 164) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5237414+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 92) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5237581+02:00">
+        <Text>[xUnit.net 00:00:01.73]     TypingEngine.Windows.Tests.Audit120RegressionTests.RelacheRemappageCtrl_MemeSiAltOuWindowsEstEnfonce(modifier: 91) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5238120+02:00">
+        <Text>[xUnit.net 00:00:01.74]     TypingEngine.Windows.Tests.Audit120RegressionTests.SondesLayout_PreserventEtatToucheMorte_EtCapsLock [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:11:17.5246722+02:00">
+        <Text>[xUnit.net 00:00:01.74]     TypingEngine.Windows.Tests.Audit120RegressionTests.RetirerCouche_PurgeVerrousEtHistorique_SansEffacerAutresCouches [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

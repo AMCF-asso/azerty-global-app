@@ -17,6 +17,12 @@ public sealed class RealWin32Api : IWin32Api
 
     public IntPtr GetKeyboardLayout(uint threadId) => Win32.GetKeyboardLayout(threadId);
 
+    public int ToUnicode(uint vk, uint scan, byte[] state, StringBuilder buffer, int capacity, uint flags) =>
+        Win32.ToUnicode(vk, scan, state, buffer, capacity, flags);
+
+    public int ToUnicodeEx(uint vk, uint scan, byte[] state, StringBuilder buffer, int capacity, uint flags, IntPtr hkl) =>
+        Win32.ToUnicodeEx(vk, scan, state, buffer, capacity, flags, hkl);
+
     public uint SendInput(Win32.INPUT[] inputs) =>
         Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
 

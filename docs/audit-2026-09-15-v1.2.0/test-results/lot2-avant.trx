@@ -1,0 +1,250 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="762a2aa3-5292-44c8-a47b-80add351e321" name="antoi@AZERTY_GLOBAL 2026-09-15 13:14:14" runUser="AZERTY_GLOBAL\CodexSandboxOffline" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-15T13:14:14.0620550+02:00" queuing="2026-09-15T13:14:14.0620553+02:00" start="2026-09-15T13:14:12.9683162+02:00" finish="2026-09-15T13:14:14.0663274+02:00" />
+  <TestSettings name="default" id="eae56c84-fbed-47e4-99ea-de78fee03315">
+    <Deployment runDeploymentRoot="antoi_AZERTY_GLOBAL_2026-09-15_13_14_14" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d3f10423-efa1-4de2-966f-129ef5e57c14" testId="50e899b9-bb47-c8e3-e06f-5376d714a8ef" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.EchecSuiviForeground_SuspendEmission" computerName="AZERTY_GLOBAL" duration="00:00:00.0015642" startTime="2026-09-15T13:14:13.9935263+02:00" endTime="2026-09-15T13:14:13.9935264+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d3f10423-efa1-4de2-966f-129ef5e57c14">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ&#xD;
+Expected: DisabledAntiCheat&#xD;
+Actual:   Default</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.EchecSuiviForeground_SuspendEmission() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 33&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d23fb274-57ed-4185-bb4d-baf75bb4d722" testId="79952c93-c1f5-ac79-d3b2-60671a09be57" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.Suspension_NettoieSansEmettreDansNouvelleCible" computerName="AZERTY_GLOBAL" duration="00:00:00.0059488" startTime="2026-09-15T13:14:13.9997323+02:00" endTime="2026-09-15T13:14:13.9997324+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d23fb274-57ed-4185-bb4d-baf75bb4d722">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Empty() Failure: Collection was not empty&#xD;
+Collection: [[TypingEngine.Windows.Win32+INPUT], [TypingEngine.Windows.Win32+INPUT, TypingEngine.Windows.Win32+INPUT], [TypingEngine.Windows.Win32+INPUT, TypingEngine.Windows.Win32+INPUT]]</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.Suspension_NettoieSansEmettreDansNouvelleCible() in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 56&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="5482ac23-d1a3-4287-8514-a3eb12bf7435" testId="1b873dbb-74a5-e562-1be1-78a6566e3d3e" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 0)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000454" startTime="2026-09-15T13:14:13.9918020+02:00" endTime="2026-09-15T13:14:13.9918020+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5482ac23-d1a3-4287-8514-a3eb12bf7435">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Empty() Failure: Collection was not empty&#xD;
+Collection: ["ab"]</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(UInt32 sent) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 74&#xD;
+   at InvokeStub_Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="c2aeed53-fc5d-4e4f-b687-de7c8b2bb4f2" testId="95482935-a2a3-ac4e-d352-a10d8244381f" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: &quot;explorer.exe&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0002129" startTime="2026-09-15T13:14:13.9878120+02:00" endTime="2026-09-15T13:14:13.9878122+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c2aeed53-fc5d-4e4f-b687-de7c8b2bb4f2">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Strings differ&#xD;
+            ↓ (pos 1)&#xD;
+Expected: "explorer.exe"&#xD;
+Actual:   "editor.exe"&#xD;
+            ↑ (pos 1)</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(String shell) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 21&#xD;
+   at InvokeStub_Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d36fd6d0-b9cd-46ab-90af-4a0cb9fc75d3" testId="a4046aad-0258-805a-db5a-f7eeec1b1be3" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: &quot;StartMenuExperienceHost.exe&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0000597" startTime="2026-09-15T13:14:13.9882747+02:00" endTime="2026-09-15T13:14:13.9882749+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d36fd6d0-b9cd-46ab-90af-4a0cb9fc75d3">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Strings differ&#xD;
+           ↓ (pos 0)&#xD;
+Expected: "StartMenuExperienceHost.exe"&#xD;
+Actual:   "editor.exe"&#xD;
+           ↑ (pos 0)</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(String shell) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 21&#xD;
+   at InvokeStub_Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="12d7e759-0b76-47d5-aa5b-29d75b908c77" testId="62002429-0f7d-aede-1534-cabf5a046fdc" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 3)" computerName="AZERTY_GLOBAL" duration="00:00:00.0070148" startTime="2026-09-15T13:14:13.9914716+02:00" endTime="2026-09-15T13:14:13.9914717+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="12d7e759-0b76-47d5-aa5b-29d75b908c77">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Empty() Failure: Collection was not empty&#xD;
+Collection: ["ab"]</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(UInt32 sent) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 74&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="a611c04c-bdbe-4760-97ec-1d32601eb49a" testId="cd200eff-9d83-327d-3b62-1d796a97c70e" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 1)" computerName="AZERTY_GLOBAL" duration="00:00:00.0002687" startTime="2026-09-15T13:14:13.9916800+02:00" endTime="2026-09-15T13:14:13.9916801+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a611c04c-bdbe-4760-97ec-1d32601eb49a">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Empty() Failure: Collection was not empty&#xD;
+Collection: ["ab"]</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(UInt32 sent) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 74&#xD;
+   at InvokeStub_Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(Object, Span`1)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="66c69842-c6b3-4197-968a-f90d40d7858d" testId="f95a4f97-3d24-ccf0-1b61-a310ea0c63d6" testName="TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: &quot;SearchHost.exe&quot;)" computerName="AZERTY_GLOBAL" duration="00:00:00.0054312" startTime="2026-09-15T13:14:13.9858451+02:00" endTime="2026-09-15T13:14:13.9858543+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66c69842-c6b3-4197-968a-f90d40d7858d">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Strings differ&#xD;
+           ↓ (pos 0)&#xD;
+Expected: "SearchHost.exe"&#xD;
+Actual:   "editor.exe"&#xD;
+           ↑ (pos 0)</Message>
+          <StackTrace>   at TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(String shell) in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs:line 21&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: &quot;StartMenuExperienceHost.exe&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="a4046aad-0258-805a-db5a-f7eeec1b1be3">
+      <Execution id="d36fd6d0-b9cd-46ab-90af-4a0cb9fc75d3" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="Shell_ActualiseIdentiteLayoutEtChampSecurise" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 1)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="cd200eff-9d83-327d-3b62-1d796a97c70e">
+      <Execution id="a611c04c-bdbe-4760-97ec-1d32601eb49a" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="EmissionIncomplete_NeComptePasLeTexte" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 0)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="1b873dbb-74a5-e562-1be1-78a6566e3d3e">
+      <Execution id="5482ac23-d1a3-4287-8514-a3eb12bf7435" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="EmissionIncomplete_NeComptePasLeTexte" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: &quot;SearchHost.exe&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="f95a4f97-3d24-ccf0-1b61-a310ea0c63d6">
+      <Execution id="66c69842-c6b3-4197-968a-f90d40d7858d" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="Shell_ActualiseIdentiteLayoutEtChampSecurise" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 3)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="62002429-0f7d-aede-1534-cabf5a046fdc">
+      <Execution id="12d7e759-0b76-47d5-aa5b-29d75b908c77" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="EmissionIncomplete_NeComptePasLeTexte" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.Suspension_NettoieSansEmettreDansNouvelleCible" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="79952c93-c1f5-ac79-d3b2-60671a09be57">
+      <Execution id="d23fb274-57ed-4185-bb4d-baf75bb4d722" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="Suspension_NettoieSansEmettreDansNouvelleCible" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.EchecSuiviForeground_SuspendEmission" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="50e899b9-bb47-c8e3-e06f-5376d714a8ef">
+      <Execution id="d3f10423-efa1-4de2-966f-129ef5e57c14" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="EchecSuiviForeground_SuspendEmission" />
+    </UnitTest>
+    <UnitTest name="TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: &quot;explorer.exe&quot;)" storage="d:\my files\keyboard layouts\projects\azerty-global\components\microsoft-store\src\typingengine.windows.tests\bin\release\net8.0-windows10.0.17763.0\typingengine.windows.tests.dll" id="95482935-a2a3-ac4e-d352-a10d8244381f">
+      <Execution id="c2aeed53-fc5d-4e4f-b687-de7c8b2bb4f2" />
+      <TestMethod codeBase="D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="TypingEngine.Windows.Tests.Audit120SuspensionTests" name="Shell_ActualiseIdentiteLayoutEtChampSecurise" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="50e899b9-bb47-c8e3-e06f-5376d714a8ef" executionId="d3f10423-efa1-4de2-966f-129ef5e57c14" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="79952c93-c1f5-ac79-d3b2-60671a09be57" executionId="d23fb274-57ed-4185-bb4d-baf75bb4d722" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1b873dbb-74a5-e562-1be1-78a6566e3d3e" executionId="5482ac23-d1a3-4287-8514-a3eb12bf7435" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="95482935-a2a3-ac4e-d352-a10d8244381f" executionId="c2aeed53-fc5d-4e4f-b687-de7c8b2bb4f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a4046aad-0258-805a-db5a-f7eeec1b1be3" executionId="d36fd6d0-b9cd-46ab-90af-4a0cb9fc75d3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="62002429-0f7d-aede-1534-cabf5a046fdc" executionId="12d7e759-0b76-47d5-aa5b-29d75b908c77" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cd200eff-9d83-327d-3b62-1d796a97c70e" executionId="a611c04c-bdbe-4760-97ec-1d32601eb49a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f95a4f97-3d24-ccf0-1b61-a310ea0c63d6" executionId="66c69842-c6b3-4197-968a-f90d40d7858d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="8" executed="8" passed="0" failed="8" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.0.1+5ebf84cd75 (64-bit .NET 8.0.29)&#xD;
+[xUnit.net 00:00:00.68]   Discovering: TypingEngine.Windows.Tests&#xD;
+[xUnit.net 00:00:00.71]   Discovered:  TypingEngine.Windows.Tests&#xD;
+[xUnit.net 00:00:00.71]   Starting:    TypingEngine.Windows.Tests&#xD;
+[xUnit.net 00:00:00.75]       Assert.Equal() Failure: Strings differ&#xD;
+[xUnit.net 00:00:00.75]                  ↓ (pos 0)&#xD;
+[xUnit.net 00:00:00.75]       Expected: "SearchHost.exe"&#xD;
+[xUnit.net 00:00:00.75]       Actual:   "editor.exe"&#xD;
+[xUnit.net 00:00:00.75]                  ↑ (pos 0)&#xD;
+[xUnit.net 00:00:00.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.75]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(21,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(String shell)&#xD;
+[xUnit.net 00:00:00.75]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:00.75]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:00.75]       Assert.Equal() Failure: Strings differ&#xD;
+[xUnit.net 00:00:00.75]                   ↓ (pos 1)&#xD;
+[xUnit.net 00:00:00.75]       Expected: "explorer.exe"&#xD;
+[xUnit.net 00:00:00.75]       Actual:   "editor.exe"&#xD;
+[xUnit.net 00:00:00.75]                   ↑ (pos 1)&#xD;
+[xUnit.net 00:00:00.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.75]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(21,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(String shell)&#xD;
+[xUnit.net 00:00:00.75]            at InvokeStub_Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(Object, Span`1)&#xD;
+[xUnit.net 00:00:00.75]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:00.75]       Assert.Equal() Failure: Strings differ&#xD;
+[xUnit.net 00:00:00.75]                  ↓ (pos 0)&#xD;
+[xUnit.net 00:00:00.75]       Expected: "StartMenuExperienceHost.exe"&#xD;
+[xUnit.net 00:00:00.75]       Actual:   "editor.exe"&#xD;
+[xUnit.net 00:00:00.75]                  ↑ (pos 0)&#xD;
+[xUnit.net 00:00:00.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.75]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(21,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(String shell)&#xD;
+[xUnit.net 00:00:00.75]            at InvokeStub_Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(Object, Span`1)&#xD;
+[xUnit.net 00:00:00.75]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:00.75]       Assert.Empty() Failure: Collection was not empty&#xD;
+[xUnit.net 00:00:00.75]       Collection: ["ab"]&#xD;
+[xUnit.net 00:00:00.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.75]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(74,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(UInt32 sent)&#xD;
+[xUnit.net 00:00:00.75]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:00.75]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:00.75]       Assert.Empty() Failure: Collection was not empty&#xD;
+[xUnit.net 00:00:00.75]       Collection: ["ab"]&#xD;
+[xUnit.net 00:00:00.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.75]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(74,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(UInt32 sent)&#xD;
+[xUnit.net 00:00:00.75]            at InvokeStub_Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(Object, Span`1)&#xD;
+[xUnit.net 00:00:00.75]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:00.75]       Assert.Empty() Failure: Collection was not empty&#xD;
+[xUnit.net 00:00:00.75]       Collection: ["ab"]&#xD;
+[xUnit.net 00:00:00.75]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.75]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(74,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(UInt32 sent)&#xD;
+[xUnit.net 00:00:00.75]            at InvokeStub_Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(Object, Span`1)&#xD;
+[xUnit.net 00:00:00.75]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:00.76]       Assert.Equal() Failure: Values differ&#xD;
+[xUnit.net 00:00:00.76]       Expected: DisabledAntiCheat&#xD;
+[xUnit.net 00:00:00.76]       Actual:   Default&#xD;
+[xUnit.net 00:00:00.76]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.76]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(33,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.EchecSuiviForeground_SuspendEmission()&#xD;
+[xUnit.net 00:00:00.76]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:00.76]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:00.76]       Assert.Empty() Failure: Collection was not empty&#xD;
+[xUnit.net 00:00:00.76]       Collection: [[TypingEngine.Windows.Win32+INPUT], [TypingEngine.Windows.Win32+INPUT, TypingEngine.Windows.Win32+INPUT], [TypingEngine.Windows.Win32+INPUT, TypingEngine.Windows.Win32+INPUT]]&#xD;
+[xUnit.net 00:00:00.76]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.76]         D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows.Tests\Audit120SuspensionTests.cs(56,0): at TypingEngine.Windows.Tests.Audit120SuspensionTests.Suspension_NettoieSansEmettreDansNouvelleCible()&#xD;
+[xUnit.net 00:00:00.76]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+[xUnit.net 00:00:00.76]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:00.76]   Finished:    TypingEngine.Windows.Tests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9847726+02:00">
+        <Text>[xUnit.net 00:00:00.75]     TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: "SearchHost.exe") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9877277+02:00">
+        <Text>[xUnit.net 00:00:00.75]     TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: "explorer.exe") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9880891+02:00">
+        <Text>[xUnit.net 00:00:00.75]     TypingEngine.Windows.Tests.Audit120SuspensionTests.Shell_ActualiseIdentiteLayoutEtChampSecurise(shell: "StartMenuExperienceHost.exe") [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9914785+02:00">
+        <Text>[xUnit.net 00:00:00.75]     TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 3) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9916056+02:00">
+        <Text>[xUnit.net 00:00:00.75]     TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 1) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9917457+02:00">
+        <Text>[xUnit.net 00:00:00.75]     TypingEngine.Windows.Tests.Audit120SuspensionTests.EmissionIncomplete_NeComptePasLeTexte(sent: 0) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9934622+02:00">
+        <Text>[xUnit.net 00:00:00.76]     TypingEngine.Windows.Tests.Audit120SuspensionTests.EchecSuiviForeground_SuspendEmission [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Error" timestamp="2026-09-15T13:14:13.9997502+02:00">
+        <Text>[xUnit.net 00:00:00.76]     TypingEngine.Windows.Tests.Audit120SuspensionTests.Suspension_NettoieSansEmettreDansNouvelleCible [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

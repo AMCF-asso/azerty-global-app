@@ -909,6 +909,8 @@ static class ConfigManager
             {
                 var json = File.ReadAllText(_configPath);
                 using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                    throw new JsonException("La configuration doit être un objet JSON.");
                 foreach (var prop in doc.RootElement.EnumerateObject())
                 {
                     if (prop.Name == "compatibility" && prop.Value.ValueKind == JsonValueKind.Object)

@@ -1,0 +1,14 @@
+
+### ProductIdentity.cs  (10)
+     24  public const string DisplayName = "AZERTY Global";
+     33  public const string ExecutableName = "AZERTY Global.exe";
+     36  public const string ShortcutFileName = "AZERTY Global.lnk";
+     41  public const string ConfigFolderName = "AZERTY Global";
+     43  public const string StoreProductId = "9N4BTS43SSSZ";
+     46  public const string SiteDomain = "azerty.global";
+     48  public const string DiscordInviteUrl = "https://discord.gg/nYknqshJz3";
+     49  public const string RepositoryUrl = "https://github.com/AZERTYGlobal/app";
+     50  public const string LogoResourceName = "favicon-azerty-global.png";
+     71  public const string StorePackageFamilyName = "AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg";
+
+Littéraux hors ProductIdentity : 0

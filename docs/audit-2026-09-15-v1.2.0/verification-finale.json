@@ -1,0 +1,16 @@
+{
+  "captured_utc": "2026-09-15 11:00:17 UTC",
+  "head": "8775489fc1170e31e7e08a2a2d9a9fa77f5a21ea",
+  "checks": [
+    {
+      "check": 0,
+      "exit_code": 0,
+      "output": "{\r\n  \"links_checked\": 44,\r\n  \"source_files_unchanged\": 171,\r\n  \"head\": \"8775489fc1170e31e7e08a2a2d9a9fa77f5a21ea\",\r\n  \"issues\": []\r\n}\r\n"
+    },
+    {
+      "check": 1,
+      "exit_code": 0,
+      "output": "warning: unable to access 'C:\\Users\\antoi/.config/git/ignore': Permission denied\n"
+    }
+  ]
+}
