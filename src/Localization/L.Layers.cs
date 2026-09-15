@@ -40,6 +40,10 @@ internal static partial class L
     public static string Layers_SearchSecureBody => T(
         $"Les champs de mot de passe suspendent la recherche de {ProductIdentity.DisplayName}.",
         $"Password fields suspend {ProductIdentity.DisplayName}'s character search.");
+    public static string Layers_InsertIncompleteTitle => T("Insertion incomplète", "Incomplete insertion");
+    public static string Layers_InsertIncompleteBody => T(
+        $"Vérifiez le texte saisi avant de réessayer avec {ProductIdentity.DisplayName}.",
+        $"Check the inserted text before trying again with {ProductIdentity.DisplayName}.");
     public static string Layers_InsertFallbackTitle => T("Caractère copié", "Character copied");
     public static string Layers_InsertFallbackBody(string ch) => T(
         $"L’insertion directe de {ProductIdentity.DisplayName} n’était pas disponible — collez « {ch} » avec Ctrl+V.",

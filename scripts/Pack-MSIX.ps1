@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Archive-StableBundle.ps1')
 
 # Architectures cibles (x64 + ARM64 natif)
 $architectures = @('x64', 'arm64')
@@ -73,7 +74,10 @@ if ([string]::IsNullOrWhiteSpace($version)) {
 # Si le csproj declare 3 segments, on complete avec .0. Si 4 deja presents, on les utilise tels quels.
 $storeVersion = if (($version -split '\.').Count -eq 4) { $version } else { "$version.0" }
 $versionedBundlePath = Join-Path $msixDir ("AZERTYGlobal-{0}.msixbundle" -f $storeVersion)
-$msixArchiveDir = Join-Path (Join-Path $msixArchiveRoot 'by-version') $storeVersion
+# Valider l'ancien bundle avant toute construction ; ne jamais lui attribuer la nouvelle version.
+if (Test-Path -LiteralPath $stableBundlePath) {
+    $null = Get-MSIXBundleVersion $stableBundlePath
+}
 
 # Vérifier que les exécutables publiés existent
 foreach ($arch in $architectures) {
@@ -161,10 +165,8 @@ if ($LASTEXITCODE -ne 0) { throw "MakeAppx bundle a échoué" }
 
 # Archiver l'ancien bundle stable
 if (Test-Path $stableBundlePath) {
-    New-Item -ItemType Directory -Path $msixArchiveDir -Force | Out-Null
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $backupPath = Join-Path $msixArchiveDir ("AZERTYGlobal-{0}-stable-backup-{1}.msixbundle" -f $storeVersion, $timestamp)
-    Move-Item -LiteralPath $stableBundlePath -Destination $backupPath -Force
+    $backup = Backup-StableMSIXBundle $stableBundlePath $msixArchiveRoot
+    Write-Host ("Bundle précédent sauvegardé : {0} (SHA256 {1})" -f $backup.Path, $backup.SHA256)
 }
 
 # Copier le bundle versionné en stable

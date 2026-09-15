@@ -115,7 +115,7 @@ Version 0.11.0 :
  • Nouveau menu « Exercices » : relancez les 6 exercices guidés à tout moment.
  • Mini-onboarding simplifié, plus lisible, avec mention de confidentialité et liens utiles.
  • Compatibilité jeux entièrement repensée : meilleure saisie dans Minecraft, Trackmania et la plupart des jeux Unity, SDL ou GLFW.
- • Désactivation automatique sur les jeux protégés par anti-cheat pour éviter tout risque de bannissement.
+ • Désactivation automatique du remappage pour les jeux et applications reconnus comme protégés par un anti-cheat.
  • Nouveau sous-menu de compatibilité par application.
  • Corrections en jeu : plus de touches fantômes après bascule rapide, sprint/saut plus fiable, Ctrl+A restauré dans les cas concernés.
  • Notifications de bascule simplifiées : seule la fenêtre flottante reste affichée.
@@ -249,7 +249,7 @@ Version 0.11.0:
  • New “Exercises” menu item: replay the 6 guided exercises at any time.
  • Clearer mini-onboarding with privacy notice and useful links.
  • Completely redesigned game compatibility: better typing in Minecraft, Trackmania and most Unity, SDL or GLFW games.
- • Automatic disabling on games protected by anti-cheat systems to prevent ban risk.
+ • Automatic remapping suspension for games and applications recognized as protected by an anti-cheat system.
  • New per-application compatibility submenu.
  • In-game fixes: no more phantom keys after rapid toggling, more reliable sprint/jump behavior, Ctrl+A restored in affected cases.
  • Simpler toggle notifications: only the floating status window remains.
@@ -319,7 +319,7 @@ APIs additionnelles introduites v1.2.0 pour les couches maintenables opt-in et l
  • UI Automation (CUIAutomation COM : GetFocusedElement, get_CurrentIsPassword) — détecter les champs de mot de passe des navigateurs depuis un thread dédié à attente bornée (30 ms), jamais dans le callback clavier. Seul le booléen IsPassword est consulté, jamais le contenu du champ, et il sert à SUSPENDRE les fonctions avancées (couches, recherche, indicateur) dans ces champs — le remapping ordinaire continue.
  • SetWinEventHook(EVENT_OBJECT_FOCUS) — suivre les changements de focus pour cette suspension.
  • GetProcessTimes — associer un verrouillage de couche à l'instance exacte du processus au premier plan (PID + instant de création). Aucun suivi d'usage : rien n'est journalisé ni transmis.
- • L'application se DÉSACTIVE automatiquement sur les jeux protégés par un anti-cheat kernel-level connu (Vanguard, EAC, BattlEye, RICOCHET, etc.) — politique de sécurité utilisateur pour éviter tout risque de bannissement.
+ • Le remappage est automatiquement SUSPENDU dans les jeux et applications reconnus comme protégés par un anti-cheat (Vanguard, EAC, BattlEye, RICOCHET, etc.). La détection repose sur les applications et modules connus du registre de compatibilité.
 
 ### Note WACK — DPIAwarenessValidation
 
@@ -361,4 +361,4 @@ Les fichiers suivants sont dans `msix/Assets/` :
 
 ---
 
-*Dernière mise à jour : 2026-08-24 (v1.2.0 — préparation, non soumise)*
+*Dernière mise à jour : 2026-09-15 (v1.2.0 — corrections après audit, non soumise)*

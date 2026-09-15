@@ -184,7 +184,7 @@ public sealed class KeyMapper
                     }
                 }
             };
-            _api.SendInput(inputs);
+            if (IsEmissionSuspended || !FlushInputRecovery() || SendInputsWithRecovery(inputs) != (uint)inputs.Length) return;
         }
         bool wasOn = _capsLockState;
         _capsLockState = false;
@@ -215,7 +215,9 @@ public sealed class KeyMapper
         // de l'install du hook (genre ZQSD + Maj pour sprinter), le keydown a ete manque
         // et l'etat interne reste a true alors que la touche est physiquement relachee.
         // Bug visible : virgule remplacee par un autre caractere dans l'exo 2.
-        CleanupStaleModifiers();
+        // Une compensation peut avoir changé l'état logique Windows ; garder alors
+        // le suivi physique du hook, qui continue passivement pendant la suspension.
+        if (_pendingInputRecovery == null) CleanupStaleModifiers();
         _suppressShiftForLayer = false;
         _suppressAltGrForLayer = false;
         _maintainableLayers.ResetTransientState();
@@ -240,42 +242,38 @@ public sealed class KeyMapper
     /// ignore proprement). Évite les "stuck keys" côté apps qui suivent l'état
     /// up/down par scancode.
     /// </summary>
-    public void ClearPassedThroughKeys()
+    public void ClearPassedThroughKeys(bool emitReleases = true)
     {
-        Win32.INPUT[]? inputs = null;
+        // Pendant la suspension, conserver les touches possédées en quarantaine.
+        // La reprise sûre envoie leurs relâchements ; un échec ne détruit pas la trace.
+        if (!emitReleases || IsEmissionSuspended || !FlushInputRecovery()) return;
+        var releases = new List<(uint Scan, ushort? Vk, Win32.INPUT Input)>();
         lock (_passedThroughKeysLock)
         {
-            if (_passedThroughKeys.Count == 0 && _syntheticVirtualKeyDowns.Count == 0) return;
-            var list = new List<Win32.INPUT>(_passedThroughKeys.Count + _syntheticVirtualKeyDowns.Count);
-            foreach (var scanCode in _passedThroughKeys)
-            {
-                list.Add(new Win32.INPUT
-                {
-                    type = INPUT_KEYBOARD,
-                    u = new Win32.INPUTUNION
-                    {
-                        ki = new Win32.KEYBDINPUT
-                        {
-                            wVk = 0,
-                            wScan = (ushort)scanCode,
-                            dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP,
-                            time = 0,
-                            dwExtraInfo = KeyboardHook.INJECTED_FLAG
-                        }
-                    }
-                });
-            }
-            foreach (var vk in _syntheticVirtualKeyDowns.Values)
-            {
-                list.Add(MakeVkInput(vk, 0, true));
-            }
-            _passedThroughKeys.Clear();
-            _syntheticVirtualKeyDowns.Clear();
-            inputs = list.ToArray();
+            foreach (var scan in _passedThroughKeys)
+                releases.Add((scan, null, MakeScanCodeInput((ushort)scan, true)));
+            foreach (var (scan, vk) in _syntheticVirtualKeyDowns)
+                releases.Add((scan, vk, MakeVkInput(vk, 0, true)));
         }
-        // Émission hors lock pour ne pas bloquer le keyboard hook si SendInput est lent
-        if (inputs.Length > 0)
-            _api.SendInput(inputs);
+        if (releases.Count == 0) return;
+        uint sent = SendInputs(releases.Select(r => r.Input).ToArray());
+        // En cas de retour partiel, le contrat ne désigne pas quels événements ont
+        // été acceptés. Garder tous les keyups : les répéter est sans effet de saisie.
+        if (sent == (uint)releases.Count)
+        {
+            lock (_passedThroughKeysLock)
+            {
+                foreach (var release in releases)
+                {
+                    if (release.Vk is ushort vk)
+                    {
+                        if (_syntheticVirtualKeyDowns.TryGetValue(release.Scan, out var tracked) && tracked == vk)
+                            _syntheticVirtualKeyDowns.Remove(release.Scan);
+                    }
+                    else _passedThroughKeys.Remove(release.Scan);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -289,11 +287,11 @@ public sealed class KeyMapper
     {
         var buf = new System.Text.StringBuilder(8);
         var keyState = new byte[256];
-        int result = Win32.ToUnicode(0x20, 0x39, keyState, buf, buf.Capacity, 0);
+        int result = _api.ToUnicode(0x20, 0x39, keyState, buf, buf.Capacity, 0);
         if (result < 0)
         {
             // -1 = touche morte détectée, appeler une seconde fois pour la consommer
-            Win32.ToUnicode(0x20, 0x39, keyState, buf, buf.Capacity, 0);
+            _api.ToUnicode(0x20, 0x39, keyState, buf, buf.Capacity, 0);
         }
     }
 
@@ -312,11 +310,11 @@ public sealed class KeyMapper
         if (IsShiftDown) { keyState[0x10] = 0x80; keyState[0xA0] = 0x80; }
         if (IsAltGrDown) { keyState[0xA5] = 0x80; keyState[0xA2] = 0x80; }
 
-        int result = Win32.ToUnicode(vkCode, scanCode, keyState, buf, buf.Capacity, 0);
+        int result = _api.ToUnicode(vkCode, scanCode, keyState, buf, buf.Capacity, 0);
         if (result < 0)
         {
             // C'est une touche morte système — appeler une 2e fois pour consommer
-            Win32.ToUnicode(vkCode, scanCode, keyState, buf, buf.Capacity, 0);
+            _api.ToUnicode(vkCode, scanCode, keyState, buf, buf.Capacity, 0);
         }
         // Si result >= 0 et qu'il y avait une DK en attente d'un appel précédent,
         // ToUnicode l'a consommée en combinant — c'est le comportement voulu.
@@ -332,8 +330,11 @@ public sealed class KeyMapper
     /// Met à jour l'état des modificateurs sans traiter la touche.
     /// Appelé par le hook même quand le remapping est désactivé.
     /// </summary>
-    public void TrackModifiers(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
+    public void TrackModifiers(uint vkCode, uint scanCode, uint flags, bool isKeyDown, bool notify = true)
     {
+        if (vkCode == Win32.VK_NUMLOCK && isKeyDown)
+            _pendingInputRecovery?.CancelNumLockRestoration();
+
         bool oldShift = IsShiftDown;
         bool oldAltGr = IsAltGrDown;
         bool oldCtrl = IsCtrlDown;
@@ -373,8 +374,8 @@ public sealed class KeyMapper
             _suppressAltGrForLayer = false;
 
         // Notifier si l'état d'un modificateur a changé (pour le clavier virtuel)
-        if (IsShiftDown != oldShift || IsAltGrDown != oldAltGr ||
-            IsCtrlDown != oldCtrl || _leftAltDown != oldAlt)
+        if (notify && (IsShiftDown != oldShift || IsAltGrDown != oldAltGr ||
+            IsCtrlDown != oldCtrl || _leftAltDown != oldAlt))
             StateChanged?.Invoke();
     }
 
@@ -480,8 +481,44 @@ public sealed class KeyMapper
     /// Traite un événement clavier. Retourne true si la touche a été gérée
     /// (et doit être bloquée), false sinon (laisser passer).
     /// </summary>
+    private readonly Dictionary<(uint Scan, bool Extended), bool> _keyDownOwnership = new();
+
     public bool ProcessKey(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
     {
+        var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
+        if (IsEmissionSuspended)
+        {
+            TrackPassThroughKey(scanCode, flags, isKeyDown);
+            return false;
+        }
+        bool hadDown = _keyDownOwnership.TryGetValue(key, out bool consumed);
+        bool handled = ProcessKeyCore(vkCode, scanCode, flags, isKeyDown);
+        if (isKeyDown)
+        {
+            // Chaque répétition garde la décision de l'appui initial.
+            if (hadDown) handled = consumed;
+            _keyDownOwnership[key] = handled;
+        }
+        else _keyDownOwnership.Remove(key);
+        return handled;
+    }
+
+    internal void TrackPassThroughKey(uint scanCode, uint flags, bool isKeyDown)
+    {
+        var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
+        if (isKeyDown) _keyDownOwnership[key] = false;
+        else _keyDownOwnership.Remove(key);
+        // La cible suspendue peut différer de celle qui a reçu l'ancien down.
+        // Conserver les relâchements de secours jusqu'à une reprise sûre.
+    }
+
+    private bool ProcessKeyCore(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
+    {
+        if (IsEmissionSuspended)
+        {
+            ClearPassedThroughKeys(emitReleases: false);
+            return false;
+        }
         bool isExtended = (flags & LLKHF_EXTENDED) != 0;
 
         // Les modificateurs sont déjà trackés par TrackModifiers() en amont dans le hook.
@@ -493,6 +530,28 @@ public sealed class KeyMapper
             case VK_LMENU: case VK_RMENU: case VK_MENU:
             case VK_LWIN: case VK_RWIN:
                 return false;
+        }
+
+        // Finaliser les keydowns déjà absorbés avant de bloquer une nouvelle émission.
+        if (!isKeyDown)
+        {
+            bool released = TryReleaseSyntheticVirtualKey(scanCode);
+            bool triggerEnded = _maintainableLayers.EndTrigger(scanCode);
+            if (released || triggerEnded)
+                return !_keyDownOwnership.TryGetValue((scanCode, isExtended), out bool consumed) || consumed;
+        }
+        if (!FlushInputRecovery())
+        {
+            var key = (scanCode, isExtended);
+            if (_keyDownOwnership.TryGetValue(key, out bool consumed))
+                return consumed; // Absorber les répétitions/keyup d'un down absorbé.
+            if (!isKeyDown)
+            {
+                lock (_passedThroughKeysLock)
+                    if (_passedThroughKeys.Remove(scanCode)) return false;
+                return !isExtended && _layout.Keys.ContainsKey(scanCode);
+            }
+            return false; // Un nouveau down physique passe ; son keyup reste associé.
         }
 
         // Resynchroniser _capsLockState avec l'etat Caps Lock systeme avant traitement.
@@ -552,13 +611,11 @@ public sealed class KeyMapper
             }
         }
 
-        // Relâchement du déclencheur : clôt l'accord, ou transforme l'appui
-        // isolé en one-shot / double appui / déverrouillage. Traité avant
-        // les early-returns modificateurs : le keydown du déclencheur a été absorbé,
-        // laisser fuir son keyup (ex. si Alt a été enfoncé entre-temps) créerait un
-        // keyup orphelin côté application et un déclencheur fantôme côté machine d'état.
-        if (!isKeyDown && _maintainableLayers.EndTrigger(scanCode))
-            return true;
+        // Une répétition déjà transmise reste physique. Backspace et Échap ont
+        // néanmoins pu annuler un nouvel état de composition ci-dessus.
+        if (isKeyDown && _keyDownOwnership.TryGetValue((scanCode, isExtended), out bool previouslyConsumed) &&
+            !previouslyConsumed)
+            return false;
 
         // Toute autre frappe pendant un déclencheur en attente consomme l'accord
         // comme un appui simple : un one-shot pour cette frappe, rien au-delà.
@@ -585,8 +642,11 @@ public sealed class KeyMapper
         if (_leftWinDown || _rightWinDown)
             return false;
 
-        if (!isKeyDown && TryReleaseSyntheticVirtualKey(scanCode))
-            return true;
+        if (!isKeyDown && _keyDownOwnership.TryGetValue((scanCode, isExtended), out bool downConsumed) && !downConsumed)
+        {
+            lock (_passedThroughKeysLock) _passedThroughKeys.Remove(scanCode);
+            return false;
+        }
 
         // Si Ctrl (gauche OU droit) est enfoncé SANS AltGr → remapper les raccourcis Ctrl+touche
         // Ex: Ctrl+A doit fonctionner selon la position AZERTY Global, pas le layout Windows
@@ -835,10 +895,12 @@ public sealed class KeyMapper
         {
             if (!_syntheticVirtualKeyDowns.TryGetValue(scanCode, out vk))
                 return false;
-            _syntheticVirtualKeyDowns.Remove(scanCode);
         }
 
-        SendVirtualKeyInput(vk, false);
+        if (SendVirtualKeyInput(vk, false) == 1)
+        {
+            lock (_passedThroughKeysLock) _syntheticVirtualKeyDowns.Remove(scanCode);
+        }
         return true;
     }
 
@@ -855,7 +917,7 @@ public sealed class KeyMapper
         SendVirtualKeyInput(vk, keyDown);
     }
 
-    private void SendVirtualKeyInput(ushort vk, bool keyDown)
+    private uint SendVirtualKeyInput(ushort vk, bool keyDown)
     {
         var input = new Win32.INPUT
         {
@@ -872,7 +934,7 @@ public sealed class KeyMapper
                 }
             }
         };
-        _api.SendInput(new[] { input });
+        return SendInputs(new[] { input });
     }
 
     /// <summary>
@@ -880,16 +942,16 @@ public sealed class KeyMapper
     /// Dispatch selon le mode foreground :
     /// - Default → KEYEVENTF_UNICODE (comportement v0.9.6)
     /// - NativeCombo → combo native via VkKeyScanExW + Alt+code fallback
-    /// - DisabledAntiCheat → ne devrait pas arriver (hook désactivé en amont) → fallback Unicode
+    /// - DisabledAntiCheat → aucune émission, y compris les appels hors hook.
     /// Tous les events d'une chaîne sont concaténés en un INPUT[] global puis envoyés
     /// en un seul SendInput pour atomicité (cf. plan v0.9.7 § Limites SendInput).
     /// </summary>
-    public void EmitText(string text)
-    {
-        // Statistiques locales d'usage (v1.1) : compteurs en mémoire uniquement, aucune
-        // I/O ici : l'hôte reçoit uniquement le texte émis pour ses compteurs locaux.
-        _host.RecordEmittedText(text);
+    public void EmitText(string text) => TryEmitText(text);
 
+    /// <summary>Rapporte les événements acceptés par Windows, sans réessayer un lot partiel.</summary>
+    public TextEmissionResult TryEmitText(string text)
+    {
+        if (IsEmissionSuspended || !FlushInputRecovery()) return new(0, 0, Blocked: true);
         // Audit sécu 2026-05 SEV-A2-05 : lecture atomique single-shot du snapshot
         // ForegroundMonitor. Évite race mode/hkl discordants pendant alt-tab.
         var (mode, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
@@ -925,9 +987,63 @@ public sealed class KeyMapper
             }
         }
 
-        if (inputs.Count > 0)
-            _api.SendInput(inputs.ToArray());
+        if (inputs.Count == 0) return new(0, 0);
+        if (IsEmissionSuspended) return new(inputs.Count, 0, Blocked: true);
+        uint sent = SendInputsWithRecovery(inputs.ToArray());
+        var result = new TextEmissionResult(inputs.Count, sent);
+        // Un retour positif ne prouve pas que le contrôle cible a accepté le texte.
+        // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué.
+        if (result.IsComplete) _host.RecordEmittedText(text);
+        return result;
     }
+
+    /// <summary>Pause volontaire poussée par l'hôte ; couvre aussi les appels hors hook.</summary>
+    public bool EmissionPaused { get; set; }
+
+    private InputRecovery? _pendingInputRecovery;
+
+    private bool IsEmissionSuspended => EmissionPaused ||
+        _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
+
+    private uint SendInputsWithRecovery(Win32.INPUT[] inputs)
+    {
+        bool numLockBefore = (_api.GetKeyState((int)Win32.VK_NUMLOCK) & 1) != 0;
+        uint sent = SendInputs(inputs);
+        if (sent > 0 && sent < inputs.Length)
+        {
+            _pendingInputRecovery = new InputRecovery(inputs, numLockBefore);
+            FlushInputRecovery(); // Une tentative, jamais un rejeu du texte.
+        }
+        return sent;
+    }
+
+    private bool FlushInputRecovery()
+    {
+        if (_pendingInputRecovery == null) return true;
+        if (IsEmissionSuspended) return false;
+        var recovery = _pendingInputRecovery.Build(_api, IsPhysicalModifierDown);
+        uint sent = SendInputs(recovery);
+        _pendingInputRecovery.MarkDeferred();
+        if (sent != (uint)recovery.Length) return false;
+        _pendingInputRecovery = null;
+        return true;
+    }
+
+    private bool IsPhysicalModifierDown(ushort vk) => (uint)vk switch
+    {
+        VK_LSHIFT => _leftShiftDown,
+        VK_RSHIFT => _rightShiftDown,
+        VK_LCONTROL => _leftCtrlDown,
+        VK_RCONTROL => _rightCtrlDown,
+        VK_LMENU => _leftAltDown,
+        VK_RMENU => _rightAltDown,
+        VK_LWIN => _leftWinDown,
+        VK_RWIN => _rightWinDown,
+        _ => false
+    };
+
+    private uint SendInputs(Win32.INPUT[] inputs) =>
+        IsEmissionSuspended ? 0 : _api.SendInput(inputs);
 
     /// <summary>
     /// Tente de construire la séquence d'INPUT pour produire le caractère via une combo
@@ -964,7 +1080,7 @@ public sealed class KeyMapper
 
     /// <summary>
     /// Détermine si VK + mods produit une dead key sur le layout natif. ToUnicodeEx renvoie
-    /// -1 pour les dead keys. Cache par (vk, mods, hkl). Utilise flags=1 (no consume) pour
+    /// -1 pour les dead keys. Cache par (vk, mods, hkl). Utilise flags=4 (sans modification) pour
     /// ne pas perturber le dead-key state du système.
     /// </summary>
     // Thread affinity: UI thread uniquement (LL hook callback exécute sur le thread qui a
@@ -982,7 +1098,7 @@ public sealed class KeyMapper
         if ((mods & 2) != 0) state[0x11] = 0x80; // Ctrl
         if ((mods & 4) != 0) state[0x12] = 0x80; // Alt
         var buf = new System.Text.StringBuilder(8);
-        int r = Win32.ToUnicodeEx(vk, 0, state, buf, buf.Capacity, 0x01, hkl);
+        int r = _api.ToUnicodeEx(vk, 0, state, buf, buf.Capacity, 0x04, hkl);
         bool isDk = r < 0;
         _isDkCache[key] = isDk;
         return isDk;
@@ -1033,7 +1149,9 @@ public sealed class KeyMapper
     internal void BuildVkComboInputs(byte vk, ushort scanCode, bool needsShift, bool needsAltGr,
         bool needsCtrl, bool needsAlt, IntPtr hkl, List<Win32.INPUT> inputs)
     {
-        bool hasShift = IsShiftDown;
+        bool hasLShift = _leftShiftDown;
+        bool hasRShift = _rightShiftDown;
+        bool hasShift = hasLShift || hasRShift;
         bool hasAltGr = IsAltGrDown;
         bool hasCtrlAlone = IsCtrlDown && !hasAltGr;
         bool hasAltAlone = _leftAltDown && !hasAltGr;
@@ -1054,7 +1172,12 @@ public sealed class KeyMapper
         // MakeVkInput(vk, scan, keyUp) — keyUp=true envoie KEYEVENTF_KEYUP.
         // Si hasX (déjà tenu) et !needsX → on doit RELEASE (keyUp=true).
         // Si !hasX et needsX → on doit PRESS (keyUp=false).
-        if (hasShift != effectiveNeedsShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, hasShift));
+        if (!effectiveNeedsShift)
+        {
+            if (hasLShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, true));
+            if (hasRShift) inputs.Add(MakeVkInput(VK_RSHIFT, 0, true));
+        }
+        else if (!hasShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, false));
         if (needsAltGr != hasAltGr)  inputs.Add(MakeVkInput(VK_RMENU, 0, hasAltGr));
         if (!needsAltGr)
         {
@@ -1074,7 +1197,12 @@ public sealed class KeyMapper
             if (needsCtrl != hasCtrlAlone) inputs.Add(MakeVkInput(VK_LCONTROL, 0, !hasCtrlAlone));
         }
         if (needsAltGr != hasAltGr)  inputs.Add(MakeVkInput(VK_RMENU, 0, !hasAltGr));
-        if (hasShift != effectiveNeedsShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, !hasShift));
+        if (!effectiveNeedsShift)
+        {
+            if (hasRShift) inputs.Add(MakeVkInput(VK_RSHIFT, 0, false));
+            if (hasLShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, false));
+        }
+        else if (!hasShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, true));
     }
 
     /// <summary>
@@ -1095,7 +1223,8 @@ public sealed class KeyMapper
 
         // Snapshot modifs physiques tenus à release temporairement.
         // hasLCtrl exclut le phantom LCtrl émis par le driver quand RAlt (AltGr réel) est tenu.
-        bool hasShift = IsShiftDown;
+        bool hasLShift = _leftShiftDown;
+        bool hasRShift = _rightShiftDown;
         bool hasRAlt  = _rightAltDown;
         bool hasRCtrl = _rightCtrlDown;
         bool hasLAlt  = _leftAltDown;
@@ -1107,7 +1236,8 @@ public sealed class KeyMapper
             inputs.Add(MakeVkInput(Win32.VK_NUMLOCK, 0, false));
             inputs.Add(MakeVkInput(Win32.VK_NUMLOCK, 0, true));
         }
-        if (hasShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, true));
+        if (hasLShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, true));
+        if (hasRShift) inputs.Add(MakeVkInput(VK_RSHIFT, 0, true));
         if (hasRAlt)  inputs.Add(MakeVkInput(VK_RMENU, 0, true));
         if (hasRCtrl) inputs.Add(MakeVkInput(VK_RCONTROL, 0, true));
         if (hasLAlt)  inputs.Add(MakeVkInput(VK_LMENU, 0, true));
@@ -1127,7 +1257,8 @@ public sealed class KeyMapper
         if (hasLAlt)  inputs.Add(MakeVkInput(VK_LMENU, 0, false));
         if (hasRCtrl) inputs.Add(MakeVkInput(VK_RCONTROL, 0, false));
         if (hasRAlt)  inputs.Add(MakeVkInput(VK_RMENU, 0, false));
-        if (hasShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, false));
+        if (hasRShift) inputs.Add(MakeVkInput(VK_RSHIFT, 0, false));
+        if (hasLShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, false));
         if (!numLockOn)
         {
             inputs.Add(MakeVkInput(Win32.VK_NUMLOCK, 0, false));
@@ -1213,7 +1344,7 @@ public sealed class KeyMapper
     /// Détermine si Caps Lock change le caractère produit par ce VK sur le layout natif (hkl).
     /// Pour les lettres A-Z et la rangée numérique en AZERTY → oui. Pour VK_OEM_102 (`<>`),
     /// VK_OEM_PLUS, etc. → généralement non. Détection dynamique via ToUnicodeEx avec et
-    /// sans Caps Lock simulé (flags=1 pour ne pas consommer le dead-key state).
+    /// sans Caps Lock simulé (flags=4 pour préserver l'état des touches mortes).
     /// </summary>
     private bool DoesCapsLockAffectVk(byte vk, IntPtr hkl)
     {
@@ -1227,8 +1358,8 @@ public sealed class KeyMapper
         var bufN = new System.Text.StringBuilder(8);
         var bufC = new System.Text.StringBuilder(8);
 
-        int rN = Win32.ToUnicodeEx(vk, 0, stateNoCaps, bufN, bufN.Capacity, 0x01, hkl);
-        int rC = Win32.ToUnicodeEx(vk, 0, stateWithCaps, bufC, bufC.Capacity, 0x01, hkl);
+        int rN = _api.ToUnicodeEx(vk, 0, stateNoCaps, bufN, bufN.Capacity, 0x04, hkl);
+        int rC = _api.ToUnicodeEx(vk, 0, stateWithCaps, bufC, bufC.Capacity, 0x04, hkl);
 
         bool affects;
         if (rN <= 0 || rC <= 0)

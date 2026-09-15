@@ -349,7 +349,11 @@ sealed class TrayApplication : IDisposable
 
         try
         {
-            _characterSearch = new CharacterSearch(new TextInsertionService(_mapper.EmitText));
+            _characterSearch = new CharacterSearch(new TextInsertionService(_mapper.TryEmitText,
+                canInsert: () => !ShouldBlockHookCompletely && _foregroundMonitor?.IsSecureInput != true,
+                refreshTarget: () => _foregroundMonitor?.Recompute()));
+            _characterSearch.InsertionIncomplete += () =>
+                ShowBalloon(L.Layers_InsertIncompleteTitle, L.Layers_InsertIncompleteBody);
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;
             _characterSearch.FallbackCopied += character =>
                 ShowBalloon(L.Layers_InsertFallbackTitle, L.Layers_InsertFallbackBody(character));
@@ -475,6 +479,7 @@ sealed class TrayApplication : IDisposable
 
     private void ApplyHookState(bool syncWhenActive = false)
     {
+        if (_mapper != null) _mapper.EmissionPaused = IsPaused;
         if (_hook == null) return;
         _hook.PassThroughAll = ShouldBlockHookCompletely;
         // Pause volontaire : garder la détection des raccourcis pour permettre la reprise
@@ -1336,7 +1341,9 @@ sealed class TrayApplication : IDisposable
         // Le separateur qui suit est aussi conditionnel pour eviter un separateur orphelin.
         // On filtre aussi notre propre process (cas où l'utilisateur clique sur le tray
         // depuis notre app : le sous-menu "Compatibilité — AZERTY Global.exe" n'a pas de sens).
-        var fgProc = _foregroundMonitor?.CurrentProcessName;
+        _compatibilityMenuProcessName = _foregroundMonitor?.LastApplicationProcessName;
+        _compatibilityMenuFullPath = _foregroundMonitor?.LastApplicationFullPath;
+        var fgProc = _compatibilityMenuProcessName;
         bool fgIsOwnApp = !string.IsNullOrEmpty(fgProc) &&
             string.Equals(fgProc, ProductIdentity.ExecutableName, StringComparison.OrdinalIgnoreCase);
         var hSubMenu = Win32.CreatePopupMenu();
@@ -2080,8 +2087,7 @@ sealed class TrayApplication : IDisposable
             Win32.GdipDeleteGraphics(g);
             if (Win32.GdipCreateHBITMAPFromBitmap(bmp32, out IntPtr hBmp, 0x00000000) != 0) return IntPtr.Zero;
             // Lignes du masque 1 bpp alignées au mot : 6 octets par ligne à 40 px, pas 5.
-            int maskStride = (size + 15) / 16 * 2;
-            var maskBits = new byte[maskStride * size];
+            var maskBits = new byte[GdiHelpers.MonochromeMaskByteCount(size, size)];
             IntPtr hMask = Win32.CreateBitmap(size, size, 1, 1, maskBits);
             var iconInfo = new Win32.ICONINFO { fIcon = true, hbmMask = hMask, hbmColor = hBmp };
             IntPtr hIcon = Win32.CreateIconIndirect(ref iconInfo);
@@ -2133,7 +2139,8 @@ sealed class TrayApplication : IDisposable
             if (_enabled && ShouldProcessHook)
             {
                 _wasEnabledBeforeAutoDisable = true;
-                _mapper.ClearPassedThroughKeys(); // émet keyup synthétiques avant désactivation
+                // La cible est déjà active : conserver les relâchements jusqu'à la reprise sûre.
+                _mapper.ClearPassedThroughKeys(emitReleases: false);
             }
             _suspendedForCompatibility = true;
             ApplyHookState();
@@ -2192,9 +2199,12 @@ sealed class TrayApplication : IDisposable
     /// Applique un override utilisateur (Auto/forceOn/forceOff) sur le process foreground actuel.
     /// Refuse forceOn sur process anti-cheat (sécurité utilisateur) avec bulle explicative.
     /// </summary>
+    private string? _compatibilityMenuProcessName;
+    private string? _compatibilityMenuFullPath;
+
     private void ApplyCompatibilityOverride(string? mode)
     {
-        var proc = _foregroundMonitor?.CurrentProcessName;
+        var proc = _compatibilityMenuProcessName;
         if (string.IsNullOrEmpty(proc)) return;
 
         if (mode == "forceOn" && GameRegistry.IsRemoteAccessProcess(proc))
@@ -2203,7 +2213,7 @@ sealed class TrayApplication : IDisposable
             return;
         }
 
-        if (mode == "forceOn" && GameRegistry.IsAntiCheatProcess(proc, _foregroundMonitor?.CurrentFullPath))
+        if (mode == "forceOn" && GameRegistry.IsAntiCheatProcess(proc, _compatibilityMenuFullPath))
         {
             ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_AntiCheatRefusedBody);
             return;
@@ -2268,7 +2278,7 @@ sealed class TrayApplication : IDisposable
         Win32.SelectObject(hdc, hBitmapOld);
 
         // Masque (tout noir = tout opaque)
-        var maskBits = new byte[size * size / 8]; // 128 octets, tous à 0
+        var maskBits = new byte[GdiHelpers.MonochromeMaskByteCount(size, size)];
         var hMask = Win32.CreateBitmap(size, size, 1, 1, maskBits);
 
         var iconInfo = new Win32.ICONINFO

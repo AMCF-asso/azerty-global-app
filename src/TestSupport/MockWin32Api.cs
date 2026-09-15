@@ -87,10 +87,30 @@ internal sealed class MockWin32Api : IWin32Api
 
     public IntPtr GetKeyboardLayout(uint threadId) => CurrentHkl;
 
+    public uint? SendInputResult { get; set; }
+    public Queue<uint> SendInputResults { get; } = new();
+    public List<uint> ToUnicodeExFlags { get; } = new();
+    public int DeadKeyState { get; set; }
+    public int ToUnicode(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags)
+    {
+        int result = DeadKeyState;
+        DeadKeyState = 0;
+        return result;
+    }
+
+    public int ToUnicodeEx(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags, IntPtr hkl)
+    {
+        ToUnicodeExFlags.Add(flags);
+        if ((flags & 4) == 0) DeadKeyState = 0;
+        buffer.Clear();
+        buffer.Append(state[0x14] == 0 ? 'a' : 'A');
+        return 1;
+    }
+
     public uint SendInput(Win32.INPUT[] inputs)
     {
         SendInputCalls.Add(inputs.ToArray()); // copy défensif
-        return (uint)inputs.Length;
+        return SendInputResults.Count > 0 ? SendInputResults.Dequeue() : SendInputResult ?? (uint)inputs.Length;
     }
 
     public IntPtr GetForegroundWindow() => ForegroundWindow;

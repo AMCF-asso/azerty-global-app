@@ -8,6 +8,14 @@ namespace AZERTYGlobal;
 /// </summary>
 static class GdiHelpers
 {
+    /// <summary>Taille du masque 1 bpp : chaque ligne est alignée sur un mot de 16 bits.</summary>
+    internal static int MonochromeMaskByteCount(int width, int height)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+        return checked(((width + 15) / 16) * 2 * height);
+    }
+
     internal static void FillSolidRect(IntPtr hdc, Win32.RECT rect, uint color)
     {
         var brush = Win32.CreateSolidBrush(color);

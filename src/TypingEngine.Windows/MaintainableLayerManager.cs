@@ -93,7 +93,28 @@ internal sealed class MaintainableLayerManager
         if (!_enabled)
         {
             ResetTransient();
+            ClearTapHistory();
             _lockedLayers.Clear();
+        }
+        else
+        {
+            // Retirer une option invalide aussi ses états déjà armés, dans tous les processus.
+            foreach (var owner in _lockedLayers.Keys.ToArray())
+                if (!IsLayerEnabled(_lockedLayers[owner])) _lockedLayers.Remove(owner);
+            if (_pressedLayer != null && !IsLayerEnabled(_pressedLayer))
+            {
+                _pressedLayer = null;
+                _pressedScanCode = 0;
+                _pressedOwner = default;
+                _pressedUsedAsChord = false;
+            }
+            if (_oneShotLayer != null && !IsLayerEnabled(_oneShotLayer))
+            {
+                _oneShotLayer = null;
+                _oneShotOwner = default;
+            }
+            if (_lastTapLayer != null && !IsLayerEnabled(_lastTapLayer))
+                ClearTapHistory();
         }
 
         NotifyIfChanged(before);
@@ -235,10 +256,10 @@ internal sealed class MaintainableLayerManager
         if (!_enabled || _secureInput || !identity.IsValid || identity != _foreground)
             return MaintainableLayerState.Inactive;
 
-        if (_oneShotLayer != null && _oneShotOwner == identity)
+        if (_oneShotLayer != null && _oneShotOwner == identity && IsLayerEnabled(_oneShotLayer))
             return new(_oneShotLayer, MaintainableLayerMode.OneShot, identity);
 
-        if (_lockedLayers.TryGetValue(identity, out var locked))
+        if (_lockedLayers.TryGetValue(identity, out var locked) && IsLayerEnabled(locked))
             return new(locked, MaintainableLayerMode.Locked, identity);
 
         return MaintainableLayerState.Inactive;

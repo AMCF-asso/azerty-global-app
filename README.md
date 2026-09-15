@@ -27,7 +27,7 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 - **Interface française et anglaise** — Changement de langue à chaud dans toute l'application
 - **Statistiques locales** — Compteurs agrégés conservés sur l'appareil, sans télémétrie réseau
 - **Défi du jour facultatif** — Rappels et séances courtes, désactivés par défaut
-- **Suspension automatique pour les jeux** — Détection des applications fullscreen et désactivation transparente du remapping
+- **Suspension automatique du remappage** — Pour les jeux protégés reconnus et les applications désactivées dans les réglages de compatibilité
 - **Compatibilité jeux renforcée** — Mode d'émission natif par scancode et désactivation de sécurité pour les anti-cheats connus
 - **Détection de l'application au premier plan** — Pour des comportements contextuels par application
 - **Icône dans la zone de notification** — Activation / désactivation rapide

@@ -181,7 +181,7 @@ Lot E du plan v1.2.0, décision D7. Le fichier est **généré depuis le bundle 
 python scripts/gen-appinstaller.py --bundle "msix\AZERTYGlobal-<version>-amcf-signed.msixbundle" --out "msix\AZERTY_Global.appinstaller"
 ```
 
-Puis relire le fichier produit contre le bundle, ce que fait aussi la vérification de release :
+Puis comparer explicitement le fichier produit au bundle avec la commande ci-dessous. Ce contrôle est distinct de `Verify-Release.ps1` :
 
 ```powershell
 python scripts/gen-appinstaller.py --bundle "msix\AZERTYGlobal-<version>-amcf-signed.msixbundle" --check "msix\AZERTY_Global.appinstaller"
@@ -201,4 +201,4 @@ Publication : deux objets dans le bucket R2 servi par `download.azerty.global`, 
 
 ---
 
-*Dernière mise à jour : 2026-08-20 (v1.2.0 — étape 9, génération du `.appinstaller` du canal AMCF)*
+*Dernière mise à jour : 2026-09-15 (v1.2.0 — contrôle explicite du `.appinstaller` du canal AMCF)*

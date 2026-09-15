@@ -15,6 +15,8 @@ public interface IWin32Api
     short GetKeyState(int vk);
     short GetAsyncKeyState(int vk);
     IntPtr GetKeyboardLayout(uint threadId);
+    int ToUnicode(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags);
+    int ToUnicodeEx(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags, IntPtr hkl);
 
     // Injection de frappes
     uint SendInput(Win32.INPUT[] inputs);

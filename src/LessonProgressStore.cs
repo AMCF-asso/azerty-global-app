@@ -183,8 +183,11 @@ internal sealed class LessonProgressStore
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(_path));
             var root = doc.RootElement;
-            if (!root.TryGetProperty("version", out var version) || version.GetInt32() != CurrentVersion)
-                return;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("version", out var version) ||
+                version.ValueKind != JsonValueKind.Number ||
+                !version.TryGetInt32(out int formatVersion) || formatVersion != CurrentVersion)
+                throw new JsonException("Format de progression non pris en charge ; fichier conservé.");
 
             LastModuleId = ReadString(root, "lastModuleId");
             LastLessonId = ReadString(root, "lastLessonId");
