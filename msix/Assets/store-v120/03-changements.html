@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>AZERTY Global — 5 changements</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", sans-serif;
+    background: #F3F3F3;
+    color: #1B1B1B;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .entete { padding: 70px 120px 0; }
+  .entete h1 { font-size: 64px; font-weight: 600; letter-spacing: -0.02em; }
+  .entete p {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 26px;
+    color: #5D5D5D;
+    margin-top: 16px;
+  }
+
+  .corps { flex: 1; display: flex; gap: 40px; padding: 48px 120px 0; }
+
+  .liste {
+    flex: 1;
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
+    padding: 12px 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    padding: 25px 0;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .item:last-child { border-bottom: none; }
+
+  .rang {
+    width: 44px; height: 44px; border-radius: 6px; flex: none;
+    background: #EFF6FC; color: #0067C0;
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .texte { flex: 1; }
+  .texte h2 { font-size: 30px; font-weight: 600; }
+  .texte p {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; color: #5D5D5D; margin-top: 5px;
+  }
+  .glyphes {
+    font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+    font-size: 34px; font-weight: 600; color: #0067C0;
+    letter-spacing: 0.08em;
+    flex: none; text-align: right; min-width: 200px;
+  }
+
+  .aside {
+    width: 470px;
+    background: #FFFFFF;
+    border: 1px solid #C9DDF2;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
+    padding: 56px 48px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .aside .chiffre { font-size: 128px; font-weight: 600; color: #0067C0; line-height: 1; letter-spacing: -0.03em; }
+  .aside .quoi { font-size: 32px; font-weight: 600; margin-top: 14px; line-height: 1.25; }
+  .aside .note {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 21px; color: #5D5D5D; margin-top: 22px; line-height: 1.45;
+  }
+  .aside .sep { height: 1px; background: #EDEDED; margin: 34px 0; }
+  .aside .invariant {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; color: #1B1B1B; line-height: 1.5;
+  }
+  .aside .invariant b { font-weight: 600; }
+
+  .pied { display: flex; align-items: center; gap: 16px; padding: 42px 120px 50px; }
+  .pied img { width: 40px; height: 40px; }
+  .pied .nom { font-size: 26px; font-weight: 600; }
+  .pied .tag {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; color: #5D5D5D;
+  }
+</style>
+</head>
+<body>
+
+  <div class="entete">
+    <h1>Cinq changements, c'est tout.</h1>
+    <p>Tout le reste de votre clavier est exactement là où vous l'avez laissé.</p>
+  </div>
+
+  <div class="corps">
+
+    <div class="liste">
+      <div class="item">
+        <div class="rang">1</div>
+        <div class="texte">
+          <h2>Majuscules accentuées directes</h2>
+          <p>Verrouillage Majuscule intelligent : il n'affecte plus que les lettres</p>
+        </div>
+        <div class="glyphes">É È Ç À</div>
+      </div>
+      <div class="item">
+        <div class="rang">2</div>
+        <div class="texte">
+          <h2>Point en accès direct</h2>
+          <p>Le point et le point-virgule échangent leurs places</p>
+        </div>
+        <div class="glyphes">.</div>
+      </div>
+      <div class="item">
+        <div class="rang">3</div>
+        <div class="texte">
+          <h2>Arobase et dièse sur la touche ²</h2>
+          <p>Sans AltGr, en haut à gauche</p>
+        </div>
+        <div class="glyphes">@ #</div>
+      </div>
+      <div class="item">
+        <div class="rang">4</div>
+        <div class="texte">
+          <h2>Symboles de programmation sur la rangée de repos</h2>
+          <p>AltGr + D F G H J K, sans quitter la position des doigts</p>
+        </div>
+        <div class="glyphes">{ } [ ] | \</div>
+      </div>
+      <div class="item">
+        <div class="rang">5</div>
+        <div class="texte">
+          <h2>Accents internationaux sur la touche ù</h2>
+          <p>Accent aigu et accent grave, pour plus de 300 langues</p>
+        </div>
+        <div class="glyphes">´ `</div>
+      </div>
+    </div>
+
+    <div class="aside">
+      <div class="chiffre">99 %</div>
+      <div class="quoi">de vos frappes<br>restent identiques</div>
+      <div class="note">Mesuré sur un corpus de français écrit : moins d'une frappe sur cent change de place.</div>
+      <div class="sep"></div>
+      <div class="invariant">A à Z, <b>é è à ç</b> et les chiffres ne bougent pas.<br>Une seule touche est déplacée : <b>ù</b>.</div>
+    </div>
+
+  </div>
+
+  <div class="pied">
+    <img src="../favicon-azerty-global.png" alt="">
+    <span class="nom">AZERTY Global</span>
+    <span class="tag">— L'AZERTY corrigé, pas réinventé.</span>
+  </div>
+
+</body>
+</html>
