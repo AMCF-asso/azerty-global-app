@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>AZERTY Global — confidentialité</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", sans-serif;
+    background: #F3F3F3;
+    color: #1B1B1B;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .entete { padding: 92px 120px 0; }
+  .entete h1 {
+    font-size: 76px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    max-width: 1400px;
+  }
+  .entete p {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 27px;
+    color: #5D5D5D;
+    margin-top: 22px;
+  }
+
+  .corps { flex: 1; display: flex; gap: 40px; padding: 58px 120px 0; }
+
+  .negations {
+    flex: 1;
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
+    padding: 8px 48px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .neg {
+    padding: 30px 0;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .neg:last-child { border-bottom: none; }
+  .neg h2 { font-size: 34px; font-weight: 600; }
+  .neg p {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; color: #5D5D5D; margin-top: 6px;
+  }
+
+  .aside {
+    width: 520px;
+    display: flex; flex-direction: column; gap: 32px;
+  }
+  .carte {
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
+    padding: 40px 44px;
+    flex: 1;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .carte.accent { border-color: #C9DDF2; }
+  .carte .titre { font-size: 40px; font-weight: 600; }
+  .carte.accent .titre { color: #0067C0; }
+  .carte .detail {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; color: #5D5D5D; margin-top: 12px; line-height: 1.45;
+  }
+
+  .pied { display: flex; align-items: center; gap: 16px; padding: 46px 120px 54px; }
+  .pied img { width: 40px; height: 40px; }
+  .pied .nom { font-size: 26px; font-weight: 600; }
+  .pied .tag {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px; color: #5D5D5D;
+  }
+</style>
+</head>
+<body>
+
+  <div class="entete">
+    <h1>Vos frappes ne quittent jamais votre machine.</h1>
+    <p>AZERTY Global lit ce que vous tapez pour le transformer. Il n'en garde rien et n'en envoie rien.</p>
+  </div>
+
+  <div class="corps">
+
+    <div class="negations">
+      <div class="neg">
+        <h2>Aucune télémétrie</h2>
+        <p>Pas de statistique d'usage remontée, pas de traceur, pas de mouchard</p>
+      </div>
+      <div class="neg">
+        <h2>Aucun compte</h2>
+        <p>Rien à créer, rien à connecter, aucune adresse demandée</p>
+      </div>
+      <div class="neg">
+        <h2>Aucun envoi réseau automatique</h2>
+        <p>Les liens ne s'ouvrent que si vous cliquez dessus</p>
+      </div>
+      <div class="neg">
+        <h2>Aucune frappe journalisée</h2>
+        <p>Vos réglages et votre progression restent sur votre appareil</p>
+      </div>
+    </div>
+
+    <div class="aside">
+      <div class="carte accent">
+        <div class="titre">Gratuit</div>
+        <div class="detail">Sans publicité, sans version payante, sans achat intégré. Publié par l'AMCF, association loi 1901.</div>
+      </div>
+      <div class="carte">
+        <div class="titre">Code ouvert</div>
+        <div class="detail">Licence EUPL 1.2. Le code est lisible et vérifiable par n'importe qui, sur GitHub.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pied">
+    <img src="../favicon-azerty-global.png" alt="">
+    <span class="nom">AZERTY Global</span>
+    <span class="tag">— L'AZERTY corrigé, pas réinventé.</span>
+  </div>
+
+</body>
+</html>

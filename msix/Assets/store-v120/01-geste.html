@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>AZERTY Global — le geste</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", sans-serif;
+    background: #F3F3F3;
+    color: #1B1B1B;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .entete { padding: 74px 120px 0; }
+  .entete h1 {
+    font-size: 64px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .entete p {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: #5D5D5D;
+    margin-top: 18px;
+  }
+
+  .corps {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    padding: 52px 120px 0;
+  }
+
+  .colonne {
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
+    padding: 40px 44px 44px;
+    display: flex;
+    flex-direction: column;
+  }
+  .colonne.retenue { border-color: #C9DDF2; }
+
+  .colonne h2 {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: #5D5D5D;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .colonne.retenue h2 { color: #0067C0; }
+  .puce { width: 10px; height: 10px; border-radius: 50%; background: #A0A0A0; flex: none; }
+  .colonne.retenue .puce { background: #0067C0; }
+
+  .lignes { margin-top: 32px; display: flex; flex-direction: column; }
+  .ligne {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 26px 0;
+    border-bottom: 1px solid #F0F0F0;
+  }
+  .ligne:last-child { border-bottom: none; padding-bottom: 0; }
+  .ligne:first-child { padding-top: 0; }
+
+  .gestes { display: flex; align-items: center; gap: 9px; flex: 1; }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 62px;
+    min-width: 62px;
+    padding: 0 18px;
+    border-radius: 6px;
+    background: #FBFBFB;
+    border: 1px solid #D6D6D6;
+    border-bottom-width: 2px;
+    border-bottom-color: #C4C4C4;
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 23px;
+    font-weight: 600;
+    color: #383838;
+    white-space: nowrap;
+  }
+  .retenue kbd {
+    background: #F5FAFF;
+    border-color: #BCD9F5;
+    border-bottom-color: #8FBFEA;
+    color: #0B4E8C;
+  }
+  .plus { font-size: 22px; color: #9A9A9A; }
+  .fleche { font-size: 26px; color: #B4B4B4; padding: 0 4px; }
+
+  .sortie { font-size: 46px; font-weight: 600; width: 72px; text-align: center; flex: none; }
+  .retenue .sortie { color: #0067C0; }
+
+  .compte {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 20px;
+    color: #767676;
+    width: 112px;
+    text-align: right;
+    flex: none;
+  }
+  .retenue .compte { color: #0067C0; font-weight: 600; }
+
+  .pied { display: flex; align-items: center; gap: 16px; padding: 44px 120px 52px; }
+  .pied img { width: 40px; height: 40px; }
+  .pied .nom { font-size: 26px; font-weight: 600; }
+  .pied .tag {
+    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    font-size: 22px;
+    color: #5D5D5D;
+  }
+</style>
+</head>
+<body>
+
+  <div class="entete">
+    <h1>Les mêmes lettres. Moins de gestes.</h1>
+    <p>AZERTY Global garde A à Z, é, è, à et ç à leur place. Il change ce qu'il faut faire pour obtenir le reste.</p>
+  </div>
+
+  <div class="corps">
+
+    <div class="colonne">
+      <h2><span class="puce"></span>AZERTY traditionnel</h2>
+      <div class="lignes">
+        <div class="ligne">
+          <div class="gestes">
+            <kbd>Alt</kbd><span class="plus">+</span><kbd>0</kbd><kbd>2</kbd><kbd>0</kbd><kbd>1</kbd>
+          </div>
+          <span class="fleche">→</span>
+          <div class="sortie">É</div>
+          <div class="compte">5 touches</div>
+        </div>
+        <div class="ligne">
+          <div class="gestes">
+            <kbd>Alt</kbd><span class="plus">+</span><kbd>0</kbd><kbd>1</kbd><kbd>9</kbd><kbd>9</kbd>
+          </div>
+          <span class="fleche">→</span>
+          <div class="sortie">Ç</div>
+          <div class="compte">5 touches</div>
+        </div>
+        <div class="ligne">
+          <div class="gestes">
+            <kbd>Alt</kbd><span class="plus">+</span><kbd>0</kbd><kbd>1</kbd><kbd>7</kbd><kbd>1</kbd>
+          </div>
+          <span class="fleche">→</span>
+          <div class="sortie">«</div>
+          <div class="compte">5 touches</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="colonne retenue">
+      <h2><span class="puce"></span>AZERTY Global</h2>
+      <div class="lignes">
+        <div class="ligne">
+          <div class="gestes">
+            <kbd>Verr. Maj</kbd><span class="plus">+</span><kbd>é</kbd>
+          </div>
+          <span class="fleche">→</span>
+          <div class="sortie">É</div>
+          <div class="compte">2 touches</div>
+        </div>
+        <div class="ligne">
+          <div class="gestes">
+            <kbd>Verr. Maj</kbd><span class="plus">+</span><kbd>ç</kbd>
+          </div>
+          <span class="fleche">→</span>
+          <div class="sortie">Ç</div>
+          <div class="compte">2 touches</div>
+        </div>
+        <div class="ligne">
+          <div class="gestes">
+            <kbd>AltGr</kbd><span class="plus">+</span><kbd>W</kbd>
+          </div>
+          <span class="fleche">→</span>
+          <div class="sortie">«</div>
+          <div class="compte">2 touches</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pied">
+    <img src="../favicon-azerty-global.png" alt="">
+    <span class="nom">AZERTY Global</span>
+    <span class="tag">— L'AZERTY corrigé, pas réinventé.</span>
+  </div>
+
+</body>
+</html>

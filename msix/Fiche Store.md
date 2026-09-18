@@ -21,7 +21,7 @@ AZERTY Global est l'AZERTY corrigé : les lettres A à Z ainsi que é, è, à et
 Installez l'application, activez-la — c'est tout. Aucun droit administrateur requis.
 
 
-🔤 5 AMÉLIORATIONS, 99% DES HABITUDES PRÉSERVÉES
+🔤 5 AMÉLIORATIONS, 99 % DES FRAPPES PRÉSERVÉES
 
 1. Verrouillage Majuscule intelligent — n'affecte que les lettres → É, È, Ç, À en un appui
 2. Point en accès direct — point et point-virgule échangés
