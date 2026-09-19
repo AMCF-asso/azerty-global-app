@@ -152,6 +152,12 @@ internal static partial class L
     /// <summary>Titre du sous-menu des couches maintenables (décision S2-3 du 2026-09-02).</summary>
     public static string Tray_MenuLayers => T("Couches", "Layers");
 
+    /// <summary>Titre du sous-menu d'apprentissage (menu court du 2026-09-19).</summary>
+    public static string Tray_MenuLearn => T("Apprendre", "Learn");
+
+    /// <summary>Titre du sous-menu d'informations et de liens (menu court du 2026-09-19).</summary>
+    public static string Tray_MenuAboutHelp => T("À propos et aide", "About and help");
+
     /// <summary>Dernière entrée du sous-menu Couches : ouvre la fenêtre complète.</summary>
     public static string Tray_MenuLayersConfigure => T("Configurer…", "Configure…");
     public static string Tray_MenuPrivacySecurity => T("Confidentialité && sécurité", "Privacy && security");
