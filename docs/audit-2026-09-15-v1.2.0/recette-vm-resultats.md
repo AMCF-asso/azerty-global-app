@@ -20,7 +20,8 @@ rendu** : une ligne par scénario, remplie au moment de l'exécution.
 | SHA-256 exe x64 | `582E3A750A23D3C02F4E35ED89E477CAC1775B334E4DD29C2F792F16F2AEA1B6` |
 | SHA-256 exe arm64 | `C46A053C03B6871B057FDEA64A36827C4DF8C5AA22D7DE1E64BF762A10DC9A76` |
 | Commit | `c1da0d6` (branche `release/1.2.0-notation-store`) |
-| Sideload 1.3.0 | `Archives/local-signing/1.3.0.0/AZERTYGlobal-1.3.0.0-local-signed-20260919.msixbundle` — 6 806 449 o, SHA-256 `7FAF5B169605B86393EFFA9800C7BCD29FD8D561A65AB1A119FBCE767AF790E0` |
+| Sideload 1.3.0 **en vigueur** | `Archives/local-signing/1.3.0.0/AZERTYGlobal-1.3.0.0-local-signed-20260919b.msixbundle` — 6 806 578 o, SHA-256 `6DCEB741B7F1199C2128AEFA97846C1DEA9B8033B352597A4E5416ABBD5876DA`, commit `17382e0`. ⛔ C'est celui-ci qui porte le libellé d'accueil corrigé |
+| Sideload 1.3.0 (périmé) | `…-local-signed-20260919.msixbundle` — 6 806 449 o, SHA-256 `7FAF5B169605B86393EFFA9800C7BCD29FD8D561A65AB1A119FBCE767AF790E0`. Même identité **et même version** que le précédent : réinstaller exige `Remove-AppxPackage` d'abord, sinon `0x80073CFB` |
 | Paquets 1.2.0 (périmés) | `Archives/local-signing/1.2.0.0/` — conservés, ne plus installer |
 | Sideload 1.1.0 | `Archives/local-signing/1.1.0.0/AZERTYGlobal-1.1.0.0-resigned-20260919.msixbundle` |
 | Certificat | `8086B18C82671DB12B366A60CD55D8EA3DB67DF0`, expire le 2027-08-18 |
@@ -47,11 +48,11 @@ signature ne change pas.
 
 | ID | Résultat | Date | Preuve / note |
 |---|---|---|---|
-| VM-01 | **VERT** | 2026-09-19 | Instantané `propre-win11-25h2-20260919` appliqué, certificat importé (voir la prépa, étape 2), `Add-AppxPackage` du sideload 1.3.0.0 accepté. Lancement depuis le menu Démarrer : **une seule** instance, icône présente dans la zone de notification, fenêtre d’accueil lisible et complète, **v1.3.0** affichée dans son en-tête. Zone de notification ouverte puis Edge : `$env:LOCALAPPDATA\AZERTY Global\error.log` **n’existe pas** — écart 1 confirmé clos sur le paquet de release, plus seulement sur le paquet de diagnostic. ⛔ Un défaut de libellé relevé au passage, corrigé après coup, voir « Écart 3 » |
+| VM-01 | **VERT** | 2026-09-19 | Instantané `propre-win11-25h2-20260919` appliqué, certificat importé (voir la prépa, étape 2), `Add-AppxPackage` du sideload 1.3.0.0 accepté. Lancement depuis le menu Démarrer : **une seule** instance, icône présente dans la zone de notification, fenêtre d’accueil lisible et complète, **v1.3.0** affichée dans son en-tête. ⚠️ **Preuve corrigée le 2026-09-19 à 16:51.** Le premier contrôle visait `$env:LOCALAPPDATA\AZERTY Global\error.log` et rendait `False` : **mauvais chemin**. L'app est en MSIX, ses écritures sont redirigées vers `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`. Le fichier **existe** à cet endroit, et son contenu ne comporte **aucune erreur** — uniquement des événements de compatibilité (`UserOverrideApplied`, `CompatMode`), que ce même fichier reçoit par conception. Écart 1 donc bien clos sur le paquet de release, mais pour cette raison-là. ⛔ Un défaut de libellé relevé au passage, corrigé après coup, voir « Écart 3 » |
 | VM-02 | **PARTIEL** | 2026-09-19 | Volet identité **vert** : `Add-AppxPackage` de la 1.2.0 par-dessus la 1.1.0 à 12:28, `Get-AppxPackage` rend **une seule** entrée — `AZERTYGlobal.AZERTYGlobal_1.2.0.0_x64__w9kghr08zmhbg`, X64. Remplacement, pas installation parallèle. ⛔ Reste dû : conservation des réglages, raccourcis, statistiques et progression, et **un seul** démarrage actif. Voir limite 1 pour ce que ce test ne couvre pas |
-| VM-03 | NON TESTÉ | | |
-| VM-04 | NON TESTÉ | | |
-| VM-05 | NON TESTÉ | | |
+| VM-03 | **VERT** | 2026-09-19 | Paquet b, `StartupTask` MSIX `AZERTYGlobalStartup` (⛔ pas une clé `Run` : c'est Windows qui tranche, pas l'app). État lu à chaque étape dans `HKCU\…\AppModel\SystemAppData\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\AZERTYGlobalStartup`. **(a) Refus initial** : `State 0`, `UserEnabledStartupOnce 0` — l'installation n'active rien, conforme à `Enabled="false"` du manifeste. **(b) Accord depuis l'app** : `State 2`, `UserEnabledStartupOnce 1`, AZERTY Global **Activé** dans Paramètres Windows → Applications → Démarrage. **(c) Refus imposé par Windows** — le vrai piège, l'app rejoue `Set(true)` à chaque fermeture : après bascule sur Désactivé, quitter l'app, la relancer et la requitter, `State` reste à **1** avec `LastDisabledTime` posé, et la case « Lancer au démarrage de Windows » de l'app **s'est décochée d'elle-même** — l'interface reflète le refus au lieu de mentir. **(d) Fermeture/réouverture de session** : refus → aucune icône AG au retour ; réactivation depuis Paramètres Windows puis nouvelle session → une seule icône AG, apparue seule. ✅ L'état réel Windows correspond au choix dans les quatre cas, aucun consentement refusé contourné |
+| VM-04 | **VERT** | 2026-09-19 | Paquet b, Bloc-notes Windows 11 (texte brut, UTF-8, CRLF). Les cinq changements saisis d'affilée rendent `éèçàÉÈÇÀ.;@#(){}[]|\ˆ¨~` — **23 caractères**, compteur du Bloc-notes à 23, `Ln 1, Col 24` : aucun caractère ajouté, perdu ni répété, et les quatre majuscules accentuées sortent bien du Verr. Maj. intelligent. Touches mortes `ˆ ¨ ~` posées en fin de ligne sans composition parasite. ⚠️ Au passage : les parenthèses `(` `)` ne sont **pas** en AltGr sur la rangée de repos — la carte 4 de l'accueil n'annonce que `{ } [ ] | \`. Erreur de consigne de la session, pas un défaut du produit. ✅ Volet **navigateur** : même séquence dans la barre d'adresse Edge (Chromium), rendu `éèçàÉÈÇÀ.;@#{}[]|\^¨~` — identique, aucun doublon ni caractère avalé par le rendu Chromium |
+| VM-05 | **PARTIEL** | 2026-09-19 | Paquet b. **Chemin normal : vert.** Bloc-notes, `^a ^e ^espace` → `âê^`, `¨e ¨i ¨espace` → `ëï¨`, `` `a `u `espace `` → `` àù` ``, puis les mêmes avec Verr. Maj. → `ÂÊ^ ËÏ¨ ÀÙ``. Espace rend bien la touche morte seule. Sondes AG120-01 passées : `^` + **Maj+a** → `Â`, `¨` + **Maj+e** → `Ë`, et **AltGr** relâché juste avant une touche morte → `{â` — aucun modificateur résiduel, aucune touche morte fantôme. Tilde : `~n` → `ñ`, `~espace` → `~`. ⛔ **Volet « compatibilité native » (forceOn) : non concluant, voir Écart 5** |
 | VM-06 | NON TESTÉ | | |
 | VM-07 | NON TESTÉ | | |
 | VM-08 | NON TESTÉ | | |
@@ -280,9 +281,69 @@ raisonnement, le mot anglais portait le même glissement.
 ⚠️ La chaîne n’apparaît qu’à cet endroit ; la fiche Store ne reprend pas la
 formule. ⛔ Aucun test ne verrouille ce libellé.
 
-⚠️ **Le paquet 1.3.0.0 testé en VM porte encore l’ancien texte.** Il faut
-republier, réempaqueter, relancer `Verify-Release.ps1`, resigner, et refaire
-passer l’accueil.
+✅ **Clos le 2026-09-19 à 16:18.** Chaîne republiée, réempaquetée,
+`Verify-Release.ps1` vert, resignée en `…-20260919b`. Antoine a désinstallé puis
+réinstallé dans la VM — sur le même état que VM-01, sans restaurer d'instantané —
+et l'étape 1 de l'accueil affiche « 99 % de vos **frappes** préservées ».
+VM-01 reste **VERT** : le paquet b ne diffère du précédent que par ce libellé.
+
+### Écart 4 — la fenêtre Paramètres est plus haute que l'écran
+
+Relevé le 2026-09-19 à 16:41 dans la VM (Windows 11 25H2, affichage Hyper-V).
+La fenêtre Paramètres ne tient pas dans la hauteur disponible, **n'a pas de
+défilement** et ne se redimensionne pas utilement. Le troisième bouton radio de
+la section « Apps suspendues », *Forcer désactivation*, est hors écran et
+inatteignable à la souris.
+
+⛔ Conséquence concrète : sur un portable 1366×768, un utilisateur qui a posé
+*Forcer compatibilité jeu* sur une application **ne peut plus revenir en
+arrière** par la souris. Contournement clavier : sélectionner un radio visible
+puis parcourir le groupe aux flèches.
+
+⚠️ La refonte déjà arbitrée pour la v2.0.0 (Paramètres à 3 onglets,
+`operations/refonte-app/2026-08-28-audit-refonte-ui.md:784`) supprime la cause.
+La question ouverte est de savoir si la v1.3.0 part au Store avec ce défaut.
+
+⚠️ Deux frictions de la même section, mineures et non bloquantes : **Ajouter…**
+ouvre un sélecteur de fichiers `*.exe` alors que le réglage porte sur un **nom
+de processus** — l'utilisateur doit aller chercher `notepad.exe` dans
+`System32` — et une application ajoutée arrive **par défaut en « désactivée »**
+sans que rien ne l'annonce.
+
+### Écart 5 — mode « Forcer compatibilité jeu » : caractères perdus, mesures contradictoires
+
+⛔ **Ouvert. Bloquant tant qu'il n'est pas expliqué.** Relevé le 2026-09-19
+entre 16:40 et 16:55 sur le paquet b, `notepad.exe` puis `msedge.exe` en
+`forceOn` (`config.json` relu : `"compatibility": { "Notepad.exe": "forceOn" }`).
+
+Ce qui a été mesuré, dans l'ordre :
+
+1. Bloc-notes en `forceOn` : `^a`, `@` et `²` **ne produisent rien** ; la frappe
+   est avalée, pas remplacée par un caractère faux.
+2. Bloc-notes, seconde passe : `²`, `a` et `é` sortent — tous atteignables
+   **directement** sur le clavier natif. `^a` et `@` restent muets ; tous deux
+   exigent un repli (Alt+code pour `â`, combo **AltGr** pour `@`).
+3. Edge en `forceOn` : `^a` rend `a` — la touche morte est **perdue**, la lettre
+   est gardée. `²` sort.
+4. ⚠️ **Puis, en revenant dans Edge sans rien changer, `â`, `@` et `é` sortent
+   correctement.** Le même geste dans la même application donne deux résultats.
+
+Le comportement dépend donc de l'instant, pas seulement de la cible : une piste
+est la fraîcheur du snapshot `ForegroundMonitor` après un changement de fenêtre.
+
+✅ Ce qui est **écarté** par lecture du code, pas par supposition :
+- l'app ne s'auto-consomme pas ses injections — tous les `INPUT` portent
+  `KeyboardHook.INJECTED_FLAG` (`KeyMapper.cs:933, 1138, 1390, 1406`) et le hook
+  les ignore (`KeyboardHook.cs:157`) ;
+- le mode est bien actif : `error.log` journalise
+  `CompatMode: Default → NativeCombo` puis le retour, avec `hasFg=True` ;
+- l'override utilisateur est bien lu (`ForegroundMonitor.cs:258`).
+
+⛔ **À reprendre dans une session de débogage dédiée**, pas au fil de la recette :
+il faut une reproduction propre — un seul processus en `forceOn`, application
+relancée, aucun passage par la fenêtre Paramètres entre le réglage et la frappe —
+et les statistiques d'émission de niveau 2 (`compatibilityDebugLog`, déjà activé
+dans la VM) relevées après sortie de l'application.
 
 ## Porte de décision
 
