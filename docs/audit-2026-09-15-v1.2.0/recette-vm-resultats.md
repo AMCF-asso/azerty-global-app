@@ -70,7 +70,7 @@ signature ne change pas.
 | RET-01 | NON TESTÉ | | |
 | RET-02 | NON TESTÉ | | |
 | RET-03 | NON TESTÉ | | |
-| RET-04 | NON TESTÉ | | avis intégré Store — hors ligne et indisponible compris |
+| RET-04 | **NON TESTÉ — décidé** | 2026-09-19 | ⛔ Hors périmètre de cette campagne : la VM est installée avec un **compte local**, sans compte Microsoft (décision d'Antoine du 2026-09-19). L'avis intégré Store ne peut pas être exercé sans session Store. À rouvrir après publication, sur poste réel |
 | RET-05 | NON TESTÉ | | active le CLSID de toast vérifié au verrou 4 |
 | RET-06 | NON TESTÉ | | dépend d'un état 1.1 réel, donc de VM-02 |
 | RET-07 | NON TESTÉ | | |
@@ -79,6 +79,16 @@ signature ne change pas.
 
 ## Préparation de la VM
 
+⛔ **État au 2026-09-19 : `AZERTY-Test` est une coquille vide.** Le VHDX pèse
+4 194 304 octets (4 Mo) pour 127 Go alloués — disque dynamique créé, jamais
+démarré. Aucun système, aucun instantané. Rien de la recette ne peut commencer
+avant l'installation de Windows 11.
+
+Choix arrêtés le 2026-09-19 : **ISO officiel Microsoft** (pas l'image dev
+Quick Create, qui embarque de l'outillage et expire à 90 jours) et **compte
+local** (d'où RET-04 clos en NON TESTÉ ci-dessus).
+
+0. Installer Windows 11 depuis l'ISO officiel, compte local.
 1. Démarrer `AZERTY-Test`, vérifier l'édition et la version de Windows, la
    noter ici.
 2. **Instantané « propre »** avant toute installation.
