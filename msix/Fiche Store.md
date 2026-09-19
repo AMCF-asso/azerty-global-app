@@ -76,6 +76,11 @@ Site web : https://azerty.global
 
 ### Nouveautés de cette version (notes de version)
 
+Version 1.3.0 :
+ • Le menu de la zone de notification passe de dix-huit à douze lignes. « Apprendre » regroupe les Leçons, le Défi du jour et la fenêtre d’accueil ; « À propos et aide » regroupe la confidentialité, les ressources, les retours, la notation et À propos. Aucune fonction n’a été retirée.
+ • Les couches grecque, cyrillique et scientifique ont chacune leur entrée à cocher dans le sous-menu « Couches ». Cocher la première active le remapping des couches, décocher la dernière le désactive.
+ • Correction : ouvrir la zone de notification ou cliquer la barre des tâches ne suspend plus le remapping par précaution. La bulle d’avertissement qui pouvait recouvrir l’icône de l’application ne se déclenche plus sur ce geste.
+
 Version 1.2.0 :
  • En option : verrouillez une touche morte d'alphabet (grec, cyrillique, scientifique) dans une application d'un double appui. Activation depuis le menu.
  • La recherche de caractères insère désormais le caractère directement dans votre document.
@@ -209,6 +214,11 @@ Licensed under EUPL 1.2 — source code available on GitHub.
 Website: https://azerty.global
 
 ### What's new (release notes)
+
+Version 1.3.0:
+ • The notification area menu goes from eighteen lines down to twelve. “Learn” groups Lessons, the Daily challenge and the welcome window; “About and help” groups privacy, resources, feedback, rating and About. No feature was removed.
+ • The Greek, Cyrillic and scientific layers each get their own checkable entry under the “Layers” submenu. Ticking the first one turns layer remapping on; unticking the last one turns it off.
+ • Fixed: opening the notification area or clicking the taskbar no longer suspends remapping as a precaution. The warning balloon that could cover the app icon no longer appears on that gesture.
 
 Version 1.2.0:
  • Optional: lock an alphabet dead key (Greek, Cyrillic, scientific) inside an application with a double press. Opt-in from the menu.
