@@ -113,7 +113,13 @@ internal sealed class MockWin32Api : IWin32Api
         return SendInputResults.Count > 0 ? SendInputResults.Dequeue() : SendInputResult ?? (uint)inputs.Length;
     }
 
-    public IntPtr GetForegroundWindow() => ForegroundWindow;
+    /// <summary>Fenêtres rendues par les prochains appels à GetForegroundWindow, dans l'ordre.
+    /// Vide, le mock rend <see cref="ForegroundWindow"/>. Permet de reproduire une fenêtre
+    /// qui change entre deux lectures d'un même Recompute.</summary>
+    public Queue<IntPtr> ForegroundWindowScript { get; } = new();
+
+    public IntPtr GetForegroundWindow() =>
+        ForegroundWindowScript.Count > 0 ? ForegroundWindowScript.Dequeue() : ForegroundWindow;
 
     public bool TryGetForegroundProcess(out string? processName, out string? fullPath, out IntPtr hkl, out uint pid)
     {
