@@ -1327,15 +1327,20 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
         // ── Apprendre ───────────────────────────────────────────────
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_EXERCISES, L.Tray_MenuLessons);
+        // Replié en sous-menu le 2026-09-19 : le menu à 18 lignes restait trop long à lire.
+        // ⚠️ Le défi du jour perd la visibilité immédiate que lui donnait la décision du
+        // 2026-08-16 — arbitrage assumé par Antoine au profit de la lisibilité du menu.
+        var hLearnMenu = Win32.CreatePopupMenu();
+        Win32.AppendMenuW(hLearnMenu, MF_STRING, IDM_EXERCISES, L.Tray_MenuLessons);
         // Défi du jour : toujours visible depuis la décision du 2026-08-16. L'entrée était
         // conditionnée à `trainingEnabled`, qui vaut false par défaut : sur une installation
         // neuve la fonction n'existait donc pas visuellement, alors que le défi commun est
         // le seul contenu identique pour tous les utilisateurs — le seul comparable, et le
         // seul partageable. L'opt-in ne gouverne plus que les rappels d'entraînement, qui
         // sont des notifications et relèvent d'un consentement distinct.
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_CHALLENGE, L.Tray_MenuChallenge);
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_ONBOARDING, L.Tray_MenuWelcomeWindow);
+        Win32.AppendMenuW(hLearnMenu, MF_STRING, IDM_CHALLENGE, L.Tray_MenuChallenge);
+        Win32.AppendMenuW(hLearnMenu, MF_STRING, IDM_ONBOARDING, L.Tray_MenuWelcomeWindow);
+        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLearnMenu, L.Tray_MenuLearn);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
         // ── Réglages et infos ───────────────────────────────────────
@@ -1384,8 +1389,13 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hSubMenu, MF_STRING, IDM_COMPAT_INFO, L.Tray_MenuCompatInfo);
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hSubMenu, L.Tray_MenuAppCompat);
 
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_STATS, L.Stats_Title);
+
+        // À propos et aide ▸ (2026-09-19) : confidentialité, ressources, retours, notation
+        // et « À propos », soit cinq lignes de premier niveau, tiennent désormais sous une
+        // seule. Rien n'est retiré : tout reste atteignable en un clic de plus.
+        var hAboutHelpMenu = Win32.CreatePopupMenu();
+        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
 
         // Ressources et liens externes
         var hResourcesMenu = Win32.CreatePopupMenu();
@@ -1394,21 +1404,22 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_GUIDE_CHANGES, L.Tray_MenuFiveChanges);
         Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_CARDS, L.Tray_MenuKeyboardCards);
         Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_RELEASE_NOTES, L.Tray_MenuWhatsNew);
-        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
+        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
 
         var hFeedbackMenu = Win32.CreatePopupMenu();
         var channel = AppChannel.Current;
         var externalLinksPolicy = PolicyManager.Current.ExternalLinks;
         foreach (int id in FeedbackMenuEntries(channel, externalLinksPolicy))
             Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
-        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
+        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
         // « Noter sur le Microsoft Store » au premier niveau, sous « Retours et soutien »
         // (S2-6, confirmé le 2026-09-02) : l'action la plus utile au projet, en un clic.
         // Absente du canal sobre : rien n'y renvoie vers le Store (D3).
         foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy))
-            Win32.AppendMenuW(hMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
 
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, L.Tray_MenuAbout);
+        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_ABOUT, L.Tray_MenuAbout);
+        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hAboutHelpMenu, L.Tray_MenuAboutHelp);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
 #if DEBUG
