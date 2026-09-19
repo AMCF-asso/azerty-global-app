@@ -177,7 +177,15 @@ public sealed class ForegroundMonitor : IDisposable
                 string.Equals(processName, "StartMenuExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "ShellExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "TextInputHost.exe", StringComparison.OrdinalIgnoreCase));
-            var resolved = IsTrackingAvailable && window == _api.GetForegroundWindow()
+            // Recette VM du 2026-09-19 : une fenêtre qui change entre les deux lectures
+            // n'est pas une identité inconnue, c'est un événement foreground de plus, qui
+            // déclenchera son propre Recompute. Suspendre ici affichait une bulle de
+            // précaution au moindre clic sur la barre des tâches (mesuré : explorer.exe
+            // puis ShellExperienceHost.exe, six occurrences en trois minutes), et cette
+            // bulle masque l'icône du tray. La sécurité de frappe reste entière :
+            // GetEmitContext recontrôle la fenêtre à chaque émission et refuse d'émettre
+            // dès qu'elle a bougé. Seul un suivi réellement indisponible suspend.
+            var resolved = IsTrackingAvailable
                 ? ResolveState(processName, fullPath, pid, hasFg)
                 : (Mode: CompatibilityMode.DisabledAntiCheat, Reason: CompatibilitySuspendReason.UnknownForeground);
             CompatibilityMode mode = resolved.Mode;
