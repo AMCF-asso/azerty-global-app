@@ -14,8 +14,12 @@ $fichePath = Join-Path $msixDir 'Fiche Store.md'
 $publicationPath = Join-Path $projectRoot 'Publication Microsoft Store.md'
 $todoPath = Join-Path $projectRoot 'TO-DO.md'
 $changelogPath = Join-Path $projectRoot 'Changelog.md'
-$contextAppPathCandidate = Join-Path $projectRoot '..\..\..\.agent\CONTEXT_APP_MICROSOFT_STORE.md'
-$contextProjectPathCandidate = Join-Path $projectRoot '..\..\..\.agent\CONTEXT_AZERTY_GLOBAL.md'
+# Profondeur corrigee le 2026-09-19 : la migration en bundle wiki a descendu le
+# composant d'un niveau (projects/azerty-global/components/microsoft-store), et
+# ces deux chemins pointaient encore sur projects/.agent, qui n'existe pas. Les
+# deux controles de version passaient donc en WARNING silencieux a chaque release.
+$contextAppPathCandidate = Join-Path $projectRoot '..\..\..\..\.agent\CONTEXT_APP_MICROSOFT_STORE.md'
+$contextProjectPathCandidate = Join-Path $projectRoot '..\..\..\..\.agent\CONTEXT_AZERTY_GLOBAL.md'
 $contextAppPath = if (Test-Path $contextAppPathCandidate) { (Resolve-Path $contextAppPathCandidate).Path } else { $null }
 $contextProjectPath = if (Test-Path $contextProjectPathCandidate) { (Resolve-Path $contextProjectPathCandidate).Path } else { $null }
 $bundlePath = Join-Path $msixDir 'AZERTYGlobal.msixbundle'
