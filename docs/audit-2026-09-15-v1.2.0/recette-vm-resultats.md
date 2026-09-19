@@ -53,19 +53,19 @@ signature ne change pas.
 | VM-03 | **VERT** | 2026-09-19 | Paquet b, `StartupTask` MSIX `AZERTYGlobalStartup` (⛔ pas une clé `Run` : c'est Windows qui tranche, pas l'app). État lu à chaque étape dans `HKCU\…\AppModel\SystemAppData\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\AZERTYGlobalStartup`. **(a) Refus initial** : `State 0`, `UserEnabledStartupOnce 0` — l'installation n'active rien, conforme à `Enabled="false"` du manifeste. **(b) Accord depuis l'app** : `State 2`, `UserEnabledStartupOnce 1`, AZERTY Global **Activé** dans Paramètres Windows → Applications → Démarrage. **(c) Refus imposé par Windows** — le vrai piège, l'app rejoue `Set(true)` à chaque fermeture : après bascule sur Désactivé, quitter l'app, la relancer et la requitter, `State` reste à **1** avec `LastDisabledTime` posé, et la case « Lancer au démarrage de Windows » de l'app **s'est décochée d'elle-même** — l'interface reflète le refus au lieu de mentir. **(d) Fermeture/réouverture de session** : refus → aucune icône AG au retour ; réactivation depuis Paramètres Windows puis nouvelle session → une seule icône AG, apparue seule. ✅ L'état réel Windows correspond au choix dans les quatre cas, aucun consentement refusé contourné |
 | VM-04 | **VERT** | 2026-09-19 | Paquet b, Bloc-notes Windows 11 (texte brut, UTF-8, CRLF). Les cinq changements saisis d'affilée rendent `éèçàÉÈÇÀ.;@#(){}[]|\ˆ¨~` — **23 caractères**, compteur du Bloc-notes à 23, `Ln 1, Col 24` : aucun caractère ajouté, perdu ni répété, et les quatre majuscules accentuées sortent bien du Verr. Maj. intelligent. Touches mortes `ˆ ¨ ~` posées en fin de ligne sans composition parasite. ⚠️ Au passage : les parenthèses `(` `)` ne sont **pas** en AltGr sur la rangée de repos — la carte 4 de l'accueil n'annonce que `{ } [ ] | \`. Erreur de consigne de la session, pas un défaut du produit. ✅ Volet **navigateur** : même séquence dans la barre d'adresse Edge (Chromium), rendu `éèçàÉÈÇÀ.;@#{}[]|\^¨~` — identique, aucun doublon ni caractère avalé par le rendu Chromium |
 | VM-05 | **PARTIEL** | 2026-09-19 | Paquet b. **Chemin normal : vert.** Bloc-notes, `^a ^e ^espace` → `âê^`, `¨e ¨i ¨espace` → `ëï¨`, `` `a `u `espace `` → `` àù` ``, puis les mêmes avec Verr. Maj. → `ÂÊ^ ËÏ¨ ÀÙ``. Espace rend bien la touche morte seule. Sondes AG120-01 passées : `^` + **Maj+a** → `Â`, `¨` + **Maj+e** → `Ë`, et **AltGr** relâché juste avant une touche morte → `{â` — aucun modificateur résiduel, aucune touche morte fantôme. Tilde : `~n` → `ñ`, `~espace` → `~`. ⛔ **Volet « compatibilité native » (forceOn) : non concluant, voir Écart 5** |
-| VM-06 | NON TESTÉ | | |
-| VM-07 | NON TESTÉ | | |
-| VM-08 | NON TESTÉ | | |
-| VM-09 | NON TESTÉ | | |
-| VM-10 | NON TESTÉ | | |
-| VM-11 | NON TESTÉ | | |
-| VM-12 | NON TESTÉ | | |
-| VM-13 | NON TESTÉ | | |
+| VM-06 | **VERT** | 2026-09-19 | Paquet b, disposition `FRA US` (HKL `040C:0409`), AZERTY Global **activé**, Bloc-notes atteint à la souris pour neutraliser l'Écart 7. `Ctrl` + position A (D01) **sélectionne tout** : le remappage des raccourcis traverse une disposition Windows non française. Puis `Ctrl` + D01 maintenue, **`Alt` enfoncé avant le relâchement**, tout relâché : `abcdef` sort intact et `Maj+E00` rend `#` — **aucune touche virtuelle laissée enfoncée**, aucun menu ouvert, aucun modificateur collé (AG120-02). ⚠️ **Première lecture de 17:17 corrigée** : la ligne était ROUGE « non exécutable » à cause de l'Écart 6, désormais **non reproduit**. ⚠️ Un faux départ du rejeu a ouvert une fenêtre de connexion Microsoft : mesuré app **désactivée**, donc frappe native `Ctrl+Q` sous US — hors scénario |
+| VM-07 | **PARTIEL** | 2026-09-19 | Paquet b, disposition Français (France). **Chemin normal : vert.** Bloc-notes, touche point d'AZERTY Global frappée successivement avec Maj gauche, Maj droite, puis les deux Maj : `;;;`. Frappe de contrôle immédiate `abcdef` → `abcdef` intact, donc aucun modificateur resté artificiellement enfoncé (AG120-03). ⛔ **Volet « compatibilité native » (mode `NativeCombo`, réglage `forceOn`) non exécuté : même chemin que l'Écart 5, hors périmètre de cette session** |
+| VM-08 | NON TESTÉ | 2026-09-19 | ⛔ **Non exécutable hors session de débogage de l'Écart 5.** Le repli Alt+code n'est atteignable qu'en mode `NativeCombo` (`KeyMapper.cs:974-980` : en mode par défaut, `EmitText` passe toujours par `BuildUnicodeInputs`, qui ne touche ni au pavé numérique ni à NumLock). Le scénario, NumLock compris, n'a donc de sens que sur le chemin `forceOn` — celui de l'Écart 5 |
+| VM-09 | **VERT** | 2026-09-19 | Paquet b, disposition Français (France). Couches disponibles : **grec, cyrillique, scientifique**. Couche grecque cochée dans Paramètres puis verrouillée par **double appui** sur sa combinaison : frappe grecque continue sur plusieurs lettres d'affilée. Couche **décochée dans Paramètres pendant qu'elle est verrouillée** → retour au latin **immédiat** au Bloc-notes, sans relance de l'application. Couche recochée puis frappe **sans refaire le double appui** → latin : aucun ancien verrou ne ressuscite (AG120-04). ⚠️ Témoin sur la seule couche grecque : les trois couches passent par le même gestionnaire (`MaintainableLayers`), grec vaut donc témoin — cyrillique et scientifique non rejouées |
+| VM-10 | **VERT** | 2026-09-19 | Paquet b, disposition Français (France). Couche grecque verrouillée au Bloc-notes, puis barre de recherche de l'Explorateur, puis recherche Windows, puis retour au Bloc-notes : **grec, latin, latin, grec**. Le verrou appartient à la cible, pas à l'application (AG120-05). Volet tray : couche verrouillée → **clic gauche sur l'icône du tray** puis Échap → retour au Bloc-notes, **grec inchangé**. ⚠️ Ce geste est celui de l'**Écart 1** (ouverture de la zone de notification suspendait le remapping) : **non reproduit** sur le paquet 1.3.0 |
+| VM-11 | **VERT** | 2026-09-19 | Paquet b. Recherche de caractères ouverte avec des résultats affichés, puis désactivation de l'application par les **deux** chemins : icône du tray (via le dépassement de la barre de notification) et raccourci clavier **`Ctrl + Maj + Verr.Maj`** (`KeyboardHook.cs:200`). Dans les deux cas la fenêtre de recherche **se ferme avec l'application** — aucun clic sur un résultat n'est possible pendant l'inactivité, donc **aucune insertion surprise** (AG120-06), garanti par construction plutôt que par filtrage. ✅ **Sous-cas « cliquer un résultat pendant la pause » : impossible par construction**, vérifié à 18:55 après avoir **épinglé l'icône** dans la barre des tâches pour lever la limite de protocole initialement notée. Icône visible en permanence, donc plus de dépassement à ouvrir : le seul clic droit sur l'icône **ferme déjà la recherche**. Elle se ferme donc à **toute perte de focus**, pas à cause du dépassement — aucun chemin ne permet d'avoir la recherche ouverte et l'application en pause en même temps |
+| VM-12 | **PARTIEL** | 2026-09-19 | Paquet b, Edge placé en « désactivé ». **Aucune émission vers la cible suspendue** : les lettres tapées dans Edge sortent non remappées (`IsEmissionSuspended`, `KeyMapper.cs:1005`). **Aucune touche bloquée** après un changement de fenêtre touche `A` maintenue. **Aucune insertion possible depuis la recherche de caractères** : changer de fenêtre ferme la recherche, donc la cible suspendue ne peut jamais être celle d'un clic sur un résultat — garanti par construction, comme en VM-11 (AG120-06). ⚠️ Le premier relevé du scénario était **contaminé par l'Écart 7** (Alt+Tab), refait à la souris. ⛔ **Écart 8 ouvert dans ce scénario** : `Ctrl+Maj+W` dans une fenêtre désactivée ferme la fenêtre au lieu d'ouvrir la recherche |
+| VM-13 | **VERT** | 2026-09-19 | Paquet b, aucun override. Fenêtre normale puis **PowerShell lancé en administrateur**, atteint à la souris pour neutraliser l'Écart 7. ✅ **UAC actif dans la VM** : l'invite « Contrôle de compte d'utilisateur » apparaît à chaque lancement, donc la fenêtre est bien en intégrité haute et la barrière UIPI existe réellement — sans cette vérification le scénario serait vide. `Maj+E00` rend **`#`** dans la fenêtre élevée (`AZERTY Global 2026.json:84`) : le remappage **traverse** la barrière d'intégrité. Insertion depuis la recherche de caractères vers cette même fenêtre : **réussie**. Aucun faux succès, aucun échec muet (AG120-08). ⛔ **Témoin écarté** : `aze` ne prouve rien, les trois lettres sont aux mêmes positions sur l'AZERTY traditionnel — même piège que le `2` → `é` de l'Écart 6 |
 | VM-14 | NON TESTÉ | | |
 | VM-15 | NON TESTÉ | | |
-| VM-16 | NON TESTÉ | | |
-| VM-17 | NON TESTÉ | | |
-| VM-18 | NON TESTÉ | | |
+| VM-16 | **VERT** | 2026-09-19 | Paquet b, Bloc-notes, témoin `E00` (`@` / `#`) — ⛔ le témoin `A` est **écarté**, même position sur les deux dispositions. **Bascule on/off touche maintenue** : `E00` tenue produit des `@`, `Ctrl+Maj+Verr.Maj` sans relâcher **arrête net l'émission**, le relâchement ne laisse rien bloqué, `abcdef` sort intact. **Sens inverse** identique : `²` natifs tenus, réactivation en cours d'appui, émission arrêtée, puis `@` dès le réappui et `#` sur `Maj+E00`. **Pause temporisée** (boîte « Mettre AZERTY Global en pause », Heures/Minutes) : natif pendant la pause, et une touche **maintenue pendant l'expiration** continue le natif jusqu'au relâchement, puis remappe dès le réappui. **Pause par application** : couverte par VM-12. **Icône du tray grisée** à l'état désactivé, normale sinon. ✅ Comportement conforme à `_keyDownOwnership` (`KeyMapper.cs:496`) : chaque répétition garde la décision de l'appui initial, donc **aucune sortie mixte ni touche bloquée** à la transition |
+| VM-17 | **VERT** | 2026-09-19 | Paquet b, disposition Windows `FRA US`. Changement de disposition **dans la même fenêtre** (barre des tâches, Bloc-notes au premier plan) : `Maj+E00` rend `#`. Changement de **fenêtre** vers Edge à la souris : `#` également. Retour au Bloc-notes : `Ctrl` + position A **sélectionne tout**. Remappage et raccourcis suivent donc la disposition réelle de la cible, pas la disposition Windows active. ⚠️ Ce scénario était annoncé comme devant tomber sur l'Écart 6 : il passe, ce qui **confirme** que l'Écart 6 n'était pas un écart de disposition. ⛔ Changements de fenêtre faits **à la souris** : par Alt+Tab ils tombent sur l'Écart 7 |
+| VM-18 | **PARTIEL** | 2026-09-19 | Paquet b, icône **épinglée** dans la barre des tâches. **Verrouillage / déverrouillage** de la session : `Maj+E00` rend `#`, icône présente. **Redémarrage de l'Explorateur** (Gestionnaire des tâches) : `Maj+E00` rend `#`, icône rétablie — le hook survit à la perte du shell. **Une seule instance** d'AZERTY Global dans le Gestionnaire après les deux événements : aucune multiplication. ⛔ **Volet non testé : veille / reprise** — l'invité Hyper-V n'offre pas la mise en veille ordinaire, il faudrait la provoquer depuis l'hôte. À rejouer sur une machine physique avant la décision de soumission |
 | VM-19 | NON TESTÉ | | |
 | VM-20 | NON TESTÉ | | priorité : couche sécurisée sur champ de mot de passe |
 | VM-21 | **PARTIEL** | 2026-09-19 | identité, version, architectures, contenu et absence de signature vérifiés hors VM : `manifestes-bundle-2026-09-19.md` ; WACK PASS : `bundle-msix-2026-09-19.md`. ⛔ Reste dû : le volet ARM64 exécuté, cf. limite 2 |
@@ -204,7 +204,7 @@ session qui l'a mesuré.
 ## Écarts mesurés en VM
 
 Constatés pendant la campagne, hors grille : ce sont des défauts de l'application,
-pas des lignes de recette. ⛔ Les deux sont **ouverts** au 2026-09-19.
+pas des lignes de recette. ⛔ Les écarts **4, 5, 7 et 8** sont **ouverts** au 2026-09-19 ; l'écart **6** est **non reproduit** et rattaché à l'écart 7.
 
 ### Écart 1 — suspension pour compatibilité sur un geste banal
 
@@ -344,6 +344,162 @@ il faut une reproduction propre — un seul processus en `forceOn`, application
 relancée, aucun passage par la fenêtre Paramètres entre le réglage et la frappe —
 et les statistiques d'émission de niveau 2 (`compatibilityDebugLog`, déjà activé
 dans la VM) relevées après sortie de l'application.
+
+### Écart 6 — ⚠️ NON REPRODUIT — aucun remappage dès que la disposition Windows n'est plus française
+
+⚠️ **Rejoué le 2026-09-19 à 18:40, même paquet, même VM : l'écart ne se
+reproduit plus.** Sous `FRA US`, Bloc-notes atteint à la souris, `E00` rend `@`
+et `Maj+E00` rend `#` — le remappage fonctionne. Le **geste d'origine exact**
+(changer la disposition par la barre des tâches puis frapper immédiatement, sans
+aller-retour de focus) a été rejoué lui aussi : il rend `@`. Contre-épreuve
+app désactivée : `²` sous `FRA FR`, `` ` `` sous `FRA US` — le natif attendu,
+donc la mesure discrimine bien.
+
+⛔ **Cet écart n'est donc pas un écart de disposition.** La lecture du code
+l'avait déjà signalé : il n'existe **aucune porte de langue** dans le moteur.
+Sa signature — *plus rien ne remappe, ni lettres ni chiffres* — n'est pas celle
+d'un mapping fautif mais celle d'un `GetEmitContext` fail-closed
+(`ForegroundMonitor.cs:102`), c'est-à-dire de l'**Écart 7**. Toutes les mesures
+de 17:17-17:35 ont été prises **juste après un changement de fenêtre** (barre des
+tâches, `Win+Espace`), donc dans la fenêtre de panne de l'Écart 7, et la
+« réparation par aller-retour de focus » y avait déjà été observée sans être
+reconnue.
+
+⚠️ **Ce qui reste vrai et non expliqué** : à 17:17-17:35 l'état tenait
+plusieurs minutes et plusieurs gestes, là où l'Écart 7 se répare dès le
+premier aller-retour de focus. La durée n'est donc pas expliquée, seulement le
+mécanisme. ⛔ **Ne pas clore cet écart** : le rattacher à l'Écart 7 dans la
+session de débogage et vérifier ce qui peut geler le snapshot durablement.
+
+Relevé initial, conservé tel quel ci-dessous — le 2026-09-19
+entre 17:17 et 17:35 sur le paquet b, dans la VM `AZERTY-Test`, Bloc-notes.
+
+Montage de la VM : le clavier **US a été ajouté sous Français (France)**, donc
+l'indicateur affiche `FRA US` et le HKL vaut `040C:0409` — langue française,
+disposition physique US. C'est un montage valide pour VM-06.
+
+Ce qui a été mesuré, dans l'ordre :
+
+1. Sous `FRA US`, la touche physique à gauche de `Z` rend **`q`**, pas `a`.
+2. Sous `FRA US`, la touche `2` de la rangée numérique rend **`2`**, et
+   **Maj+2** rend **`@`** — c'est la sortie US native, caractère par caractère.
+3. ⚠️ Témoin sous **Français (France)** : la touche `2` rend `é` — **mesure
+   écartée, elle ne prouve rien**. L'AZERTY traditionnel produit déjà `é` sur
+   cette touche sans Maj, donc la sortie est la même avec ou sans remappage.
+   Le témoin valable est ailleurs, au même moment et sur le même paquet :
+   **VM-07** (`;` sur la touche point avec les trois Maj), **VM-09** (couche
+   grecque verrouillée) et **VM-10** — tous verts sous Français (France).
+4. Contrôle du geste : la bascule vers US refaite **à la souris** depuis
+   l'indicateur de la barre des tâches, sans aucune frappe — la touche `2` rend
+   toujours **`2`**. Ce n'est donc pas `Win+Espace` qui gèle le moteur.
+
+Le remappage n'est pas partiellement faux sous disposition non-française : il
+est **entièrement absent**, lettres comme chiffres.
+
+✅ Ce qui est **écarté par mesure**, pas par supposition :
+- l'application tourne et n'est pas en pause — `Get-Process` : PID 7452,
+  démarrée à 16:52:15, et Antoine confirme l'activation ;
+- aucune suspension d'émission — `error.log` est muet depuis 16:58:58, soit
+  ~18 minutes avant la première frappe du test ;
+- aucun override de compatibilité résiduel — `config.json` relu, **aucun bloc
+  `compatibility`** ; seul `compatibilityDebugLog: true` subsiste. Les lignes
+  `UserOverrideApplied` du log datent d'avant le retrait des overrides ;
+- snapshot `ForegroundMonitor` périmé — un aller-retour vers une autre fenêtre
+  (qui force `EVENT_SYSTEM_FOREGROUND` → `Recompute`) ne change rien ;
+- modificateur Windows resté enfoncé après `Win+Espace` — écarté deux fois :
+  par la mesure 4 ci-dessus, et par `CleanupStaleModifiers`
+  (`KeyMapper.cs:471-474`) qui resynchronise `VK_LWIN`/`VK_RWIN` sur
+  `GetAsyncKeyState` avant la garde `if (_leftWinDown || _rightWinDown)`.
+
+⚠️ **Ce que la lecture du code ne trouve pas.** Aucune porte de langue n'existe
+dans le moteur : la table est indexée par **scancode** (`_layout.Keys`), et rien
+dans `KeyMapper.cs`, `ForegroundMonitor.cs` ni `TrayApplication.cs` ne compare
+le HKL à `040C`. Le `hkl` de la cible ne sert qu'à décider un pass-through
+(`CanPassThrough`, `KeyMapper.cs:847-873`) et à construire les combos natives
+(`BuildNativeComboInputs`, `KeyMapper.cs:1053`). Le code lu prédit donc
+l'inverse de ce qui est observé — la cause est **en amont du moteur** et reste
+à trouver : installation du hook, résolution du mode, ou un niveau que la
+recette ne peut pas instrumenter depuis la VM.
+
+⛔ **À reprendre dans une session de débogage dédiée**, comme l'écart 5, avec
+les statistiques d'émission de niveau 2 (`compatibilityDebugLog`, déjà actif
+dans la VM) relevées après sortie de l'application, et un relevé du HKL vu par
+l'application elle-même au moment de la frappe.
+
+### Écart 7 — après un Alt+Tab, plus aucun remappage dans la fenêtre d'arrivée
+
+**Mesuré le 2026-09-19**, paquet b, disposition Français (France),
+**aucun override de compatibilité en place** (le premier relevé a été refait
+après réactivation du remappage sur Edge, pour écarter l'override).
+
+1. Edge → Bloc-notes par **Alt+Tab** : la touche `E00` rend `²` au lieu de `@`.
+   **Aucun remappage**, et l'état persiste — il faut **défocaliser puis
+   refocaliser** le Bloc-notes pour que le remappage revienne.
+2. Bloc-notes → Edge par **Alt+Tab** : même absence de remappage, mais
+   **une demi-seconde** seulement, puis le remappage revient seul.
+3. Le même changement de fenêtre **à la souris** donne un remappage
+   **immédiat** dans les deux sens.
+
+**Cause localisée par lecture du code.** `GetEmitContext`
+(`ForegroundMonitor.cs:102`) refuse toute émission dès que
+`snap.Window != _api.GetForegroundWindow()`, et renvoie alors
+`CompatibilityMode.DisabledAntiCheat` — un fail-closed délibéré (audit sécu
+2026-05 SEV-A2-05). Le snapshot ne se rafraîchit que sur `EVENT_SYSTEM_FOREGROUND`
+ou `EVENT_OBJECT_FOCUS` (`ForegroundMonitor.cs:127-130`). Un Alt+Tab laisse donc
+le snapshot périmé sur la fenêtre du sélecteur, et **tout le remappage reste
+suspendu** jusqu'au prochain événement de focus.
+
+L'asymétrie du point 2 se lit de la même façon : Edge émet ses propres
+événements de focus en continu, ce qui rafraîchit le snapshot tout seul ; le
+Bloc-notes n'en émet plus une fois au premier plan, donc l'état périmé y tient
+jusqu'à un aller-retour de focus provoqué à la main. La durée de la panne
+dépend donc de la fenêtre d'arrivée, pas du geste.
+
+⚠️ **Écarté par le code** : l'hypothèse « Alt gauche resté enfoncé »
+(`ProcessKeyCore` sort sur `_leftAltDown && !_rightCtrlDown`) ne tient pas —
+`CleanupStaleModifiers` est appelé à chaque frappe (`KeyMapper.cs:220`, `575`),
+donc l'état se réparerait dès la première touche, sans aller-retour de focus.
+
+⚠️ **Portée** : l'Alt+Tab est le geste de changement de fenêtre le plus
+courant. L'écart touche donc l'usage ordinaire, pas un cas limite, et il
+contamine la lecture de plusieurs scénarios de la grille qui commencent par un
+changement de fenêtre — dont **VM-12**, où il a d'abord été pris pour un effet
+de l'application désactivée.
+
+⛔ **À reprendre en session de débogage dédiée.** La correction n'est pas de
+lever le fail-closed de `GetEmitContext` — c'est lui qui empêche d'écrire dans
+la mauvaise fenêtre — mais de garantir un `Recompute` après la fermeture du
+sélecteur Alt+Tab.
+
+### Écart 8 — dans une fenêtre désactivée, `Ctrl+Maj+W` ferme la fenêtre
+
+**Mesuré deux fois le 2026-09-19**, paquet b : une fois sur le Bloc-notes placé
+en « désactivé », une fois sur Edge placé en « désactivé ». Dans les deux cas
+le raccourci de la recherche de caractères **n'ouvre pas la recherche** et la
+frappe **atteint l'application**, qui interprète `Ctrl+W` et **ferme sa
+fenêtre**. Aucun retour visuel n'indique que le raccourci a été abandonné.
+Le même raccourci fonctionne normalement dans une fenêtre non désactivée, dans
+la même session.
+
+⚠️ **La lecture du code ne trouve pas la porte.** Le raccourci n'est gardé
+que par `AdvancedFeaturesSuppressed` (`KeyboardHook.cs:206`), qui vaut
+`_foregroundMonitor?.IsSecureInput == true` (`KeyMapper.cs:80`) — un champ de mot
+de passe, pas le mode de compatibilité. `IsToggleShortcut` lit des modificateurs
+que le hook suit en amont de toute suspension, et `MatchesShortcutKey` ne dépend
+que de la disposition. Rien dans ce chemin ne connaît l'override « désactivé ».
+La cause est donc **ailleurs que dans le chemin lu**, comme pour l'Écart 6.
+
+⚠️ **Conséquence utilisateur disproportionnée** : le geste attendu ouvre une
+fenêtre, le geste réel **détruit le travail en cours** dans l'application. C'est
+le seul écart de la campagne dont l'effet secondaire est destructeur.
+
+⚠️ **Non mesuré** : le raccourci du **clavier virtuel** tombe-t-il de la même
+façon ? Il est testé juste après dans le hook (`KeyboardHook.cs:215`) et, lui,
+n'est **pas** gardé par `AdvancedFeaturesSuppressed` — asymétrie à vérifier dans
+la session de débogage.
+
+⛔ **À reprendre en session de débogage dédiée**, avec l'Écart 6 : même
+signature, une porte qui n'existe pas dans le code lu.
 
 ## Porte de décision
 
