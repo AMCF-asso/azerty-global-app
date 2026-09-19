@@ -1,4 +1,11 @@
-# Recette VM 1.2.0 — feuille de résultats
+# Recette VM 1.3.0 — feuille de résultats
+
+⚠️ **La campagne porte désormais sur la 1.3.0**, pas sur la 1.2.0 : la 1.2.0
+n’a jamais été soumise au Store, et la réorganisation du menu de la zone de
+notification en fait une version de fonctionnalité (décision d’Antoine du
+2026-09-19). Les lignes déjà renseignées contre un paquet 1.2.0 le disent dans
+leur colonne « Preuve » et **ne valent pas** pour la 1.3.0 quand le paquet a
+changé — VM-02 et VM-21 sont dans ce cas.
 
 Compagnon de `recette-vm.md`, qui est le protocole. Ce fichier est le **compte
 rendu** : une ligne par scénario, remplie au moment de l'exécution.
@@ -9,11 +16,12 @@ rendu** : une ligne par scénario, remplie au moment de l'exécution.
 
 | | |
 |---|---|
-| Candidat | `msix/AZERTYGlobal-1.2.0.0.msixbundle` — 6 798 518 o, 2026-09-19 09:46:20 |
-| SHA-256 exe x64 | `4D8B82F579692F86D4F4FA682642F0957BB2B339B5AAAB56CE7531AFDE375E6D` |
-| SHA-256 exe arm64 | `4D64569A07375568E6855F534871A80D006CB073260AB25144EB4E8F203290AC` |
-| Commit | `2f5bb68` (branche `release/1.2.0-notation-store`) |
-| Sideload 1.2.0 | `Archives/local-signing/1.2.0.0/AZERTYGlobal-1.2.0.0-local-signed-20260919.msixbundle` |
+| Candidat | `msix/AZERTYGlobal-1.3.0.0.msixbundle` — construit le 2026-09-19 à 15:51, `Verify-Release.ps1` **vert** |
+| SHA-256 exe x64 | `582E3A750A23D3C02F4E35ED89E477CAC1775B334E4DD29C2F792F16F2AEA1B6` |
+| SHA-256 exe arm64 | `C46A053C03B6871B057FDEA64A36827C4DF8C5AA22D7DE1E64BF762A10DC9A76` |
+| Commit | `c1da0d6` (branche `release/1.2.0-notation-store`) |
+| Sideload 1.3.0 | `Archives/local-signing/1.3.0.0/AZERTYGlobal-1.3.0.0-local-signed-20260919.msixbundle` — 6 806 449 o, SHA-256 `7FAF5B169605B86393EFFA9800C7BCD29FD8D561A65AB1A119FBCE767AF790E0` |
+| Paquets 1.2.0 (périmés) | `Archives/local-signing/1.2.0.0/` — conservés, ne plus installer |
 | Sideload 1.1.0 | `Archives/local-signing/1.1.0.0/AZERTYGlobal-1.1.0.0-resigned-20260919.msixbundle` |
 | Certificat | `8086B18C82671DB12B366A60CD55D8EA3DB67DF0`, expire le 2027-08-18 |
 | VM | `AZERTY-Test`, génération 2, 12 Go, Hyper-V sur `C:` |
@@ -140,7 +148,24 @@ dotnet publish src\AZERTYGlobal.csproj -c Release -r win-x64
 dotnet publish src\AZERTYGlobal.csproj -c Release -r win-arm64
 ```
 
-⛔ **Et la version vit à deux endroits indépendants.** `src/AZERTYGlobal.csproj`
+⛔ **La version vit à cinq endroits indépendants, pas deux.** Mesuré le
+2026-09-19 en passant à 1.3.0 : `scripts/Verify-Release.ps1` a refusé la release
+trois fois de suite, sur un source différent à chaque passage.
+
+| Source | Ce qu’elle gouverne | Format |
+|---|---|---|
+| `src/AZERTYGlobal.csproj` `<Version>` | version du bundle et noms de fichiers | `1.3.0` |
+| `msix/AppxManifest.xml` `Version=` | **identité** du paquet | `1.3.0.0` |
+| `src/Program.cs` `internal const string Version` | version affichée (infobulle, À propos, URL `/bug`) | `1.3.0` |
+| `src/Properties/AssemblyInfo.cs` | `AssemblyFileVersion` et `AssemblyVersion` en 4 segments, `AssemblyInformationalVersion` en 3 | `1.3.0.0` / `1.3.0` |
+| Documents | `msix/Fiche Store.md` (FR **et** EN), `Changelog.md`, `Publication Microsoft Store.md`, `../../../../.agent/CONTEXT_APP_MICROSOFT_STORE.md`, `CONTEXT_AZERTY_GLOBAL.md` | texte |
+
+✅ **Le contrôle qui tranche : `scripts/Verify-Release.ps1`.** Il lit les cinq et
+échoue sur le premier écart. ⛔ Le lancer **avant** de signer, pas après : les deux
+premiers bundles 1.3.0 ont été construits et le premier signé avec un exe portant
+encore `1.2.0` dans `Program.cs`.
+
+⛔ **Et rien ne vérifie l’accord csproj / AppxManifest hors de ce script.** `src/AZERTYGlobal.csproj`
 (`<Version>`) donne la version du **bundle** et les noms de fichiers produits ;
 `msix/AppxManifest.xml` (`Version=`) donne la version **d'identité** du paquet, que le
 script ne réécrit pas — il n'ajuste que `ProcessorArchitecture` (ligne 128). Rien ne
