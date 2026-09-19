@@ -140,6 +140,14 @@ dotnet publish src\AZERTYGlobal.csproj -c Release -r win-x64
 dotnet publish src\AZERTYGlobal.csproj -c Release -r win-arm64
 ```
 
+⛔ **Et la version vit à deux endroits indépendants.** `src/AZERTYGlobal.csproj`
+(`<Version>`) donne la version du **bundle** et les noms de fichiers produits ;
+`msix/AppxManifest.xml` (`Version=`) donne la version **d'identité** du paquet, que le
+script ne réécrit pas — il n'ajuste que `ProcessorArchitecture` (ligne 128). Rien ne
+vérifie qu'elles coïncident : un candidat peut partir avec une identité qui ne
+correspond pas à la version annoncée. Mesuré le 2026-09-19 en corrigeant l'une puis
+l'autre sans jamais les avoir toutes les deux.
+
 ⚠️ Le contrôle qui tranche, et qui ne coûte rien : comparer l'horodatage du
 `publish` à celui du dernier commit touchant `src/`. Un exe plus vieux que le commit
 n'a pas à être empaqueté.
@@ -167,9 +175,30 @@ Deux causes possibles, dans `src/TypingEngine.Windows/ForegroundMonitor.cs` :
 | 180 | la fenêtre de premier plan change entre les deux lectures | course, faux positif |
 | 225 | `hasFg` faux avec un `pid` non nul — process illisible | identité vraiment inconnue |
 
-Instrument qui tranche : la clé `compatibilityDebugLog` de `config.json`, qui fait
+Instrument qui a tranché : la clé `compatibilityDebugLog` de `config.json`, qui fait
 écrire dans le même `error.log` des lignes `CompatMode` portant le nom du process
-(`ConfigManager.cs:628`, `TrayApplication.cs:2151`). ⛔ Non encore posée en VM.
+(`ConfigManager.cs:628`, `TrayApplication.cs:2151`). Les noms sont anonymisés par
+HMAC-SHA256 à sel local (`ConfigManager.AnonymizeProcessName`) : ils se résolvent en
+recalculant le HMAC des candidats **dans la VM**, avec le sel `_compat_log_salt` de
+`config.json`.
+
+**Cause établie le 2026-09-19** : `hash:f5796950` = `explorer.exe` (suspend),
+`hash:93afb154` = `ShellExperienceHost.exe` (rétablit), `hash:96e5f434` = `msedge.exe`.
+Cliquer la barre des tâches met `explorer.exe` au premier plan, la fenêtre bascule vers
+le volet `ShellExperienceHost` entre les deux `GetForegroundWindow()` d'un même
+`Recompute`, et la branche de course fabriquait une identité inconnue. **Faux positif
+sur le shell Windows, au geste le plus banal qui soit.**
+
+✅ **Corrigé** (`edfe727`) : la course ne suspend plus, seul un suivi réellement
+indisponible (`IsTrackingAvailable` faux) suspend. La sécurité de frappe est inchangée :
+`GetEmitContext()` recontrôle la fenêtre à chaque émission et refuse d'émettre dès
+qu'elle a bougé — c'est la garde qui compte. Deux tests neufs dans
+`src/TypingEngine.Windows.Tests/ShellRaceSuspensionTests.cs`, témoin de mutation passé :
+ancienne ligne remise, 1 rouge et le bon, 153 verts.
+
+✅ **Vérifié en VM le 2026-09-19 à 13:44**, paquet de diagnostic `1.2.0.1` portant le
+binaire de 13:38 : explorateur ouvert, Edge ouvert, zone de notification ouverte —
+**`error.log` n'existe pas**, aucun événement de compatibilité, aucune bulle.
 
 ### Écart 2 — la bulle de précaution masque l'icône du tray
 
@@ -185,6 +214,12 @@ Get-Process | Where-Object ProcessName -like '*AZERTY*' | Stop-Process -Force
 ```
 
 ⚠️ Un utilisateur du Store n'a pas ce contournement dans les mains.
+
+✅ **Clos par conséquence le 2026-09-19** : l'écart 1 corrigé, la bulle ne se déclenche
+plus sur ce geste, donc l'icône reste accessible. ⚠️ Le défaut de conception demeure en
+théorie — une bulle émise pour un vrai motif masquera toujours l'icône — mais il n'est
+plus atteignable par un usage normal. À rouvrir si une suspension légitime se produit
+pendant que l'utilisateur cherche à quitter.
 
 ## Porte de décision
 
