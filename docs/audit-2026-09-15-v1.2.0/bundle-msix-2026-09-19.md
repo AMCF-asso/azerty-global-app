@@ -69,30 +69,90 @@ réellement et passent.
 dépôt : le contrôle reste en `WARNING` permanent. Soit le fichier revient, soit
 le contrôle saute — le laisser en l'état entretient un troisième témoin muet.
 
-## Ce qui reste du verrou 3 : le WACK
+## WACK — PASS le 2026-09-19
 
-⛔ **Non exécuté.** `appcert.exe` exige une invite élevée ; la session n'est pas
-administrateur. Outils présents et vérifiés sur le poste :
+`Archives/wack/2026-09/wack-report-v1.2.0-20260919.xml` (64 007 octets),
+exécuté par Antoine en invite élevée, ~1 min.
+
+```
+OVERALL_RESULT="PASS"   VERSION=10.0.26100.7705
+APP_TYPE="Centennial"   APP_NAME="AZERTYGlobal.AZERTYGlobal"
+APP_VERSION="1.2.0.0"   OS=Windows 11 Pro for Workstations 10.0.26200.0
+```
+
+**24 tests : 23 PASS, 1 FAIL.**
+
+⚠️ Le `PASS` global coexiste avec un test en échec — `Blocked executables`,
+marqué `OPTIONAL="TRUE"`, qui ne bloque donc pas le verdict. Lire l'en-tête
+seul aurait manqué l'échec ; il faut parser les `<RESULT>` par test.
+
+⛔ Piège de lecture : le verdict de chaque test est un **élément enfant en
+CDATA** (`<RESULT><![CDATA[PASS]]></RESULT>`), pas un attribut. Une regex sur
+`RESULT="..."` rend 24 « sans résultat » et zéro échec — panne muette.
+
+### Le FAIL est préexistant et déjà accepté par le Store
+
+`Blocked executables` signale trois références dans `AZERTY Global.exe` :
+
+- API de lancement de processus `shell32.dll!ShellExecuteW` ;
+- référence à l'exécutable bloqué « CMD » ;
+- référence à l'exécutable bloqué « MSBuild ».
+
+Les trois sont sans action :
+
+1. **`ShellExecuteW`** — 19 appels dans le source, tous de la forme
+   `ShellExecuteW(0, "open", <url>, …)` : ouverture d'une URL dans le
+   navigateur par défaut (site, guide, Discord, feedback, fiche Store). Aucun
+   appel ne lance d'exécutable.
+2. **« MSBuild »** — déjà identifié et traité : `GenerateAssemblyInfo` est
+   désactivé dans le csproj pour cette raison précise, cf. l'en-tête de
+   `src/AssemblyAttributes.cs`. Le littéral restant vient du runtime lié
+   statiquement par Native AOT, pas du code applicatif.
+3. **« CMD »** — aucun littéral correspondant dans le source ; même origine AOT.
+
+**Preuve que ce n'est pas un régresseur** : le rapport
+`wack-report-v1.1.0-bundle18-20260723.xml` — le bundle effectivement publié sur
+le Store le 2026-07-23 — porte le **même** `OVERALL_RESULT=PASS` avec le
+**même** `Blocked executables FAIL`, et une liste plus longue : « CMd », « CsI »
+et « MSBuild ». La v1.2.0 en a une de moins.
+
+⛔ Ne pas « corriger » ce FAIL : il est structurel à Native AOT et la version
+publiée vit avec depuis juillet.
+
+## Outillage vérifié sur le poste
 
 - `C:\Program Files (x86)\Windows Kits\10\App Certification Kit\appcert.exe`
 - `C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\makeappx.exe`
 - `C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe`
 
-À lancer dans un PowerShell **administrateur** :
+Commande exacte, en PowerShell **administrateur** :
 
 ```powershell
-Set-Location "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store"
-New-Item -ItemType Directory -Force "Archives\wack\2026-09" | Out-Null
 & "C:\Program Files (x86)\Windows Kits\10\App Certification Kit\appcert.exe" reset
 & "C:\Program Files (x86)\Windows Kits\10\App Certification Kit\appcert.exe" test `
-    -apptype windowsstoreapp `
-    -packagefullname "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal-1.2.0.0.msixbundle" `
-    -reportoutputpath "Archives\wack\2026-09\wack-report-v1.2.0-20260919.xml"
+    -appxpackagepath "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal-1.2.0.0.msixbundle" `
+    -reportoutputpath "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\Archives\wack\2026-09\wack-report-v1.2.0-20260919.xml"
 ```
 
-Compter 15 à 25 minutes ; la machine doit rester libre pendant le test.
-Le critère est `OVERALL_RESULT=PASS` dans le XML — précédent de référence :
-`wack-report-v1.1.0-bundle18-20260723.xml`, PASS le 2026-07-23.
+⛔ Deux contraintes de la ligne de commande, apprises à l'usage :
+
+- c'est `-appxpackagepath` (fichier de paquet) et **non** `-packagefullname`,
+  qui désigne un paquet déjà installé ;
+- `-reportoutputpath` **exige un chemin absolu** ; un chemin relatif rend
+  « The '/reportoutputpath' argument must be valid path to the report file »
+  après un `reset` pourtant réussi.
+
+Durée réelle : **~1 minute**, pas les 15-25 min d'un WACK complet. Sur un bundle
+`Centennial`, le kit n'exécute que les 24 contrôles statiques de paquet ; il n'y
+a ni test de performance au lancement ni test de suspension. La machine n'a donc
+pas besoin d'être au repos — la consigne valait pour la suite runtime, qui ne
+s'exécute pas ici.
 
 ⛔ Un WACK PASS ne remplace ni le verrou 4 (manifestes internes du bundle) ni la
 recette VM : il certifie le paquet, pas le comportement de l'application.
+
+## Ce qui reste
+
+4. Vérifier les manifestes internes du bundle et des MSIX (identité, version,
+   architectures, ressources) — `Verify-Release.ps1` ne les ouvre pas.
+5. Paquet 1.1.0 publié + VM Hyper-V, puis la recette de `recette-vm.md`.
