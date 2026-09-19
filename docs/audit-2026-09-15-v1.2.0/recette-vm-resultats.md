@@ -47,7 +47,7 @@ signature ne change pas.
 
 | ID | Résultat | Date | Preuve / note |
 |---|---|---|---|
-| VM-01 | NON TESTÉ | | |
+| VM-01 | **VERT** | 2026-09-19 | Instantané `propre-win11-25h2-20260919` appliqué, certificat importé (voir la prépa, étape 2), `Add-AppxPackage` du sideload 1.3.0.0 accepté. Lancement depuis le menu Démarrer : **une seule** instance, icône présente dans la zone de notification, fenêtre d’accueil lisible et complète, **v1.3.0** affichée dans son en-tête. Zone de notification ouverte puis Edge : `$env:LOCALAPPDATA\AZERTY Global\error.log` **n’existe pas** — écart 1 confirmé clos sur le paquet de release, plus seulement sur le paquet de diagnostic. ⛔ Un défaut de libellé relevé au passage, corrigé après coup, voir « Écart 3 » |
 | VM-02 | **PARTIEL** | 2026-09-19 | Volet identité **vert** : `Add-AppxPackage` de la 1.2.0 par-dessus la 1.1.0 à 12:28, `Get-AppxPackage` rend **une seule** entrée — `AZERTYGlobal.AZERTYGlobal_1.2.0.0_x64__w9kghr08zmhbg`, X64. Remplacement, pas installation parallèle. ⛔ Reste dû : conservation des réglages, raccourcis, statistiques et progression, et **un seul** démarrage actif. Voir limite 1 pour ce que ce test ne couvre pas |
 | VM-03 | NON TESTÉ | | |
 | VM-04 | NON TESTÉ | | |
@@ -102,6 +102,24 @@ local** (d'où RET-04 clos en NON TESTÉ ci-dessus).
    compte local `testeur`. Disposition clavier active : `040C:0000040C`
    — français (France), AZERTY standard : poste représentatif.
 2. ✅ **Instantané « propre »** `propre-win11-25h2-20260919`.
+   ⛔ **Mesuré le 2026-09-19 à 16:00 : cet instantané ne contient PAS le
+   certificat.** Il a été pris à 12:00:44, l’import de l’étape 3 est venu après.
+   Repartir de « propre » et installer un paquet signé échoue sur
+   `0x800B0109` — « le certificat racine de la signature doit être approuvé ».
+   ⚠️ L’étape 3 ci-dessous, écrite au passé, laisse croire le contraire : elle
+   n’est vraie que pour `etat-1.1.0-20260919`.
+   ✅ Geste à refaire après chaque application de « propre », en PowerShell
+   **administrateur** dans l’invité, le `.cer` copié sur le Bureau :
+
+   ```powershell
+   Import-Certificate -FilePath "$env:USERPROFILE\Desktop\AZERTYGlobal-local-test.cer" -CertStoreLocation Cert:\LocalMachine\Root
+   Import-Certificate -FilePath "$env:USERPROFILE\Desktop\AZERTYGlobal-local-test.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+   ```
+
+   Le `.cer` vit dans `Archives/local-signing/1.3.0.0/` (exporté le 2026-09-19 à
+   16:04 depuis `Cert:\CurrentUser\My`, empreinte `8086B18C82671DB12B366A60CD55D8EA3DB67DF0`).
+   ⚠️ Il était auparavant rangé dans `Archives/local-signing/1.2.0.0/` seulement,
+   donc invisible depuis le dossier de la campagne en cours.
 3. ✅ Certificat `8086B18C` importé en **Personnes de confiance** de la machine
    locale, dans l'invité.
 4. ✅ Sideload 1.1.0 installé le 2026-09-19 à 12:21. Contrôle d'identité **vert** :
@@ -245,6 +263,26 @@ plus sur ce geste, donc l'icône reste accessible. ⚠️ Le défaut de concepti
 théorie — une bulle émise pour un vrai motif masquera toujours l'icône — mais il n'est
 plus atteignable par un usage normal. À rouvrir si une suspension légitime se produit
 pendant que l'utilisateur cherche à quitter.
+
+### Écart 3 — « 99 % de vos habitudes préservées » dans l’accueil
+
+Relevé par Antoine le 2026-09-19 à 16:05, dans la VM, sur le paquet 1.3.0.0.
+Le titre de l’étape 1 de la fenêtre d’accueil annonçait « 5 améliorations,
+99 % de vos **habitudes** préservées ». Le chiffre porte sur les frappes, pas
+sur les habitudes : l’ancien libellé promettait quelque chose de plus large que
+ce qui est mesuré.
+
+✅ **Corrigé** : `src/Localization/L.Onboarding.cs`, `Onboarding_Step1Title`
+devient « 5 améliorations, 99 % de vos **frappes** préservées ». Anglais aligné
+dans la foulée, `habits` → `keystrokes` — décidé sans Antoine, même
+raisonnement, le mot anglais portait le même glissement.
+
+⚠️ La chaîne n’apparaît qu’à cet endroit ; la fiche Store ne reprend pas la
+formule. ⛔ Aucun test ne verrouille ce libellé.
+
+⚠️ **Le paquet 1.3.0.0 testé en VM porte encore l’ancien texte.** Il faut
+republier, réempaqueter, relancer `Verify-Release.ps1`, resigner, et refaire
+passer l’accueil.
 
 ## Porte de décision
 

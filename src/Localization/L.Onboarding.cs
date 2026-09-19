@@ -26,7 +26,7 @@ internal static partial class L
     public static string Onboarding_Subtitle => T("Votre clavier est maintenant amélioré.", "Your keyboard is now improved.");
 
     // ── Étape 1 — les 5 améliorations ─────────────────────────────────
-    public static string Onboarding_Step1Title => T("5 améliorations, 99 % de vos habitudes préservées", "5 improvements, 99% of your habits preserved");
+    public static string Onboarding_Step1Title => T("5 améliorations, 99 % de vos frappes préservées", "5 improvements, 99% of your keystrokes preserved");
     public static string Onboarding_Feature1Title => T("Verrouillage Majuscule intelligent", "Smart Caps Lock");
     public static string Onboarding_Feature2Title => T("Point en accès direct", "Direct period access");
     public static string Onboarding_Feature2Desc => T("Le point et le point-virgule échangent leurs places.", "The period and semicolon swap places.");
