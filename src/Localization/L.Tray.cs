@@ -147,7 +147,13 @@ internal static partial class L
     public static string Tray_MenuVirtualKeyboard(string key) => T($"Clavier virtuel\tCtrl+Maj+{key}", $"Virtual keyboard\tCtrl+Shift+{key}");
     public static string Tray_MenuSearchCharacter(string key) => T($"Rechercher un caractère\tCtrl+Maj+{key}", $"Find a character\tCtrl+Shift+{key}");
     public static string Tray_MenuLessons => T("Leçons", "Lessons");
-    public static string Tray_MenuWelcomeWindow => T("Fenêtre de bienvenue", "Welcome window");
+    public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Replay the welcome tour");
+
+    /// <summary>Titre du sous-menu des couches maintenables (décision S2-3 du 2026-09-02).</summary>
+    public static string Tray_MenuLayers => T("Couches", "Layers");
+
+    /// <summary>Dernière entrée du sous-menu Couches : ouvre la fenêtre complète.</summary>
+    public static string Tray_MenuLayersConfigure => T("Configurer…", "Configure…");
     public static string Tray_MenuPrivacySecurity => T("Confidentialité && sécurité", "Privacy && security");
     public static string Tray_MenuPrintableGuide => T("Guide utilisateur imprimable", "Printable user guide");
     public static string Tray_MenuFiveChanges => T("Les 5 changements", "The 5 changes");

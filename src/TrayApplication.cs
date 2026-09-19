@@ -44,6 +44,10 @@ sealed class TrayApplication : IDisposable
     internal const int IDM_DISCORD = 1029;
     private const int IDM_RELEASE_NOTES = 1030;
     private const int IDM_MAINTAINABLE_LAYERS = 1040;
+    // Sous-menu Couches (décision S2-3 du 2026-09-02) : une entrée cochable par couche.
+    private const int IDM_LAYER_GREEK = 1041;
+    private const int IDM_LAYER_CYRILLIC = 1042;
+    private const int IDM_LAYER_SCIENTIFIC = 1043;
     internal const int IDM_RATE_STORE = 1031;
     private const int IDM_STATS = 1032;
     private const int IDM_SWITCH_LANGUAGE = 1033;
@@ -639,6 +643,11 @@ sealed class TrayApplication : IDisposable
                             break;
                         case IDM_SETTINGS:
                             ShowSettingsWindow();
+                            break;
+                        case IDM_LAYER_GREEK:
+                        case IDM_LAYER_CYRILLIC:
+                        case IDM_LAYER_SCIENTIFIC:
+                            ToggleMaintainableLayer(wParam.ToInt32() & 0xFFFF);
                             break;
                         case IDM_MAINTAINABLE_LAYERS:
                             if (_maintainableLayersWindow == null)
@@ -1278,20 +1287,46 @@ sealed class TrayApplication : IDisposable
         var hMenu = Win32.CreatePopupMenu();
         var kbdKey = ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutVirtualKeyboardVk);
         var searchKey = ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk);
-        // Actions fréquentes
+        // Menu en quatre blocs d'intention (décision S2 du 2026-09-02, portée en v1.2.0 le
+        // 2026-09-19) : État · Outils · Apprendre · Réglages et infos, puis Langue et Quitter.
+        // Les IDM_* ne changent pas ; seuls l'ordre, les regroupements et trois libellés bougent.
+
+        // ── État ────────────────────────────────────────────────────
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE,
             _enabled ? L.Tray_MenuDisable : L.Tray_MenuEnable);
         uint pauseFlags = _enabled || IsPaused ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, pauseFlags, IDM_PAUSE,
             IsPaused ? L.Tray_MenuResumeNow : L.Tray_MenuPauseEllipsis);
+        Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
+
+        // ── Outils ──────────────────────────────────────────────────
         uint kbdFlags = ShouldProcessHook || _virtualKeyboard?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, kbdFlags, IDM_KEYBOARD,
             _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdKey) : L.Tray_MenuVirtualKeyboard(kbdKey));
         uint searchFlags = (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true) ||
             _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchKey));
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_MAINTAINABLE_LAYERS,
-            ConfigManager.MaintainableLayersEnabled ? L.Layers_MenuEntry + " ✓" : L.Layers_MenuEntry + "…");
+
+        // Couches ▸ (S2-3) : l'entrée unique à suffixe ✓/… devient un sous-menu de trois
+        // couches cochables. Les libellés sont repris tels quels de la fenêtre des couches,
+        // aucun texte neuf hors le titre du sous-menu et « Configurer… ».
+        bool layersOn = ConfigManager.MaintainableLayersEnabled;
+        var hLayersMenu = Win32.CreatePopupMenu();
+        Win32.AppendMenuW(hLayersMenu,
+            MF_STRING | (layersOn && ConfigManager.MaintainableGreekEnabled ? MF_CHECKED : 0u),
+            IDM_LAYER_GREEK, L.Layers_LabelGreek);
+        Win32.AppendMenuW(hLayersMenu,
+            MF_STRING | (layersOn && ConfigManager.MaintainableCyrillicEnabled ? MF_CHECKED : 0u),
+            IDM_LAYER_CYRILLIC, L.Layers_LabelCyrillic);
+        Win32.AppendMenuW(hLayersMenu,
+            MF_STRING | (layersOn && ConfigManager.MaintainableScientificEnabled ? MF_CHECKED : 0u),
+            IDM_LAYER_SCIENTIFIC, L.Layers_LabelScientific);
+        Win32.AppendMenuW(hLayersMenu, MF_SEPARATOR, 0, null);
+        Win32.AppendMenuW(hLayersMenu, MF_STRING, IDM_MAINTAINABLE_LAYERS, L.Tray_MenuLayersConfigure);
+        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLayersMenu, L.Tray_MenuLayers);
+        Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
+
+        // ── Apprendre ───────────────────────────────────────────────
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_EXERCISES, L.Tray_MenuLessons);
         // Défi du jour : toujours visible depuis la décision du 2026-08-16. L'entrée était
         // conditionnée à `trainingEnabled`, qui vaut false par défaut : sur une installation
@@ -1302,6 +1337,52 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_CHALLENGE, L.Tray_MenuChallenge);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_ONBOARDING, L.Tray_MenuWelcomeWindow);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
+
+        // ── Réglages et infos ───────────────────────────────────────
+        // « Lancer au démarrage de Windows » ne figure plus ici (S2-8) : le réglage vit dans
+        // Paramètres › Préférences, qui porte déjà la case (`SettingsWindow.cs`). IDM_AUTOSTART
+        // reste déclaré et gardé : l'accueil et les notifications l'empruntent encore.
+        Win32.AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, L.Tray_MenuSettings);
+
+        // Compatibilité des applications ▸ (S2-5) : toujours visible. Sans application
+        // détectée au premier plan, les trois choix sont grisés et « Comprendre la
+        // compatibilité… » reste actif — auparavant le sous-menu entier disparaîssait, ce
+        // qui se lisait comme une fonctionnalité absente plutôt qu'inapplicable.
+        // On filtre notre propre process : « Compatibilité — AZERTY Global.exe » n'a pas de sens.
+        _compatibilityMenuProcessName = _foregroundMonitor?.LastApplicationProcessName;
+        _compatibilityMenuFullPath = _foregroundMonitor?.LastApplicationFullPath;
+        var fgProc = _compatibilityMenuProcessName;
+        bool fgIsOwnApp = !string.IsNullOrEmpty(fgProc) &&
+            string.Equals(fgProc, ProductIdentity.ExecutableName, StringComparison.OrdinalIgnoreCase);
+        bool hasTarget = !string.IsNullOrEmpty(fgProc) && !fgIsOwnApp;
+        var hSubMenu = Win32.CreatePopupMenu();
+        if (hasTarget)
+        {
+            Win32.AppendMenuW(hSubMenu, MF_STRING | MF_GRAYED, 0, L.Tray_MenuActiveApp(fgProc));
+            Win32.AppendMenuW(hSubMenu, MF_SEPARATOR, 0, null);
+        }
+        bool fgIsRemoteAccess = hasTarget && GameRegistry.IsRemoteAccessProcess(fgProc);
+        uint targetFlags = hasTarget ? MF_STRING : MF_STRING | MF_GRAYED;
+        Win32.AppendMenuW(hSubMenu, targetFlags, IDM_COMPAT_AUTO, L.Tray_MenuCompatAuto);
+        Win32.AppendMenuW(hSubMenu,
+            hasTarget && !fgIsRemoteAccess ? MF_STRING : MF_STRING | MF_GRAYED,
+            IDM_COMPAT_FORCE_ON, L.Tray_MenuCompatForceOn);
+        Win32.AppendMenuW(hSubMenu, targetFlags, IDM_COMPAT_FORCE_OFF, L.Tray_MenuCompatForceOff);
+        if (hasTarget)
+        {
+            // Marquer la radio active
+            var ovr = fgIsRemoteAccess ? null : ConfigManager.GetCompatibilityOverride(fgProc);
+            uint activeId = ovr switch
+            {
+                "forceOn" => IDM_COMPAT_FORCE_ON,
+                "forceOff" => IDM_COMPAT_FORCE_OFF,
+                _ => IDM_COMPAT_AUTO
+            };
+            Win32.CheckMenuRadioItem(hSubMenu, IDM_COMPAT_AUTO, IDM_COMPAT_FORCE_OFF, activeId, Win32.MF_BYCOMMAND);
+        }
+        Win32.AppendMenuW(hSubMenu, MF_SEPARATOR, 0, null);
+        Win32.AppendMenuW(hSubMenu, MF_STRING, IDM_COMPAT_INFO, L.Tray_MenuCompatInfo);
+        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hSubMenu, L.Tray_MenuAppCompat);
 
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_STATS, L.Stats_Title);
@@ -1322,68 +1403,22 @@ sealed class TrayApplication : IDisposable
             Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
         // « Noter sur le Microsoft Store » au premier niveau, sous « Retours et soutien »
-        // (demande smoke test 2026-07-16) : l'action la plus utile au projet, en un clic.
+        // (S2-6, confirmé le 2026-09-02) : l'action la plus utile au projet, en un clic.
         // Absente du canal sobre : rien n'y renvoie vers le Store (D3).
         foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy))
             Win32.AppendMenuW(hMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
-        Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
-        // Configuration
-        // « Lancer au démarrage » au premier niveau : hors Paramètres, c'est la seule
-        // affordance permanente de l'autostart, et l'accueil ne persiste sa case qu'à
-        // l'étape 3 (décision 2026-08-17). L'état coché vient de AutoStart.IsRegistered,
-        // jamais du cache ConfigManager.AutoStartEnabled.
-        Win32.AppendMenuW(hMenu, MF_STRING | (AutoStart.IsRegistered ? MF_CHECKED : 0u),
-            IDM_AUTOSTART, L.Tray_MenuAutoStart);
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, L.Tray_MenuSettings);
-
-        // Sous-menu compatibilite du process foreground (conditionnel — n'apparait que si fg detecte).
-        // Le separateur qui suit est aussi conditionnel pour eviter un separateur orphelin.
-        // On filtre aussi notre propre process (cas où l'utilisateur clique sur le tray
-        // depuis notre app : le sous-menu "Compatibilité — AZERTY Global.exe" n'a pas de sens).
-        _compatibilityMenuProcessName = _foregroundMonitor?.LastApplicationProcessName;
-        _compatibilityMenuFullPath = _foregroundMonitor?.LastApplicationFullPath;
-        var fgProc = _compatibilityMenuProcessName;
-        bool fgIsOwnApp = !string.IsNullOrEmpty(fgProc) &&
-            string.Equals(fgProc, ProductIdentity.ExecutableName, StringComparison.OrdinalIgnoreCase);
-        var hSubMenu = Win32.CreatePopupMenu();
-        if (!string.IsNullOrEmpty(fgProc) && !fgIsOwnApp)
-        {
-            Win32.AppendMenuW(hSubMenu, MF_STRING | MF_GRAYED, 0, L.Tray_MenuActiveApp(fgProc));
-            Win32.AppendMenuW(hSubMenu, MF_SEPARATOR, 0, null);
-            Win32.AppendMenuW(hSubMenu, MF_STRING, IDM_COMPAT_AUTO, L.Tray_MenuCompatAuto);
-            bool fgIsRemoteAccess = GameRegistry.IsRemoteAccessProcess(fgProc);
-            Win32.AppendMenuW(hSubMenu,
-                MF_STRING | (fgIsRemoteAccess ? MF_GRAYED : 0),
-                IDM_COMPAT_FORCE_ON,
-                L.Tray_MenuCompatForceOn);
-            Win32.AppendMenuW(hSubMenu, MF_STRING, IDM_COMPAT_FORCE_OFF, L.Tray_MenuCompatForceOff);
-
-            // Marquer la radio active
-            var ovr = fgIsRemoteAccess ? null : ConfigManager.GetCompatibilityOverride(fgProc);
-            uint activeId = ovr switch
-            {
-                "forceOn" => IDM_COMPAT_FORCE_ON,
-                "forceOff" => IDM_COMPAT_FORCE_OFF,
-                _ => IDM_COMPAT_AUTO
-            };
-            Win32.CheckMenuRadioItem(hSubMenu, IDM_COMPAT_AUTO, IDM_COMPAT_FORCE_OFF, activeId, Win32.MF_BYCOMMAND);
-            Win32.AppendMenuW(hSubMenu, MF_SEPARATOR, 0, null);
-        }
-        Win32.AppendMenuW(hSubMenu, MF_STRING, IDM_COMPAT_INFO, L.Tray_MenuCompatInfo);
-        Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hSubMenu, L.Tray_MenuAppCompat);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_ABOUT, L.Tray_MenuAbout);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
 #if DEBUG
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_RESET_ONBOARDING, L.Tray_MenuResetOnboardingDebug);
 #endif
-        // Bascule de langue directe juste avant Quitter (déplacée depuis le bloc
-        // Configuration — demande smoke test 2026-07-16) : libellé dans la langue
-        // cible, cf. L.Tray_MenuSwitchLanguage.
-        // Langue imposée par une politique : l'entrée reste visible mais grisée, comme les
-        // autres entrées que l'état courant interdit. La retirer ferait croire à une
-        // fonctionnalité disparue plutôt qu'à une décision de la structure.
+        // Bascule de langue directe juste avant Quitter : libellé dans la langue cible,
+        // cf. L.Tray_MenuSwitchLanguage. Langue imposée par une politique : l'entrée reste
+        // visible mais grisée, comme les autres entrées que l'état courant interdit. La
+        // retirer ferait croire à une fonctionnalité disparue plutôt qu'à une décision de
+        // la structure. S2-2 : le même réglage existe aussi dans Paramètres › Préférences.
         uint languageFlags = PolicyManager.LanguageIsManagedNow ? MF_STRING | MF_GRAYED : MF_STRING;
         Win32.AppendMenuW(hMenu, languageFlags, IDM_SWITCH_LANGUAGE, L.Tray_MenuSwitchLanguage);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_QUIT, L.Tray_MenuQuit);
@@ -1629,6 +1664,35 @@ sealed class TrayApplication : IDisposable
             ConfigManager.MaintainableLayersEnabled,
             enabledLayers,
             ConfigManager.MaintainableDoubleTapMilliseconds);
+    }
+
+    /// <summary>
+    /// Bascule une couche depuis le sous-menu Couches (S2-3). Les trois couches sont
+    /// gardées par l'interrupteur principal `maintainableLayersEnabled`, qui vaut false
+    /// par défaut : cocher une couche alors qu'il est éteint l'allume, et décocher la
+    /// dernière couche active l'éteint. Sans cela, un clic sur une couche ne produirait
+    /// rien de visible sur une installation neuve.
+    /// </summary>
+    private void ToggleMaintainableLayer(int id)
+    {
+        bool master = ConfigManager.MaintainableLayersEnabled;
+        bool greek = master && ConfigManager.MaintainableGreekEnabled;
+        bool cyrillic = master && ConfigManager.MaintainableCyrillicEnabled;
+        bool scientific = master && ConfigManager.MaintainableScientificEnabled;
+
+        switch (id)
+        {
+            case IDM_LAYER_GREEK: greek = !greek; break;
+            case IDM_LAYER_CYRILLIC: cyrillic = !cyrillic; break;
+            case IDM_LAYER_SCIENTIFIC: scientific = !scientific; break;
+            default: return;
+        }
+
+        ConfigManager.SetMaintainableGreekEnabled(greek);
+        ConfigManager.SetMaintainableCyrillicEnabled(cyrillic);
+        ConfigManager.SetMaintainableScientificEnabled(scientific);
+        ConfigManager.SetMaintainableLayersEnabled(greek || cyrillic || scientific);
+        OnMaintainableLayerSettingsChanged();
     }
 
     private void OnMaintainableLayerSettingsChanged()
