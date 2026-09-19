@@ -197,10 +197,16 @@ public sealed class ForegroundMonitor : IDisposable
             if (hasFg && !isTransientShell && pid != (uint)Environment.ProcessId)
                 _lastApplication = _snapshot;
 
-            if (oldMode != mode && _host.CompatibilityDebugLog)
+            // Le motif et hasFg sont journalisés avec le mode : sans eux, deux Recompute
+            // successifs se lisent comme un seul événement et le motif réellement vu par
+            // le tray reste invisible (recette VM du 2026-09-19).
+            var oldReason = oldSnapshot?.SuspendReason ?? CompatibilitySuspendReason.None;
+            if ((oldMode != mode || oldReason != resolved.Reason) && _host.CompatibilityDebugLog)
             {
                 _host.LogCompatibilityEvent("CompatMode",
-                    $"{oldMode} → {mode} (process={_host.AnonymizeProcessName(processName)})");
+                    $"{oldMode} → {mode} [{oldReason} → {resolved.Reason}] "
+                    + $"(process={_host.AnonymizeProcessName(processName)}, hasFg={hasFg}, "
+                    + $"pid={pid}, tracking={IsTrackingAvailable})");
             }
 
             if (oldMode != mode || oldSnapshot?.Identity != identity ||
