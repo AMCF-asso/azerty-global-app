@@ -119,6 +119,36 @@ version précédente et ne renseigne aucune ligne de la grille.
 ⚠️ Sans l'instantané de l'étape 2, VM-01 et VM-22 ne sont pas rejouables : une
 VM déjà utilisée n'est plus une VM propre.
 
+## ⛔ Piège : `Pack-MSIX.ps1` ne compile pas
+
+**Mesuré le 2026-09-19.** Le script empaquette le `publish` déjà présent
+(`src/bin/Release/net8.0-windows10.0.17763.0/win-<arch>/publish/AZERTY Global.exe`,
+ligne 125) et ne lève une erreur que s'il est **absent**. Un publish périmé passe
+donc sans un mot, et le bundle produit annonce la bonne version en portant l'ancien
+binaire.
+
+Coût réel ce jour-là : deux bundles reconstruits, signés, copiés en VM et installés
+— tous trois embarquant un `publish` de 09:43, antérieur aux correctifs de 13:19 et
+13:26. La recette a conclu « le correctif ne marche pas » sur un binaire qui ne le
+contenait pas.
+
+⛔ **Avant tout `Pack-MSIX.ps1`, compiler les deux architectures :**
+
+```powershell
+$env:PATH += ";C:\Program Files (x86)\Microsoft Visual Studio\Installer"
+dotnet publish src\AZERTYGlobal.csproj -c Release -r win-x64
+dotnet publish src\AZERTYGlobal.csproj -c Release -r win-arm64
+```
+
+⚠️ Le contrôle qui tranche, et qui ne coûte rien : comparer l'horodatage du
+`publish` à celui du dernier commit touchant `src/`. Un exe plus vieux que le commit
+n'a pas à être empaqueté.
+
+Même famille que le `dotnet test` à la racine de `src/` déjà consigné dans
+`.claude/rules/app-repo-guard-blind-spots.md` : une commande qui réussit sans avoir
+fait le travail. ⛔ Reste dû : porter ce piège dans cette rule, hors périmètre de la
+session qui l'a mesuré.
+
 ## Écarts mesurés en VM
 
 Constatés pendant la campagne, hors grille : ce sont des défauts de l'application,
