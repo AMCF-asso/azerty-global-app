@@ -1,5 +1,28 @@
 # Changelog — Application AZERTY Global
 
+## Version 1.3.0 — 19 septembre 2026
+
+Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous. Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
+
+**Menu de la zone de notification — quatre blocs puis douze lignes (décisions du 2026-09-02 et du 2026-09-19)**
+
+- Portage de la décision S2 : le menu est réordonné en quatre blocs (état, outils, apprentissage, application) et l’entrée unique à suffixe ✓ des couches maintenables devient un sous-menu « Couches ▸ » de trois entrées cochables — grec, cyrillique, scientifique.
+- Cocher une couche alors que l’interrupteur principal `maintainableLayersEnabled` est éteint l’allume ; décocher la dernière couche active l’éteint. Sans cette règle, un clic sur une couche ne produit rien de visible sur une installation neuve, puisque l’interrupteur vaut `false` par défaut. La décision S2-3 ne tranchait pas ce point.
+- Le menu S2 mesurait dix-huit lignes, jugées encore trop longues en VM. « Apprendre ▸ » replie Leçons, Défi du jour et Revoir l’accueil ; « À propos et aide ▸ » replie Confidentialité et sécurité, Ressources, Retours et soutien, Noter sur le Store et À propos. Dix-huit lignes deviennent douze, **rien n’est retiré**. Le Défi du jour perd la visibilité immédiate que lui donnait la décision du 2026-08-16 : arbitrage assumé.
+- ⚠️ Aucun test ne verrouille la structure du menu — `ShowContextMenu` appelle Win32 directement. La vérification est visuelle, en VM.
+
+**Compatibilité — fin d’une suspension déclenchée par le shell Windows**
+
+- Ouvrir la zone de notification ou cliquer la barre des tâches suffisait à suspendre le remapping, avec une bulle « suspendu par précaution » qui recouvrait l’icône de l’application — donc le seul geste prévu pour quitter. Six occurrences journalisées en trois minutes dans la VM le 2026-09-19.
+- Cause établie : `explorer.exe` passe au premier plan, la fenêtre bascule vers le volet `ShellExperienceHost` entre les deux `GetForegroundWindow()` d’un même `Recompute`, et la branche de course fabriquait une identité inconnue. Faux positif sur le shell Windows, au geste le plus banal qui soit.
+- Seul un suivi réellement indisponible (`IsTrackingAvailable` faux) suspend désormais. La sécurité de frappe est inchangée : `GetEmitContext()` recontrôle la fenêtre à chaque émission et refuse d’émettre dès qu’elle a bougé — c’est cette garde qui compte, pas la suspension.
+- Deux tests neufs dans `src/TypingEngine.Windows.Tests/ShellRaceSuspensionTests.cs`, témoin de mutation passé : l’ancienne ligne remise, un seul rouge et le bon.
+- Trace de compatibilité enrichie : mode, motif, `hasFg`, `pid` et `tracking`, émise aussi quand seul le motif change.
+
+**Vérifié**
+
+- Corrigé et vérifié en VM le 2026-09-19 à 13:44 : explorateur, Edge et zone de notification ouverts, `error.log` n’existe pas.
+
 ## Version 1.2.0 — 17 août 2026
 
 Préparée et vérifiée dans ce dépôt ; **non encore soumise au Microsoft Store**. Remplacer cette ligne par la révision Store le jour de l'acceptation. Source réconciliée le 2026-08-15.
