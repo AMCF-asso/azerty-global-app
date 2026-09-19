@@ -40,7 +40,7 @@ signature ne change pas.
 | ID | Résultat | Date | Preuve / note |
 |---|---|---|---|
 | VM-01 | NON TESTÉ | | |
-| VM-02 | NON TESTÉ | | voir limite 1 |
+| VM-02 | **PARTIEL** | 2026-09-19 | Volet identité **vert** : `Add-AppxPackage` de la 1.2.0 par-dessus la 1.1.0 à 12:28, `Get-AppxPackage` rend **une seule** entrée — `AZERTYGlobal.AZERTYGlobal_1.2.0.0_x64__w9kghr08zmhbg`, X64. Remplacement, pas installation parallèle. ⛔ Reste dû : conservation des réglages, raccourcis, statistiques et progression, et **un seul** démarrage actif. Voir limite 1 pour ce que ce test ne couvre pas |
 | VM-03 | NON TESTÉ | | |
 | VM-04 | NON TESTÉ | | |
 | VM-05 | NON TESTÉ | | |
@@ -88,18 +88,73 @@ Choix arrêtés le 2026-09-19 : **ISO officiel Microsoft** (pas l'image dev
 Quick Create, qui embarque de l'outillage et expire à 90 jours) et **compte
 local** (d'où RET-04 clos en NON TESTÉ ci-dessus).
 
-0. Installer Windows 11 depuis l'ISO officiel, compte local.
-1. Démarrer `AZERTY-Test`, vérifier l'édition et la version de Windows, la
-   noter ici.
-2. **Instantané « propre »** avant toute installation.
-3. Importer le certificat dans l'invité, en **Personnes de confiance** de la
-   machine locale — `Archives/local-signing/1.2.0.0/AZERTYGlobal-local-test.cer`.
-4. Installer le sideload 1.1.0, exercer l'application, **second instantané**
-   « état 1.1.0 » : c'est la base de VM-02 et de RET-06.
-5. Installer le candidat 1.2.0 par-dessus.
+0. ✅ Windows 11 installé depuis l'ISO officiel, compte local.
+1. ✅ **Invité mesuré le 2026-09-19 à 12:21** : Microsoft Windows 11
+   Professionnel 64 bits, **build 26200** (25H2), machine `AZERTY-RECETTE`,
+   compte local `testeur`. Disposition clavier active : `040C:0000040C`
+   — français (France), AZERTY standard : poste représentatif.
+2. ✅ **Instantané « propre »** `propre-win11-25h2-20260919`.
+3. ✅ Certificat `8086B18C` importé en **Personnes de confiance** de la machine
+   locale, dans l'invité.
+4. ✅ Sideload 1.1.0 installé le 2026-09-19 à 12:21. Contrôle d'identité **vert** :
+   `AZERTYGlobal.AZERTYGlobal_1.1.0.0_x64__w9kghr08zmhbg`, architecture X64,
+   PFN `AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg` — **le même que la 1.1.0 du
+   Store**. Le chemin de mise à jour de VM-02 est donc le bon : la 1.2.0
+   remplacera ce paquet au lieu de s'installer à côté.
+   Application lancée et **onboarding mené à son terme** par Antoine à 12:24,
+   ce qui crée les réglages et la progression dont VM-02 vérifie la survie.
+5. ✅ **Second instantané** `etat-1.1.0-20260919`, pris le 2026-09-19 à
+   12:24:48. Les deux instantanés de référence coexistent : `propre-win11-25h2-20260919`
+   (12:00:44) et `etat-1.1.0-20260919`. ⚠️ Un troisième, `Automatic Checkpoint`
+   du 11:11:37, est créé par Hyper-V lui-même ; il n'est pas une référence de
+   campagne et les instantanés automatiques ont été désactivés pour qu'il n'en
+   apparaisse plus.
+
+⛔ **Ce qui vient d'être fait n'est pas VM-01.** VM-01 demande le **paquet
+final** — la 1.2.0 — dans une VM propre. La 1.1.0 posée ici est le *socle* de
+VM-02, pas un scénario. Le lancement sans erreur observé porte donc sur la
+version précédente et ne renseigne aucune ligne de la grille.
+6. Installer le candidat 1.2.0 par-dessus → c'est VM-02.
 
 ⚠️ Sans l'instantané de l'étape 2, VM-01 et VM-22 ne sont pas rejouables : une
 VM déjà utilisée n'est plus une VM propre.
+
+## Écarts mesurés en VM
+
+Constatés pendant la campagne, hors grille : ce sont des défauts de l'application,
+pas des lignes de recette. ⛔ Les deux sont **ouverts** au 2026-09-19.
+
+### Écart 1 — suspension pour compatibilité sur un geste banal
+
+Ouvrir la zone de notification suffit à suspendre le remapping. Six occurrences
+journalisées dans `error.log` le 2026-09-19, entre 12:29:44 et 12:32:33, toutes
+identiques : `UnknownForegroundSuspended: action=disable`.
+
+Deux causes possibles, dans `src/TypingEngine.Windows/ForegroundMonitor.cs` :
+
+| Ligne | Cause | Lecture |
+|---|---|---|
+| 180 | la fenêtre de premier plan change entre les deux lectures | course, faux positif |
+| 225 | `hasFg` faux avec un `pid` non nul — process illisible | identité vraiment inconnue |
+
+Instrument qui tranche : la clé `compatibilityDebugLog` de `config.json`, qui fait
+écrire dans le même `error.log` des lignes `CompatMode` portant le nom du process
+(`ConfigManager.cs:628`, `TrayApplication.cs:2151`). ⛔ Non encore posée en VM.
+
+### Écart 2 — la bulle de précaution masque l'icône du tray
+
+Conséquence du précédent, et plus grave que lui : ouvrir la zone de notification
+déclenche la bulle, la bulle recouvre l'icône de l'application, **et l'utilisateur
+ne peut plus quitter l'app par le seul geste prévu**. Mesuré par Antoine le
+2026-09-19 dans la VM.
+
+Contournement, en ligne de commande seulement :
+
+```powershell
+Get-Process | Where-Object ProcessName -like '*AZERTY*' | Stop-Process -Force
+```
+
+⚠️ Un utilisateur du Store n'a pas ce contournement dans les mains.
 
 ## Porte de décision
 
