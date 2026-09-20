@@ -29,6 +29,7 @@ public sealed class KeyMapper
     private const uint KEYEVENTF_UNICODE = 0x0004;
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const uint KEYEVENTF_SCANCODE = 0x0008;
+    private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
 
     private readonly Layout _layout;
     private readonly CompositionEngine _composition;
@@ -1174,15 +1175,15 @@ public sealed class KeyMapper
         // Si !hasX et needsX → on doit PRESS (keyUp=false).
         if (!effectiveNeedsShift)
         {
-            if (hasLShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, true));
-            if (hasRShift) inputs.Add(MakeVkInput(VK_RSHIFT, 0, true));
+            if (hasLShift) inputs.Add(MakeModifierInput(VK_LSHIFT, true));
+            if (hasRShift) inputs.Add(MakeModifierInput(VK_RSHIFT, true));
         }
-        else if (!hasShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, false));
-        if (needsAltGr != hasAltGr)  inputs.Add(MakeVkInput(VK_RMENU, 0, hasAltGr));
+        else if (!hasShift) inputs.Add(MakeModifierInput(VK_LSHIFT, false));
+        if (needsAltGr != hasAltGr)  inputs.Add(MakeModifierInput(VK_RMENU, hasAltGr));
         if (!needsAltGr)
         {
-            if (needsCtrl != hasCtrlAlone) inputs.Add(MakeVkInput(VK_LCONTROL, 0, hasCtrlAlone));
-            if (needsAlt != hasAltAlone)   inputs.Add(MakeVkInput(VK_LMENU, 0, hasAltAlone));
+            if (needsCtrl != hasCtrlAlone) inputs.Add(MakeModifierInput(VK_LCONTROL, hasCtrlAlone));
+            if (needsAlt != hasAltAlone)   inputs.Add(MakeModifierInput(VK_LMENU, hasAltAlone));
         }
 
         // Press + release par scancode : les jeux/frameworks qui bindent les touches
@@ -1193,16 +1194,16 @@ public sealed class KeyMapper
         // Restauration symétrique : action inverse de la préparation
         if (!needsAltGr)
         {
-            if (needsAlt != hasAltAlone)   inputs.Add(MakeVkInput(VK_LMENU, 0, !hasAltAlone));
-            if (needsCtrl != hasCtrlAlone) inputs.Add(MakeVkInput(VK_LCONTROL, 0, !hasCtrlAlone));
+            if (needsAlt != hasAltAlone)   inputs.Add(MakeModifierInput(VK_LMENU, !hasAltAlone));
+            if (needsCtrl != hasCtrlAlone) inputs.Add(MakeModifierInput(VK_LCONTROL, !hasCtrlAlone));
         }
-        if (needsAltGr != hasAltGr)  inputs.Add(MakeVkInput(VK_RMENU, 0, !hasAltGr));
+        if (needsAltGr != hasAltGr)  inputs.Add(MakeModifierInput(VK_RMENU, !hasAltGr));
         if (!effectiveNeedsShift)
         {
-            if (hasRShift) inputs.Add(MakeVkInput(VK_RSHIFT, 0, false));
-            if (hasLShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, false));
+            if (hasRShift) inputs.Add(MakeModifierInput(VK_RSHIFT, false));
+            if (hasLShift) inputs.Add(MakeModifierInput(VK_LSHIFT, false));
         }
-        else if (!hasShift) inputs.Add(MakeVkInput(VK_LSHIFT, 0, true));
+        else if (!hasShift) inputs.Add(MakeModifierInput(VK_LSHIFT, true));
     }
 
     /// <summary>
@@ -1376,7 +1377,39 @@ public sealed class KeyMapper
         return affects;
     }
 
-    private static Win32.INPUT MakeVkInput(uint vk, ushort scanCode, bool keyUp) => new()
+    /// <summary>
+    /// Scan code et bit etendu d'une touche modificatrice, tels que le clavier physique
+    /// les produit. (0, false) pour un VK qui n'est pas un modificateur lateralise.
+    ///
+    /// Emis nus (wScan = 0, sans KEYEVENTF_EXTENDEDKEY), RAlt et RCtrl sont indiscernables
+    /// de leurs jumelles gauches pour toute cible qui lit le scan code — GLFW, SDL, Unity,
+    /// et le commentaire d'origine de cette classe le dit deja des touches de caractere.
+    /// C'est le mecanisme (a) de l'ecart 5 (AG130-08) : AltGr est detecte comme RAlt+LCtrl
+    /// mais emis comme un VK_RMENU nu, donc la cible voit Alt gauche et le « @ » d'AZERTY
+    /// peut declencher un accelerateur de menu au lieu de produire son caractere.
+    ///
+    /// La faute vaut aussi au relachement : relacher un RAlt non etendu apres l'avoir
+    /// enfonce etendu laisse la cible croire RAlt toujours enfoncee.
+    /// </summary>
+    private static (ushort Scan, bool Extended) ModifierScanCode(uint vk) => vk switch
+    {
+        VK_LSHIFT => ((ushort)0x2A, false),
+        VK_RSHIFT => ((ushort)0x36, false),
+        VK_LCONTROL => ((ushort)0x1D, false),
+        VK_RCONTROL => ((ushort)0x1D, true),
+        VK_LMENU => ((ushort)0x38, false),
+        VK_RMENU => ((ushort)0x38, true),
+        _ => ((ushort)0, false)
+    };
+
+    /// <summary>Evenement d'une touche modificatrice, avec son scan code et son bit etendu.</summary>
+    private static Win32.INPUT MakeModifierInput(uint vk, bool keyUp)
+    {
+        var (scan, extended) = ModifierScanCode(vk);
+        return MakeVkInput(vk, scan, keyUp, extended);
+    }
+
+    private static Win32.INPUT MakeVkInput(uint vk, ushort scanCode, bool keyUp, bool extended = false) => new()
     {
         type = INPUT_KEYBOARD,
         u = new Win32.INPUTUNION
@@ -1385,7 +1418,7 @@ public sealed class KeyMapper
             {
                 wVk = (ushort)vk,
                 wScan = scanCode,
-                dwFlags = keyUp ? KEYEVENTF_KEYUP : 0,
+                dwFlags = (keyUp ? KEYEVENTF_KEYUP : 0) | (extended ? KEYEVENTF_EXTENDEDKEY : 0),
                 time = 0,
                 dwExtraInfo = KeyboardHook.INJECTED_FLAG
             }
