@@ -48,6 +48,12 @@ public static class Win32
     public const uint WM_SYSKEYDOWN = 0x0104;
     public const uint WM_SYSKEYUP = 0x0105;
     public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    // Sélecteur Alt+Tab : SWITCHSTART à son ouverture, SWITCHEND à sa fermeture.
+    // Écart 7 de la recette VM du 2026-09-19 : la fenêtre d'arrivée d'un Alt+Tab
+    // n'émet pas toujours EVENT_SYSTEM_FOREGROUND ni EVENT_OBJECT_FOCUS, le
+    // snapshot restait donc figé sur le sélecteur et toute émission était refusée.
+    public const uint EVENT_SYSTEM_SWITCHSTART = 0x0014;
+    public const uint EVENT_SYSTEM_SWITCHEND = 0x0015;
     public const uint EVENT_OBJECT_FOCUS = 0x8005;
     public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
     public const uint LIST_MODULES_ALL = 0x03;

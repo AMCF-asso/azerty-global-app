@@ -312,6 +312,47 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool bRepaint);
 
+    // Barre de défilement verticale — Écart 4 de la recette VM du 2026-09-19 : la
+    // fenêtre Paramètres était plus haute que l'écran en 1366×768 à 150 %, et le
+    // troisième bouton radio de compatibilité devenait inatteignable. Le modèle
+    // v2.0.0 (audit du 2026-08-28, § 17) impose qu'aucune fenêtre ne dépasse la zone
+    // de travail : ce qui ne tient pas défile au lieu de sortir de l'écran.
+    public const uint WM_VSCROLL = 0x0115;
+    public const int SB_VERT = 1;
+    public const int SB_LINEUP = 0;
+    public const int SB_LINEDOWN = 1;
+    public const int SB_PAGEUP = 2;
+    public const int SB_PAGEDOWN = 3;
+    public const int SB_THUMBTRACK = 5;
+    public const int SB_TOP = 6;
+    public const int SB_BOTTOM = 7;
+    public const uint SIF_RANGE = 0x0001;
+    public const uint SIF_PAGE = 0x0002;
+    public const uint SIF_POS = 0x0004;
+    public const uint SIF_TRACKPOS = 0x0010;
+    public const int SM_CXVSCROLL = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SCROLLINFO
+    {
+        public uint cbSize;
+        public uint fMask;
+        public int nMin;
+        public int nMax;
+        public uint nPage;
+        public int nPos;
+        public int nTrackPos;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern int SetScrollInfo(IntPtr hWnd, int nBar, ref SCROLLINFO lpsi, bool redraw);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool GetScrollInfo(IntPtr hWnd, int nBar, ref SCROLLINFO lpsi);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool ShowScrollBar(IntPtr hWnd, int wBar, bool bShow);
+
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 

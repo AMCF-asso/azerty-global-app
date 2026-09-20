@@ -71,7 +71,11 @@ public sealed class KeyboardHook : IDisposable
     /// En mode pass-through « pause volontaire » (pas anti-cheat), autorise la seule
     /// détection des raccourcis (Ctrl+Maj+Verr.Maj / recherche / clavier virtuel)
     /// pour que l'utilisateur puisse reprendre au clavier. Aucun remapping n'a lieu.
-    /// Doit rester false en suspension de compatibilité : aucun raccourci n'y est exécuté.
+    /// Doit rester false en suspension de compatibilité subie — anti-cheat, accès distant,
+    /// premier plan inconnu : aucun raccourci n'y est exécuté. Depuis l'Écart 8 de la
+    /// recette VM du 2026-09-19, l'hôte la remet à true pour la seule désactivation
+    /// choisie par l'utilisateur (motif UserOverride), où l'inertie totale ne protégeait
+    /// rien et laissait Ctrl+Maj+W fermer la fenêtre cible.
     /// </summary>
     public bool ShortcutsWhilePassThrough { get; set; }
 

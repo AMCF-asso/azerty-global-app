@@ -120,7 +120,62 @@ sealed class SettingsWindow : IDisposable
         public Win32.RECT CompatAutoRect;
         public Win32.RECT CompatForceOnRect;
         public Win32.RECT CompatForceOffRect;
+        // Hauteur totale du contenu, marge basse comprise, avant tout défilement.
+        // C'est elle qui décide de la hauteur de la fenêtre : le modèle v2.0.0 veut
+        // une fenêtre qui mesure son contenu, jamais une constante (audit du
+        // 2026-08-28, § 17 — BASE_WIN_H était devenue fausse à chaque section ajoutée).
+        public int ContentHeight;
         // GuideRect et CloseButtonRect retirés — la croix système suffit
+    }
+
+    /// <summary>
+    /// Décale verticalement toute la mise en page. Point de passage unique du
+    /// défilement : la mise en page se calcule en coordonnées de contenu, et ce
+    /// décalage s'applique juste avant de rendre la structure, si bien que le tracé
+    /// comme le positionnement des contrôles suivent sans le savoir.
+    /// </summary>
+    private static void ShiftLayout(ref LayoutInfo l, int dy)
+    {
+        if (dy == 0) return;
+        l.HeaderTitleY += dy;
+        l.HeaderDividerY += dy;
+        l.KeyboardRowY += dy;
+        l.SearchRowY += dy;
+        ShiftRect(ref l.LogoRect, dy);
+        ShiftRect(ref l.ShortcutsPanel, dy);
+        ShiftRect(ref l.KeyboardBoxRect, dy);
+        ShiftRect(ref l.SearchBoxRect, dy);
+        ShiftRect(ref l.KeyboardEditRect, dy);
+        ShiftRect(ref l.SearchEditRect, dy);
+        ShiftRect(ref l.ValidationRect, dy);
+        ShiftRect(ref l.ResetRect, dy);
+        ShiftRect(ref l.PreferencesPanel, dy);
+        ShiftRect(ref l.AutoStartRect, dy);
+        ShiftRect(ref l.NotificationsRect, dy);
+        ShiftRect(ref l.ManagedNotificationsRect, dy);
+        ShiftRect(ref l.OnboardingRect, dy);
+        ShiftRect(ref l.ManagedOnboardingRect, dy);
+        ShiftRect(ref l.TrainingRect, dy);
+        ShiftRect(ref l.LanguagePanel, dy);
+        ShiftRect(ref l.LanguageFrRect, dy);
+        ShiftRect(ref l.LanguageEnRect, dy);
+        ShiftRect(ref l.ManagedLanguageRect, dy);
+        ShiftRect(ref l.WindowsPanel, dy);
+        ShiftRect(ref l.ResetVirtualKeyboardWindowRect, dy);
+        ShiftRect(ref l.ResetLessonsWindowRect, dy);
+        ShiftRect(ref l.CompatPanel, dy);
+        ShiftRect(ref l.CompatListRect, dy);
+        ShiftRect(ref l.CompatAddRect, dy);
+        ShiftRect(ref l.CompatRemoveRect, dy);
+        ShiftRect(ref l.CompatAutoRect, dy);
+        ShiftRect(ref l.CompatForceOnRect, dy);
+        ShiftRect(ref l.CompatForceOffRect, dy);
+    }
+
+    private static void ShiftRect(ref Win32.RECT r, int dy)
+    {
+        r.top += dy;
+        r.bottom += dy;
     }
 
     private IntPtr _hWnd;
@@ -184,6 +239,15 @@ sealed class SettingsWindow : IDisposable
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
 
+    // Défilement vertical (Écart 4). _scrollY est la position courante, en pixels de
+    // contenu ; _contentHeight la hauteur mesurée du contenu ; _viewportHeight la
+    // hauteur de la zone cliente réellement obtenue après plafonnement à la zone de
+    // travail. Quand le contenu tient, les trois restent cohérents et la barre de
+    // défilement est masquée : la fenêtre se comporte exactement comme avant.
+    private int _scrollY;
+    private int _contentHeight;
+    private int _viewportHeight;
+
     private IntPtr _hFontTitle;
     private IntPtr _hFontVersion;
     private IntPtr _hFontSubtitle;
@@ -229,6 +293,9 @@ sealed class SettingsWindow : IDisposable
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
+        // Mesurer avant de positionner : la fenêtre prend la hauteur de son contenu et
+        // arme le défilement si la zone de travail l'a plafonnée (Écart 4).
+        FitWindowToContent();
         RepositionControls();
 
         // Bascule de langue initiée ailleurs (menu tray, fenêtre de bienvenue) pendant que
@@ -243,7 +310,7 @@ sealed class SettingsWindow : IDisposable
             {
                 _dpiScale = realDpi / 96f;
                 RecreateFonts();
-                ResizeWindow();
+                FitWindowToContent();
                 RepositionControls();
             }
         }
@@ -332,7 +399,10 @@ sealed class SettingsWindow : IDisposable
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        // WS_VSCROLL est présent dès la création pour que la barre existe quand le
+        // contenu dépasse la zone de travail ; FitWindowToContent la masque aussitôt
+        // lorsque tout tient, ce qui est le cas courant (Écart 4).
+        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | WS_VSCROLL;
         var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
         Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
         int windowW = adjustRect.right - adjustRect.left;
@@ -491,19 +561,99 @@ sealed class SettingsWindow : IDisposable
         RefreshCompatList(selectProcess: null);
     }
 
-    private void ResizeWindow()
+    /// <summary>
+    /// Donne à la fenêtre la hauteur de son contenu, plafonnée à la zone de travail de
+    /// l'écran qui la porte, et arme le défilement si le plafond a mordu.
+    ///
+    /// Écart 4 de la recette VM du 2026-09-19 : en 1366×768 à 150 %, BASE_WIN_H valait
+    /// 680 × 1,5 = 1 020 px de client pour 728 px utiles — la fenêtre dépassait par le
+    /// bas et le troisième bouton radio de compatibilité était inatteignable, sans
+    /// aucun moyen de l'atteindre puisque la fenêtre n'est pas redimensionnable.
+    /// Le modèle v2.0.0 (audit du 2026-08-28, § 17) pose la règle : aucune fenêtre ne
+    /// dépasse la zone de travail, et une fenêtre mesure son contenu plutôt que de le
+    /// supposer. BASE_WIN_H ne sert donc plus que d'amorce avant la première mesure.
+    /// </summary>
+    private void FitWindowToContent()
     {
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
-        Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
-        int windowW = adjustRect.right - adjustRect.left;
-        int windowH = adjustRect.bottom - adjustRect.top;
+
+        // Mesure sans défilement : la hauteur du contenu ne dépend pas de la position.
+        int savedScroll = _scrollY;
+        _scrollY = 0;
+        int contentHeight = GetLayout(S(BASE_WIN_W), S(BASE_WIN_H)).ContentHeight;
+        _scrollY = savedScroll;
+        _contentHeight = contentHeight;
+
         Win32.GetWindowRect(_hWnd, out var currentRect);
         int cx = (currentRect.left + currentRect.right) / 2;
         int cy = (currentRect.top + currentRect.bottom) / 2;
-        Win32.MoveWindow(_hWnd, cx - windowW / 2, cy - windowH / 2, windowW, windowH, true);
+        var hMonitor = Win32.MonitorFromWindow(_hWnd, 0x00000002);
+        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        Win32.GetMonitorInfo(hMonitor, ref monInfo);
+        int workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        int workW = monInfo.rcWork.right - monInfo.rcWork.left;
+
+        // Hauteur de client maximale : la zone de travail moins les bordures et le
+        // titre, mesurés par AdjustWindowRectEx plutôt que devinés.
+        var frame = new Win32.RECT { left = 0, top = 0, right = S(BASE_WIN_W), bottom = contentHeight };
+        Win32.AdjustWindowRectEx(ref frame, dwStyle, false, 0);
+        int chromeH = (frame.bottom - frame.top) - contentHeight;
+        int chromeW = (frame.right - frame.left) - S(BASE_WIN_W);
+        int maxClientH = Math.Max(S(200), workH - chromeH);
+
+        int clientH = Math.Min(contentHeight, maxClientH);
+        bool needsScroll = contentHeight > clientH;
+        _viewportHeight = clientH;
+
+        // La barre de défilement mange de la largeur du client : l'ajouter à la
+        // fenêtre pour que le contenu garde sa largeur de mise en page.
+        int clientW = S(BASE_WIN_W) + (needsScroll ? Win32.GetSystemMetrics(Win32.SM_CXVSCROLL) : 0);
+        int windowW = Math.Min(clientW + chromeW, workW);
+        int windowH = clientH + chromeH;
+
+        // Replacer dans la zone de travail : centrer puis ramener si un bord sort.
+        int x = cx - windowW / 2;
+        int y = cy - windowH / 2;
+        x = Math.Max(monInfo.rcWork.left, Math.Min(x, monInfo.rcWork.right - windowW));
+        y = Math.Max(monInfo.rcWork.top, Math.Min(y, monInfo.rcWork.bottom - windowH));
+        Win32.MoveWindow(_hWnd, x, y, windowW, windowH, true);
+
+        ClampScroll();
+        UpdateScrollBar(needsScroll);
+    }
+
+    private void ClampScroll()
+    {
+        int maxScroll = Math.Max(0, _contentHeight - _viewportHeight);
+        _scrollY = Math.Max(0, Math.Min(_scrollY, maxScroll));
+    }
+
+    private void UpdateScrollBar(bool visible)
+    {
+        Win32.ShowScrollBar(_hWnd, Win32.SB_VERT, visible);
+        if (!visible) return;
+        var si = new Win32.SCROLLINFO
+        {
+            cbSize = (uint)Marshal.SizeOf<Win32.SCROLLINFO>(),
+            fMask = Win32.SIF_RANGE | Win32.SIF_PAGE | Win32.SIF_POS,
+            nMin = 0,
+            nMax = Math.Max(0, _contentHeight - 1),
+            nPage = (uint)Math.Max(1, _viewportHeight),
+            nPos = _scrollY
+        };
+        Win32.SetScrollInfo(_hWnd, Win32.SB_VERT, ref si, true);
+    }
+
+    /// <summary>Applique une nouvelle position de défilement et redessine si elle a bougé.</summary>
+    private void ScrollTo(int newScroll)
+    {
+        int before = _scrollY;
+        _scrollY = newScroll;
+        ClampScroll();
+        if (_scrollY == before) return;
+        UpdateScrollBar(_contentHeight > _viewportHeight);
+        RepositionControls();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     private void RepositionControls()
@@ -713,7 +863,7 @@ sealed class SettingsWindow : IDisposable
             var windowsPanel = Rect(margin, windowsTitleTop, contentWidth, panelBottom - windowsTitleTop);
             var compatPanel = Rect(margin, compatTitleTop, contentWidth, panelBottom - compatTitleTop);
 
-            return new LayoutInfo
+            var layoutInfo = new LayoutInfo
             {
                 Margin = margin,
                 HeaderTitleX = margin + logoSize + S(6),
@@ -754,7 +904,11 @@ sealed class SettingsWindow : IDisposable
                 CompatAutoRect = compatAutoRect,
                 CompatForceOnRect = compatForceOnRect,
                 CompatForceOffRect = compatForceOffRect,
+                ContentHeight = panelBottom + margin,
             };
+
+            ShiftLayout(ref layoutInfo, -_scrollY);
+            return layoutInfo;
         }
         finally
         {
@@ -868,6 +1022,48 @@ sealed class SettingsWindow : IDisposable
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
 
+            case Win32.WM_VSCROLL:
+            {
+                int code = wParam.ToInt32() & 0xFFFF;
+                int line = S(24);
+                int page = Math.Max(line, _viewportHeight - line);
+                int target = _scrollY;
+                switch (code)
+                {
+                    case Win32.SB_LINEUP: target -= line; break;
+                    case Win32.SB_LINEDOWN: target += line; break;
+                    case Win32.SB_PAGEUP: target -= page; break;
+                    case Win32.SB_PAGEDOWN: target += page; break;
+                    case Win32.SB_TOP: target = 0; break;
+                    case Win32.SB_BOTTOM: target = _contentHeight; break;
+                    case Win32.SB_THUMBTRACK:
+                    {
+                        // La position du curseur dépasse 16 bits sur un contenu long :
+                        // la lire dans SCROLLINFO, jamais dans le mot haut de wParam.
+                        var si = new Win32.SCROLLINFO
+                        {
+                            cbSize = (uint)Marshal.SizeOf<Win32.SCROLLINFO>(),
+                            fMask = Win32.SIF_TRACKPOS
+                        };
+                        if (Win32.GetScrollInfo(_hWnd, Win32.SB_VERT, ref si))
+                            target = si.nTrackPos;
+                        break;
+                    }
+                }
+                ScrollTo(target);
+                return IntPtr.Zero;
+            }
+
+            case Win32.WM_MOUSEWHEEL:
+            {
+                if (_contentHeight <= _viewportHeight) break;
+                int delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
+                // Un cran de molette vaut WHEEL_DELTA (120) ; trois lignes par cran,
+                // comme le défilement par défaut de Windows.
+                ScrollTo(_scrollY - (delta / 120) * S(24) * 3);
+                return IntPtr.Zero;
+            }
+
             case Win32.WM_DPICHANGED:
             {
                 int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
@@ -877,6 +1073,11 @@ sealed class SettingsWindow : IDisposable
                 var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
                 Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
                     suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                // La taille suggérée par Windows applique le nouveau facteur à l'ancienne
+                // hauteur : elle peut dépasser la zone de travail du nouvel écran. On
+                // remesure derrière, sinon l'Écart 4 revient dès qu'on déplace la fenêtre
+                // d'un écran 100 % vers un écran 150 %.
+                FitWindowToContent();
                 RepositionControls();
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                 return IntPtr.Zero;
@@ -1148,6 +1349,10 @@ sealed class SettingsWindow : IDisposable
     {
         RefreshLanguageTexts();
         RefreshLanguageRadios();
+        // Les libellés traduits changent de hauteur (les textes anglais tiennent parfois
+        // sur une ligne de moins) : remesurer, sinon la fenêtre garde la hauteur de
+        // l'autre langue et le bas du contenu redevient inatteignable.
+        FitWindowToContent();
         RepositionControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
