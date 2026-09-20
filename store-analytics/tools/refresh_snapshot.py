@@ -180,6 +180,18 @@ def main() -> None:
         api_get(f"/repos/{REPO}/actions/runs/{run['id']}/artifacts", token)
     ).get("artifacts") or []
     live = [a for a in artifacts if not a.get("expired")]
+    if not artifacts:
+        # ⚠️ Ne jamais confondre les deux cas : pendant deux semaines ce script a
+        # annoncé « artefact expiré » pour un run du jour même, ce qui envoyait
+        # chercher un problème de rétention là où l'étape avait été supprimée.
+        raise SystemExit(
+            "Ce run n'a produit AUCUN artefact — ce n'est pas une expiration.\n"
+            "L'étape `upload-artifact` a été retirée du workflow par le commit "
+            "1013d2b du 2026-09-05 (« Keep Store analytics archives in private "
+            "storage only »), et l'archive détaillée ne vit plus que dans le "
+            "conteneur Azure privé.\n"
+            "Pour les cumuls, qui eux sortent encore : python tools/fetch_totals.py"
+        )
     if not live:
         raise SystemExit(
             "L'artefact de ce run a expiré (rétention 14 jours). "

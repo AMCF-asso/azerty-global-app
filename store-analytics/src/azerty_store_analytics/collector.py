@@ -10,6 +10,8 @@ from typing import Any
 
 from .client import StoreAnalyticsClient, obtain_access_token
 from .config import DATASETS
+from .summary import build_totals
+from .summary import emit as emit_totals
 
 
 def required_env(name: str) -> str:
@@ -101,6 +103,14 @@ def main() -> None:
         shutil.rmtree(latest_dir)
     shutil.copytree(run_dir, latest_dir)
     write_json(output_root / "manifest.json", manifest)
+
+    # Totaux agrégés : la seule donnée qui sort de l'archive privée depuis la
+    # décision du 2026-09-05. Émis même quand un jeu a échoué, mais porteurs du
+    # drapeau `complete` pour que le consommateur refuse un cumul sous-évalué.
+    totals = build_totals(output_root, manifest)
+    write_json(run_dir / "totals.json", totals)
+    write_json(latest_dir / "totals.json", totals)
+    emit_totals(totals)
 
     if failures:
         for failure in failures:
