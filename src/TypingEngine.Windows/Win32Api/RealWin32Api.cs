@@ -23,8 +23,20 @@ public sealed class RealWin32Api : IWin32Api
     public int ToUnicodeEx(uint vk, uint scan, byte[] state, StringBuilder buffer, int capacity, uint flags, IntPtr hkl) =>
         Win32.ToUnicodeEx(vk, scan, state, buffer, capacity, flags, hkl);
 
-    public uint SendInput(Win32.INPUT[] inputs) =>
-        Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
+    /// <inheritdoc />
+    public int LastSendInputError { get; private set; }
+
+    /// <summary>
+    /// AG130-09 : un retour 0 sur un lot non vide est un refus en bloc, jamais une
+    /// emission partielle. On releve GetLastWin32Error immediatement, avant que
+    /// n'importe quel appel interpose n'ecrase le code d'erreur du thread.
+    /// </summary>
+    public uint SendInput(Win32.INPUT[] inputs)
+    {
+        uint sent = Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
+        if (sent == 0 && inputs.Length > 0) LastSendInputError = Marshal.GetLastWin32Error();
+        return sent;
+    }
 
     public IntPtr GetForegroundWindow() => Win32.GetForegroundWindow();
 
