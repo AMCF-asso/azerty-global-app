@@ -566,6 +566,9 @@ sealed class TrayApplication : IDisposable
         while ((ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0)) != 0)
         {
             if (ret == -1) break; // Erreur fatale — sortir de la boucle
+            // AG130-40 : la fenetre inscrite prend la navigation de dialogue. Consomme,
+            // le message ne doit surtout pas repartir en dispatch — il serait livre deux fois.
+            if (DialogNavigation.TryRoute(ref msg)) continue;
             Win32.TranslateMessage(ref msg);
             Win32.DispatchMessageW(ref msg);
         }

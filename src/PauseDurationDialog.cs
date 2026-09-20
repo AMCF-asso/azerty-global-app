@@ -66,6 +66,8 @@ sealed class PauseDurationDialog : IDisposable
                 int ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0);
                 if (ret <= 0)
                     break;
+                // AG130-40 : cette boucle modale a la meme omission que la principale.
+                if (DialogNavigation.TryRoute(ref msg)) continue;
                 Win32.TranslateMessage(ref msg);
                 Win32.DispatchMessageW(ref msg);
             }
@@ -109,6 +111,9 @@ sealed class PauseDurationDialog : IDisposable
 
         _hWnd = Win32.CreateWindowExW(0, ClassName, L.Pause_WindowTitle,
             style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
+
+        // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
+        DialogNavigation.Register(_hWnd);
 
         _hFont = Win32.CreateFontW(-14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         CreateControls(hInstance);
@@ -324,6 +329,8 @@ sealed class PauseDurationDialog : IDisposable
         }
         if (_hWnd != IntPtr.Zero)
         {
+            // AG130-40 : desinscrire AVANT de detruire — Windows recycle les HWND.
+            DialogNavigation.Unregister(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
