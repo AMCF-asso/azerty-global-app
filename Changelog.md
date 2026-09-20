@@ -11,6 +11,20 @@ Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0
 - Le menu S2 mesurait dix-huit lignes, jugées encore trop longues en VM. « Apprendre ▸ » replie Leçons, Défi du jour et Revoir l’accueil ; « À propos et aide ▸ » replie Confidentialité et sécurité, Ressources, Retours et soutien, Noter sur le Store et À propos. Dix-huit lignes deviennent douze, **rien n’est retiré**. Le Défi du jour perd la visibilité immédiate que lui donnait la décision du 2026-08-16 : arbitrage assumé.
 - ⚠️ Aucun test ne verrouille la structure du menu — `ShowContextMenu` appelle Win32 directement. La vérification est visuelle, en VM.
 
+**Sollicitation d’avis — rattrapage de la base 1.1.0 (décision d’Antoine du 2026-09-20)**
+
+- Le drapeau hérité `reviewPromptDone` ne vaut plus une sollicitation consommée. Une installation qui migre depuis la 1.1.0 repart avec ses **deux essais entiers**, au lieu d’un seul comme le prévoyait la règle de migration de la 1.2.0.
+- Motif mesuré : la sollicitation de la 1.1.0 vivait dans le `else` du test d’affichage de l’accueil, donc une partie des installations n’a **jamais** été sollicitée ; et quand elle l’était, le tirage 50/50 l’envoyait une fois sur deux vers la page de feedback privée au lieu de la fiche Store. Un `reviewPromptDone` à true ne prouve donc pas qu’une note ait été demandée. Snapshot Store du 2026-09-02 : **0 notation sur 394 utilisateurs actifs** en juillet 2026, et 3 notes uniques hors celle de l’auteur depuis mars.
+- ⚠️ Contrepartie assumée : l’utilisateur de la 1.1.0 qui a cliqué sa sollicitation et déposé sa note est **indistinguable** de celui qui l’a ignorée — la 1.1.0 n’écrit pas `reviewPromptClicked`, ce champ naît en 1.2.0. Il sera re-sollicité une fois. Les garde-fous ordinaires tiennent : plafond de deux essais sur la vie de l’installation, planchers de 3 puis 10 jours d’usage distincts, une sollicitation par jour au plus, silence de 48 heures après une erreur journalisée.
+- Témoin : `ReviewPromptCount_LegacyDoneFlagNoLongerConsumesAnAttempt` attend 0 là où l’ancienne ligne rendait 1 — remettre le repli rougit ce test et lui seul. Un second test prouve que `reviewPromptClicked` reste lu.
+- La priorité de la sollicitation sur le rappel du Défi du jour **survit désormais au redémarrage** : le champ en mémoire qui la portait est mort, l’état se relit sur disque. Sans ce correctif, un redémarrage laissait le rappel d’entraînement passer devant la sollicitation le même soir.
+
+**Correctifs isolés repris de `main`**
+
+- `RepositoryUrl` pointait encore le compte personnel `AZERTYGlobal` au lieu de `AMCF-asso` ; la constante part dans le binaire Store.
+- `src/lessons.json` reprend le module « course aux 30 millions » du site. Cela répare le job CI `provenance`, qui échouait parce que la copie embarquée avait dérivé de son original canonique `tester/lessons.json` — vérifié : `check-layout-provenance.py` rend 0, les 3 copies sont identiques.
+- ⛔ Le reste de l’écart avec `main` n’est **pas** portable : 95 fichiers et ~17 800 insertions, qui sont la refonte graphique CH0-CH4b, c’est-à-dire la 2.0.0. Les quick wins QW-3 et QW-5 n’existent nulle part — le chantier CH5 n’a jamais été ouvert.
+
 **Compatibilité — fin d’une suspension déclenchée par le shell Windows**
 
 - Ouvrir la zone de notification ou cliquer la barre des tâches suffisait à suspendre le remapping, avec une bulle « suspendu par précaution » qui recouvrait l’icône de l’application — donc le seul geste prévu pour quitter. Six occurrences journalisées en trois minutes dans la VM le 2026-09-19.
