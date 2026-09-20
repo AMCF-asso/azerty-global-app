@@ -10,11 +10,11 @@ public class LessonCoreTests
     {
         var catalog = LessonCatalogLoader.LoadFromResource();
 
-        Assert.Equal(8, catalog.Modules.Count);
-        Assert.Equal(7, catalog.SiteModuleCount);
-        Assert.Equal(31, catalog.SiteLessonCount);
-        Assert.Equal(70, catalog.SiteExerciseCount);
-        Assert.Equal(76, catalog.TotalExerciseCount);
+        Assert.Equal(9, catalog.Modules.Count);
+        Assert.Equal(8, catalog.SiteModuleCount);
+        Assert.Equal(34, catalog.SiteLessonCount);
+        Assert.Equal(73, catalog.SiteExerciseCount);
+        Assert.Equal(79, catalog.TotalExerciseCount);
         Assert.Equal("initiation", catalog.Modules[0].Id);
         Assert.Equal("email-web", catalog.Modules[1].Id);
         Assert.All(catalog.Modules.Skip(1).SelectMany(m => m.Lessons).SelectMany(l => l.Exercises),
