@@ -202,6 +202,35 @@ class UrlTests(unittest.TestCase):
                          ["VERSION-CORPS-INCONNUE"])
 
 
+class VersionsHorsProduitTests(unittest.TestCase):
+    """Champ ajoute le 2026-09-20 en mettant README.md sous surveillance (AG130-12).
+
+    Le README cite `10.0.17763.0`, le build Windows minimal. Sans ce champ le scanner le
+    lit comme une version d'application perimee et rend une erreur que rien ne peut
+    corriger : ce n'est pas une version d'AZERTY Global, et la loger en
+    `versions-historiques` ferait dire au document que l'app a eu une version 10.0.17763.0.
+    """
+
+    BLOC = ("<!-- suivi-version\nversion-app: 1.2.0\n"
+            "versions-hors-produit: 10.0.17763.0\n-->")
+
+    def test_version_hors_produit_declaree_est_tue(self):
+        corps = "MinVersion 10.0.17763.0 est requis."
+        self.assertEqual(codes(scanner.analyser(doc(self.BLOC, corps), COURANTE)), [])
+
+    def test_une_autre_version_reste_signalee(self):
+        """Temoin negatif : le champ ne rend pas le scanner aveugle en general."""
+        corps = "MinVersion 10.0.17763.0, et l'app est en 1.1.0."
+        self.assertEqual(codes(scanner.analyser(doc(self.BLOC, corps), COURANTE)),
+                         ["VERSION-CORPS-INCONNUE"])
+
+    def test_sans_le_champ_la_version_windows_est_signalee(self):
+        """Le faux positif qu'on corrige doit exister sans le champ, sinon ce lot ne sert a rien."""
+        corps = "MinVersion 10.0.17763.0 est requis."
+        self.assertEqual(codes(scanner.analyser(doc(BLOC_NU, corps), COURANTE)),
+                         ["VERSION-CORPS-INCONNUE"])
+
+
 class DocumentsReelsTests(unittest.TestCase):
     """Non-régression sur les documents du parc : aucune ERREUR ne doit y subsister.
 

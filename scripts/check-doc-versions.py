@@ -37,6 +37,12 @@ Les deux listes ne disent pas la même chose, et confondre les deux rend le scan
   2026-07-23 ». Ils restent vrais après la prochaine release, donc silence.
 - `versions-en-bascule` — ce que la bascule du kit remplacera, « **Version** : `1.1.0.0` ».
   Signalé en attente à chaque passage, jamais tu.
+- `versions-hors-produit` — des versions qui ne sont pas celles de l'application : build
+  Windows minimal, version de .NET, dépendance tierce. Silence total. Ajouté le 2026-09-20
+  en mettant `README.md` sous surveillance (AG130-12), où `10.0.17763.0` — le build Windows
+  minimal — était lu comme une version d'application périmée. Les loger en
+  `versions-historiques` marcherait, mais dirait qu'AZERTY Global a eu une version
+  10.0.17763.0 : le scanner deviendrait illisible pour qui le relit.
 
 Un **nom de fichier** `AZERTY_Global_1.1.0.msixbundle` est toujours traité en attente, même
 si sa version figure dans les historiques : il nomme le fichier réellement livré dans le
@@ -84,6 +90,10 @@ KIT = LEGACY / "Fichiers d'installation" / "Application AZERTY Global (Windows S
 # `Publication Microsoft Store.md` et `TO-DO.md`. Le marquer obligatoire rendrait le scanner
 # inconcluant sur tout clone du dépôt public, où il n'existe pas.
 DOCUMENTS = [
+    # Ajoute le 2026-09-20 (AG130-12) : le README annoncait la version 1.2.0, un manifeste
+    # en 1.2.0.0 et « aucun package produit ni soumis » alors que deux versions etaient
+    # publiees sur le Store, sans que rien ne le signale - il n etait pas surveille.
+    (REPO / "README.md", False),
     (REPO / "Distribution Entreprises.md", True),
     (REPO / "entreprise" / "Note RGPD - Établissements.md", False),
     (LEGACY / "Microsoft Store" / "Distribution Entreprises.md", True),
@@ -188,6 +198,7 @@ def analyser(texte, courante):
 
     historiques = valeurs_listees(champs, "versions-historiques")
     en_bascule = valeurs_listees(champs, "versions-en-bascule")
+    hors_produit = valeurs_listees(champs, "versions-hors-produit")
     empreintes = {e.upper() for e in valeurs_listees(champs, "empreintes-attendues")}
     attente_empreinte = champs.get("empreintes-attendues", "") == EN_ATTENTE
 
@@ -210,7 +221,7 @@ def analyser(texte, courante):
                 anomalies.append(Anomalie(
                     ATTENTE, "VERSION-EN-BASCULE", n,
                     f"version {vue} déclarée remplaçable par la bascule du kit"))
-            elif vue in historiques:
+            elif vue in historiques or vue in hors_produit:
                 continue
             else:
                 anomalies.append(Anomalie(

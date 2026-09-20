@@ -156,7 +156,7 @@ AZERTY Global is an improved French keyboard layout for Windows: the same AZERTY
 Install the app, enable it — that's it. No admin rights required, and almost no relearning.
 
 
-🔤 5 IMPROVEMENTS, 99% OF YOUR HABITS PRESERVED
+🔤 5 IMPROVEMENTS, 99% OF YOUR KEYSTROKES PRESERVED
 
 1. Smart Caps Lock — only affects letters → É, È, Ç, À, Ù in one key press
 2. Direct period access — period and semicolon swapped
