@@ -397,11 +397,21 @@ internal sealed class LessonsWindow : IDisposable
         Win32.GetMonitorInfo(monitor, ref monInfo);
         int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
         int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        // AG130-42 : borner avant de creer. A 175 % sur 1920x1080, D(1120)xD(760) vaut
+        // 1960x1330 pour une zone de travail de 1920x1032 : la fenetre naissait hors ecran,
+        // commandes du bas inatteignables, sans que rien n'echoue.
+        (winW, winH) = WindowSizing.ClampToWorkArea(winW, winH, screenW, screenH);
+
         int x = monInfo.rcWork.left + Math.Max(0, (screenW - winW) / 2);
         int y = monInfo.rcWork.top + Math.Max(0, (screenH - winH) / 2);
 
         _hWnd = Win32.CreateWindowExW(0, WND_CLASS_NAME, L.LessonsWin_WindowTitle,
             style, x, y, winW, winH, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+
+        // AG130-42 : le constructeur a lu le DPI du moniteur PRINCIPAL, faute de fenetre
+        // a interroger. Maintenant qu'elle existe, prendre le sien : sur un poste a deux
+        // ecrans de densites differentes, les polices etaient calculees pour le mauvais.
+        AdoptWindowDpi();
         CaptureBaseWindowMetrics();
         RestoreSavedBoundsIfVisible();
         UpdateRenderScaleFromCurrentClient(force: true);
@@ -480,6 +490,52 @@ internal sealed class LessonsWindow : IDisposable
         UpdateRenderScaleFromCurrentClient(force: true);
         if (_visible)
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>
+    /// AG130-42 — aligner l'echelle sur le DPI reel de la fenetre, puis la redimensionner
+    /// pour tenir dans son ecran. Rend vrai quand quelque chose a bouge.
+    /// </summary>
+    private bool AdoptWindowDpi()
+    {
+        if (_hWnd == IntPtr.Zero) return false;
+        int dpi = Win32.GetDpiForWindow(_hWnd);
+        if (dpi <= 0) return false;
+
+        float scale = dpi / 96f;
+        if (MathF.Abs(scale - _dpiScale) < 0.01f) return false;
+
+        _dpiScale = scale;
+        RecreateScaledFonts();
+        return true;
+    }
+
+    /// <summary>
+    /// AG130-42 — remettre la fenetre a la taille voulue par le DPI courant, bornee a sa
+    /// zone de travail. Windows suggere, sur WM_DPICHANGED, une taille obtenue en appliquant
+    /// le nouveau facteur a l'ancienne : elle peut deborder l'ecran d'arrivee.
+    /// </summary>
+    private void FitWindowToWorkArea()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        if (!Win32.GetWindowRect(_hWnd, out var window)) return;
+
+        var monitor = Win32.MonitorFromWindow(_hWnd, Win32.MONITOR_DEFAULTTONEAREST);
+        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        if (!Win32.GetMonitorInfo(monitor, ref monInfo)) return;
+
+        int workW = monInfo.rcWork.right - monInfo.rcWork.left;
+        int workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        var (winW, winH) = WindowSizing.ClampToWorkArea(
+            Math.Max(1, window.right - window.left),
+            Math.Max(1, window.bottom - window.top),
+            workW, workH);
+
+        // Recentrer plutot que garder le coin : une fenetre retrecie qui garde son coin
+        // superieur gauche laisse tout le retrecissement du meme cote.
+        int x = monInfo.rcWork.left + Math.Max(0, (workW - winW) / 2);
+        int y = monInfo.rcWork.top + Math.Max(0, (workH - winH) / 2);
+        Win32.MoveWindow(_hWnd, x, y, winW, winH, true);
     }
 
     private void CaptureBaseWindowMetrics()
@@ -761,6 +817,26 @@ internal sealed class LessonsWindow : IDisposable
                     }
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
+                // AG130-42 : les neuf autres fenetres traitaient deja ce message ; celle-ci
+                // gardait les polices du DPI de son ecran d'origine en changeant d'ecran.
+                case Win32.WM_DPICHANGED:
+                {
+                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
+                    if (newDpi > 0) _dpiScale = newDpi / 96f;
+                    RecreateScaledFonts();
+
+                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
+                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
+                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+
+                    // Puis remesurer : la taille suggeree peut deborder l'ecran d'arrivee.
+                    FitWindowToWorkArea();
+                    CaptureBaseWindowMetrics();
+                    UpdateRenderScaleFromCurrentClient(force: true);
+                    Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                    return IntPtr.Zero;
+                }
+
                 case Win32.WM_GETMINMAXINFO:
                     var mmi = Marshal.PtrToStructure<Win32.MINMAXINFO>(lParam);
                     int minClientW = D(BASE_MIN_W);
