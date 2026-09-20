@@ -88,6 +88,9 @@ internal sealed class MockWin32Api : IWin32Api
     public IntPtr GetKeyboardLayout(uint threadId) => CurrentHkl;
 
     public uint? SendInputResult { get; set; }
+
+    /// <summary>Code d'erreur Win32 rendu au moteur apres un SendInput a 0 (AG130-09).</summary>
+    public int LastSendInputError { get; set; }
     public Queue<uint> SendInputResults { get; } = new();
     public List<uint> ToUnicodeExFlags { get; } = new();
     public int DeadKeyState { get; set; }
@@ -187,5 +190,10 @@ internal sealed class TestWindowsTypingHost : IWindowsTypingHost
     public void RecordEmittedText(string text) => EmittedTexts.Add(text);
     public void Log(string context, Exception exception) { }
     public void LogCompatibilityEvent(string eventName, string details) { }
-    public void LogCompatibilityCriticalEvent(string eventName, string details) { }
+
+    /// <summary>Evenements critiques recus, dans l'ordre (AG130-09).</summary>
+    public List<(string EventName, string Details)> CriticalEvents { get; } = new();
+
+    public void LogCompatibilityCriticalEvent(string eventName, string details) =>
+        CriticalEvents.Add((eventName, details));
 }

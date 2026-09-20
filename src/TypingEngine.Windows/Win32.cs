@@ -61,7 +61,9 @@ public static class Win32
     public const uint PROCESS_VM_READ = 0x10;
     public const uint VK_NUMLOCK = 0x90;
 
-    [DllImport("user32.dll")]
+    // AG130-09 : sans SetLastError, un retour 0 (UIPI, bureau securise, session
+    // verrouillee) ne dit pas pourquoi le lot a ete refuse en bloc.
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
     [DllImport("user32.dll")]

@@ -21,6 +21,13 @@ public interface IWin32Api
     // Injection de frappes
     uint SendInput(Win32.INPUT[] inputs);
 
+    /// <summary>
+    /// Code d'erreur Win32 du dernier SendInput qui a rendu 0 (AG130-09).
+    /// Membre par defaut : une implementation qui ne le renseigne pas rend 0,
+    /// ce qui reste lisible dans le journal comme « cause inconnue ».
+    /// </summary>
+    int LastSendInputError => 0;
+
     // Foreground / process inspection
     IntPtr GetForegroundWindow();
 

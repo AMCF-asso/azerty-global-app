@@ -1081,8 +1081,55 @@ public sealed class KeyMapper
         _ => false
     };
 
-    private uint SendInputs(Win32.INPUT[] inputs) =>
-        IsEmissionSuspended ? 0 : _api.SendInput(inputs);
+    private int _emissionLossCount;
+    private int _emissionLossStreak;
+
+    /// <summary>
+    /// Nombre de lots refuses en bloc par Windows depuis le demarrage (AG130-09).
+    /// Chacun est un caractere perdu : la touche physique avait deja ete bloquee.
+    /// </summary>
+    public int EmissionLossCount => _emissionLossCount;
+
+    /// <summary>
+    /// Point de passage unique des sept sites d'emission. Un retour 0 sur un lot non
+    /// vide, emission non suspendue, est un refus total : UIPI (fenetre plus privilegiee
+    /// au premier plan), bureau securise ou session verrouillee. La 1.3.0 le compte et le
+    /// journalise sans rien changer au blocage de la touche physique - laisser passer la
+    /// touche rendrait le caractere *natif*, donc un mauvais caractere plutot qu'aucun,
+    /// et touche les sept sites (decision d'Antoine du 2026-09-20, reporte en 1.3.1).
+    /// </summary>
+    /// <remarks>
+    /// <c>internal</c> et non <c>private</c> : la garde de suspension qui ouvre cette methode
+    /// est un filet de securite que tous les appelants doublent deja, donc aucun chemin public
+    /// ne l'atteint - un temoin ecrit par l'API publique serait vert pour la mauvaise raison
+    /// (mesure par mutation le 2026-09-20). Le temoin l'appelle donc directement.
+    /// </remarks>
+    internal uint SendInputs(Win32.INPUT[] inputs)
+    {
+        if (IsEmissionSuspended) return 0;
+        uint sent = _api.SendInput(inputs);
+        if (inputs.Length == 0) return sent;
+        if (sent == 0) RecordEmissionLoss(inputs.Length);
+        else _emissionLossStreak = 0;
+        return sent;
+    }
+
+    /// <summary>
+    /// Journalise le refus. Le canal critique ecrit sur disque a chaque appel et une
+    /// session verrouillee refuserait une frappe sur deux : on trace le premier refus
+    /// d'une serie puis un sur cinquante, et la serie se remet a zero des qu'une emission
+    /// repasse. Le compteur, lui, n'en perd aucun.
+    /// </summary>
+    private void RecordEmissionLoss(int requested)
+    {
+        _emissionLossCount++;
+        _emissionLossStreak++;
+        if (_emissionLossStreak != 1 && _emissionLossStreak % 50 != 0) return;
+        _host.LogCompatibilityCriticalEvent(
+            "EmissionRefusee",
+            $"SendInput a rendu 0 pour {requested} evenement(s) ; erreur Win32 {_api.LastSendInputError} ; " +
+            $"serie {_emissionLossStreak}, total {_emissionLossCount}");
+    }
 
     /// <summary>
     /// Tente de construire la séquence d'INPUT pour produire le caractère via une combo
