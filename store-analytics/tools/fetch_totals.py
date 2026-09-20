@@ -39,9 +39,10 @@ from refresh_snapshot import (  # noqa: E402
     API,
     REPO,
     USER_AGENT,
+    WORKFLOW,
     _DropAuthorizationOnRedirect,
+    api_get,
     github_token,
-    latest_successful_run,
     use_utf8_console,
 )
 
@@ -116,28 +117,60 @@ def log_text(archive: bytes) -> str:
     return "\n".join(parts)
 
 
-def main() -> None:
-    use_utf8_console()
-    token = github_token()
-    run = latest_successful_run(token)
-    print(
-        f"Run {run['run_number']} ({run['event']}, {run['created_at']}) — "
-        f"{run['html_url']}"
-    )
-
+def read_totals(run: dict, token: str) -> dict:
     try:
         raw = logs_via_gh(run["id"])
     except RuntimeError as error:
         print(f"⚠️ {error} — repli sur l'API REST.", file=sys.stderr)
         raw = log_text(download_logs(run["id"], token))
+    return summary.extract(raw)
 
-    try:
-        totals = summary.extract(raw)
-    except ValueError as error:
-        raise SystemExit(
-            f"{error}. Ce run est antérieur à l'ajout des totaux agrégés "
-            "(2026-09-20) : relancer le workflow pour en produire un nouveau."
-        ) from error
+
+def latest_run_with_totals(token: str, depth: int = 5) -> tuple[dict, dict]:
+    """Le run le plus récent dont le journal porte un bloc de totaux.
+
+    ⛔ Ne pas se limiter au dernier run **réussi**. La collecte s'exécute avant
+    l'archivage Azure, donc un run peut produire des totaux parfaitement valides
+    puis échouer à l'étape suivante — c'est exactement ce qui arrive sur une
+    branche, dont l'identité fédérée Azure est restreinte à `refs/heads/main`
+    (mesuré le 2026-09-20 : `AADSTS700213 No matching federated identity
+    record`). Filtrer sur `status=success` rendait ces totaux invisibles.
+
+    ⚠️ Ce qui protège la donnée reste le drapeau `complete` du manifeste, vérifié
+    par l'appelant, pas la conclusion du run : les deux ne mesurent pas la même
+    chose. Un run vert avec un jeu manquant est dangereux, un run rouge après une
+    collecte complète ne l'est pas.
+    """
+    payload = json.loads(
+        api_get(
+            f"/repos/{REPO}/actions/workflows/{WORKFLOW}/runs?per_page={depth}",
+            token,
+        )
+    )
+    runs = payload.get("workflow_runs") or []
+    if not runs:
+        raise SystemExit("Aucun run : lancer le workflow avant de relever les totaux.")
+    for run in runs:
+        try:
+            return run, read_totals(run, token)
+        except ValueError:
+            continue
+    raise SystemExit(
+        f"Aucun bloc de totaux dans les {len(runs)} derniers runs. Ils sont "
+        "antérieurs à l'ajout des totaux agrégés (2026-09-20), ou la branche "
+        "fusionnée ne porte pas encore le correctif : relancer le workflow."
+    )
+
+
+def main() -> None:
+    use_utf8_console()
+    token = github_token()
+    run, totals = latest_run_with_totals(token)
+    print(
+        f"Run {run['run_number']} ({run['event']}, {run['created_at']}, "
+        f"{run['head_branch']}, conclusion {run['conclusion']}) — "
+        f"{run['html_url']}"
+    )
 
     if not totals.get("complete"):
         raise SystemExit(
