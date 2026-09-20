@@ -177,6 +177,13 @@ sealed class TrayApplication : IDisposable
     private ForegroundMonitor? _foregroundMonitor;
     private bool _wasEnabledBeforeAutoDisable;
     private bool _suspendedForCompatibility;
+    // Raison pour laquelle le hook a ete configure la derniere fois. Les quatre raisons
+    // rendent toutes CompatibilityMode.DisabledAntiCheat, donc passer d'une application
+    // suspendue a une autre ne change ni le mode ni _suspendedForCompatibility : sans
+    // cette memoire, OnForegroundChanged ne voit aucune transition et laisse le hook
+    // configure pour l'application precedente (ecart 8 de la recette VM du 2026-09-19,
+    // trou de transition mesure par l'audit du 2026-09-20).
+    private CompatibilitySuspendReason _appliedSuspendReason = CompatibilitySuspendReason.None;
 
     public TrayApplication()
     {
@@ -504,10 +511,10 @@ sealed class TrayApplication : IDisposable
         // choix de confort de l'utilisateur n'a rien à protéger. Le remappage, lui, reste
         // éteint : Enabled vaut toujours ShouldProcessHook, donc seule la détection des
         // raccourcis revient.
-        bool userChosenSuspension = _suspendedForCompatibility
-            && _foregroundMonitor?.CurrentSuspendReason == CompatibilitySuspendReason.UserOverride;
-        _hook.ShortcutsWhilePassThrough =
-            (IsPaused && !_suspendedForCompatibility) || userChosenSuspension;
+        _hook.ShortcutsWhilePassThrough = ShouldDetectShortcutsWhileBlocked(
+            IsPaused,
+            _suspendedForCompatibility,
+            _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.None);
         _hook.Enabled = ShouldProcessHook;
         ApplyWindowInputState();
         if (syncWhenActive && ShouldProcessHook)
@@ -1826,10 +1833,101 @@ sealed class TrayApplication : IDisposable
         data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     }
 
+    /// <summary>
+    /// Bulle et journal décrivant la suspension en cours. Partagée par l'entrée en
+    /// suspension et par le changement de raison : les deux doivent dire la même chose,
+    /// puisque l'utilisateur voit la même protection s'appliquer.
+    /// </summary>
+    private void AnnounceSuspension(CompatibilitySuspendReason reason, string procName, string procDisplay)
+    {
+        switch (reason)
+        {
+            case CompatibilitySuspendReason.UnknownForeground:
+                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.Tray_SuspendedUnknownForeground);
+                ConfigManager.LogCompatCriticalEvent("UnknownForegroundSuspended", "action=disable");
+                break;
+            case CompatibilitySuspendReason.RemoteAccess:
+                ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), L.Tray_DisabledForRemoteAccess);
+                ConfigManager.LogCompatCriticalEvent("RemoteAccessDetected",
+                    $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
+                break;
+            case CompatibilitySuspendReason.UserOverride:
+                ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledByUserOverride);
+                ConfigManager.LogCompatEvent("UserOverrideApplied",
+                    $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
+                break;
+            default:
+                ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledForAntiCheat);
+                ConfigManager.LogCompatCriticalEvent("AntiCheatDetected",
+                    $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Le hook doit-il continuer a detecter les raccourcis alors qu'il laisse tout passer ?
+    /// Fonction pure : c'est la propriete de securite de l'ecart 8, et le seul point ou
+    /// elle se decide.
+    ///
+    /// Vrai dans deux cas seulement — une pause volontaire (pour permettre la reprise au
+    /// clavier) et une suspension que l'utilisateur a lui-meme configuree. Toute suspension
+    /// de securite (anti-triche, acces distant, premier plan inconnu) exige l'inertie
+    /// totale : y detecter un raccourci, c'est lire les frappes dans un jeu qui bannit
+    /// pour cela. Une pause qui tombe pendant une suspension de securite ne la leve pas.
+    /// </summary>
+    private static bool ShouldDetectShortcutsWhileBlocked(
+        bool isPaused,
+        bool suspendedForCompatibility,
+        CompatibilitySuspendReason reason)
+    {
+        if (suspendedForCompatibility)
+            return reason == CompatibilitySuspendReason.UserOverride;
+        return isPaused;
+    }
+
     private static bool IsSecuritySuspension(CompatibilitySuspendReason reason) =>
         reason is CompatibilitySuspendReason.AntiCheat
             or CompatibilitySuspendReason.RemoteAccess
             or CompatibilitySuspendReason.UnknownForeground;
+
+    /// <summary>Transition de suspension a appliquer au hook.</summary>
+    private enum SuspensionTransition
+    {
+        /// <summary>Rien a faire : l'etat du hook correspond deja au premier plan.</summary>
+        None,
+        /// <summary>Entree en suspension depuis un premier plan ordinaire.</summary>
+        Enter,
+        /// <summary>Toujours suspendu, mais pour une autre raison qu'a la configuration precedente.</summary>
+        ReasonChanged,
+        /// <summary>Sortie de suspension.</summary>
+        Leave
+    }
+
+    /// <summary>
+    /// Classe la transition a appliquer. Fonction pure, sans etat : c'est le seul endroit
+    /// ou la decision se prend, et le seul qui soit testable sans instancier TrayApplication.
+    ///
+    /// Le troisieme cas est celui que la version a deux branches ratait. AntiCheat,
+    /// RemoteAccess, UnknownForeground et UserOverride rendent tous DisabledAntiCheat :
+    /// entre deux applications suspendues, ni « mode == DisabledAntiCheat &amp;&amp; !suspendu »
+    /// ni « mode != DisabledAntiCheat &amp;&amp; suspendu » n'est vrai, donc ApplyHookState()
+    /// n'etait jamais rappele et ShortcutsWhilePassThrough gardait la valeur calculee pour
+    /// l'application precedente — dans les deux sens : shortcuts encore detectes dans un jeu
+    /// anti-triche apres un override utilisateur, et Ctrl+Maj+W fuyant vers l'application
+    /// apres un jeu anti-triche.
+    /// </summary>
+    private static SuspensionTransition ClassifySuspensionTransition(
+        CompatibilityMode mode,
+        bool suspendedForCompatibility,
+        CompatibilitySuspendReason appliedReason,
+        CompatibilitySuspendReason currentReason)
+    {
+        bool suspendNow = mode == CompatibilityMode.DisabledAntiCheat;
+        if (suspendNow && !suspendedForCompatibility) return SuspensionTransition.Enter;
+        if (!suspendNow && suspendedForCompatibility) return SuspensionTransition.Leave;
+        if (suspendNow && currentReason != appliedReason) return SuspensionTransition.ReasonChanged;
+        return SuspensionTransition.None;
+    }
 
     private void UpdateIcon()
     {
@@ -2236,61 +2334,63 @@ sealed class TrayApplication : IDisposable
         var procDisplay = FormatProcessName(procName);
         var reason = _foregroundMonitor.CurrentSuspendReason;
 
-        if (mode == CompatibilityMode.DisabledAntiCheat && !_suspendedForCompatibility)
+        switch (ClassifySuspensionTransition(mode, _suspendedForCompatibility, _appliedSuspendReason, reason))
         {
-            // Entrée dans une application qui impose une suspension de compatibilité.
-            if (_enabled && ShouldProcessHook)
+            case SuspensionTransition.Enter:
             {
-                _wasEnabledBeforeAutoDisable = true;
-                // La cible est déjà active : conserver les relâchements jusqu'à la reprise sûre.
-                _mapper.ClearPassedThroughKeys(emitReleases: false);
+                // Entrée dans une application qui impose une suspension de compatibilité.
+                if (_enabled && ShouldProcessHook)
+                {
+                    _wasEnabledBeforeAutoDisable = true;
+                    // La cible est déjà active : conserver les relâchements jusqu'à la reprise sûre.
+                    _mapper.ClearPassedThroughKeys(emitReleases: false);
+                }
+                _suspendedForCompatibility = true;
+                _appliedSuspendReason = reason;
+                ApplyHookState();
+                UpdateIcon();
+                UpdateTooltip();
+                AnnounceSuspension(reason, procName, procDisplay);
+                break;
             }
-            _suspendedForCompatibility = true;
-            ApplyHookState();
-            UpdateIcon();
-            UpdateTooltip();
-            switch (reason)
+
+            case SuspensionTransition.ReasonChanged:
             {
-                case CompatibilitySuspendReason.UnknownForeground:
-                    ShowSecurityBalloon(L.Tray_PrecautionTitle, L.Tray_SuspendedUnknownForeground);
-                    ConfigManager.LogCompatCriticalEvent("UnknownForegroundSuspended", "action=disable");
-                    break;
-                case CompatibilitySuspendReason.RemoteAccess:
-                    ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), L.Tray_DisabledForRemoteAccess);
-                    ConfigManager.LogCompatCriticalEvent("RemoteAccessDetected",
-                        $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
-                    break;
-                case CompatibilitySuspendReason.UserOverride:
-                    ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledByUserOverride);
-                    ConfigManager.LogCompatEvent("UserOverrideApplied",
-                        $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
-                    break;
-                default:
-                    ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledForAntiCheat);
-                    ConfigManager.LogCompatCriticalEvent("AntiCheatDetected",
-                        $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
-                    break;
+                // Toujours suspendu, mais plus pour la même raison : le hook est encore
+                // configuré pour l'application précédente. Sans ce cas, un override
+                // utilisateur suivi d'un jeu anti-triche laissait ShortcutsWhilePassThrough
+                // à true dans le jeu, et l'ordre inverse le laissait à false, où Ctrl+Maj+W
+                // atteignait l'application au lieu d'ouvrir la recherche de caractères.
+                _appliedSuspendReason = reason;
+                ApplyHookState();
+                UpdateIcon();
+                UpdateTooltip();
+                AnnounceSuspension(reason, procName, procDisplay);
+                break;
             }
-        }
-        else if (mode != CompatibilityMode.DisabledAntiCheat && _suspendedForCompatibility)
-        {
-            // Sortie de l'application suspendue : réactivation si on était actif avant.
-            _suspendedForCompatibility = false;
-            if (_wasEnabledBeforeAutoDisable && _enabled)
+
+            case SuspensionTransition.Leave:
             {
-                ApplyHookState(syncWhenActive: true);
-                ShowBalloon(L.Tray_ActiveAgainTitle, L.Tray_ActiveAgain);
+                // Sortie de l'application suspendue : réactivation si on était actif avant.
+                _suspendedForCompatibility = false;
+                _appliedSuspendReason = CompatibilitySuspendReason.None;
+                if (_wasEnabledBeforeAutoDisable && _enabled)
+                {
+                    ApplyHookState(syncWhenActive: true);
+                    ShowBalloon(L.Tray_ActiveAgainTitle, L.Tray_ActiveAgain);
+                }
+                else
+                {
+                    // syncWhenActive aussi ici : si _enabled est true (ex. pause expirée
+                    // pendant la partie), le hook redevient actif et l'état CapsLock/modifs/DK
+                    // doit être resynchronisé (correctif audit 2026-07 m1). No-op si inactif.
+                    ApplyHookState(syncWhenActive: true);
+                }
+                _wasEnabledBeforeAutoDisable = false;
+                UpdateIcon();
+                UpdateTooltip();
+                break;
             }
-            else
-            {
-                // syncWhenActive aussi ici : si _enabled est true (ex. pause expirée
-                // pendant la partie), le hook redevient actif et l'état CapsLock/modifs/DK
-                // doit être resynchronisé (correctif audit 2026-07 m1). No-op si inactif.
-                ApplyHookState(syncWhenActive: true);
-            }
-            _wasEnabledBeforeAutoDisable = false;
-            UpdateIcon();
-            UpdateTooltip();
         }
 
         // L'indicateur de couche dépend du process foreground, de l'état sécurisé
