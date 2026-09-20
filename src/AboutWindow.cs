@@ -174,6 +174,9 @@ sealed class AboutWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(0, className, L.About_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+
+        // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
+        DialogNavigation.Register(_hWnd);
         Win32.EnableDarkTitleBar(_hWnd);
     }
 
@@ -551,6 +554,8 @@ sealed class AboutWindow : IDisposable
             Win32.RemoveWindowSubclass(_hWndLinkAmcf, _linkSubclassProc, (UIntPtr)4);
         if (_hWnd != IntPtr.Zero)
         {
+            // AG130-40 : desinscrire AVANT de detruire — Windows recycle les HWND.
+            DialogNavigation.Unregister(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }

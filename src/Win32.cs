@@ -540,6 +540,17 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool TranslateMessage(ref MSG lpMsg);
 
+    // AG130-40 : navigation clavier de dialogue (Tab, Maj+Tab, Entree, Echap).
+    // GA_ROOT remonte d'un controle enfant a sa fenetre racine — IsDialogMessageW
+    // veut la racine, la boucle voit les enfants.
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool IsDialogMessageW(IntPtr hDlg, ref MSG lpMsg);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    public const uint GA_ROOT = 2;
+
     [DllImport("user32.dll")]
     public static extern IntPtr DispatchMessageW(ref MSG lpMsg);
 
