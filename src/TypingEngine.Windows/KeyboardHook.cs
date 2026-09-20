@@ -12,6 +12,10 @@ public sealed class KeyboardHook : IDisposable
 {
     private const int WH_KEYBOARD_LL = 13;
 
+    // AG130-07 : bit « evenement injecte » de KBDLLHOOKSTRUCT.flags. Windows le pose
+    // sur tout ce qui vient de SendInput/keybd_event, jamais sur une frappe physique.
+    private const uint LLKHF_INJECTED = 0x10;
+
     // Audit sécu 2026-05 SEV-A3-01 : marker runtime random pour éviter qu'un
     // attaquant qui lit le code source (open source EUPL) puisse bypass le hook
     // en injectant des frappes avec le même flag. Bits hauts forcés à 0xA pour
@@ -183,6 +187,27 @@ public sealed class KeyboardHook : IDisposable
             mapper.TrackModifiers(vk, scan, flags, down, notify: false);
     }
 
+    /// <summary>
+    /// AG130-07 — une frappe injectee par un AUTRE programme ne nous concerne pas.
+    ///
+    /// Jusqu'ici seul <c>LLKHF_EXTENDED</c> etait lu : AutoHotkey, le clavier visuel
+    /// de Windows et les outils d'accessibilite voyaient leurs frappes remappees
+    /// comme des frappes physiques. C'est faux dans les deux sens :
+    ///
+    /// <list type="bullet">
+    /// <item>une macro injecte le caractere qu'elle veut ecrire, pas la touche qu'on
+    /// aurait pressee pour l'ecrire — la remapper la trahit ;</item>
+    /// <item>le clavier visuel affiche la disposition NATIVE de Windows. Cliquer
+    /// « e » y produit « e » ; remapper ce clic ferait mentir ses propres etiquettes.</item>
+    /// </list>
+    ///
+    /// Aucun flag Win32 ne dit QUI a injecte, et c'est sans importance : la reponse
+    /// est la meme pour tous. Nos propres injections sont reconnues a leur marqueur
+    /// et sortent plus haut, avant celle-ci.
+    /// </summary>
+    internal static bool IsForeignInjection(IntPtr dwExtraInfo, uint flags, IntPtr ourMarker)
+        => (flags & LLKHF_INJECTED) != 0 && dwExtraInfo != ourMarker;
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         // AG130-10 : avant tout filtrage. Un rappel prouve le hook vivant meme quand
@@ -201,6 +226,13 @@ public sealed class KeyboardHook : IDisposable
 
             // Ne pas traiter nos propres injections
             if (hookStruct.dwExtraInfo == INJECTED_FLAG)
+                return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
+
+            // AG130-07 : ni celles d'un tiers. Sortie avant TrackModifiers : un Maj
+            // injecte n'est pas un Maj physique, et le faire entrer dans l'etat des
+            // modificateurs desynchroniserait le remappage de la frappe physique
+            // suivante.
+            if (IsForeignInjection(hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG))
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();
