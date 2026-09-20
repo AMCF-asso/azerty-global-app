@@ -489,6 +489,7 @@ public sealed class KeyMapper
         var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
         if (IsEmissionSuspended)
         {
+            ArbitratePendingDeadKeyWhileSuspended();
             TrackPassThroughKey(scanCode, flags, isKeyDown);
             return false;
         }
@@ -803,6 +804,17 @@ public sealed class KeyMapper
         // La composition est pure et portable ; l'émission reste dans l'adaptateur Windows.
         if (output.StartsWith("dk_", StringComparison.Ordinal) || _composition.ActiveDeadKey != null)
         {
+            if (IsEmissionSuspended)
+            {
+                // L'instantane de premier plan a change depuis l'entree de ProcessKey.
+                // Consommer ici detruirait la touche morte pour une emission qui n'aura
+                // pas lieu : le caractere disparaitrait entierement. Meme traitement que
+                // la garde d'entree, pour que les deux chemins suspendus se ressemblent.
+                ArbitratePendingDeadKeyWhileSuspended();
+                TrackPassThroughKey(scanCode, flags, isKeyDown);
+                return false;
+            }
+
             var result = _composition.Process(output);
             if (result.Text.Length > 0)
                 EmitText(result.Text);
@@ -1002,6 +1014,32 @@ public sealed class KeyMapper
     public bool EmissionPaused { get; set; }
 
     private InputRecovery? _pendingInputRecovery;
+
+    /// <summary>
+    /// Vrai quand l'emission est suspendue parce que le premier plan l'exige, et non
+    /// par une simple pause volontaire. La distinction decide du sort d'une touche
+    /// morte en attente.
+    /// </summary>
+    private bool IsSuspendedByForeground =>
+        _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
+
+    /// <summary>
+    /// Arbitre le sort d'une touche morte en attente quand l'emission devient
+    /// indisponible (AG130-08 (b), decision d'Antoine du 2026-09-20).
+    ///
+    /// Pause volontaire : la touche morte attend. L'utilisateur reste dans la meme
+    /// fenetre et reprendra sa frappe ou il l'a laissee.
+    ///
+    /// Suspension imposee par le premier plan : il a change d'application, la touche
+    /// morte est abandonnee. La garder ferait surgir un accent sur une lettre tapee
+    /// bien plus tard, dans un autre contexte - c'est le « meme geste, deux resultats »
+    /// de la recette VM du 2026-09-19.
+    /// </summary>
+    private void ArbitratePendingDeadKeyWhileSuspended()
+    {
+        if (!IsSuspendedByForeground) return;
+        if (_composition.Cancel()) StateChanged?.Invoke();
+    }
 
     private bool IsEmissionSuspended => EmissionPaused ||
         _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
