@@ -1,12 +1,18 @@
 # AZERTY Global — Application Windows
 
+<!-- suivi-version
+version-app: 1.3.0
+versions-historiques: 1.0.0, 1.1.0, 1.2.0
+versions-hors-produit: 10.0.17763.0
+-->
+
 > 🇬🇧 Windows companion app for **AZERTY Global**, the free, open-source (EUPL 1.2) corrected French keyboard layout — available on the [Microsoft Store](https://apps.microsoft.com/detail/9N4BTS43SSSZ). C# / .NET 8.0, native AOT. Project home: [azerty.global](https://azerty.global). README in French below.
 
 Application AZERTY Global pour Windows, disponible sur le [Microsoft Store](https://apps.microsoft.com/detail/9N4BTS43SSSZ).
 
 ## Qu'est-ce qu'AZERTY Global ?
 
-AZERTY Global est une disposition clavier française améliorée, alternative à l'AZERTY traditionnel de Windows (1984) et à la norme AFNOR (2019). Elle corrige les problèmes quotidiens du clavier français tout en conservant 99 % des habitudes existantes.
+AZERTY Global est une disposition clavier française améliorée, alternative à l'AZERTY traditionnel de Windows (1984) et à la norme AFNOR (2019). Elle corrige les problèmes quotidiens du clavier français tout en conservant 99 % des frappes d'un texte français.
 
 **Site web :** [azerty.global](https://azerty.global)
 
@@ -14,7 +20,7 @@ AZERTY Global est une disposition clavier française améliorée, alternative à
 
 L'application Windows permet d'utiliser AZERTY Global **sans installation système et sans droits administrateur**. Elle fonctionne en arrière-plan et intercepte les frappes clavier pour appliquer la disposition.
 
-**État du code :** version 1.2.0, manifeste MSIX local en 1.2.0.0, portes de version de `Verify-Release.ps1` franchies. Aucun package n'a encore été produit ni soumis.
+**État du code :** version 1.3.0, manifeste MSIX local en 1.3.0.0. Les v1.0.0 et v1.1.0 sont publiées sur le Microsoft Store, respectivement depuis le 2026-06-29 et le 2026-07-23 ; les v1.2.0 et v1.3.0 sont préparées dans ce dépôt et n'ont pas été soumises.
 
 ### Fonctionnalités
 
