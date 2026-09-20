@@ -465,6 +465,17 @@ sealed class TrayApplication : IDisposable
     private const uint HOOK_WATCHDOG_INTERVAL_MS = 60_000;
     // Statistiques locales d'usage (v1.1) : sauvegarde différée, jamais sur le chemin
     // de la frappe. Cf. UsageStats.Flush.
+    // AG130-10 : sonde de silence. Le watchdog ci-dessus repare, mais a l'aveugle et
+    // en 60 s au pire — pendant lesquelles l'utilisateur tape en AZERTY natif sans
+    // qu'un mot soit dit. La sonde compare le dernier rappel recu du hook a une
+    // fenetre pendant laquelle une frappe a ete vue PAR AILLEURS (GetAsyncKeyState) :
+    // une frappe sans rappel, c'est un hook decroche. Detection en ~4 s au lieu de 60,
+    // et une trace dans le journal de compatibilite.
+    private const uint TIMER_HOOK_PROBE = 9007;
+    private const uint HOOK_PROBE_INTERVAL_MS = 2_000;
+    private readonly HookSilenceWatchdog _hookSilence = new();
+    private long _hookProbeWindowStartTicks = Environment.TickCount64;
+
     private const uint TIMER_STATS_FLUSH = 9005;
     private const uint STATS_FLUSH_INTERVAL_MS = 5 * 60_000;
     // Chien de garde du snapshot foreground (Écart 7, recette VM du 2026-09-19).
@@ -541,6 +552,8 @@ sealed class TrayApplication : IDisposable
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK_3, 8000, IntPtr.Zero);
         // Watchdog périodique (non tué : se répète tant que l'app vit)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG, HOOK_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
+        // Sonde de silence du hook (non tué : périodique) — AG130-10
+        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE, HOOK_PROBE_INTERVAL_MS, IntPtr.Zero);
         // Sauvegarde différée des statistiques locales d'usage (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH, STATS_FLUSH_INTERVAL_MS, IntPtr.Zero);
         // Chien de garde du snapshot foreground (non tué : périodique)
@@ -822,6 +835,11 @@ sealed class TrayApplication : IDisposable
                         // constante, sans nudge foreground (correctif audit 2026-07 M2).
                         ReinstallHook(nudgeForeground: false);
                     }
+                    else if (timerId == TIMER_HOOK_PROBE)
+                    {
+                        // Timer récurrent : sonde de silence du hook (AG130-10).
+                        ProbeHookSilence();
+                    }
                     else if (timerId == TIMER_STATS_FLUSH)
                     {
                         // Timer récurrent : sauvegarde différée des statistiques locales.
@@ -919,6 +937,42 @@ sealed class TrayApplication : IDisposable
     /// pas recevoir d'événements au boot. false (watchdog, reprise de veille, session) :
     /// ne jamais toucher au foreground en cours de session.
     /// </param>
+    /// <summary>
+    /// AG130-10 — une frappe vue sans rappel du hook vaut hook décroché.
+    ///
+    /// La sonde ne parle que quand le hook est censé travailler : en pause, suspendu
+    /// pour compatibilité ou désactivé, le silence est voulu et ne prouve rien. Le
+    /// compteur de série est alors remis à zéro pour qu'une série entamée avant la
+    /// pause ne se poursuive pas au travers.
+    /// </summary>
+    private void ProbeHookSilence()
+    {
+        long windowStart = _hookProbeWindowStartTicks;
+        _hookProbeWindowStartTicks = Environment.TickCount64;
+
+        if (_hook == null || !ShouldProcessHook)
+        {
+            // Consommer quand même les bits de GetAsyncKeyState : sans cela, les
+            // touches pressées pendant la pause seraient rendues à la première sonde
+            // d'après et feraient croire à une frappe dans une fenêtre vide.
+            KeyboardHook.AnyKeyPressedSinceLastPoll();
+            _hookSilence.Suspend();
+            return;
+        }
+
+        bool keyPressObserved = KeyboardHook.AnyKeyPressedSinceLastPoll();
+        if (!_hookSilence.Observe(keyPressObserved, _hook.LastCallbackTicks, windowStart))
+            return;
+
+        ConfigManager.LogCompatCriticalEvent("HookSilentlyDetached",
+            $"action=reinstall ; probes={HookSilenceWatchdog.DefaultConsecutiveProbes}" +
+            $" ; windowMs={HOOK_PROBE_INTERVAL_MS} ; reinstalls={_hookSilence.ReinstallCount}");
+
+        // Sans nudge foreground : la sonde tire en pleine frappe de l'utilisateur,
+        // lui voler le focus serait pire que le mal (même motif que l'audit 2026-07 M2).
+        ReinstallHook(nudgeForeground: false);
+    }
+
     private void ReinstallHook(bool nudgeForeground = true)
     {
         if (_hook == null) return;
@@ -1790,6 +1844,7 @@ sealed class TrayApplication : IDisposable
 
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG);
+        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH);
         UsageStats.Flush(); // dernière sauvegarde avant fermeture
         Win32.WTSUnRegisterSessionNotification(_hWnd);
