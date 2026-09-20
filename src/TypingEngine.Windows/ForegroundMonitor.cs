@@ -46,6 +46,7 @@ public sealed class ForegroundMonitor : IDisposable
     private Win32.WinEventDelegate? _winEventDelegate;
     private IntPtr _winEventHook = IntPtr.Zero;
     private IntPtr _focusEventHook = IntPtr.Zero;
+    private IntPtr _switchEventHook = IntPtr.Zero;
 
     // Snapshot immuable atomique pour cohérence cross-thread. Tous les champs sont
     // mis à jour en une seule écriture de référence (atomique CLR pour les types ref).
@@ -104,6 +105,24 @@ public sealed class ForegroundMonitor : IDisposable
         return (snap?.Mode ?? CompatibilityMode.Default, snap?.Hkl ?? IntPtr.Zero);
     }
 
+    /// <summary>
+    /// Vrai lorsque le snapshot décrit une autre fenêtre que le premier plan réel.
+    /// Dans cet état <see cref="GetEmitContext"/> refuse toute émission (fail-closed
+    /// voulu), et rien ne le répare tant qu'aucun événement de focus n'arrive — c'est
+    /// l'Écart 7 de la recette VM du 2026-09-19 : après un Alt+Tab vers le Bloc-notes,
+    /// le remappage restait mort jusqu'à un aller-retour de focus fait à la main.
+    /// L'hôte interroge cette propriété périodiquement et appelle Recompute quand elle
+    /// est vraie : une lecture GetForegroundWindow, aucun coût sur le chemin de frappe.
+    /// </summary>
+    public bool IsSnapshotStale
+    {
+        get
+        {
+            var snap = _snapshot;
+            return snap != null && snap.Window != _api.GetForegroundWindow();
+        }
+    }
+
     /// <summary>Indique si le suivi des changements de fenêtre a pu être installé.</summary>
     public bool IsHookInstalled => _winEventHook != IntPtr.Zero;
     public bool IsTrackingAvailable => IsHookInstalled && _focusEventHook != IntPtr.Zero;
@@ -128,6 +147,13 @@ public sealed class ForegroundMonitor : IDisposable
                 Win32.EVENT_SYSTEM_FOREGROUND, Win32.EVENT_SYSTEM_FOREGROUND, _winEventDelegate);
             _focusEventHook = _api.SetWinEventHook(
                 Win32.EVENT_OBJECT_FOCUS, Win32.EVENT_OBJECT_FOCUS, _winEventDelegate);
+            // Fermeture du sélecteur Alt+Tab : la fenêtre d'arrivée ne produit pas
+            // toujours un EVENT_SYSTEM_FOREGROUND, le snapshot restait alors figé sur
+            // le sélecteur (Écart 7). Ce troisième suivi n'entre pas dans
+            // IsTrackingAvailable : son absence ne justifie aucune suspension, le
+            // chien de garde de l'hôte couvre le même cas.
+            _switchEventHook = _api.SetWinEventHook(
+                Win32.EVENT_SYSTEM_SWITCHSTART, Win32.EVENT_SYSTEM_SWITCHEND, _winEventDelegate);
             // Un échec de l'un des deux suivis impose une suspension de précaution.
         }
         catch (Exception ex)
@@ -281,6 +307,11 @@ public sealed class ForegroundMonitor : IDisposable
         {
             try { _api.UnhookWinEvent(_focusEventHook); } catch { }
             _focusEventHook = IntPtr.Zero;
+        }
+        if (_switchEventHook != IntPtr.Zero)
+        {
+            try { _api.UnhookWinEvent(_switchEventHook); } catch { }
+            _switchEventHook = IntPtr.Zero;
         }
         _winEventDelegate = null;
     }

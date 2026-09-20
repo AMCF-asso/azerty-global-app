@@ -159,4 +159,48 @@ public class ForegroundMonitorMockedTests
         Assert.True(eventCount >= 1, "ForegroundChanged should fire at least once");
         Assert.Equal(CompatibilityMode.NativeCombo, fm.CurrentMode);
     }
+
+    // --- Écart 7 : snapshot périmé après un Alt+Tab ---------------------------------
+    // Le sélecteur Alt+Tab passe au premier plan, puis la fenêtre d'arrivée prend le
+    // focus sans qu'aucun EVENT_SYSTEM_FOREGROUND ne soit émis. Le snapshot reste alors
+    // figé sur une fenêtre qui n'est plus au premier plan, et GetEmitContext refuse
+    // toute émission. IsSnapshotStale est ce que le chien de garde de l'hôte interroge
+    // pour s'en apercevoir.
+
+    [Fact]
+    public void IsSnapshotStale_ForegroundUnchanged_IsFalse()
+    {
+        var mock = SetupMock("notepad.exe", @"C:\Windows\notepad.exe");
+        using var fm = new ForegroundMonitor(mock, IntPtr.Zero, _host);
+
+        Assert.False(fm.IsSnapshotStale);
+    }
+
+    [Fact]
+    public void IsSnapshotStale_ForegroundChangedWithoutEvent_IsTrue()
+    {
+        var mock = SetupMock("notepad.exe", @"C:\Windows\notepad.exe");
+        using var fm = new ForegroundMonitor(mock, IntPtr.Zero, _host);
+        Assert.False(fm.IsSnapshotStale);
+
+        // Le premier plan bouge sans qu'aucun événement ne soit délivré : c'est
+        // exactement ce que fait un Alt+Tab vers une fenêtre déjà ouverte.
+        mock.ForegroundWindow = (IntPtr)0x5678;
+
+        Assert.True(fm.IsSnapshotStale);
+    }
+
+    [Fact]
+    public void IsSnapshotStale_AfterRecompute_IsFalseAgain()
+    {
+        var mock = SetupMock("notepad.exe", @"C:\Windows\notepad.exe");
+        using var fm = new ForegroundMonitor(mock, IntPtr.Zero, _host);
+        mock.ForegroundWindow = (IntPtr)0x5678;
+        Assert.True(fm.IsSnapshotStale);
+
+        // Ce que fait le chien de garde de TrayApplication toutes les 250 ms.
+        fm.Recompute();
+
+        Assert.False(fm.IsSnapshotStale);
+    }
 }

@@ -464,6 +464,16 @@ sealed class TrayApplication : IDisposable
     // de la frappe. Cf. UsageStats.Flush.
     private const uint TIMER_STATS_FLUSH = 9005;
     private const uint STATS_FLUSH_INTERVAL_MS = 5 * 60_000;
+    // Chien de garde du snapshot foreground (Écart 7, recette VM du 2026-09-19).
+    // Un Alt+Tab peut laisser ForegroundMonitor figé sur la fenêtre du sélecteur :
+    // GetEmitContext refuse alors toute émission, et rien ne le répare tant qu'aucun
+    // événement de focus n'arrive — dans le Bloc-notes, qui n'en émet plus une fois
+    // au premier plan, le remappage restait mort jusqu'à un aller-retour manuel.
+    // Un tick ne coûte qu'un GetForegroundWindow ; le Recompute complet n'a lieu que
+    // si le snapshot est réellement périmé. 250 ms est sous le seuil de perception
+    // d'une frappe interrompue, sans peser sur la boucle de messages.
+    private const uint TIMER_FOREGROUND_WATCHDOG = 9006;
+    private const uint FOREGROUND_WATCHDOG_INTERVAL_MS = 250;
     private const uint TIMER_SINGLECLICK = 9010;
     private const uint TIMER_LAYOUT_CHECK = 9020;
     private const uint TIMER_PAUSE = 9030;
@@ -488,7 +498,20 @@ sealed class TrayApplication : IDisposable
         _hook.PassThroughAll = ShouldBlockHookCompletely;
         // Pause volontaire : garder la détection des raccourcis pour permettre la reprise
         // au clavier. Jamais pendant une désactivation anti-cheat (inertie totale voulue).
-        _hook.ShortcutsWhilePassThrough = IsPaused && !_suspendedForCompatibility;
+        //
+        // Écart 8 de la recette VM du 2026-09-19 : une application que l'utilisateur a
+        // lui-même marquée « désactivée » tombait dans cette même inertie totale, si bien
+        // que Ctrl+Maj+W n'ouvrait pas la recherche de caractères et atteignait
+        // l'application, qui y lisait Ctrl+W et fermait sa fenêtre — le geste attendu
+        // ouvre une fenêtre, le geste réel détruisait le travail en cours. L'inertie
+        // totale protège l'anti-cheat, l'accès distant et le premier plan inconnu ; un
+        // choix de confort de l'utilisateur n'a rien à protéger. Le remappage, lui, reste
+        // éteint : Enabled vaut toujours ShouldProcessHook, donc seule la détection des
+        // raccourcis revient.
+        bool userChosenSuspension = _suspendedForCompatibility
+            && _foregroundMonitor?.CurrentSuspendReason == CompatibilitySuspendReason.UserOverride;
+        _hook.ShortcutsWhilePassThrough =
+            (IsPaused && !_suspendedForCompatibility) || userChosenSuspension;
         _hook.Enabled = ShouldProcessHook;
         ApplyWindowInputState();
         if (syncWhenActive && ShouldProcessHook)
@@ -517,6 +540,8 @@ sealed class TrayApplication : IDisposable
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG, HOOK_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
         // Sauvegarde différée des statistiques locales d'usage (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH, STATS_FLUSH_INTERVAL_MS, IntPtr.Zero);
+        // Chien de garde du snapshot foreground (non tué : périodique)
+        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_FOREGROUND_WATCHDOG, FOREGROUND_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
         // Chargement anticipé de usage-stats.json sur le thread UI : la première frappe
         // remappée ne doit déclencher aucune I/O dans le callback du hook.
         UsageStats.Preload();
@@ -801,6 +826,14 @@ sealed class TrayApplication : IDisposable
                         // Rappel Défi du jour (v1.2.0) : décision pure à chaque tick, tous
                         // les gardes (opt-in, un par jour, fenêtre horaire) sont dedans.
                         MaybeShowTrainingReminder();
+                    }
+                    else if (timerId == TIMER_FOREGROUND_WATCHDOG)
+                    {
+                        // Timer récurrent (pas de KillTimer). Le test est une seule
+                        // lecture GetForegroundWindow ; le recalcul complet n'a lieu
+                        // que sur un snapshot réellement périmé (Écart 7).
+                        if (_foregroundMonitor?.IsSnapshotStale == true)
+                            _foregroundMonitor.Recompute();
                     }
                     else if (timerId == ForegroundMonitor.TIMER_FOREGROUND_DEBOUNCE)
                     {
