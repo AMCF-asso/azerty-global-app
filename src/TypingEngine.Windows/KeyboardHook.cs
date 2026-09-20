@@ -30,6 +30,12 @@ public sealed class KeyboardHook : IDisposable
     }
 
     private IntPtr _hookId = IntPtr.Zero;
+
+    // AG130-10 : instant du dernier rappel recu de Windows. Sans lui, un hook
+    // decroche en silence (LowLevelHooksTimeout depasse, reprise de veille) ne se
+    // voit nulle part - l'application reinstalle a l'aveugle toutes les 60 s et
+    // l'utilisateur tape en AZERTY natif entre-temps, sans signal.
+    private long _lastCallbackTicks = Environment.TickCount64;
     private readonly Win32.LowLevelKeyboardProc _proc;
     private readonly KeyMapper _mapper;
     private readonly IWindowsTypingHost _host;
@@ -138,6 +144,38 @@ public sealed class KeyboardHook : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Instant du dernier rappel recu du hook (AG130-10). Compare a la fenetre d'une
+    /// sonde, il distingue un hook vivant d'un hook decroche en silence.
+    /// </summary>
+    public long LastCallbackTicks => Interlocked.Read(ref _lastCallbackTicks);
+
+    /// <summary>
+    /// Vrai si une touche du clavier a ete pressee depuis l'appel precedent, vue
+    /// autrement que par le hook (AG130-10).
+    ///
+    /// Le bit de poids faible rendu par <c>GetAsyncKeyState</c> signifie « pressee
+    /// depuis le precedent appel », et le lire le consomme : cette sonde est donc le
+    /// seul appelant regulier, et elle balaie 0x08 a 0xFE - les boutons de souris
+    /// 0x01 a 0x06 sont volontairement hors plage, une souris ne prouve rien sur un
+    /// hook clavier. Environ 247 lectures d'une table partagee par tick de sonde.
+    /// </summary>
+    public static bool AnyKeyPressedSinceLastPoll() => AnyKeyPressed(Win32.GetAsyncKeyState);
+
+    /// <summary>Le balayage seul, sans Win32, pour que le temoin puisse l'eprouver.</summary>
+    internal static bool AnyKeyPressed(Func<int, short> readAsyncKeyState)
+    {
+        bool pressed = false;
+        for (int vk = 0x08; vk <= 0xFE; vk++)
+        {
+            // Pas de sortie anticipee : le bit doit etre consomme sur TOUTES les
+            // touches, sinon celles qui restent le rendraient a la sonde suivante et
+            // feraient croire a une frappe pendant une fenetre ou personne ne tapait.
+            if ((readAsyncKeyState(vk) & 0x0001) != 0) pressed = true;
+        }
+        return pressed;
+    }
+
     internal static void ObserveSuspendedModifiers(KeyMapper mapper, uint vk, uint scan, uint flags, bool down)
     {
         mapper.TrackPassThroughKey(scan, flags, down);
@@ -147,6 +185,10 @@ public sealed class KeyboardHook : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
+        // AG130-10 : avant tout filtrage. Un rappel prouve le hook vivant meme quand
+        // son contenu est ignore (injection a nous, suspension, pass-through).
+        Interlocked.Exchange(ref _lastCallbackTicks, Environment.TickCount64);
+
         // Audit sécu 2026-05 SEV-A2-04 : try/catch défensif. Une exception remontant
         // d'un callback Win32 LL crash le process sans passer par AppDomain.
         // UnhandledException correctement (callback natif). Hardening défense en
