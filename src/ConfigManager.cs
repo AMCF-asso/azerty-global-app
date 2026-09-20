@@ -335,20 +335,27 @@ static class ConfigManager
     /// <summary>
     /// Nombre de sollicitations d'avis déjà affichées : 0, 1 ou 2 (plafond dur).
     ///
-    /// Migration v1.1 → v1.2 : les installations existantes ne connaissent que le booléen
-    /// `reviewPromptDone`. Un `true` vaut une sollicitation déjà consommée, sinon la
-    /// v1.2.0 enverrait deux nouvelles notifications à quelqu'un qui a déjà été sollicité.
-    /// La conversion est déduite à la lecture, sans réécrire les configs existantes.
+    /// Migration v1.1 → v1.3 (décision d'Antoine du 2026-09-20) : le booléen hérité
+    /// `reviewPromptDone` ne vaut plus une sollicitation consommée. Les installations
+    /// qui migrent repartent donc avec les deux essais entiers.
+    ///
+    /// Le raisonnement tient à ce qu'était réellement la sollicitation v1.1 : elle vivait
+    /// dans le `else` du test d'affichage de l'accueil — une partie des installations
+    /// n'a jamais été sollicitée — et, quand elle l'était, un tirage 50/50 l'envoyait une
+    /// fois sur deux vers la page de feedback privée au lieu de la fiche Store. Un
+    /// `reviewPromptDone` à true ne prouve donc pas qu'une note ait été demandée. Mesure
+    /// du 2026-09-02 : 0 notation sur 394 utilisateurs actifs en juillet 2026.
+    ///
+    /// ⚠️ Contrepartie assumée : le cas qu'on ne sait pas distinguer est celui de
+    /// l'utilisateur v1.1 qui a cliqué sa sollicitation et déposé sa note. La v1.1
+    /// n'écrit pas `reviewPromptClicked` — ce champ naît en v1.2.0 — donc rien dans la
+    /// configuration ne le sépare de celui qui a ignoré la notification. Il sera
+    /// re-sollicité une fois. Les garde-fous ordinaires s'appliquent quand même :
+    /// plafond de deux essais sur la vie de l'installation, planchers de 3 puis 10 jours
+    /// d'usage distincts, une sollicitation par jour au plus, silence de 48 heures après
+    /// une erreur journalisée.
     /// </summary>
-    public static int ReviewPromptCount
-    {
-        get
-        {
-            var stored = GetUInt("reviewPromptCount");
-            if (stored > 0) return (int)stored;
-            return GetBool("reviewPromptDone") ? 1 : 0;
-        }
-    }
+    public static int ReviewPromptCount => (int)GetUInt("reviewPromptCount");
 
     /// <summary>Date (heure locale, au jour près) de la dernière sollicitation affichée, si connue.</summary>
     public static DateOnly? ReviewPromptLastShown

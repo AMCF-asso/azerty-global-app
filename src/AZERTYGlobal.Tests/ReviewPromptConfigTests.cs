@@ -126,21 +126,48 @@ public class ReviewPromptConfigTests : IDisposable
     }
 
     /// <summary>
-    /// Migration v1.1 → v1.2 : une installation qui ne porte que `reviewPromptDone` a déjà
-    /// consommé un essai. Sans cette équivalence, la v1.2.0 enverrait deux notifications
-    /// supplémentaires à quelqu'un qui a déjà été sollicité.
+    /// Migration v1.1 → v1.3 (décision d'Antoine du 2026-09-20) : une installation qui ne
+    /// porte que `reviewPromptDone` n'a **pas** consommé d'essai. Elle repart avec les deux.
+    ///
+    /// Témoin : cette assertion vaut 0 sous la règle du 2026-09-20 et valait 1 sous la règle
+    /// de la v1.2.0 (`return GetBool("reviewPromptDone") ? 1 : 0;`). Remettre l'ancienne ligne
+    /// rougit ce test et lui seul — les deux états se distinguent bien sur ce fichier.
+    ///
+    /// Motif : la sollicitation v1.1 vivait dans le `else` du test d'affichage de l'accueil,
+    /// et son tirage 50/50 visait une fois sur deux la page de feedback privée. Le drapeau
+    /// hérité ne prouve donc pas qu'une note ait jamais été demandée.
     /// </summary>
     [Fact]
-    public void ReviewPromptCount_MigratesLegacyDoneFlagToOne()
+    public void ReviewPromptCount_LegacyDoneFlagNoLongerConsumesAnAttempt()
     {
         File.WriteAllText(_configPath, "{\"reviewPromptDone\": true}");
         ConfigManager.OverrideConfigPathForTests(_configPath);
 
-        Assert.Equal(1, ConfigManager.ReviewPromptCount);
+        Assert.Equal(0, ConfigManager.ReviewPromptCount);
 
-        // Le second essai reste possible et porte bien le compteur à 2, pas à 3.
+        // Les deux essais sont bien disponibles, et le plafond dur tient toujours à 2.
+        ConfigManager.RecordReviewPromptShown();
+        Assert.Equal(1, ConfigManager.ReviewPromptCount);
         ConfigManager.RecordReviewPromptShown();
         Assert.Equal(2, ConfigManager.ReviewPromptCount);
+        ConfigManager.RecordReviewPromptShown();
+        Assert.Equal(2, ConfigManager.ReviewPromptCount);
+    }
+
+    /// <summary>
+    /// Le rattrapage ne touche pas `reviewPromptClicked` : une installation v1.2+ dont
+    /// l'utilisateur a cliqué reste hors de portée de toute relance. Seul le drapeau v1.1
+    /// cesse de compter.
+    /// </summary>
+    [Fact]
+    public void ReviewPromptCount_ResetDoesNotRevivePromptsForAClickedInstall()
+    {
+        File.WriteAllText(_configPath,
+            "{\"reviewPromptDone\": true, \"reviewPromptClicked\": true}");
+        ConfigManager.OverrideConfigPathForTests(_configPath);
+
+        Assert.Equal(0, ConfigManager.ReviewPromptCount);
+        Assert.True(ConfigManager.ReviewPromptClicked);
     }
 
     [Fact]
