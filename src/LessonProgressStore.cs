@@ -240,7 +240,9 @@ internal sealed class LessonProgressStore
 
     private bool Save(string operation)
     {
-        string tempPath = _path + ".tmp";
+        // AG130-11 (b) : .tmp suffixe par le PID, deux instances du meme compte
+        // (RDP + console) ecrivant sinon dans le meme fichier temporaire.
+        string tempPath = $"{_path}.{Environment.ProcessId}.tmp";
         try
         {
             if (_loadFailed && File.Exists(_path))

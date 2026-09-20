@@ -962,9 +962,20 @@ static class ConfigManager
         }
     }
 
+    /// <summary>
+    /// Chemin du fichier temporaire d'une sauvegarde atomique (AG130-11 b).
+    ///
+    /// L'ancien chemin etait fixe (<c>config.json.tmp</c>), donc partage par deux
+    /// instances du meme compte - une console et un Bureau a distance - qui ecrivaient
+    /// dedans en meme temps. L'IOException de collision etait avalee : dernier ecrivain
+    /// gagnant, sans trace. Le PID suffit a les separer.
+    /// </summary>
+    internal static string BuildTempPath(string finalPath, int processId) =>
+        $"{finalPath}.{processId}.tmp";
+
     private static void Save()
     {
-        string tempPath = _configPath + ".tmp";
+        string tempPath = BuildTempPath(_configPath, Environment.ProcessId);
         try
         {
             if (_loadFailed && File.Exists(_configPath))
@@ -984,14 +995,14 @@ static class ConfigManager
                 foreach (var (key, val) in _cache!)
                 {
                     writer.WritePropertyName(key);
-                    switch (val.ValueKind)
-                    {
-                        case JsonValueKind.True: writer.WriteBooleanValue(true); break;
-                        case JsonValueKind.False: writer.WriteBooleanValue(false); break;
-                        case JsonValueKind.Number: writer.WriteNumberValue(val.GetDouble()); break;
-                        case JsonValueKind.String: writer.WriteStringValue(val.GetString()); break;
-                        default: writer.WriteStringValue(val.ToString()); break;
-                    }
+                    // AG130-11 (a) : ecrire l'element tel qu'il a ete lu. L'ancien switch
+                    // repassait tout nombre par double (un entier long y perdait ses
+                    // derniers chiffres) et serialisait objet, tableau et null en CHAINE :
+                    // {"x":{"a":1}} ressortait en "x":"{\"a\":1}". Une cle inconnue
+                    // survivait donc a la sauvegarde, mais pas sa forme - et la version qui
+                    // l'avait ecrite ne la relisait plus.
+                    if (val.ValueKind == JsonValueKind.Undefined) continue;
+                    val.WriteTo(writer);
                 }
                 // Sous-objet compatibility (overrides utilisateur par process)
                 if (_compatibilityCache != null && _compatibilityCache.Count > 0)

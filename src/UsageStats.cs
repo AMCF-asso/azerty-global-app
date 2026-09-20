@@ -518,7 +518,9 @@ static class UsageStats
         // _dirty armé pour toujours.
         if (!CollectionEnabled) return true;
 
-        string tempPath = _statsPath + ".tmp";
+        // AG130-11 (b) : .tmp suffixe par le PID, deux instances du meme compte
+        // (RDP + console) ecrivant sinon dans le meme fichier temporaire.
+        string tempPath = $"{_statsPath}.{Environment.ProcessId}.tmp";
         try
         {
             var dir = Path.GetDirectoryName(_statsPath);

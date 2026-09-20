@@ -12,6 +12,27 @@ static class Program
     private static string BuildSecondInstanceLogDetails(bool packaged, string[] args) =>
         $"packaged={packaged}, argCount={args.Length}";
 
+    /// <summary>
+    /// Les deux noms d'objet qui gardent l'instance unique (AG130-11 b).
+    ///
+    /// <c>Local\</c> ne porte que la session Windows courante : il attrape la relance
+    /// d'activation d'un paquet MSIX, qui doit mourir en silence. <c>Global\</c>
+    /// traverse les sessions : il attrape la console et le Bureau a distance du meme
+    /// compte, qui ecriraient sinon dans les memes config.json, usage-stats.json et
+    /// error.log, dernier ecrivain gagnant.
+    ///
+    /// Le SID reste dans les deux noms : sans lui, un autre compte de la machine
+    /// squatterait le nom et empecherait le demarrage (audit secu 2026-05 SEV-A2-03).
+    /// C'est aussi pourquoi la portee reste un compte, et non la machine entiere : deux
+    /// comptes distincts ont des fichiers de reglages distincts.
+    /// </summary>
+    internal static (string Local, string Global) BuildSingleInstanceMutexNames(string? sid)
+    {
+        var qualifier = string.IsNullOrEmpty(sid) ? "anon" : sid;
+        return ($"Local\\{ProductIdentity.SingleInstanceMutexName}.{qualifier}",
+                $"Global\\{ProductIdentity.SingleInstanceMutexName}.{qualifier}");
+    }
+
     [STAThread]
     static void Main()
     {
@@ -26,9 +47,48 @@ static class Program
         // préfixe Local\ explicite + qualif SID pour éviter qu'un autre process
         // user-land squatte le nom et bloque le démarrage (DoS trivial sans
         // préfixe). Local\ scope = current session uniquement, donc safe.
-        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? "anon";
-        var mutexName = $"Local\\{ProductIdentity.SingleInstanceMutexName}.{sid}";
-        using var mutex = new Mutex(true, mutexName, out bool isNew);
+        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value;
+        var (localMutexName, globalMutexName) = BuildSingleInstanceMutexNames(sid);
+        using var mutex = new Mutex(true, localMutexName, out bool isNew);
+
+        // AG130-11 (b) : le mutex ci-dessus ne porte que la session courante. Une
+        // console et une session RDP du meme compte lancaient donc deux instances sur
+        // les memes config.json, usage-stats.json et error.log, dernier ecrivain
+        // gagnant. Le second mutex, lui, traverse les sessions.
+        //
+        // Consequence assumee (decision d'Antoine, 2026-09-20) : la seconde session
+        // refuse de demarrer et dit pourquoi, au lieu de corrompre en silence.
+        //
+        // Creer un objet du namespace Global\ demande SeCreateGlobalPrivilege, que
+        // tous les comptes n'ont pas. Quand il manque, on retombe sur le comportement
+        // d'avant plutot que d'empecher le demarrage : la protection est au mieux
+        // possible, jamais un prerequis.
+        Mutex? crossSession = null;
+        bool isNewCrossSession = true;
+        try
+        {
+            crossSession = new Mutex(true,
+                globalMutexName, out isNewCrossSession);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or NotSupportedException)
+        {
+            ConfigManager.LogCompatEvent("CrossSessionMutexUnavailable", ex.GetType().Name);
+        }
+
+        // L'ordre compte : une seconde instance de la MEME session est une relance
+        // d'activation Windows et meurt en silence sous MSIX ; une instance d'une AUTRE
+        // session est un vrai conflit de fichiers et se dit, packagee ou non.
+        if (isNew && !isNewCrossSession)
+        {
+            ConfigManager.LogCompatEvent("SecondSessionRefused", $"packaged={ConfigManager.IsPackaged}");
+            Win32.MessageBoxW(IntPtr.Zero,
+                L.Startup_AlreadyRunningOtherSession,
+                ProductIdentity.DisplayName, 0x40); // MB_ICONINFORMATION
+            crossSession?.Dispose();
+            return;
+        }
+
+        using var crossSessionMutex = crossSession;
         if (!isNew)
         {
             // Diagnostic (sert aussi à préparer l'activateur COM prévu en v1.2.0, cf. TO-DO
