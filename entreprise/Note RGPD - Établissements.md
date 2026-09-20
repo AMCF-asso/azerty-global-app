@@ -1,7 +1,7 @@
 # Note RGPD — établissements scolaires et structures publiques
 
 <!-- suivi-version
-version-app: 1.2.0
+version-app: 1.3.0
 -->
 
 AZERTY Global fonctionne entièrement sur le poste. Aucune donnée ne parvient à l'AMCF ni à un tiers : l'application n'effectue aucun envoi réseau automatique, ce qui se vérifie en bloquant son trafic sortant au pare-feu pendant le pilote.
