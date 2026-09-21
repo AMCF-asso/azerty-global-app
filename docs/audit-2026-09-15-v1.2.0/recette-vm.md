@@ -2,6 +2,8 @@
 
 **État au 15 septembre 2026 : aucun scénario ci-dessous n'a été exécuté dans cet audit.**
 
+⚠️ **Ce document est le protocole de la 1.2.0.** Pour le paquet 1.3.0, la grille à jouer est [`recette-vm-v1.3.0-correctifs.md`](<D:/My files/Keyboard Layouts/projects/azerty-global/components/microsoft-store/docs/audit-2026-09-15-v1.2.0/recette-vm-v1.3.0-correctifs.md>) : elle reprend VM-05, VM-07, VM-08, VM-13, VM-18, VM-19, RET-06, RET-07 et RET-08 dans leur version 1.3.0, et porte le geste AG130-06 demandé par l'audit du 2026-09-20 (section A, gestes 4 à 8). Les scénarios VM-14, VM-15, VM-20, VM-22 et VM-23 n'existent que dans ce document-ci et restent non testés.
+
 But : décider de la soumission de la v1.2.0 au Microsoft Store avant le 17 septembre. Les onze constats du code ont été corrigés et les validations automatisées ont été exécutées ; voir le [bilan des corrections](<D:/My files/Keyboard Layouts/projects/azerty-global/components/microsoft-store/docs/audit-2026-09-15-v1.2.0/corrections.md>). Commencer cette recette après préparation de la VM et du paquet candidat.
 
 ## 1. Préparer une preuve utilisable
