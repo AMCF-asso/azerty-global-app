@@ -62,6 +62,9 @@ L’audit complet du candidat 1.3.0 a rendu 52 constats, dont 4 bloquants (`docs
 **Vérifié**
 
 - Corrigé et vérifié en VM le 2026-09-19 à 13:44 : explorateur, Edge et zone de notification ouverts, `error.log` n’existe pas.
+- Paquet reconstruit le 2026-09-21 à 19:17 depuis le commit `63e58e2`, sur un publish x64 et ARM64 refait le jour même : le bundle du 2026-09-20 à 17:27, auquel 28 fichiers de production étaient postérieurs, est archivé et ne doit pas être installé. Les trois suites .NET en Release rendent **618 tests, 0 échec, 0 ignoré** — le chiffre de 501 qui circulait datait de l’audit et était périmé de treize commits.
+- `Verify-Release.ps1` code de sortie 0, et **WACK `OVERALL_RESULT=PASS`** sur `AZERTYGlobal-1.3.0.0.msixbundle`, rapport généré à 19:20:59. Vingt-trois tests passent ; le seul échec est `Blocked executables`, test **optionnel**, en échec pour les mêmes raisons connues qu’en 1.0.0 et 0.12.0.
+- ⚠️ Ce qui n’est toujours pas fait : la recette VM des 55 gestes, la signature AMCF, et les trois points hors chemin d’empaquetage (AG130-04, AG130-34, AG130-50). Le paquet n’est **pas signé** et ne se diffuse à personne.
 
 ## Version 1.2.0 — 17 août 2026
 
