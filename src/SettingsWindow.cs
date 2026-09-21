@@ -24,6 +24,7 @@ sealed class SettingsWindow : IDisposable
     private const uint CLR_KEY_BORDER_FOCUS = 0x000078D4;
     private static string ShortcutCaptureHint => L.Settings_ShortcutCaptureHint;
 
+    private const int IDC_TAB_STRIP = 3120;
     private const int IDC_EDIT_KEYBOARD = 3101;
     private const int IDC_EDIT_SEARCH = 3102;
     private const int IDC_CHK_AUTOSTART = 3103;
@@ -82,6 +83,7 @@ sealed class SettingsWindow : IDisposable
     private struct LayoutInfo
     {
         public int Margin;
+        public Win32.RECT TabStripRect;
         public int HeaderTitleX;
         public int HeaderTitleY;
         public int HeaderDividerY;
@@ -139,6 +141,7 @@ sealed class SettingsWindow : IDisposable
         if (dy == 0) return;
         l.HeaderTitleY += dy;
         l.HeaderDividerY += dy;
+        ShiftRect(ref l.TabStripRect, dy);
         l.KeyboardRowY += dy;
         l.SearchRowY += dy;
         ShiftRect(ref l.LogoRect, dy);
@@ -177,6 +180,15 @@ sealed class SettingsWindow : IDisposable
         r.top += dy;
         r.bottom += dy;
     }
+
+    /// <summary>Les trois onglets de la fenêtre. L'ordre est celui de la bande.</summary>
+    private enum SettingsTab { General = 0, Applications = 1, LanguageMaintenance = 2 }
+
+    // Onglet affiché. Volontairement NON persisté : la fenêtre rouvre toujours sur
+    // « Général », qui porte ce qu'on vient changer neuf fois sur dix. Mémoriser le
+    // dernier onglet ferait rouvrir sur « Langue » après un unique passage.
+    private SettingsTab _activeTab = SettingsTab.General;
+    private IntPtr _hWndTabStrip;
 
     private IntPtr _hWnd;
     private IntPtr _hWndEditKeyboard;
@@ -358,6 +370,11 @@ sealed class SettingsWindow : IDisposable
 
     private void ApplyFontsToControls()
     {
+        // ⛔ La bande d'onglets doit figurer ici : RecreateFonts supprime les anciennes
+        // polices, et un contrôle oublié garderait un HFONT détruit après un changement
+        // de DPI (geste 40 de la recette VM : déplacer la fenêtre d'un écran 100 % vers
+        // un écran 150 %).
+        Win32.SendMessageW(_hWndTabStrip, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
         Win32.SendMessageW(_hWndEditKeyboard, Win32.WM_SETFONT, _hFontEdit, (IntPtr)1);
         Win32.SendMessageW(_hWndEditSearch, Win32.WM_SETFONT, _hFontEdit, (IntPtr)1);
         Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -429,6 +446,8 @@ sealed class SettingsWindow : IDisposable
     private void CreateControls()
     {
         var hInstance = Win32.GetModuleHandleW(null);
+
+        CreateTabStrip(hInstance);
 
         _hWndEditKeyboard = Win32.CreateWindowExW(0, "EDIT",
             ConfigManager.GetShortcutDisplayName(_keyboardVk),
@@ -659,6 +678,52 @@ sealed class SettingsWindow : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
+    /// <summary>
+    /// Cree la bande de trois onglets. Un vrai SysTabControl32 et non trois libelles
+    /// peints : lui seul est annonce « onglet 1 sur 3 » par les lecteurs d'ecran et
+    /// repond aux fleches gauche/droite sans une ligne de notre part.
+    /// TCS_FOCUSNEVER : la bande ne prend pas le focus a la tabulation, sinon Tab
+    /// changerait d'onglet au lieu de traverser les controles (AG130-40, geste 41).
+    /// </summary>
+    private void CreateTabStrip(IntPtr hInstance)
+    {
+        var icc = new Win32.INITCOMMONCONTROLSEX
+        {
+            dwSize = (uint)Marshal.SizeOf<Win32.INITCOMMONCONTROLSEX>(),
+            dwICC = Win32.ICC_TAB_CLASSES
+        };
+        Win32.InitCommonControlsEx(ref icc);
+
+        _hWndTabStrip = Win32.CreateWindowExW(0, Win32.WC_TABCONTROL, string.Empty,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.TCS_FOCUSNEVER,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_TAB_STRIP, hInstance, IntPtr.Zero);
+        if (_hWndTabStrip == IntPtr.Zero) return;
+
+        Win32.SendMessageW(_hWndTabStrip, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        InsertTab(0, L.Settings_TabGeneral);
+        InsertTab(1, L.Settings_TabApplications);
+        InsertTab(2, L.Settings_TabLanguageMaintenance);
+        Win32.SendMessageW(_hWndTabStrip, Win32.TCM_SETCURSEL, (IntPtr)(int)_activeTab, IntPtr.Zero);
+    }
+
+    private void InsertTab(int index, string text)
+    {
+        IntPtr pText = Marshal.StringToHGlobalUni(text);
+        try
+        {
+            var item = new Win32.TCITEMW { mask = Win32.TCIF_TEXT, pszText = pText };
+            IntPtr pItem = Marshal.AllocHGlobal(Marshal.SizeOf<Win32.TCITEMW>());
+            try
+            {
+                Marshal.StructureToPtr(item, pItem, false);
+                Win32.SendMessageW(_hWndTabStrip, Win32.TCM_INSERTITEMW, (IntPtr)index, pItem);
+            }
+            finally { Marshal.FreeHGlobal(pItem); }
+        }
+        finally { Marshal.FreeHGlobal(pText); }
+    }
+
     private void RepositionControls()
     {
         int winW = S(BASE_WIN_W);
@@ -751,6 +816,67 @@ sealed class SettingsWindow : IDisposable
             layout.CompatForceOffRect.left, layout.CompatForceOffRect.top,
             layout.CompatForceOffRect.right - layout.CompatForceOffRect.left,
             layout.CompatForceOffRect.bottom - layout.CompatForceOffRect.top, true);
+
+        Win32.MoveWindow(_hWndTabStrip,
+            layout.TabStripRect.left, layout.TabStripRect.top,
+            layout.TabStripRect.right - layout.TabStripRect.left,
+            layout.TabStripRect.bottom - layout.TabStripRect.top, true);
+
+        ApplyTabVisibility();
+    }
+
+    /// <summary>
+    /// Masque les contrôles qui n'appartiennent pas à l'onglet actif. ⛔ Masquer et
+    /// non déplacer hors écran : un contrôle visible hors du cadre reste dans l'ordre
+    /// de tabulation et le focus disparaîtrait de la vue (AG130-40, geste 41).
+    /// </summary>
+    private void ApplyTabVisibility()
+    {
+        bool general = _activeTab == SettingsTab.General;
+        bool apps = _activeTab == SettingsTab.Applications;
+        bool langMaint = _activeTab == SettingsTab.LanguageMaintenance;
+
+        Show(_hWndEditKeyboard, general);
+        Show(_hWndEditSearch, general);
+        Show(_hWndLinkReset, general);
+        Show(_hWndValidation, general);
+        Show(_hWndChkAutoStart, general);
+        Show(_hWndChkNotifications, general);
+        Show(_hWndChkOnboarding, general);
+        Show(_hWndChkTraining, general);
+        Show(_hWndManagedNotifications, general && _managedNotifications);
+        Show(_hWndManagedOnboarding, general && _managedOnboarding);
+
+        Show(_hWndCompatList, apps);
+        Show(_hWndCompatAdd, apps);
+        Show(_hWndCompatRemove, apps);
+        Show(_hWndRadioCompatAuto, apps);
+        Show(_hWndRadioCompatForceOn, apps);
+        Show(_hWndRadioCompatForceOff, apps);
+
+        Show(_hWndRadioLangFr, langMaint);
+        Show(_hWndRadioLangEn, langMaint);
+        Show(_hWndManagedLanguage, langMaint && _managedLanguage);
+        Show(_hWndResetVirtualKeyboardWindow, langMaint);
+        Show(_hWndResetLessonsWindow, langMaint);
+
+        static void Show(IntPtr hWnd, bool visible)
+        {
+            if (hWnd != IntPtr.Zero) Win32.ShowWindow(hWnd, visible ? 5 : 0); // SW_SHOW / SW_HIDE
+        }
+    }
+
+    /// <summary>Change d'onglet, remesure la fenêtre et la redessine.</summary>
+    private void SetActiveTab(SettingsTab tab)
+    {
+        if (_activeTab == tab) return;
+        _activeTab = tab;
+        // Le défilement d'un onglet n'a pas de sens dans le suivant : il est plus
+        // court, et un décalage hérité laisserait la fenêtre ouverte sur du vide.
+        _scrollY = 0;
+        FitWindowToContent();
+        RepositionControls();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     private LayoutInfo GetLayout(int winW, int winH)
@@ -771,7 +897,6 @@ sealed class SettingsWindow : IDisposable
             int headerTitleY = headerTop + Math.Max(0, (headerLineHeight - titleHeight) / 2);
             int headerBottom = headerTop + headerLineHeight + S(9);
 
-            int shortcutsPanelTop = headerBottom + S(7);
             int panelTitleHeight = MeasureSingleLineHeight(hdc, _hFontPanelTitle);
             int textLineHeight = MeasureSingleLineHeight(hdc, _hFontText);
             int checkboxHeight = Math.Max(S(18), MeasureSingleLineHeight(hdc, _hFontBold));
@@ -785,81 +910,116 @@ sealed class SettingsWindow : IDisposable
             int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
             int shortcutX = labelX + labelWidth + S(6);
             int shortcutWidth = keyOuterX - shortcutX - S(8);
-
-            int keyboardRowY = shortcutsPanelTop + S(30);
-            int searchRowY = keyboardRowY + Math.Max(S(28), textLineHeight + S(11));
-
-            var keyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, keyOuterH);
-            var searchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, keyOuterH);
-            var keyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, keyOuterH - 2);
-            var searchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, keyOuterH - 2);
-            int resetY = searchRowY + Math.Max(S(20), textLineHeight + S(7));
-            var resetRect = Rect(labelX, resetY, S(118), Math.Max(S(18), linkHeight));
-
-            bool showValidation = !string.IsNullOrEmpty(_validationMessage);
-            int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
-            int currentValidationHeight = showValidation ? Math.Max(S(15), validationHeight) : 0;
-            var validationRect = Rect(labelX, validationTop,
-                contentWidth - panelPadX * 2, currentValidationHeight);
-
-            int prefsTitleTop = (showValidation ? validationRect.bottom : resetRect.bottom) + S(10);
+            int innerWidth = contentWidth - panelPadX * 2;
             int checkboxGap = S(6);
-            var autoStartRect = Rect(labelX, prefsTitleTop + panelTitleHeight + S(9),
-                contentWidth - panelPadX * 2, checkboxHeight);
-            var notificationsRect = Rect(labelX, autoStartRect.bottom + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
-            // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur de
-            // la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est imposé —
-            // la fenêtre est alors exactement celle d'avant le lot C.
             int managedHeight = Math.Max(S(13), validationHeight);
             int managedIndent = S(18);
             int managedGap = S(2);
-            int managedWidth = contentWidth - panelPadX * 2 - managedIndent;
+            int managedWidth = innerWidth - managedIndent;
+            int buttonHeight = S(28);
+
+            // ── Bande d'onglets ─────────────────────────────────────────────
+            // Trois onglets au lieu d'une colonne de cinq sections. La fenêtre se cale
+            // alors sur l'onglet le plus haut au lieu de la somme de tout. Découpage
+            // décidé par Antoine le 2026-09-21 après mesure des hauteurs : Général
+            // ~224 px, Applications ~196 px, Langue et maintenance ~175 px, contre
+            // ~631 px cumulés. ⛔ « Langue » appartient au troisième onglet et non au
+            // premier : avec elle, « Général » culminait à ~310 px et commandait seul
+            // la hauteur, ce qui ramenait le défilement à 175 % sur 1366×768 — le cas
+            // exact du geste 36 de la recette VM.
+            var tabStripRect = Rect(margin, headerBottom + S(4), contentWidth, S(24));
+
+            bool tabGeneral = _activeTab == SettingsTab.General;
+            bool tabApps = _activeTab == SettingsTab.Applications;
+            bool tabLangMaint = _activeTab == SettingsTab.LanguageMaintenance;
+
+            // Curseur vertical. Chaque section visible l'avance ; les sections des
+            // autres onglets sont repliées à hauteur nulle à sa position courante et
+            // ne le bougent pas. Elles gardent ainsi des rectangles valides — les
+            // contrôles correspondants sont masqués par RepositionControls, jamais
+            // déplacés hors écran, sinon leur ordre de tabulation devient incohérent.
+            int cursorY = tabStripRect.bottom + S(7);
+
+            // ── Onglet « Général » : Raccourcis puis Préférences ────────────
+            int shortcutsPanelTop = cursorY;
+            int keyboardRowY = shortcutsPanelTop + (tabGeneral ? S(30) : 0);
+            int searchRowY = keyboardRowY + (tabGeneral ? Math.Max(S(28), textLineHeight + S(11)) : 0);
+            int shortcutRowH = tabGeneral ? keyOuterH : 0;
+            var keyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, shortcutRowH);
+            var searchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, shortcutRowH);
+            var keyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, Math.Max(0, shortcutRowH - 2));
+            var searchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, Math.Max(0, shortcutRowH - 2));
+            int resetY = searchRowY + (tabGeneral ? Math.Max(S(20), textLineHeight + S(7)) : 0);
+            var resetRect = Rect(labelX, resetY, S(118), tabGeneral ? Math.Max(S(18), linkHeight) : 0);
+
+            bool showValidation = tabGeneral && !string.IsNullOrEmpty(_validationMessage);
+            int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
+            int currentValidationHeight = showValidation ? Math.Max(S(15), validationHeight) : 0;
+            var validationRect = Rect(labelX, validationTop, innerWidth, currentValidationHeight);
+
+            int prefsTitleTop = (showValidation ? validationRect.bottom : resetRect.bottom) + (tabGeneral ? S(10) : 0);
+            int prefsRowH = tabGeneral ? checkboxHeight : 0;
+            int prefsGap = tabGeneral ? checkboxGap : 0;
+            int prefsTitleH = tabGeneral ? panelTitleHeight + S(9) : 0;
+            var autoStartRect = Rect(labelX, prefsTitleTop + prefsTitleH, innerWidth, prefsRowH);
+            var notificationsRect = Rect(labelX, autoStartRect.bottom + prefsGap, innerWidth, prefsRowH);
+            // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur
+            // de la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est
+            // imposé — la fenêtre est alors exactement celle d'avant le lot C.
             var managedNotificationsRect = Rect(labelX + managedIndent,
                 notificationsRect.bottom + managedGap, managedWidth,
-                _managedNotifications ? managedHeight : 0);
+                tabGeneral && _managedNotifications ? managedHeight : 0);
             var onboardingRect = Rect(labelX,
-                (_managedNotifications ? managedNotificationsRect.bottom : notificationsRect.bottom) + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
+                (tabGeneral && _managedNotifications ? managedNotificationsRect.bottom : notificationsRect.bottom) + prefsGap,
+                innerWidth, prefsRowH);
             var managedOnboardingRect = Rect(labelX + managedIndent,
                 onboardingRect.bottom + managedGap, managedWidth,
-                _managedOnboarding ? managedHeight : 0);
+                tabGeneral && _managedOnboarding ? managedHeight : 0);
             var trainingRect = Rect(labelX,
-                (_managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom) + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
+                (tabGeneral && _managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom) + prefsGap,
+                innerWidth, prefsRowH);
 
-            int languageTitleTop = trainingRect.bottom + S(18);
-            var languageFrRect = Rect(labelX, languageTitleTop + panelTitleHeight + S(9),
-                contentWidth - panelPadX * 2, checkboxHeight);
-            var languageEnRect = Rect(labelX, languageFrRect.bottom + checkboxGap,
-                contentWidth - panelPadX * 2, checkboxHeight);
+            if (tabGeneral) cursorY = trainingRect.bottom;
+
+            // ── Onglet « Applications » : apps suspendues ───────────────────
+            int compatTitleTop = cursorY;
+            int compatTitleH = tabApps ? panelTitleHeight + S(9) : 0;
+            var compatListRect = Rect(labelX, compatTitleTop + compatTitleH, innerWidth, tabApps ? S(58) : 0);
+            int compatBtnW = (innerWidth - S(6)) / 2;
+            int compatBtnH = tabApps ? S(24) : 0;
+            var compatAddRect = Rect(labelX, compatListRect.bottom + (tabApps ? S(6) : 0), compatBtnW, compatBtnH);
+            var compatRemoveRect = Rect(labelX + compatBtnW + S(6), compatAddRect.top,
+                innerWidth - compatBtnW - S(6), compatBtnH);
+            int compatRowH = tabApps ? checkboxHeight : 0;
+            var compatAutoRect = Rect(labelX, compatAddRect.bottom + (tabApps ? S(8) : 0), innerWidth, compatRowH);
+            var compatForceOnRect = Rect(labelX, compatAutoRect.bottom + (tabApps ? S(4) : 0), innerWidth, compatRowH);
+            var compatForceOffRect = Rect(labelX, compatForceOnRect.bottom + (tabApps ? S(4) : 0), innerWidth, compatRowH);
+
+            if (tabApps) cursorY = compatForceOffRect.bottom;
+
+            // ── Onglet « Langue et maintenance » ────────────────────────────
+            int languageTitleTop = cursorY;
+            int langTitleH = tabLangMaint ? panelTitleHeight + S(9) : 0;
+            int langRowH = tabLangMaint ? checkboxHeight : 0;
+            int langGap = tabLangMaint ? checkboxGap : 0;
+            var languageFrRect = Rect(labelX, languageTitleTop + langTitleH, innerWidth, langRowH);
+            var languageEnRect = Rect(labelX, languageFrRect.bottom + langGap, innerWidth, langRowH);
             var managedLanguageRect = Rect(labelX + managedIndent,
                 languageEnRect.bottom + managedGap, managedWidth,
-                _managedLanguage ? managedHeight : 0);
+                tabLangMaint && _managedLanguage ? managedHeight : 0);
 
             int windowsTitleTop =
-                (_managedLanguage ? managedLanguageRect.bottom : languageEnRect.bottom) + S(18);
-            int buttonHeight = S(28);
-            var resetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + panelTitleHeight + S(9),
-                contentWidth - panelPadX * 2, buttonHeight);
-            var resetLessonsWindowRect = Rect(labelX, resetVirtualKeyboardWindowRect.bottom + S(7),
-                contentWidth - panelPadX * 2, buttonHeight);
+                (tabLangMaint && _managedLanguage ? managedLanguageRect.bottom : languageEnRect.bottom)
+                + (tabLangMaint ? S(18) : 0);
+            int maintBtnH = tabLangMaint ? buttonHeight : 0;
+            var resetVirtualKeyboardWindowRect = Rect(labelX,
+                windowsTitleTop + langTitleH, innerWidth, maintBtnH);
+            var resetLessonsWindowRect = Rect(labelX,
+                resetVirtualKeyboardWindowRect.bottom + (tabLangMaint ? S(7) : 0), innerWidth, maintBtnH);
 
-            // Section « Apps suspendues » (v1.2.0) : liste des overrides par process,
-            // boutons Ajouter/Retirer, radio du mode pour l'entrée sélectionnée.
-            int compatTitleTop = resetLessonsWindowRect.bottom + S(18);
-            int innerWidth = contentWidth - panelPadX * 2;
-            var compatListRect = Rect(labelX, compatTitleTop + panelTitleHeight + S(9),
-                innerWidth, S(58));
-            int compatBtnW = (innerWidth - S(6)) / 2;
-            var compatAddRect = Rect(labelX, compatListRect.bottom + S(6), compatBtnW, S(24));
-            var compatRemoveRect = Rect(labelX + compatBtnW + S(6), compatListRect.bottom + S(6),
-                innerWidth - compatBtnW - S(6), S(24));
-            var compatAutoRect = Rect(labelX, compatAddRect.bottom + S(8), innerWidth, checkboxHeight);
-            var compatForceOnRect = Rect(labelX, compatAutoRect.bottom + S(4), innerWidth, checkboxHeight);
-            var compatForceOffRect = Rect(labelX, compatForceOnRect.bottom + S(4), innerWidth, checkboxHeight);
+            if (tabLangMaint) cursorY = resetLessonsWindowRect.bottom;
 
-            int panelBottom = compatForceOffRect.bottom + S(12);
+            int panelBottom = cursorY + S(12);
             var shortcutsPanel = Rect(margin, shortcutsPanelTop, contentWidth, panelBottom - shortcutsPanelTop);
             var preferencesPanel = Rect(margin, prefsTitleTop, contentWidth, panelBottom - prefsTitleTop);
             var languagePanel = Rect(margin, languageTitleTop, contentWidth, panelBottom - languageTitleTop);
@@ -869,6 +1029,7 @@ sealed class SettingsWindow : IDisposable
             var layoutInfo = new LayoutInfo
             {
                 Margin = margin,
+                TabStripRect = tabStripRect,
                 HeaderTitleX = margin + logoSize + S(6),
                 HeaderTitleY = headerTitleY,
                 HeaderDividerY = headerBottom,
@@ -1084,6 +1245,18 @@ sealed class SettingsWindow : IDisposable
                 RepositionControls();
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                 return IntPtr.Zero;
+            }
+
+            case Win32.WM_NOTIFY:
+            {
+                var nm = Marshal.PtrToStructure<Win32.NMHDR>(lParam);
+                if (nm.hwndFrom == _hWndTabStrip && nm.code == Win32.TCN_SELCHANGE)
+                {
+                    int sel = (int)Win32.SendMessageW(_hWndTabStrip, Win32.TCM_GETCURSEL,
+                        IntPtr.Zero, IntPtr.Zero);
+                    if (sel >= 0 && sel <= 2) SetActiveTab((SettingsTab)sel);
+                }
+                break;
             }
 
             case Win32.WM_COMMAND:
@@ -1734,11 +1907,23 @@ sealed class SettingsWindow : IDisposable
 
         DrawHeader(hdc, gfx, layout, cw);
         GdiHelpers.DrawPanel(hdc, layout.ShortcutsPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, 0, 0);
-        PaintShortcutPanel(hdc, layout);
-        PaintPreferencesPanel(hdc, layout);
-        PaintLanguagePanel(hdc, layout);
-        PaintWindowsPanel(hdc, layout);
-        PaintCompatPanel(hdc, layout);
+        // Seules les sections de l'onglet actif se dessinent. Les autres ont des
+        // rectangles de hauteur nulle : les tracer ne planterait pas, mais leurs
+        // titres de panneau, eux, se dessineraient les uns sur les autres.
+        if (_activeTab == SettingsTab.General)
+        {
+            PaintShortcutPanel(hdc, layout);
+            PaintPreferencesPanel(hdc, layout);
+        }
+        else if (_activeTab == SettingsTab.Applications)
+        {
+            PaintCompatPanel(hdc, layout);
+        }
+        else
+        {
+            PaintLanguagePanel(hdc, layout);
+            PaintWindowsPanel(hdc, layout);
+        }
 
         if (gfx != IntPtr.Zero)
             Win32.GdipDeleteGraphics(gfx);

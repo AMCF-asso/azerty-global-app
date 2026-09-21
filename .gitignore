@@ -37,3 +37,7 @@ Thumbs.db
 TO-DO.md
 Publication Microsoft Store.md
 Distribution Entreprises.md
+
+# Certificat de test pour la recette VM - ne jamais versionner (cle privee)
+test-signing/
+*.pfx

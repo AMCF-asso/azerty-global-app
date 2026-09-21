@@ -151,6 +151,56 @@ static class Win32
     public const uint WM_SYSCHAR = 0x0106;
     public const uint WM_SYSDEADCHAR = 0x0107;
     public const uint WM_COMMAND = 0x0111;
+    public const uint WM_NOTIFY = 0x004E;
+
+    // ── Contrôle d'onglets (comctl32) ─────────────────────────────
+    // Un vrai SysTabControl32, et non trois libellés dessinés à la main : lui seul
+    // est annoncé comme « onglet 1 sur 3 » par les lecteurs d'écran et répond aux
+    // flèches gauche/droite sans code de notre part.
+    public const string WC_TABCONTROL = "SysTabControl32";
+    public const uint TCS_FOCUSNEVER = 0x8000;
+    public const uint TCM_FIRST = 0x1300;
+    public const uint TCM_GETCURSEL = TCM_FIRST + 11;
+    public const uint TCM_SETCURSEL = TCM_FIRST + 12;
+    public const uint TCM_INSERTITEMW = TCM_FIRST + 62;
+    public const uint TCM_ADJUSTRECT = TCM_FIRST + 40;
+    public const uint TCM_SETITEMSIZE = TCM_FIRST + 41;
+    public const uint TCM_DELETEALLITEMS = TCM_FIRST + 9;
+    public const int TCN_FIRST = -550;
+    public const int TCN_SELCHANGE = TCN_FIRST - 1;
+    public const uint TCIF_TEXT = 0x0001;
+    public const uint ICC_TAB_CLASSES = 0x00000008;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct TCITEMW
+    {
+        public uint mask;
+        public uint dwState;
+        public uint dwStateMask;
+        public IntPtr pszText;
+        public int cchTextMax;
+        public int iImage;
+        public IntPtr lParam;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NMHDR
+    {
+        public IntPtr hwndFrom;
+        public IntPtr idFrom;
+        public int code;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INITCOMMONCONTROLSEX
+    {
+        public uint dwSize;
+        public uint dwICC;
+    }
+
+    [DllImport("comctl32.dll")]
+    public static extern bool InitCommonControlsEx(ref INITCOMMONCONTROLSEX picce);
+
     public const uint WM_TIMER = 0x0113;
     public const uint WM_CTLCOLORBTN = 0x0135;
     public const uint WM_GETDLGCODE = 0x0087;

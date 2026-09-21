@@ -28,6 +28,12 @@ internal static partial class L
     public static string Settings_ResetVirtualKeyboard => T("Réinitialiser clavier virtuel", "Reset virtual keyboard");
     public static string Settings_ResetLessonsModule => T("Réinitialiser module Leçons", "Reset Lessons module");
 
+    // Onglets (2026-09-21). Libellés courts : la bande fait 300 px de large à
+    // 100 %, trois onglets y tiennent seulement si aucun ne dépasse ~14 signes.
+    public static string Settings_TabGeneral => T("Général", "General");
+    public static string Settings_TabApplications => T("Applications", "Applications");
+    public static string Settings_TabLanguageMaintenance => T("Langue", "Language");
+
     public static string Settings_ConfirmResetShortcuts => T(
         "Réinitialiser les raccourcis aux valeurs par défaut\n(Ctrl+Maj+Q et Ctrl+Maj+W) ?",
         "Reset shortcuts to default values\n(Ctrl+Shift+Q and Ctrl+Shift+W)?");

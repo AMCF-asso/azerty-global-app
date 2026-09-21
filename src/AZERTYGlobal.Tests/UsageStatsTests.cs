@@ -357,3 +357,84 @@ public class UsageStatsTests : IDisposable
         Assert.DoesNotContain("Je viens tout juste", text);
     }
 }
+
+/// <summary>
+/// Frappe exclue du comptage — module d'apprentissage du tutoriel (2026-09-21).
+/// Les six exercices produisent a eux seuls 21 caracteres enrichis pour un seuil de
+/// sollicitation d'avis de 20 : sans exclusion, terminer l'onboarding declenchait la
+/// demande de notation, constate en VM. Les Lecons, elles, restent comptees.
+/// </summary>
+public class ExcludedTypingTests : IDisposable
+{
+    private readonly string _tempDir;
+
+    public ExcludedTypingTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), "AZGTests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tempDir);
+        UsageStats.OverrideStatsPathForTests(Path.Combine(_tempDir, "usage-stats.json"));
+    }
+
+    public void Dispose()
+    {
+        while (UsageStats.IsTypingExcluded) UsageStats.EndExcludedTyping();
+        try { Directory.Delete(_tempDir, true); } catch { }
+    }
+
+    [Fact]
+    public void Frappe_dans_la_plage_exclue_n_incremente_aucun_compteur()
+    {
+        UsageStats.RecordEmittedText("É");
+        long baseline = UsageStats.TotalSpecialCharsCount;
+
+        UsageStats.BeginExcludedTyping();
+        // Largement au-dessus du seuil de sollicitation : c'est tout l'enjeu.
+        for (int i = 0; i < 50; i++) UsageStats.RecordEmittedText("É« ñ");
+        UsageStats.EndExcludedTyping();
+
+        Assert.Equal(baseline, UsageStats.TotalSpecialCharsCount);
+    }
+
+    [Fact]
+    public void Le_comptage_reprend_apres_la_fermeture_de_la_plage()
+    {
+        UsageStats.BeginExcludedTyping();
+        UsageStats.RecordEmittedText("É");
+        UsageStats.EndExcludedTyping();
+
+        long before = UsageStats.TotalSpecialCharsCount;
+        UsageStats.RecordEmittedText("É");
+
+        Assert.True(UsageStats.TotalSpecialCharsCount > before);
+    }
+
+    [Fact]
+    public void Les_plages_imbriquees_exigent_autant_de_fermetures_que_d_ouvertures()
+    {
+        UsageStats.BeginExcludedTyping();
+        UsageStats.BeginExcludedTyping();
+        UsageStats.EndExcludedTyping();
+
+        Assert.True(UsageStats.IsTypingExcluded);
+
+        long before = UsageStats.TotalSpecialCharsCount;
+        UsageStats.RecordEmittedText("É");
+        Assert.Equal(before, UsageStats.TotalSpecialCharsCount);
+
+        UsageStats.EndExcludedTyping();
+        Assert.False(UsageStats.IsTypingExcluded);
+    }
+
+    [Fact]
+    public void Une_fermeture_en_trop_ne_derange_pas_le_compteur()
+    {
+        UsageStats.EndExcludedTyping();
+        UsageStats.EndExcludedTyping();
+
+        Assert.False(UsageStats.IsTypingExcluded);
+
+        long before = UsageStats.TotalSpecialCharsCount;
+        UsageStats.RecordEmittedText("É");
+        Assert.True(UsageStats.TotalSpecialCharsCount > before);
+    }
+}

@@ -388,6 +388,14 @@ sealed class LearningModule : IDisposable
         ArgumentNullException.ThrowIfNull(hook);
         ArgumentNullException.ThrowIfNull(layout);
         _replayMode = replayMode;
+        // Frappe non comptabilisée tant que ce module vit. Les 6 exercices produisent
+        // à eux seuls 21 caractères enrichis, pour un seuil de sollicitation d'avis de 20
+        // (UsageStats.EnrichedCharsReviewThreshold) : sans cette exclusion, terminer
+        // l'onboarding déclenchait la demande de notation, constaté en VM le 2026-09-21.
+        // Posée après les ThrowIfNull ci-dessus : si le ctor lève, Dispose ne passera
+        // jamais et la plage resterait ouverte. Refermée dans Dispose, protégée par
+        // _disposed contre une double fermeture.
+        UsageStats.BeginExcludedTyping();
         _tweaks = LearningTweaks.Load(); // re-lu a chaque ctor → bouton "Reinitialiser onboarding" applique les changements
         _hWndOnboarding = hWndOnboarding;
         ConfigManager.LogCrashTraceDebug("LM.ctor: A1 _hWndOnboarding assigned");
@@ -3065,6 +3073,9 @@ sealed class LearningModule : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        // Referme la plage ouverte par le ctor : la frappe redevient comptabilisée.
+        UsageStats.EndExcludedTyping();
 
         _mapper.StateChanged -= OnStateChanged;
         _hook.RawKeyDown -= OnRawKeyDown;
