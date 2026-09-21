@@ -6,16 +6,18 @@ Elle couvre les trois écarts corrigés le 20 septembre **et** les onze correcti
 
 ## Le paquet à installer
 
-⛔ **À remplir après la reconstruction, pas avant.** Le bundle `1.3.0.0` présent dans `msix/` date du 2026-09-20 à 17:27 et **28 fichiers de production lui sont postérieurs** : il ne contient aucun des correctifs de l'audit. `Pack-MSIX.ps1` refuse désormais de l'empaqueter en l'état (`scripts/Assert-PublishFreshness.ps1`, commit `394fdf7`).
+✅ **Reconstruit le 2026-09-21 à 19:17**, publish x64 et ARM64 refaits juste avant. Le bundle périmé du 2026-09-20 à 17:27, auquel 28 fichiers de production étaient postérieurs, est archivé sous `Archives/msix-previous/by-version/1.3.0.0/` — c'est celui-ci, et lui seul, qui s'installe en VM. `Pack-MSIX.ps1` a passé le garde-fou de fraîcheur (`scripts/Assert-PublishFreshness.ps1`, commit `394fdf7`) et `Verify-Release.ps1` rend 0.
 
 | | |
 |---|---|
 | Fichier | `msix/AZERTYGlobal-1.3.0.0.msixbundle` |
-| Taille | *(à relever)* |
-| Construit le | *(à relever)* |
-| SHA-256 de `AZERTY Global.exe` (x64) | *(à relever)* |
-| SHA-256 de `AZERTY Global.exe` (ARM64) | *(à relever)* |
-| Commit de construction | *(à relever)* |
+| Taille | 6 829 529 octets (6,51 Mo) |
+| Construit le | 2026-09-21 à 19:17:40 (local) |
+| SHA-256 du bundle | `AC28BAFDF25499A838C224C1BF6E762D344B1A0EDCB9985C05FDF4EEB557FD92` |
+| SHA-256 de `AZERTY Global.exe` (x64) | `4DA6F431F7749CCFDF9050D28A3B4A5474084CC210B6DD7614333820BD183B8F` |
+| SHA-256 de `AZERTY Global.exe` (ARM64) | `6598CCD5197943F9520B484D88D4FA64AD65BA4AE6192B2259C79188428CEFA0` |
+| Commit de construction | `63e58e2` |
+| Suites .NET au moment du pack | 618 tests, 0 échec, 0 ignoré (Release) |
 | Architectures | x64 et ARM64 |
 | Branche | `release/1.2.0-notation-store` — **sans** les 95 fichiers de refonte graphique de `origin/main`, qui sont la 2.0.0 (décision d'Antoine du 2026-09-20) |
 
