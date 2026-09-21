@@ -41,7 +41,11 @@ class ArchiveStableBundleTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             proof = json.loads(result.stdout)
             backup = Path(proof["Path"])
-            self.assertEqual(archives / "by-version/1.1.0.0", backup.parent)
+            # resolve() des deux cotes : sur un runner GitHub, %TEMP% est servi en forme
+            # courte 8.3 (RUNNER~1) alors que PowerShell rend la forme longue
+            # (runneradmin). Les deux chemins designent le meme dossier ; comparer les
+            # formes brutes faisait echouer ce test sur le runner, et lui seul.
+            self.assertEqual((archives / "by-version/1.1.0.0").resolve(), backup.parent.resolve())
             self.assertEqual("1.1.0.0", proof["Version"])
             self.assertEqual(hashlib.sha256(original).hexdigest().upper(), proof["SHA256"])
             self.assertEqual(original, backup.read_bytes())
