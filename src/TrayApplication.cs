@@ -88,15 +88,20 @@ sealed class TrayApplication : IDisposable
     private const string StoreReviewUrl = ProductIdentity.StoreReviewUrl;
 
     // ── Sollicitation d'avis (v1.2.0) ───────────────────────────────
-    // Seuils en JOURS D'USAGE distincts, pas en jours calendaires : jusqu'en v1.1 la
-    // sollicitation partait à J+7 du premier lancement, ce qui traitait de la même façon
-    // celui qui tape tous les jours et celui qui a installé puis oublié l'application.
-    private const int ReviewPromptFirstActiveDays = 3;
+    // Essai 1 — v1.3.0, décision d'Antoine du 2026-09-21 : le déclencheur n'est plus le
+    // calendrier mais la PREUVE D'USAGE de ce qu'AZERTY Global apporte. Le seuil vit dans
+    // UsageStats.EnrichedCharsReviewThreshold, avec le compteur qu'il borne.
+    //
+    // Les deux planchers de jours qu'il remplace (3 jours d'usage distincts, 3 jours
+    // écoulés depuis la première frappe) disaient « l'application a servi » par un proxy.
+    // Le compte de caractères enrichis le dit directement, et dit en plus QUOI a servi :
+    // UsageStats.TryCategorize exclut par construction tout ce que l'AZERTY traditionnel
+    // de Windows donne déjà. ⛔ Ne pas les recumuler : la 1.1.0 a fait 0 notation pour 394
+    // utilisateurs actifs en juillet 2026, le risque n'est pas de trop demander.
     private const int ReviewPromptSecondActiveDays = 10;
-    // Planchers calendaires : jamais dans les trois premiers jours, et sept jours au moins
-    // entre les deux essais, sinon le second tombe dans la même semaine que le premier et
-    // se lit comme une relance.
-    private const int ReviewPromptFirstMinDays = 3;
+    // Plancher calendaire de l'essai 2 seulement : sept jours au moins après le premier,
+    // sinon le second tombe dans la même semaine et se lit comme une relance. C'est un
+    // garde-fou d'espacement, pas une preuve d'usage — il survit au changement ci-dessus.
     private const int ReviewPromptSecondMinGapDays = 7;
     // Au-delà, l'utilisateur est considéré comme parti : on ne relance pas un absent.
     private const int ReviewPromptStaleDays = 3;
@@ -497,6 +502,22 @@ sealed class TrayApplication : IDisposable
     // n'apparaissait jamais, quand les mêmes bulles émises plus tard s'affichent).
     private const uint TIMER_STARTUP_BALLOON = 9040;
     private const uint STARTUP_BALLOON_DELAY_MS = 1500;
+    // Sollicitation d'avis au fil de la frappe (v1.3.0). Le chemin de démarrage ne voit
+    // l'utilisateur qu'au lancement, c'est-à-dire au pire moment : il n'a encore rien
+    // tapé. Ce timer attend qu'il vienne de franchir le seuil de caractères enrichis,
+    // puis qu'il ait cessé de taper — on ne coupe pas une phrase en cours.
+    //
+    // ⛔ Le hook clavier ne pose PAS ce timer : il est sur le chemin critique de la
+    // frappe et UsageStats.RecordEmittedText s'y interdit toute I/O. Le hook ne fait
+    // qu'armer un drapeau en mémoire ; c'est ce tick, sur la boucle de messages, qui
+    // lit le drapeau et décide. Le coût d'un tick est deux lectures d'entier sous lock.
+    //
+    // Le timer ne tourne que tant qu'une sollicitation reste possible, et se tue dès
+    // qu'elle ne l'est plus. Résolution : l'affichage tombe entre 15 et 20 s après la
+    // dernière frappe, ce qui est sans importance à cette échelle.
+    private const uint TIMER_REVIEW_QUIET = 9050;
+    private const uint REVIEW_QUIET_POLL_MS = 5_000;
+    private const long REVIEW_QUIET_SILENCE_MS = 15_000;
 
     // Message TaskbarCreated (Explorer restart / chargement tardif au boot)
     private readonly uint _wmTaskbarCreated = Win32.RegisterWindowMessageW("TaskbarCreated");
@@ -556,6 +577,9 @@ sealed class TrayApplication : IDisposable
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE, HOOK_PROBE_INTERVAL_MS, IntPtr.Zero);
         // Sauvegarde différée des statistiques locales d'usage (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH, STATS_FLUSH_INTERVAL_MS, IntPtr.Zero);
+        // Sollicitation d'avis au fil de la frappe : seulement s'il en reste une à faire.
+        if (ReviewPromptStillPossible())
+            Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero);
         // Chien de garde du snapshot foreground (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_FOREGROUND_WATCHDOG, FOREGROUND_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
         // Chargement anticipé de usage-stats.json sur le thread UI : la première frappe
@@ -850,6 +874,11 @@ sealed class TrayApplication : IDisposable
                         // Rappel Défi du jour (v1.2.0) : décision pure à chaque tick, tous
                         // les gardes (opt-in, un par jour, fenêtre horaire) sont dedans.
                         MaybeShowTrainingReminder();
+                    }
+                    else if (timerId == TIMER_REVIEW_QUIET)
+                    {
+                        // Timer récurrent tant qu'une sollicitation reste possible.
+                        MaybeShowReviewAfterQuietTyping();
                     }
                     else if (timerId == TIMER_FOREGROUND_WATCHDOG)
                     {
@@ -2074,12 +2103,17 @@ sealed class TrayApplication : IDisposable
     /// l'application puis l'a oubliée n'a rien à en dire ; le J+7 calendaire de la v1.1
     /// le sollicitait quand même.
     ///
-    /// Essai 1 : <see cref="ReviewPromptFirstActiveDays"/> jours d'usage distincts, et au
-    /// moins <see cref="ReviewPromptFirstMinDays"/> jours écoulés depuis la première
-    /// frappe remappée. Essai 2 : <see cref="ReviewPromptSecondActiveDays"/> jours d'usage
-    /// distincts, et <see cref="ReviewPromptSecondMinGapDays"/> jours au moins après
-    /// l'essai 1 — sans ce plancher les deux notifications tombent dans la même semaine et
-    /// la seconde n'a rien de neuf à dire.
+    /// Essai 1 (v1.3.0) : <see cref="UsageStats.EnrichedCharsReviewThreshold"/> caractères
+    /// que l'AZERTY traditionnel de Windows ne donne pas. Aucun plancher de jours — le
+    /// compte de caractères dit ce qu'un compte de jours ne disait pas : ce qui a servi.
+    /// Essai 2 : <see cref="ReviewPromptSecondActiveDays"/> jours d'usage distincts, et
+    /// <see cref="ReviewPromptSecondMinGapDays"/> jours au moins après l'essai 1 — sans ce
+    /// plancher les deux notifications tombent dans la même semaine et la seconde n'a rien
+    /// de neuf à dire.
+    ///
+    /// Deux chemins y mènent : le démarrage de l'application, et
+    /// <see cref="MaybeShowReviewAfterQuietTyping"/>, qui attend le franchissement du seuil
+    /// puis une pause dans la frappe. Les gardes ci-dessous valent pour les deux.
     ///
     /// Le second essai est abandonné si le premier a été cliqué (l'utilisateur a répondu,
     /// peu importe ce qu'il a fait ensuite) ou si l'application n'a plus servi depuis plus
@@ -2096,6 +2130,67 @@ sealed class TrayApplication : IDisposable
     /// mais il en reste un second, ce que la v1.1 n'offrait pas.
     /// Retourne true si la notification a été affichée.
     /// </summary>
+    /// <summary>
+    /// Reste-t-il une sollicitation d'avis à faire sur cette installation ? Ne lit que des
+    /// réglages persistés, jamais l'usage : sert à décider si le timer de quiétude a une
+    /// raison de tourner, pas si la sollicitation doit partir.
+    /// </summary>
+    private static bool ReviewPromptStillPossible()
+    {
+        try
+        {
+            return PolicyManager.ExternalLinksEnabledNow
+                && ConfigManager.NotificationsEnabled
+                && !ConfigManager.ReviewPromptClicked
+                && ConfigManager.ReviewPromptCount < 2;
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("ReviewPromptStillPossible", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Sollicitation d'avis déclenchée par la frappe (v1.3.0, décision du 2026-09-21).
+    ///
+    /// Part quand l'utilisateur vient de franchir le seuil de caractères enrichis — ceux
+    /// que l'AZERTY traditionnel de Windows ne donne pas — et qu'il a cessé de taper
+    /// depuis <see cref="REVIEW_QUIET_SILENCE_MS"/> millisecondes. C'est le seul moment où
+    /// la valeur du produit vient d'être ressentie et où l'interruption ne coupe rien.
+    ///
+    /// Le drapeau marque une TRANSITION observée dans cette session de processus, jamais
+    /// un état : quelqu'un qui démarre déjà au-dessus du seuil ne le lève pas, et c'est le
+    /// chemin de démarrage qui le rattrape. Le drapeau est désarmé quoi qu'il arrive —
+    /// <see cref="MaybeShowReviewPrompt"/> a ses propres gardes et peut refuser ; le
+    /// franchissement, lui, ne vaut qu'une fois.
+    /// </summary>
+    private void MaybeShowReviewAfterQuietTyping()
+    {
+        try
+        {
+            // Plus rien à solliciter : le timer n'a plus de raison de tourner.
+            if (!ReviewPromptStillPossible())
+            {
+                Win32.KillTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+                return;
+            }
+
+            if (!UsageStats.EnrichedThresholdCrossed) return;
+            // Encore en train de taper : on repasse dans cinq secondes.
+            if (UsageStats.MillisecondsSinceLastRemap < REVIEW_QUIET_SILENCE_MS) return;
+            // Accueil ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
+            if (_reviewPromptDeferred) return;
+
+            UsageStats.ClearEnrichedThresholdSignal();
+            MaybeShowReviewPrompt();
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("MaybeShowReviewAfterQuietTyping", ex);
+        }
+    }
+
     private bool MaybeShowReviewPrompt()
     {
         try
@@ -2129,8 +2224,10 @@ sealed class TrayApplication : IDisposable
 
             if (attempt == 1)
             {
-                if (activeDays < ReviewPromptFirstActiveDays) return false;
-                if (today.DayNumber - firstRemap.Value.DayNumber < ReviewPromptFirstMinDays) return false;
+                // v1.3.0 : preuve d'usage par les caractères qu'AZERTY Global apporte, et
+                // non par un compte de jours. Remplace les deux planchers calendaires.
+                if (UsageStats.TotalSpecialCharsCount < UsageStats.EnrichedCharsReviewThreshold)
+                    return false;
             }
             else
             {

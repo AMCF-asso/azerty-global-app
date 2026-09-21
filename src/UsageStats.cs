@@ -19,6 +19,12 @@ namespace AZERTYGlobal;
 /// </summary>
 static class UsageStats
 {
+    /// <summary>Caracteres enrichis — ceux que l'AZERTY traditionnel de Windows ne
+    /// donne pas — a partir desquels une sollicitation d'avis devient legitime
+    /// (decision d'Antoine du 2026-09-21). Declaree ici parce que c'est ici que vit le
+    /// compteur : TrayApplication la lit, il ne la redeclare pas.</summary>
+    internal const int EnrichedCharsReviewThreshold = 20;
+
     private static string _statsPath = GetStatsPath();
     private static readonly object _lock = new();
 
@@ -47,6 +53,16 @@ static class UsageStats
     private static long _virtualKeyboardOpenCount;
     private static long _challengesCompletedCount;
     private static string? _lastSpecialCharDate; // "yyyy-MM-dd"
+    // Sollicitation d'avis (v1.3.0) : le seuil de caracteres enrichis vient d'etre
+    // franchi PENDANT cette session de processus. Non persiste, et c'est deliberé :
+    // ce qui declenche la sollicitation est la transition, pas l'etat. Une installation
+    // qui demarre deja au-dessus du seuil est rattrapee par le chemin de demarrage de
+    // TrayApplication.MaybeShowReviewPrompt, qui teste le total et non la transition.
+    private static bool _enrichedThresholdCrossed;
+    // Horloge monotone de la derniere frappe remappee. Environment.TickCount64 et non
+    // DateTime : un changement d'heure ou un passage a l'heure d'ete ne doit pas
+    // fabriquer un silence de 3 600 000 ms. Non persiste.
+    private static long _lastRemapTickCount;
 
     /// <summary>
     /// Hook de test : redirige usage-stats.json vers un fichier temporaire et réinitialise
@@ -80,6 +96,8 @@ static class UsageStats
         _virtualKeyboardOpenCount = 0;
         _challengesCompletedCount = 0;
         _lastSpecialCharDate = null;
+        _enrichedThresholdCrossed = false;
+        _lastRemapTickCount = 0;
     }
 
     private static string GetStatsPath() => Path.Combine(ConfigManager.LogDirectory, "usage-stats.json");
@@ -135,6 +153,33 @@ static class UsageStats
     public static long ChallengesCompletedCount { get { lock (_lock) { EnsureLoaded(); return _challengesCompletedCount; } } }
     public static DateOnly? LastSpecialCharDate { get { lock (_lock) { EnsureLoaded(); return ParseDate(_lastSpecialCharDate); } } }
 
+    /// <summary>Le seuil de caracteres enrichis a-t-il ete franchi depuis le demarrage
+    /// du processus ? Aucune I/O : ne lit que l'etat en memoire, donc appelable depuis
+    /// un tick de la boucle de messages sans risque de toucher le disque.</summary>
+    internal static bool EnrichedThresholdCrossed { get { lock (_lock) { return _enrichedThresholdCrossed; } } }
+
+    /// <summary>Millisecondes ecoulees depuis la derniere frappe remappee, ou
+    /// <see cref="long.MaxValue"/> si aucune n'a eu lieu dans cette session de
+    /// processus — un silence infini, ce qui est exact.</summary>
+    internal static long MillisecondsSinceLastRemap
+    {
+        get
+        {
+            lock (_lock)
+            {
+                if (_lastRemapTickCount == 0) return long.MaxValue;
+                return Environment.TickCount64 - _lastRemapTickCount;
+            }
+        }
+    }
+
+    /// <summary>Desarme le signal. Appele une fois la decision de sollicitation prise,
+    /// qu'elle ait abouti ou non : le franchissement ne vaut qu'une fois.</summary>
+    internal static void ClearEnrichedThresholdSignal()
+    {
+        lock (_lock) { _enrichedThresholdCrossed = false; }
+    }
+
     /// <summary>Ouverture de la recherche de caractères (compteur global, aucun contenu).</summary>
     public static void RecordSearchOpened()
     {
@@ -179,6 +224,11 @@ static class UsageStats
             // ponctuation échangée…) ne serait pas compté.
             bool changed = RecordActivityLocked();
 
+            // Total avant categorisation : c'est la comparaison avant/apres qui detecte
+            // la transition sous le seuil -> au-dessus, une seule fois par session.
+            long enrichedBefore = _accentedUppercaseCount + _frenchTypographyCount
+                                + _internationalCount + _symbolsCount;
+
             foreach (char c in text)
             {
                 if (!TryCategorize(c, out var bucket)) continue;
@@ -194,6 +244,14 @@ static class UsageStats
                 // (déjà en cache — aucune I/O, aucun caractère enregistré).
                 if (_lastSpecialCharDate != _todayCacheStr && _todayCacheStr != null)
                     _lastSpecialCharDate = _todayCacheStr;
+            }
+
+            if (!_enrichedThresholdCrossed && enrichedBefore < EnrichedCharsReviewThreshold)
+            {
+                long enrichedAfter = _accentedUppercaseCount + _frenchTypographyCount
+                                   + _internationalCount + _symbolsCount;
+                if (enrichedAfter >= EnrichedCharsReviewThreshold)
+                    _enrichedThresholdCrossed = true;
             }
 
             if (changed)
@@ -295,6 +353,9 @@ static class UsageStats
     private static bool RecordActivityLocked()
     {
         var now = DateTime.Now;
+        // Toute emission remappee, speciale ou non : c'est le silence de frappe que
+        // TrayApplication mesure, pas le silence de caracteres enrichis.
+        _lastRemapTickCount = Environment.TickCount64;
 
         // Minute active : première frappe remappée de cette minute → +1 au total.
         // Comparaison d'un entier en cache, négligeable sur le chemin du hook.
