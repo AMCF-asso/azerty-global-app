@@ -1,6 +1,6 @@
 # Changelog — Application AZERTY Global
 
-## Version 1.3.0 — 19 septembre 2026
+## Version 1.3.0 — 21 septembre 2026
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous. Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
@@ -18,6 +18,7 @@ Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0
 - ⚠️ Contrepartie assumée : l’utilisateur de la 1.1.0 qui a cliqué sa sollicitation et déposé sa note est **indistinguable** de celui qui l’a ignorée — la 1.1.0 n’écrit pas `reviewPromptClicked`, ce champ naît en 1.2.0. Il sera re-sollicité une fois. Les garde-fous ordinaires tiennent : plafond de deux essais sur la vie de l’installation, planchers de 3 puis 10 jours d’usage distincts, une sollicitation par jour au plus, silence de 48 heures après une erreur journalisée.
 - Témoin : `ReviewPromptCount_LegacyDoneFlagNoLongerConsumesAnAttempt` attend 0 là où l’ancienne ligne rendait 1 — remettre le repli rougit ce test et lui seul. Un second test prouve que `reviewPromptClicked` reste lu.
 - La priorité de la sollicitation sur le rappel du Défi du jour **survit désormais au redémarrage** : le champ en mémoire qui la portait est mort, l’état se relit sur disque. Sans ce correctif, un redémarrage laissait le rappel d’entraînement passer devant la sollicitation le même soir.
+- Le premier essai ne se déclenche plus sur un plancher de jours d’usage mais sur l’usage réel de la disposition (décision d’Antoine du 2026-09-21) : vingt caractères qu’un AZERTY traditionnel ne donne pas, puis quinze secondes sans frappe, pour ne pas couper une phrase en cours. Le second essai garde ses planchers de 10 jours d’usage et de 7 jours d’écart, et le chemin du partage est inchangé. Onze témoins, chaque cas négatif doublé de sa réciproque.
 
 **Correctifs isolés repris de `main`**
 
@@ -32,6 +33,31 @@ Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0
 - Seul un suivi réellement indisponible (`IsTrackingAvailable` faux) suspend désormais. La sécurité de frappe est inchangée : `GetEmitContext()` recontrôle la fenêtre à chaque émission et refuse d’émettre dès qu’elle a bougé — c’est cette garde qui compte, pas la suspension.
 - Deux tests neufs dans `src/TypingEngine.Windows.Tests/ShellRaceSuspensionTests.cs`, témoin de mutation passé : l’ancienne ligne remise, un seul rouge et le bon.
 - Trace de compatibilité enrichie : mode, motif, `hasFg`, `pid` et `tracking`, émise aussi quand seul le motif change.
+
+**Compatibilité et fenêtres — les trois écarts relevés en VM le 2026-09-19**
+
+- Écart 7 — après un Alt+Tab, la fenêtre d’arrivée n’émet pas toujours `EVENT_SYSTEM_FOREGROUND` : l’instantané restait figé sur le sélecteur de tâches et toute émission était refusée, donc la frappe sortait en AZERTY traditionnel. Ajout des événements `SWITCHSTART` et `SWITCHEND`, d’une propriété `IsSnapshotStale` et d’un chien de garde de 250 ms côté hôte, qui ne recalcule que sur un instantané réellement périmé. Trois témoins neufs, vérifiés par mutation.
+- Écart 8 — une application marquée « désactivée par l’utilisateur » tombait dans l’inertie totale prévue pour l’anti-cheat : Ctrl+Maj+W atteignait l’application, qui y lisait Ctrl+W et fermait sa fenêtre. Les raccourcis sont réarmés pour le seul motif `UserOverride` ; le remapping reste éteint, et l’inertie totale tient toujours pour l’anti-cheat, l’accès distant et le premier plan inconnu.
+- Écart 8, complément du 2026-09-21 (AG130-06) — le correctif ci-dessus n’avait que deux branches, celle qui entre en suspension et celle qui en sort. Passer **directement** d’une application désactivée par l’utilisateur à un jeu anti-cheat, ou l’inverse, ne rappelait donc rien : les raccourcis gardaient l’état de l’application précédente, et Ctrl+Maj+W pouvait ouvrir une fenêtre sous anti-cheat. La transition se classe désormais sur le **motif** de suspension et pas seulement sur le mode ; `ClassifySuspensionTransition` et `ShouldDetectShortcutsWhileBlocked` sont des fonctions pures, 24 témoins.
+- Écart 4 — la fenêtre Paramètres se dimensionnait sur deux constantes et dépassait la zone de travail en 1366×768 à 150 %, rendant le troisième bouton radio inatteignable. Elle mesure désormais son contenu, se plafonne à la zone de travail et défile.
+
+**Accueil — le chiffre public porte sur les frappes**
+
+- « 99 % de vos habitudes préservées » devient « 99 % de vos frappes préservées », en français comme en anglais (`habits` → `keystrokes`). Relevé par Antoine en VM sur le paquet 1.3.0.0 : la mesure porte sur les frappes, « habitudes » promettait plus large que ce qui est mesuré.
+
+**Correctifs de l’audit du 2026-09-20**
+
+L’audit complet du candidat 1.3.0 a rendu 52 constats, dont 4 bloquants (`docs/audit-2026-09-20-v1.3.0/rapport.md`). Onze sont corrigés dans cette version, chacun avec des témoins prouvés par mutation ; les autres sont mineurs ou reportés en 1.3.1.
+
+- **Compatibilité jeu, caractères perdus (écart 5, AG130-08).** AltGr était détecté comme RAlt+LCtrl mais émis comme un `VK_RMENU` nu, sans bit étendu ni scan code : la table `ModifierScanCode` couvre les six modificateurs et les douze émissions passent par elle. Et une touche morte en attente n’est plus perdue quand le contexte d’émission devient indisponible : elle est relâchée sur une pause volontaire, abandonnée sur une suspension de premier plan, puisque l’utilisateur a changé d’application.
+- **Perte silencieuse à l’émission (AG130-09).** `SendInput` est déclaré avec `SetLastError`, et un lot refusé en entier — UIPI, bureau sécurisé, session verrouillée — n’est plus perdu sans trace alors que la touche physique a déjà été bloquée. `KeyMapper.SendInputs` devient le point de passage unique des sept sites d’émission, compte les refus et les journalise, le premier d’une série puis un sur cinquante.
+- **Hook décroché (AG130-10).** Windows retire silencieusement un hook bas niveau dont le rappel dépasse `LowLevelHooksTimeout`, et l’application réinstallait à l’aveugle toutes les 60 s, sans rien dire. Le dernier rappel est horodaté et une sonde de 2 s le compare aux frappes réellement vues : détection en 4 s environ, avec une ligne de journal.
+- **Frappes injectées par un tiers (AG130-07).** `LLKHF_INJECTED` est lu : ce qu’injecte un autre programme — outil d’automatisation, clavier visuel de Windows, outil d’accessibilité — passe sans être remappé. Un programme qui injecte du texte connaît déjà le caractère qu’il envoie, et le clavier visuel affiche la disposition native : remapper son clic ferait mentir ses propres étiquettes.
+- **Configuration (AG130-11).** Les clés inconnues gardent leur forme au lieu d’être réécrites en chaîne ; le fichier temporaire de sauvegarde porte le PID ; le mutex d’instance unique devient global. Conséquence assumée : une seconde session du même compte, bureau à distance et console ouverts en même temps, refuse de démarrer et le dit, au lieu d’écrire dans les mêmes fichiers avec le dernier écrivain gagnant.
+- **Navigation clavier (AG130-40).** La boucle de messages n’appelait ni `IsDialogMessageW` ni `TranslateAcceleratorW` : les `WS_TABSTOP` étaient inertes et Entrée n’activait pas le bouton par défaut. Cinq fenêtres à contrôles s’inscrivent désormais explicitement. Les surfaces de frappe — Leçons, module d’apprentissage — en restent dehors, Tab et Entrée y étant des caractères à taper.
+- **Fenêtre Leçons (AG130-42).** Elle lisait son DPI sur le moniteur principal et ne traitait pas `WM_DPICHANGED`, seule des dix fenêtres : à 175 % sur un 1920×1080 elle demandait plus de place que l’écran n’en a. Elle suit désormais `GetDpiForWindow` et `WM_DPICHANGED`, et se plafonne à 90 % de la zone de travail.
+- **Documents publics (AG130-12).** Le `README` annonçait « version 1.2.0 » et « aucun package n’a encore été produit ni soumis », trois assertions fausses ; la formule interdite « 99 % des habitudes » survivait dans trois fichiers. Le `README` entre dans le périmètre de `check-doc-versions.py`.
+- **Versions des documents de parc (AG130-02).** Les sept documents surveillés déclaraient encore `version-app: 1.2.0`, ce qui faisait sortir `check-doc-versions.py` en erreur et bloquait la CI avant même de compiler. La 1.2.0 est déclarée historique.
 
 **Vérifié**
 

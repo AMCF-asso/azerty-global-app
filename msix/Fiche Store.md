@@ -80,6 +80,10 @@ Version 1.3.0 :
  • Le menu de la zone de notification passe de dix-huit à douze lignes. « Apprendre » regroupe les Leçons, le Défi du jour et la fenêtre d’accueil ; « À propos et aide » regroupe la confidentialité, les ressources, les retours, la notation et À propos. Aucune fonction n’a été retirée.
  • Les couches grecque, cyrillique et scientifique ont chacune leur entrée à cocher dans le sous-menu « Couches ». Cocher la première active le remapping des couches, décocher la dernière le désactive.
  • Correction : ouvrir la zone de notification ou cliquer la barre des tâches ne suspend plus le remapping par précaution. La bulle d’avertissement qui pouvait recouvrir l’icône de l’application ne se déclenche plus sur ce geste.
+ • Correction : après un Alt+Tab, les caractères ne sortent plus en AZERTY traditionnel dans la fenêtre qui vient de passer au premier plan.
+ • Correction : en mode compatibilité jeu, les caractères composés avec AltGr ou avec une touche morte ne se perdent plus.
+ • Correction : le raccourci de recherche de caractères n’atteint plus les applications où vous avez désactivé le remapping, qui pouvaient le lire comme un Ctrl+W et fermer leur fenêtre.
+ • La fenêtre Paramètres mesure son contenu, tient dans votre écran et défile ; la fenêtre des Leçons suit la mise à l’échelle de l’affichage.
 
 Version 1.2.0 :
  • En option : verrouillez une touche morte d'alphabet (grec, cyrillique, scientifique) dans une application d'un double appui. Activation depuis le menu.
@@ -219,6 +223,10 @@ Version 1.3.0:
  • The notification area menu goes from eighteen lines down to twelve. “Learn” groups Lessons, the Daily challenge and the welcome window; “About and help” groups privacy, resources, feedback, rating and About. No feature was removed.
  • The Greek, Cyrillic and scientific layers each get their own checkable entry under the “Layers” submenu. Ticking the first one turns layer remapping on; unticking the last one turns it off.
  • Fixed: opening the notification area or clicking the taskbar no longer suspends remapping as a precaution. The warning balloon that could cover the app icon no longer appears on that gesture.
+ • Fixed: after an Alt+Tab, characters no longer come out in traditional AZERTY in the window that has just come to the front.
+ • Fixed: in game compatibility mode, characters composed with AltGr or with a dead key are no longer lost.
+ • Fixed: the character search shortcut no longer reaches applications where you turned remapping off, which could read it as Ctrl+W and close their window.
+ • The Settings window measures its content, fits your screen and scrolls; the Lessons window follows the display scaling.
 
 Version 1.2.0:
  • Optional: lock an alphabet dead key (Greek, Cyrillic, scientific) inside an application with a double press. Opt-in from the menu.
@@ -371,4 +379,4 @@ Les fichiers suivants sont dans `msix/Assets/` :
 
 ---
 
-*Dernière mise à jour : 2026-09-15 (v1.2.0 — corrections après audit, non soumise)*
+*Dernière mise à jour : 2026-09-21 (v1.3.0 — correctifs de recette VM et d’audit, non soumise)*
