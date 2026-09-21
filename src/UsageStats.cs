@@ -41,6 +41,15 @@ static class UsageStats
     // seul le total est persisté, jamais quelles minutes.
     private static long _totalActiveMinutes;
     private static long _lastActiveMinute; // Ticks/minute de la dernière minute comptée (non persisté)
+    // Profondeur d'exclusion (non persistée). Tant qu'elle est > 0, RecordEmittedText
+    // n'enregistre RIEN : ni minute active, ni jour actif, ni caractère enrichi.
+    // Posée par le module d'apprentissage du tutoriel (décision d'Antoine du 2026-09-21,
+    // observée en VM : les 6 exercices produisent 21 caractères enrichis pour un seuil
+    // de 20, donc l'onboarding déclenchait à lui seul la sollicitation d'avis). Un
+    // parcours imposé à l'installation ne prouve aucun usage. ⛔ Les Leçons
+    // (LessonsWindow) ne la posent pas : elles sont choisies, elles comptent.
+    // Compteur et non booléen pour rester correct si deux surfaces s'imbriquent.
+    private static int _excludedTypingDepth;
     private static long _accentedUppercaseCount;
     private static long _frenchTypographyCount;
     private static long _internationalCount;
@@ -181,6 +190,23 @@ static class UsageStats
     }
 
     /// <summary>Ouverture de la recherche de caractères (compteur global, aucun contenu).</summary>
+    /// <summary>Ouvre une plage de frappe non comptabilisée. À appairer avec
+    /// <see cref="EndExcludedTyping"/> dans un finally ou un Dispose.</summary>
+    internal static void BeginExcludedTyping()
+    {
+        lock (_lock) { _excludedTypingDepth++; }
+    }
+
+    /// <summary>Referme une plage ouverte par <see cref="BeginExcludedTyping"/>.
+    /// Idempotente sous zéro : une fermeture en trop ne dérègle pas le compteur.</summary>
+    internal static void EndExcludedTyping()
+    {
+        lock (_lock) { if (_excludedTypingDepth > 0) _excludedTypingDepth--; }
+    }
+
+    /// <summary>Vrai tant qu'une plage de frappe exclue est ouverte (tests).</summary>
+    internal static bool IsTypingExcluded { get { lock (_lock) { return _excludedTypingDepth > 0; } } }
+
     public static void RecordSearchOpened()
     {
         lock (_lock) { EnsureLoaded(); _searchOpenCount++; _dirty = true; }
@@ -216,6 +242,10 @@ static class UsageStats
 
         lock (_lock)
         {
+            // Frappe exclue (module d'apprentissage du tutoriel) : on sort avant
+            // EnsureLoaded, donc sans aucune I/O ni aucun compteur touché.
+            if (_excludedTypingDepth > 0) return;
+
             EnsureLoaded();
 
             // Toute émission remappée compte comme activité du jour (cf. plan § 1a :

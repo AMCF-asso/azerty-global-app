@@ -98,6 +98,13 @@ sealed class TrayApplication : IDisposable
     // UsageStats.TryCategorize exclut par construction tout ce que l'AZERTY traditionnel
     // de Windows donne déjà. ⛔ Ne pas les recumuler : la 1.1.0 a fait 0 notation pour 394
     // utilisateurs actifs en juillet 2026, le risque n'est pas de trop demander.
+    // Plancher de temps de frappe actif à l'essai 1, en minutes distinctes avec au moins
+    // une frappe remappée (UsageStats.TotalActiveMinutes). Décision d'Antoine du
+    // 2026-09-21, après observation en VM : le compte de caractères enrichis seul se
+    // franchit en une poignée de secondes dès qu'un texte est riche en accents, alors
+    // qu'une durée ne se fabrique pas. Les deux gardes sont cumulatives et disent deux
+    // choses différentes : QUOI a servi (20 caractères enrichis) et COMBIEN (10 minutes).
+    private const int ReviewPromptFirstMinActiveMinutes = 10;
     private const int ReviewPromptSecondActiveDays = 10;
     // Plancher calendaire de l'essai 2 seulement : sept jours au moins après le premier,
     // sinon le second tombe dans la même semaine et se lit comme une relance. C'est un
@@ -2227,6 +2234,10 @@ sealed class TrayApplication : IDisposable
                 // v1.3.0 : preuve d'usage par les caractères qu'AZERTY Global apporte, et
                 // non par un compte de jours. Remplace les deux planchers calendaires.
                 if (UsageStats.TotalSpecialCharsCount < UsageStats.EnrichedCharsReviewThreshold)
+                    return false;
+                // ... et l'application doit avoir servi assez longtemps. Sans ce plancher,
+                // un seul texte accentué suffit à solliciter.
+                if (UsageStats.TotalActiveMinutes < ReviewPromptFirstMinActiveMinutes)
                     return false;
             }
             else

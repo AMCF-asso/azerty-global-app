@@ -31,13 +31,26 @@ $packagedAssets = @(
 )
 
 function Copy-DirectoryContent([string]$Source, [string]$Destination) {
+    # ⛔ Les exclusions ci-dessous portent sur des NOMS DE FICHIERS. Un sous-dossier dont
+    # le nom ne correspond à aucune ne les subit pas : il partait en copie récursive avec
+    # tout son contenu, extensions exclues comprises. Mesuré le 2026-09-21 — un dossier
+    # `msix/test-signing/` créé pour la recette VM a fait entrer dans le paquet un bundle
+    # de 6,8 Mo (3x la taille finale), le certificat de test ET SA CLÉ PRIVÉE .pfx.
+    # D'où la liste blanche : seul un sous-dossier explicitement attendu est copié, et
+    # tout autre fait échouer l'empaquetage au lieu de passer en silence.
+    $allowedDirectories = @()
+
     Get-ChildItem $Source -Force |
         Where-Object { $_.Name -notlike '*.msix' -and $_.Name -notlike '*.msixbundle' -and
                        $_.Name -notlike '*.exe' -and $_.Name -notlike '*.md' -and
+                       $_.Name -notlike '*.pfx' -and $_.Name -notlike '*.cer' -and
                        $_.Name -notlike 'wack-report*' -and $_.Name -ne 'Assets' } |
         ForEach-Object {
             $target = Join-Path $Destination $_.Name
             if ($_.PSIsContainer) {
+                if ($allowedDirectories -notcontains $_.Name) {
+                    throw "Sous-dossier inattendu dans msix/ : $($_.Name). Il partirait dans le paquet. Le déplacer hors de msix/, ou l'ajouter à `$allowedDirectories s'il doit être livré."
+                }
                 Copy-Item $_.FullName -Destination $target -Recurse -Force
             }
             else {
