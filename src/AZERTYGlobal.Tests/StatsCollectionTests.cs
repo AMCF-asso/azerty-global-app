@@ -130,4 +130,48 @@ public class StatsCollectionTests : IDisposable
 
         Assert.Equal(42L, UsageStats.AccentedUppercaseCount);
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // AG130-11 (b) — le fichier temporaire est propre au processus
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// <c>ConfigManager</c> a reçu ses deux témoins à la correction d'AG130-11, pas
+    /// <c>UsageStats</c>, dont le <c>.tmp</c> est construit en ligne. Le témoin de mutation
+    /// du 2026-09-21 l'a mesuré : retirer le PID du chemin temporaire ne rendait aucun test
+    /// rouge. Le seul témoin honnête rend ce chemin <b>occupé</b>, un dossier au chemin
+    /// attendu faisant échouer l'ouverture du flux.
+    /// </summary>
+    [Fact]
+    public void Flush_ÉcritAuCheminTemporairePortantLePid()
+    {
+        Directory.CreateDirectory($"{_statsPath}.{Environment.ProcessId}.tmp");
+
+        using (AppChannel.OverrideForTests(DistributionChannel.Store))
+        {
+            UsageStats.OverrideStatsPathForTests(_statsPath);
+            SimulerUneSessionComplete();
+        }
+
+        // Le chemin par PID était barré, donc rien n'a pu s'écrire.
+        Assert.False(File.Exists(_statsPath));
+    }
+
+    /// <summary>
+    /// Contrôle négatif du témoin ci-dessus. Sans lui, un flush devenu incapable d'écrire
+    /// quoi que ce soit passerait au vert pour la mauvaise raison.
+    /// </summary>
+    [Fact]
+    public void Flush_NUtilisePlusLAncienCheminFixe()
+    {
+        Directory.CreateDirectory(_statsPath + ".tmp");
+
+        using (AppChannel.OverrideForTests(DistributionChannel.Store))
+        {
+            UsageStats.OverrideStatsPathForTests(_statsPath);
+            SimulerUneSessionComplete();
+        }
+
+        Assert.True(File.Exists(_statsPath));
+    }
 }

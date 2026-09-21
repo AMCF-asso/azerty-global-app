@@ -20,8 +20,8 @@ declasses** en limitations argumentees, **3 citations du rapport brut corrigees*
 | `raw-code.md` | Regressions, machine a etats de la sollicitation d'avis |
 | `raw-release.md` | Versions, `Verify-Release.ps1`, tests, garde-fous |
 | `delta-textes-affine.md` | Delta du texte visible, mesure contre le binaire expedie |
-| `witness-baseline.py`, `delta-typographie.py` | Scripts rejouables des mesures ci-dessous |
-| `witness-lot-b.py`, `witness-lot-d.py` | Temoins de mutation des lots B et D du plan parc (2026-08-19) |
+| `witness-baseline.py`, `delta-typographie.py` | Mesures de la base 1.1.0. ⛔ `witness-baseline.py` n'est plus rejouable, voir l'etat des temoins |
+| `witness-lot-b.py`, `witness-lot-c.py`, `witness-lot-d.py` | Temoins de mutation des lots B, C et D du plan parc (2026-08-19), revus le 2026-09-21 |
 | `AppxManifest.INSTALLED-1.1.0.0.xml` | Manifeste reel de la 1.1.0 servie par le Store |
 
 ## 1. Ce que cet audit peut affirmer, et pourquoi la base a du etre reconstruite
@@ -469,6 +469,78 @@ Un garde-fou dont on n'a jamais vu un echec ne prouve rien.
 - Le `SKIP_DIRS` du scanner d'identite (`list-identity-literals.py:52-56`) saute
   `TypingEngine.Core` et `TypingEngine.Windows`, devenus du code de production
   depuis `452aab0`.
+
+### Etat des temoins de mutation au 2026-09-21 (AG130-14)
+
+L'audit du 2026-09-20 a releve trois defauts dans ces temoins. Les trois sont
+traites ici ; la mesure de leur rejeu est datee, pas promise.
+
+**Ce qui a change dans les scripts.**
+
+- `run_suite()` des lots B, C et D ne lancait que `src/AZERTYGlobal.Tests` : les
+  deux projets `TypingEngine` restaient invisibles a toute mutation, soit 175
+  tests sur 501 au moment de l'audit. Les trois suites sont lancees, et une suite
+  qui ne rend aucun compteur est comptee comme un rouge nomme, jamais comme un
+  zero.
+- `main()` imprimait `ECHEC` sur une ancre absente, puis `continue`, puis
+  `return 0` : un temoin qui n'avait rien mesure sortait vert. Il sort desormais
+  en 1 sur une ancre absente, sur une mutation attendue rouge restee verte, sur
+  une mutation attendue verte devenue rouge, sur une restauration divergente et
+  sur une suite non mutee non verte. Les mutations attendues a zero rouge sont
+  declarees par leur numero dans `EXPECT_ZERO`, en tete de chaque script.
+- Un refus d'Application Control n'est plus compte comme un rouge. Mesure du
+  2026-09-21 : la mutation 6 du lot B, attendue a zero, a rendu **320 tests
+  rouges** portant tous `System.IO.FileLoadException : Could not load file or
+  assembly`, c'est-a-dire le refus du poste sur l'assembly fraichement
+  reconstruite. Le temoin s'interrompt et le dit, au lieu d'accuser le garde.
+
+**Deux ancres mortes, reparees.** Celle que l'audit avait vue, la mutation 3 du
+lot D (`CollectionEnabled` avait ete reecrite par le lot C le 2026-08-19 et lit
+maintenant `PolicyManager.UsageStatsEnabled`), et une seconde que la sortie
+stricte a trouvee seule : la mutation 2 du meme lot citait la garde avec son
+voisin `string tempPath`, que le correctif AG130-11 (b) a separes par deux lignes
+de commentaire. C'est l'argument pour la sortie en 1 : une ancre meurt en silence
+a chaque fois qu'on touche le code qu'elle cite.
+
+**Rejeu du 2026-09-21, sur `release/1.2.0-notation-store`.**
+
+| Temoin | Resultat |
+|---|---|
+| `witness-lot-c.py` | conforme, sortie 0, 10 mutations dont 2 attendues a zero |
+| `witness-lot-d.py` | conforme, sortie 0, apres reparation des deux ancres |
+| `witness-lot-b.py` | mutations 1 a 5 conformes ; **interrompu** a la 6 par Application Control, sortie 1 |
+
+La mutation 6 du lot B n'est donc ni prouvee ni infirmee sur ce poste. Elle est
+attendue a zero rouge de toute facon, parce que le lien Discord de l'accueil vit
+dans une fenetre que la suite ne peut pas instancier : sa seule preuve reste le
+smoke test du lot G.
+
+**Le temoin de la 1.3.0.** L'audit demandait un temoin versionne pour cette
+version : `docs/audit-2026-09-20-v1.3.0/witness-v130.py`, huit mutations sur
+AG130-06, 08 (a) et (b), 09 et 11 (a) et (b). Rejeu du 2026-09-21 : **conforme,
+sortie 0, 8 mutations sur 8 rouges**. Le premier rejeu en avait rendu 7 sur 8 et
+c'est ce que le temoin sert a trouver : le `.tmp` par PID d'`usage-stats.json`
+n'etait couvert par aucun test, quand `ConfigManager` avait les siens depuis la
+correction d'AG130-11. Les deux temoins manquants sont entres dans
+`StatsCollectionTests` le meme jour, sur le modele du chemin barre.
+
+Ce temoin deduit la fin de ligne de chaque ancre au lieu de la declarer :
+`KeyMapper.cs`, `ConfigManager.cs` et `Program.cs` melangent CRLF et LF, et la
+mesure du 2026-09-21 donne 5 ancres en CRLF pour 3 en LF dans le meme lot.
+
+**Ce qui n'est plus rejouable.**
+
+- ⛔ `witness-baseline.py` compare les chaines du binaire 1.1.0 installe a celles
+  du depot. Ce binaire a ete desinstalle du poste : le script ne peut plus tourner
+  et sa sortie du 2026-08-18 est une preuve historique, pas un controle. Le
+  refaire demande de reinstaller la 1.1.0 depuis
+  `sources/legacy/.../artifact-signing/1.1.0.0/`.
+- ⚠️ `scripts/witness-embedded-resources.py` n'est pas un controle statique : il
+  ecrit sous `src/`, copie par `shutil.copy2` et lance `dotnet`. Il ne se lance
+  pas depuis une passe en lecture seule, et son en-tete porte l'avertissement qui
+  va avec : restaurer les octets ne suffit pas, `copy2` rend aussi la date, dont
+  MSBuild se sert.
+
 
 ## 8. Smoke test qui decoule de cet audit
 
