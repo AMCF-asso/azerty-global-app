@@ -73,3 +73,17 @@ Le message de `54ef49e` dit aussi que `Pack-MSIX` refusait jusque-là un sous-do
 - Rendu réel des fenêtres non observé ; les hauteurs des gestes 34-36 sont calculées, pas mesurées.
 - ARM64, veille/reprise, mise à jour Store→Store : hors de portée du code, comme avant.
 - Les rapports complets des trois relecteurs ne sont pas versionnés ; les pointeurs retenus ici ont été relus à la source pour R1 à R5, R11 et R13 (✔) ; les autres viennent des rapports, citations vérifiées par les relecteurs.
+
+## 6. Suite donnée le 2026-09-21, même soir
+
+Point 1 de l'ordre de marche (§ 4) exécuté : **R1, R2, R5 corrigés**, le reste du tableau du § 1 est inchangé.
+
+| # | Correctif | Où | Preuve |
+|---|---|---|---|
+| R1 | `TCS_FOCUSNEVER` retiré, `WS_TABSTOP` posé sur la bande d'onglets : Tab l'atteint, flèches gauche/droite changent d'onglet, Tab repart vers le premier contrôle de l'onglet actif. Le commentaire qui justifiait `TCS_FOCUSNEVER` (« Tab changerait d'onglet ») décrivait un comportement que SysTabControl32 n'a pas. | `SettingsWindow.cs`, `CreateTabStrip` | Style seul, hors de portée de la suite : recette VM, geste 41 |
+| R2 | Les deux sous-classements de liens répondent `DialogNavigation.DialogCodeKeepingTab` : `DLGC_WANTALLKEYS` sauf pour un `WM_KEYDOWN`/`WM_SYSKEYDOWN` portant VK_TAB, qui rend le code de base. `ShortcutSubclassProc` de Paramètres passe par la même fonction. Échap sur un lien ferme la fenêtre (géré dans le sous-classement, puisque le lien garde la touche). | `AboutWindow.cs`, `UsageStatsWindow.cs`, `SettingsWindow.cs`, `DialogNavigation.cs` | `DialogNavigationKeyboardTrapTests`, 11 témoins ; **mutation** : `/* MUTANT */` à la place de l'exception Tab → **2 rouges sur 421** |
+| R5 | Les trois `WM_COMMAND` traitent `IDCANCEL` (→ `Close()`) et `IDOK` : Paramètres presse le bouton poussoir focalisé (`ButtonToPressOnEnter`, liste explicite des quatre boutons), Statistiques copie si le focus est sur « Copier » sinon ferme, À propos ferme. Les anciens gestionnaires `WM_KEYDOWN`/VK_ESCAPE restent en place : ils ne coûtent rien et reprendraient du service si une fenêtre se désinscrivait. | idem | Décision pure testée ; l'arrivée réelle de `IDOK`/`IDCANCEL` est du Win32 : recette VM, geste 41 |
+
+Suite Release après correctif : **421 tests, 0 échec** (410 + 11). Build : 0 erreur, 2 avertissements préexistants (`TrayApplication.cs:1494,1507`).
+
+Non touché, à dessein : `OnboardingWindow.cs:1027` répond aussi `DLGC_WANTALLKEYS` inconditionnel, mais cette fenêtre n'est pas inscrite à `DialogNavigation`, donc `IsDialogMessageW` ne la voit jamais et le piège n'existe pas là. R10 (libellés d'onglets non retraduits) et R12 restent ouverts : points 2 à 6 du § 4 inchangés.

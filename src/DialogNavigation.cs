@@ -46,6 +46,52 @@ static class DialogNavigation
 
     internal static void ResetForTests() => _dialogs.Clear();
 
+    /// <summary>Identifiant que <c>IsDialogMessageW</c> envoie en <c>WM_COMMAND</c> sur Entrée.</summary>
+    public const int IDOK = 1;
+    /// <summary>Identifiant que <c>IsDialogMessageW</c> envoie en <c>WM_COMMAND</c> sur Échap.</summary>
+    public const int IDCANCEL = 2;
+
+    /// <summary><c>WM_GETDLGCODE</c> : le contrôle veut toutes les touches — <c>IsDialogMessageW</c> ne les traite plus.</summary>
+    public const long DLGC_WANTALLKEYS = 0x0004;
+    private const int VK_TAB = 0x09;
+
+    /// <summary>
+    /// Revue du 2026-09-21, R2 — un contrôle qui répond <c>DLGC_WANTALLKEYS</c> sans exception
+    /// piège le clavier : <c>DLGC_WANTALLKEYS</c> vaut <c>DLGC_WANTMESSAGE</c>, donc
+    /// <c>IsDialogMessageW</c> renonce à Tab aussi, et le focus ne sort plus jamais du
+    /// contrôle (WCAG 2.1.2). La réponse doit dépendre de la touche interrogée : Tab est
+    /// rendu à la navigation, tout le reste est gardé par le contrôle.
+    /// </summary>
+    /// <param name="baseCode">Ce que le contrôle répondait déjà (<c>DefSubclassProc</c>).</param>
+    /// <param name="inputMessage">Le message que <c>IsDialogMessageW</c> s'apprête à traiter, 0 quand il n'y en a pas.</param>
+    /// <param name="inputVk">Sa touche virtuelle, 0 quand il n'y en a pas.</param>
+    public static long DialogCodeKeepingTab(long baseCode, uint inputMessage, long inputVk)
+    {
+        bool isKeyDown = inputMessage == Win32.WM_KEYDOWN || inputMessage == Win32.WM_SYSKEYDOWN;
+        if (isKeyDown && inputVk == VK_TAB) return baseCode;
+        return baseCode | DLGC_WANTALLKEYS;
+    }
+
+    /// <summary>
+    /// Revue du 2026-09-21, R5 — <c>IsDialogMessageW</c> ne livre jamais Entrée ni Échap à la
+    /// fenêtre : il les convertit en <c>WM_COMMAND</c> portant <c>IDOK</c> ou <c>IDCANCEL</c>, et
+    /// retourne TRUE sans dispatcher. Les gestionnaires <c>WM_KEYDOWN</c>/<c>VK_ESCAPE</c> des
+    /// fenêtres inscrites sont donc morts ; c'est ici que la touche se relit.
+    /// </summary>
+    public static bool IsEscapeCommand(int commandId) => commandId == IDCANCEL;
+
+    /// <summary>
+    /// Entrée sur un bouton poussoir doit presser ce bouton, pas le bouton par défaut. Sans
+    /// <c>DefDlgProc</c>, rien ne fait du bouton focalisé le bouton par défaut temporaire :
+    /// <c>IsDialogMessageW</c> envoie <c>IDOK</c> quoi qu'il arrive. Rend le bouton à presser,
+    /// <c>IntPtr.Zero</c> si le focus n'est sur aucun des boutons connus.
+    /// </summary>
+    public static IntPtr ButtonToPressOnEnter(int commandId, IntPtr focused, IReadOnlyCollection<IntPtr> pushButtons)
+    {
+        if (commandId != IDOK || focused == IntPtr.Zero) return IntPtr.Zero;
+        return pushButtons.Contains(focused) ? focused : IntPtr.Zero;
+    }
+
     /// <summary>
     /// La décision, sans Win32 : ce message appartient-il à une fenêtre qui a demandé la
     /// navigation de dialogue ?
