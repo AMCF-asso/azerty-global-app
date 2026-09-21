@@ -9,6 +9,7 @@ sealed class SettingsWindow : IDisposable
     private const uint WS_GROUP = 0x00020000;
     private const uint BM_GETCHECK = 0x00F0;
     private const uint BM_SETCHECK = 0x00F1;
+    private const uint BM_CLICK = 0x00F5;
     private const uint BST_CHECKED = 0x0001;
     private const uint SS_NOTIFY = 0x0100;
     private const uint ES_AUTOHSCROLL = 0x0080;
@@ -18,7 +19,6 @@ sealed class SettingsWindow : IDisposable
     private const uint EM_SETLIMITTEXT = 0x00C5;
     private const uint EM_SETREADONLY = 0x00CF;
 
-    private const int DLGC_WANTALLKEYS = 0x0004;
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
     private const uint CLR_KEY_BORDER_FOCUS = 0x000078D4;
@@ -682,8 +682,12 @@ sealed class SettingsWindow : IDisposable
     /// Cree la bande de trois onglets. Un vrai SysTabControl32 et non trois libelles
     /// peints : lui seul est annonce « onglet 1 sur 3 » par les lecteurs d'ecran et
     /// repond aux fleches gauche/droite sans une ligne de notre part.
-    /// TCS_FOCUSNEVER : la bande ne prend pas le focus a la tabulation, sinon Tab
-    /// changerait d'onglet au lieu de traverser les controles (AG130-40, geste 41).
+    /// ⛔ Pas de TCS_FOCUSNEVER (revue du 2026-09-21, R1) : la bande est un arrêt de
+    /// tabulation comme les autres. Tab y arrive, les flèches changent d'onglet, Tab en
+    /// repart vers le premier contrôle de l'onglet actif. Sans ce focus, rien ne permettait
+    /// au clavier seul d'atteindre « Applications » ni « Langue » : IsDialogMessageW ne
+    /// traite pas Ctrl+Tab, et Tab sur une bande focalisée ne change pas d'onglet — la
+    /// crainte qui avait motivé TCS_FOCUSNEVER était fausse.
     /// </summary>
     private void CreateTabStrip(IntPtr hInstance)
     {
@@ -695,7 +699,7 @@ sealed class SettingsWindow : IDisposable
         Win32.InitCommonControlsEx(ref icc);
 
         _hWndTabStrip = Win32.CreateWindowExW(0, Win32.WC_TABCONTROL, string.Empty,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.TCS_FOCUSNEVER,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_TAB_STRIP, hInstance, IntPtr.Zero);
         if (_hWndTabStrip == IntPtr.Zero) return;
@@ -865,6 +869,12 @@ sealed class SettingsWindow : IDisposable
             if (hWnd != IntPtr.Zero) Win32.ShowWindow(hWnd, visible ? 5 : 0); // SW_SHOW / SW_HIDE
         }
     }
+
+    /// <summary>Les boutons poussoirs de la fenêtre — ceux qu'Entrée doit presser quand ils ont le focus.</summary>
+    private IntPtr[] PushButtons() => new[]
+    {
+        _hWndCompatAdd, _hWndCompatRemove, _hWndResetVirtualKeyboardWindow, _hWndResetLessonsWindow
+    };
 
     /// <summary>Change d'onglet, remesure la fenêtre et la redessine.</summary>
     private void SetActiveTab(SettingsTab tab)
@@ -1265,6 +1275,19 @@ sealed class SettingsWindow : IDisposable
                 int code = (wParam.ToInt32() >> 16) & 0xFFFF;
                 switch (id)
                 {
+                    // Revue du 2026-09-21, R5 : Entrée et Échap arrivent d'IsDialogMessageW
+                    // sous forme de WM_COMMAND, jamais en WM_KEYDOWN. Entrée presse le bouton
+                    // focalisé s'il y en a un ; Échap ferme. Les cases de raccourci gardent
+                    // leur Échap à elles (DLGC_WANTALLKEYS), il n'arrive pas ici.
+                    case DialogNavigation.IDOK:
+                    {
+                        IntPtr target = DialogNavigation.ButtonToPressOnEnter(id, Win32.GetFocus(), PushButtons());
+                        if (target != IntPtr.Zero) Win32.SendMessageW(target, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                        break;
+                    }
+                    case DialogNavigation.IDCANCEL:
+                        Close();
+                        break;
                     case IDC_LINK_RESET:
                         if (code == 0)
                         {
@@ -1786,15 +1809,16 @@ sealed class SettingsWindow : IDisposable
             case Win32.WM_GETDLGCODE:
             {
                 IntPtr baseResult = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+                uint inputMessage = 0;
+                long inputVk = 0;
                 if (lParam != IntPtr.Zero)
                 {
                     var inputMsg = Marshal.PtrToStructure<Win32.MSG>(lParam);
-                    if ((inputMsg.message == Win32.WM_KEYDOWN || inputMsg.message == Win32.WM_SYSKEYDOWN) &&
-                        inputMsg.wParam == (IntPtr)VK_TAB)
-                        return baseResult;
+                    inputMessage = inputMsg.message;
+                    inputVk = inputMsg.wParam.ToInt64();
                 }
 
-                return (IntPtr)(baseResult.ToInt64() | DLGC_WANTALLKEYS);
+                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), inputMessage, inputVk);
             }
 
             case Win32.WM_SETFOCUS:

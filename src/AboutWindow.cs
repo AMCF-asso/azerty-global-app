@@ -346,6 +346,10 @@ sealed class AboutWindow : IDisposable
                             if (code == 0) OpenLink("https://www.helloasso.com/associations/association-pour-la-modernisation-du-clavier-francais");
                             break;
                         case IDC_BTN_CLOSE:
+                        // Revue du 2026-09-21, R5 : IsDialogMessageW traduit Entrée en IDOK et
+                        // Échap en IDCANCEL ; le seul bouton étant « Fermer », les deux ferment.
+                        case DialogNavigation.IDOK:
+                        case DialogNavigation.IDCANCEL:
                             Close();
                             break;
                     }
@@ -425,13 +429,31 @@ sealed class AboutWindow : IDisposable
                     Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 }
                 break;
-            case 0x0087: // WM_GETDLGCODE
-                return (IntPtr)0x0004; // DLGC_WANTALLKEYS
+            case Win32.WM_GETDLGCODE:
+            {
+                // Revue du 2026-09-21, R2 : DLGC_WANTALLKEYS inconditionnel gardait Tab aussi,
+                // et le focus ne sortait plus jamais d'un lien. Tab est rendu à IsDialogMessageW.
+                IntPtr baseResult = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+                uint inputMessage = 0;
+                long inputVk = 0;
+                if (lParam != IntPtr.Zero)
+                {
+                    var inputMsg = Marshal.PtrToStructure<Win32.MSG>(lParam);
+                    inputMessage = inputMsg.message;
+                    inputVk = inputMsg.wParam.ToInt64();
+                }
+                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), inputMessage, inputVk);
+            }
             case Win32.WM_KEYDOWN:
                 if (wParam == (IntPtr)0x0D) // VK_RETURN
                 {
                     int ctrlId = Win32.GetDlgCtrlID(hWnd);
                     Win32.SendMessageW(_hWnd, Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
+                    return IntPtr.Zero;
+                }
+                if (wParam == (IntPtr)0x1B) // VK_ESCAPE — gardé par le lien (WANTALLKEYS), il ferme la fenêtre
+                {
+                    Close();
                     return IntPtr.Zero;
                 }
                 break;
