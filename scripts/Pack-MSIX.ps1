@@ -1,5 +1,6 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Archive-StableBundle.ps1')
+. (Join-Path $PSScriptRoot 'Assert-PublishFreshness.ps1')
 
 # Architectures cibles (x64 + ARM64 natif)
 $architectures = @('x64', 'arm64')
@@ -89,6 +90,11 @@ foreach ($arch in $architectures) {
         # qui est copiee quand le pack s'arrete.
         throw "Publish introuvable pour $arch : $publishExe`nLancer:`n  `$env:PATH += `";C:\Program Files (x86)\Microsoft Visual Studio\Installer`"`n  dotnet publish -c Release -r win-$arch"
     }
+
+    # Exister ne suffit pas : le bundle 1.3.0.0 du 2026-09-20 a ete produit sur un publish
+    # anterieur de deux heures a ses propres sources (bloquant B1). Verify-Release.ps1 ne
+    # compare que publish <-> bundle et ne pouvait pas le voir.
+    Assert-PublishNotStale -SourceRoot $srcDir -PublishExe $publishExe -Architecture $arch
 }
 
 $makeAppx = Resolve-MakeAppx
