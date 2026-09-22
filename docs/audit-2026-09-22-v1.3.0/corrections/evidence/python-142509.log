@@ -1,0 +1,166 @@
+test_aucun_libelle_orphelin (test_admx_agreement.AdmlTests.test_aucun_libelle_orphelin)
+Réciproque : une chaîne que le modèle n'appelle plus est du texte mort, et un ... ok
+test_aucun_libelle_vide (test_admx_agreement.AdmlTests.test_aucun_libelle_vide) ... ok
+test_chaque_reference_du_modele_existe_dans_les_deux_langues (test_admx_agreement.AdmlTests.test_chaque_reference_du_modele_existe_dans_les_deux_langues) ... ok
+test_le_francais_et_l_anglais_ne_sont_pas_le_meme_texte (test_admx_agreement.AdmlTests.test_le_francais_et_l_anglais_ne_sont_pas_le_meme_texte)
+Un .adml recopié d'une langue sur l'autre passerait tous les tests ci-dessus. ... ok
+test_les_deux_langues_portent_les_memes_identifiants (test_admx_agreement.AdmlTests.test_les_deux_langues_portent_les_memes_identifiants) ... ok
+test_les_presentations_referencees_existent (test_admx_agreement.AdmlTests.test_les_presentations_referencees_existent) ... ok
+test_cinq_strategies (test_admx_agreement.AdmxTests.test_cinq_strategies) ... ok
+test_la_fenetre_de_bienvenue_reste_inversee (test_admx_agreement.AdmxTests.test_la_fenetre_de_bienvenue_reste_inversee)
+Elle est le seul réglage dont « Activé » écrit 0. Un jour quelqu'un « corrigera » ... ok
+test_langues_acceptees_par_le_selecteur (test_admx_agreement.AdmxTests.test_langues_acceptees_par_le_selecteur) ... ok
+test_les_valeurs_du_modele_sont_celles_du_code (test_admx_agreement.AdmxTests.test_les_valeurs_du_modele_sont_celles_du_code)
+Le cas qui justifie ce fichier : une clé renommée dans le code, un ADMX qui pose ... ok
+test_toutes_les_strategies_pointent_la_racine_du_code (test_admx_agreement.AdmxTests.test_toutes_les_strategies_pointent_la_racine_du_code) ... ok
+test_toutes_les_strategies_sont_machine (test_admx_agreement.AdmxTests.test_toutes_les_strategies_sont_machine) ... ok
+test_valeurs_ecrites_par_chaque_strategie (test_admx_agreement.AdmxTests.test_valeurs_ecrites_par_chaque_strategie) ... ok
+test_encodage_utf16_avec_bom (test_admx_agreement.RegTests.test_encodage_utf16_avec_bom)
+regedit importe sans discuter un .reg UTF-16 LE. En UTF-8 il lit les accents comme ... ok
+test_entete_attendu_par_regedit (test_admx_agreement.RegTests.test_entete_attendu_par_regedit) ... ok
+test_fins_de_ligne_crlf (test_admx_agreement.RegTests.test_fins_de_ligne_crlf) ... ok
+test_la_cle_est_celle_du_code (test_admx_agreement.RegTests.test_la_cle_est_celle_du_code) ... ok
+test_la_fenetre_de_bienvenue_est_posee_a_zero (test_admx_agreement.RegTests.test_la_fenetre_de_bienvenue_est_posee_a_zero) ... ok
+test_la_langue_est_une_chaine_pas_un_dword (test_admx_agreement.RegTests.test_la_langue_est_une_chaine_pas_un_dword)
+Language est le seul REG_SZ des cinq ; un dword ici serait ignoré à la lecture. ... ok
+test_les_cinq_valeurs_sont_posees (test_admx_agreement.RegTests.test_les_cinq_valeurs_sont_posees) ... ok
+test_le_scanner_voit_quelque_chose (test_admx_agreement.ScannerTests.test_le_scanner_voit_quelque_chose)
+Sans ce test, un motif aveugle rendrait tous les autres vacuement verts. ... ok
+test_archive_version_110_pendant_preparation_120_et_conserve_stable (test_archive_stable_bundle.ArchiveStableBundleTests.test_archive_version_110_pendant_preparation_120_et_conserve_stable) ... ok
+test_refuse_manifeste_absent_et_zip_corrompu (test_archive_stable_bundle.ArchiveStableBundleTests.test_refuse_manifeste_absent_et_zip_corrompu) ... ok
+test_refuse_version_invalide_sans_toucher_au_stable (test_archive_stable_bundle.ArchiveStableBundleTests.test_refuse_version_invalide_sans_toucher_au_stable) ... ok
+test_analyse_complete_acceptee (test_binary_hardening.BinaryHardeningTests.test_analyse_complete_acceptee) ... ok
+test_analyse_incomplete_refusee_meme_avec_controles_reussis (test_binary_hardening.BinaryHardeningTests.test_analyse_incomplete_refusee_meme_avec_controles_reussis) ... ok
+test_echec_refuse (test_binary_hardening.BinaryHardeningTests.test_echec_refuse) ... ok
+test_message_par_identifiant_seul_refuse_pour_github (test_binary_hardening.BinaryHardeningTests.test_message_par_identifiant_seul_refuse_pour_github) ... ok
+test_modele_absent_refuse_sans_inventer_un_message (test_binary_hardening.BinaryHardeningTests.test_modele_absent_refuse_sans_inventer_un_message) ... ok
+test_rapport_absent_refuse (test_binary_hardening.BinaryHardeningTests.test_rapport_absent_refuse) ... ok
+test_texte_resolu_sans_changer_un_verdict_en_echec (test_binary_hardening.BinaryHardeningTests.test_texte_resolu_sans_changer_un_verdict_en_echec) ... ok
+test_zero_controle_refuse (test_binary_hardening.BinaryHardeningTests.test_zero_controle_refuse) ... ok
+test_bloc_absent_est_une_erreur (test_check_doc_versions.BlocTests.test_bloc_absent_est_une_erreur) ... ok
+test_bloc_present_et_document_vide_est_conforme (test_check_doc_versions.BlocTests.test_bloc_present_et_document_vide_est_conforme) ... ok
+test_le_bloc_ne_se_scanne_pas_lui_meme (test_check_doc_versions.BlocTests.test_le_bloc_ne_se_scanne_pas_lui_meme)
+Sans cette exclusion, `versions-historiques: 1.0.0` se dénoncerait tout seul. ... ok
+test_version_declaree_a_quatre_champs_acceptee (test_check_doc_versions.BlocTests.test_version_declaree_a_quatre_champs_acceptee) ... ok
+test_version_declaree_perimee (test_check_doc_versions.BlocTests.test_version_declaree_perimee) ... ok
+test_aucune_erreur_dans_les_documents_de_parc (test_check_doc_versions.DocumentsReelsTests.test_aucune_erreur_dans_les_documents_de_parc) ... ok
+test_le_document_interne_porte_bien_un_bloc (test_check_doc_versions.DocumentsReelsTests.test_le_document_interne_porte_bien_un_bloc) ... ok
+test_empreinte_declaree_en_minuscules (test_check_doc_versions.EmpreinteTests.test_empreinte_declaree_en_minuscules) ... ok
+test_empreinte_declaree_est_muette (test_check_doc_versions.EmpreinteTests.test_empreinte_declaree_est_muette) ... ok
+test_empreinte_non_declaree_est_une_erreur (test_check_doc_versions.EmpreinteTests.test_empreinte_non_declaree_est_une_erreur) ... ok
+test_en_attente_degrade_l_empreinte_en_simple_attente (test_check_doc_versions.EmpreinteTests.test_en_attente_degrade_l_empreinte_en_simple_attente) ... ok
+test_en_attente_se_signale_meme_sans_empreinte_dans_le_corps (test_check_doc_versions.EmpreinteTests.test_en_attente_se_signale_meme_sans_empreinte_dans_le_corps) ... ok
+test_une_seconde_empreinte_non_declaree_rougit (test_check_doc_versions.EmpreinteTests.test_une_seconde_empreinte_non_declaree_rougit) ... ok
+test_chemin_d_archive_et_nom_sur_la_meme_ligne (test_check_doc_versions.NomDeBundleTests.test_chemin_d_archive_et_nom_sur_la_meme_ligne) ... ok
+test_nom_de_bundle_a_jour_est_muet (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_a_jour_est_muet) ... ok
+test_nom_de_bundle_apres_un_souligne (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_apres_un_souligne)
+Faux négatif du 2026-08-21 : `\b` ne voit rien entre `_` et `1`. ... ok
+test_nom_de_bundle_perime_passe_avant_la_liste_historique (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_perime_passe_avant_la_liste_historique)
+Un nom de fichier n'est pas un fait daté : il nomme ce que le kit livre. ... ok
+test_nom_de_bundle_suivi_d_un_point (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_suivi_d_un_point)
+Faux négatif du 2026-08-21 : la version est suivie du point de `.msixbundle`. ... ok
+test_une_url_hors_domaine_de_telechargement_n_est_pas_jugee (test_check_doc_versions.UrlTests.test_une_url_hors_domaine_de_telechargement_n_est_pas_jugee)
+Seul `download.azerty.global` sert des paquets : le reste du site est hors sujet. ... ok
+test_url_de_l_appinstaller_est_muette (test_check_doc_versions.UrlTests.test_url_de_l_appinstaller_est_muette) ... ok
+test_url_stable_est_muette (test_check_doc_versions.UrlTests.test_url_stable_est_muette) ... ok
+test_url_versionnee_est_une_erreur (test_check_doc_versions.UrlTests.test_url_versionnee_est_une_erreur) ... ok
+test_csproj_reel_du_depot (test_check_doc_versions.VersionDeReferenceTests.test_csproj_reel_du_depot)
+La version de référence existe vraiment : sans elle le scanner est inconcluant. ... ok
+test_csproj_sans_version (test_check_doc_versions.VersionDeReferenceTests.test_csproj_sans_version) ... ok
+test_forme_a_quatre_champs_admise (test_check_doc_versions.VersionDeReferenceTests.test_forme_a_quatre_champs_admise) ... ok
+test_version_avec_espaces (test_check_doc_versions.VersionDeReferenceTests.test_version_avec_espaces) ... ok
+test_version_lue_dans_le_csproj (test_check_doc_versions.VersionDeReferenceTests.test_version_lue_dans_le_csproj) ... ok
+test_la_ligne_est_reportee (test_check_doc_versions.VersionsDuCorpsTests.test_la_ligne_est_reportee) ... ok
+test_ni_licence_ni_runtime_ni_build_windows_ne_sont_des_versions (test_check_doc_versions.VersionsDuCorpsTests.test_ni_licence_ni_runtime_ni_build_windows_ne_sont_des_versions) ... ok
+test_version_courante_est_muette (test_check_doc_versions.VersionsDuCorpsTests.test_version_courante_est_muette) ... ok
+test_version_en_bascule_est_une_attente (test_check_doc_versions.VersionsDuCorpsTests.test_version_en_bascule_est_une_attente) ... ok
+test_version_historique_declaree_est_muette (test_check_doc_versions.VersionsDuCorpsTests.test_version_historique_declaree_est_muette) ... ok
+test_version_inconnue_est_une_erreur (test_check_doc_versions.VersionsDuCorpsTests.test_version_inconnue_est_une_erreur) ... ok
+test_sans_le_champ_la_version_windows_est_signalee (test_check_doc_versions.VersionsHorsProduitTests.test_sans_le_champ_la_version_windows_est_signalee)
+Le faux positif qu'on corrige doit exister sans le champ, sinon ce lot ne sert a rien. ... ok
+test_une_autre_version_reste_signalee (test_check_doc_versions.VersionsHorsProduitTests.test_une_autre_version_reste_signalee)
+Temoin negatif : le champ ne rend pas le scanner aveugle en general. ... ok
+test_version_hors_produit_declaree_est_tue (test_check_doc_versions.VersionsHorsProduitTests.test_version_hors_produit_declaree_est_tue) ... ok
+test_intervalle_a_zero_accepte (test_gen_appinstaller.BuildRefusalTests.test_intervalle_a_zero_accepte)
+Réciproque des bornes : 0 est une valeur légale, pas une valeur absente. ... ok
+test_refus_d_un_editeur_qui_exigerait_un_echappement (test_gen_appinstaller.BuildRefusalTests.test_refus_d_un_editeur_qui_exigerait_un_echappement) ... ok
+test_refus_d_un_intervalle_hors_bornes (test_gen_appinstaller.BuildRefusalTests.test_refus_d_un_intervalle_hors_bornes) ... ok
+test_refus_d_une_version_a_trois_segments (test_gen_appinstaller.BuildRefusalTests.test_refus_d_une_version_a_trois_segments) ... ok
+test_refus_de_l_identite_store (test_gen_appinstaller.BuildRefusalTests.test_refus_de_l_identite_store) ... ok
+test_archive_sans_manifeste_de_bundle (test_gen_appinstaller.IdentityReadingTests.test_archive_sans_manifeste_de_bundle) ... ok
+test_identite_du_bundle_reel (test_gen_appinstaller.IdentityReadingTests.test_identite_du_bundle_reel)
+Le littéral accentué des autres tests est-il celui du fichier signé ? ... ok
+test_identite_lue_dans_un_bundle_synthetique (test_gen_appinstaller.IdentityReadingTests.test_identite_lue_dans_un_bundle_synthetique) ... ok
+test_accent_retire_de_l_editeur (test_gen_appinstaller.MutationTests.test_accent_retire_de_l_editeur) ... ok
+test_activation_bloquante_sans_invite (test_gen_appinstaller.MutationTests.test_activation_bloquante_sans_invite) ... ok
+test_bloc_de_mise_a_jour_absent (test_gen_appinstaller.MutationTests.test_bloc_de_mise_a_jour_absent) ... ok
+test_bom_en_tete (test_gen_appinstaller.MutationTests.test_bom_en_tete) ... ok
+test_circonflexe_retire_de_l_editeur (test_gen_appinstaller.MutationTests.test_circonflexe_retire_de_l_editeur) ... ok
+test_echappement_introduit (test_gen_appinstaller.MutationTests.test_echappement_introduit) ... ok
+test_element_racine_renomme (test_gen_appinstaller.MutationTests.test_element_racine_renomme) ... ok
+test_fichier_genere_ne_signale_rien (test_gen_appinstaller.MutationTests.test_fichier_genere_ne_signale_rien)
+Réciproque de toutes les mutations : sans mutation, aucun écart. ... ok
+test_fins_de_ligne_crlf (test_gen_appinstaller.MutationTests.test_fins_de_ligne_crlf) ... ok
+test_intervalle_absent (test_gen_appinstaller.MutationTests.test_intervalle_absent) ... ok
+test_intervalle_different (test_gen_appinstaller.MutationTests.test_intervalle_different) ... ok
+test_nom_de_paquet_divergent (test_gen_appinstaller.MutationTests.test_nom_de_paquet_divergent) ... ok
+test_paquet_simple_au_lieu_du_bundle (test_gen_appinstaller.MutationTests.test_paquet_simple_au_lieu_du_bundle) ... ok
+test_tache_de_fond_ajoutee (test_gen_appinstaller.MutationTests.test_tache_de_fond_ajoutee) ... ok
+test_url_du_bundle_divergente (test_gen_appinstaller.MutationTests.test_url_du_bundle_divergente) ... ok
+test_url_du_fichier_divergente (test_gen_appinstaller.MutationTests.test_url_du_fichier_divergente) ... ok
+test_version_de_la_racine_divergente (test_gen_appinstaller.MutationTests.test_version_de_la_racine_divergente) ... ok
+test_version_du_bundle_divergente (test_gen_appinstaller.MutationTests.test_version_du_bundle_divergente) ... ok
+test_xml_casse (test_gen_appinstaller.MutationTests.test_xml_casse) ... ok
+test_les_trois_caracteres_accentues_sont_traces (test_gen_appinstaller.NonAsciiReportTests.test_les_trois_caracteres_accentues_sont_traces) ... ok
+test_un_fichier_sans_accent_ne_trace_rien (test_gen_appinstaller.NonAsciiReportTests.test_un_fichier_sans_accent_ne_trace_rien) ... ok
+test_l_echappatoire_degrade_le_refus_en_avertissement (test_publish_freshness.PublishFreshnessTests.test_l_echappatoire_degrade_le_refus_en_avertissement) ... ok
+test_la_ressource_embarquee_compte_autant_que_le_code (test_publish_freshness.PublishFreshnessTests.test_la_ressource_embarquee_compte_autant_que_le_code) ... ok
+test_publish_plus_recent_que_tout_le_pack_est_autorise (test_publish_freshness.PublishFreshnessTests.test_publish_plus_recent_que_tout_le_pack_est_autorise) ... ok
+test_temoins_negatifs_bin_obj_tests_et_testsupport_ne_bloquent_pas (test_publish_freshness.PublishFreshnessTests.test_temoins_negatifs_bin_obj_tests_et_testsupport_ne_bloquent_pas) ... ok
+test_une_reference_absente_leve_au_lieu_de_laisser_passer (test_publish_freshness.PublishFreshnessTests.test_une_reference_absente_leve_au_lieu_de_laisser_passer) ... ok
+test_une_source_modifiee_apres_le_publish_bloque_le_pack_et_se_nomme (test_publish_freshness.PublishFreshnessTests.test_une_source_modifiee_apres_le_publish_bloque_le_pack_et_se_nomme) ... ok
+test_aucun_receveur_inconnu (test_schema_parser_agreement.SchemaParserAgreementTests.test_aucun_receveur_inconnu)
+Un nouveau niveau dans le parseur doit rejoindre LOCATIONS, pas passer inaperçu. ... ok
+test_ce_que_le_parseur_exige_est_required (test_schema_parser_agreement.SchemaParserAgreementTests.test_ce_que_le_parseur_exige_est_required) ... ok
+test_ce_que_le_parseur_lit_est_declare (test_schema_parser_agreement.SchemaParserAgreementTests.test_ce_que_le_parseur_lit_est_declare) ... ok
+test_le_parseur_lit_bien_quelque_chose (test_schema_parser_agreement.SchemaParserAgreementTests.test_le_parseur_lit_bien_quelque_chose)
+Un motif qui ne trouve plus rien passerait tous les autres tests de ce fichier. ... ok
+test_caractere_direct_ajoute_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_caractere_direct_ajoute_desaccorde_les_compteurs)
+Un caractère inédit sur une couche libre déplace le compte des directs. ... ok
+test_caractere_produit_inedit_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_caractere_produit_inedit_desaccorde_les_compteurs)
+Une combinaison produisant un caractère inédit déplace le total unique. ... ok
+test_combinaison_retiree_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_combinaison_retiree_desaccorde_les_compteurs) ... ok
+test_compteur_faux_detecte (test_validate_layout.LayoutCounterTests.test_compteur_faux_detecte) ... ok
+test_touche_morte_retiree_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_touche_morte_retiree_desaccorde_les_compteurs)
+Le nombre de touches mortes se recalcule : il était écrit à la main deux fois. ... ok
+test_touche_retiree_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_touche_retiree_desaccorde_les_compteurs)
+Retirer une touche doit se voir : c'est le mode de panne d'une édition manuelle. ... ok
+test_declencheur_non_declare_detecte (test_validate_layout.LayoutReferenceTests.test_declencheur_non_declare_detecte) ... ok
+test_position_en_double_detectee (test_validate_layout.LayoutReferenceTests.test_position_en_double_detectee) ... ok
+test_scancode_en_double_detecte (test_validate_layout.LayoutReferenceTests.test_scancode_en_double_detecte) ... ok
+test_touche_morte_jamais_posee_detectee (test_validate_layout.LayoutReferenceTests.test_touche_morte_jamais_posee_detectee) ... ok
+test_champ_de_touche_inconnu (test_validate_layout.LayoutSchemaTests.test_champ_de_touche_inconnu) ... ok
+test_cle_racine_inconnue (test_validate_layout.LayoutSchemaTests.test_cle_racine_inconnue) ... ok
+test_cle_racine_mal_orthographiee (test_validate_layout.LayoutSchemaTests.test_cle_racine_mal_orthographiee) ... ok
+test_couche_nulle_acceptee (test_validate_layout.LayoutSchemaTests.test_couche_nulle_acceptee) ... ok
+test_couche_numerique_rejetee (test_validate_layout.LayoutSchemaTests.test_couche_numerique_rejetee) ... ok
+test_declencheur_de_table_a_deux_caracteres_rejete (test_validate_layout.LayoutSchemaTests.test_declencheur_de_table_a_deux_caracteres_rejete)
+Une clé de deux caractères ne serait jamais atteinte par une frappe. ... ok
+test_disposition_reelle_conforme (test_validate_layout.LayoutSchemaTests.test_disposition_reelle_conforme) ... ok
+test_doigt_hors_enumeration_rejete (test_validate_layout.LayoutSchemaTests.test_doigt_hors_enumeration_rejete) ... ok
+test_nom_de_touche_morte_hors_convention_rejete (test_validate_layout.LayoutSchemaTests.test_nom_de_touche_morte_hors_convention_rejete) ... ok
+test_position_hors_forme_rejetee (test_validate_layout.LayoutSchemaTests.test_position_hors_forme_rejetee) ... ok
+test_scancode_decimal_a_dix_chiffres_rejete (test_validate_layout.LayoutSchemaTests.test_scancode_decimal_a_dix_chiffres_rejete)
+Dix chiffres tenaient dans le motif et pas dans un uint : le parseur débordait. ... ok
+test_scancode_decimal_a_neuf_chiffres_accepte (test_validate_layout.LayoutSchemaTests.test_scancode_decimal_a_neuf_chiffres_accepte)
+Neuf chiffres décimaux tiennent dans un uint : la frontière haute du motif. ... ok
+test_scancode_decimal_accepte (test_validate_layout.LayoutSchemaTests.test_scancode_decimal_accepte) ... ok
+test_scancode_hexa_sans_prefixe_rejete (test_validate_layout.LayoutSchemaTests.test_scancode_hexa_sans_prefixe_rejete)
+ABCD passerait un motif trop permissif, et ferait lever uint.Parse en décimal. ... ok
+test_scancode_non_numerique_rejete (test_validate_layout.LayoutSchemaTests.test_scancode_non_numerique_rejete) ... ok
+test_scancode_prefixe_0x_accepte (test_validate_layout.LayoutSchemaTests.test_scancode_prefixe_0x_accepte) ... ok
+
+----------------------------------------------------------------------
+Ran 133 tests in 10.582s
+
+OK

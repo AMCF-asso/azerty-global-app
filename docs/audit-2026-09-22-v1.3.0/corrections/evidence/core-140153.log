@@ -1,0 +1,7 @@
+  TypingEngine.Core -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+  TypingEngine.Core.Tests -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Core.Tests\bin\Release\net8.0\TypingEngine.Core.Tests.dll
+Test run for D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Core.Tests\bin\Release\net8.0\TypingEngine.Core.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+Results File: D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\docs\audit-2026-09-22-v1.3.0\corrections\evidence\core-verified.trx
+
+Passed!  - Failed:     0, Passed:    18, Skipped:     0, Total:    18, Duration: 16 ms - TypingEngine.Core.Tests.dll (net8.0)

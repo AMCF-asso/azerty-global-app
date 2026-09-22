@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\scripts\check-binary-hardening.py", line 135, in <module>
+    main()
+  File "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\scripts\check-binary-hardening.py", line 131, in main
+    raise ValueError(" ; ".join(errors))
+ValueError: x64 : Contrôles en échec : BA2024, BA2025, BA2026, BA2027, BA6006 ; arm64 : Contrôles en échec : BA2024, BA2026, BA2027, BA6006

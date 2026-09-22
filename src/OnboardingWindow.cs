@@ -120,6 +120,19 @@ sealed class OnboardingWindow : IDisposable
     /// sollicitation d'avis notamment, qui ne doit pas s'afficher par-dessus l'accueil.
     /// </summary>
     public Action? OnClosed { get; set; }
+    public Func<bool>? ActivationRequested { get; set; }
+    private bool _activationAccepted = ConfigManager.ActivationConsent;
+    private string TryButtonText => _activationAccepted ? L.Onboarding_TryNow : L.Onboarding_ActivateAndTry;
+    private bool RequestActivation()
+    {
+        if (_activationAccepted) return true;
+        if (ActivationRequested?.Invoke() != true) return false;
+        _activationAccepted = true;
+        Win32.SetWindowTextW(_hWndBtnTry, TryButtonText);
+        UpdateStepVisibility();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        return true;
+    }
 
     public void SetInputPaused(bool paused)
     {
@@ -454,7 +467,7 @@ sealed class OnboardingWindow : IDisposable
         // n'ont pas ete completes une fois. Positionne dans UpdateStepVisibility a gauche du
         // bouton « Suivant », pour que l'utilisateur puisse choisir : essayer maintenant OU
         // passer directement a l'etape 2.
-        _hWndBtnTry = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_TryNow,
+        _hWndBtnTry = Win32.CreateWindowExW(0, "BUTTON", TryButtonText,
             Win32.WS_CHILD | Win32.WS_TABSTOP,
             0, bottomY, S(BASE_BTN_W_NEXT_MIN), S(BASE_BTN_H),
             _hWnd, (IntPtr)IDC_BTN_TRY, hInstance, IntPtr.Zero);
@@ -575,7 +588,8 @@ sealed class OnboardingWindow : IDisposable
         bool isStep1Attempted    = _currentStep == 0 &&  _learningModuleAttempted && !_learningModuleDone; // etat B
         // etat C = _currentStep == 0 && _learningModuleDone (ou etapes 2/3) → comportement standard
 
-        string nextText = _currentStep == 2 ? L.Onboarding_LetsGo : L.Onboarding_Next;
+        string nextText = _currentStep == 2
+            ? (_activationAccepted ? L.Onboarding_LetsGo : L.Onboarding_Activate) : L.Onboarding_Next;
         Win32.SetWindowTextW(_hWndBtnNext, nextText);
 
         int btnWinW = S(BASE_WIN_W);
@@ -587,7 +601,7 @@ sealed class OnboardingWindow : IDisposable
             // Etat A : seul « Essayer maintenant », position droite. « Suivant » cache.
             Win32.ShowWindow(_hWndBtnNext, 0);
             Win32.ShowWindow(_hWndBtnTry, 1);
-            string tryText = L.Onboarding_TryNow;
+            string tryText = TryButtonText;
             IntPtr hdc = Win32.GetDC(_hWnd);
             int tryTextW;
             try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
@@ -604,7 +618,7 @@ sealed class OnboardingWindow : IDisposable
             var nextGeomB = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
             Win32.MoveWindow(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width, S(BASE_BTN_H), true);
 
-            string tryText = L.Onboarding_TryNow;
+            string tryText = TryButtonText;
             IntPtr hdc = Win32.GetDC(_hWnd);
             int tryTextW;
             try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
@@ -632,11 +646,12 @@ sealed class OnboardingWindow : IDisposable
     {
         _currentStep = 0;
         _step3Reached = false; // sera mis a true a la 1ere transition vers l'etape 3
-        // Etape 3 : « Lancer au demarrage » coche par defaut (recommandation), « Ne plus afficher »
+        // Étape 3 : conserver le choix de démarrage existant, sans le joindre au consentement.
+        // « Ne plus afficher »
         // UNCHECKED par defaut (v0.9.7.1) -> l'opt-out doit etre explicite. Avant, la default-checked
         // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
         // declenchait un opt-out permanent, meme si l'utilisateur n'avait jamais atteint l'etape 3.
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK, AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkDontShow, BM_SETCHECK, IntPtr.Zero, IntPtr.Zero);
         // Sync bidirectionnel des flags avec la progression persistee. Seuils alignes avec
         // la condition d'auto-show ([TrayApplication.cs] : LearningMaxStepCompleted < 3) :
@@ -650,6 +665,8 @@ sealed class OnboardingWindow : IDisposable
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
         _visible = true;
+        DialogNavigation.Register(_hWnd);
+        Win32.SetFocus(_currentStep == 0 && !_learningModuleDone ? _hWndBtnTry : _hWndBtnNext);
     }
 
     /// <summary>Remet l'onboarding à zéro (étape 1, exercice non fait) et réautorise son affichage automatique.</summary>
@@ -676,7 +693,7 @@ sealed class OnboardingWindow : IDisposable
         // Sinon, fermer le wizard a l'etape 1 ou 2 (croix, Esc, Quitter) ne touche ni
         // ShowOnboardingAtStartup ni l'autostart. Les checkboxes sont initialisees par
         // defaut dans Show(), mais ne deviennent un choix utilisateur qu'une fois visibles.
-        if (_step3Reached)
+        if (_step3Reached && _activationAccepted)
         {
             var checkState = Win32.SendMessageW(_hWndChkDontShow, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
             ConfigManager.SetShowOnboardingAtStartup(checkState != (IntPtr)BST_CHECKED);
@@ -742,17 +759,28 @@ sealed class OnboardingWindow : IDisposable
                 int code = (wParam.ToInt32() >> 16) & 0xFFFF;
                 switch (id)
                 {
+                    case DialogNavigation.IDOK:
+                    {
+                        IntPtr focused = Win32.GetFocus();
+                        IntPtr button = DialogNavigation.ButtonToPressOnEnter(id, focused,
+                            new[] { _hWndBtnNext, _hWndBtnPrev, _hWndBtnTry });
+                        if (button != IntPtr.Zero) Win32.SendMessageW(button, 0x00F5, IntPtr.Zero, IntPtr.Zero);
+                        break;
+                    }
+                    case DialogNavigation.IDCANCEL:
+                        Close();
+                        break;
                     case IDC_BTN_NEXT:
                         // Etape 1 ou 2 : passer a la suivante. Etape 3 : fermer l'onboarding.
                         // (Le bouton « Essayer maintenant » est un controle distinct IDC_BTN_TRY.)
                         if (_currentStep < 2) { _currentStep++; if (_currentStep == 2) _step3Reached = true; UpdateStepVisibility(); }
-                        else Close();
+                        else if (RequestActivation()) Close();
                         break;
                     case IDC_BTN_TRY:
                         // Etape 1 uniquement (visible seulement si !_learningModuleDone).
                         // L'utilisateur reste sur l'etape 1 a la fermeture du module ; les deux
                         // boutons restent presents tant qu'il n'a pas vraiment complete les exercices.
-                        LaunchLearningModule();
+                        if (RequestActivation()) LaunchLearningModule();
                         break;
                     case IDC_BTN_PREV:
                         if (_currentStep > 0) { _currentStep--; UpdateStepVisibility(); }
@@ -852,15 +880,20 @@ sealed class OnboardingWindow : IDisposable
                 if (vk == 0x27 || vk == 0x28) // VK_RIGHT, VK_DOWN
                 {
                     if (_currentStep == 0 && !_learningModuleDone)
-                        LaunchLearningModule();
+                    {
+                        if (_activationAccepted) LaunchLearningModule();
+                        else Win32.SetFocus(_hWndBtnTry);
+                    }
                     else if (_currentStep < 2)
                     {
                         _currentStep++;
                         if (_currentStep == 2) _step3Reached = true;
                         UpdateStepVisibility();
                     }
-                    else
+                    else if (_activationAccepted)
                         Close();
+                    else
+                        Win32.SetFocus(_hWndBtnNext);
                     return IntPtr.Zero;
                 }
                 if (vk == 0x25 || vk == 0x26) // VK_LEFT, VK_UP
@@ -929,7 +962,7 @@ sealed class OnboardingWindow : IDisposable
     private void RefreshLanguageTexts()
     {
         Win32.SetWindowTextW(_hWndBtnPrev, L.Onboarding_Prev);
-        Win32.SetWindowTextW(_hWndBtnTry, L.Onboarding_TryNow);
+        Win32.SetWindowTextW(_hWndBtnTry, TryButtonText);
         Win32.SetWindowTextW(_hWndLinkLessons, L.Onboarding_LinkLessons);
         Win32.SetWindowTextW(_hWndLinkGuide, L.Onboarding_LinkGuide);
         Win32.SetWindowTextW(_hWndLinkFeedback, L.Tray_MenuGiveFeedback);
@@ -1024,8 +1057,11 @@ sealed class OnboardingWindow : IDisposable
                     Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 }
                 break;
-            case 0x0087: // WM_GETDLGCODE — permet au STATIC de recevoir les touches
-                return (IntPtr)0x0004; // DLGC_WANTALLKEYS
+            case 0x0087: // WM_GETDLGCODE : Entrée au lien, Tab à la navigation.
+            {
+                var input = lParam != IntPtr.Zero ? Marshal.PtrToStructure<Win32.MSG>(lParam) : default;
+                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(0, input.message, input.wParam.ToInt64());
+            }
             case Win32.WM_KEYDOWN:
                 if (wParam == (IntPtr)0x0D) // VK_RETURN
                 {
@@ -1049,6 +1085,11 @@ sealed class OnboardingWindow : IDisposable
     {
         if (_inputPaused && IsPausedInputMessage(msg))
             return IntPtr.Zero;
+
+        // Les flèches restent gérées par le wizard ; Tab/Entrée/Échap sont routées
+        // par IsDialogMessage, comme dans les paramètres.
+        if (msg == 0x0087) // WM_GETDLGCODE / DLGC_WANTARROWS
+            return (IntPtr)(Win32.DefSubclassProc(hWnd, msg, wParam, lParam).ToInt64() | 0x0001);
 
         if (msg == Win32.WM_KEYDOWN)
         {
@@ -1221,7 +1262,7 @@ sealed class OnboardingWindow : IDisposable
             right = cw - margin,
             bottom = subtitleBottom
         };
-        Win32.DrawTextW(hdc, L.Onboarding_Subtitle, -1, ref subtitleRect,
+        Win32.DrawTextW(hdc, _activationAccepted ? L.Onboarding_Subtitle : L.Onboarding_InactiveSubtitle, -1, ref subtitleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         // Le bloc drapeau + version (à droite) peut désormais descendre plus bas que le
@@ -1685,6 +1726,7 @@ sealed class OnboardingWindow : IDisposable
         if (_hWndBtnPrev != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnPrev, _buttonArrowSubclassProc, (UIntPtr)21);
         if (_hWndBtnTry != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnTry, _buttonArrowSubclassProc, (UIntPtr)22);
 
+        DialogNavigation.Unregister(_hWnd);
         if (_hWnd != IntPtr.Zero) { Win32.DestroyWindow(_hWnd); _hWnd = IntPtr.Zero; }
         if (_hIcon != IntPtr.Zero) { Win32.DestroyIcon(_hIcon); _hIcon = IntPtr.Zero; }
         if (_gdipLogo != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipLogo); _gdipLogo = IntPtr.Zero; }

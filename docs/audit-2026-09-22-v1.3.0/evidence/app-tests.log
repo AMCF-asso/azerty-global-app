@@ -1,0 +1,14 @@
+  TypingEngine.Core -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+  TypingEngine.Windows -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TrayApplication.cs(1522,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.csproj]
+D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TrayApplication.cs(1535,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.csproj]
+  AZERTYGlobal -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\bin\Release\net8.0-windows10.0.17763.0\AZERTY Global.dll
+  AZERTYGlobal.Tests -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll
+Test run for D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+Results File: D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\docs\audit-2026-09-22-v1.3.0\evidence\app.trx
+
+Passed!  - Failed:     0, Passed:   451, Skipped:     0, Total:   451, Duration: 1 s - AZERTYGlobal.Tests.dll (net8.0)

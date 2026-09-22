@@ -1,0 +1,110 @@
+[
+  {
+    "path": ".github/workflows/ci.yml",
+    "sha256": "044797767a0bbda80a01fe26e48770b322c9a9ca05221c56f34aba1e4ccab79e"
+  },
+  {
+    "path": "Changelog.md",
+    "sha256": "f2cb9ac7e43d30309a43d9af43083d1304b0499d0c99b835863d9fec5663e564"
+  },
+  {
+    "path": "README.md",
+    "sha256": "2f304bbdaafaab3de1856c46c495b8af5cf500b7d3e211eb9cb6f57b7be50266"
+  },
+  {
+    "path": "docs/audit-2026-09-22-v1.3.0/corrections/README.md",
+    "sha256": "b7f24504de0e87843f73fd1b93419dce8c3b1ab3dda6b198ee8a3e1f227b58ab"
+  },
+  {
+    "path": "msix/Fiche Store.md",
+    "sha256": "4e36c62885729479b829e417bb5fa67ebf743e40dab55452d7a42f850814ca6a"
+  },
+  {
+    "path": "scripts/check-binary-hardening.py",
+    "sha256": "222bca512765d85f694c8ea9be220500fef49f2b62b87eb31ae7bca75d6078be"
+  },
+  {
+    "path": "scripts/tests/test_binary_hardening.py",
+    "sha256": "0b7c7a28a346b728461a5ec5a7465db87f9c7694db1d278a710a10716eb46339"
+  },
+  {
+    "path": "src/AZERTYGlobal.Tests/ActivationConsentTests.cs",
+    "sha256": "a3aa19df8306c2b6082ab0b5424af756554ae59cc58562f7446e969609e3886d"
+  },
+  {
+    "path": "src/AZERTYGlobal.Tests/DisplayGlyphTests.cs",
+    "sha256": "fec6bbf6f054a017fe747e9a7c17ee9d5bfd685466fd3967964272c632a16518"
+  },
+  {
+    "path": "src/AZERTYGlobal.Tests/SettingsScrollTests.cs",
+    "sha256": "81df976c22026d732a912a6898c8fb1e2260e20f7600d5c04f20d85a0d449ca5"
+  },
+  {
+    "path": "src/ConfigManager.cs",
+    "sha256": "3913b1312c1ab60ad0954972ec8b591ecdc1229d2e51451e86ce0a3c83cdbf06"
+  },
+  {
+    "path": "src/DialogNavigation.cs",
+    "sha256": "7c6f6a0883f58b0ac604530506b8c90adfdbb7b88c1c308ed09ee173ad403078"
+  },
+  {
+    "path": "src/DisplayGlyph.cs",
+    "sha256": "97f1b0c79fde00ada64b7b459c403f58200e193d5bcfb0a84590f90985590ce9"
+  },
+  {
+    "path": "src/Localization/L.Onboarding.cs",
+    "sha256": "adb71597faeb34d4fd727ef962992d5cf8d1b3493e6b70b961d28be1b8bb7827"
+  },
+  {
+    "path": "src/OnboardingWindow.cs",
+    "sha256": "a06057f2a9a846312e0da571638c329ef3808fa24c651d1944e0d76b3a965b40"
+  },
+  {
+    "path": "src/SettingsScrollState.cs",
+    "sha256": "e9310767c7d16ecffb76478f6412b13bef91346369b00dc3d1ac30675dd43040"
+  },
+  {
+    "path": "src/SettingsWindow.cs",
+    "sha256": "d371d13df05e2fd94e15da8c962d1781e24c4ed6bc61c789b17c9694f98e10c4"
+  },
+  {
+    "path": "src/TestSupport/MockWin32Api.cs",
+    "sha256": "0ed83bf4f5005a29466123636b788b53d7bafcc3e927fba6457d97cbde3f0ff9"
+  },
+  {
+    "path": "src/TrayApplication.cs",
+    "sha256": "4ba47a10321a6accd116866fd613e8b4730cafaa85ac11e54e22bd081516f7c3"
+  },
+  {
+    "path": "src/TypingEngine.Windows.Tests/ForegroundWindowBindingTests.cs",
+    "sha256": "48f56f08fc4a1561caefaaef7708bbfdf9848a8bd8dba877a38663a18f43df4d"
+  },
+  {
+    "path": "src/TypingEngine.Windows.Tests/SecureInputProbeTests.cs",
+    "sha256": "d9cc7bf5545dc78cacb718ee41d3bda623bfd49e75cfe3b5491382848c31e879"
+  },
+  {
+    "path": "src/TypingEngine.Windows/ForegroundMonitor.cs",
+    "sha256": "cdfe43618b9bdcf80033931075e14fe20ffe5f1b9b0958cf2e5b7f3908fea3d0"
+  },
+  {
+    "path": "src/TypingEngine.Windows/SecureInputDetector.cs",
+    "sha256": "2010d378dbf95c5aca23b8c2ad769a58db64d437da133d8b850d36cf84a595c4"
+  },
+  {
+    "path": "src/TypingEngine.Windows/SecureInputProbe.cs",
+    "sha256": "df751f3b077d717c0da77ac61bf8cc33d3e7922d98285ae3976e6f9bd79f23d1"
+  },
+  {
+    "path": "src/TypingEngine.Windows/Win32Api/IWin32Api.cs",
+    "sha256": "8d182f71f3759a829ad868f62cd27fbcce30fd5fa7c3239e6fcda9cac3ef77fd"
+  },
+  {
+    "path": "src/TypingEngine.Windows/Win32Api/RealWin32Api.cs",
+    "sha256": "ca1274e1dece720ee90ce147cfc8e11967400d1d102fd4197e619b5b04925b06"
+  },
+  {
+    "path": "src/VirtualKeyboard.cs",
+    "sha256": "6f79584a41cb2a447511a83a6d7014af48fc005abeeb56f8683f6a276fcef84d"
+  }
+]

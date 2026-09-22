@@ -12,7 +12,7 @@ namespace TypingEngine.Windows;
 /// des frappes pour tout le système. Toutes les requêtes UIA partent donc d'un
 /// thread de travail dédié (MTA, recommandé pour les clients UIA) ; l'appelant
 /// attend au plus <see cref="QueryTimeoutMilliseconds"/> puis retombe sur la
-/// dernière valeur connue. Détection best-effort assumée : le chemin ES_PASSWORD
+/// protection des fonctions avancées. Le chemin ES_PASSWORD
 /// de RealWin32Api reste la source sûre pour les contrôles classiques, et un
 /// résultat tardif qui change la donne est signalé via <see cref="ResultChangedLate"/>.
 ///
@@ -31,21 +31,18 @@ public static unsafe class SecureInputDetector
 
     private const int GetFocusedElementSlot = 8;
     private const int GetCurrentIsPasswordSlot = 35;
+    private const int GetCurrentNativeWindowHandleSlot = 36;
+    private const int GetRawViewWalkerSlot = 16;
+    private const int GetParentElementSlot = 3;
     private const int ReleaseSlot = 2;
 
     // CUIAutomation / IUIAutomation, définis par UIAutomationClient.h.
     private static readonly Guid ClsidCuiAutomation = new("FF48DBA4-60EF-4201-AA87-54103EEF594E");
     private static readonly Guid IidIUiAutomation = new("30CBE57D-D9D0-452A-AB13-7AC5AC4825EE");
 
-    private static readonly object _startGate = new();
-    private static readonly AutoResetEvent _wake = new(false);
-    private static readonly AutoResetEvent _done = new(false);
-    private static Thread? _worker;
-
-    private static int _requestId;
-    private static int _completedId;
-    private static long _callerDeadline;
-    private static bool _lastIsPassword;
+    private static readonly SecureInputProbe Probe = new(
+        () => CoInitializeEx(IntPtr.Zero, COINIT_MULTITHREADED) >= 0,
+        QueryFocusedElementIsPassword, QueryTimeoutMilliseconds);
 
     // Instance IUIAutomation mise en cache sur le worker (CoCreateInstance à chaque
     // focus serait du gaspillage) ; recréée après tout échec.
@@ -57,83 +54,16 @@ public static unsafe class SecureInputDetector
     /// est alors périmé et mérite un Recompute. Peut arriver sur n'importe quel
     /// thread — l'abonné doit se contenter d'un PostMessage.
     /// </summary>
-    public static event Action? ResultChangedLate;
-
-    /// <summary>
-    /// Interroge UIA depuis le thread de travail et retourne le résultat s'il
-    /// arrive dans le budget, sinon la dernière valeur connue. Jamais bloquant
-    /// au-delà de <see cref="QueryTimeoutMilliseconds"/>.
-    /// </summary>
-    public static bool IsFocusedElementPassword()
+    public static event Action? ResultChangedLate
     {
-        EnsureWorker();
-
-        int id = Interlocked.Increment(ref _requestId);
-        long deadline = Environment.TickCount64 + QueryTimeoutMilliseconds;
-        Volatile.Write(ref _callerDeadline, deadline);
-        _wake.Set();
-
-        // Le worker peut signaler _done pour une requête antérieure : re-attendre
-        // jusqu'à ce que NOTRE requête soit traitée ou que le budget soit épuisé.
-        while (Volatile.Read(ref _completedId) < id)
-        {
-            long remaining = deadline - Environment.TickCount64;
-            if (remaining <= 0 || !_done.WaitOne((int)remaining))
-                break;
-        }
-
-        return Volatile.Read(ref _lastIsPassword);
+        add => Probe.ResultChangedLate += value;
+        remove => Probe.ResultChangedLate -= value;
     }
 
-    private static void EnsureWorker()
-    {
-        if (_worker != null) return;
-        lock (_startGate)
-        {
-            if (_worker != null) return;
-            var thread = new Thread(WorkerLoop)
-            {
-                IsBackground = true,
-                Name = "AZERTYGlobal.SecureInputDetector"
-            };
-            thread.Start();
-            _worker = thread;
-        }
-    }
+    /// <summary>Retour frais dans le budget ; sinon protection des fonctions avancées.</summary>
+    public static bool IsFocusedElementPassword(IntPtr window) => Probe.Query(window);
 
-    private static void WorkerLoop()
-    {
-        // MTA : recommandé pour les clients UI Automation, et sans pompe de
-        // messages à entretenir. Jamais CoUninitialize : thread background,
-        // le teardown du process s'en charge.
-        int hr = CoInitializeEx(IntPtr.Zero, COINIT_MULTITHREADED);
-        if (hr < 0) return;
-
-        while (true)
-        {
-            _wake.WaitOne();
-
-            // Coalescence : traiter uniquement la requête la plus récente.
-            int id = Volatile.Read(ref _requestId);
-            bool result = QueryFocusedElementIsPassword();
-
-            bool late = Environment.TickCount64 > Volatile.Read(ref _callerDeadline);
-            bool changed = Volatile.Read(ref _lastIsPassword) != result;
-
-            Volatile.Write(ref _lastIsPassword, result);
-            Volatile.Write(ref _completedId, id);
-            _done.Set();
-
-            // L'appelant a dépassé son budget ET la valeur change : son snapshot
-            // est faux, prévenir pour qu'un Recompute rattrape. Une notification
-            // en trop est bénigne (le Recompute relit la valeur fraîche et
-            // converge, aucune boucle possible puisque changed redevient false).
-            if (late && changed)
-                ResultChangedLate?.Invoke();
-        }
-    }
-
-    private static bool QueryFocusedElementIsPassword()
+    private static bool QueryFocusedElementIsPassword(IntPtr window)
     {
         IntPtr element = IntPtr.Zero;
         try
@@ -147,7 +77,7 @@ public static unsafe class SecureInputDetector
                 if (hr < 0 || _automation == IntPtr.Zero)
                 {
                     _automation = IntPtr.Zero;
-                    return false;
+                    return true;
                 }
             }
 
@@ -161,7 +91,7 @@ public static unsafe class SecureInputDetector
                 // repartir d'une instance neuve à la prochaine requête.
                 if (hrFocused < 0)
                     ReleaseAutomation();
-                return false;
+                return true;
             }
             element = focused;
 
@@ -169,19 +99,55 @@ public static unsafe class SecureInputDetector
                 VTableSlot(element, GetCurrentIsPasswordSlot);
             int isPassword;
             int hrPassword = getIsPassword(element, &isPassword);
-            return hrPassword >= 0 && isPassword != 0;
+            return hrPassword < 0 || isPassword != 0 || !BelongsToWindow(element, window);
         }
         catch
         {
             // Best-effort : ne jamais tuer le worker, ne rien logger par focus
             // (bruit + contexte d'utilisation sensible).
             ReleaseAutomation();
-            return false;
+            return true;
         }
         finally
         {
             ReleaseComPointer(element);
         }
+    }
+
+    // Un résultat « non sécurisé » doit appartenir à la fenêtre attendue. Le PID
+    // seul ne suffit pas : plusieurs fenêtres d'un navigateur partagent un processus.
+    // Slots vérifiés dans UIAutomationClient.h (SDK 10.0.26100.0). Aucun texte lu.
+    private static bool BelongsToWindow(IntPtr element, IntPtr window)
+    {
+        if (window == IntPtr.Zero) return false;
+        IntPtr walker = IntPtr.Zero;
+        IntPtr ownedParent = IntPtr.Zero;
+        try
+        {
+            var getWalker = (delegate* unmanaged[Stdcall]<IntPtr, IntPtr*, int>)
+                VTableSlot(_automation, GetRawViewWalkerSlot);
+            if (getWalker(_automation, &walker) < 0 || walker == IntPtr.Zero) return false;
+            IntPtr current = element;
+            // Borne la traversée même face à un fournisseur UIA défectueux.
+            for (int depth = 0; depth < 64 && current != IntPtr.Zero; depth++)
+            {
+                var getWindow = (delegate* unmanaged[Stdcall]<IntPtr, IntPtr*, int>)
+                    VTableSlot(current, GetCurrentNativeWindowHandleSlot);
+                IntPtr nativeWindow = IntPtr.Zero;
+                if (getWindow(current, &nativeWindow) < 0) return false;
+                if (nativeWindow == window) return true;
+                var getParent = (delegate* unmanaged[Stdcall]<IntPtr, IntPtr, IntPtr*, int>)
+                    VTableSlot(walker, GetParentElementSlot);
+                IntPtr parent = IntPtr.Zero;
+                int hr = getParent(walker, current, &parent);
+                ReleaseComPointer(ownedParent);
+                ownedParent = parent;
+                if (hr < 0) return false;
+                current = parent;
+            }
+            return false;
+        }
+        finally { ReleaseComPointer(ownedParent); ReleaseComPointer(walker); }
     }
 
     private static void ReleaseAutomation()

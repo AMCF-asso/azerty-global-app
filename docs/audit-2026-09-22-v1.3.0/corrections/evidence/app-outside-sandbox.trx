@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="63e936d5-f9e4-4c83-a6d3-5d4fba7f8228" name="antoi@AZERTY_GLOBAL 2026-09-22 14:02:34" runUser="AZERTY_GLOBAL\antoi" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-22T14:02:34.1477814+02:00" queuing="2026-09-22T14:02:34.1477815+02:00" start="2026-09-22T14:02:33.5624365+02:00" finish="2026-09-22T14:02:34.1480473+02:00" />
+  <TestSettings name="default" id="ff1d65b5-1419-436b-9dd8-fec52953cc16">
+    <Deployment runDeploymentRoot="antoi_AZERTY_GLOBAL_2026-09-22_14_02_34" />
+  </TestSettings>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="0" executed="0" passed="0" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.0.1+5ebf84cd75 (64-bit .NET 8.0.31)&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Warning" timestamp="2026-09-22T14:02:34.1080207+02:00">
+        <Text>[xUnit.net 00:00:00.30] Skipping: AZERTYGlobal.Tests (could not load dependent assembly 'AZERTYGlobal.Tests'): Could not load file or assembly 'D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll'. An Application Control policy has blocked this file. (0x800711C7)</Text>
+      </RunInfo>
+      <RunInfo computerName="AZERTY_GLOBAL" outcome="Warning" timestamp="2026-09-22T14:02:34.1085912+02:00">
+        <Text>No test is available in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll. Make sure that test discoverer &amp; executors are registered and platform &amp; framework version settings are appropriate and try again.</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\scripts\check-binary-hardening.py", line 93, in <module>
+    main()
+  File "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\scripts\check-binary-hardening.py", line 89, in main
+    raise ValueError(" ; ".join(errors))
+ValueError: x64 : Message SARIF textuel absent : utiliser BinSkim --log Inline ; arm64 : Message SARIF textuel absent : utiliser BinSkim --log Inline

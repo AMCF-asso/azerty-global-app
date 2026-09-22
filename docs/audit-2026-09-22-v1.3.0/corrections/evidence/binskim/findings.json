@@ -1,0 +1,60 @@
+{
+  "binskim-arm64.sarif": [
+    {
+      "rule": "BA2024",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' was compiled with one or more modules that do not enable code generation mitigations for speculative execution side-channel attack (Spectre) vulnerabilities.\r\nSpectre attacks can compromise hardware-based isolation, allowing non-privileged users to retrieve potentially sensitive data from the CPU cache.\r\nTo resolve this issue, ensure that all modules compiled into the binary are compiled with /Qspectre switch on cl.exe command-line.\r\nYou may need to install the 'C++ spectre-mitigated libs' component from the Visual Studio installer if you observe violations against C runtime libraries such as libcmt.lib, libvcruntime.lib, etc.\r\nFor VC projects use SpectreMitigation property with 'Spectre' value.\r\nWhen using older MSVC versions pass /d2guardspecload in cases where your compiler supports this switch and it is not possible to update to a toolset that supports /Qspectre.\r\nThis warning should be addressed for code that operates on data that crosses a trust boundary and that can affect execution, such as parsing untrusted file inputs or processing query strings of a web request.\r\nFor mitigation to be effective, all dlls and libs that are part of an exe, should be compiled with /QSpectre, so decision should be made for the whole process.\r\nCan cause some perf degradations, so should not be used when not needed."
+    },
+    {
+      "rule": "BA2026",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' is a Windows PE that wasn't compiled with recommended Security Development Lifecycle (SDL) checks. As a result some critical compile-time and runtime checks may be disabled, increasing the possibility of an exploitable runtime issue.\r\nTo resolve this problem, pass '/sdl' on the cl.exe command-line.\r\nFor VC projects use ItemDefinitionGroup - ClCompile - SDLCheck property with 'true' value."
+    },
+    {
+      "rule": "BA2027",
+      "kind": "fail",
+      "level": "warning",
+      "text": "The PDB for 'AZERTY%20Global.exe' does not contain SourceLink information, compromising frictionless source-driven debugging and increasing latency of security response.\r\nEnable SourceLink by configuring necessary project properties and adding a package reference for your source control provider.\r\nSee https://aka.ms/sourcelink for more information."
+    },
+    {
+      "rule": "BA6006",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' was compiled without Link Time Code Generation (/LTCG). Enabling LTCG can improve optimizations and performance.\r\nFor VC projects use WholeProgramOptimization property with 'true' value."
+    }
+  ],
+  "binskim-x64.sarif": [
+    {
+      "rule": "BA2024",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' was compiled with one or more modules that do not enable code generation mitigations for speculative execution side-channel attack (Spectre) vulnerabilities.\r\nSpectre attacks can compromise hardware-based isolation, allowing non-privileged users to retrieve potentially sensitive data from the CPU cache.\r\nTo resolve this issue, ensure that all modules compiled into the binary are compiled with /Qspectre switch on cl.exe command-line.\r\nYou may need to install the 'C++ spectre-mitigated libs' component from the Visual Studio installer if you observe violations against C runtime libraries such as libcmt.lib, libvcruntime.lib, etc.\r\nFor VC projects use SpectreMitigation property with 'Spectre' value.\r\nWhen using older MSVC versions pass /d2guardspecload in cases where your compiler supports this switch and it is not possible to update to a toolset that supports /Qspectre.\r\nThis warning should be addressed for code that operates on data that crosses a trust boundary and that can affect execution, such as parsing untrusted file inputs or processing query strings of a web request.\r\nFor mitigation to be effective, all dlls and libs that are part of an exe, should be compiled with /QSpectre, so decision should be made for the whole process.\r\nCan cause some perf degradations, so should not be used when not needed."
+    },
+    {
+      "rule": "BA2025",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' does not enable the Control-flow Enforcement Technology (CET) Shadow Stack mitigation.\r\nTo resolve this issue, pass /CETCOMPAT on the linker command lines.\r\nFor VC projects use ItemDefinitionGroup - Link - CETCompat property with 'true' value.\r\nNote: older .NET versions are not compatible with CET/shadow stack technology. If your native process loads older managed assemblies (.NET 6 or earlier), unhandled exceptions in those components may not be handled properly and may cause your process to crash."
+    },
+    {
+      "rule": "BA2026",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' is a Windows PE that wasn't compiled with recommended Security Development Lifecycle (SDL) checks. As a result some critical compile-time and runtime checks may be disabled, increasing the possibility of an exploitable runtime issue.\r\nTo resolve this problem, pass '/sdl' on the cl.exe command-line.\r\nFor VC projects use ItemDefinitionGroup - ClCompile - SDLCheck property with 'true' value."
+    },
+    {
+      "rule": "BA2027",
+      "kind": "fail",
+      "level": "warning",
+      "text": "The PDB for 'AZERTY%20Global.exe' does not contain SourceLink information, compromising frictionless source-driven debugging and increasing latency of security response.\r\nEnable SourceLink by configuring necessary project properties and adding a package reference for your source control provider.\r\nSee https://aka.ms/sourcelink for more information."
+    },
+    {
+      "rule": "BA6006",
+      "kind": "fail",
+      "level": "warning",
+      "text": "'AZERTY%20Global.exe' was compiled without Link Time Code Generation (/LTCG). Enabling LTCG can improve optimizations and performance.\r\nFor VC projects use WholeProgramOptimization property with 'true' value."
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "head": "67601c1b36c6d6a11147b09d04037de488afba1b",
+  "tests": {
+    "core": {
+      "total": "18",
+      "executed": "18",
+      "passed": "18",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "windows": {
+      "total": "226",
+      "executed": "226",
+      "passed": "226",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "app": {
+      "total": "451",
+      "executed": "451",
+      "passed": "451",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    }
+  },
+  "total_csharp": 695,
+  "python_tests": 125,
+  "new_race_witness": {
+    "counters": {
+      "total": "4",
+      "executed": "4",
+      "passed": "3",
+      "failed": "1",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "expected_failure": "TypingEngine.Windows.Tests.ForegroundAbaRaceWitnessTests.Security_property_anti_cheat_A_must_remain_suspended_after_ABA"
+  },
+  "local_bundle_sha256": "a71544702d95322f3c5ad9095cb10d65e2a58f76b9a6f0aedd967f1ecdd10278",
+  "ci_bundle_sha256": "00b4dc8cf1c3929bb50c983b27999521b9d15d280212780a597e17ea76b83154",
+  "tracked_product_diff_exit": 0,
+  "ci_code_diff_exit": 0,
+  "binskim": [
+    {
+      "arch": "x64",
+      "exit": 1,
+      "kinds": {
+        "notApplicable": 21,
+        "pass": 9
+      },
+      "executionSuccessful": [
+        false
+      ]
+    },
+    {
+      "arch": "arm64",
+      "exit": 1,
+      "kinds": {
+        "notApplicable": 22,
+        "pass": 9
+      },
+      "executionSuccessful": [
+        false
+      ]
+    }
+  ],
+  "local_report_links": [
+    {
+      "target": "race-witness/ForegroundAbaRaceWitnessTests.cs",
+      "exists": true
+    },
+    {
+      "target": "race-witness/RESULT.md",
+      "exists": true
+    },
+    {
+      "target": "recette-finale.md",
+      "exists": true
+    }
+  ]
+}

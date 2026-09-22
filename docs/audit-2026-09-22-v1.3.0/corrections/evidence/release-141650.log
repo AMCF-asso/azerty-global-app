@@ -1,0 +1,9 @@
+WARNING: TO-DO non disponible dans ce depot; verification ignoree.
+FileVersion x64 : 1.3.0.0 (publish = 1.3.0.0)
+FileVersion arm64 : 1.3.0.0 (publish = 1.3.0.0)
+SHA256 x64 : 897064B175CBB68CE1D243A00F3879608DA095A41A0BC0199C21D37C447349E6 (publish = bundle)
+SHA256 arm64 : 736E0EF45B66FB35A772CAC027F7344506527D6E92AACD1181BD6FA01BF00CEA (publish = bundle)
+
+Release vérifiée: version 1.3.0 / package 1.3.0.0
+Architectures: x64, arm64
+Bundle versionne: D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal-1.3.0.0.msixbundle

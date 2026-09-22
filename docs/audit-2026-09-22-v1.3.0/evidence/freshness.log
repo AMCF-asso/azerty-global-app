@@ -1,0 +1,40 @@
+FAIL x64 : 12 fichier(s) de src/ sont plus récents que le publish x64 :
+  - AboutWindow.cs
+  - DialogNavigation.cs
+  - LearningModule.cs
+  - OnboardingWindow.cs
+  - ProductIdentity.cs
+  - SettingsWindow.cs
+  - TrayApplication.cs
+  - TypingEngine.Windows\ForegroundMonitor.cs
+  - TypingEngine.Windows\KeyboardHook.cs
+  - TypingEngine.Windows\KeyMapper.cs
+  … et 2 autre(s)
+
+Le paquet contiendrait un binaire antérieur à ces sources (bloquant B1 de l'audit du 2026-09-20).
+Republier avant d'empaqueter :
+  $env:PATH += ";C:\Program Files (x86)\Microsoft Visual Studio\Installer"
+  dotnet publish -c Release -r win-x64
+
+Pour empaqueter quand même (seul un fichier non compilé a bougé) :
+  $env:AZERTYGLOBAL_ALLOW_STALE_PUBLISH = '1'
+FAIL arm64 : 12 fichier(s) de src/ sont plus récents que le publish arm64 :
+  - AboutWindow.cs
+  - DialogNavigation.cs
+  - LearningModule.cs
+  - OnboardingWindow.cs
+  - ProductIdentity.cs
+  - SettingsWindow.cs
+  - TrayApplication.cs
+  - TypingEngine.Windows\ForegroundMonitor.cs
+  - TypingEngine.Windows\KeyboardHook.cs
+  - TypingEngine.Windows\KeyMapper.cs
+  … et 2 autre(s)
+
+Le paquet contiendrait un binaire antérieur à ces sources (bloquant B1 de l'audit du 2026-09-20).
+Republier avant d'empaqueter :
+  $env:PATH += ";C:\Program Files (x86)\Microsoft Visual Studio\Installer"
+  dotnet publish -c Release -r win-arm64
+
+Pour empaqueter quand même (seul un fichier non compilé a bougé) :
+  $env:AZERTYGLOBAL_ALLOW_STALE_PUBLISH = '1'

@@ -257,6 +257,7 @@ sealed class SettingsWindow : IDisposable
     // travail. Quand le contenu tient, les trois restent cohérents et la barre de
     // défilement est masquée : la fenêtre se comporte exactement comme avant.
     private int _scrollY;
+    private readonly SettingsScrollState _scrollInput = new();
     private int _contentHeight;
     private int _viewportHeight;
 
@@ -385,7 +386,7 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndResetLessonsWindow, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndRadioLangFr, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         Win32.SendMessageW(_hWndRadioLangEn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndLinkReset, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
+        Win32.SendMessageW(_hWndLinkReset, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndValidation, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
         Win32.SendMessageW(_hWndManagedNotifications, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
         Win32.SendMessageW(_hWndManagedOnboarding, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
@@ -439,7 +440,7 @@ sealed class SettingsWindow : IDisposable
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
-        DialogNavigation.Register(_hWnd);
+        DialogNavigation.Register(_hWnd, EnsureFocusVisible);
         Win32.EnableDarkTitleBar(_hWnd);
     }
 
@@ -470,8 +471,8 @@ sealed class SettingsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
 
-        _hWndLinkReset = Win32.CreateWindowExW(0, "STATIC", L.Settings_LinkResetDefaults,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY,
+        _hWndLinkReset = Win32.CreateWindowExW(0, "BUTTON", L.Settings_LinkResetDefaults,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_RESET, hInstance, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndLinkReset, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
@@ -667,6 +668,16 @@ sealed class SettingsWindow : IDisposable
     }
 
     /// <summary>Applique une nouvelle position de défilement et redessine si elle a bougé.</summary>
+    private void EnsureFocusVisible(IntPtr control)
+    {
+        if (control == IntPtr.Zero || control == _hWnd || _contentHeight <= _viewportHeight) return;
+        if (!Win32.GetWindowRect(control, out var rect)) return;
+        var top = new Win32.POINT { x = rect.left, y = rect.top };
+        var bottom = new Win32.POINT { x = rect.right, y = rect.bottom };
+        if (!Win32.ScreenToClient(_hWnd, ref top) || !Win32.ScreenToClient(_hWnd, ref bottom)) return;
+        ScrollTo(SettingsScrollState.EnsureVisible(_scrollY, top.y, bottom.y, _viewportHeight, S(8)));
+    }
+
     private void ScrollTo(int newScroll)
     {
         int before = _scrollY;
@@ -888,7 +899,7 @@ sealed class SettingsWindow : IDisposable
     /// <summary>Les boutons poussoirs de la fenêtre — ceux qu'Entrée doit presser quand ils ont le focus.</summary>
     private IntPtr[] PushButtons() => new[]
     {
-        _hWndCompatAdd, _hWndCompatRemove, _hWndResetVirtualKeyboardWindow, _hWndResetLessonsWindow
+        _hWndCompatAdd, _hWndCompatRemove, _hWndResetVirtualKeyboardWindow, _hWndResetLessonsWindow, _hWndLinkReset
     };
 
     /// <summary>Change d'onglet, remesure la fenêtre et la redessine.</summary>
@@ -975,7 +986,8 @@ sealed class SettingsWindow : IDisposable
             var keyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, Math.Max(0, shortcutRowH - 2));
             var searchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, Math.Max(0, shortcutRowH - 2));
             int resetY = searchRowY + (tabGeneral ? Math.Max(S(20), textLineHeight + S(7)) : 0);
-            var resetRect = Rect(labelX, resetY, S(118), tabGeneral ? Math.Max(S(18), linkHeight) : 0);
+            int resetWidth = Math.Max(S(150), MeasureSingleLineWidth(hdc, _hFontButton, L.Settings_LinkResetDefaults) + S(24));
+            var resetRect = Rect(labelX, resetY, resetWidth, tabGeneral ? Math.Max(S(28), linkHeight + S(10)) : 0);
 
             bool showValidation = tabGeneral && !string.IsNullOrEmpty(_validationMessage);
             int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
@@ -1249,7 +1261,7 @@ sealed class SettingsWindow : IDisposable
                 int delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
                 // Un cran de molette vaut WHEEL_DELTA (120) ; trois lignes par cran,
                 // comme le défilement par défaut de Windows.
-                ScrollTo(_scrollY - (delta / 120) * S(24) * 3);
+                ScrollTo(_scrollY - _scrollInput.ConsumeWheel(delta) * S(24) * 3);
                 return IntPtr.Zero;
             }
 

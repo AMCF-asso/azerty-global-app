@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Repli d'exécution pour les postes où Windows Application Control interdit le
+    chargement d'une DLL de test depuis docs/. Aucun fichier de src/ n'est modifié :
+    MSBuild inclut ce témoin dans le projet de tests existant pour cette invocation seule.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'TypingEngine.Windows.Tests'">
+    <Compile Include="$(MSBuildThisFileDirectory)ForegroundAbaRaceWitnessTests.cs"
+             Link="Audit\ForegroundAbaRaceWitnessTests.cs" />
+  </ItemGroup>
+</Project>

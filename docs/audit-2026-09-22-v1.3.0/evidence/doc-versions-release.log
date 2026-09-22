@@ -1,0 +1,52 @@
+Version de référence (csproj) : 1.3.0
+Mode release : les attentes de bascule échouent aussi.
+
+### components/microsoft-store/README.md  (conforme)
+
+### components/microsoft-store/Distribution Entreprises.md  (conforme)
+
+### components/microsoft-store/entreprise/Note RGPD - Établissements.md  (conforme)
+
+### sources/legacy/AZERTY Global/2026/Microsoft Store/Distribution Entreprises.md  (6 anomalie(s))
+  ATTENTE L24    VERSION-EN-BASCULE       version 1.1.0.0 déclarée remplaçable par la bascule du kit
+  ATTENTE L24    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L25    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L26    EMPREINTE-NON-DECLAREE   empreinte 79A9C9C80CE9… absente de empreintes-attendues
+  ATTENTE L36    EMPREINTE-NON-DECLAREE   empreinte 1B040DE6AE43… absente de empreintes-attendues
+  ATTENTE bloc   EMPREINTE-EN-ATTENTE     empreintes-attendues vaut en-attente : document non publiable en l'état
+
+### sources/legacy/AZERTY Global/2026/Pilotes/Note informatique.md  (7 anomalie(s))
+  ATTENTE L84    EMPREINTE-NON-DECLAREE   empreinte 1B040DE6AE43… absente de empreintes-attendues
+  ATTENTE L85    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L86    EMPREINTE-NON-DECLAREE   empreinte 79A9C9C80CE9… absente de empreintes-attendues
+  ATTENTE L89    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L91    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L93    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE bloc   EMPREINTE-EN-ATTENTE     empreintes-attendues vaut en-attente : document non publiable en l'état
+
+### sources/legacy/AZERTY Global/2026/Fichiers d'installation/Application AZERTY Global (Windows Store-MSIX)/LISEZMOI-DSI.md  (13 anomalie(s))
+  ATTENTE L23    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L24    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L32    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L33    VERSION-EN-BASCULE       version 1.1.0.0 déclarée remplaçable par la bascule du kit
+  ATTENTE L34    EMPREINTE-NON-DECLAREE   empreinte 79A9C9C80CE9… absente de empreintes-attendues
+  ATTENTE L48    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L55    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L62    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L73    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L79    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L88    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L96    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE bloc   EMPREINTE-EN-ATTENTE     empreintes-attendues vaut en-attente : document non publiable en l'état
+
+### sources/legacy/AZERTY Global/2026/Fichiers d'installation/Application AZERTY Global (Windows Store-MSIX)/LISEZ-MOI.md  (1 anomalie(s))
+  ATTENTE L33    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+
+### sources/legacy/AZERTY Global/2026/Fichiers d'installation/Application AZERTY Global (Windows Store-MSIX)/SIGNATURE.md  (5 anomalie(s))
+  ATTENTE L12    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L17    EMPREINTE-NON-DECLAREE   empreinte 79A9C9C80CE9… absente de empreintes-attendues
+  ATTENTE L23    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE L29    NOM-BUNDLE-PERIME        le kit nomme encore le bundle 1.1.0 ; bascule par update_kit_version.py
+  ATTENTE bloc   EMPREINTE-EN-ATTENTE     empreintes-attendues vaut en-attente : document non publiable en l'état
+
+0 erreur(s), 32 attente(s) de bascule.

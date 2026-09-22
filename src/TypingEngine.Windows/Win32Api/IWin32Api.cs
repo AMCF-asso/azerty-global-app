@@ -33,20 +33,19 @@ public interface IWin32Api
 
     /// <summary>
     /// Récupère le nom court (ex: "Minecraft.Windows.exe"), le chemin complet, le HKL
-    /// du thread foreground et le PID. Encapsule la séquence
-    /// GetForegroundWindow → GetWindowThreadProcessId → OpenProcess → QueryFullProcessImageNameW.
-    /// Retourne false si pas de fenêtre foreground ou si le process foreground ne peut pas être inspecté.
+    /// du thread de la fenêtre capturée et le PID, sans relire le premier plan.
+    /// Retourne false si la fenêtre ou son processus ne peut pas être inspecté.
     /// </summary>
-    bool TryGetForegroundProcess(out string? processName, out string? fullPath, out IntPtr hkl, out uint pid);
+    bool TryGetWindowProcess(IntPtr window, out string? processName, out string? fullPath, out IntPtr hkl, out uint pid);
 
     /// <summary>Retourne l'instant de création du processus en ticks FILETIME UTC.</summary>
     bool TryGetProcessStartTime(uint pid, out long startTimeTicks);
 
     /// <summary>
-    /// Détection légère du contrôle sécurisé actuellement focalisé. Cette méthode
+    /// Détection du contrôle sécurisé dans la fenêtre capturée. Cette méthode
     /// est appelée par ForegroundMonitor, jamais depuis le callback clavier.
     /// </summary>
-    bool IsForegroundPasswordField();
+    bool IsWindowPasswordField(IntPtr window);
 
     /// <summary>
     /// Énumère les modules (DLL) chargés dans un process. Retourne false si OpenProcess

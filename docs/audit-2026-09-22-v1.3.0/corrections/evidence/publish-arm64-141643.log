@@ -1,0 +1,7 @@
+  TypingEngine.Core -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+  TypingEngine.Windows -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TrayApplication.cs(1553,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.csproj]
+D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TrayApplication.cs(1566,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.csproj]
+  AZERTYGlobal -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\bin\Release\net8.0-windows10.0.17763.0\win-arm64\AZERTY Global.dll
+  Generating native code
+  AZERTYGlobal -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\bin\Release\net8.0-windows10.0.17763.0\win-arm64\publish\

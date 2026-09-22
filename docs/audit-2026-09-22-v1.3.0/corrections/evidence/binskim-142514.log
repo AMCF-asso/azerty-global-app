@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\scripts\check-binary-hardening.py", line 124, in <module>
+    main()
+  File "D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\scripts\check-binary-hardening.py", line 120, in main
+    raise ValueError(" ; ".join(errors))
+ValueError: x64 : Modèle SARIF introuvable : NotApplicable_InvalidMetadata ; arm64 : Modèle SARIF introuvable : NotApplicable_InvalidMetadata

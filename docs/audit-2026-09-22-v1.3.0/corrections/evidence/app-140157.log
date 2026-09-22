@@ -1,0 +1,11 @@
+  TypingEngine.Core -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+  TypingEngine.Windows -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+  AZERTYGlobal -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\bin\Release\net8.0-windows10.0.17763.0\AZERTY Global.dll
+  AZERTYGlobal.Tests -> D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll
+Test run for D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.29] Skipping: AZERTYGlobal.Tests (could not load dependent assembly 'AZERTYGlobal.Tests'): Could not load file or assembly 'D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll'. An Application Control policy has blocked this file. (0x800711C7)
+No test is available in D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll. Make sure that test discoverer & executors are registered and platform & framework version settings are appropriate and try again.
+Results File: D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\docs\audit-2026-09-22-v1.3.0\corrections\evidence\app-verified.trx
+
+Additionally, path to test adapters can be specified using /TestAdapterPath command. Example  /TestAdapterPath:<pathToCustomAdapters>.

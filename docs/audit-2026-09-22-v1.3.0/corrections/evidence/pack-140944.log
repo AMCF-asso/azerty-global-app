@@ -1,0 +1,53 @@
+--- Construction x64 ---
+Microsoft (R) MakeAppx Tool
+Copyright (C) 2013 Microsoft.  All rights reserved.
+
+The path (/p) parameter is: "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\AZERTYGlobal-1.3.0.0-x64.msix"
+The content directory (/d) parameter is: "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64"
+Enumerating files from directory "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64"
+Packing 8 file(s) in "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64" (content directory) to "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\AZERTYGlobal-1.3.0.0-x64.msix" (output file name).
+Memory limit defaulting to 34223888384 bytes.
+Using "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\AppxManifest.xml" as the manifest for the package.
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\Assets\StoreLogo.png" as a payload file.  Its path in the package will be "Assets\StoreLogo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\Assets\Square44x44Logo.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\Assets\Square44x44Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.scale-200.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\Assets\Square150x150Logo.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\Assets\Square150x150Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.scale-200.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\Assets\Wide310x150Logo.png" as a payload file.  Its path in the package will be "Assets\Wide310x150Logo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-x64\AZERTY Global.exe" as a payload file.  Its path in the package will be "AZERTY Global.exe".
+Package creation succeeded.
+--- Construction arm64 ---
+Microsoft (R) MakeAppx Tool
+Copyright (C) 2013 Microsoft.  All rights reserved.
+
+The path (/p) parameter is: "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\AZERTYGlobal-1.3.0.0-arm64.msix"
+The content directory (/d) parameter is: "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64"
+Enumerating files from directory "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64"
+Packing 8 file(s) in "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64" (content directory) to "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\AZERTYGlobal-1.3.0.0-arm64.msix" (output file name).
+Memory limit defaulting to 34223888384 bytes.
+Using "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\AppxManifest.xml" as the manifest for the package.
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\Assets\StoreLogo.png" as a payload file.  Its path in the package will be "Assets\StoreLogo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\Assets\Square44x44Logo.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\Assets\Square44x44Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.scale-200.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\Assets\Square150x150Logo.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\Assets\Square150x150Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.scale-200.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\Assets\Wide310x150Logo.png" as a payload file.  Its path in the package will be "Assets\Wide310x150Logo.png".
+Processing "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-staging-arm64\AZERTY Global.exe" as a payload file.  Its path in the package will be "AZERTY Global.exe".
+Package creation succeeded.
+--- Construction du bundle ---
+Microsoft (R) MakeAppx Tool
+Copyright (C) 2013 Microsoft.  All rights reserved.
+
+The path (/p) parameter is: "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal-1.3.0.0.msixbundle"
+The content directory (/d) parameter is: "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-bundle-staging"
+Enumerating files from directory "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-bundle-staging"
+Packing 2 file(s) in "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-bundle-staging" (content directory) to "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal-1.3.0.0.msixbundle" (output file name).
+Adding "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-bundle-staging\AZERTYGlobal-1.3.0.0-x64.msix" to the bundle as a payload package.  Its path in the bundle is "AZERTYGlobal-1.3.0.0-x64.msix".
+Adding "\\?\D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.msix-bundle-staging\AZERTYGlobal-1.3.0.0-arm64.msix" to the bundle as a payload package.  Its path in the bundle is "AZERTYGlobal-1.3.0.0-arm64.msix".
+Bundle creation succeeded.
+Bundle précédent sauvegardé : D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\Archives\msix-previous\by-version\1.3.0.0\AZERTYGlobal-1.3.0.0-stable-backup-20260922-140944-66282f495abb48b38f11f3001c320471.msixbundle (SHA256 A71544702D95322F3C5AD9095CB10D65E2A58F76B9A6F0AEDD967F1ECDD10278)
+
+MSIX bundle reconstruit:
+ - Versioned : D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal-1.3.0.0.msixbundle
+ - Stable    : D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\msix\AZERTYGlobal.msixbundle
+ - Archs     : x64, arm64

@@ -40,17 +40,16 @@ public sealed class RealWin32Api : IWin32Api
 
     public IntPtr GetForegroundWindow() => Win32.GetForegroundWindow();
 
-    public bool TryGetForegroundProcess(out string? processName, out string? fullPath, out IntPtr hkl, out uint pid)
+    public bool TryGetWindowProcess(IntPtr window, out string? processName, out string? fullPath, out IntPtr hkl, out uint pid)
     {
         processName = null;
         fullPath = null;
         hkl = IntPtr.Zero;
         pid = 0;
 
-        var hwnd = Win32.GetForegroundWindow();
-        if (hwnd == IntPtr.Zero) return false;
+        if (window == IntPtr.Zero) return false;
 
-        uint tid = Win32.GetWindowThreadProcessIdOut(hwnd, out pid);
+        uint tid = Win32.GetWindowThreadProcessIdOut(window, out pid);
         if (tid == 0 || pid == 0) return false;
 
         // Layout natif du thread foreground
@@ -97,17 +96,16 @@ public sealed class RealWin32Api : IWin32Api
         }
     }
 
-    public bool IsForegroundPasswordField()
+    public bool IsWindowPasswordField(IntPtr window)
     {
-        IntPtr foreground = Win32.GetForegroundWindow();
-        if (foreground == IntPtr.Zero) return false;
+        if (window == IntPtr.Zero) return true;
 
-        uint threadId = Win32.GetWindowThreadProcessIdOut(foreground, out _);
-        if (threadId == 0) return false;
+        uint threadId = Win32.GetWindowThreadProcessIdOut(window, out _);
+        if (threadId == 0) return true;
 
         var info = new Win32.GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<Win32.GUITHREADINFO>() };
         if (!Win32.GetGUIThreadInfo(threadId, ref info) || info.hwndFocus == IntPtr.Zero)
-            return false;
+            return true;
 
         // ES_PASSWORD est la source native fiable pour EDIT et RichEdit. Pour les
         // contrôles navigateur, SecureInputDetector complète cette détection hors hook.
@@ -127,7 +125,9 @@ public sealed class RealWin32Api : IWin32Api
 
         // Chromium, Firefox et plusieurs applications modernes exposent le champ
         // sécurisé par UIA plutôt que par un HWND enfant avec ES_PASSWORD.
-        return SecureInputDetector.IsFocusedElementPassword();
+        if (Win32.GetForegroundWindow() != window) return true;
+        bool secure = SecureInputDetector.IsFocusedElementPassword(window);
+        return secure || Win32.GetForegroundWindow() != window;
     }
 
     public bool TryEnumProcessModules(uint pid, out string[] moduleFileNames)

@@ -1,0 +1,1007 @@
+provenance	Set up job	﻿2026-09-22T12:10:34.6416463Z Current runner version: '2.337.0'
+provenance	Set up job	2026-09-22T12:10:34.6453154Z ##[group]Runner Image Provisioner
+provenance	Set up job	2026-09-22T12:10:34.6454060Z Hosted Compute Agent
+provenance	Set up job	2026-09-22T12:10:34.6454729Z Version: 20260828.587
+provenance	Set up job	2026-09-22T12:10:34.6455728Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+provenance	Set up job	2026-09-22T12:10:34.6456468Z Build Date: 2026-08-28T16:44:25Z
+provenance	Set up job	2026-09-22T12:10:34.6457283Z Worker ID: {d90b4bd4-877f-4a95-b45a-56ffa8b4a01c}
+provenance	Set up job	2026-09-22T12:10:34.6458015Z Azure Region: northcentralus
+provenance	Set up job	2026-09-22T12:10:34.6458699Z ##[endgroup]
+provenance	Set up job	2026-09-22T12:10:34.6460222Z ##[group]Operating System
+provenance	Set up job	2026-09-22T12:10:34.6460931Z Ubuntu
+provenance	Set up job	2026-09-22T12:10:34.6461939Z 24.04.5
+provenance	Set up job	2026-09-22T12:10:34.6462516Z LTS
+provenance	Set up job	2026-09-22T12:10:34.6463061Z ##[endgroup]
+provenance	Set up job	2026-09-22T12:10:34.6463635Z ##[group]Runner Image
+provenance	Set up job	2026-09-22T12:10:34.6464239Z Image: ubuntu-24.04
+provenance	Set up job	2026-09-22T12:10:34.6465204Z Version: 20260907.300.1
+provenance	Set up job	2026-09-22T12:10:34.6466317Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+provenance	Set up job	2026-09-22T12:10:34.6468126Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+provenance	Set up job	2026-09-22T12:10:34.6469100Z ##[endgroup]
+provenance	Set up job	2026-09-22T12:10:34.6470544Z ##[group]GITHUB_TOKEN Permissions
+provenance	Set up job	2026-09-22T12:10:34.6472766Z Attestations: write
+provenance	Set up job	2026-09-22T12:10:34.6473494Z Contents: read
+provenance	Set up job	2026-09-22T12:10:34.6474064Z Metadata: read
+provenance	Set up job	2026-09-22T12:10:34.6474641Z SecurityEvents: write
+provenance	Set up job	2026-09-22T12:10:34.6475657Z ##[endgroup]
+provenance	Set up job	2026-09-22T12:10:34.6477764Z Secret source: Actions
+provenance	Set up job	2026-09-22T12:10:34.6478799Z Cache mode: write
+provenance	Set up job	2026-09-22T12:10:34.6479738Z Prepare workflow directory
+provenance	Set up job	2026-09-22T12:10:34.6818116Z Prepare all required actions
+provenance	Set up job	2026-09-22T12:10:34.6865311Z Getting action download info
+provenance	Set up job	2026-09-22T12:10:34.9493782Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+provenance	Set up job	2026-09-22T12:10:35.0648397Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+provenance	Set up job	2026-09-22T12:10:35.2496445Z Complete job name: provenance
+provenance	Run actions/checkout@v4	﻿2026-09-22T12:10:35.3235951Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3244538Z ##[group]Run actions/checkout@v4
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3245577Z with:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3246059Z   repository: AMCF-asso/azerty-global-app
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3249768Z   token: ***
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3250240Z   ssh-strict: true
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3250745Z   ssh-user: git
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3251250Z   persist-credentials: true
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3251740Z   clean: true
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3252198Z   sparse-checkout-cone-mode: true
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3252730Z   fetch-depth: 1
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3253188Z   fetch-tags: false
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3253644Z   show-progress: true
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3254100Z   lfs: false
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3254536Z   submodules: false
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3255349Z   set-safe-directory: true
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3255872Z   allow-unsafe-pr-checkout: false
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.3256694Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4248780Z Syncing repository: AMCF-asso/azerty-global-app
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4251194Z ##[group]Getting Git version info
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4252095Z Working directory is '/home/runner/work/azerty-global-app/azerty-global-app'
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4253266Z [command]/usr/bin/git version
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4352330Z git version 2.55.0
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4379466Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4396483Z Temporarily overriding HOME='/home/runner/work/_temp/d582fe7a-27a9-46a4-8857-376c954102b4' before making global git config changes
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4398226Z Adding repository directory to the temporary git global config as a safe directory
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4403044Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/azerty-global-app/azerty-global-app
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4460890Z Deleting the contents of '/home/runner/work/azerty-global-app/azerty-global-app'
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4464360Z ##[group]Initializing the repository
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4469797Z [command]/usr/bin/git init /home/runner/work/azerty-global-app/azerty-global-app
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4566644Z hint: Using 'master' as the name for the initial branch. This default branch name
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4568261Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4569862Z hint: to use in all of your new repositories, which will suppress this warning,
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4571121Z hint: call:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4572004Z hint:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4573205Z hint: 	git config --global init.defaultBranch <name>
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4574368Z hint:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4576070Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4577677Z hint: 'development'. The just-created branch can be renamed via this command:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4578891Z hint:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4579706Z hint: 	git branch -m <name>
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4580722Z hint:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4581808Z hint: Disable this message with "git config set advice.defaultBranchName false"
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4587397Z Initialized empty Git repository in /home/runner/work/azerty-global-app/azerty-global-app/.git/
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4596853Z [command]/usr/bin/git remote add origin https://github.com/AMCF-asso/azerty-global-app
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4643208Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4644598Z ##[group]Disabling automatic garbage collection
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4647428Z [command]/usr/bin/git config --local gc.auto 0
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4678706Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4680170Z ##[group]Setting up auth
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4686594Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.4719919Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5057064Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5094907Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5349972Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5388235Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5631783Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5672153Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5673283Z ##[group]Fetching the repository
+provenance	Run actions/checkout@v4	2026-09-22T12:10:35.5682249Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +1a13f08d3963d57ae5e2907e4d49c4616a326b19:refs/remotes/origin/ci/verif
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3468809Z From https://github.com/AMCF-asso/azerty-global-app
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3470713Z  * [new ref]         1a13f08d3963d57ae5e2907e4d49c4616a326b19 -> origin/ci/verif
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3475595Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3477460Z ##[group]Determining the checkout info
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3479485Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3481045Z [command]/usr/bin/git sparse-checkout disable
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3560462Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3593534Z ##[group]Checking out the ref
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.3597412Z [command]/usr/bin/git checkout --progress --force -B ci/verif refs/remotes/origin/ci/verif
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.4061492Z Switched to a new branch 'ci/verif'
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.4066065Z branch 'ci/verif' set up to track 'origin/ci/verif'.
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.4075384Z ##[endgroup]
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.4118772Z [command]/usr/bin/git log -1 --format=%H
+provenance	Run actions/checkout@v4	2026-09-22T12:10:36.4146074Z 1a13f08d3963d57ae5e2907e4d49c4616a326b19
+provenance	Run actions/setup-python@v5	﻿2026-09-22T12:10:36.4538683Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4545167Z ##[group]Run actions/setup-python@v5
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4546411Z with:
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4547318Z   python-version: 3.12
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4548353Z   check-latest: false
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4558270Z   token: ***
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4559248Z   update-environment: true
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4560374Z   allow-prereleases: false
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4561473Z   freethreaded: false
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.4562476Z ##[endgroup]
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.5886225Z ##[group]Installed versions
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.5973634Z (node:2231) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.5978369Z (Use `node --trace-deprecation ...` to show where the warning was created)
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.5981366Z Successfully set up CPython (3.12.14)
+provenance	Run actions/setup-python@v5	2026-09-22T12:10:36.5984368Z ##[endgroup]
+provenance	Les JSON embarqués sont identiques à leur original canonique	﻿2026-09-22T12:10:36.6222934Z ##[group]Run python scripts/check-layout-provenance.py
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6225955Z ^[[36;1mpython scripts/check-layout-provenance.py^[[0m
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6287810Z shell: /usr/bin/bash -e {0}
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6289369Z env:
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6290880Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.14/x64
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6292951Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib/pkgconfig
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6295151Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6297504Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6301145Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.14/x64
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6303998Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.14/x64/lib
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:36.6306601Z ##[endgroup]
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:37.4833940Z IDENTIQUE  src/AZERTY Global 2026.json  5f79f9e04232393c  33494 o
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:37.4835660Z IDENTIQUE  src/character-index.json  b2eba45490e0e81a  605678 o
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:37.4836276Z IDENTIQUE  src/lessons.json  a53bd3469ee31343  36635 o
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:37.4836565Z 
+provenance	Les JSON embarqués sont identiques à leur original canonique	2026-09-22T12:10:37.4837010Z Les 3 copies sont identiques à leur original canonique.
+provenance	Post Run actions/setup-python@v5	﻿2026-09-22T12:10:37.5033520Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+provenance	Post Run actions/setup-python@v5	2026-09-22T12:10:37.5035273Z Post job cleanup.
+provenance	Post Run actions/setup-python@v5	2026-09-22T12:10:37.6209101Z (node:2242) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+provenance	Post Run actions/setup-python@v5	2026-09-22T12:10:37.6210090Z (Use `node --trace-deprecation ...` to show where the warning was created)
+provenance	Post Run actions/checkout@v4	﻿2026-09-22T12:10:37.6400438Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.6401836Z Post job cleanup.
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7285918Z [command]/usr/bin/git version
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7312594Z git version 2.55.0
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7358119Z Temporarily overriding HOME='/home/runner/work/_temp/7e2a6eb1-a687-47b6-afe0-810d7c711d54' before making global git config changes
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7359366Z Adding repository directory to the temporary git global config as a safe directory
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7365107Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/azerty-global-app/azerty-global-app
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7404406Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7444516Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7694408Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7721561Z http.https://github.com/.extraheader
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7733868Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.7769882Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.8096058Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+provenance	Post Run actions/checkout@v4	2026-09-22T12:10:37.8145809Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+provenance	Complete job	﻿2026-09-22T12:10:37.8641660Z Cleaning up orphan processes
+provenance	Complete job	2026-09-22T12:10:37.8929605Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Set up job	﻿2026-09-22T12:10:32.7028367Z Current runner version: '2.337.0'
+build	Set up job	2026-09-22T12:10:32.7082026Z ##[group]Runner Image Provisioner
+build	Set up job	2026-09-22T12:10:32.7083221Z Hosted Compute Agent
+build	Set up job	2026-09-22T12:10:32.7083964Z Version: 20260828.587
+build	Set up job	2026-09-22T12:10:32.7084870Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+build	Set up job	2026-09-22T12:10:32.7085925Z Build Date: 2026-08-28T16:44:25Z
+build	Set up job	2026-09-22T12:10:32.7086882Z Worker ID: {86cc172c-dd1c-4018-beab-36bef78dd0ee}
+build	Set up job	2026-09-22T12:10:32.7087951Z Azure Region: northcentralus
+build	Set up job	2026-09-22T12:10:32.7088704Z ##[endgroup]
+build	Set up job	2026-09-22T12:10:32.7090553Z ##[group]Operating System
+build	Set up job	2026-09-22T12:10:32.7091465Z Microsoft Windows Server 2025
+build	Set up job	2026-09-22T12:10:32.7092294Z 10.0.26100
+build	Set up job	2026-09-22T12:10:32.7093001Z Datacenter
+build	Set up job	2026-09-22T12:10:32.7093640Z ##[endgroup]
+build	Set up job	2026-09-22T12:10:32.7094279Z ##[group]Runner Image
+build	Set up job	2026-09-22T12:10:32.7095022Z Image: windows-2025-vs2026
+build	Set up job	2026-09-22T12:10:32.7095810Z Version: 20260907.229.1
+build	Set up job	2026-09-22T12:10:32.7097461Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260907.229/images/windows/Windows2025-VS2026-Readme.md
+build	Set up job	2026-09-22T12:10:32.7100252Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260907.229
+build	Set up job	2026-09-22T12:10:32.7102239Z ##[endgroup]
+build	Set up job	2026-09-22T12:10:32.7103970Z ##[group]GITHUB_TOKEN Permissions
+build	Set up job	2026-09-22T12:10:32.7107024Z Attestations: write
+build	Set up job	2026-09-22T12:10:32.7107854Z Contents: read
+build	Set up job	2026-09-22T12:10:32.7108544Z Metadata: read
+build	Set up job	2026-09-22T12:10:32.7109228Z SecurityEvents: write
+build	Set up job	2026-09-22T12:10:32.7109976Z ##[endgroup]
+build	Set up job	2026-09-22T12:10:32.7112585Z Secret source: Actions
+build	Set up job	2026-09-22T12:10:32.7113838Z Cache mode: write
+build	Set up job	2026-09-22T12:10:32.7114764Z Prepare workflow directory
+build	Set up job	2026-09-22T12:10:32.7458638Z Prepare all required actions
+build	Set up job	2026-09-22T12:10:32.7517733Z Getting action download info
+build	Set up job	2026-09-22T12:10:32.9853505Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+build	Set up job	2026-09-22T12:10:33.1203877Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+build	Set up job	2026-09-22T12:10:33.2640303Z Download action repository 'actions/setup-dotnet@v4' (SHA:67a3573c9a986a3f9c594539f4ab511d57bb3ce9)
+build	Set up job	2026-09-22T12:10:33.5887284Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build	Set up job	2026-09-22T12:10:33.8039759Z Download action repository 'actions/attest-build-provenance@v2' (SHA:e8998f949152b193b063cb0ec769d69d929409be)
+build	Set up job	2026-09-22T12:10:34.1598586Z Download action repository 'github/codeql-action@v3' (SHA:3ea06614dafe36dec890db3446326e0d40ce53d4)
+build	Set up job	2026-09-22T12:10:34.8112996Z Getting action download info
+build	Set up job	2026-09-22T12:10:34.9100866Z Download action repository 'actions/attest-build-provenance@1176ef556905f349f669722abf30bce1a6e16e01' (SHA:1176ef556905f349f669722abf30bce1a6e16e01)
+build	Set up job	2026-09-22T12:10:35.2916790Z Download action repository 'actions/attest@ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc' (SHA:ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc)
+build	Set up job	2026-09-22T12:10:35.9688960Z Complete job name: build
+build	Run actions/checkout@v4	﻿2026-09-22T12:10:36.1438036Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1446507Z ##[group]Run actions/checkout@v4
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1446956Z with:
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1447247Z   repository: AMCF-asso/azerty-global-app
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1450308Z   token: ***
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1450554Z   ssh-strict: true
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1450816Z   ssh-user: git
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1451071Z   persist-credentials: true
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1451349Z   clean: true
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1451628Z   sparse-checkout-cone-mode: true
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1451916Z   fetch-depth: 1
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1452140Z   fetch-tags: false
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1452402Z   show-progress: true
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1452639Z   lfs: false
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1454751Z   submodules: false
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1455076Z   set-safe-directory: true
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1455364Z   allow-unsafe-pr-checkout: false
+build	Run actions/checkout@v4	2026-09-22T12:10:36.1455937Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:36.2941540Z Syncing repository: AMCF-asso/azerty-global-app
+build	Run actions/checkout@v4	2026-09-22T12:10:36.2943330Z ##[group]Getting Git version info
+build	Run actions/checkout@v4	2026-09-22T12:10:36.2943982Z Working directory is 'D:\a\azerty-global-app\azerty-global-app'
+build	Run actions/checkout@v4	2026-09-22T12:10:36.3690782Z [command]"C:\Program Files\Git\bin\git.exe" version
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8067930Z git version 2.55.0.windows.5
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8116601Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8135570Z Temporarily overriding HOME='D:\a\_temp\86dfb3d4-a042-4cb0-838a-21d06007d930' before making global git config changes
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8136683Z Adding repository directory to the temporary git global config as a safe directory
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8146499Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\azerty-global-app\azerty-global-app
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8808200Z Deleting the contents of 'D:\a\azerty-global-app\azerty-global-app'
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8816055Z ##[group]Initializing the repository
+build	Run actions/checkout@v4	2026-09-22T12:10:36.8827861Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\azerty-global-app\azerty-global-app
+build	Run actions/checkout@v4	2026-09-22T12:10:36.9659593Z Initialized empty Git repository in D:/a/azerty-global-app/azerty-global-app/.git/
+build	Run actions/checkout@v4	2026-09-22T12:10:36.9714996Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/AMCF-asso/azerty-global-app
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0326522Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0327348Z ##[group]Disabling automatic garbage collection
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0339007Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0639899Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0640668Z ##[group]Setting up auth
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0659016Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+build	Run actions/checkout@v4	2026-09-22T12:10:37.0975998Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+build	Run actions/checkout@v4	2026-09-22T12:10:38.7034129Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Run actions/checkout@v4	2026-09-22T12:10:38.7339747Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+build	Run actions/checkout@v4	2026-09-22T12:10:39.2415929Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Run actions/checkout@v4	2026-09-22T12:10:39.2722606Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+build	Run actions/checkout@v4	2026-09-22T12:10:39.8086187Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+build	Run actions/checkout@v4	2026-09-22T12:10:39.8396007Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:39.8396967Z ##[group]Fetching the repository
+build	Run actions/checkout@v4	2026-09-22T12:10:39.8411191Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +1a13f08d3963d57ae5e2907e4d49c4616a326b19:refs/remotes/origin/ci/verif
+build	Run actions/checkout@v4	2026-09-22T12:10:41.3856175Z From https://github.com/AMCF-asso/azerty-global-app
+build	Run actions/checkout@v4	2026-09-22T12:10:41.3857222Z  * [new ref]         1a13f08d3963d57ae5e2907e4d49c4616a326b19 -> origin/ci/verif
+build	Run actions/checkout@v4	2026-09-22T12:10:41.3908043Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:41.3908828Z ##[group]Determining the checkout info
+build	Run actions/checkout@v4	2026-09-22T12:10:41.3910481Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:41.3920930Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+build	Run actions/checkout@v4	2026-09-22T12:10:41.4392286Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+build	Run actions/checkout@v4	2026-09-22T12:10:41.4723556Z ##[group]Checking out the ref
+build	Run actions/checkout@v4	2026-09-22T12:10:41.4734618Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B ci/verif refs/remotes/origin/ci/verif
+build	Run actions/checkout@v4	2026-09-22T12:10:41.6421107Z Switched to a new branch 'ci/verif'
+build	Run actions/checkout@v4	2026-09-22T12:10:41.6484340Z branch 'ci/verif' set up to track 'origin/ci/verif'.
+build	Run actions/checkout@v4	2026-09-22T12:10:41.6548940Z ##[endgroup]
+build	Run actions/checkout@v4	2026-09-22T12:10:41.6940241Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+build	Run actions/checkout@v4	2026-09-22T12:10:41.7212612Z 1a13f08d3963d57ae5e2907e4d49c4616a326b19
+build	Run actions/setup-python@v5	﻿2026-09-22T12:10:41.7699444Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7701188Z ##[group]Run actions/setup-python@v5
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7701535Z with:
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7701854Z   python-version: 3.12
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7702183Z   check-latest: false
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7704940Z   token: ***
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7705278Z   update-environment: true
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7705771Z   allow-prereleases: false
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7706424Z   freethreaded: false
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.7706843Z ##[endgroup]
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.9412030Z ##[group]Installed versions
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.9706550Z (node:4328) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.9707350Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.9708548Z Successfully set up CPython (3.12.10)
+build	Run actions/setup-python@v5	2026-09-22T12:10:41.9710757Z ##[endgroup]
+build	Aucun littéral d'identité hors ProductIdentity	﻿2026-09-22T12:10:42.0016864Z ##[group]Run python scripts/list-identity-literals.py
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.0017654Z ^[[36;1mpython scripts/list-identity-literals.py^[[0m
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1062320Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1062928Z env:
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1063328Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1063877Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1064404Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1065399Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1065872Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:42.1066301Z ##[endgroup]
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6034561Z 
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6035206Z ### ProductIdentity.cs  (10)
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6036136Z      24  public const string DisplayName = "AZERTY Global";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6037095Z      33  public const string ExecutableName = "AZERTY Global.exe";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6037946Z      36  public const string ShortcutFileName = "AZERTY Global.lnk";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6038662Z      41  public const string ConfigFolderName = "AZERTY Global";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6039330Z      43  public const string StoreProductId = "9N4BTS43SSSZ";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6039924Z      46  public const string SiteDomain = "azerty.global";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6040632Z      48  public const string DiscordInviteUrl = "https://discord.gg/nYknqshJz3";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6041577Z      49  public const string RepositoryUrl = "https://github.com/AMCF-asso/azerty-global-app";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6043030Z      50  public const string LogoResourceName = "favicon-azerty-global.png";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6044058Z      71  public const string StorePackageFamilyName = "AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg";
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6044631Z 
+build	Aucun littéral d'identité hors ProductIdentity	2026-09-22T12:10:43.6045184Z Littéraux hors ProductIdentity : 0
+build	Installer jsonschema	﻿2026-09-22T12:10:43.7408555Z ##[group]Run python -m pip install "jsonschema>=4,<5"
+build	Installer jsonschema	2026-09-22T12:10:43.7409076Z ^[[36;1mpython -m pip install "jsonschema>=4,<5"^[[0m
+build	Installer jsonschema	2026-09-22T12:10:43.7474273Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Installer jsonschema	2026-09-22T12:10:43.7474922Z env:
+build	Installer jsonschema	2026-09-22T12:10:43.7475276Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Installer jsonschema	2026-09-22T12:10:43.7475875Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Installer jsonschema	2026-09-22T12:10:43.7476401Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Installer jsonschema	2026-09-22T12:10:43.7477181Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Installer jsonschema	2026-09-22T12:10:43.7477917Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Installer jsonschema	2026-09-22T12:10:43.7478303Z ##[endgroup]
+build	Installer jsonschema	2026-09-22T12:10:48.1856138Z Collecting jsonschema<5,>=4
+build	Installer jsonschema	2026-09-22T12:10:48.3615244Z   Downloading jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+build	Installer jsonschema	2026-09-22T12:10:48.4455172Z Collecting attrs>=22.2.0 (from jsonschema<5,>=4)
+build	Installer jsonschema	2026-09-22T12:10:48.4541469Z   Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+build	Installer jsonschema	2026-09-22T12:10:48.5158879Z Collecting jsonschema-specifications>=2023.03.6 (from jsonschema<5,>=4)
+build	Installer jsonschema	2026-09-22T12:10:48.5201669Z   Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+build	Installer jsonschema	2026-09-22T12:10:48.5853627Z Collecting referencing>=0.28.4 (from jsonschema<5,>=4)
+build	Installer jsonschema	2026-09-22T12:10:48.5894344Z   Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+build	Installer jsonschema	2026-09-22T12:10:48.9459435Z Collecting rpds-py>=0.25.0 (from jsonschema<5,>=4)
+build	Installer jsonschema	2026-09-22T12:10:48.9502905Z   Downloading rpds_py-2026.6.3-cp312-cp312-win_amd64.whl.metadata (4.2 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.0216963Z Collecting typing-extensions>=4.4.0 (from referencing>=0.28.4->jsonschema<5,>=4)
+build	Installer jsonschema	2026-09-22T12:10:49.0257843Z   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.0722256Z Downloading jsonschema-4.26.0-py3-none-any.whl (90 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.1207967Z Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.1567134Z Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.1806147Z Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.2077164Z Downloading rpds_py-2026.6.3-cp312-cp312-win_amd64.whl (220 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.2334328Z Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+build	Installer jsonschema	2026-09-22T12:10:49.5477867Z Installing collected packages: typing-extensions, rpds-py, attrs, referencing, jsonschema-specifications, jsonschema
+build	Installer jsonschema	2026-09-22T12:10:50.0744565Z 
+build	Installer jsonschema	2026-09-22T12:10:50.0763353Z Successfully installed attrs-26.1.0 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 referencing-0.37.0 rpds-py-2026.6.3 typing-extensions-4.16.0
+build	La disposition est conforme à son schéma	﻿2026-09-22T12:10:50.3076507Z ##[group]Run python scripts/validate-layout.py
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3077019Z ^[[36;1mpython scripts/validate-layout.py^[[0m
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3140879Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3141356Z env:
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3141718Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3142225Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3142818Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3143284Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3143754Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.3144156Z ##[endgroup]
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.7053445Z Schéma : conforme
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.7054382Z Compteurs : conforme
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.7055021Z Références : conforme
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.7055331Z 
+build	La disposition est conforme à son schéma	2026-09-22T12:10:50.7056222Z AZERTY Global 2026.json est conforme au schéma, à ses compteurs et à ses références.
+build	Témoins du schéma et de son accord avec le parseur	﻿2026-09-22T12:10:50.8292749Z ##[group]Run python -m unittest discover -s scripts/tests -v
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8293408Z ^[[36;1mpython -m unittest discover -s scripts/tests -v^[[0m
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8357148Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8357623Z env:
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8358013Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8358746Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8359289Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8359781Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8360241Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:50.8360656Z ##[endgroup]
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3539851Z test_aucun_libelle_orphelin (test_admx_agreement.AdmlTests.test_aucun_libelle_orphelin)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3541184Z Réciproque : une chaîne que le modèle n'appelle plus est du texte mort, et un ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3542892Z test_aucun_libelle_vide (test_admx_agreement.AdmlTests.test_aucun_libelle_vide) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3544697Z test_chaque_reference_du_modele_existe_dans_les_deux_langues (test_admx_agreement.AdmlTests.test_chaque_reference_du_modele_existe_dans_les_deux_langues) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3546549Z test_le_francais_et_l_anglais_ne_sont_pas_le_meme_texte (test_admx_agreement.AdmlTests.test_le_francais_et_l_anglais_ne_sont_pas_le_meme_texte)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3548254Z Un .adml recopié d'une langue sur l'autre passerait tous les tests ci-dessus. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3549709Z test_les_deux_langues_portent_les_memes_identifiants (test_admx_agreement.AdmlTests.test_les_deux_langues_portent_les_memes_identifiants) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3551339Z test_les_presentations_referencees_existent (test_admx_agreement.AdmlTests.test_les_presentations_referencees_existent) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3556843Z test_cinq_strategies (test_admx_agreement.AdmxTests.test_cinq_strategies) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3558095Z test_la_fenetre_de_bienvenue_reste_inversee (test_admx_agreement.AdmxTests.test_la_fenetre_de_bienvenue_reste_inversee)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3559825Z Elle est le seul réglage dont « Activé » écrit 0. Un jour quelqu'un « corrigera » ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3561088Z test_langues_acceptees_par_le_selecteur (test_admx_agreement.AdmxTests.test_langues_acceptees_par_le_selecteur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3562484Z test_les_valeurs_du_modele_sont_celles_du_code (test_admx_agreement.AdmxTests.test_les_valeurs_du_modele_sont_celles_du_code)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3563733Z Le cas qui justifie ce fichier : une clé renommée dans le code, un ADMX qui pose ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3564878Z test_toutes_les_strategies_pointent_la_racine_du_code (test_admx_agreement.AdmxTests.test_toutes_les_strategies_pointent_la_racine_du_code) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3565972Z test_toutes_les_strategies_sont_machine (test_admx_agreement.AdmxTests.test_toutes_les_strategies_sont_machine) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3566847Z test_valeurs_ecrites_par_chaque_strategie (test_admx_agreement.AdmxTests.test_valeurs_ecrites_par_chaque_strategie) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3625702Z test_encodage_utf16_avec_bom (test_admx_agreement.RegTests.test_encodage_utf16_avec_bom)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3626668Z regedit importe sans discuter un .reg UTF-16 LE. En UTF-8 il lit les accents comme ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3627394Z test_entete_attendu_par_regedit (test_admx_agreement.RegTests.test_entete_attendu_par_regedit) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3628062Z test_fins_de_ligne_crlf (test_admx_agreement.RegTests.test_fins_de_ligne_crlf) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3629682Z test_la_cle_est_celle_du_code (test_admx_agreement.RegTests.test_la_cle_est_celle_du_code) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3630639Z test_la_fenetre_de_bienvenue_est_posee_a_zero (test_admx_agreement.RegTests.test_la_fenetre_de_bienvenue_est_posee_a_zero) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3631973Z test_la_langue_est_une_chaine_pas_un_dword (test_admx_agreement.RegTests.test_la_langue_est_une_chaine_pas_un_dword)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3634746Z Language est le seul REG_SZ des cinq ; un dword ici serait ignoré à la lecture. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3635464Z test_les_cinq_valeurs_sont_posees (test_admx_agreement.RegTests.test_les_cinq_valeurs_sont_posees) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3637210Z test_le_scanner_voit_quelque_chose (test_admx_agreement.ScannerTests.test_le_scanner_voit_quelque_chose)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:51.3638099Z Sans ce test, un motif aveugle rendrait tous les autres vacuement verts. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:52.3907483Z test_archive_version_110_pendant_preparation_120_et_conserve_stable (test_archive_stable_bundle.ArchiveStableBundleTests.test_archive_version_110_pendant_preparation_120_et_conserve_stable) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:53.4174252Z test_refuse_manifeste_absent_et_zip_corrompu (test_archive_stable_bundle.ArchiveStableBundleTests.test_refuse_manifeste_absent_et_zip_corrompu) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5296286Z test_refuse_version_invalide_sans_toucher_au_stable (test_archive_stable_bundle.ArchiveStableBundleTests.test_refuse_version_invalide_sans_toucher_au_stable) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5297940Z test_analyse_complete_acceptee (test_binary_hardening.BinaryHardeningTests.test_analyse_complete_acceptee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5299407Z test_analyse_incomplete_refusee_meme_avec_controles_reussis (test_binary_hardening.BinaryHardeningTests.test_analyse_incomplete_refusee_meme_avec_controles_reussis) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5300387Z test_echec_refuse (test_binary_hardening.BinaryHardeningTests.test_echec_refuse) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5301172Z test_rapport_absent_refuse (test_binary_hardening.BinaryHardeningTests.test_rapport_absent_refuse) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5301965Z test_zero_controle_refuse (test_binary_hardening.BinaryHardeningTests.test_zero_controle_refuse) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5303145Z test_bloc_absent_est_une_erreur (test_check_doc_versions.BlocTests.test_bloc_absent_est_une_erreur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5304044Z test_bloc_present_et_document_vide_est_conforme (test_check_doc_versions.BlocTests.test_bloc_present_et_document_vide_est_conforme) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5304895Z test_le_bloc_ne_se_scanne_pas_lui_meme (test_check_doc_versions.BlocTests.test_le_bloc_ne_se_scanne_pas_lui_meme)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5305995Z Sans cette exclusion, `versions-historiques: 1.0.0` se dénoncerait tout seul. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5306807Z test_version_declaree_a_quatre_champs_acceptee (test_check_doc_versions.BlocTests.test_version_declaree_a_quatre_champs_acceptee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5307650Z test_version_declaree_perimee (test_check_doc_versions.BlocTests.test_version_declaree_perimee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5334783Z test_aucune_erreur_dans_les_documents_de_parc (test_check_doc_versions.DocumentsReelsTests.test_aucune_erreur_dans_les_documents_de_parc) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5337313Z test_le_document_interne_porte_bien_un_bloc (test_check_doc_versions.DocumentsReelsTests.test_le_document_interne_porte_bien_un_bloc) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5338879Z test_empreinte_declaree_en_minuscules (test_check_doc_versions.EmpreinteTests.test_empreinte_declaree_en_minuscules) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5339973Z test_empreinte_declaree_est_muette (test_check_doc_versions.EmpreinteTests.test_empreinte_declaree_est_muette) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5341006Z test_empreinte_non_declaree_est_une_erreur (test_check_doc_versions.EmpreinteTests.test_empreinte_non_declaree_est_une_erreur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5343023Z test_en_attente_degrade_l_empreinte_en_simple_attente (test_check_doc_versions.EmpreinteTests.test_en_attente_degrade_l_empreinte_en_simple_attente) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5344949Z test_en_attente_se_signale_meme_sans_empreinte_dans_le_corps (test_check_doc_versions.EmpreinteTests.test_en_attente_se_signale_meme_sans_empreinte_dans_le_corps) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5346724Z test_une_seconde_empreinte_non_declaree_rougit (test_check_doc_versions.EmpreinteTests.test_une_seconde_empreinte_non_declaree_rougit) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5349321Z test_chemin_d_archive_et_nom_sur_la_meme_ligne (test_check_doc_versions.NomDeBundleTests.test_chemin_d_archive_et_nom_sur_la_meme_ligne) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5350795Z test_nom_de_bundle_a_jour_est_muet (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_a_jour_est_muet) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5352502Z test_nom_de_bundle_apres_un_souligne (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_apres_un_souligne)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5354013Z Faux négatif du 2026-08-21 : `\b` ne voit rien entre `_` et `1`. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5355263Z test_nom_de_bundle_perime_passe_avant_la_liste_historique (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_perime_passe_avant_la_liste_historique)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5356632Z Un nom de fichier n'est pas un fait daté : il nomme ce que le kit livre. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5357707Z test_nom_de_bundle_suivi_d_un_point (test_check_doc_versions.NomDeBundleTests.test_nom_de_bundle_suivi_d_un_point)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5358867Z Faux négatif du 2026-08-21 : la version est suivie du point de `.msixbundle`. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5360112Z test_une_url_hors_domaine_de_telechargement_n_est_pas_jugee (test_check_doc_versions.UrlTests.test_une_url_hors_domaine_de_telechargement_n_est_pas_jugee)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5361482Z Seul `download.azerty.global` sert des paquets : le reste du site est hors sujet. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5362627Z test_url_de_l_appinstaller_est_muette (test_check_doc_versions.UrlTests.test_url_de_l_appinstaller_est_muette) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5363762Z test_url_stable_est_muette (test_check_doc_versions.UrlTests.test_url_stable_est_muette) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5364867Z test_url_versionnee_est_une_erreur (test_check_doc_versions.UrlTests.test_url_versionnee_est_une_erreur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5366262Z test_csproj_reel_du_depot (test_check_doc_versions.VersionDeReferenceTests.test_csproj_reel_du_depot)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5367448Z La version de référence existe vraiment : sans elle le scanner est inconcluant. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5368523Z test_csproj_sans_version (test_check_doc_versions.VersionDeReferenceTests.test_csproj_sans_version) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5369800Z test_forme_a_quatre_champs_admise (test_check_doc_versions.VersionDeReferenceTests.test_forme_a_quatre_champs_admise) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5371365Z test_version_avec_espaces (test_check_doc_versions.VersionDeReferenceTests.test_version_avec_espaces) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5372513Z test_version_lue_dans_le_csproj (test_check_doc_versions.VersionDeReferenceTests.test_version_lue_dans_le_csproj) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5373738Z test_la_ligne_est_reportee (test_check_doc_versions.VersionsDuCorpsTests.test_la_ligne_est_reportee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5375129Z test_ni_licence_ni_runtime_ni_build_windows_ne_sont_des_versions (test_check_doc_versions.VersionsDuCorpsTests.test_ni_licence_ni_runtime_ni_build_windows_ne_sont_des_versions) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5376796Z test_version_courante_est_muette (test_check_doc_versions.VersionsDuCorpsTests.test_version_courante_est_muette) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5378079Z test_version_en_bascule_est_une_attente (test_check_doc_versions.VersionsDuCorpsTests.test_version_en_bascule_est_une_attente) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5379410Z test_version_historique_declaree_est_muette (test_check_doc_versions.VersionsDuCorpsTests.test_version_historique_declaree_est_muette) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5380797Z test_version_inconnue_est_une_erreur (test_check_doc_versions.VersionsDuCorpsTests.test_version_inconnue_est_une_erreur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5382199Z test_sans_le_champ_la_version_windows_est_signalee (test_check_doc_versions.VersionsHorsProduitTests.test_sans_le_champ_la_version_windows_est_signalee)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5383508Z Le faux positif qu'on corrige doit exister sans le champ, sinon ce lot ne sert a rien. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5384649Z test_une_autre_version_reste_signalee (test_check_doc_versions.VersionsHorsProduitTests.test_une_autre_version_reste_signalee)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5386050Z Temoin negatif : le champ ne rend pas le scanner aveugle en general. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5387198Z test_version_hors_produit_declaree_est_tue (test_check_doc_versions.VersionsHorsProduitTests.test_version_hors_produit_declaree_est_tue) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5388679Z test_intervalle_a_zero_accepte (test_gen_appinstaller.BuildRefusalTests.test_intervalle_a_zero_accepte)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5389959Z Réciproque des bornes : 0 est une valeur légale, pas une valeur absente. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5391229Z test_refus_d_un_editeur_qui_exigerait_un_echappement (test_gen_appinstaller.BuildRefusalTests.test_refus_d_un_editeur_qui_exigerait_un_echappement) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5393051Z test_refus_d_un_intervalle_hors_bornes (test_gen_appinstaller.BuildRefusalTests.test_refus_d_un_intervalle_hors_bornes) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5394362Z test_refus_d_une_version_a_trois_segments (test_gen_appinstaller.BuildRefusalTests.test_refus_d_une_version_a_trois_segments) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5395608Z test_refus_de_l_identite_store (test_gen_appinstaller.BuildRefusalTests.test_refus_de_l_identite_store) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5396943Z test_archive_sans_manifeste_de_bundle (test_gen_appinstaller.IdentityReadingTests.test_archive_sans_manifeste_de_bundle) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5398238Z test_identite_du_bundle_reel (test_gen_appinstaller.IdentityReadingTests.test_identite_du_bundle_reel)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5400057Z Le littéral accentué des autres tests est-il celui du fichier signé ? ... skipped 'Bundle signé absent : D:\\a\\azerty-global-app\\website\\assets\\downloads\\AZERTY_Global_1.1.0.msixbundle'
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5454306Z test_identite_lue_dans_un_bundle_synthetique (test_gen_appinstaller.IdentityReadingTests.test_identite_lue_dans_un_bundle_synthetique) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5455631Z test_accent_retire_de_l_editeur (test_gen_appinstaller.MutationTests.test_accent_retire_de_l_editeur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5456801Z test_activation_bloquante_sans_invite (test_gen_appinstaller.MutationTests.test_activation_bloquante_sans_invite) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5458189Z test_bloc_de_mise_a_jour_absent (test_gen_appinstaller.MutationTests.test_bloc_de_mise_a_jour_absent) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5459457Z test_bom_en_tete (test_gen_appinstaller.MutationTests.test_bom_en_tete) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5460993Z test_circonflexe_retire_de_l_editeur (test_gen_appinstaller.MutationTests.test_circonflexe_retire_de_l_editeur) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5462364Z test_echappement_introduit (test_gen_appinstaller.MutationTests.test_echappement_introduit) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5463539Z test_element_racine_renomme (test_gen_appinstaller.MutationTests.test_element_racine_renomme) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5464735Z test_fichier_genere_ne_signale_rien (test_gen_appinstaller.MutationTests.test_fichier_genere_ne_signale_rien)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5466028Z Réciproque de toutes les mutations : sans mutation, aucun écart. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5466962Z test_fins_de_ligne_crlf (test_gen_appinstaller.MutationTests.test_fins_de_ligne_crlf) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5467963Z test_intervalle_absent (test_gen_appinstaller.MutationTests.test_intervalle_absent) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5469029Z test_intervalle_different (test_gen_appinstaller.MutationTests.test_intervalle_different) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5470133Z test_nom_de_paquet_divergent (test_gen_appinstaller.MutationTests.test_nom_de_paquet_divergent) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5471407Z test_paquet_simple_au_lieu_du_bundle (test_gen_appinstaller.MutationTests.test_paquet_simple_au_lieu_du_bundle) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5472854Z test_tache_de_fond_ajoutee (test_gen_appinstaller.MutationTests.test_tache_de_fond_ajoutee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5473986Z test_url_du_bundle_divergente (test_gen_appinstaller.MutationTests.test_url_du_bundle_divergente) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5475164Z test_url_du_fichier_divergente (test_gen_appinstaller.MutationTests.test_url_du_fichier_divergente) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5476700Z test_version_de_la_racine_divergente (test_gen_appinstaller.MutationTests.test_version_de_la_racine_divergente) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5478006Z test_version_du_bundle_divergente (test_gen_appinstaller.MutationTests.test_version_du_bundle_divergente) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5479195Z test_xml_casse (test_gen_appinstaller.MutationTests.test_xml_casse) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5480389Z test_les_trois_caracteres_accentues_sont_traces (test_gen_appinstaller.NonAsciiReportTests.test_les_trois_caracteres_accentues_sont_traces) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:55.5481812Z test_un_fichier_sans_accent_ne_trace_rien (test_gen_appinstaller.NonAsciiReportTests.test_un_fichier_sans_accent_ne_trace_rien) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:56.4618913Z test_l_echappatoire_degrade_le_refus_en_avertissement (test_publish_freshness.PublishFreshnessTests.test_l_echappatoire_degrade_le_refus_en_avertissement) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:56.8893282Z test_la_ressource_embarquee_compte_autant_que_le_code (test_publish_freshness.PublishFreshnessTests.test_la_ressource_embarquee_compte_autant_que_le_code) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:57.7473799Z test_publish_plus_recent_que_tout_le_pack_est_autorise (test_publish_freshness.PublishFreshnessTests.test_publish_plus_recent_que_tout_le_pack_est_autorise) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:58.6087344Z test_temoins_negatifs_bin_obj_tests_et_testsupport_ne_bloquent_pas (test_publish_freshness.PublishFreshnessTests.test_temoins_negatifs_bin_obj_tests_et_testsupport_ne_bloquent_pas) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.0163522Z test_une_reference_absente_leve_au_lieu_de_laisser_passer (test_publish_freshness.PublishFreshnessTests.test_une_reference_absente_leve_au_lieu_de_laisser_passer) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9034774Z test_une_source_modifiee_apres_le_publish_bloque_le_pack_et_se_nomme (test_publish_freshness.PublishFreshnessTests.test_une_source_modifiee_apres_le_publish_bloque_le_pack_et_se_nomme) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9041967Z test_aucun_receveur_inconnu (test_schema_parser_agreement.SchemaParserAgreementTests.test_aucun_receveur_inconnu)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9044869Z Un nouveau niveau dans le parseur doit rejoindre LOCATIONS, pas passer inaperçu. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9046479Z test_ce_que_le_parseur_exige_est_required (test_schema_parser_agreement.SchemaParserAgreementTests.test_ce_que_le_parseur_exige_est_required) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9048354Z test_ce_que_le_parseur_lit_est_declare (test_schema_parser_agreement.SchemaParserAgreementTests.test_ce_que_le_parseur_lit_est_declare) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9050020Z test_le_parseur_lit_bien_quelque_chose (test_schema_parser_agreement.SchemaParserAgreementTests.test_le_parseur_lit_bien_quelque_chose)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9051660Z Un motif qui ne trouve plus rien passerait tous les autres tests de ce fichier. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9055628Z test_caractere_direct_ajoute_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_caractere_direct_ajoute_desaccorde_les_compteurs)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9067590Z Un caractère inédit sur une couche libre déplace le compte des directs. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9068464Z test_caractere_produit_inedit_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_caractere_produit_inedit_desaccorde_les_compteurs)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9078910Z Une combinaison produisant un caractère inédit déplace le total unique. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9090059Z test_combinaison_retiree_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_combinaison_retiree_desaccorde_les_compteurs) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9101111Z test_compteur_faux_detecte (test_validate_layout.LayoutCounterTests.test_compteur_faux_detecte) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9101942Z test_touche_morte_retiree_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_touche_morte_retiree_desaccorde_les_compteurs)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9112328Z Le nombre de touches mortes se recalcule : il était écrit à la main deux fois. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9114127Z test_touche_retiree_desaccorde_les_compteurs (test_validate_layout.LayoutCounterTests.test_touche_retiree_desaccorde_les_compteurs)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9123112Z Retirer une touche doit se voir : c'est le mode de panne d'une édition manuelle. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9140691Z test_declencheur_non_declare_detecte (test_validate_layout.LayoutReferenceTests.test_declencheur_non_declare_detecte) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9150716Z test_position_en_double_detectee (test_validate_layout.LayoutReferenceTests.test_position_en_double_detectee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9160245Z test_scancode_en_double_detecte (test_validate_layout.LayoutReferenceTests.test_scancode_en_double_detecte) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9169545Z test_touche_morte_jamais_posee_detectee (test_validate_layout.LayoutReferenceTests.test_touche_morte_jamais_posee_detectee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:10:59.9920451Z test_champ_de_touche_inconnu (test_validate_layout.LayoutSchemaTests.test_champ_de_touche_inconnu) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0173766Z test_cle_racine_inconnue (test_validate_layout.LayoutSchemaTests.test_cle_racine_inconnue) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0273068Z test_cle_racine_mal_orthographiee (test_validate_layout.LayoutSchemaTests.test_cle_racine_mal_orthographiee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0456134Z test_couche_nulle_acceptee (test_validate_layout.LayoutSchemaTests.test_couche_nulle_acceptee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0634746Z test_couche_numerique_rejetee (test_validate_layout.LayoutSchemaTests.test_couche_numerique_rejetee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0635673Z test_declencheur_de_table_a_deux_caracteres_rejete (test_validate_layout.LayoutSchemaTests.test_declencheur_de_table_a_deux_caracteres_rejete)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0809336Z Une clé de deux caractères ne serait jamais atteinte par une frappe. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.0988645Z test_disposition_reelle_conforme (test_validate_layout.LayoutSchemaTests.test_disposition_reelle_conforme) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1175751Z test_doigt_hors_enumeration_rejete (test_validate_layout.LayoutSchemaTests.test_doigt_hors_enumeration_rejete) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1354777Z test_nom_de_touche_morte_hors_convention_rejete (test_validate_layout.LayoutSchemaTests.test_nom_de_touche_morte_hors_convention_rejete) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1531885Z test_position_hors_forme_rejetee (test_validate_layout.LayoutSchemaTests.test_position_hors_forme_rejetee) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1533147Z test_scancode_decimal_a_dix_chiffres_rejete (test_validate_layout.LayoutSchemaTests.test_scancode_decimal_a_dix_chiffres_rejete)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1710887Z Dix chiffres tenaient dans le motif et pas dans un uint : le parseur débordait. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1711895Z test_scancode_decimal_a_neuf_chiffres_accepte (test_validate_layout.LayoutSchemaTests.test_scancode_decimal_a_neuf_chiffres_accepte)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.1887286Z Neuf chiffres décimaux tiennent dans un uint : la frontière haute du motif. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2067723Z test_scancode_decimal_accepte (test_validate_layout.LayoutSchemaTests.test_scancode_decimal_accepte) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2069044Z test_scancode_hexa_sans_prefixe_rejete (test_validate_layout.LayoutSchemaTests.test_scancode_hexa_sans_prefixe_rejete)
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2247507Z ABCD passerait un motif trop permissif, et ferait lever uint.Parse en décimal. ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2425237Z test_scancode_non_numerique_rejete (test_validate_layout.LayoutSchemaTests.test_scancode_non_numerique_rejete) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2608200Z test_scancode_prefixe_0x_accepte (test_validate_layout.LayoutSchemaTests.test_scancode_prefixe_0x_accepte) ... ok
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2609267Z 
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2609667Z ----------------------------------------------------------------------
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2610585Z Ran 130 tests in 8.908s
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2610910Z 
+build	Témoins du schéma et de son accord avec le parseur	2026-09-22T12:11:00.2611233Z OK (skipped=1)
+build	Setup .NET 8 SDK	﻿2026-09-22T12:11:00.3945521Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3946930Z ##[group]Run actions/setup-dotnet@v4
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3947555Z with:
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3947850Z   dotnet-version: 8.0.x
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3948173Z   cache: false
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3948446Z env:
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3948778Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3949312Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3949824Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3950274Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3950797Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.3951232Z ##[endgroup]
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.5664617Z (node:3928) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.5665486Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build	Setup .NET 8 SDK	2026-09-22T12:11:00.6448603Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Runtime dotnet -Channel LTS
+build	Setup .NET 8 SDK	2026-09-22T12:11:02.4305648Z dotnet-install: Downloaded file https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.12/dotnet-runtime-10.0.12-win-x64.zip size is 36960258 bytes.
+build	Setup .NET 8 SDK	2026-09-22T12:11:02.4310500Z dotnet-install: Either downloaded or local package size can not be measured. One of them may be corrupted.
+build	Setup .NET 8 SDK	2026-09-22T12:11:02.4340121Z dotnet-install: Extracting the archive.
+build	Setup .NET 8 SDK	2026-09-22T12:11:03.4466868Z dotnet-install: Note that the script does not ensure your Windows version is supported during the installation.
+build	Setup .NET 8 SDK	2026-09-22T12:11:03.4474316Z dotnet-install: To check the list of supported versions, go to https://learn.microsoft.com/dotnet/core/install/windows#supported-versions
+build	Setup .NET 8 SDK	2026-09-22T12:11:03.4480671Z dotnet-install: Installed version is 10.0.12
+build	Setup .NET 8 SDK	2026-09-22T12:11:03.4486313Z dotnet-install: Installation finished
+build	Setup .NET 8 SDK	2026-09-22T12:11:03.5840084Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Channel 8.0
+build	Setup .NET 8 SDK	2026-09-22T12:11:10.2920902Z dotnet-install: Downloaded file https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.425/dotnet-sdk-8.0.425-win-x64.zip size is 285157731 bytes.
+build	Setup .NET 8 SDK	2026-09-22T12:11:10.2929131Z dotnet-install: Either downloaded or local package size can not be measured. One of them may be corrupted.
+build	Setup .NET 8 SDK	2026-09-22T12:11:10.2957722Z dotnet-install: Extracting the archive.
+build	Setup .NET 8 SDK	2026-09-22T12:11:32.4771544Z dotnet-install: Note that the script does not ensure your Windows version is supported during the installation.
+build	Setup .NET 8 SDK	2026-09-22T12:11:32.4775737Z dotnet-install: To check the list of supported versions, go to https://learn.microsoft.com/dotnet/core/install/windows#supported-versions
+build	Setup .NET 8 SDK	2026-09-22T12:11:32.4781788Z dotnet-install: Installed version is 8.0.425
+build	Setup .NET 8 SDK	2026-09-22T12:11:32.4788769Z dotnet-install: Installation finished
+build	Restore + publish x64	﻿2026-09-22T12:11:32.5608997Z ##[group]Run dotnet publish src/AZERTYGlobal.csproj -c Release -r win-x64
+build	Restore + publish x64	2026-09-22T12:11:32.5609842Z ^[[36;1mdotnet publish src/AZERTYGlobal.csproj -c Release -r win-x64^[[0m
+build	Restore + publish x64	2026-09-22T12:11:32.5673765Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Restore + publish x64	2026-09-22T12:11:32.5674251Z env:
+build	Restore + publish x64	2026-09-22T12:11:32.5674645Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Restore + publish x64	2026-09-22T12:11:32.5675178Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Restore + publish x64	2026-09-22T12:11:32.5675698Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Restore + publish x64	2026-09-22T12:11:32.5676193Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Restore + publish x64	2026-09-22T12:11:32.5676736Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Restore + publish x64	2026-09-22T12:11:32.5677206Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Restore + publish x64	2026-09-22T12:11:32.5677556Z ##[endgroup]
+build	Restore + publish x64	2026-09-22T12:11:38.4844380Z   Determining projects to restore...
+build	Restore + publish x64	2026-09-22T12:11:40.4404124Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\TypingEngine.Core.csproj (in 145 ms).
+build	Restore + publish x64	2026-09-22T12:11:46.3270362Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\TypingEngine.Windows.csproj (in 6.05 sec).
+build	Restore + publish x64	2026-09-22T12:12:05.1903174Z   Restored D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj (in 24.92 sec).
+build	Restore + publish x64	2026-09-22T12:12:11.8642539Z   TypingEngine.Core -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+build	Restore + publish x64	2026-09-22T12:12:13.2780183Z   TypingEngine.Windows -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+build	Restore + publish x64	2026-09-22T12:12:17.6597299Z ##[warning]D:\a\azerty-global-app\azerty-global-app\src\TrayApplication.cs(1553,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj]
+build	Restore + publish x64	2026-09-22T12:12:17.6656756Z ##[warning]D:\a\azerty-global-app\azerty-global-app\src\TrayApplication.cs(1566,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj]
+build	Restore + publish x64	2026-09-22T12:12:18.2010914Z   AZERTYGlobal -> D:\a\azerty-global-app\azerty-global-app\src\bin\Release\net8.0-windows10.0.17763.0\win-x64\AZERTY Global.dll
+build	Restore + publish x64	2026-09-22T12:12:24.2870206Z   Generating native code
+build	Restore + publish x64	2026-09-22T12:12:35.4483989Z   AZERTYGlobal -> D:\a\azerty-global-app\azerty-global-app\src\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\
+build	Publish ARM64	﻿2026-09-22T12:12:35.8986804Z ##[group]Run dotnet publish src/AZERTYGlobal.csproj -c Release -r win-arm64
+build	Publish ARM64	2026-09-22T12:12:35.8987607Z ^[[36;1mdotnet publish src/AZERTYGlobal.csproj -c Release -r win-arm64^[[0m
+build	Publish ARM64	2026-09-22T12:12:35.9058409Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Publish ARM64	2026-09-22T12:12:35.9058946Z env:
+build	Publish ARM64	2026-09-22T12:12:35.9059323Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Publish ARM64	2026-09-22T12:12:35.9059856Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Publish ARM64	2026-09-22T12:12:35.9060502Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Publish ARM64	2026-09-22T12:12:35.9061054Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Publish ARM64	2026-09-22T12:12:35.9061602Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Publish ARM64	2026-09-22T12:12:35.9062016Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Publish ARM64	2026-09-22T12:12:35.9062344Z ##[endgroup]
+build	Publish ARM64	2026-09-22T12:12:36.9293617Z   Determining projects to restore...
+build	Publish ARM64	2026-09-22T12:12:37.4672984Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\TypingEngine.Core.csproj (in 178 ms).
+build	Publish ARM64	2026-09-22T12:12:37.5791739Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\TypingEngine.Windows.csproj (in 302 ms).
+build	Publish ARM64	2026-09-22T12:12:37.5979356Z   Restored D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj (in 320 ms).
+build	Publish ARM64	2026-09-22T12:12:38.0207016Z   TypingEngine.Core -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+build	Publish ARM64	2026-09-22T12:12:38.2291266Z   TypingEngine.Windows -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+build	Publish ARM64	2026-09-22T12:12:41.9617379Z ##[warning]D:\a\azerty-global-app\azerty-global-app\src\TrayApplication.cs(1553,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj]
+build	Publish ARM64	2026-09-22T12:12:41.9632762Z ##[warning]D:\a\azerty-global-app\azerty-global-app\src\TrayApplication.cs(1566,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj]
+build	Publish ARM64	2026-09-22T12:12:42.0425981Z   AZERTYGlobal -> D:\a\azerty-global-app\azerty-global-app\src\bin\Release\net8.0-windows10.0.17763.0\win-arm64\AZERTY Global.dll
+build	Publish ARM64	2026-09-22T12:12:43.8590599Z   Generating native code
+build	Publish ARM64	2026-09-22T12:12:54.7017588Z   AZERTYGlobal -> D:\a\azerty-global-app\azerty-global-app\src\bin\Release\net8.0-windows10.0.17763.0\win-arm64\publish\
+build	Test Core	﻿2026-09-22T12:12:55.1205873Z ##[group]Run dotnet test src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj -c Release
+build	Test Core	2026-09-22T12:12:55.1207194Z ^[[36;1mdotnet test src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj -c Release^[[0m
+build	Test Core	2026-09-22T12:12:55.1281086Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Test Core	2026-09-22T12:12:55.1281618Z env:
+build	Test Core	2026-09-22T12:12:55.1282046Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Core	2026-09-22T12:12:55.1282719Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Test Core	2026-09-22T12:12:55.1283855Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Core	2026-09-22T12:12:55.1284769Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Core	2026-09-22T12:12:55.1285649Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Core	2026-09-22T12:12:55.1286585Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Test Core	2026-09-22T12:12:55.1287302Z ##[endgroup]
+build	Test Core	2026-09-22T12:12:56.2118139Z   Determining projects to restore...
+build	Test Core	2026-09-22T12:12:56.6040274Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\TypingEngine.Core.csproj (in 105 ms).
+build	Test Core	2026-09-22T12:13:21.6684466Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core.Tests\TypingEngine.Core.Tests.csproj (in 25.18 sec).
+build	Test Core	2026-09-22T12:13:22.1708654Z   TypingEngine.Core -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+build	Test Core	2026-09-22T12:13:22.9938200Z   TypingEngine.Core.Tests -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core.Tests\bin\Release\net8.0\TypingEngine.Core.Tests.dll
+build	Test Core	2026-09-22T12:13:23.0035883Z Test run for D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core.Tests\bin\Release\net8.0\TypingEngine.Core.Tests.dll (.NETCoreApp,Version=v8.0)
+build	Test Core	2026-09-22T12:13:23.7037847Z A total of 1 test files matched the specified pattern.
+build	Test Core	2026-09-22T12:13:24.4787832Z 
+build	Test Core	2026-09-22T12:13:24.4841744Z Passed!  - Failed:     0, Passed:    18, Skipped:     0, Total:    18, Duration: 49 ms - TypingEngine.Core.Tests.dll (net8.0)
+build	Test Windows engine	﻿2026-09-22T12:13:24.9427821Z ##[group]Run dotnet test src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj -c Release
+build	Test Windows engine	2026-09-22T12:13:24.9428690Z ^[[36;1mdotnet test src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj -c Release^[[0m
+build	Test Windows engine	2026-09-22T12:13:24.9501619Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Test Windows engine	2026-09-22T12:13:24.9502169Z env:
+build	Test Windows engine	2026-09-22T12:13:24.9502572Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Windows engine	2026-09-22T12:13:24.9503154Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Test Windows engine	2026-09-22T12:13:24.9503795Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Windows engine	2026-09-22T12:13:24.9504302Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Windows engine	2026-09-22T12:13:24.9504997Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test Windows engine	2026-09-22T12:13:24.9505462Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Test Windows engine	2026-09-22T12:13:24.9505790Z ##[endgroup]
+build	Test Windows engine	2026-09-22T12:13:25.9089259Z   Determining projects to restore...
+build	Test Windows engine	2026-09-22T12:13:26.9560972Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\TypingEngine.Windows.csproj (in 256 ms).
+build	Test Windows engine	2026-09-22T12:13:27.0756347Z   Restored D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows.Tests\TypingEngine.Windows.Tests.csproj (in 375 ms).
+build	Test Windows engine	2026-09-22T12:13:27.0794313Z   1 of 3 projects are up-to-date for restore.
+build	Test Windows engine	2026-09-22T12:13:27.6683396Z   TypingEngine.Core -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+build	Test Windows engine	2026-09-22T12:13:27.8599974Z   TypingEngine.Windows -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+build	Test Windows engine	2026-09-22T12:13:28.3919933Z   TypingEngine.Windows.Tests -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll
+build	Test Windows engine	2026-09-22T12:13:28.4090093Z Test run for D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows.Tests\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.Tests.dll (.NETCoreApp,Version=v8.0)
+build	Test Windows engine	2026-09-22T12:13:28.6458128Z A total of 1 test files matched the specified pattern.
+build	Test Windows engine	2026-09-22T12:13:29.6853258Z 
+build	Test Windows engine	2026-09-22T12:13:29.6918588Z Passed!  - Failed:     0, Passed:   235, Skipped:     0, Total:   235, Duration: 337 ms - TypingEngine.Windows.Tests.dll (net8.0)
+build	Test application	﻿2026-09-22T12:13:30.1584275Z ##[group]Run dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release
+build	Test application	2026-09-22T12:13:30.1585011Z ^[[36;1mdotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release^[[0m
+build	Test application	2026-09-22T12:13:30.1651088Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Test application	2026-09-22T12:13:30.1651630Z env:
+build	Test application	2026-09-22T12:13:30.1652054Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test application	2026-09-22T12:13:30.1652593Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Test application	2026-09-22T12:13:30.1653165Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test application	2026-09-22T12:13:30.1653679Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test application	2026-09-22T12:13:30.1654232Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Test application	2026-09-22T12:13:30.1654727Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Test application	2026-09-22T12:13:30.1655086Z ##[endgroup]
+build	Test application	2026-09-22T12:13:31.1097575Z   Determining projects to restore...
+build	Test application	2026-09-22T12:13:32.3329845Z   Restored D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj (in 342 ms).
+build	Test application	2026-09-22T12:13:32.4036192Z   Restored D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.Tests\AZERTYGlobal.Tests.csproj (in 430 ms).
+build	Test application	2026-09-22T12:13:32.4076561Z   2 of 4 projects are up-to-date for restore.
+build	Test application	2026-09-22T12:13:33.4748890Z   TypingEngine.Core -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+build	Test application	2026-09-22T12:13:33.7359829Z   TypingEngine.Windows -> D:\a\azerty-global-app\azerty-global-app\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+build	Test application	2026-09-22T12:13:35.0747471Z ##[warning]D:\a\azerty-global-app\azerty-global-app\src\TrayApplication.cs(1553,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj]
+build	Test application	2026-09-22T12:13:35.0750775Z ##[warning]D:\a\azerty-global-app\azerty-global-app\src\TrayApplication.cs(1566,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.csproj]
+build	Test application	2026-09-22T12:13:35.2605532Z   AZERTYGlobal -> D:\a\azerty-global-app\azerty-global-app\src\bin\Release\net8.0-windows10.0.17763.0\AZERTY Global.dll
+build	Test application	2026-09-22T12:13:35.8054841Z   AZERTYGlobal.Tests -> D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll
+build	Test application	2026-09-22T12:13:35.8235732Z Test run for D:\a\azerty-global-app\azerty-global-app\src\AZERTYGlobal.Tests\bin\Release\net8.0-windows10.0.17763.0\AZERTYGlobal.Tests.dll (.NETCoreApp,Version=v8.0)
+build	Test application	2026-09-22T12:13:36.0607042Z A total of 1 test files matched the specified pattern.
+build	Test application	2026-09-22T12:13:45.5701114Z 
+build	Test application	2026-09-22T12:13:45.5747864Z Passed!  - Failed:     0, Passed:   470, Skipped:     0, Total:   470, Duration: 8 s - AZERTYGlobal.Tests.dll (net8.0)
+build	Pack MSIX	﻿2026-09-22T12:13:46.0171111Z ##[group]Run pwsh ./scripts/Pack-MSIX.ps1
+build	Pack MSIX	2026-09-22T12:13:46.0171601Z ^[[36;1mpwsh ./scripts/Pack-MSIX.ps1^[[0m
+build	Pack MSIX	2026-09-22T12:13:46.0236832Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Pack MSIX	2026-09-22T12:13:46.0237316Z env:
+build	Pack MSIX	2026-09-22T12:13:46.0237696Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Pack MSIX	2026-09-22T12:13:46.0238208Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Pack MSIX	2026-09-22T12:13:46.0238744Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Pack MSIX	2026-09-22T12:13:46.0239226Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Pack MSIX	2026-09-22T12:13:46.0239672Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Pack MSIX	2026-09-22T12:13:46.0240138Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Pack MSIX	2026-09-22T12:13:46.0240454Z ##[endgroup]
+build	Pack MSIX	2026-09-22T12:13:47.5257911Z --- Construction x64 ---
+build	Pack MSIX	2026-09-22T12:13:48.5762202Z Microsoft (R) MakeAppx Tool
+build	Pack MSIX	2026-09-22T12:13:48.5762695Z 
+build	Pack MSIX	2026-09-22T12:13:48.5763016Z Version 10.0.26100.8249
+build	Pack MSIX	2026-09-22T12:13:48.5763404Z 
+build	Pack MSIX	2026-09-22T12:13:48.5763888Z Copyright (C) Microsoft. All rights reserved.
+build	Pack MSIX	2026-09-22T12:13:48.5764670Z 
+build	Pack MSIX	2026-09-22T12:13:48.5764766Z 
+build	Pack MSIX	2026-09-22T12:13:48.5764774Z 
+build	Pack MSIX	2026-09-22T12:13:48.5765393Z The path (/p) parameter is: "\\?\D:\a\azerty-global-app\azerty-global-app\AZERTYGlobal-1.3.0.0-x64.msix"
+build	Pack MSIX	2026-09-22T12:13:48.5766838Z 
+build	Pack MSIX	2026-09-22T12:13:48.5767441Z The content directory (/d) parameter is: "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64"
+build	Pack MSIX	2026-09-22T12:13:48.5768181Z 
+build	Pack MSIX	2026-09-22T12:13:48.5768770Z Enumerating files from directory "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64"
+build	Pack MSIX	2026-09-22T12:13:48.5769323Z 
+build	Pack MSIX	2026-09-22T12:13:48.5770375Z Packing 8 file(s) in "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64" (content directory) to "\\?\D:\a\azerty-global-app\azerty-global-app\AZERTYGlobal-1.3.0.0-x64.msix" (output file name).
+build	Pack MSIX	2026-09-22T12:13:48.5771453Z 
+build	Pack MSIX	2026-09-22T12:13:48.5771732Z Memory limit defaulting to 8587180032 bytes.
+build	Pack MSIX	2026-09-22T12:13:48.5772099Z 
+build	Pack MSIX	2026-09-22T12:13:48.5772744Z Using "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\AppxManifest.xml" as the manifest for the package.
+build	Pack MSIX	2026-09-22T12:13:48.5773485Z 
+build	Pack MSIX	2026-09-22T12:13:48.5774436Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\Assets\Square150x150Logo.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.png".
+build	Pack MSIX	2026-09-22T12:13:48.5775370Z 
+build	Pack MSIX	2026-09-22T12:13:48.5776233Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\Assets\Square44x44Logo.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.png".
+build	Pack MSIX	2026-09-22T12:13:48.5777183Z 
+build	Pack MSIX	2026-09-22T12:13:48.5778221Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\Assets\Square44x44Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.scale-200.png".
+build	Pack MSIX	2026-09-22T12:13:48.5779566Z 
+build	Pack MSIX	2026-09-22T12:13:48.5780363Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\Assets\StoreLogo.png" as a payload file.  Its path in the package will be "Assets\StoreLogo.png".
+build	Pack MSIX	2026-09-22T12:13:48.5781210Z 
+build	Pack MSIX	2026-09-22T12:13:48.5782265Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\Assets\Square150x150Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.scale-200.png".
+build	Pack MSIX	2026-09-22T12:13:48.5783240Z 
+build	Pack MSIX	2026-09-22T12:13:48.5784103Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\Assets\Wide310x150Logo.png" as a payload file.  Its path in the package will be "Assets\Wide310x150Logo.png".
+build	Pack MSIX	2026-09-22T12:13:48.5785003Z 
+build	Pack MSIX	2026-09-22T12:13:48.5785749Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-x64\AZERTY Global.exe" as a payload file.  Its path in the package will be "AZERTY Global.exe".
+build	Pack MSIX	2026-09-22T12:13:48.5786936Z 
+build	Pack MSIX	2026-09-22T12:13:48.5787106Z Package creation succeeded.
+build	Pack MSIX	2026-09-22T12:13:48.5789469Z 
+build	Pack MSIX	2026-09-22T12:13:48.5893233Z --- Construction arm64 ---
+build	Pack MSIX	2026-09-22T12:13:49.1422174Z Microsoft (R) MakeAppx Tool
+build	Pack MSIX	2026-09-22T12:13:49.1422727Z 
+build	Pack MSIX	2026-09-22T12:13:49.1423086Z Version 10.0.26100.8249
+build	Pack MSIX	2026-09-22T12:13:49.1423391Z 
+build	Pack MSIX	2026-09-22T12:13:49.1423748Z Copyright (C) Microsoft. All rights reserved.
+build	Pack MSIX	2026-09-22T12:13:49.1424151Z 
+build	Pack MSIX	2026-09-22T12:13:49.1424261Z 
+build	Pack MSIX	2026-09-22T12:13:49.1424337Z 
+build	Pack MSIX	2026-09-22T12:13:49.1424962Z The path (/p) parameter is: "\\?\D:\a\azerty-global-app\azerty-global-app\AZERTYGlobal-1.3.0.0-arm64.msix"
+build	Pack MSIX	2026-09-22T12:13:49.1425701Z 
+build	Pack MSIX	2026-09-22T12:13:49.1426332Z The content directory (/d) parameter is: "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64"
+build	Pack MSIX	2026-09-22T12:13:49.1426983Z 
+build	Pack MSIX	2026-09-22T12:13:49.1427566Z Enumerating files from directory "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64"
+build	Pack MSIX	2026-09-22T12:13:49.1428276Z 
+build	Pack MSIX	2026-09-22T12:13:49.1430147Z Packing 8 file(s) in "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64" (content directory) to "\\?\D:\a\azerty-global-app\azerty-global-app\AZERTYGlobal-1.3.0.0-arm64.msix" (output file name).
+build	Pack MSIX	2026-09-22T12:13:49.1433060Z 
+build	Pack MSIX	2026-09-22T12:13:49.1433498Z Memory limit defaulting to 8587180032 bytes.
+build	Pack MSIX	2026-09-22T12:13:49.1433953Z 
+build	Pack MSIX	2026-09-22T12:13:49.1434775Z Using "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\AppxManifest.xml" as the manifest for the package.
+build	Pack MSIX	2026-09-22T12:13:49.1435552Z 
+build	Pack MSIX	2026-09-22T12:13:49.1436991Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\Assets\Square150x150Logo.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.png".
+build	Pack MSIX	2026-09-22T12:13:49.1438176Z 
+build	Pack MSIX	2026-09-22T12:13:49.1439223Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\Assets\Square44x44Logo.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.png".
+build	Pack MSIX	2026-09-22T12:13:49.1440368Z 
+build	Pack MSIX	2026-09-22T12:13:49.1441338Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\Assets\Square44x44Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.scale-200.png".
+build	Pack MSIX	2026-09-22T12:13:49.1442444Z 
+build	Pack MSIX	2026-09-22T12:13:49.1443354Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\Assets\StoreLogo.png" as a payload file.  Its path in the package will be "Assets\StoreLogo.png".
+build	Pack MSIX	2026-09-22T12:13:49.1444369Z 
+build	Pack MSIX	2026-09-22T12:13:49.1445451Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\Assets\Square150x150Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.scale-200.png".
+build	Pack MSIX	2026-09-22T12:13:49.1446565Z 
+build	Pack MSIX	2026-09-22T12:13:49.1447563Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\Assets\Wide310x150Logo.png" as a payload file.  Its path in the package will be "Assets\Wide310x150Logo.png".
+build	Pack MSIX	2026-09-22T12:13:49.1448560Z 
+build	Pack MSIX	2026-09-22T12:13:49.1449412Z Processing "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-staging-arm64\AZERTY Global.exe" as a payload file.  Its path in the package will be "AZERTY Global.exe".
+build	Pack MSIX	2026-09-22T12:13:49.1450300Z 
+build	Pack MSIX	2026-09-22T12:13:49.1450569Z Package creation succeeded.
+build	Pack MSIX	2026-09-22T12:13:49.1450935Z 
+build	Pack MSIX	2026-09-22T12:13:49.1529599Z --- Construction du bundle ---
+build	Pack MSIX	2026-09-22T12:13:49.4565197Z Microsoft (R) MakeAppx Tool
+build	Pack MSIX	2026-09-22T12:13:49.4565726Z 
+build	Pack MSIX	2026-09-22T12:13:49.4565907Z Version 10.0.26100.8249
+build	Pack MSIX	2026-09-22T12:13:49.4566255Z 
+build	Pack MSIX	2026-09-22T12:13:49.4566585Z Copyright (C) Microsoft. All rights reserved.
+build	Pack MSIX	2026-09-22T12:13:49.4567027Z 
+build	Pack MSIX	2026-09-22T12:13:49.4567047Z 
+build	Pack MSIX	2026-09-22T12:13:49.4567055Z 
+build	Pack MSIX	2026-09-22T12:13:49.4567791Z The path (/p) parameter is: "\\?\D:\a\azerty-global-app\azerty-global-app\msix\AZERTYGlobal-1.3.0.0.msixbundle"
+build	Pack MSIX	2026-09-22T12:13:49.4568446Z 
+build	Pack MSIX	2026-09-22T12:13:49.4569092Z The content directory (/d) parameter is: "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-bundle-staging"
+build	Pack MSIX	2026-09-22T12:13:49.4570119Z 
+build	Pack MSIX	2026-09-22T12:13:49.4571685Z Enumerating files from directory "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-bundle-staging"
+build	Pack MSIX	2026-09-22T12:13:49.4572357Z 
+build	Pack MSIX	2026-09-22T12:13:49.4574378Z Packing 2 file(s) in "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-bundle-staging" (content directory) to "\\?\D:\a\azerty-global-app\azerty-global-app\msix\AZERTYGlobal-1.3.0.0.msixbundle" (output file name).
+build	Pack MSIX	2026-09-22T12:13:49.4575875Z 
+build	Pack MSIX	2026-09-22T12:13:49.4577183Z Adding "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-bundle-staging\AZERTYGlobal-1.3.0.0-x64.msix" to the bundle as a payload package.  Its path in the bundle is "AZERTYGlobal-1.3.0.0-x64.msix".
+build	Pack MSIX	2026-09-22T12:13:49.4578319Z 
+build	Pack MSIX	2026-09-22T12:13:49.4579896Z Adding "\\?\D:\a\azerty-global-app\azerty-global-app\.msix-bundle-staging\AZERTYGlobal-1.3.0.0-arm64.msix" to the bundle as a payload package.  Its path in the bundle is "AZERTYGlobal-1.3.0.0-arm64.msix".
+build	Pack MSIX	2026-09-22T12:13:49.4581078Z 
+build	Pack MSIX	2026-09-22T12:13:49.4581374Z Bundle creation succeeded.
+build	Pack MSIX	2026-09-22T12:13:49.4581787Z 
+build	Pack MSIX	2026-09-22T12:13:49.4720106Z 
+build	Pack MSIX	2026-09-22T12:13:49.4726159Z MSIX bundle reconstruit:
+build	Pack MSIX	2026-09-22T12:13:49.4746141Z  - Versioned : D:\a\azerty-global-app\azerty-global-app\msix\AZERTYGlobal-1.3.0.0.msixbundle
+build	Pack MSIX	2026-09-22T12:13:49.4753716Z  - Stable    : D:\a\azerty-global-app\azerty-global-app\msix\AZERTYGlobal.msixbundle
+build	Pack MSIX	2026-09-22T12:13:49.4759858Z  - Archs     : x64, arm64
+build	Verify Release	﻿2026-09-22T12:13:49.6602857Z ##[group]Run pwsh ./scripts/Verify-Release.ps1
+build	Verify Release	2026-09-22T12:13:49.6603398Z ^[[36;1mpwsh ./scripts/Verify-Release.ps1^[[0m
+build	Verify Release	2026-09-22T12:13:49.6668831Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	Verify Release	2026-09-22T12:13:49.6669386Z env:
+build	Verify Release	2026-09-22T12:13:49.6669835Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Verify Release	2026-09-22T12:13:49.6670458Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Verify Release	2026-09-22T12:13:49.6671137Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Verify Release	2026-09-22T12:13:49.6671705Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Verify Release	2026-09-22T12:13:49.6672238Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Verify Release	2026-09-22T12:13:49.6672727Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Verify Release	2026-09-22T12:13:49.6673116Z ##[endgroup]
+build	Verify Release	2026-09-22T12:13:50.3354224Z ^[[33;1mWARNING: Publication Microsoft Store non disponible dans ce depot; verification ignoree.^[[0m
+build	Verify Release	2026-09-22T12:13:50.3358557Z ^[[33;1mWARNING: Publication Microsoft Store non disponible dans ce depot; verification ignoree.^[[0m
+build	Verify Release	2026-09-22T12:13:50.3361677Z ^[[33;1mWARNING: TO-DO non disponible dans ce depot; verification ignoree.^[[0m
+build	Verify Release	2026-09-22T12:13:50.3371685Z ^[[33;1mWARNING: Contexte app non disponible dans ce depot; verification ignoree.^[[0m
+build	Verify Release	2026-09-22T12:13:50.3372900Z ^[[33;1mWARNING: Contexte projet non disponible dans ce depot; verification ignoree.^[[0m
+build	Verify Release	2026-09-22T12:13:50.3529363Z FileVersion x64 : 1.3.0.0 (publish = 1.3.0.0)
+build	Verify Release	2026-09-22T12:13:50.3573884Z FileVersion arm64 : 1.3.0.0 (publish = 1.3.0.0)
+build	Verify Release	2026-09-22T12:13:50.4864415Z SHA256 x64 : 234C9711AD380531B28CAD05061C8C122366724933AE526511E28E332EA2037F (publish = bundle)
+build	Verify Release	2026-09-22T12:13:50.5365513Z SHA256 arm64 : 3EFDA83BE5737DB1F9D06C01D8DB99CE2526C73FB8FAC9029CE6EFE6BBFC2CBF (publish = bundle)
+build	Verify Release	2026-09-22T12:13:50.5371338Z 
+build	Verify Release	2026-09-22T12:13:50.5377409Z Release vérifiée: version 1.3.0 / package 1.3.0.0
+build	Verify Release	2026-09-22T12:13:50.5383833Z Architectures: x64, arm64
+build	Verify Release	2026-09-22T12:13:50.5399599Z Bundle versionne: D:\a\azerty-global-app\azerty-global-app\msix\AZERTYGlobal-1.3.0.0.msixbundle
+build	BinSkim hardening check	﻿2026-09-22T12:13:50.7394437Z ##[group]Run python scripts/check-binary-hardening.py
+build	BinSkim hardening check	2026-09-22T12:13:50.7395561Z ^[[36;1mpython scripts/check-binary-hardening.py^[[0m
+build	BinSkim hardening check	2026-09-22T12:13:50.7464181Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	BinSkim hardening check	2026-09-22T12:13:50.7464751Z env:
+build	BinSkim hardening check	2026-09-22T12:13:50.7465202Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	BinSkim hardening check	2026-09-22T12:13:50.7466475Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	BinSkim hardening check	2026-09-22T12:13:50.7467115Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	BinSkim hardening check	2026-09-22T12:13:50.7467648Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	BinSkim hardening check	2026-09-22T12:13:50.7468255Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	BinSkim hardening check	2026-09-22T12:13:50.7468739Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	BinSkim hardening check	2026-09-22T12:13:50.7469120Z ##[endgroup]
+build	BinSkim hardening check	2026-09-22T12:14:12.0069680Z x64 : analyse complète, aucun contrôle en échec
+build	BinSkim hardening check	2026-09-22T12:14:12.0070279Z arm64 : analyse complète, aucun contrôle en échec
+build	SHA256 artefacts	﻿2026-09-22T12:14:12.1312260Z ##[group]Run Get-FileHash -Algorithm SHA256 "src/bin/Release/net8.0-windows10.0.17763.0/win-x64/publish/AZERTY Global.exe"
+build	SHA256 artefacts	2026-09-22T12:14:12.1313196Z ^[[36;1mGet-FileHash -Algorithm SHA256 "src/bin/Release/net8.0-windows10.0.17763.0/win-x64/publish/AZERTY Global.exe"^[[0m
+build	SHA256 artefacts	2026-09-22T12:14:12.1313933Z ^[[36;1mGet-FileHash -Algorithm SHA256 "src/bin/Release/net8.0-windows10.0.17763.0/win-arm64/publish/AZERTY Global.exe"^[[0m
+build	SHA256 artefacts	2026-09-22T12:14:12.1314732Z ^[[36;1mGet-ChildItem ./msix -Filter "AZERTYGlobal-*.msixbundle" | ForEach-Object { Get-FileHash -Algorithm SHA256 $_.FullName }^[[0m
+build	SHA256 artefacts	2026-09-22T12:14:12.1379310Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build	SHA256 artefacts	2026-09-22T12:14:12.1379790Z env:
+build	SHA256 artefacts	2026-09-22T12:14:12.1380171Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	SHA256 artefacts	2026-09-22T12:14:12.1380764Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	SHA256 artefacts	2026-09-22T12:14:12.1381323Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	SHA256 artefacts	2026-09-22T12:14:12.1381932Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	SHA256 artefacts	2026-09-22T12:14:12.1382412Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	SHA256 artefacts	2026-09-22T12:14:12.1382827Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	SHA256 artefacts	2026-09-22T12:14:12.1383155Z ##[endgroup]
+build	SHA256 artefacts	2026-09-22T12:14:12.4917672Z 
+build	SHA256 artefacts	2026-09-22T12:14:12.4925780Z ^[[32;1mAlgorithm      ^[[0m^[[32;1m Hash                                                                  ^[[0m^[[32;1m Path^[[0m
+build	SHA256 artefacts	2026-09-22T12:14:12.4926816Z ^[[32;1m---------      ^[[0m ^[[32;1m----                                                                  ^[[0m ^[[32;1m----^[[0m
+build	SHA256 artefacts	2026-09-22T12:14:12.4927887Z SHA256          234C9711AD380531B28CAD05061C8C122366724933AE526511E28E332EA2037F       D:\a\azerty-global-app\azerty-g…
+build	SHA256 artefacts	2026-09-22T12:14:12.5045150Z SHA256          3EFDA83BE5737DB1F9D06C01D8DB99CE2526C73FB8FAC9029CE6EFE6BBFC2CBF       D:\a\azerty-global-app\azerty-g…
+build	SHA256 artefacts	2026-09-22T12:14:12.5341062Z SHA256          7FA9E7AD495A3E7300B8F13ADA3FCDE9BC0031443F8ED81B45111EC706F7DC00       D:\a\azerty-global-app\azerty-g…
+build	SHA256 artefacts	2026-09-22T12:14:12.5374212Z 
+build	Upload msixbundle artefact	﻿2026-09-22T12:14:12.6053394Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6054741Z ##[group]Run actions/upload-artifact@v4
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6054992Z with:
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6055172Z   name: msixbundle
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6055454Z   path: msix/AZERTYGlobal-*.msixbundle
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6055794Z   retention-days: 90
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6056005Z   if-no-files-found: warn
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6056216Z   compression-level: 6
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6056414Z   overwrite: false
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6056865Z   include-hidden-files: false
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6057087Z env:
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6057341Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6057777Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6058238Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6058614Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6059188Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6059513Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Upload msixbundle artefact	2026-09-22T12:14:12.6059757Z ##[endgroup]
+build	Upload msixbundle artefact	2026-09-22T12:14:12.8125971Z (node:7616) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build	Upload msixbundle artefact	2026-09-22T12:14:12.8127471Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build	Upload msixbundle artefact	2026-09-22T12:14:12.8199931Z With the provided path, there will be 1 file uploaded
+build	Upload msixbundle artefact	2026-09-22T12:14:12.8208534Z Artifact name is valid!
+build	Upload msixbundle artefact	2026-09-22T12:14:12.8210344Z Root directory input is valid!
+build	Upload msixbundle artefact	2026-09-22T12:14:13.0786394Z Beginning upload of artifact content to blob storage
+build	Upload msixbundle artefact	2026-09-22T12:14:13.3277248Z (node:7616) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+build	Upload msixbundle artefact	2026-09-22T12:14:13.7697572Z Uploaded bytes 6836242
+build	Upload msixbundle artefact	2026-09-22T12:14:13.8027032Z Finished uploading artifact content to blob storage!
+build	Upload msixbundle artefact	2026-09-22T12:14:13.8027893Z SHA256 digest of uploaded artifact zip is d9d58cf24fdf0933ca4941ca201b972128024b8e822a74d4512a51aa1411a9ee
+build	Upload msixbundle artefact	2026-09-22T12:14:13.8030038Z Finalizing artifact upload
+build	Upload msixbundle artefact	2026-09-22T12:14:14.0116126Z Artifact msixbundle.zip successfully finalized. Artifact ID 10692683039
+build	Upload msixbundle artefact	2026-09-22T12:14:14.0118189Z Artifact msixbundle has been successfully uploaded! Final size is 6836242 bytes. Artifact ID is 10692683039
+build	Upload msixbundle artefact	2026-09-22T12:14:14.0128833Z Artifact download URL: https://github.com/AMCF-asso/azerty-global-app/actions/runs/35725613971/artifacts/10692683039
+build	Attest provenance (SLSA L1)	﻿2026-09-22T12:14:14.0496350Z ##[group]Run actions/attest-build-provenance@v2
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0496855Z with:
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0497160Z   subject-path: msix/AZERTYGlobal-*.msixbundle
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0497511Z   push-to-registry: false
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0497804Z   show-summary: true
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0500509Z   github-token: ***
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0500793Z env:
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0501117Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0501638Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0502137Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0502574Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0503123Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0503827Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0504134Z ##[endgroup]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0565527Z ##[start-action display=Run actions/attest-build-provenance/predicate@1176ef556905f349f669722abf30bce1a6e16e01;id=__actions_attest-build-provenance.generate-build-provenance-predicate]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0705970Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0707330Z ##[group]Run actions/attest-build-provenance/predicate@1176ef556905f349f669722abf30bce1a6e16e01
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0707810Z env:
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0708094Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0708575Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0709049Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0709471Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0709901Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0710261Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.0710521Z ##[endgroup]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5272661Z ##[end-action id=__actions_attest-build-provenance.generate-build-provenance-predicate;outcome=success;conclusion=success;duration_ms=470]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5277766Z ##[start-action display=Run actions/attest@ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc;id=__actions_attest-build-provenance.attest]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5420592Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5421789Z ##[group]Run actions/attest@ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5422156Z with:
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5422381Z   subject-path: msix/AZERTYGlobal-*.msixbundle
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5422719Z   predicate-type: https://slsa.dev/provenance/v1
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5425965Z   predicate: {"buildDefinition":{"buildType":"https://actions.github.io/buildtypes/workflow/v1","externalParameters":{"workflow":{"ref":"refs/heads/ci/verif","repository":"https://github.com/AMCF-asso/azerty-global-app","path":".github/workflows/ci.yml"}},"internalParameters":{"github":{"event_name":"push","repository_id":"1188074767","repository_owner_id":"323935628","runner_environment":"github-hosted"}},"resolvedDependencies":[{"uri":"git+https://github.com/AMCF-asso/azerty-global-app@refs/heads/ci/verif","digest":{"gitCommit":"1a13f08d3963d57ae5e2907e4d49c4616a326b19"}}]},"runDetails":{"builder":{"id":"https://github.com/AMCF-asso/azerty-global-app/.github/workflows/ci.yml@refs/heads/ci/verif"},"metadata":{"invocationId":"https://github.com/AMCF-asso/azerty-global-app/actions/runs/35725613971/attempts/1"}}}
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5430548Z   push-to-registry: false
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5430788Z   show-summary: true
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5433760Z   github-token: ***
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5433972Z env:
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5434255Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5434741Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5435207Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5435630Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5436049Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5436392Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:14.5436665Z ##[endgroup]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8091040Z Attestation created for AZERTYGlobal-1.3.0.0.msixbundle@sha256:7fa9e7ad495a3e7300b8f13ada3fcde9bc0031443f8ed81b45111ec706f7dc00
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8094222Z ##[group]^[[36mAttestation signed using certificate from Public Good Sigstore instance^[[39m
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8095126Z -----BEGIN CERTIFICATE-----
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8096164Z MIIHVjCCBtygAwIBAgIUbIIQIqh8MmJnGy5MaDE0hQ6fOSIwCgYIKoZIzj0EAwMw
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8097012Z NzEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MR4wHAYDVQQDExVzaWdzdG9yZS1pbnRl
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8097911Z cm1lZGlhdGUwHhcNMjYwOTIyMTIxNDE0WhcNMjYwOTIyMTIyNDE0WjAAMFkwEwYH
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8099030Z KoZIzj0CAQYIKoZIzj0DAQcDQgAECp/nLTZkcii53fBtRcG8ZSXREmEXfFEFq6eO
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8099742Z yWR5LqhYGarKBMkBTixmRi+FMJizB6ATZ8/sonKB0YyqN/c116OCBfswggX3MA4G
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8100464Z A1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzAdBgNVHQ4EFgQUe0MV
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8101190Z V+b1C4RpTG6zf7HvUGQklpwwHwYDVR0jBBgwFoAU39Ppz1YkEZb5qNjpKFWixi4Y
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8101909Z ZD8waQYDVR0RAQH/BF8wXYZbaHR0cHM6Ly9naXRodWIuY29tL0FNQ0YtYXNzby9h
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8102625Z emVydHktZ2xvYmFsLWFwcC8uZ2l0aHViL3dvcmtmbG93cy9jaS55bWxAcmVmcy9o
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8103335Z ZWFkcy9jaS92ZXJpZjA5BgorBgEEAYO/MAEBBCtodHRwczovL3Rva2VuLmFjdGlv
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8104085Z bnMuZ2l0aHVidXNlcmNvbnRlbnQuY29tMBIGCisGAQQBg78wAQIEBHB1c2gwNgYK
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8104864Z KwYBBAGDvzABAwQoMWExM2YwOGQzOTYzZDU3YWU1ZTI5MDdlNGQ0OWM0NjE2YTMy
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8106414Z NmIxOTAkBgorBgEEAYO/MAEEBBZDSSBidWlsZCArIGF1ZGl0IHPDqWN1MCkGCisG
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8107565Z AQQBg78wAQUEG0FNQ0YtYXNzby9hemVydHktZ2xvYmFsLWFwcDAhBgorBgEEAYO/
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8108287Z MAEGBBNyZWZzL2hlYWRzL2NpL3ZlcmlmMDsGCisGAQQBg78wAQgELQwraHR0cHM6
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8109083Z Ly90b2tlbi5hY3Rpb25zLmdpdGh1YnVzZXJjb250ZW50LmNvbTBrBgorBgEEAYO/
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8109891Z MAEJBF0MW2h0dHBzOi8vZ2l0aHViLmNvbS9BTUNGLWFzc28vYXplcnR5LWdsb2Jh
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8110680Z bC1hcHAvLmdpdGh1Yi93b3JrZmxvd3MvY2kueW1sQHJlZnMvaGVhZHMvY2kvdmVy
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8111464Z aWYwOAYKKwYBBAGDvzABCgQqDCgxYTEzZjA4ZDM5NjNkNTdhZTVlMjkwN2U0ZDQ5
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8112196Z YzQ2MTZhMzI2YjE5MB0GCisGAQQBg78wAQsEDwwNZ2l0aHViLWhvc3RlZDA+Bgor
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8113542Z BgEEAYO/MAEMBDAMLmh0dHBzOi8vZ2l0aHViLmNvbS9BTUNGLWFzc28vYXplcnR5
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8115380Z LWdsb2JhbC1hcHAwOAYKKwYBBAGDvzABDQQqDCgxYTEzZjA4ZDM5NjNkNTdhZTVl
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8116164Z MjkwN2U0ZDQ5YzQ2MTZhMzI2YjE5MCMGCisGAQQBg78wAQ4EFQwTcmVmcy9oZWFk
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8116890Z cy9jaS92ZXJpZjAaBgorBgEEAYO/MAEPBAwMCjExODgwNzQ3NjcwLAYKKwYBBAGD
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8117588Z vzABEAQeDBxodHRwczovL2dpdGh1Yi5jb20vQU1DRi1hc3NvMBkGCisGAQQBg78w
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8118655Z AREECwwJMzIzOTM1NjI4MGsGCisGAQQBg78wARIEXQxbaHR0cHM6Ly9naXRodWIu
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8119436Z Y29tL0FNQ0YtYXNzby9hemVydHktZ2xvYmFsLWFwcC8uZ2l0aHViL3dvcmtmbG93
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8120131Z cy9jaS55bWxAcmVmcy9oZWFkcy9jaS92ZXJpZjA4BgorBgEEAYO/MAETBCoMKDFh
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8120849Z MTNmMDhkMzk2M2Q1N2FlNWUyOTA3ZTRkNDljNDYxNmEzMjZiMTkwFAYKKwYBBAGD
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8121565Z vzABFAQGDARwdXNoMGIGCisGAQQBg78wARUEVAxSaHR0cHM6Ly9naXRodWIuY29t
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8122186Z L0FNQ0YtYXNzby9hemVydHktZ2xvYmFsLWFwcC9hY3Rpb25zL3J1bnMvMzU3MjU2
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8123533Z MTM5NzEvYXR0ZW1wdHMvMTAWBgorBgEEAYO/MAEWBAgMBnB1YmxpYzBdBgorBgEE
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8124189Z AYO/MAEYBE8MTXJlcG86QU1DRi1hc3NvQDMyMzkzNTYyOC9hemVydHktZ2xvYmFs
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8125375Z LWFwcEAxMTg4MDc0NzY3OnJlZjpyZWZzL2hlYWRzL2NpL3ZlcmlmMIGKBgorBgEE
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8126058Z AdZ5AgQCBHwEegB4AHYA3T0wasbHETJjGR4cmWc3AqJKXrjePK3/h4pygC8p7o4A
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8126770Z AAGgyQnB0QAABAMARzBFAiEA5S2nAW7pT5Ymb+EZ+LNG2Us7t1J7VM4jFr5hZ3NY
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8127506Z wqACIGviRsyZm22Rah3tPzHLZD9W/GLhQZnj50VR9ss5W24gMAoGCCqGSM49BAMD
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8128223Z A2gAMGUCMFhNhZ8mjTREzefluNZuDQJJMQvtkVd7MtqFGgjwVgevOEx2mDkBtwLF
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8128935Z CMj+1bHosgIxAMItyECp6lR8dMTI34eQJUaL/5VbApHn+C/Pp+6j2wUEEfwbPETZ
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8129435Z XguwLSO23zCv4Q==
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8129733Z -----END CERTIFICATE-----
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8129957Z 
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8130396Z ##[endgroup]
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8131036Z ^[[36mAttestation signature uploaded to Rekor transparency log^[[39m
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8131624Z https://search.sigstore.dev?logIndex=2909259862
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8132176Z ^[[36mAttestation uploaded to repository^[[39m
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8132729Z https://github.com/AMCF-asso/azerty-global-app/attestations/49210550
+build	Attest provenance (SLSA L1)	2026-09-22T12:14:15.8567077Z ##[end-action id=__actions_attest-build-provenance.attest;outcome=success;conclusion=success;duration_ms=1328]
+build	Upload BinSkim SARIF	﻿2026-09-22T12:14:15.9914948Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9916257Z ##[group]Run github/codeql-action/upload-sarif@v3
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9916534Z with:
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9916731Z   sarif_file: binskim-sarif
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9917019Z   checkout_path: D:\a\azerty-global-app\azerty-global-app
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9919752Z   token: ***
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9919961Z   matrix: null
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9920175Z   wait-for-processing: true
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9920423Z env:
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9920698Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9921172Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.12.10\x64/lib/pkgconfig
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9921836Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9922251Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9922617Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.12.10\x64
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9922941Z   DOTNET_ROOT: C:\Program Files\dotnet
+build	Upload BinSkim SARIF	2026-09-22T12:14:15.9923211Z ##[endgroup]
+build	Upload BinSkim SARIF	2026-09-22T12:14:16.2705978Z Job run UUID is ebf3f483-e9b0-435c-a2b4-bb6d957b1b15.
+build	Upload BinSkim SARIF	2026-09-22T12:14:16.2770640Z ##[warning]CodeQL Action v3 will be deprecated in December 2026. Please update all occurrences of the CodeQL Action in your workflow files to v4. For more information, see https://github.blog/changelog/2025-10-28-upcoming-deprecation-of-codeql-action-v3/
+build	Upload BinSkim SARIF	2026-09-22T12:14:17.0335894Z Post-processing sarif files: ["D:\\a\\azerty-global-app\\azerty-global-app\\binskim-sarif\\binskim-arm64.sarif","D:\\a\\azerty-global-app\\azerty-global-app\\binskim-sarif\\binskim-x64.sarif"]
+build	Upload BinSkim SARIF	2026-09-22T12:14:17.0347754Z Validating D:\a\azerty-global-app\azerty-global-app\binskim-sarif\binskim-arm64.sarif
+build	Upload BinSkim SARIF	2026-09-22T12:14:17.0787264Z Validating D:\a\azerty-global-app\azerty-global-app\binskim-sarif\binskim-x64.sarif
+build	Upload BinSkim SARIF	2026-09-22T12:14:17.1018578Z Combining SARIF files using the CodeQL CLI
+build	Upload BinSkim SARIF	2026-09-22T12:14:17.1105786Z ##[error]The CodeQL Action does not support uploading multiple SARIF runs with the same category. Please update your workflow to upload a single run per category. For more information, see https://github.blog/changelog/2025-07-21-code-scanning-will-stop-combining-multiple-sarif-runs-uploaded-in-the-same-sarif-file/
+build	Post Upload BinSkim SARIF	﻿2026-09-22T12:14:17.5440854Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Post Upload BinSkim SARIF	2026-09-22T12:14:17.5442030Z Post job cleanup.
+build	Post Upload BinSkim SARIF	2026-09-22T12:14:17.8316459Z ##[group]Uploading combined SARIF debug artifact
+build	Post Upload BinSkim SARIF	2026-09-22T12:14:17.8318266Z ##[endgroup]
+build	Post Run actions/checkout@v4	﻿2026-09-22T12:14:17.8648340Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	Post Run actions/checkout@v4	2026-09-22T12:14:17.8649620Z Post job cleanup.
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.0554264Z [command]"C:\Program Files\Git\bin\git.exe" version
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.0883994Z git version 2.55.0.windows.5
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.0958486Z Temporarily overriding HOME='D:\a\_temp\7c4ac6c4-789a-4758-a1d2-24a566fe1f17' before making global git config changes
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.0959615Z Adding repository directory to the temporary git global config as a safe directory
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.0972715Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\azerty-global-app\azerty-global-app
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.1290293Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.1620044Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.7175045Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.7430180Z http.https://github.com/.extraheader
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.7478044Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+build	Post Run actions/checkout@v4	2026-09-22T12:14:18.7793947Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+build	Post Run actions/checkout@v4	2026-09-22T12:14:19.3369424Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Post Run actions/checkout@v4	2026-09-22T12:14:19.3674065Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+build	Complete job	﻿2026-09-22T12:14:19.9324031Z Cleaning up orphan processes
+build	Complete job	2026-09-22T12:14:19.9807318Z Terminate orphan process: pid (6964) (dotnet)
+build	Complete job	2026-09-22T12:14:20.0049863Z Terminate orphan process: pid (588) (conhost)
+build	Complete job	2026-09-22T12:14:20.0461845Z Terminate orphan process: pid (7140) (VBCSCompiler)
+build	Complete job	2026-09-22T12:14:20.0805628Z Terminate orphan process: pid (3608) (conhost)
+build	Complete job	2026-09-22T12:14:20.1132952Z Terminate orphan process: pid (3604) (vctip)
+build	Complete job	2026-09-22T12:14:20.1508035Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/attest-build-provenance/predicate@1176ef556905f349f669722abf30bce1a6e16e01, actions/attest@ce27ba3b4a9a139d9a20a4a07d69fabb52f1e5bc, actions/checkout@v4, actions/setup-dotnet@v4, actions/setup-python@v5, actions/upload-artifact@v4, github/codeql-action/upload-sarif@v3. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

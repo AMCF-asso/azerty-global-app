@@ -1,0 +1,283 @@
+[
+  {
+    "name": "core-tests",
+    "command": [
+      "dotnet",
+      "test",
+      "src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "--logger",
+      "trx;LogFileName=core.trx",
+      "--results-directory",
+      "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence"
+    ],
+    "exit": 0,
+    "seconds": 7.14,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:27.215069+00:00"
+  },
+  {
+    "name": "windows-tests",
+    "command": [
+      "dotnet",
+      "test",
+      "src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "--logger",
+      "trx;LogFileName=windows.trx",
+      "--results-directory",
+      "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence"
+    ],
+    "exit": 0,
+    "seconds": 5.98,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:33.194708+00:00"
+  },
+  {
+    "name": "app-tests",
+    "command": [
+      "dotnet",
+      "test",
+      "src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "--logger",
+      "trx;LogFileName=app.trx",
+      "--results-directory",
+      "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence"
+    ],
+    "exit": 0,
+    "seconds": 15.8,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:48.995641+00:00"
+  },
+  {
+    "name": "python-tests",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-v"
+    ],
+    "exit": 1,
+    "seconds": 10.2,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.202480+00:00"
+  },
+  {
+    "name": "identity",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/list-identity-literals.py"
+    ],
+    "exit": 0,
+    "seconds": 0.11,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.311487+00:00"
+  },
+  {
+    "name": "layout-schema",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/validate-layout.py"
+    ],
+    "exit": 2,
+    "seconds": 0.05,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.349225+00:00"
+  },
+  {
+    "name": "layout-provenance",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/check-layout-provenance.py"
+    ],
+    "exit": 2,
+    "seconds": 0.16,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.506806+00:00"
+  },
+  {
+    "name": "doc-versions",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/check-doc-versions.py"
+    ],
+    "exit": 0,
+    "seconds": 0.06,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.573130+00:00"
+  },
+  {
+    "name": "doc-versions-release",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/check-doc-versions.py",
+      "--release"
+    ],
+    "exit": 1,
+    "seconds": 0.08,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.643683+00:00"
+  },
+  {
+    "name": "verify-release",
+    "command": [
+      "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "-NoProfile",
+      "-File",
+      "scripts/Verify-Release.ps1"
+    ],
+    "exit": 127,
+    "seconds": 0.0,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.645683+00:00"
+  },
+  {
+    "name": "freshness",
+    "command": [
+      "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "-NoProfile",
+      "-File",
+      "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\check_freshness.ps1"
+    ],
+    "exit": 127,
+    "seconds": 0.0,
+    "application_control_block": false,
+    "at": "2026-09-22T11:01:59.646684+00:00"
+  },
+  {
+    "name": "nuget-vulnerabilities",
+    "command": [
+      "dotnet",
+      "list",
+      "src/AZERTYGlobal.csproj",
+      "package",
+      "--vulnerable",
+      "--include-transitive",
+      "--format",
+      "json"
+    ],
+    "exit": 1,
+    "seconds": 12.05,
+    "application_control_block": false,
+    "at": "2026-09-22T11:02:11.705247+00:00"
+  },
+  {
+    "name": "python-tests",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-v"
+    ],
+    "exit": 0,
+    "seconds": 10.38,
+    "application_control_block": false,
+    "at": "2026-09-22T11:03:47.000250+00:00"
+  },
+  {
+    "name": "layout-schema",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/validate-layout.py"
+    ],
+    "exit": 0,
+    "seconds": 0.12,
+    "application_control_block": false,
+    "at": "2026-09-22T11:03:47.123382+00:00"
+  },
+  {
+    "name": "verify-release",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.EXE",
+      "-NoProfile",
+      "-File",
+      "scripts/Verify-Release.ps1"
+    ],
+    "exit": 0,
+    "seconds": 0.75,
+    "application_control_block": false,
+    "at": "2026-09-22T11:03:47.864613+00:00"
+  },
+  {
+    "name": "freshness",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.EXE",
+      "-NoProfile",
+      "-File",
+      "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\check_freshness.ps1"
+    ],
+    "exit": 1,
+    "seconds": 0.66,
+    "application_control_block": false,
+    "at": "2026-09-22T11:03:48.532952+00:00"
+  },
+  {
+    "name": "layout-provenance",
+    "command": [
+      "C:\\Users\\antoi\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "scripts/check-layout-provenance.py"
+    ],
+    "exit": 0,
+    "seconds": 0.91,
+    "application_control_block": false,
+    "at": "2026-09-22T11:06:50.171612+00:00"
+  },
+  {
+    "name": "nuget-vulnerabilities",
+    "command": [
+      "dotnet",
+      "list",
+      "src/AZERTYGlobal.csproj",
+      "package",
+      "--vulnerable",
+      "--include-transitive",
+      "--format",
+      "json"
+    ],
+    "exit": 0,
+    "seconds": 1.11,
+    "application_control_block": false,
+    "at": "2026-09-22T11:06:51.267593+00:00"
+  },
+  {
+    "name": "windows-tests",
+    "command": [
+      "dotnet",
+      "test",
+      "src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj",
+      "-c",
+      "Release",
+      "--no-restore",
+      "--logger",
+      "trx;LogFileName=windows.trx",
+      "--results-directory",
+      "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence"
+    ],
+    "exit": 0,
+    "seconds": 1.58,
+    "application_control_block": false,
+    "at": "2026-09-22T11:27:20.342670+00:00"
+  }
+]

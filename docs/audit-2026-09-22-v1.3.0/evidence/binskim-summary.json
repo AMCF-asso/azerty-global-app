@@ -1,0 +1,857 @@
+{
+  "version": "4.4.9.11",
+  "url": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.binskim/4.4.9.11/microsoft.codeanalysis.binskim.4.4.9.11.nupkg",
+  "package_sha256": "69678989cbc273b5b50fcf98fb0fd978e1e35a3f844acb24254b31f0ce90c447",
+  "executable": "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\dependencies\\binskim\\tools\\net9.0\\win-x64\\BinSkim.exe",
+  "runs": [
+    {
+      "arch": "x64",
+      "exit": 1,
+      "command": [
+        "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\dependencies\\binskim\\tools\\net9.0\\win-x64\\BinSkim.exe",
+        "analyze",
+        "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence\\ci-exes\\AZERTYGlobal-x64.exe",
+        "--output",
+        "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence\\binskim-x64.sarif",
+        "--disable-telemetry",
+        "--kind",
+        "Fail;Pass;Review;Open;NotApplicable"
+      ],
+      "sarif_exists": true,
+      "results": [
+        {
+          "ruleId": "BA2016",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "MarkImageAsNXCompatible",
+              "image is a 64-bit binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2018",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableSafeSEH",
+              "image is not a 32-bit binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3001",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnablePositionIndependentExecutable",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "DoNotMarkStackAsExecutable",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3003",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableStackProtector",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3004",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "GenerateRequiredSymbolFormat",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3005",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableStackClashProtection",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3006",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableNonExecutableStack",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3010",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableReadOnlyRelocations",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3011",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableBindNow",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3030",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "UseGccCheckedFunctions",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3031",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableClangSafeStack",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA4002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "ReportElfOrMachoCompilerData",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA5001",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnablePositionIndependentExecutableMachO",
+              "image is not a MachO binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA5002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "DoNotAllowExecutableStack",
+              "image is not a MachO binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6001",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "DisableIncrementalLinkingInReleaseBuilds",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EliminateDuplicateStrings",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6004",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableComdatFolding",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6005",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableOptimizeReferences",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6006",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "EnableLinkTimeCodeGeneration",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2001",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2005",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2008",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2009",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2010",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2012",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2015",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2019",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2021",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-x64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2022",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-x64.exe",
+              "SignSecurely",
+              "image is not signed "
+            ]
+          }
+        }
+      ],
+      "invocations": [
+        [
+          {
+            "startTimeUtc": "2026-09-22T11:13:39.936Z",
+            "endTimeUtc": "2026-09-22T11:13:41.109Z",
+            "toolConfigurationNotifications": [
+              {
+                "locations": [
+                  {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "file:///D:/My%20files/Keyboard%20Layouts/projects/azerty-global/components/microsoft-store/docs/audit-2026-09-22-v1.3.0/evidence/ci-exes/AZERTYGlobal-x64.exe"
+                      }
+                    }
+                  }
+                ],
+                "message": {
+                  "text": "'AZERTYGlobal-x64.exe' was not evaluated because its PDB could not be loaded (E_PDB_NOT_FOUND)."
+                },
+                "level": "error",
+                "descriptor": {
+                  "id": "ERR997.ExceptionLoadingPdb"
+                }
+              }
+            ],
+            "executionSuccessful": false
+          }
+        ]
+      ]
+    },
+    {
+      "arch": "arm64",
+      "exit": 1,
+      "command": [
+        "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\dependencies\\binskim\\tools\\net9.0\\win-x64\\BinSkim.exe",
+        "analyze",
+        "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence\\ci-exes\\AZERTYGlobal-arm64.exe",
+        "--output",
+        "D:\\My files\\Keyboard Layouts\\projects\\azerty-global\\components\\microsoft-store\\docs\\audit-2026-09-22-v1.3.0\\evidence\\binskim-arm64.sarif",
+        "--disable-telemetry",
+        "--kind",
+        "Fail;Pass;Review;Open;NotApplicable"
+      ],
+      "sarif_exists": true,
+      "results": [
+        {
+          "ruleId": "BA2016",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "MarkImageAsNXCompatible",
+              "image is a 64-bit binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2018",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableSafeSEH",
+              "image is not a 32-bit binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2025",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableShadowStack",
+              "image is an ARM64 binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3001",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnablePositionIndependentExecutable",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "DoNotMarkStackAsExecutable",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3003",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableStackProtector",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3004",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "GenerateRequiredSymbolFormat",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3005",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableStackClashProtection",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3006",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableNonExecutableStack",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3010",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableReadOnlyRelocations",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3011",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableBindNow",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3030",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "UseGccCheckedFunctions",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA3031",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableClangSafeStack",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA4002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "ReportElfOrMachoCompilerData",
+              "image is not an ELF binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA5001",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnablePositionIndependentExecutableMachO",
+              "image is not a MachO binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA5002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "DoNotAllowExecutableStack",
+              "image is not a MachO binary"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6001",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "DisableIncrementalLinkingInReleaseBuilds",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6002",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EliminateDuplicateStrings",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6004",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableComdatFolding",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6005",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableOptimizeReferences",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA6006",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "EnableLinkTimeCodeGeneration",
+              "an exception occurred attempting to load its pdb"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2001",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2005",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2008",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2009",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2010",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2012",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2015",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2019",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2021",
+          "level": "none",
+          "kind": "pass",
+          "message": {
+            "id": "Pass",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe"
+            ]
+          }
+        },
+        {
+          "ruleId": "BA2022",
+          "level": "none",
+          "kind": "notApplicable",
+          "message": {
+            "id": "NotApplicable_InvalidMetadata",
+            "arguments": [
+              "AZERTYGlobal-arm64.exe",
+              "SignSecurely",
+              "image is not signed "
+            ]
+          }
+        }
+      ],
+      "invocations": [
+        [
+          {
+            "startTimeUtc": "2026-09-22T11:13:41.439Z",
+            "endTimeUtc": "2026-09-22T11:13:41.615Z",
+            "toolConfigurationNotifications": [
+              {
+                "locations": [
+                  {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "file:///D:/My%20files/Keyboard%20Layouts/projects/azerty-global/components/microsoft-store/docs/audit-2026-09-22-v1.3.0/evidence/ci-exes/AZERTYGlobal-arm64.exe"
+                      }
+                    }
+                  }
+                ],
+                "message": {
+                  "text": "'AZERTYGlobal-arm64.exe' was not evaluated because its PDB could not be loaded (E_PDB_NOT_FOUND)."
+                },
+                "level": "error",
+                "descriptor": {
+                  "id": "ERR997.ExceptionLoadingPdb"
+                }
+              }
+            ],
+            "executionSuccessful": false
+          }
+        ]
+      ]
+    }
+  ]
+}
