@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 namespace AZERTYGlobal;
 
@@ -712,7 +712,22 @@ sealed class SettingsWindow : IDisposable
     }
 
     private void InsertTab(int index, string text)
+        => SendTabText(Win32.TCM_INSERTITEMW, index, text);
+
+    /// <summary>Réécrit le libellé d'un onglet déjà posé. Appelé par
+    /// <see cref="RefreshLanguageTexts"/> : sans lui, la bande gardait les libellés de la
+    /// langue d'origine sur une fenêtre entièrement retraduite — « Général / Applications /
+    /// Langue » sur une fenêtre anglaise (R10 de la revue du 2026-09-21).</summary>
+    private void SetTabText(int index, string text)
+        => SendTabText(Win32.TCM_SETITEMW, index, text);
+
+    /// <summary>Envoi commun à l'insertion et à la mise à jour : même <c>TCITEMW</c>, même
+    /// masque, même libération. Les deux chemins partagent ce corps pour qu'un libellé
+    /// posé et un libellé retraduit ne puissent pas diverger de forme.</summary>
+    private void SendTabText(uint message, int index, string text)
     {
+        if (_hWndTabStrip == IntPtr.Zero) return;
+
         IntPtr pText = Marshal.StringToHGlobalUni(text);
         try
         {
@@ -721,7 +736,7 @@ sealed class SettingsWindow : IDisposable
             try
             {
                 Marshal.StructureToPtr(item, pItem, false);
-                Win32.SendMessageW(_hWndTabStrip, Win32.TCM_INSERTITEMW, (IntPtr)index, pItem);
+                Win32.SendMessageW(_hWndTabStrip, message, (IntPtr)index, pItem);
             }
             finally { Marshal.FreeHGlobal(pItem); }
         }
@@ -1484,7 +1499,14 @@ sealed class SettingsWindow : IDisposable
         _showCaptureHint = captureHint;
         Win32.SetWindowTextW(_hWndValidation, text);
         if (_hWnd != IntPtr.Zero && _hWndValidation != IntPtr.Zero)
+        {
+            // Le message fait grandir le contenu, parfois de deux lignes. Sans remesure,
+            // la fenêtre gardait sa hauteur et le message débordait sans que le défilement
+            // s'arme : le bas du contenu devenait inatteignable (R12 de la revue du
+            // 2026-09-21). Même enchaînement que OnLanguageChanged, pour la même raison.
+            FitWindowToContent();
             RepositionControls();
+        }
     }
 
     private void ClearCaptureHintIfVisible()
@@ -1560,6 +1582,12 @@ sealed class SettingsWindow : IDisposable
     private void RefreshLanguageTexts()
     {
         Win32.SetWindowTextW(_hWnd, L.Settings_WindowTitle);
+        // La bande d'onglets n'est pas un contrôle à texte de fenêtre : ses trois libellés
+        // vivent dans le contrôle onglet et ne se réécrivent qu'avec TCM_SETITEMW. Ils
+        // étaient les seuls oubliés de cette fonction.
+        SetTabText(0, L.Settings_TabGeneral);
+        SetTabText(1, L.Settings_TabApplications);
+        SetTabText(2, L.Settings_TabLanguageMaintenance);
         Win32.SetWindowTextW(_hWndLinkReset, L.Settings_LinkResetDefaults);
         Win32.SetWindowTextW(_hWndChkAutoStart, L.Settings_AutoStart);
         Win32.SetWindowTextW(_hWndChkNotifications, L.Settings_Notifications);
