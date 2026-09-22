@@ -212,3 +212,47 @@ lot : **18 / 207 / 439 = 664**.
 
 R13 à R17 (mineurs), les témoins creux § 3.3 et § 3.4 (reportés), puis points 5 et 6 :
 reconstruire, WACK, réécrire la recette, VM minimale.
+
+## 11. Suite donnée le 2026-09-22 (soir) : R13 à R17 et les témoins creux
+
+**Le tableau du § 1 est intégralement soldé.** R1 à R5 et R8 à R12 corrigés (§§ 7, 8, 10),
+R6 reformulé et R7 reporté en 1.3.1 (§ 9), R13 à R17 ci-dessous. Les témoins creux
+§ 3.3 et § 3.4 sont traités ; § 3.5 à § 3.10 restent ouverts.
+
+| # | Correctif | Où | Preuve |
+|---|---|---|---|
+| R13 | Une touche morte en attente est abandonnée quand l'utilisateur change d'application, et non plus seulement quand le premier plan impose une suspension. L'identité comparée est celle de la **dernière application** (`ForegroundMonitor.LastApplicationIdentity`), pas du premier plan courant : le shell et nos propres fenêtres ne détruisent rien. Décision pure `ShouldAbandonDeadKeyOnApplicationChange`, couture `ApplyForegroundApplication`. | `KeyMapper.cs`, `ForegroundMonitor.cs` | `ApplicationChangeDeadKeyTests`, 15 cas ; mutation : décision neutralisée → **4 rouges, les bons** |
+| R14 | **Aucun correctif de code — le constat visait la recette.** Une fenêtre élevée ne se classe pas en `UnknownForeground` : `OpenProcess(QUERY_LIMITED_INFORMATION)` traverse l'élévation, le nom est lu, le mode vaut `Default`. C'est le comportement voulu (VM-13 : le remappage traverse une fenêtre élevée ; suspendre casserait la frappe dans un terminal administrateur). Le résidu réel est que `EnumProcessModules` échoue en silence, ce qui prive la détection auto de jeu de sa voie « modules » sur un processus élevé — la détection par nom tient, et `NativeCombo` n'est pas une suspension. | recette, geste 8 | Attente du geste 8 réécrite |
+| R15 | Rien ne s'annonce tant que le premier plan est une surface éphémère du shell ; une fois le premier plan posé, l'annonce ne part que si elle dit autre chose que la précédente. Ce qui est dû reste dû. Décision **entièrement pure**, état compris : `NextAnnouncement(ref CompatibilityAnnouncementState, …)`. Seules les bulles passent par là. | `TrayApplication.cs` | `ShellHopBalloonTests`, 7 cas joués comme des séquences ; mutation : garde du shell retirée → **3 rouges, les bons** |
+| R16 | `ProductIdentity.DiagnosticUrl` devient le corps unique des cinq liens de retour ; `OsDescription` unifie la description de Windows. Le `source=app-notification` de la sollicitation est conservé, le site le lit depuis la 1.2.0. | `ProductIdentity.cs`, `TrayApplication.cs`, `UsageStatsWindow.cs`, `OnboardingWindow.cs` | `DiagnosticUrlTests`, 5 cas dont le séparateur et l'échappement |
+| R17 | Le Changelog annonçait quatre blocs de menu ; `ShowContextMenu` en sépare cinq. Le menu n'a pas bougé, sa description était fausse. | `Changelog.md` | Lecture de `ShowContextMenu` |
+| § 3.4 | `MockWin32Api.ToUnicodeEx` sait rendre −1 sur une touche morte native déclarée. `IsDeadKeyOnLayout` pouvait jusque-là **ne jamais** valoir vrai sous test : le repli Alt+code du geste 19 n'avait aucune couverture dans sa branche utile. | `MockWin32Api.cs` | `NativeDeadKeyFallbackTests`, 4 cas dont la réciproque et le cache |
+| § 3.3 | ⚠️ **Pas de couverture neuve — une limite écrite.** Les deux témoins de pause volontaire éprouvent une branche inatteignable en production : une pause met `PassThroughAll` à vrai (`ShouldBlockHookCompletely`) et le hook est le seul appelant de `ProcessKey`. La garde reste, défensive. La vraie couture est `StopPause` → `SyncState(preservePendingDeadKey)`, tenue par `PauseResumeDeadKeyTests` depuis R4. | `DeadKeyWhileSuspendedTests.cs` | — |
+
+### Ce que ce lot ne prouve pas
+
+- ⛔ **Les suites n'ont pas pu être mesurées après le dernier lot** : Application Control a
+  refusé les assemblies reconstruites (`0x800711C7`) sur les quatre dernières tentatives,
+  en Release comme en Debug. Mesuré avant ce blocage, et donc valable pour R13, R15 et R16 :
+  `TypingEngine.Windows.Tests` **222 / 222**, `AZERTYGlobal.Tests` **451 / 451**. Le lot des
+  témoins creux ajoute 4 cas. Attendu en CI : **18 / 226 / 451 = 695**. ⚠️ Un « 0 test » se
+  lit comme « tout passe » dans un code de sortie : c'est la ligne de comptage qui fait foi,
+  jamais le vert du shell.
+- Build Release des trois projets à HEAD : **0 erreur, 2 avertissements préexistants**
+  (`TrayApplication.cs:1522,1535`).
+- R15 réduit la rafale, il ne la supprime pas dans tous les cas : deux jeux **différents**
+  alternés continuent de produire une bulle par bascule. C'est voulu — l'information est
+  neuve à chaque fois. Ce qui disparaît est la bulle de reprise du passage par le shell et
+  l'aller-retour par la barre des tâches, qui n'apprenaient rien.
+- R13 et R15 reposent tous deux sur `IsTransientShellForeground` et
+  `LastApplicationIdentity`, donc sur la liste des cinq surfaces du shell. Une sixième
+  surface non listée les ferait tomber ensemble — la liste est tenue par
+  `ApplicationChangeDeadKeyTests` et `ShellRaceSuspensionTests`, mais aucune des deux ne
+  peut prouver qu'elle est complète.
+- Les témoins creux § 3.5 à § 3.10 restent ouverts, dont AG130-19 (`TIMER_FOREGROUND_DEBOUNCE`
+  jamais armé, branche morte).
+
+### Reste à faire pour la 1.3.0
+
+Points 5 et 6 de l'ordre de marche, inchangés : reconstruire le bundle, WACK, réécrire la
+table du paquet et les gestes 34-38, puis la VM minimale d'environ 12 gestes.
