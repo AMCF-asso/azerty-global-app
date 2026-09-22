@@ -19,6 +19,23 @@ Suite des [corrections de l’audit](../corrections/README.md). Arbitrages d’A
 
 **Anomalie non expliquée, consignée :** un petit témoin console ou WinExe .NET 8 NativeAOT avec `ControlFlowGuard=Guard` s’arrête au premier `throw` sur ce poste (0xC0000409, sous-code 0x0A). Le phénomène est identique avec ILCompiler 8.0.29 ou 8.0.31, avec ou sans `/CETCOMPAT`, avec ou sans le manifeste de l’app ; sans CFG, il passe (`evidence/cet/temoin/`). **L’application réelle ne le reproduit pas** : `throw` et `catch` dans `ConfigManager.EnsureLoaded` fonctionnent avec CFG, hors paquet sur l’hôte comme packagée dans le Sandbox. La 1.1.0 en production porte le même CFG et n’a laissé aucun plantage dans le journal de ce poste depuis le 28/07. La ligne A11 de la recette exerce ce chemin sur le paquet final.
 
+## Partner Center — relevé en lecture seule du 2026-09-22 (23 h)
+
+Aucun brouillon n’est ouvert ; la soumission 15 (modifiée le 02/09) est en ligne avec `AZERTYGlobal-1.1.0.0.msixbundle` (Desktop, minimum 10.0.17763.0).
+
+| Élément | État en ligne | À faire lors de la soumission 1.3.0 |
+|---|---|---|
+| Notes de certification | Désormais sur la page produit « Additional Testing Info » ; texte encore « Update 1.1.0 — 2026-07-23 » | Remplacer par la section « Notes pour l’équipe de certification » de `msix/Fiche Store.md` |
+| Nouveautés FR | « Version 1.1.0 : … » | Coller « Nouveautés de cette version » (FR) et « What’s new » (EN) de la fiche |
+| Description | Valeur masquée à la lecture automatique : mention des dons non vérifiée | Recoller la description longue FR/EN de la fiche, qui mentionne l’AMCF et HelloAsso |
+| Propriétés | Utilitaires ; données personnelles « oui », politique `https://azerty.global/mentions-legales` ; support `https://azerty.global` | Inchangé |
+| Déclaration d’accessibilité | Cochée | **Décision d’Antoine du 2026-09-22 : la garder et rendre la 1.3.0 conforme aux recommandations du Store avant soumission** (chantier ouvert, voir ci-dessous) |
+| Classification | IARC 3+ / PEGI 3 / ESRB Everyone | Inchangé, la 1.3.0 n’ajoute aucun appel réseau |
+| Publication | « Dès la certification » | **Conservé** (décision du 2026-09-22) |
+| Paquets | 1.1.0.0 seul | Ajouter le bundle final ; le Store sert la version la plus haute |
+
+**Conséquence de la décision d’accessibilité :** le code va changer, donc le bundle `768f13fb…` n’est plus le candidat de soumission. La recette et le WACK se feront sur le bundle produit après ce chantier ; le kit reste valable tel quel, seule l’empreinte change.
+
 ## À faire par Antoine, dans l’ordre
 
 1. Récupérer le bundle CI du run ci-dessus et vérifier son empreinte (`gh attestation verify <bundle> -R AMCF-asso/azerty-global-app`).
