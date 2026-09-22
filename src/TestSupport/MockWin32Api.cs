@@ -1,4 +1,4 @@
-// Mock IWin32Api pour les tests d'intégration niveau 3.
+﻿// Mock IWin32Api pour les tests d'intégration niveau 3.
 //
 // Limitations connues (cf. plan v0.9.7 §« Limitations du mock ») :
 // - Timing exact des events Windows (debounce, ordering rapide) non reproductible
@@ -121,8 +121,17 @@ internal sealed class MockWin32Api : IWin32Api
     /// qui change entre deux lectures d'un même Recompute.</summary>
     public Queue<IntPtr> ForegroundWindowScript { get; } = new();
 
-    public IntPtr GetForegroundWindow() =>
-        ForegroundWindowScript.Count > 0 ? ForegroundWindowScript.Dequeue() : ForegroundWindow;
+    /// <summary>Nombre de lectures de GetForegroundWindow depuis la création du mock.
+    /// Un témoin qui scripte une file de fenêtres doit vérifier qu'elle a été **consommée** :
+    /// sans ce compteur, un test peut empiler des fenêtres que le code ne lit jamais et
+    /// passer avec ou sans le correctif qu'il prétend prouver (constat du 2026-09-21).</summary>
+    public int ForegroundWindowReads { get; private set; }
+
+    public IntPtr GetForegroundWindow()
+    {
+        ForegroundWindowReads++;
+        return ForegroundWindowScript.Count > 0 ? ForegroundWindowScript.Dequeue() : ForegroundWindow;
+    }
 
     public bool TryGetForegroundProcess(out string? processName, out string? fullPath, out IntPtr hkl, out uint pid)
     {

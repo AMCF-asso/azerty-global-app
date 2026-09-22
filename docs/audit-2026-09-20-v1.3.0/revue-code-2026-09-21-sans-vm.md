@@ -181,3 +181,34 @@ gauche.
 
 **R10** (libellés d’onglets jamais retraduits — `TCM_SETITEMW` absent du code) et **R12**.
 Puis points 5 et 6 : reconstruire, WACK, réécrire la recette, VM minimale.
+
+## 10. Suite donnée le 2026-09-22 : R10, R12 et le témoin creux du § 3.2
+
+**Le tableau du § 1 est entièrement soldé pour la 1.3.0** : R1 à R5, R8 à R12 corrigés,
+R6 reformulé et R7 reporté (§ 9). Restent **R13 à R17**, mineurs, non traités.
+
+| # | Correctif | Où | Preuve |
+|---|---|---|---|
+| R10 | `RefreshLanguageTexts` réécrit les trois libellés d’onglets par `TCM_SETITEMW` (constante ajoutée à `Win32.cs`). `InsertTab` et le nouveau `SetTabText` partagent un seul corps, `SendTabText`, pour qu’un libellé posé et un libellé retraduit ne divergent pas de forme. | `SettingsWindow.cs`, `Win32.cs` | ⚠️ Hors de portée de la suite (zéro test de fenêtre, § 3.8) : recette VM, bascule FR↔EN dans Paramètres |
+| R12 | `SetValidationMessage` appelle `FitWindowToContent` avant `RepositionControls`, même enchaînement que `OnLanguageChanged` et pour la même raison : le message change la hauteur du contenu. | `SettingsWindow.cs` | ⚠️ Idem : recette VM, message long après une réinitialisation |
+| § 3.2 | `ShellRaceSuspensionTests` réécrit. Le témoin vérifie d’abord que le scénario est joué — la fenêtre est relue, la file est consommée — puis couvre les **cinq** surfaces du shell et garde une réciproque vivante (suivi indisponible → suspension). `MockWin32Api` compte ses lectures de `GetForegroundWindow`. | `ShellRaceSuspensionTests.cs`, `MockWin32Api.cs` | **207 tests, 0 échec** ; mutation jouée : file non consommée → **1 rouge, le bon** |
+
+### Ce que la mutation a montré
+
+L’ancien témoin empilait deux fenêtres et n’en lisait aucune : depuis le correctif de la
+1.3.0, `Recompute` ne lit la fenêtre qu’une fois. Le nouveau l’assertion explicitement, et
+la mutation le prouve — `GetForegroundWindow` qui cesse de dépiler fait rougir
+`La_fenetre_qui_change_entre_deux_recomputes_ne_suspend_pas`, **et elle seule**.
+
+⚠️ La réciproque `Seul_un_suivi_indisponible_suspend_encore` n’est pas décorative : sans
+elle, les cinq cas du shell passeraient aussi bien si **plus rien** ne suspendait.
+
+**Mesures de ce lot** : `TypingEngine.Windows.Tests` a bien tourné sur ce poste —
+**207 / 207**, Application Control ne bloque pas cette assembly. Les deux autres suites
+restent non mesurées ici (`0x800711C7` sur `AZERTY Global.dll`). Attendu en CI après ce
+lot : **18 / 207 / 439 = 664**.
+
+### Reste ouvert
+
+R13 à R17 (mineurs), les témoins creux § 3.3 et § 3.4 (reportés), puis points 5 et 6 :
+reconstruire, WACK, réécrire la recette, VM minimale.

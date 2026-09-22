@@ -1,4 +1,4 @@
-// Déclarations Win32 partagées — P/Invoke, structures et constantes communes
+﻿// Déclarations Win32 partagées — P/Invoke, structures et constantes communes
 using System.Runtime.InteropServices;
 
 namespace AZERTYGlobal;
@@ -163,6 +163,7 @@ static class Win32
     public const uint TCM_GETCURSEL = TCM_FIRST + 11;
     public const uint TCM_SETCURSEL = TCM_FIRST + 12;
     public const uint TCM_INSERTITEMW = TCM_FIRST + 62;
+    public const uint TCM_SETITEMW = TCM_FIRST + 61;
     public const uint TCM_ADJUSTRECT = TCM_FIRST + 40;
     public const uint TCM_SETITEMSIZE = TCM_FIRST + 41;
     public const uint TCM_DELETEALLITEMS = TCM_FIRST + 9;
