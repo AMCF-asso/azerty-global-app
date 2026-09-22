@@ -121,3 +121,11 @@ jobs:
         with:
           sarif_file: binskim-sarif/binskim-arm64.sarif
           category: binskim-arm64
+
+      - name: Conserver les preuves BinSkim même en cas d'échec
+        if: always() && hashFiles('binskim-sarif/*') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: binskim-evidence
+          path: binskim-sarif/
+          retention-days: 90
