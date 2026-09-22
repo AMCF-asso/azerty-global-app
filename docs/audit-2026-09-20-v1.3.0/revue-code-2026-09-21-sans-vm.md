@@ -231,13 +231,14 @@ R6 reformulé et R7 reporté en 1.3.1 (§ 9), R13 à R17 ci-dessous. Les témoin
 
 ### Ce que ce lot ne prouve pas
 
-- ⛔ **Les suites n'ont pas pu être mesurées après le dernier lot** : Application Control a
-  refusé les assemblies reconstruites (`0x800711C7`) sur les quatre dernières tentatives,
-  en Release comme en Debug. Mesuré avant ce blocage, et donc valable pour R13, R15 et R16 :
-  `TypingEngine.Windows.Tests` **222 / 222**, `AZERTYGlobal.Tests` **451 / 451**. Le lot des
-  témoins creux ajoute 4 cas. Attendu en CI : **18 / 226 / 451 = 695**. ⚠️ Un « 0 test » se
-  lit comme « tout passe » dans un code de sortie : c'est la ligne de comptage qui fait foi,
-  jamais le vert du shell.
+- **Les trois suites sont mesurées sur ce poste à HEAD : 18 / 226 / 451 = 695, 0 échec,
+  0 ignoré.** ⚠️ Il a fallu cinq tentatives : Application Control a refusé les assemblies
+  reconstruites (`0x800711C7`) sur quatre essais consécutifs, en Release comme en Debug,
+  avant de les accepter sans que rien n'ait changé. Le blocage est intermittent et ne dit
+  rien du code. ⛔ Il rend « `No test is available` » avec un code de sortie vert : c'est la
+  ligne de comptage qui fait foi, jamais le vert du shell. Cette puce a d'abord été écrite
+  comme « non mesurable », pendant la série de refus ; les chiffres ci-dessus la
+  remplacent.
 - Build Release des trois projets à HEAD : **0 erreur, 2 avertissements préexistants**
   (`TrayApplication.cs:1522,1535`).
 - R15 réduit la rafale, il ne la supprime pas dans tous les cas : deux jeux **différents**
