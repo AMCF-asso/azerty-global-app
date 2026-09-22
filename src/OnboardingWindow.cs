@@ -758,7 +758,8 @@ sealed class OnboardingWindow : IDisposable
                         if (_currentStep > 0) { _currentStep--; UpdateStepVisibility(); }
                         break;
                     case IDC_LINK_FEEDBACK_BANNER: case IDC_LINK_FEEDBACK:
-                        if (code == 0) OpenLink(ProductIdentity.Url("/feedback")); break;
+                        if (code == 0) OpenLink(ProductIdentity.DiagnosticUrl("/feedback",
+                            Program.Version, ProductIdentity.OsDescription(), "onboarding")); break;
                     case IDC_LINK_GUIDE:
                         if (code == 0) OpenLink(ProductIdentity.Url("/guide")); break;
                     case IDC_LINK_DISCORD:
