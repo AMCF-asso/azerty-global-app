@@ -72,7 +72,7 @@ Vous cherchez un symbole ? Tapez son nom et l'application vous montre où il se 
 ✅ GRATUIT ET OPEN SOURCE
 Licence EUPL 1.2 — code source disponible sur GitHub.
 
-L'entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l'AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n'est pas le collecteur.
+L'entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l'AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n'est ni le collecteur ni le parrain de la collecte.
 
 Site web : https://azerty.global
 
@@ -217,7 +217,7 @@ Looking for a symbol? Type its name and the app shows where it is on the keyboar
 ✅ FREE AND OPEN SOURCE
 Licensed under EUPL 1.2 — source code available on GitHub.
 
-The "Support the project" entry opens azerty.global/support in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is not the fundraiser.
+The "Support the project" entry opens azerty.global/support in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
 
 Website: https://azerty.global
 
@@ -326,7 +326,7 @@ Cette application utilise un hook clavier bas niveau (WH_KEYBOARD_LL via SetWind
 
 Points importants :
  • Le hook ne s'injecte dans aucun processus externe — tout le traitement se fait dans le processus de l'application.
- • L'application affiche un écran de consentement (OnboardingWindow) au premier lancement, conformément à la politique Store 10.2.8 sur la transparence des logiciels qui modifient le comportement du système.
+ • Le hook clavier n’est installé qu’après l’action explicite « Activer et essayer » ou « Activer AZERTY Global » dans l’accueil. Fermer l’accueil sans activer laisse le clavier système inchangé. L’accord est conservé localement ; une configuration ancienne sans cet accord le redemande une fois. Le lancement au démarrage de Windows reste un choix distinct.
  • Aucune frappe n'est journalisée, stockée durablement ou transmise. L'application n'effectue aucun envoi réseau automatique : le remapping, la recherche et les leçons fonctionnent localement ; seuls des journaux techniques locaux peuvent être écrits pour diagnostiquer les erreurs et la compatibilité.
  • L'application est un exécutable .NET 8.0 AOT natif (pas de runtime .NET requis).
  • La capacité runFullTrust est requise car c'est une application Desktop Bridge Win32.
@@ -383,4 +383,4 @@ Les fichiers suivants sont dans `msix/Assets/` :
 
 ---
 
-*Dernière mise à jour : 2026-09-21 (v1.3.0 — correctifs de recette VM et d’audit, non soumise)*
+*Dernière mise à jour : 2026-09-22 (v1.3.0 — correctifs de recette VM et d’audit, non soumise)*

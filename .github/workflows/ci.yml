@@ -2,7 +2,7 @@ name: CI build + audit sécu
 
 on:
   push:
-    branches: [main, release/**]
+    branches: [main, release/**, ci/verif]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -85,26 +85,10 @@ jobs:
       - name: Verify Release
         run: pwsh ./scripts/Verify-Release.ps1
 
+      # BinSkim est distribué comme exécutable autonome, pas comme dotnet tool.
+      # Le script épingle son empreinte et exige une analyse complète avec les PDB.
       - name: BinSkim hardening check
-        run: |
-          New-Item -ItemType Directory -Force -Path binskim-sarif | Out-Null
-          dotnet tool install --global Microsoft.CodeAnalysis.BinSkim
-          binskim analyze "src/bin/Release/net8.0-windows10.0.17763.0/win-x64/publish/AZERTY Global.exe" --output binskim-sarif/binskim-x64.sarif --pretty-print
-          binskim analyze "src/bin/Release/net8.0-windows10.0.17763.0/win-arm64/publish/AZERTY Global.exe" --output binskim-sarif/binskim-arm64.sarif --pretty-print
-        continue-on-error: true   # NuGet BinSkim install est instable, ne pas bloquer
-
-      - name: Detect BinSkim SARIF
-        id: binskim_sarif
-        if: always()
-        run: |
-          $files = @(Get-ChildItem -Path binskim-sarif -Filter *.sarif -ErrorAction SilentlyContinue)
-          if ($files.Count -gt 0) {
-            "found=true" >> $env:GITHUB_OUTPUT
-            $files | ForEach-Object { Write-Host "Found SARIF: $($_.FullName)" }
-          } else {
-            "found=false" >> $env:GITHUB_OUTPUT
-            Write-Warning "No BinSkim SARIF report was generated; skipping SARIF upload."
-          }
+        run: python scripts/check-binary-hardening.py
 
       - name: SHA256 artefacts
         run: |
@@ -124,8 +108,24 @@ jobs:
         with:
           subject-path: 'msix/AZERTYGlobal-*.msixbundle'
 
-      - name: Upload BinSkim SARIF
-        if: always() && steps.binskim_sarif.outputs.found == 'true'
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload BinSkim SARIF x64
+        if: always() && hashFiles('binskim-sarif/binskim-x64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: binskim-sarif
+          sarif_file: binskim-sarif/binskim-x64.sarif
+          category: binskim-x64
+
+      - name: Upload BinSkim SARIF ARM64
+        if: always() && hashFiles('binskim-sarif/binskim-arm64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: binskim-sarif/binskim-arm64.sarif
+          category: binskim-arm64
+
+      - name: Conserver les preuves BinSkim même en cas d'échec
+        if: always() && hashFiles('binskim-sarif/*') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: binskim-evidence
+          path: binskim-sarif/
+          retention-days: 90

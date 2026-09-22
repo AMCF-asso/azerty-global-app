@@ -1170,6 +1170,7 @@ sealed class VirtualKeyboard : IDisposable
                     // Texte sombre sur fond clair quand la touche est pressée
                     uint charColor = isPressed ? 0x00201C18 : (isDkOutput ? CLR_DK_CHAR : CLR_CHAR);
                     Win32.SetTextColor(hdc, charColor);
+                    displayChar = DisplayGlyph.ForStandaloneMark(displayChar);
                     Win32.DrawTextW(hdc, displayChar, displayChar.Length, ref charRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP);
                 }
 
