@@ -1,0 +1,6 @@
+cet2-off	etape 0 : demarrage sans exception  etape 1 : throw/catch local  
+cet2-on	etape 0 : demarrage sans exception  etape 1 : throw/catch local  
+cet2-nocfg-cet	etape 0 : demarrage sans exception  etape 1 : throw/catch local  etape 1 ok=1  etape 2 : throw profond + finally + filtre  etape 2 ok=500  etape 3 : thread secondaire  etape 3 ok=500  fin ok=True finallies=22000  
+cfg-default	etape 0 : demarrage sans exception  etape 1 : throw/catch local  
+cfg-829	etape 0 : demarrage sans exception  etape 1 : throw/catch local  
+cfg-manifest	etape 0 : demarrage sans exception  etape 1 : throw/catch local  

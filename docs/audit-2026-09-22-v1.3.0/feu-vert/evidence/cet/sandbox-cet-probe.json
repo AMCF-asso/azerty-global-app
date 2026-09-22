@@ -1,0 +1,30 @@
+﻿{
+    "cpu":  "13th Gen Intel(R) Core(TM) i5-13600K",
+    "os":  "10.0.26100.0",
+    "runs":  [
+                 {
+                     "variant":  "nocet",
+                     "sha256":  "897064B175CBB68CE1D243A00F3879608DA095A41A0BC0199C21D37C447349E6",
+                     "aliveAt5s":  true,
+                     "userShadowStack":  "OFF",
+                     "userShadowStackStrict":  "OFF",
+                     "cfg":  "ON",
+                     "errorLog":  "[2026-09-22T22:16:53] ConfigManager.EnsureLoaded: JsonException: La configuration doit Ãªtre un objet JSON. | [2026-09-22T22:16:53] ConfigManager.Save: IOException: Sauvegarde ignoree: config.json existant non charge. | [2026-09-22T22:16:53] ConfigManager.Save: IOException: Sauvegarde ignoree: config.json existant non charge.",
+                     "crashEvents":  [
+
+                                     ]
+                 },
+                 {
+                     "variant":  "cet",
+                     "sha256":  "59D3EADB63C1ACAB2AFC480CD30D10C5A6757565379394B1971E9B4D83385B53",
+                     "aliveAt5s":  true,
+                     "userShadowStack":  "ON",
+                     "userShadowStackStrict":  "OFF",
+                     "cfg":  "ON",
+                     "errorLog":  "[2026-09-22T22:17:01] ConfigManager.EnsureLoaded: JsonException: La configuration doit Ãªtre un objet JSON. | [2026-09-22T22:17:01] ConfigManager.Save: IOException: Sauvegarde ignoree: config.json existant non charge. | [2026-09-22T22:17:01] ConfigManager.Save: IOException: Sauvegarde ignoree: config.json existant non charge.",
+                     "crashEvents":  [
+
+                                     ]
+                 }
+             ]
+}

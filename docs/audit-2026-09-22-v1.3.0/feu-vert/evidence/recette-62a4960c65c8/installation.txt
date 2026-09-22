@@ -1,0 +1,5 @@
+[22:25:04] SHA-256 candidat : 62a4960c65c87284cb57dcfba5080e28b174fb93ca06c3bd87bbe8962c684efb
+[22:25:06] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[22:25:09] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[22:25:17] App lancee (pid 13596) ; shadow stack ON ; CFG ON
+[22:25:17] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.
