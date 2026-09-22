@@ -6,7 +6,7 @@
 //   sur le thread qui a appelé SetWinEventHook, soit notre thread principal)
 // - Recalcul immédiat sur le thread UI à chaque changement de fenêtre ou de contrôle.
 // - Recompute() :
-//   1. lit le process foreground via IWin32Api.TryGetForegroundProcess
+//   1. lit le process foreground via IWin32Api.TryGetWindowProcess
 //   2. énumère les modules du process via IWin32Api.TryEnumProcessModules
 //   3. calcule CurrentMode selon la liste anti-cheat / DLL signatures / overrides utilisateur
 //   4. déclenche ForegroundChanged
@@ -38,6 +38,8 @@ public sealed class ForegroundMonitor : IDisposable
 {
     private readonly IWin32Api _api;
     private readonly IWindowsTypingHost _host;
+    private readonly Func<long> _clock;
+    private long _secureRetryAfter;
 
     /// <summary>ID du timer Win32 utilisé pour le debounce. Doit être unique côté wndproc.</summary>
     public const uint TIMER_FOREGROUND_DEBOUNCE = 0xF00100;
@@ -61,7 +63,7 @@ public sealed class ForegroundMonitor : IDisposable
         CompatibilitySuspendReason SuspendReason,
         ForegroundProcessIdentity Identity,
         bool SecureInput);
-    private Snapshot? _snapshot;
+    private volatile Snapshot? _snapshot;
     private Snapshot? _lastApplication;
 
     /// <summary>Dernière application hors shell, destinée uniquement au menu de compatibilité.</summary>
@@ -135,7 +137,8 @@ public sealed class ForegroundMonitor : IDisposable
         get
         {
             var snap = _snapshot;
-            return snap != null && snap.Window != _api.GetForegroundWindow();
+            return snap != null && (snap.Window != _api.GetForegroundWindow()
+                || (snap.SecureInput && _clock() >= _secureRetryAfter));
         }
     }
 
@@ -151,10 +154,11 @@ public sealed class ForegroundMonitor : IDisposable
     /// trayHwnd est conservé pour compatibilité avec les hôtes existants.
     /// Le recalcul se fait immédiatement, hors callback clavier.
     /// </summary>
-    public ForegroundMonitor(IWin32Api api, IntPtr trayHwnd, IWindowsTypingHost? host = null)
+    public ForegroundMonitor(IWin32Api api, IntPtr trayHwnd, IWindowsTypingHost? host = null, Func<long>? clock = null)
     {
         _api = api;
         _host = host ?? NullWindowsTypingHost.Instance;
+        _clock = clock ?? (() => Environment.TickCount64);
 
         try
         {
@@ -204,12 +208,13 @@ public sealed class ForegroundMonitor : IDisposable
             IntPtr hkl = IntPtr.Zero;
             uint pid = 0;
             IntPtr window = _api.GetForegroundWindow();
-            bool hasFg = _api.TryGetForegroundProcess(out processName, out fullPath, out hkl, out pid);
+            bool hasFg = _api.TryGetWindowProcess(window, out processName, out fullPath, out hkl, out pid);
             long startTimeTicks = 0;
             if (hasFg && pid != 0)
                 _api.TryGetProcessStartTime(pid, out startTimeTicks);
             var identity = new ForegroundProcessIdentity(pid, startTimeTicks);
-            bool secureInput = hasFg && _api.IsForegroundPasswordField();
+            bool secureInput = !hasFg || _api.IsWindowPasswordField(window);
+            _secureRetryAfter = _clock() + 1000;
 
             // Le menu conserve la dernière application utile ; la frappe suit toujours
             // la vraie cible, y compris Explorer, la recherche Windows et nos fenêtres.
@@ -219,14 +224,10 @@ public sealed class ForegroundMonitor : IDisposable
                 string.Equals(processName, "StartMenuExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "ShellExperienceHost.exe", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(processName, "TextInputHost.exe", StringComparison.OrdinalIgnoreCase));
-            // Recette VM du 2026-09-19 : une fenêtre qui change entre les deux lectures
-            // n'est pas une identité inconnue, c'est un événement foreground de plus, qui
-            // déclenchera son propre Recompute. Suspendre ici affichait une bulle de
-            // précaution au moindre clic sur la barre des tâches (mesuré : explorer.exe
-            // puis ShellExperienceHost.exe, six occurrences en trois minutes), et cette
-            // bulle masque l'icône du tray. La sécurité de frappe reste entière :
-            // GetEmitContext recontrôle la fenêtre à chaque émission et refuse d'émettre
-            // dès qu'elle a bougé. Seul un suivi réellement indisponible suspend.
+            // Toutes les inspections portent sur window : un aller-retour A-B-A ne
+            // peut plus associer le HWND A au processus B (audit A22-04).
+            // GetEmitContext refuse une autre fenêtre. Ne pas créer une suspension
+            // transitoire du shell : le prochain événement recalcule sa propre cible.
             var resolved = IsTrackingAvailable
                 ? ResolveState(processName, fullPath, pid, hasFg)
                 : (Mode: CompatibilityMode.DisabledAntiCheat, Reason: CompatibilitySuspendReason.UnknownForeground);

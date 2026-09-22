@@ -6,6 +6,9 @@ internal static partial class L
     public static string Onboarding_Next => T("Suivant", "Next");
     public static string Onboarding_Prev => T("Précédent", "Previous");
     public static string Onboarding_TryNow => T("Essayer maintenant", "Try it now");
+    public static string Onboarding_ActivateAndTry => T("Activer et essayer", "Activate and try");
+    public static string Onboarding_Activate => T($"Activer {Product}", $"Activate {Product}");
+    public static string Onboarding_InactiveSubtitle => T("Activez votre clavier amélioré.", "Activate your improved keyboard.");
     public static string Onboarding_LetsGo => T("C’est parti !", "Let's go!");
 
     // ── Étape 3 — liens et préférences ────────────────────────────────
@@ -40,8 +43,8 @@ internal static partial class L
         "Accents aigu, grave et tilde sur la touche à droite du M.",
         "Acute, grave and tilde accents on the key to the right of M.");
     public static string Onboarding_PrivacyReassurance => T(
-        "Cette application améliore votre clavier. Aucune frappe n’est enregistrée ni transmise.",
-        "This application improves your keyboard. No keystroke is ever logged or transmitted.");
+        "Activation : adaptation locale des touches, sans envoi ni journal de frappe.",
+        "Activation: local key remapping, with no keystroke logging or transmission.");
 
     // ── Étape 2 — comment utiliser ────────────────────────────────────
     public static string Onboarding_Step2Title => T($"Comment utiliser {Product}", $"How to use {Product}");

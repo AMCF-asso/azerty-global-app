@@ -165,7 +165,8 @@ sealed class TrayApplication : IDisposable
     // dans le `else` du test d'accueil et se trouvait donc perdue, définitivement, pour
     // tout utilisateur qui revoyait l'accueil à chaque démarrage.
     private bool _reviewPromptDeferred;
-    private bool _enabled = true;
+    private bool _activationConsent = ConfigManager.ActivationConsent;
+    private bool _enabled = ConfigManager.ActivationConsent;
     private DateTimeOffset? _pauseUntilUtc;
 
     // Nature de la dernière balloon cliquable affichée : le clic sur une balloon est
@@ -302,8 +303,8 @@ sealed class TrayApplication : IDisposable
             // Afficher le wizard tant que ex1+ex2+ex3 ne sont pas tous complétés,
             // SAUF si l'utilisateur a explicitement désactivé l'option dans les Settings
             // (priorité au choix manuel — cf. Q2 du plan UX 2026-05-02).
-            bool shouldShowOnboarding = ConfigManager.ShowOnboardingAtStartup
-                                     && ConfigManager.LearningMaxStepCompleted < 3;
+            bool shouldShowOnboarding = !_activationConsent || (ConfigManager.ShowOnboardingAtStartup
+                                     && ConfigManager.LearningMaxStepCompleted < 3);
 #endif
             if (shouldShowOnboarding)
             {
@@ -354,7 +355,8 @@ sealed class TrayApplication : IDisposable
         _hook.SearchRequested += () => Win32.PostMessageW(_hWnd, WM_APP_SEARCH, IntPtr.Zero, IntPtr.Zero);
         _hook.VirtualKeyboardRequested += () => Win32.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);
         _hook.LayoutMayHaveChanged += OnLayoutMayHaveChanged;
-        _hook.Install();
+        ApplyHookState();
+        if (_activationConsent) _hook.Install();
 
         // Synchroniser l'etat interne (CapsLock + modificateurs Shift/Ctrl/Alt) avec l'etat
         // reel du systeme. Cas critique : si l'utilisateur lance l'app pendant qu'un jeu
@@ -530,8 +532,8 @@ sealed class TrayApplication : IDisposable
     private readonly uint _wmTaskbarCreated = Win32.RegisterWindowMessageW("TaskbarCreated");
 
     private bool IsPaused => _pauseUntilUtc.HasValue;
-    private bool ShouldBlockHookCompletely => IsPaused || _suspendedForCompatibility;
-    private bool ShouldProcessHook => _enabled && !IsPaused && !_suspendedForCompatibility;
+    private bool ShouldBlockHookCompletely => !_activationConsent || IsPaused || _suspendedForCompatibility;
+    private bool ShouldProcessHook => _activationConsent && _enabled && !IsPaused && !_suspendedForCompatibility;
 
     // R3 : suspension décidée par l'utilisateur lui-même (case « forcer la
     // désactivation »), par opposition à une suspension imposée (anti-cheat, accès
@@ -572,7 +574,7 @@ sealed class TrayApplication : IDisposable
         // choix de confort de l'utilisateur n'a rien à protéger. Le remappage, lui, reste
         // éteint : Enabled vaut toujours ShouldProcessHook, donc seule la détection des
         // raccourcis revient.
-        _hook.ShortcutsWhilePassThrough = ShouldDetectShortcutsWhileBlocked(
+        _hook.ShortcutsWhilePassThrough = _activationConsent && ShouldDetectShortcutsWhileBlocked(
             IsPaused,
             _suspendedForCompatibility,
             _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.None);
@@ -589,8 +591,9 @@ sealed class TrayApplication : IDisposable
         // détecté ; geler la saisie de la fenêtre ouvrirait une fenêtre inerte.
         _characterSearch?.SetInputPaused(paused && !IsUserOverrideSuspension);
         _lessons?.SetInputPaused(paused);
-        _settings?.SetInputPaused(paused);
-        _onboarding?.SetInputPaused(paused);
+        _settings?.SetInputPaused(_activationConsent && paused);
+        // Le consentement doit rester accessible avant que le moteur soit actif.
+        _onboarding?.SetInputPaused(_activationConsent && paused);
     }
 
     /// <summary>Boucle de messages principale.</summary>
@@ -1014,6 +1017,7 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void ProbeHookSilence()
     {
+        if (!_activationConsent) return;
         long windowStart = _hookProbeWindowStartTicks;
         _hookProbeWindowStartTicks = Environment.TickCount64;
 
@@ -1042,7 +1046,7 @@ sealed class TrayApplication : IDisposable
 
     private void ReinstallHook(bool nudgeForeground = true)
     {
-        if (_hook == null) return;
+        if (_hook == null || !_activationConsent) return;
 
         // Les échecs de SetWindowsHookEx sont journalisés dans Reinstall() lui-même,
         // y compris le cas « ancien hook conservé » (retour true) invisible d'ici.
@@ -1184,7 +1188,7 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void ShowOnboardingNow()
     {
-        _onboarding = CreateOnboardingWindow();
+        _onboarding ??= CreateOnboardingWindow();
         ApplyWindowInputState();
         _onboarding.Show();
     }
@@ -1199,6 +1203,31 @@ sealed class TrayApplication : IDisposable
         return onboarding;
     }
 
+    private bool ActivateWithConsent()
+    {
+        if (_activationConsent) return true;
+        if (_hook == null) return false;
+        try
+        {
+            // Installer en mode transparent, puis activer après le choix explicite.
+            _hook.Install();
+            ConfigManager.AcceptActivation();
+            _activationConsent = true;
+            _enabled = true;
+            ApplyHookState(syncWhenActive: true);
+            UpdateIcon();
+            UpdateTooltip();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if (!_activationConsent) _hook.Dispose();
+            ConfigManager.Log("Activation", ex);
+            Win32.MessageBoxW(_hWnd, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
+            return false;
+        }
+    }
+
     private void ConfigureOnboardingWindow(OnboardingWindow onboarding)
     {
         onboarding.Mapper = _mapper;
@@ -1206,6 +1235,7 @@ sealed class TrayApplication : IDisposable
         onboarding.AppLayout = _layout;
         onboarding.OpenLessonsRequested = ShowLessonsWindow;
         onboarding.OnClosed = OnOnboardingClosed;
+        onboarding.ActivationRequested = ActivateWithConsent;
     }
 
     /// <summary>
@@ -1215,13 +1245,14 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void OnOnboardingClosed()
     {
-        if (!_reviewPromptDeferred) return;
+        if (!_activationConsent || !_reviewPromptDeferred) return;
         _reviewPromptDeferred = false;
         MaybeShowReviewPrompt();
     }
 
     private void ShowLessonsWindow()
     {
+        if (!_activationConsent) { ShowOnboardingNow(); return; }
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
         _lessons!.Show();
@@ -1620,6 +1651,7 @@ sealed class TrayApplication : IDisposable
     private void OnToggle()
     {
         if (_hook == null) return;
+        if (!_activationConsent) { ShowOnboardingNow(); return; }
 
         // Une suspension de compatibilité surclasse l'état global : l'utilisateur doit
         // quitter l'application concernée ou remettre son override sur Auto.
@@ -2106,7 +2138,7 @@ sealed class TrayApplication : IDisposable
     /// <summary>Retourne le symbole d'affichage d'une touche morte (partagé avec LearningModule).</summary>
     internal static string GetDeadKeySymbol(string deadKeyName)
     {
-        return deadKeyName switch
+        return DisplayGlyph.ForStandaloneMark(deadKeyName switch
         {
             "dk_circumflex"       => "^",
             "dk_diaeresis"        => "¨",
@@ -2138,7 +2170,7 @@ sealed class TrayApplication : IDisposable
             "dk_currencies"       => "¤",
             "dk_punctuation"      => "§",
             _ => "◌"  // DOTTED CIRCLE — fallback identique au web
-        };
+        });
     }
 
     /// <summary>
