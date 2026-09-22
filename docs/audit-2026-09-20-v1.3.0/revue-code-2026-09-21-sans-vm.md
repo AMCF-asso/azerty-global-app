@@ -110,3 +110,23 @@ push de la branche `release/1.2.0-notation-store` — geste d'Antoine.
 pas leur câblage Win32. `StopPause`, l'arrivée de `WM_APP_SEARCH` et le callback du hook
 restent hors de portée de la suite — c'est le geste 16 et la VM minimale du point 6 qui les
 prouvent.
+
+## 8. Suite donnée le 2026-09-22 : point 3 de l’ordre de marche
+
+**R8 et R9 corrigés**, avec leurs deux témoins. Le reste du tableau du § 1 est inchangé :
+R6 et R7 attendent un arbitrage (point 4), **R10 et R12 restent ouverts**.
+
+| # | Correctif | Où | Preuve |
+|---|---|---|---|
+| R8 | Le franchissement du seuil enrichi n’est consommé que si la sollicitation est partie, ou si plus aucune n’est possible (`ReviewPromptStillPossible` faux). Un refus provisoire — plancher des 10 minutes actives, seuil de caractères, fenêtre de 48 h après une erreur, jours actifs de l’essai 2 — laisse le signal armé ; le timer `TIMER_REVIEW_QUIET` repasse et retente au prochain silence. La décision sort en fonction pure `ShouldConsumeEnrichedSignal`. | `TrayApplication.cs`, `MaybeShowReviewAfterQuietTyping` | `ReviewSignalConsumptionTests`, 4 cas dont le scénario exact du constat (refus provisoire répété) |
+| R9 | Le corps du constructeur de `LearningModule` postérieur à `BeginExcludedTyping` est sous `try`/`catch` : le catch referme la plage puis relance. Un constructeur qui lève ne laisse plus le comptage éteint pour tout le processus. | `LearningModule.cs`, ctor | `ExcludedTypingLifetimeTests`, 2 cas sur l’ordre validation → ouverture |
+
+⚠️ Ce que ces témoins ne tiennent pas, et qui reste à la recette VM :
+
+- le `catch` lui-même de R9 — le faire lever après l’ouverture de la plage demande un
+  constructeur qui aille jusqu’à Win32, hors de portée d’une suite sans bureau ;
+- le réarmement effectif de R8 au tour de timer suivant, qui est du Win32 (`SetTimer`).
+
+**Suites non mesurées sur ce poste** : Application Control refuse de charger les assemblies
+reconstruites (`0x800711C7`, constat identique à celui du point 2). Build Release : 0 erreur,
+2 avertissements préexistants. Attendu en CI : **18 / 201 / 439 = 658** (6 témoins neufs).
