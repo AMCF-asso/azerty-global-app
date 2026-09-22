@@ -83,6 +83,14 @@
     <EmbeddedResource Include="flag-fr.png" LogicalName="flag-fr.png" />
   </ItemGroup>
 
+  <!-- Audit Store 2026-09-22, BinSkim BA2025 : marque CET (shadow stack) sur x64.
+       Le SDK NativeAOT 8 ne l'ajoute pas (le 9 le fait par défaut) ; ARM64 n'a pas
+       de CET. Pas de /guard:ehcont : ILC 8 n'émet pas les cibles de continuation.
+       Témoin : docs/audit-2026-09-22-v1.3.0/feu-vert/. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <LinkerArg Include="/CETCOMPAT" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="TypingEngine.Core\TypingEngine.Core.csproj" />
     <ProjectReference Include="TypingEngine.Windows\TypingEngine.Windows.csproj" />
