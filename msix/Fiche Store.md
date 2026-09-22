@@ -72,6 +72,8 @@ Vous cherchez un symbole ? Tapez son nom et l'application vous montre où il se 
 ✅ GRATUIT ET OPEN SOURCE
 Licence EUPL 1.2 — code source disponible sur GitHub.
 
+L'entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l'AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n'est pas le collecteur.
+
 Site web : https://azerty.global
 
 ### Nouveautés de cette version (notes de version)
@@ -214,6 +216,8 @@ Looking for a symbol? Type its name and the app shows where it is on the keyboar
 
 ✅ FREE AND OPEN SOURCE
 Licensed under EUPL 1.2 — source code available on GitHub.
+
+The "Support the project" entry opens azerty.global/support in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is not the fundraiser.
 
 Website: https://azerty.global
 
