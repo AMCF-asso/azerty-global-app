@@ -2190,6 +2190,24 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
+    /// Le franchissement du seuil enrichi doit-il être consommé après une tentative de
+    /// sollicitation ? Décision pure, sans état ni I/O, pour rester éprouvable.
+    ///
+    /// Oui dans deux cas seulement : la sollicitation est partie — elle ne se rejoue pas —
+    /// ou plus aucune sollicitation n'est possible, auquel cas le signal ne sert plus à
+    /// rien. Tout autre refus est provisoire : un plancher encore atteignable dans cette
+    /// session de processus (minutes actives, caractères enrichis, fenêtre après erreur,
+    /// jours actifs). Le signal reste alors armé et le prochain silence retentera.
+    ///
+    /// Avant le 2026-09-22, le drapeau était consommé avant même la tentative : franchir
+    /// le seuil à 9 minutes actives brûlait la sollicitation pour toute la session de
+    /// processus, le plancher des 10 minutes n'étant jamais rattrapé avant un
+    /// redémarrage (R8 de la revue du 2026-09-21).
+    /// </summary>
+    internal static bool ShouldConsumeEnrichedSignal(bool promptShown, bool stillPossible)
+        => promptShown || !stillPossible;
+
+    /// <summary>
     /// Sollicitation d'avis déclenchée par la frappe (v1.3.0, décision du 2026-09-21).
     ///
     /// Part quand l'utilisateur vient de franchir le seuil de caractères enrichis — ceux
@@ -2199,9 +2217,9 @@ sealed class TrayApplication : IDisposable
     ///
     /// Le drapeau marque une TRANSITION observée dans cette session de processus, jamais
     /// un état : quelqu'un qui démarre déjà au-dessus du seuil ne le lève pas, et c'est le
-    /// chemin de démarrage qui le rattrape. Le drapeau est désarmé quoi qu'il arrive —
-    /// <see cref="MaybeShowReviewPrompt"/> a ses propres gardes et peut refuser ; le
-    /// franchissement, lui, ne vaut qu'une fois.
+    /// chemin de démarrage qui le rattrape. Il n'est désarmé que si la sollicitation est
+    /// partie, ou si plus aucune n'est possible : voir
+    /// <see cref="ShouldConsumeEnrichedSignal"/>.
     /// </summary>
     private void MaybeShowReviewAfterQuietTyping()
     {
@@ -2220,8 +2238,9 @@ sealed class TrayApplication : IDisposable
             // Accueil ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
             if (_reviewPromptDeferred) return;
 
-            UsageStats.ClearEnrichedThresholdSignal();
-            MaybeShowReviewPrompt();
+            bool shown = MaybeShowReviewPrompt();
+            if (ShouldConsumeEnrichedSignal(shown, ReviewPromptStillPossible()))
+                UsageStats.ClearEnrichedThresholdSignal();
         }
         catch (Exception ex)
         {

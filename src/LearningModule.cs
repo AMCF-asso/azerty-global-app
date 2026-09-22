@@ -392,76 +392,89 @@ sealed class LearningModule : IDisposable
         // à eux seuls 21 caractères enrichis, pour un seuil de sollicitation d'avis de 20
         // (UsageStats.EnrichedCharsReviewThreshold) : sans cette exclusion, terminer
         // l'onboarding déclenchait la demande de notation, constaté en VM le 2026-09-21.
-        // Posée après les ThrowIfNull ci-dessus : si le ctor lève, Dispose ne passera
-        // jamais et la plage resterait ouverte. Refermée dans Dispose, protégée par
-        // _disposed contre une double fermeture.
+        // Ouverte après les ThrowIfNull ci-dessus, et refermée par le catch ci-dessous
+        // si la suite du constructeur lève : dans ce cas l'instance n'existe pas, Dispose
+        // ne passera jamais, et la plage resterait ouverte pour tout le processus — plus
+        // une seule frappe comptée jusqu'au redémarrage (R9 de la revue du 2026-09-21).
+        // Sur le chemin nominal elle est refermée dans Dispose, protégée par _disposed
+        // contre une double fermeture.
         UsageStats.BeginExcludedTyping();
-        _tweaks = LearningTweaks.Load(); // re-lu a chaque ctor → bouton "Reinitialiser onboarding" applique les changements
-        _hWndOnboarding = hWndOnboarding;
-        ConfigManager.LogCrashTraceDebug("LM.ctor: A1 _hWndOnboarding assigned");
-        _mapper = mapper;
-        ConfigManager.LogCrashTraceDebug("LM.ctor: A2 _mapper assigned");
-        _hook = hook;
-        ConfigManager.LogCrashTraceDebug("LM.ctor: A3 _hook assigned");
-        _layout = layout;
-        ConfigManager.LogCrashTraceDebug("LM.ctor: A4 _layout assigned");
-        _wndProcDelegate = WndProc;
-        ConfigManager.LogCrashTraceDebug("LM.ctor: A5 _wndProcDelegate created");
-        _visualKeys = VirtualKeyboard.BuildKeyLayout();
-        ConfigManager.LogCrashTraceDebug($"LM.ctor: BuildKeyLayout done ({_visualKeys.Length} keys)");
-
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
-        _hKbBgBrush = Win32.CreateSolidBrush(CLR_KB_BG);
-
-        // DPI initial
-        var hdcScreen = Win32.GetDC(IntPtr.Zero);
-        int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
-        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
-        _dpiScale = dpi / 96f;
-        ConfigManager.LogCrashTraceDebug($"LM.ctor: dpi={dpi}, scale={_dpiScale}");
-
-        LoadCharacterMethods();
-        ConfigManager.LogCrashTraceDebug("LM.ctor: LoadCharacterMethods done");
-        CreateFonts();
-        ConfigManager.LogCrashTraceDebug("LM.ctor: CreateFonts done");
-        CreateMainWindow();
-        ConfigManager.LogCrashTraceDebug($"LM.ctor: CreateMainWindow done, _hWnd={_hWnd}");
-        CreateControls();
-        ConfigManager.LogCrashTraceDebug("LM.ctor: CreateControls done");
-        UpdateControlVisibility();
-        ConfigManager.LogCrashTraceDebug("LM.ctor: UpdateControlVisibility done");
-
-        // Corriger le DPI avec le vrai DPI du moniteur
         try
         {
-            int realDpi = Win32.GetDpiForWindow(_hWnd);
-            if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+            _tweaks = LearningTweaks.Load(); // re-lu a chaque ctor → bouton "Reinitialiser onboarding" applique les changements
+            _hWndOnboarding = hWndOnboarding;
+            ConfigManager.LogCrashTraceDebug("LM.ctor: A1 _hWndOnboarding assigned");
+            _mapper = mapper;
+            ConfigManager.LogCrashTraceDebug("LM.ctor: A2 _mapper assigned");
+            _hook = hook;
+            ConfigManager.LogCrashTraceDebug("LM.ctor: A3 _hook assigned");
+            _layout = layout;
+            ConfigManager.LogCrashTraceDebug("LM.ctor: A4 _layout assigned");
+            _wndProcDelegate = WndProc;
+            ConfigManager.LogCrashTraceDebug("LM.ctor: A5 _wndProcDelegate created");
+            _visualKeys = VirtualKeyboard.BuildKeyLayout();
+            ConfigManager.LogCrashTraceDebug($"LM.ctor: BuildKeyLayout done ({_visualKeys.Length} keys)");
+
+            _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
+            _hKbBgBrush = Win32.CreateSolidBrush(CLR_KB_BG);
+
+            // DPI initial
+            var hdcScreen = Win32.GetDC(IntPtr.Zero);
+            int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
+            Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+            _dpiScale = dpi / 96f;
+            ConfigManager.LogCrashTraceDebug($"LM.ctor: dpi={dpi}, scale={_dpiScale}");
+
+            LoadCharacterMethods();
+            ConfigManager.LogCrashTraceDebug("LM.ctor: LoadCharacterMethods done");
+            CreateFonts();
+            ConfigManager.LogCrashTraceDebug("LM.ctor: CreateFonts done");
+            CreateMainWindow();
+            ConfigManager.LogCrashTraceDebug($"LM.ctor: CreateMainWindow done, _hWnd={_hWnd}");
+            CreateControls();
+            ConfigManager.LogCrashTraceDebug("LM.ctor: CreateControls done");
+            UpdateControlVisibility();
+            ConfigManager.LogCrashTraceDebug("LM.ctor: UpdateControlVisibility done");
+
+            // Corriger le DPI avec le vrai DPI du moniteur
+            try
             {
-                _dpiScale = realDpi / 96f;
-                RecreateFonts();
-                ResizeWindow();
+                int realDpi = Win32.GetDpiForWindow(_hWnd);
+                if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+                {
+                    _dpiScale = realDpi / 96f;
+                    RecreateFonts();
+                    ResizeWindow();
+                }
             }
+            catch { }
+
+            // S'abonner aux événements
+            _mapper.StateChanged += OnStateChanged;
+            _hook.RawKeyDown += OnRawKeyDown;
+            // Bascule de langue en cours de tutoriel (ex. depuis le menu tray) : retraduire
+            // en direct sans fermer le tutoriel ni perdre la progression (constat smoke test
+            // 2026-07-17). Les libellés de boutons Win32 sont fixés à la création ; le titre,
+            // l'instruction et le texte cible se relisent depuis Steps (dynamique) au repaint.
+            _onAppLanguageChanged = _ => RefreshLanguage();
+            ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
+            ConfigManager.LogCrashTraceDebug("LM.ctor: events subscribed");
+
+            // Highlight initial
+            UpdateHighlight();
+
+            // Tooltip pour les touches du clavier (au survol). Comportement aligné sur le
+            // testeur web : affiche le caractère + son nom Unicode FR pour les 4 couches.
+            CreateTooltip();
+            ConfigManager.LogCrashTraceDebug("LM.ctor: UpdateHighlight done — exit");
         }
-        catch { }
-
-        // S'abonner aux événements
-        _mapper.StateChanged += OnStateChanged;
-        _hook.RawKeyDown += OnRawKeyDown;
-        // Bascule de langue en cours de tutoriel (ex. depuis le menu tray) : retraduire
-        // en direct sans fermer le tutoriel ni perdre la progression (constat smoke test
-        // 2026-07-17). Les libellés de boutons Win32 sont fixés à la création ; le titre,
-        // l'instruction et le texte cible se relisent depuis Steps (dynamique) au repaint.
-        _onAppLanguageChanged = _ => RefreshLanguage();
-        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
-        ConfigManager.LogCrashTraceDebug("LM.ctor: events subscribed");
-
-        // Highlight initial
-        UpdateHighlight();
-
-        // Tooltip pour les touches du clavier (au survol). Comportement aligné sur le
-        // testeur web : affiche le caractère + son nom Unicode FR pour les 4 couches.
-        CreateTooltip();
-        ConfigManager.LogCrashTraceDebug("LM.ctor: UpdateHighlight done — exit");
+        catch
+        {
+            // Le constructeur a levé : personne ne tient l'instance, donc personne
+            // n'appellera Dispose. On referme ici avant de relancer.
+            UsageStats.EndExcludedTyping();
+            throw;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
