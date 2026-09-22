@@ -38,5 +38,18 @@ public class ActivationConsentTests : IDisposable
         Assert.Equal(1, doc.RootElement.GetProperty("future").GetProperty("x").GetInt32());
     }
 
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    public void Politique_masquant_l_accueil_ne_vaut_jamais_activation(int? policy, bool prompt)
+    {
+        using var scope = PolicyManager.OverrideForTests((_, name) => name == "ShowOnboarding" ? policy : null);
+        Assert.Equal(prompt, ConfigManager.ActivationPromptAtStartup);
+        Assert.False(ConfigManager.ActivationConsent);
+        ConfigManager.AcceptActivation();
+        Assert.False(ConfigManager.ActivationPromptAtStartup);
+    }
+
     public void Dispose() { Directory.Delete(_directory, true); }
 }

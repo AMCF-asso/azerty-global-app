@@ -108,8 +108,16 @@ jobs:
         with:
           subject-path: 'msix/AZERTYGlobal-*.msixbundle'
 
-      - name: Upload BinSkim SARIF
-        if: always() && hashFiles('binskim-sarif/*.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload BinSkim SARIF x64
+        if: always() && hashFiles('binskim-sarif/binskim-x64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: binskim-sarif
+          sarif_file: binskim-sarif/binskim-x64.sarif
+          category: binskim-x64
+
+      - name: Upload BinSkim SARIF ARM64
+        if: always() && hashFiles('binskim-sarif/binskim-arm64.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: binskim-sarif/binskim-arm64.sarif
+          category: binskim-arm64
