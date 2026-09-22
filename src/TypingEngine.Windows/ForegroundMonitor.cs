@@ -68,6 +68,22 @@ public sealed class ForegroundMonitor : IDisposable
     public string? LastApplicationProcessName => _lastApplication?.ProcessName;
     public string? LastApplicationFullPath => _lastApplication?.FullPath;
 
+    /// <summary>
+    /// Instance exacte de la derniere application reelle : ni une surface ephemere du shell
+    /// (selecteur Alt+Tab, barre des taches, menu Demarrer), ni une de nos propres fenetres.
+    /// C'est elle, et non <see cref="CurrentIdentity"/>, qui dit « l'utilisateur a change
+    /// d'application » - un clic sur la barre des taches change le premier plan sans changer
+    /// d'application (R13 de la revue du 2026-09-21).
+    /// </summary>
+    public ForegroundProcessIdentity LastApplicationIdentity => _lastApplication?.Identity ?? default;
+
+    /// <summary>
+    /// Vrai quand le premier plan est une surface ephemere du shell Windows. Le tray s'en sert
+    /// pour ne pas annoncer une reprise que le prochain evenement defera aussitot (R15 : rafale
+    /// de bulles a chaque Alt+Tab entre deux applications suspendues).
+    /// </summary>
+    public bool IsTransientShellForeground { get; private set; }
+
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
     public string? CurrentProcessName => _snapshot?.ProcessName;
 
@@ -222,6 +238,7 @@ public sealed class ForegroundMonitor : IDisposable
             _snapshot = new Snapshot(window, processName, fullPath, hkl, mode, resolved.Reason, identity, secureInput);
             if (hasFg && !isTransientShell && pid != (uint)Environment.ProcessId)
                 _lastApplication = _snapshot;
+            IsTransientShellForeground = isTransientShell;
 
             // Le motif et hasFg sont journalisés avec le mode : sans eux, deux Recompute
             // successifs se lisent comme un seul événement et le motif réellement vu par
@@ -248,6 +265,7 @@ public sealed class ForegroundMonitor : IDisposable
         {
             _snapshot = new Snapshot(IntPtr.Zero, null, null, IntPtr.Zero,
                 CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UnknownForeground, default, true);
+            IsTransientShellForeground = false;
             _host.Log("ForegroundMonitor.Recompute", ex);
             ForegroundChanged?.Invoke();
         }
