@@ -153,7 +153,7 @@ internal sealed class MockWin32Api : IWin32Api
         return ForegroundWindowScript.Count > 0 ? ForegroundWindowScript.Dequeue() : ForegroundWindow;
     }
 
-    public bool TryGetForegroundProcess(out string? processName, out string? fullPath, out IntPtr hkl, out uint pid)
+    public bool TryGetWindowProcess(IntPtr window, out string? processName, out string? fullPath, out IntPtr hkl, out uint pid)
     {
         if (ShouldFailForegroundInspection)
         {
@@ -183,7 +183,7 @@ internal sealed class MockWin32Api : IWin32Api
         return pid != 0 && startTimeTicks != 0;
     }
 
-    public bool IsForegroundPasswordField() => ScriptedSecureInput;
+    public bool IsWindowPasswordField(IntPtr window) => ScriptedSecureInput;
 
     public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb)
     {

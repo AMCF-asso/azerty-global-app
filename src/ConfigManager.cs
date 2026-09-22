@@ -115,6 +115,31 @@ static class ConfigManager
     private static readonly object _lock = new();
     private static bool _loadFailed;
 
+    /// <summary>Accord explicite ; une ancienne configuration n'en tient pas lieu.</summary>
+    public static bool ActivationConsent
+    {
+        get
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+                return !_loadFailed && _cache!.TryGetValue("activationConsent", out var value)
+                    && value.ValueKind == JsonValueKind.True;
+            }
+        }
+    }
+
+    public static void AcceptActivation()
+    {
+        lock (_lock)
+        {
+            EnsureLoaded();
+            using var doc = JsonDocument.Parse("true");
+            _cache!["activationConsent"] = doc.RootElement.Clone();
+            Save();
+        }
+    }
+
     /// <summary>
     /// La fenêtre de bienvenue doit-elle s'ouvrir au démarrage ? Une politique d'entreprise
     /// à 0 la supprime ; à 1 elle autorise sans imposer, l'utilisateur gardant sa case

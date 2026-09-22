@@ -25,26 +25,33 @@ namespace AZERTYGlobal;
 static class DialogNavigation
 {
     private static readonly HashSet<IntPtr> _dialogs = new();
+    private static readonly Dictionary<IntPtr, Action<IntPtr>> _focusHandlers = new();
 
     /// <summary>
     /// À appeler juste après <c>CreateWindowExW</c> de la fenêtre racine — jamais pour un
     /// contrôle enfant, que <c>GetAncestor</c> ramène de toute façon à sa racine.
     /// </summary>
-    public static void Register(IntPtr hwnd)
+    public static void Register(IntPtr hwnd, Action<IntPtr>? ensureFocusVisible = null)
     {
-        if (hwnd != IntPtr.Zero) _dialogs.Add(hwnd);
+        if (hwnd == IntPtr.Zero) return;
+        _dialogs.Add(hwnd);
+        if (ensureFocusVisible != null) _focusHandlers[hwnd] = ensureFocusVisible;
     }
 
     /// <summary>
     /// À appeler juste avant <c>DestroyWindow</c>. Un HWND détruit est recyclé par Windows
     /// pour une autre fenêtre : le laisser inscrit ferait router les messages d'un inconnu.
     /// </summary>
-    public static void Unregister(IntPtr hwnd) => _dialogs.Remove(hwnd);
+    public static void Unregister(IntPtr hwnd)
+    {
+        _dialogs.Remove(hwnd);
+        _focusHandlers.Remove(hwnd);
+    }
 
     /// <summary>Fenêtres inscrites — pour les témoins, et pour vérifier qu'on désinscrit.</summary>
     public static int RegisteredCount => _dialogs.Count;
 
-    internal static void ResetForTests() => _dialogs.Clear();
+    internal static void ResetForTests() { _dialogs.Clear(); _focusHandlers.Clear(); }
 
     /// <summary>Identifiant que <c>IsDialogMessageW</c> envoie en <c>WM_COMMAND</c> sur Entrée.</summary>
     public const int IDOK = 1;
@@ -114,6 +121,9 @@ static class DialogNavigation
         IntPtr root = Win32.GetAncestor(msg.hwnd, Win32.GA_ROOT);
         if (!ShouldRouteAsDialog(root, _dialogs)) return false;
 
-        return Win32.IsDialogMessageW(root, ref msg);
+        bool consumed = Win32.IsDialogMessageW(root, ref msg);
+        if (consumed && _focusHandlers.TryGetValue(root, out var ensureVisible))
+            ensureVisible(Win32.GetFocus());
+        return consumed;
     }
 }
