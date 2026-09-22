@@ -282,7 +282,7 @@ public sealed class KeyboardHook : IDisposable
                 }
 
                 // Détecter Ctrl+Shift+<touche> → ouvrir/fermer la recherche de caractère
-                if (!_mapper.AdvancedFeaturesSuppressed && _vkSearch != 0 &&
+                if (ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkSearch) &&
                     _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode) &&
                     isKeyDown && _mapper.IsToggleShortcut())
                 {
@@ -291,7 +291,11 @@ public sealed class KeyboardHook : IDisposable
                 }
 
                 // Détecter Ctrl+Shift+<touche> → ouvrir/fermer le clavier virtuel
-                if (_vkVirtualKeyboard != 0 && _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode) && isKeyDown && _mapper.IsToggleShortcut())
+                // R11 : même garde « saisie sécurisée » que la recherche — sans elle, le
+                // clavier virtuel s'affiche au-dessus d'un champ mot de passe.
+                if (ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkVirtualKeyboard) &&
+                    _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode) &&
+                    isKeyDown && _mapper.IsToggleShortcut())
                 {
                     VirtualKeyboardRequested?.Invoke();
                     return (IntPtr)1;
@@ -330,6 +334,16 @@ public sealed class KeyboardHook : IDisposable
             return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
     }
+
+    /// <summary>
+    /// R11 : un raccourci qui fait surgir une fenêtre par-dessus le premier plan ne
+    /// s'arme pas au-dessus d'une saisie sécurisée. La recherche portait cette garde,
+    /// le clavier virtuel non — Ctrl+Maj+Q s'affichait au-dessus d'un champ mot de passe.
+    /// Les deux branches passent désormais par le même prédicat, pour que l'oubli ne
+    /// puisse plus porter sur une seule des deux.
+    /// </summary>
+    internal static bool ShortcutOpensWindow(bool advancedFeaturesSuppressed, uint configuredVk) =>
+        !advancedFeaturesSuppressed && configuredVk != 0;
 
     private static bool IsModifierKey(uint vkCode) => vkCode is
         0xA0 or 0xA1 or 0x10 or  // LShift, RShift, Shift
