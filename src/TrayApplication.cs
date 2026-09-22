@@ -2572,7 +2572,6 @@ sealed class TrayApplication : IDisposable
                 ApplyHookState();
                 UpdateIcon();
                 UpdateTooltip();
-                AnnounceSuspension(reason, procName, procDisplay);
                 break;
             }
 
@@ -2587,7 +2586,6 @@ sealed class TrayApplication : IDisposable
                 ApplyHookState();
                 UpdateIcon();
                 UpdateTooltip();
-                AnnounceSuspension(reason, procName, procDisplay);
                 break;
             }
 
@@ -2599,7 +2597,7 @@ sealed class TrayApplication : IDisposable
                 if (_wasEnabledBeforeAutoDisable && _enabled)
                 {
                     ApplyHookState(syncWhenActive: true);
-                    ShowBalloon(L.Tray_ActiveAgainTitle, L.Tray_ActiveAgain);
+                    _announcementState.ResumeOwed = true;
                 }
                 else
                 {
@@ -2615,9 +2613,94 @@ sealed class TrayApplication : IDisposable
             }
         }
 
+        AnnounceCompatibilityStateIfChanged(procName, procDisplay);
+
         // L'indicateur de couche dépend du process foreground, de l'état sécurisé
         // et de ShouldProcessHook (modifié ci-dessus) : rafraîchir en dernier.
         ApplyStateChange();
+    }
+
+    /// <summary>Ce que l'utilisateur a déjà appris, et ce qu'on lui doit encore.</summary>
+    internal struct CompatibilityAnnouncementState
+    {
+        public CompatibilitySuspendReason AnnouncedReason;
+        public ForegroundProcessIdentity AnnouncedApplication;
+
+        /// <summary>Une reprise a eu lieu mais n'a pas encore été annoncée, parce que le
+        /// premier plan du moment était une surface du shell.</summary>
+        public bool ResumeOwed;
+    }
+
+    internal enum CompatibilityAnnouncement { None, Suspension, Resumed }
+
+    private CompatibilityAnnouncementState _announcementState;
+
+    /// <summary>
+    /// Décide si l'état de compatibilité doit être annoncé à l'utilisateur (R15 de la revue
+    /// du 2026-09-21).
+    ///
+    /// Un Alt+Tab entre deux applications suspendues passait par le sélecteur de tâches, qui
+    /// appartient à <c>explorer.exe</c> et se résout en <c>Default</c> : la sortie de
+    /// suspension déclenchait « à nouveau actif », l'arrivée déclenchait la bulle de sécurité,
+    /// et l'utilisateur prenait deux bulles par bascule — dont une qui ignore le réglage des
+    /// notifications. Un aller-retour par la barre des tâches, sans changer d'application du
+    /// tout, en produisait autant.
+    ///
+    /// Deux règles, et elles suffisent. Tant que le premier plan est une surface éphémère du
+    /// shell, rien ne s'annonce : cet état-là ne dure pas, et le prochain événement dira la
+    /// vérité. Et une fois le premier plan posé, l'annonce ne part que si elle dit autre chose
+    /// que la précédente — même motif dans la même application, l'utilisateur le sait déjà.
+    ///
+    /// ⛔ Seules les bulles passent par ici. Le hook, l'icône, l'infobulle et les raccourcis
+    /// suivent le premier plan réel sans délai, y compris sur le shell : c'est ce que le
+    /// correctif de la course avec le shell a établi en 1.3.0, et une annonce retardée n'est
+    /// pas une protection retardée.
+    /// </summary>
+    internal static CompatibilityAnnouncement NextAnnouncement(
+        ref CompatibilityAnnouncementState state,
+        bool transientShellForeground,
+        CompatibilitySuspendReason current,
+        ForegroundProcessIdentity currentApplication)
+    {
+        // Tant que le premier plan est une surface éphémère du shell, rien ne s'annonce :
+        // cet état ne dure pas, et le prochain événement dira la vérité. Ce qui est dû
+        // reste dû.
+        if (transientShellForeground) return CompatibilityAnnouncement.None;
+
+        if (current == state.AnnouncedReason && currentApplication == state.AnnouncedApplication)
+            return CompatibilityAnnouncement.None;
+
+        state.AnnouncedReason = current;
+        state.AnnouncedApplication = currentApplication;
+
+        if (current != CompatibilitySuspendReason.None)
+        {
+            state.ResumeOwed = false;
+            return CompatibilityAnnouncement.Suspension;
+        }
+
+        if (!state.ResumeOwed) return CompatibilityAnnouncement.None;
+        state.ResumeOwed = false;
+        return CompatibilityAnnouncement.Resumed;
+    }
+
+    private void AnnounceCompatibilityStateIfChanged(string procName, string procDisplay)
+    {
+        var reason = _suspendedForCompatibility
+            ? _appliedSuspendReason : CompatibilitySuspendReason.None;
+        var application = _suspendedForCompatibility
+            ? (_foregroundMonitor?.LastApplicationIdentity ?? default) : default;
+
+        switch (NextAnnouncement(ref _announcementState,
+                    _foregroundMonitor?.IsTransientShellForeground == true, reason, application))
+        {
+            case CompatibilityAnnouncement.Suspension:
+                AnnounceSuspension(reason, procName, procDisplay);
+                break;
+            case CompatibilityAnnouncement.Resumed:
+                ShowBalloon(L.Tray_ActiveAgainTitle, L.Tray_ActiveAgain);
+                break;
+        }
     }
 
     /// <summary>
