@@ -13,7 +13,7 @@ namespace AZERTYGlobal;
 /// frappe. <c>LearningModule</c> et <c>LessonsWindow</c> sont des surfaces où Tab et Entrée
 /// sont des caractères à taper, pas des ordres de navigation : leur passer les messages par
 /// <c>IsDialogMessageW</c> les mangerait, et un exercice de frappe cesserait de recevoir ce
-/// qu'on y tape. <c>OnboardingWindow</c> route déjà Entrée et les flèches lui-même.
+/// qu'on y tape. L’accueil s’inscrit comme dialogue ; seules ses flèches restent locales.
 ///
 /// D'où l'inscription volontaire : une fenêtre déclare qu'elle veut la navigation de
 /// dialogue, et celles qui ne disent rien gardent leurs frappes. Le défaut est le silence,

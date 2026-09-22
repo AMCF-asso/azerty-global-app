@@ -129,6 +129,10 @@ static class ConfigManager
         }
     }
 
+    /// <summary>La politique peut masquer l'accueil ; l'activation reste alors au menu.</summary>
+    public static bool ActivationPromptAtStartup =>
+        !ActivationConsent && PolicyManager.Current.ShowOnboarding != false;
+
     public static void AcceptActivation()
     {
         lock (_lock)

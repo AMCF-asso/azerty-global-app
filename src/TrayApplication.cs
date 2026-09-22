@@ -303,7 +303,7 @@ sealed class TrayApplication : IDisposable
             // Afficher le wizard tant que ex1+ex2+ex3 ne sont pas tous complétés,
             // SAUF si l'utilisateur a explicitement désactivé l'option dans les Settings
             // (priorité au choix manuel — cf. Q2 du plan UX 2026-05-02).
-            bool shouldShowOnboarding = !_activationConsent || (ConfigManager.ShowOnboardingAtStartup
+            bool shouldShowOnboarding = ConfigManager.ActivationPromptAtStartup || (ConfigManager.ShowOnboardingAtStartup
                                      && ConfigManager.LearningMaxStepCompleted < 3);
 #endif
             if (shouldShowOnboarding)
