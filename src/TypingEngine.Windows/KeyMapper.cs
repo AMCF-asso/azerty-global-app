@@ -138,6 +138,7 @@ public sealed class KeyMapper
         var identity = _foregroundMonitor?.CurrentIdentity ?? default;
         bool secure = _foregroundMonitor?.IsSecureInput == true;
         _maintainableLayers.SetForeground(identity, secure);
+        ApplyForegroundApplication(_foregroundMonitor?.LastApplicationIdentity ?? default);
 
         // Nettoyage opportuniste des verrouillages dont le processus a disparu.
         _maintainableLayers.RemoveDeadProcessLocks(candidate =>
@@ -1040,6 +1041,45 @@ public sealed class KeyMapper
     {
         if (!IsSuspendedByForeground) return;
         if (_composition.Cancel()) StateChanged?.Invoke();
+    }
+
+    private ForegroundProcessIdentity _lastApplicationIdentity;
+
+    /// <summary>
+    /// Decide si une touche morte en attente doit etre abandonnee parce que l'utilisateur
+    /// a change d'application (R13 de la revue du 2026-09-21).
+    ///
+    /// L'arbitrage ci-dessus ne couvrait que les suspensions imposees - anti-triche, acces
+    /// distant, premier plan inconnu. Passer par Alt+Tab d'un traitement de texte a un
+    /// navigateur ne suspend rien : la touche morte survivait, et l'accent surgissait sur
+    /// une lettre tapee bien plus tard, dans une autre application. C'est le « meme geste,
+    /// deux resultats » de la recette VM du 2026-09-19, a ceci pres que la cible est
+    /// ordinaire. Le motif est le meme, donc la regle doit l'etre.
+    ///
+    /// ⛔ L'identite comparee est celle de la derniere *application* et non du premier plan
+    /// courant. Un clic sur la barre des taches, l'ouverture du selecteur Alt+Tab ou l'une de
+    /// nos propres fenetres changent le premier plan sans changer d'application : les
+    /// comparer detruirait la composition au geste le plus banal, exactement la faute que le
+    /// correctif de la course avec le shell a reparee en 1.3.0.
+    ///
+    /// Une identite nulle - aucune application encore vue, ou suivi indisponible - n'est pas
+    /// un changement. Aux deux bouts : elle ne declenche rien en arrivant, et ne fait rien
+    /// oublier en partant.
+    /// </summary>
+    internal static bool ShouldAbandonDeadKeyOnApplicationChange(
+        ForegroundProcessIdentity previous, ForegroundProcessIdentity current) =>
+        previous != default && current != default && previous != current;
+
+    /// <summary>
+    /// Couture entre le moniteur de premier plan et la decision ci-dessus. Separee pour que
+    /// la suite puisse la jouer sans construire de ForegroundMonitor ni toucher Win32.
+    /// </summary>
+    internal void ApplyForegroundApplication(ForegroundProcessIdentity application)
+    {
+        if (ShouldAbandonDeadKeyOnApplicationChange(_lastApplicationIdentity, application)
+            && _composition.Cancel())
+            StateChanged?.Invoke();
+        _lastApplicationIdentity = application;
     }
 
     private bool IsEmissionSuspended => EmissionPaused ||
