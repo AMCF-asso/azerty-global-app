@@ -767,7 +767,7 @@ sealed class TrayApplication : IDisposable
                         case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/mentions-legales#confidentialite-securite"), null, null, 1); break;
                         case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
-                        case IDM_FEEDBACK: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/feedback"), null, null, 1); break;
+                        case IDM_FEEDBACK: OpenFeedback("tray-menu"); break;
                         case IDM_RATE_STORE: OnRateStoreFromMenu(); break;
                         case IDM_AUTOSTART: ToggleAutoStart(); break;
                         case IDM_BUG: OnReportBug(); break;
@@ -1890,14 +1890,20 @@ sealed class TrayApplication : IDisposable
             _mapper.DisplayDeadKey);
     }
 
-    private void OnReportBug()
-    {
-        var os = Environment.OSVersion;
-        var winVer = os.Version.Build >= 22000 ? "11" : "10";
-        var osVersion = $"Windows {winVer} ({os.Version.Build})";
-        var url = ProductIdentity.Url($"/bug?v={Uri.EscapeDataString(Program.Version)}&os={Uri.EscapeDataString(osVersion)}&src=app");
-        Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
-    }
+    private void OnReportBug() => OpenDiagnosticPage("/bug", "app");
+
+    /// <summary>
+    /// Ouvre la page de retour, version et OS compris (R16). Le paramètre <c>source</c>
+    /// déjà présent dans l'URL de la sollicitation d'avis est conservé tel quel : le site
+    /// le lit depuis la 1.2.0, et le renommer casserait sa mesure.
+    /// </summary>
+    private void OpenFeedback(string source, string path = "/feedback") =>
+        OpenDiagnosticPage(path, source);
+
+    private static void OpenDiagnosticPage(string path, string source) =>
+        Win32.ShellExecuteW(IntPtr.Zero, "open",
+            ProductIdentity.DiagnosticUrl(path, Program.Version, ProductIdentity.OsDescription(), source),
+            null, null, 1);
 
     private void OnExit()
     {
@@ -2347,7 +2353,7 @@ sealed class TrayApplication : IDisposable
         if (toStore && ConfigManager.IsPackaged)
             OpenStoreReview();
         else
-            Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/feedback?source=app-notification"), null, null, 1);
+            OpenFeedback("app-notification", "/feedback?source=app-notification");
     }
 
     /// <summary>

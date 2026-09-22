@@ -84,4 +84,34 @@ static class ProductIdentity
 
     /// <summary>URL du site, chemin compris (« /guide », « /feedback »…).</summary>
     public static string Url(string path) => SiteBaseUrl + path;
+
+    /// <summary>
+    /// URL du site enrichie des marqueurs de diagnostic : version du binaire, version de
+    /// Windows, origine du clic.
+    ///
+    /// R16 de la revue du 2026-09-21 : seul « Signaler un bug » les portait. Les quatre
+    /// entrées « Donner mon avis » — menu du tray, sollicitation d'avis, fenêtre de
+    /// statistiques, accueil — ouvraient un « /feedback » nu, et un retour sans version ne
+    /// se rattache à aucun binaire : la 1.1.0, la 1.2.0 et la 1.3.0 arrivaient indistinctes.
+    /// Un seul corps désormais, pour que l'oubli ne puisse plus porter sur une branche.
+    ///
+    /// Le chemin peut déjà porter une requête (« ?source=… ») : le séparateur suit.
+    /// </summary>
+    public static string DiagnosticUrl(string path, string version, string osVersion, string source) =>
+        Url(path) + (path.Contains('?') ? '&' : '?')
+        + "v=" + Uri.EscapeDataString(version)
+        + "&os=" + Uri.EscapeDataString(osVersion)
+        + "&src=" + Uri.EscapeDataString(source);
+
+    /// <summary>
+    /// Version de Windows telle qu'elle part dans un retour : « Windows 11 (26200) ».
+    /// Le numéro de build est ce qui distingue vraiment deux postes ; 22000 est la
+    /// frontière 10/11. Ici plutôt qu'au point d'appel pour que les cinq liens de retour
+    /// écrivent la même chose.
+    /// </summary>
+    public static string OsDescription()
+    {
+        var os = Environment.OSVersion;
+        return $"Windows {(os.Version.Build >= 22000 ? "11" : "10")} ({os.Version.Build})";
+    }
 }

@@ -345,7 +345,9 @@ sealed class UsageStatsWindow : IDisposable
                             Close();
                             break;
                         case IDC_LINK_FEEDBACK:
-                            Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/feedback"), null, null, 1);
+                            Win32.ShellExecuteW(IntPtr.Zero, "open",
+                                ProductIdentity.DiagnosticUrl("/feedback", Program.Version,
+                                    ProductIdentity.OsDescription(), "stats"), null, null, 1);
                             break;
                         case IDC_LINK_DISCORD:
                             Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1);
