@@ -101,11 +101,31 @@ internal sealed class MockWin32Api : IWin32Api
         return result;
     }
 
+    /// <summary>
+    /// Touches mortes du layout natif sous-jacent, par code virtuel. Windows fait répondre
+    /// -1 à <c>ToUnicodeEx</c> pour celles-là, et c'est ce -1 que lit
+    /// <c>KeyMapper.IsDeadKeyOnLayout</c> pour renoncer à la combo native et retomber sur
+    /// Alt+code (« ^ », « ¨ », « ~ », « ` » sur un AZERTY traditionnel).
+    ///
+    /// ⛔ Ajouté le 2026-09-22 (§ 3.4 de la revue du 2026-09-21). Ce mock rendait 1 en toutes
+    /// circonstances : <c>IsDeadKeyOnLayout</c> ne pouvait **jamais** valoir vrai sous test,
+    /// et le repli avait zéro couverture dans sa branche utile. Un mock qui ne sait répondre
+    /// qu'une seule chose ne mesure pas une décision binaire, il en cache la moitié.
+    ///
+    /// Vide par défaut : le comportement des témoins écrits avant cette date est inchangé.
+    /// </summary>
+    public HashSet<byte> NativeDeadKeys { get; } = new();
+
     public int ToUnicodeEx(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags, IntPtr hkl)
     {
         ToUnicodeExFlags.Add(flags);
         if ((flags & 4) == 0) DeadKeyState = 0;
         buffer.Clear();
+        if (NativeDeadKeys.Contains((byte)vk))
+        {
+            buffer.Append('^'); // Windows écrit le caractère mort, puis signale par -1.
+            return -1;
+        }
         buffer.Append(state[0x14] == 0 ? 'a' : 'A');
         return 1;
     }

@@ -21,6 +21,23 @@ namespace TypingEngine.Windows.Tests;
 /// Arbitrage retenu (décision d'Antoine du 2026-09-20) : la touche morte est abandonnée
 /// quand la suspension vient du premier plan — l'utilisateur a changé d'application — et
 /// conservée pendant une pause volontaire, où il reste dans la même fenêtre.
+///
+/// ⛔ **Ce que ces témoins ne prouvent pas** (§ 3.3 de la revue du 2026-09-21, tranché le
+/// 2026-09-22). Les deux qui portent sur la pause volontaire éprouvent une branche que la
+/// production n'atteint pas : une pause met <c>KeyboardHook.PassThroughAll</c> à vrai
+/// (<c>TrayApplication.ShouldBlockHookCompletely</c>), et le hook est le seul appelant de
+/// <c>ProcessKey</c> — la garde d'entrée du moteur ne voit donc jamais
+/// <c>EmissionPaused</c>. Elle reste, défensive, parce que <c>EmissionPaused</c> est une
+/// propriété publique du moteur et que rien n'oblige un futur hôte à couper le hook ; mais
+/// elle ne décrit pas ce que vit l'utilisateur.
+///
+/// Le vrai chemin d'une pause volontaire est la **reprise** : <c>StopPause</c> →
+/// <c>ApplyHookState(syncWhenActive: true)</c> → <c>SyncState(preservePendingDeadKey: true)</c>,
+/// et c'est <c>PauseResumeDeadKeyTests</c> qui le tient depuis le correctif R4. Le geste 16
+/// de la recette VM reste l'arbitre final.
+///
+/// ⚠️ Le changement d'application sans suspension — Alt+Tab vers une application ordinaire —
+/// n'est pas ici non plus : voir <c>ApplicationChangeDeadKeyTests</c> (R13).
 /// </summary>
 public class DeadKeyWhileSuspendedTests
 {
@@ -87,6 +104,9 @@ public class DeadKeyWhileSuspendedTests
     /// <summary>
     /// b1, moitié « pause » : la pause est volontaire et courte, l'utilisateur reste dans
     /// la même fenêtre. La touche morte l'attend.
+    ///
+    /// ⚠️ Branche défensive, pas un chemin de production : voir la limite écrite en tête de
+    /// classe. Ce témoin tient le contrat du moteur, pas le comportement observable.
     /// </summary>
     [Fact]
     public void PauseVolontaire_ConserveLaToucheMorte()
@@ -143,6 +163,12 @@ public class DeadKeyWhileSuspendedTests
     /// <summary>
     /// Symétrique du précédent : après une pause, la touche morte conservée compose bien
     /// la lettre suivante. C'est ce qui justifie de la garder.
+    ///
+    /// ⚠️ La reprise est jouée ici en remettant <c>EmissionPaused</c> à false directement,
+    /// sans resynchronisation — ce que la production ne fait pas. C'est cet écart qui a
+    /// laissé passer R4 pendant deux jours : <c>StopPause</c> resynchronisait et annulait la
+    /// composition, et aucun témoin ne le voyait. La couture réelle est dans
+    /// <c>PauseResumeDeadKeyTests</c>.
     /// </summary>
     [Fact]
     public void ApresUnePause_LaToucheMorteConserveeCompose()
