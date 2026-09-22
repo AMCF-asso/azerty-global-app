@@ -130,3 +130,54 @@ R6 et R7 attendent un arbitrage (point 4), **R10 et R12 restent ouverts**.
 **Suites non mesurées sur ce poste** : Application Control refuse de charger les assemblies
 reconstruites (`0x800711C7`, constat identique à celui du point 2). Build Release : 0 erreur,
 2 avertissements préexistants. Attendu en CI : **18 / 201 / 439 = 658** (6 témoins neufs).
+
+## 9. Point 4 de l’ordre de marche : R6 et R7 tranchés le 2026-09-22
+
+Les deux constats majeurs qui attendaient un arbitrage sont fermés. **Aucun des deux ne
+bloque la 1.3.0.**
+
+### R6 — claim UIPI : reformulé, garde conservée
+
+**Décision d’Antoine (QCM du 2026-09-22) : reformuler le claim du Changelog.**
+
+Le mécanisme reste en place — `KeyMapper.SendInputs`, point de passage unique, compteur et
+journalisation. Il attrape ce que Windows signale vraiment. Ce qui change est ce qu’on en
+**annonce** : UIPI sort de la liste des causes couvertes, et le Changelog dit désormais noir
+sur blanc qu’un compteur à zéro ne prouve rien face à une fenêtre élevée.
+
+⚠️ Conséquence pour la recette : **le geste 26 ne sert plus à prouver R6**. VM-13 du 19/09 a
+déjà mesuré que le remappage traverse une fenêtre élevée sur ce poste ; un compteur à zéro y
+serait ambigu entre « aucune perte » et « perte invisible ». Le geste reste dans la liste
+minimale du point 6 pour ce qu’il mesure réellement — que la frappe sort — pas pour le compteur.
+
+Piste écartée : chercher une détection réelle (relecture de `GetAsyncKeyState` après émission,
+ou détection de l’élévation de la cible en amont). Plusieurs heures, issue incertaine, hors
+périmètre de la 1.3.0.
+
+### R7 — repli Alt+code : reporté en 1.3.1
+
+**Décision d’Antoine (QCM du 2026-09-22) : dette inscrite, pas de correctif en 1.3.0.**
+
+Motif : le chemin concerné ne sert que lorsque l’émission directe a déjà échoué, et la cible
+exposée est étroite (moteurs qui lisent le scan code, claviers US). En face, le correctif
+demande de remplacer la discrimination par `wScan` par une discrimination par ordre
+d’émission, donc de réécrire `AltGrEmissionTests` — un témoin qui a déjà eu raison contre une
+session le 2026-09-20 en encodant une vraie distinction (fiche
+`un-test-qui-fige-une-forme-peut-encoder-une-distinction`). Le risque n’est pas le code :
+c’est de détruire cette distinction en réécrivant le témoin qui la garde, à la veille d’une
+soumission.
+
+⚠️ À tenir en 1.3.1, dans cet ordre : (1) écrire le témoin qui prouve la distinction
+physique / synthétique **par l’ordre d’émission**, sur le code actuel, et le voir vert ;
+(2) seulement ensuite poser les scan codes étendus dans `BuildAltCodeInputs` ; (3) retirer
+`wScan == 0` comme critère de distinction. Inverser ces étapes, c’est perdre le filet.
+
+Pistes écartées : corriger partiellement là où le témoin ne regarde pas — ce serait faire
+coexister deux formes d’émission, exactement ce qui a produit l’écart 5 ; et déclarer la forme
+voulue pour fermer le constat — les cibles qui lisent le scan code verraient toujours un Alt
+gauche.
+
+### Reste ouvert après ce point
+
+**R10** (libellés d’onglets jamais retraduits — `TCM_SETITEMW` absent du code) et **R12**.
+Puis points 5 et 6 : reconstruire, WACK, réécrire la recette, VM minimale.
