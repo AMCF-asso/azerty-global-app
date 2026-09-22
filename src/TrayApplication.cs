@@ -533,7 +533,29 @@ sealed class TrayApplication : IDisposable
     private bool ShouldBlockHookCompletely => IsPaused || _suspendedForCompatibility;
     private bool ShouldProcessHook => _enabled && !IsPaused && !_suspendedForCompatibility;
 
-    private void ApplyHookState(bool syncWhenActive = false)
+    // R3 : suspension décidée par l'utilisateur lui-même (case « forcer la
+    // désactivation »), par opposition à une suspension imposée (anti-cheat, accès
+    // distant, premier plan inconnu). Miroir exact de ShouldDetectShortcutsWhileBlocked :
+    // les raccourcis restent détectés dans ce cas, donc leurs fenêtres doivent vivre.
+    private bool IsUserOverrideSuspension =>
+        ShouldServeSearchWhileBlocked(
+            _suspendedForCompatibility,
+            _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.None);
+
+    /// <summary>
+    /// R3 : la recherche de caractères suit exactement la détection des raccourcis sous
+    /// suspension — seule la suspension choisie par l'utilisateur la sert. Une suspension
+    /// imposée (anti-cheat, accès distant, premier plan inconnu) protège quelque chose ;
+    /// un choix de confort n'a rien à protéger.
+    ///
+    /// ⚠️ Fonction pure et non la propriété : la propriété dépend de _foregroundMonitor,
+    /// que la suite ne sait pas construire. C'est le trou du § 3 de la revue du 21/09.
+    /// </summary>
+    private static bool ShouldServeSearchWhileBlocked(
+        bool suspendedForCompatibility, CompatibilitySuspendReason reason) =>
+        suspendedForCompatibility && reason == CompatibilitySuspendReason.UserOverride;
+
+    private void ApplyHookState(bool syncWhenActive = false, bool preservePendingDeadKey = false)
     {
         if (_mapper != null) _mapper.EmissionPaused = IsPaused;
         if (_hook == null) return;
@@ -557,13 +579,15 @@ sealed class TrayApplication : IDisposable
         _hook.Enabled = ShouldProcessHook;
         ApplyWindowInputState();
         if (syncWhenActive && ShouldProcessHook)
-            _mapper?.SyncState();
+            _mapper?.SyncState(preservePendingDeadKey);
     }
 
     private void ApplyWindowInputState()
     {
         bool paused = ShouldBlockHookCompletely;
-        _characterSearch?.SetInputPaused(paused);
+        // R3 : sous « forcer la désactivation », le raccourci de recherche est toujours
+        // détecté ; geler la saisie de la fenêtre ouvrirait une fenêtre inerte.
+        _characterSearch?.SetInputPaused(paused && !IsUserOverrideSuspension);
         _lessons?.SetInputPaused(paused);
         _settings?.SetInputPaused(paused);
         _onboarding?.SetInputPaused(paused);
@@ -661,7 +685,11 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case WM_APP_SEARCH:
-                    if (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true)
+                    // R3, écart 8 : le raccourci arrive jusqu'ici sous suspension choisie
+                    // (ShortcutsWhilePassThrough) ; annoncer « Désactivé » contredisait le
+                    // Changelog. Le remappage, lui, reste éteint.
+                    if ((ShouldProcessHook || IsUserOverrideSuspension) &&
+                        _mapper?.AdvancedFeaturesSuppressed != true)
                         _characterSearch?.Toggle();
                     else if (_mapper?.AdvancedFeaturesSuppressed == true)
                         ShowBalloon(L.Layers_SearchSecureTitle, L.Layers_SearchSecureBody);
@@ -1699,7 +1727,10 @@ sealed class TrayApplication : IDisposable
         bool wasPaused = IsPaused;
         _pauseUntilUtc = null;
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
-        ApplyHookState(syncWhenActive: true);
+        // R4 : doctrine d'ArbitratePendingDeadKeyWhileSuspended — une pause volontaire
+        // conserve la touche morte, seule une suspension imposée l'abandonne. SyncState
+        // l'annulait à la reprise, ce que le produit ne tenait donc pas.
+        ApplyHookState(syncWhenActive: true, preservePendingDeadKey: true);
         UpdateIcon();
         UpdateTooltip();
 

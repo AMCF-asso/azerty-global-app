@@ -87,3 +87,26 @@ Point 1 de l'ordre de marche (§ 4) exécuté : **R1, R2, R5 corrigés**, le res
 Suite Release après correctif : **421 tests, 0 échec** (410 + 11). Build : 0 erreur, 2 avertissements préexistants (`TrayApplication.cs:1494,1507`).
 
 Non touché, à dessein : `OnboardingWindow.cs:1027` répond aussi `DLGC_WANTALLKEYS` inconditionnel, mais cette fenêtre n'est pas inscrite à `DialogNavigation`, donc `IsDialogMessageW` ne la voit jamais et le piège n'existe pas là. R10 (libellés d'onglets non retraduits) et R12 restent ouverts : points 2 à 6 du § 4 inchangés.
+
+## 7. Suite donnée le 2026-09-22 : point 2 de l'ordre de marche
+
+**R3, R4 et R11 corrigés**, avec leurs trois témoins. Le reste du tableau du § 1 est
+inchangé : R6 et R7 attendent un arbitrage (point 4), R8, R9, R10 et R12 restent ouverts.
+
+| # | Correctif | Où | Preuve |
+|---|---|---|---|
+| R3 | `WM_APP_SEARCH` accepte la suspension choisie par l'utilisateur, et `ApplyWindowInputState` ne gèle plus la saisie de la recherche dans ce cas — un raccourci détecté qui ouvre une fenêtre inerte était le même défaut déplacé d'un cran. La décision sort en fonction pure `ShouldServeSearchWhileBlocked`. | `TrayApplication.cs` | `SearchWhileSuspendedTests`, 12 cas dont l'égalité avec `ShouldDetectShortcutsWhileBlocked` sur les cinq motifs |
+| R4 | `SyncState` prend `preservePendingDeadKey`, que seul `StopPause` passe à vrai. La bascule manuelle (activer/désactiver) garde son annulation. | `KeyMapper.cs`, `TrayApplication.cs` | `PauseResumeDeadKeyTests`, 3 cas dont la réciproque : sans le drapeau, `SyncState` annule bien |
+| R11 | Les deux raccourcis qui font surgir une fenêtre passent par `KeyboardHook.ShortcutOpensWindow` : l'oubli ne peut plus porter sur une seule des deux branches. | `KeyboardHook.cs` | `SecureInputShortcutTests`, 4 cas |
+
+⛔ **Les suites n'ont pas pu être mesurées sur ce poste** : Application Control refuse les
+trois assemblies fraîchement reconstruites (`0x800711C7`, une relance confirme). Le build
+Release des trois projets sort en **0 erreur, 2 avertissements préexistants**
+(`TrayApplication.cs:1509,1522`). Attendu en CI : **18 / 201 / 433 = 652** (194 + 7 et 421 + 12),
+à lire sur un
+push de la branche `release/1.2.0-notation-store` — geste d'Antoine.
+
+⚠️ Limite des trois témoins, écrite dans leurs `<summary>` : ils tiennent les décisions,
+pas leur câblage Win32. `StopPause`, l'arrivée de `WM_APP_SEARCH` et le callback du hook
+restent hors de portée de la suite — c'est le geste 16 et la VM minimale du point 6 qui les
+prouvent.

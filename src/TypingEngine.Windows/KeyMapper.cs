@@ -199,14 +199,15 @@ public sealed class KeyMapper
     /// À appeler quand le remapping est réactivé (l'utilisateur a pu
     /// changer le CapsLock pendant que le hook était désactivé).
     /// </summary>
-    public void SyncState()
+    public void SyncState(bool preservePendingDeadKey = false)
     {
         bool actualCaps = (_api.GetKeyState(0x14) & 0x0001) != 0;
         bool changed = _capsLockState != actualCaps;
         _capsLockState = actualCaps;
 
-        // Réinitialiser une éventuelle touche morte en attente
-        if (_composition.Cancel())
+        // Réinitialiser une éventuelle touche morte en attente — sauf reprise d'une
+        // pause volontaire (R4) : l'utilisateur reprend sa frappe là où il l'a laissée.
+        if (!preservePendingDeadKey && _composition.Cancel())
         {
             changed = true;
         }
