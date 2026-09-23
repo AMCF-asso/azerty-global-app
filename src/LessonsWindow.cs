@@ -616,10 +616,30 @@ internal sealed class LessonsWindow : IDisposable
             rect.bottom = rect.top + newOuterH;
     }
 
+    /// <summary>
+    /// D3 (accessibilité 1.3.0) : minimum de zone client, borné à la zone de travail de l'écran
+    /// de la fenêtre (<see cref="WindowSizing.MinimumClientSize"/>).
+    /// </summary>
+    private (int Width, int Height) MinimumClientSize(IntPtr hwnd, double ratio)
+    {
+        int workW = 0;
+        int workH = 0;
+        var monitor = Win32.MonitorFromWindow(hwnd, Win32.MONITOR_DEFAULTTONEAREST);
+        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        if (monitor != IntPtr.Zero && Win32.GetMonitorInfo(monitor, ref monInfo))
+        {
+            workW = monInfo.rcWork.right - monInfo.rcWork.left;
+            workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        }
+        return WindowSizing.MinimumClientSize(D(BASE_MIN_W), D(BASE_MIN_H), ratio,
+            _nonClientW, _nonClientH, workW, workH);
+    }
+
     private void EnforceMinimumClientSize(ref int clientW, ref int clientH, double ratio)
     {
-        int minW = D(BASE_MIN_W);
-        int minH = D(BASE_MIN_H);
+        // D3 : le même minimum borné que WM_GETMINMAXINFO, sans quoi tirer un bord le
+        // repousserait hors de l'écran.
+        var (minW, minH) = MinimumClientSize(_hWnd, ratio);
         if (clientW < minW)
         {
             clientW = minW;
@@ -839,13 +859,15 @@ internal sealed class LessonsWindow : IDisposable
 
                 case Win32.WM_GETMINMAXINFO:
                     var mmi = Marshal.PtrToStructure<Win32.MINMAXINFO>(lParam);
-                    int minClientW = D(BASE_MIN_W);
-                    int minClientH = D(BASE_MIN_H);
-                    if (_baseClientW > 0 && _baseClientH > 0)
-                    {
-                        double ratio = _baseClientW / (double)_baseClientH;
-                        EnforceMinimumClientSize(ref minClientW, ref minClientH, ratio);
-                    }
+                    // D3 (accessibilité 1.3.0) : minimum borné à la zone de travail. Windows
+                    // l'applique aussi à CreateWindowEx et MoveWindow (mesuré le 2026-09-23) ;
+                    // non borné, il dépassait l'écran dès 175 % sur un 1920 × 1080 et annulait
+                    // le plafond d'AG130-42. Avant la création, aucun rapport n'est mesuré :
+                    // aucun n'est imposé, comme avant.
+                    double minRatio = _baseClientW > 0 && _baseClientH > 0
+                        ? _baseClientW / (double)_baseClientH
+                        : 0;
+                    var (minClientW, minClientH) = MinimumClientSize(hWnd, minRatio);
                     mmi.ptMinTrackSize.x = minClientW + _nonClientW;
                     mmi.ptMinTrackSize.y = minClientH + _nonClientH;
                     Marshal.StructureToPtr(mmi, lParam, false);
@@ -976,7 +998,12 @@ internal sealed class LessonsWindow : IDisposable
             DrawFreeContent(hdc, content);
 
         DrawFocusRing(hdc);
-        DrawHoverTooltip(hdc, rc);
+        // K4 (accessibilité 1.3.0) : l'infobulle de survol garde la priorité ; à défaut, celle
+        // de la cible focalisée au clavier.
+        if (string.IsNullOrEmpty(_hoverTooltip))
+            DrawFocusedTooltip(hdc, rc);
+        else
+            DrawHoverTooltip(hdc, rc);
     }
 
     private void DrawHeader(IntPtr hdc, Win32.RECT rc)
@@ -1850,24 +1877,62 @@ internal sealed class LessonsWindow : IDisposable
 
     private void DrawHoverTooltip(IntPtr hdc, Win32.RECT bounds)
     {
-        if (string.IsNullOrEmpty(_hoverTooltip)) return;
+        DrawTooltip(hdc, bounds, _hoverTooltip, _hoverTooltipAnchor, _hoverTooltipPreferAbove, _hoverTooltipCompact);
+    }
+
+    /// <summary>
+    /// K4 (accessibilité 1.3.0) : un bouton-icône ne dit ce qu'il fait que par son infobulle,
+    /// qui n'apparaissait qu'au survol de la souris. La cible focalisée au clavier affiche la
+    /// même, au même endroit.
+    /// </summary>
+    private void DrawFocusedTooltip(IntPtr hdc, Win32.RECT bounds)
+    {
+        if (_focusedActionIndex < 0 || _focusedActionIndex >= _clickActions.Count) return;
+        int index = FindHoverAreaFor(_clickActions[_focusedActionIndex].Rect, _hoverAreas);
+        if (index < 0) return;
+        var area = _hoverAreas[index];
+        DrawTooltip(hdc, bounds, area.Tooltip, area.Rect, area.PreferAbove, area.Compact);
+    }
+
+    /// <summary>
+    /// K4 : l'infobulle d'une cible cliquable est celle déclarée sur le même rectangle
+    /// (<see cref="DrawIconButton"/> passe le même aux deux listes) ; la première s'il y en a
+    /// plusieurs, -1 quand la cible n'en a pas.
+    /// </summary>
+    internal static int FindHoverAreaFor(Win32.RECT target,
+        IReadOnlyList<(Win32.RECT Rect, string Tooltip, bool PreferAbove, bool Compact)> areas)
+    {
+        for (int i = 0; i < areas.Count; i++)
+        {
+            var rect = areas[i].Rect;
+            if (rect.left == target.left && rect.top == target.top &&
+                rect.right == target.right && rect.bottom == target.bottom &&
+                !string.IsNullOrEmpty(areas[i].Tooltip))
+                return i;
+        }
+        return -1;
+    }
+
+    private void DrawTooltip(IntPtr hdc, Win32.RECT bounds, string? text, Win32.RECT anchor, bool preferAbove, bool compact)
+    {
+        if (string.IsNullOrEmpty(text)) return;
 
         int pad = S(8);
-        string[] lines = _hoverTooltip.Split('\n');
+        string[] lines = text.Split('\n');
         int lineH = S(18);
         int textWidth = lines.Max(line => GdiHelpers.MeasureSingleLineWidth(hdc, _hFontSmall, line));
-        int minWidth = _hoverTooltipCompact ? 0 : S(80);
+        int minWidth = compact ? 0 : S(80);
         int width = Math.Max(minWidth, textWidth) + pad * 2;
         int height = Math.Max(S(26), lines.Length * lineH + pad);
-        int anchorCenter = _hoverTooltipAnchor.left + (_hoverTooltipAnchor.right - _hoverTooltipAnchor.left) / 2;
+        int anchorCenter = anchor.left + (anchor.right - anchor.left) / 2;
         int left = Math.Max(bounds.left + S(8), Math.Min(anchorCenter - width / 2, bounds.right - width - S(8)));
-        int top = _hoverTooltipPreferAbove
-            ? _hoverTooltipAnchor.top - height - S(6)
-            : _hoverTooltipAnchor.bottom + S(6);
+        int top = preferAbove
+            ? anchor.top - height - S(6)
+            : anchor.bottom + S(6);
         if (top < bounds.top + S(8))
-            top = _hoverTooltipAnchor.bottom + S(6);
+            top = anchor.bottom + S(6);
         if (top + height > bounds.bottom - S(8))
-            top = _hoverTooltipAnchor.top - height - S(6);
+            top = anchor.top - height - S(6);
 
         var rect = new Win32.RECT { left = left, top = top, right = left + width, bottom = top + height };
         DrawRoundedBox(hdc, rect, CLR_PANEL_2, CLR_BORDER, S(6));
@@ -2046,6 +2111,9 @@ internal sealed class LessonsWindow : IDisposable
         else
             _focusedActionIndex = (_focusedActionIndex + direction + _clickActions.Count) % _clickActions.Count;
 
+        // K4 : la navigation au clavier retire l'infobulle de survol pour laisser voir celle
+        // de la cible focalisée ; le prochain mouvement de souris la rétablit.
+        _hoverTooltip = null;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 

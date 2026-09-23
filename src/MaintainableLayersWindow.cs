@@ -37,6 +37,12 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hDelay;
     private IntPtr _hFont;
     private IntPtr _hFontTitle;
+    // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
+    // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
+    private int _dpi = 96;
+    private readonly List<(IntPtr Control, int X, int Y, int W, int H, bool Title)> _layout = new();
+    private const int BASE_CLIENT_W = 520;
+    private const int BASE_CLIENT_H = 408;
     private IntPtr _hBgBrush;
     private bool _visible;
 
@@ -53,14 +59,23 @@ internal sealed class MaintainableLayersWindow : IDisposable
     public void Show()
     {
         LoadFromConfig();
+        // K1 (accessibilité 1.3.0) : Tab, Maj+Tab, Entrée et Échap entre les contrôles, comme
+        // les autres fenêtres à contrôles. Inscrite le temps d'être visible, comme l'accueil :
+        // inscrite en permanence, elle ferait passer chaque message du processus par
+        // GetAncestor (voir DialogNavigation.TryRoute).
+        DialogNavigation.Register(_hWnd);
         Win32.ShowWindow(_hWnd, 5);
         Win32.SetForegroundWindow(_hWnd);
+        // Focus initial sur le premier contrôle : sans lui, le focus restait sur la fenêtre
+        // elle-même, et rien n'était annoncé avant la première tabulation.
+        Win32.SetFocus(_hMaster);
         _visible = true;
     }
 
     public void Hide()
     {
         SaveToConfig();
+        DialogNavigation.Unregister(_hWnd);
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
     }
@@ -82,8 +97,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
         };
         Win32.RegisterClassExW(ref wc);
 
-        const int clientW = 520;
-        const int clientH = 408;
+        const int clientW = BASE_CLIENT_W;
+        const int clientH = BASE_CLIENT_H;
         uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var rect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
         Win32.AdjustWindowRectEx(ref rect, style, false, 0);
@@ -99,9 +114,12 @@ internal sealed class MaintainableLayersWindow : IDisposable
             style, x, y, width, height, IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
         Win32.EnableDarkTitleBar(_hWnd);
 
-        _hFont = Win32.CreateFontW(-16, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        // -18 : le titre complet tient sur une seule ligne dans 470 px.
-        _hFontTitle = Win32.CreateFontW(-18, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
+        // l'accueille. Taille, positions et polices en découlent : elles étaient fixes en
+        // pixels, et la fenêtre gardait sa taille 100 % à 200 %.
+        _dpi = Win32.GetDpiForWindowOrDefault(_hWnd);
+        FitWindowToDpi(work);
+        CreateFonts();
 
         CreateStatic(instance, L.Layers_Title, 24, 20, 470, 26, _hFontTitle);
         // Le second groupe de phrases wrappe sur deux lignes dans 470 px :
@@ -120,12 +138,14 @@ internal sealed class MaintainableLayersWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | ES_NUMBER | ES_CENTER,
             210, 317, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
         SetFont(_hDelay, _hFont);
+        Track(_hDelay, 210, 317, 70, 28);
         CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
 
         IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Layers_SaveButton,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | BS_DEFPUSHBUTTON,
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
+        Track(save, 350, 357, 140, 34);
     }
 
     private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)
@@ -134,6 +154,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | BS_AUTOCHECKBOX,
             x, y, w, h, _hWnd, (IntPtr)id, instance, IntPtr.Zero);
         SetFont(control, _hFont);
+        Track(control, x, y, w, h);
         return control;
     }
 
@@ -143,6 +164,51 @@ internal sealed class MaintainableLayersWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE,
             x, y, w, h, _hWnd, IntPtr.Zero, instance, IntPtr.Zero);
         SetFont(control, font);
+        Track(control, x, y, w, h, font == _hFontTitle);
+    }
+
+    private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
+
+    private void CreateFonts()
+    {
+        _hFont = Win32.CreateFontW(S(-16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        // -18 : le titre complet tient sur une seule ligne dans 470 px.
+        _hFontTitle = Win32.CreateFontW(S(-18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+    }
+
+    /// <summary>D1 : retient la géométrie de référence du contrôle et l'applique au DPI courant.</summary>
+    private void Track(IntPtr control, int x, int y, int w, int h, bool title = false)
+    {
+        _layout.Add((control, x, y, w, h, title));
+        Win32.MoveWindow(control, S(x), S(y), S(w), S(h), false);
+    }
+
+    /// <summary>D1 : taille de la fenêtre au DPI courant, centrée dans la zone de travail.</summary>
+    private void FitWindowToDpi(Win32.RECT work)
+    {
+        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var rect = new Win32.RECT { left = 0, top = 0, right = S(BASE_CLIENT_W), bottom = S(BASE_CLIENT_H) };
+        Win32.AdjustWindowRectEx(ref rect, style, false, 0);
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+        int x = work.left + Math.Max(0, (work.right - work.left - width) / 2);
+        int y = work.top + Math.Max(0, (work.bottom - work.top - height) / 2);
+        Win32.MoveWindow(_hWnd, x, y, width, height, false);
+    }
+
+    /// <summary>D1 : polices et contrôles au nouveau DPI (WM_DPICHANGED).</summary>
+    private void ApplyDpiToControls()
+    {
+        IntPtr oldFont = _hFont;
+        IntPtr oldTitle = _hFontTitle;
+        CreateFonts();
+        foreach (var (control, x, y, w, h, title) in _layout)
+        {
+            SetFont(control, title ? _hFontTitle : _hFont);
+            Win32.MoveWindow(control, S(x), S(y), S(w), S(h), true);
+        }
+        if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
+        if (oldTitle != IntPtr.Zero) Win32.DeleteObject(oldTitle);
     }
 
     private static void SetFont(IntPtr control, IntPtr font) =>
@@ -210,6 +276,15 @@ internal sealed class MaintainableLayersWindow : IDisposable
             {
                 case Win32.WM_COMMAND:
                     int id = wParam.ToInt32() & 0xFFFF;
+                    // K1 : Entrée et Échap arrivent d'IsDialogMessageW en IDOK et IDCANCEL,
+                    // jamais en WM_KEYDOWN (DialogNavigation, revue R5). Les deux ferment en
+                    // enregistrant, comme « Enregistrer », la croix et l'ancien Échap : cette
+                    // fenêtre n'a pas d'annulation.
+                    if (id == DialogNavigation.IDOK || DialogNavigation.IsEscapeCommand(id))
+                    {
+                        Hide();
+                        return IntPtr.Zero;
+                    }
                     if (id == IDC_MASTER)
                     {
                         UpdateEnabledState();
@@ -233,6 +308,18 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     // Statics et cases posent leur texte directement sur le fond de classe.
                     Win32.SetBkMode(wParam, 1);
                     return _hBgBrush;
+                case Win32.WM_DPICHANGED:
+                {
+                    // D1 : même traitement que LayoutConflictWindow — fenêtre au rectangle
+                    // suggéré par Windows, polices et contrôles au nouveau DPI.
+                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
+                    if (newDpi > 0) _dpi = newDpi;
+                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
+                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
+                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    ApplyDpiToControls();
+                    return IntPtr.Zero;
+                }
                 case Win32.WM_CLOSE:
                     Hide();
                     return IntPtr.Zero;
@@ -266,6 +353,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     {
         if (_hWnd != IntPtr.Zero)
         {
+            // Désinscrire AVANT de détruire : Windows recycle les HWND.
+            DialogNavigation.Unregister(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }

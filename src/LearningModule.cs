@@ -69,6 +69,7 @@ sealed class LearningModule : IDisposable
     // Boutons affiches a la fin de chaque exercice (page de choix Reessayer / Suivant)
     private const int IDC_BTN_RETRY = 4004;
     private const int IDC_BTN_CONTINUE = 4005;
+    private const uint BM_CLICK = 0x00F5;
 
     // ── Timer IDs ───────────────────────────────────────────────────
     private const uint TIMER_KEYPRESS = 8001;
@@ -1411,6 +1412,15 @@ sealed class LearningModule : IDisposable
                             Close();
                         return IntPtr.Zero;
                     }
+                    if (vk == 0x09) // VK_TAB
+                    {
+                        // K3 (accessibilité 1.3.0) : Tab et Maj+Tab mènent aux boutons
+                        // d'en-tête ; « Passer cet exercice » n'était atteignable qu'à la
+                        // souris. Aucun exercice ne contient de tabulation : la touche ne
+                        // faisait que compter une faute.
+                        CycleHeaderFocus(_hWnd);
+                        return IntPtr.Zero;
+                    }
                     if (vk == 0x08) // VK_BACK
                         OnBackspace();
                     else if (vk == 0x1B) // VK_ESCAPE
@@ -1513,6 +1523,9 @@ sealed class LearningModule : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private void OnChar(char c)
     {
+        // K3 : le WM_CHAR de Tab arrive encore ici après que WM_KEYDOWN a déplacé le focus
+        // (TranslateMessage l'a posté à cette fenêtre) ; ce n'est pas une frappe d'exercice.
+        if (c == '\t') return;
         if (_completed || _inTransition || _awaitingChoice) return;
         if (_currentStep >= Steps.Length) return;
 
@@ -1640,6 +1653,44 @@ sealed class LearningModule : IDisposable
     {
         if (_currentStep < Steps.Length && Steps[_currentStep].Skippable)
             AdvanceToNextStep();
+    }
+
+    /// <summary>
+    /// K3 (accessibilité 1.3.0) : cycle de tabulation surface de frappe → « Quitter » →
+    /// « Passer » (s'il est affiché) → surface, à l'envers avec Maj. La fenêtre reste hors
+    /// d'IsDialogMessageW, qui mangerait les frappes de l'exercice : elle tourne son focus
+    /// elle-même.
+    /// </summary>
+    private void CycleHeaderFocus(IntPtr from)
+    {
+        var stops = new List<IntPtr> { _hWnd };
+        if (Win32.IsWindowVisible(_hWndBtnQuit)) stops.Add(_hWndBtnQuit);
+        if (Win32.IsWindowVisible(_hWndBtnSkip)) stops.Add(_hWndBtnSkip);
+        bool backwards = (Win32.GetKeyState(0x10) & 0x8000) != 0; // VK_SHIFT
+        int next = DialogNavigation.NextFocusStop(stops.IndexOf(from), stops.Count, backwards);
+        if (next >= 0) Win32.SetFocus(stops[next]);
+    }
+
+    /// <summary>
+    /// K3 : clavier des boutons d'en-tête. Hors d'IsDialogMessageW, un BUTTON ne rend pas Tab
+    /// et ne réagit pas à Entrée ; Espace, lui, clique déjà. Échap ferme, comme sur la surface.
+    /// </summary>
+    private bool HandleHeaderButtonKey(IntPtr hWnd, uint msg, IntPtr wParam)
+    {
+        if (msg != Win32.WM_KEYDOWN || _inputPaused) return false;
+        switch (wParam.ToInt32())
+        {
+            case 0x09: // VK_TAB
+                CycleHeaderFocus(hWnd);
+                return true;
+            case 0x0D: // VK_RETURN
+                Win32.SendMessageW(hWnd, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                return true;
+            case 0x1B: // VK_ESCAPE
+                Close();
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -2726,6 +2777,7 @@ sealed class LearningModule : IDisposable
     private IntPtr QuitButtonSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
+        if (HandleHeaderButtonKey(hWnd, msg, wParam)) return IntPtr.Zero;
         switch (msg)
         {
             case Win32.WM_MOUSEMOVE:
@@ -2779,12 +2831,28 @@ sealed class LearningModule : IDisposable
         Win32.SetTextColor(dis.hDC, hovered ? 0x00FFFFFFu : CLR_BTN_QUIT_TEXT);
         Win32.DrawTextW(dis.hDC, label, label.Length, ref rc,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+
+        // K3 (accessibilité 1.3.0) : un bouton owner-draw ne dessine que ce qu'on lui dit, et
+        // le focus clavier ne se voyait pas. Rectangle système, en retrait du cadre arrondi.
+        if ((dis.itemState & Win32.ODS_FOCUS) != 0)
+        {
+            int inset = S(3);
+            var focus = new Win32.RECT
+            {
+                left = dis.rcItem.left + inset,
+                top = dis.rcItem.top + inset,
+                right = dis.rcItem.right - inset,
+                bottom = dis.rcItem.bottom - inset
+            };
+            Win32.DrawFocusRect(dis.hDC, ref focus);
+        }
     }
 
     /// <summary>Subclass du bouton « Passer cet exercice » — même comportement que QuitButtonSubclassProc.</summary>
     private IntPtr SkipButtonSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
+        if (HandleHeaderButtonKey(hWnd, msg, wParam)) return IntPtr.Zero;
         switch (msg)
         {
             case Win32.WM_MOUSEMOVE:
