@@ -326,7 +326,7 @@ Cette application utilise un hook clavier bas niveau (WH_KEYBOARD_LL via SetWind
 
 Points importants :
  • Le hook ne s'injecte dans aucun processus externe — tout le traitement se fait dans le processus de l'application.
- • Le hook clavier n’est installé qu’après l’action explicite « Activer et essayer » ou « Activer AZERTY Global » dans l’accueil. Fermer l’accueil sans activer laisse le clavier système inchangé. L’accord est conservé localement ; une configuration ancienne sans cet accord le redemande une fois. Le lancement au démarrage de Windows reste un choix distinct.
+ • Le hook clavier n’est installé qu’après l’action explicite « Activer et essayer » ou « Activer AZERTY Global » dans l’accueil. Fermer l’accueil sans activer laisse le clavier système inchangé. L’accord est conservé localement ; une configuration ancienne sans cet accord le redemande une fois. Le lancement au démarrage de Windows reste un choix distinct : la case est proposée cochée à la dernière étape de l’accueil, et n’est appliquée que si l’utilisateur valide cette étape après avoir activé l’app. Un refus dans les paramètres Windows (Applications > Démarrage) est respecté : la case reste alors décochée.
  • Aucune frappe n'est journalisée, stockée durablement ou transmise. L'application n'effectue aucun envoi réseau automatique : le remapping, la recherche et les leçons fonctionnent localement ; seuls des journaux techniques locaux peuvent être écrits pour diagnostiquer les erreurs et la compatibilité.
  • L'application est un exécutable .NET 8.0 AOT natif (pas de runtime .NET requis).
  • La capacité runFullTrust est requise car c'est une application Desktop Bridge Win32.

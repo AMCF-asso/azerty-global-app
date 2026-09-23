@@ -233,7 +233,9 @@ sealed class TrayApplication : IDisposable
         Win32.WTSRegisterSessionNotification(_hWnd, Win32.NOTIFY_FOR_THIS_SESSION);
 
         // Icône tray
-        _hIcon = CreateTextIcon("AG", true);
+        // Couleur de l'état réel dès la première image : grise tant que l'accord d'activation
+        // manque ou que l'application est désactivée (UpdateIcon suit ensuite).
+        _hIcon = CreateTextIcon("AG", ShouldProcessHook);
         // L'icône balloon (logo produit) se crée à chaque émission, jamais ici :
         // NIIF_LARGE_ICON exige la taille SM_CXICON du moment, qui suit l'échelle
         // d'affichage (F6 du smoke v1.2.0 — 32 px codé en dur = bulle rejetée à 125 %).
@@ -286,7 +288,9 @@ sealed class TrayApplication : IDisposable
             // Refléter l'état réel dans le tooltip dès le démarrage : le szTip posé au
             // NIM_ADD ne portait que « AZERTY Global vX.Y.Z » (sans « — Actif »), et
             // UpdateTooltip n'était sinon appelé qu'au premier changement d'état/langue
-            // (constat smoke test 2026-07-17).
+            // (constat smoke test 2026-07-17). Même chose pour l'icône, créée avant
+            // LoadAndStart : elle suit l'état réel (grise sans accord, constat v1.3.0).
+            UpdateIcon();
             UpdateTooltip();
             CheckSystemLayout(); // peut declencher LayoutConflictWindow et set _layoutPopupOpen
 

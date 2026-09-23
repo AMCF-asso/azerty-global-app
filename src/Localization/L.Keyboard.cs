@@ -3,7 +3,7 @@ namespace AZERTYGlobal;
 internal static partial class L
 {
     // ── Tooltips des touches contextuelles (KeyboardRenderer.GetContextTooltip) ──
-    // Entrée (input) : le libellé fixe dessiné sur la touche (jamais traduit, cf. VirtualKeyboard._visualKeys).
+    // Entrée (input) : le libellé interne de la touche (VirtualKeyboard.BuildKeyLayout), identifiant jamais traduit.
     // Sortie : description longue affichée au survol — celle-ci est traduite.
     public static string Keyboard_TooltipTab => T("Tabulation", "Tab");
     public static string Keyboard_TooltipBackspace => T("Retour arrière", "Backspace");
@@ -15,6 +15,19 @@ internal static partial class L
     public static string Keyboard_TooltipAlt => "Alt";
     public static string Keyboard_TooltipAltGr => T("Alt droite (AltGr)", "Right Alt (AltGr)");
     public static string Keyboard_TooltipMenu => T("Menu contextuel", "Context menu");
+
+    // ── Texte dessiné sur les touches ──
+    // Le libellé interne d'une VisualKey (français) sert aussi d'identifiant : surlignage,
+    // état des modificateurs, tooltips. Il ne change jamais ; seul le texte dessiné passe
+    // par cette table, au moment du rendu. Les autres libellés sont identiques en anglais.
+    public static string Keyboard_KeyCap(string internalLabel) => internalLabel switch
+    {
+        "Entrée" => T("Entrée", "Enter"),
+        "Verr. Maj." => T("Verr. Maj.", "Caps Lock"),
+        "Maj ⇧" => T("Maj ⇧", "Shift ⇧"),
+        "Espace" => T("Espace", "Space"),
+        _ => internalLabel,
+    };
 
     // ── Libellés de couche dans le tooltip d'une touche (Base : x — NOM) ──
     public static string Keyboard_LayerShift => T("Maj", "Shift");

@@ -82,7 +82,7 @@ sealed class VirtualKeyboard : IDisposable
     internal record struct VisualKey(
         float X, float Y, float W, float H,   // Position/taille en unités (1u = largeur touche standard)
         uint Scancode,                          // 0 = touche contextuelle (non remappée)
-        string Label,                           // Label fixe en bas (repère AZERTY)
+        string Label,                           // Identifiant interne (repère AZERTY) ; texte dessiné : L.Keyboard_KeyCap
         bool IsContextual,                      // Tab, Shift, Ctrl, etc.
         string? ContextId = null                // Identifiant interne invisible (ex: ShiftLeft)
     );
@@ -369,6 +369,7 @@ sealed class VirtualKeyboard : IDisposable
 
         CreateTooltip();
         ConfigManager.WindowBoundsCleared += OnWindowBoundsCleared;
+        ConfigManager.AppLanguageChanged += OnAppLanguageChanged;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -597,6 +598,15 @@ sealed class VirtualKeyboard : IDisposable
         if (_hWnd == IntPtr.Zero) return;
         if (Win32.GetWindowRect(_hWnd, out var rect) && IsRectVisibleOnScreen(rect))
             ConfigManager.SetWindowBounds(ConfigManager.VirtualKeyboardBoundsKey, rect);
+    }
+
+    // Les libellés dessinés (Entrée, Verr. Maj., Maj, Espace) suivent la langue de
+    // l'interface : redessiner dès qu'elle change, et réécrire l'infobulle au prochain survol.
+    private void OnAppLanguageChanged(string _)
+    {
+        _hoveredKeyIndex = -1;
+        if (_visible && _hWnd != IntPtr.Zero)
+            Invalidate();
     }
 
     private void OnWindowBoundsCleared(string key)
@@ -1139,7 +1149,8 @@ sealed class VirtualKeyboard : IDisposable
                 var ctxRect = new Win32.RECT { left = ctxLeft, top = ky, right = kx + kw, bottom = ky + kh };
                 Win32.SelectObject(hdc, hCtxFont);
                 Win32.SetTextColor(hdc, ctxTextColor);
-                Win32.DrawTextW(hdc, vk.Label, vk.Label.Length, ref ctxRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+                string ctxText = L.Keyboard_KeyCap(vk.Label); // libellé interne → texte affiché
+                Win32.DrawTextW(hdc, ctxText, ctxText.Length, ref ctxRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
             }
             else
             {
@@ -1180,7 +1191,8 @@ sealed class VirtualKeyboard : IDisposable
                     var labelRect = new Win32.RECT { left = kx, top = ky + kh - labelFontSize - 4, right = kx + kw, bottom = ky + kh - 1 };
                     Win32.SelectObject(hdc, hLabelFont);
                     Win32.SetTextColor(hdc, CLR_LABEL);
-                    Win32.DrawTextW(hdc, vk.Label, vk.Label.Length, ref labelRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+                    string labelText = L.Keyboard_KeyCap(vk.Label);
+                    Win32.DrawTextW(hdc, labelText, labelText.Length, ref labelRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
                 }
             }
 
@@ -1354,6 +1366,7 @@ sealed class VirtualKeyboard : IDisposable
     public void Dispose()
     {
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
+        ConfigManager.AppLanguageChanged -= OnAppLanguageChanged;
         if (_hTooltip != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hTooltip);
