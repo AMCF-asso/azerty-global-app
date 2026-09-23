@@ -154,4 +154,58 @@ public class Accessibilite130Tests
             L.Language = avant;
         }
     }
+
+    // ── N10 : noms accessibles des boutons ▲▼ de la Pause ─────────────
+
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("en")]
+    public void N10_ChaqueBoutonDeLaPausePorteUnVraiNom(string langue)
+    {
+        string avant = L.Language;
+        try
+        {
+            L.Language = langue;
+            var boutons = PauseDurationDialog.SpinButtons();
+            Assert.Equal(4, boutons.Length);
+            Assert.Equal(4, boutons.Select(b => b.Id).Distinct().Count());
+            // ⛔ Le témoin qui compte : un nom qui retombe sur le glyphe, c'est l'annonce
+            // « ▲ » d'avant le correctif.
+            Assert.All(boutons, b => Assert.False(string.IsNullOrWhiteSpace(b.Name)));
+            Assert.All(boutons, b => Assert.NotEqual(b.Glyph, b.Name));
+            Assert.All(boutons, b => Assert.DoesNotContain(b.Glyph, b.Name));
+            // Quatre noms distincts : ni champ ni sens ne doivent se confondre.
+            Assert.Equal(4, boutons.Select(b => b.Name).Distinct().Count());
+            Assert.Equal(2, boutons.Count(b => b.Glyph == "▲"));
+            Assert.Equal(2, boutons.Count(b => b.Glyph == "▼"));
+        }
+        finally
+        {
+            L.Language = avant;
+        }
+    }
+
+    [Fact]
+    public void N10_LesNomsSontTraduits()
+    {
+        string avant = L.Language;
+        try
+        {
+            L.Language = "fr";
+            var fr = PauseDurationDialog.SpinButtons();
+            L.Language = "en";
+            var en = PauseDurationDialog.SpinButtons();
+            // Même bouton, même glyphe, autre langue : le nom change.
+            for (int i = 0; i < fr.Length; i++)
+            {
+                Assert.Equal(fr[i].Id, en[i].Id);
+                Assert.Equal(fr[i].Glyph, en[i].Glyph);
+                Assert.NotEqual(fr[i].Name, en[i].Name);
+            }
+        }
+        finally
+        {
+            L.Language = avant;
+        }
+    }
 }

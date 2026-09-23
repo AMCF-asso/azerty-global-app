@@ -11,6 +11,12 @@ internal static partial class L
     public static string Pause_Label => T("Durée de pause temporaire", "Temporary pause duration");
     public static string Pause_Hours => T("Heures", "Hours");
     public static string Pause_Minutes => T("Minutes", "Minutes");
+    // N10 (accessibilité 1.3.0) : noms accessibles des boutons ▲▼, que lit le Narrateur ;
+    // le glyphe affiché, lui, ne dit ni quel champ ni quel sens.
+    public static string Pause_HoursUp => T("Augmenter les heures", "Increase hours");
+    public static string Pause_HoursDown => T("Diminuer les heures", "Decrease hours");
+    public static string Pause_MinutesUp => T("Augmenter les minutes", "Increase minutes");
+    public static string Pause_MinutesDown => T("Diminuer les minutes", "Decrease minutes");
     public static string Pause_BtnConfirm => T("Mettre en pause", "Pause");
     public static string Pause_BtnCancel => T("Annuler", "Cancel");
     public static string Pause_InvalidDuration => T(

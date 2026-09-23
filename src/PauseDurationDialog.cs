@@ -30,6 +30,11 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hMinutes;
     private IntPtr _hBtnOk;
     private IntPtr _hBtnCancel;
+    // N10 (accessibilité 1.3.0) : boutons ▲▼, gardés pour leur poser un nom accessible.
+    private IntPtr _hBtnHoursUp;
+    private IntPtr _hBtnHoursDown;
+    private IntPtr _hBtnMinutesUp;
+    private IntPtr _hBtnMinutesDown;
     private IntPtr _hFont;
     private Action<string>? _onAppLanguageChanged;
     private bool _done;
@@ -136,6 +141,7 @@ sealed class PauseDurationDialog : IDisposable
         Win32.SetWindowTextW(_hMinutes, L.Pause_Minutes);
         Win32.SetWindowTextW(_hBtnOk, L.Pause_BtnConfirm);
         Win32.SetWindowTextW(_hBtnCancel, L.Pause_BtnCancel);
+        AnnotateSpinButtons();
     }
 
     private static Win32.RECT GetWorkArea(IntPtr owner)
@@ -167,13 +173,46 @@ sealed class PauseDurationDialog : IDisposable
         _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 82, 54, 50, 26);
         _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 150, 60, 82, 22);
         _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 218, 54, 50, 26);
-        CreateButton(hInstance, IDC_HOURS_UP, "▲", 82, 38, 50, 15, BS_PUSHBUTTON);
-        CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 82, 81, 50, 15, BS_PUSHBUTTON);
-        CreateButton(hInstance, IDC_MINUTES_UP, "▲", 218, 38, 50, 15, BS_PUSHBUTTON);
-        CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 218, 81, 50, 15, BS_PUSHBUTTON);
+        _hBtnHoursUp = CreateButton(hInstance, IDC_HOURS_UP, "▲", 82, 38, 50, 15, BS_PUSHBUTTON);
+        _hBtnHoursDown = CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 82, 81, 50, 15, BS_PUSHBUTTON);
+        _hBtnMinutesUp = CreateButton(hInstance, IDC_MINUTES_UP, "▲", 218, 38, 50, 15, BS_PUSHBUTTON);
+        _hBtnMinutesDown = CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 218, 81, 50, 15, BS_PUSHBUTTON);
 
         _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 96, 106, 120, 32, BS_DEFPUSHBUTTON);
         _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 224, 106, 84, 32, BS_PUSHBUTTON);
+        AnnotateSpinButtons();
+    }
+
+    /// <summary>
+    /// N10 (accessibilité 1.3.0) : nom accessible de chaque bouton ▲▼ dans la langue
+    /// courante. Le glyphe reste le texte affiché ; seul, il s'annonçait « ▲ » ou « ▼ ».
+    /// </summary>
+    internal static (int Id, string Glyph, string Name)[] SpinButtons() => new[]
+    {
+        (IDC_HOURS_UP, "▲", L.Pause_HoursUp),
+        (IDC_HOURS_DOWN, "▼", L.Pause_HoursDown),
+        (IDC_MINUTES_UP, "▲", L.Pause_MinutesUp),
+        (IDC_MINUTES_DOWN, "▼", L.Pause_MinutesDown),
+    };
+
+    /// <summary>
+    /// N10 : pose ces noms par Dynamic Annotation (<see cref="AccessibleName"/>) ; rappelé
+    /// au changement de langue. Un échec laisse le glyphe pour nom, comme avant.
+    /// </summary>
+    private void AnnotateSpinButtons()
+    {
+        foreach (var (id, _, name) in SpinButtons())
+        {
+            IntPtr button = id switch
+            {
+                IDC_HOURS_UP => _hBtnHoursUp,
+                IDC_HOURS_DOWN => _hBtnHoursDown,
+                IDC_MINUTES_UP => _hBtnMinutesUp,
+                IDC_MINUTES_DOWN => _hBtnMinutesDown,
+                _ => IntPtr.Zero
+            };
+            AccessibleName.TrySet(button, name);
+        }
     }
 
     private IntPtr CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h)
