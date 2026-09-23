@@ -1074,6 +1074,10 @@ sealed class OnboardingWindow : IDisposable
             case Win32.WM_KILLFOCUS:
                 Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 break;
+            case Win32.WM_PAINT:
+                // K5 (accessibilité 1.3.0) : le focus se signale aussi par un cadre, pas
+                // seulement par la couleur de WM_CTLCOLORSTATIC.
+                return GdiHelpers.PaintLinkWithFocusRect(hWnd, msg, wParam, lParam);
         }
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
