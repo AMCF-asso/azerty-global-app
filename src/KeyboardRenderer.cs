@@ -461,7 +461,7 @@ internal static class KeyboardRenderer
 
         Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, disabled ? 0x00606060u : CLR_CTX_TEXT);
-        Win32.DrawTextW(hdc, key.Label, -1, ref labelRect,
+        Win32.DrawTextW(hdc, L.Keyboard_KeyCap(key.Label), -1, ref labelRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
     }
 
@@ -528,7 +528,8 @@ internal static class KeyboardRenderer
         var labelRect = new Win32.RECT { left = rect.left + 2, top = rect.bottom - labelH - 2, right = rect.right - 2, bottom = rect.bottom - 1 };
         var oldLabelFont = Win32.SelectObject(hdc, hFontTiny);
         Win32.SetTextColor(hdc, CLR_KEY_LABEL);
-        Win32.DrawTextW(hdc, key.Label, key.Label.Length, ref labelRect,
+        string keyCap = L.Keyboard_KeyCap(key.Label);
+        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
         Win32.SelectObject(hdc, oldLabelFont);
     }

@@ -4,6 +4,25 @@ using System.Runtime.InteropServices;
 namespace AZERTYGlobal;
 
 /// <summary>
+/// État du lancement automatique tel que Windows le rapporte, refus compris. Lu par l'accueil
+/// pour décider de sa case par défaut (<see cref="AutoStart.DefaultOnboardingCheck()"/>).
+/// </summary>
+internal enum AutoStartWindowsState
+{
+    /// <summary>État illisible (API indisponible, exception) : ne rien présumer.</summary>
+    Unknown,
+    /// <summary>Inactif, et l'application peut l'activer elle-même.</summary>
+    Disabled,
+    /// <summary>Actif, y compris imposé par une stratégie.</summary>
+    Enabled,
+    /// <summary>Refusé par l'utilisateur dans Windows (Paramètres &gt; Applications &gt;
+    /// Démarrage, Gestionnaire des tâches) : lui seul peut le rétablir.</summary>
+    DisabledByUser,
+    /// <summary>Interdit par une stratégie d'entreprise.</summary>
+    DisabledByPolicy,
+}
+
+/// <summary>
 /// Gère le lancement automatique au démarrage de Windows.
 /// Mode unpackaged (EXE standalone) : raccourci .lnk dans le dossier Startup.
 /// Mode packaged (MSIX) : API WinRT StartupTask déclarée dans le manifeste.
@@ -132,6 +151,38 @@ static class AutoStart
         ConfigManager.IsPackaged
             ? L.AutoStart_FailureMessagePackaged
             : L.AutoStart_FailureMessageUnpackaged;
+
+    /// <summary>
+    /// Case « Lancer au démarrage de Windows » de l'accueil (décision d'Antoine du
+    /// 2026-09-23, v1.3.0) : cochée par défaut au premier accueil, pour que l'activation
+    /// l'applique. Garde-fous : un refus exprimé dans Windows (utilisateur ou stratégie)
+    /// n'est jamais contourné, et dès qu'un choix a pu être fait, la case reflète l'état
+    /// réel comme avant. Décision pure, sans accès à Windows.
+    /// </summary>
+    internal static bool DefaultOnboardingCheck(
+        AutoStartWindowsState state, bool isRegistered, bool choiceAlreadyPossible)
+    {
+        if (choiceAlreadyPossible) return isRegistered;
+        if (isRegistered) return true;
+        return state == AutoStartWindowsState.Disabled;
+    }
+
+    /// <summary>Photographie les signaux, puis applique la décision pure.</summary>
+    internal static bool DefaultOnboardingCheck()
+    {
+        // Traces d'un choix déjà possible. Une ancienne configuration ne vaut pas accord
+        // d'activation, d'où les trois autres signaux : qui a déjà réglé le démarrage ou
+        // utilisé l'application n'en est plus à son premier accueil.
+        bool choiceAlreadyPossible = ConfigManager.ActivationConsent
+            || ConfigManager.AutoStartNudgeDone
+            || ConfigManager.AutoStartEnabled
+            || UsageStats.FirstRemapDate != null;
+        return DefaultOnboardingCheck(WindowsState, IsRegistered, choiceAlreadyPossible);
+    }
+
+    /// <summary>État du lancement automatique vu de Windows, refus compris.</summary>
+    internal static AutoStartWindowsState WindowsState =>
+        ConfigManager.IsPackaged ? GetStartupTaskWindowsState() : GetShortcutWindowsState();
 
     private static bool Enable()
     {
@@ -300,4 +351,62 @@ static class AutoStart
         }
         catch { return false; }
     }
+
+    private static AutoStartWindowsState GetStartupTaskWindowsState()
+    {
+        try
+        {
+            var task = Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId)
+                .GetAwaiter().GetResult();
+            return task.State switch
+            {
+                Windows.ApplicationModel.StartupTaskState.Enabled
+                    or Windows.ApplicationModel.StartupTaskState.EnabledByPolicy => AutoStartWindowsState.Enabled,
+                Windows.ApplicationModel.StartupTaskState.DisabledByUser => AutoStartWindowsState.DisabledByUser,
+                Windows.ApplicationModel.StartupTaskState.DisabledByPolicy => AutoStartWindowsState.DisabledByPolicy,
+                _ => AutoStartWindowsState.Disabled,
+            };
+        }
+        catch { return AutoStartWindowsState.Unknown; }
+    }
+
+    // ──────────────────────────────────────────────
+    //  Mode non empaqueté : refus inscrit par Windows
+    // ──────────────────────────────────────────────
+
+    private static AutoStartWindowsState GetShortcutWindowsState()
+    {
+        if (IsShortcutDisabledInWindows()) return AutoStartWindowsState.DisabledByUser;
+        return File.Exists(ShortcutPath) ? AutoStartWindowsState.Enabled : AutoStartWindowsState.Disabled;
+    }
+
+    /// <summary>
+    /// Le Gestionnaire des tâches et Paramètres &gt; Applications &gt; Démarrage ne suppriment
+    /// pas le raccourci qu'on y désactive : ils inscrivent le refus sous
+    /// StartupApproved\StartupFolder, valeur binaire au nom du raccourci dont le premier
+    /// octet est impair (0x03) quand l'entrée est désactivée, pair (0x02) quand elle est
+    /// permise. Lecture seule, par RegGetValueW comme PolicyManager.
+    /// </summary>
+    private static bool IsShortcutDisabledInWindows()
+    {
+        try
+        {
+            var buffer = new byte[64];
+            uint size = (uint)buffer.Length;
+            int rc = RegGetValueBinary(HKEY_CURRENT_USER, StartupApprovedKey, ShortcutName,
+                RRF_RT_REG_BINARY, IntPtr.Zero, buffer, ref size);
+            return rc == ERROR_SUCCESS && size > 0 && (buffer[0] & 1) == 1;
+        }
+        catch { return false; }
+    }
+
+    private const string StartupApprovedKey =
+        @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder";
+    private static readonly IntPtr HKEY_CURRENT_USER = new(unchecked((int)0x80000001));
+    private const uint RRF_RT_REG_BINARY = 0x00000008;
+    private const int ERROR_SUCCESS = 0;
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, EntryPoint = "RegGetValueW")]
+    private static extern int RegGetValueBinary(IntPtr hkey, string lpSubKey, string lpValue,
+        uint dwFlags, IntPtr pdwType, [Out] byte[] pvData, ref uint pcbData);
 }

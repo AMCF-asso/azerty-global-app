@@ -102,6 +102,9 @@ sealed class OnboardingWindow : IDisposable
     // a effectivement vu et touche a l'option. Avant v0.9.7.1, la default-checked + persist
     // inconditionnel rendait l'opt-out implicite des l'ouverture de la fenetre.
     private bool _step3Reached;
+    // État de la case « Lancer au démarrage » au dernier Show() : décocher la case cochée
+    // par défaut est un choix, alors même que l'état réel ne change pas.
+    private bool _autoStartShownChecked;
     // Vrai des qu'on lance le LM une premiere fois. Distincte de _learningModuleDone (qui
     // n'est mis a true qu'a la complete reussite des 6 exercices). Etat B (essaye non complete)
     // sert a afficher « Suivant » a cote de « Essayer maintenant » sur l'etape 1.
@@ -661,12 +664,16 @@ sealed class OnboardingWindow : IDisposable
     {
         _currentStep = 0;
         _step3Reached = false; // sera mis a true a la 1ere transition vers l'etape 3
-        // Étape 3 : conserver le choix de démarrage existant, sans le joindre au consentement.
+        // Étape 3 : « Lancer au démarrage » cochée par défaut au premier accueil, sinon l'état
+        // réel ; un refus dans Windows n'est jamais contourné (AutoStart.DefaultOnboardingCheck,
+        // décision du 2026-09-23). Rien n'est appliqué ici : Close() ne persiste la case que si
+        // l'étape 3 a été vue et l'activation acceptée.
         // « Ne plus afficher »
         // UNCHECKED par defaut (v0.9.7.1) -> l'opt-out doit etre explicite. Avant, la default-checked
         // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
         // declenchait un opt-out permanent, meme si l'utilisateur n'avait jamais atteint l'etape 3.
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK, AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        _autoStartShownChecked = AutoStart.DefaultOnboardingCheck();
+        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK, _autoStartShownChecked ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkDontShow, BM_SETCHECK, IntPtr.Zero, IntPtr.Zero);
         // Sync bidirectionnel des flags avec la progression persistee. Seuils alignes avec
         // la condition d'auto-show ([TrayApplication.cs] : LearningMaxStepCompleted < 3) :
@@ -724,7 +731,8 @@ sealed class OnboardingWindow : IDisposable
             // modifier est un choix, qui éteint la relance dans un sens comme dans
             // l'autre (R2 de l'audit v1.2.0). Une case jamais vue reste hors de ce
             // chemin, la décision v0.9.7.1 est intacte.
-            else if (autoStart != autoStartWasRegistered)
+            // Depuis la case cochée par défaut (v1.3.0), la décocher est aussi un choix.
+            else if (autoStart != autoStartWasRegistered || autoStart != _autoStartShownChecked)
                 AutoStartNudge.MarkPromptShown();
         }
 

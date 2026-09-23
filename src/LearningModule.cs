@@ -2473,7 +2473,8 @@ sealed class LearningModule : IDisposable
                     ? geo.OffsetX + (int)((vk.X + (vk.W - 1.25f)) * geo.Scale)
                     : kx;
                 var labelRect = new Win32.RECT { left = ctxLeft, top = ky, right = kx + kw, bottom = ky + kh };
-                Win32.DrawTextW(hdc, vk.Label, vk.Label.Length, ref labelRect,
+                string keyCap = L.Keyboard_KeyCap(vk.Label);
+                Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect,
                     Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
                 Win32.SelectObject(hdc, hOldFont);
             }
@@ -2638,7 +2639,8 @@ sealed class LearningModule : IDisposable
             right = kx + kw,
             bottom = ky + kh - S(1)
         };
-        Win32.DrawTextW(hdc, vk.Label, vk.Label.Length, ref labelRect,
+        string keyCap = L.Keyboard_KeyCap(vk.Label);
+        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP);
         Win32.SelectObject(hdc, hOldLabelFont);
     }
