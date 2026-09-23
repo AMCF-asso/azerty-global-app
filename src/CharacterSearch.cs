@@ -102,6 +102,9 @@ sealed class CharacterSearch : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
     private IntPtr _hEdit;
+    // N8 (accessibilité 1.3.0) : étiquette jamais affichée qui nomme le champ ; son
+    // placeholder est dessiné en GDI, et le champ n'avait aucun nom.
+    private IntPtr _hEditLabel;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Win32.SUBCLASSPROC _editSubclassProc;
     private List<CharEntry> _allEntries = new();
@@ -746,6 +749,13 @@ sealed class CharacterSearch : IDisposable
 
         CreateFonts();
 
+        // N8 (accessibilité 1.3.0) : MSAA et UI Automation nomment un EDIT par le STATIC qui
+        // le précède dans l'ordre Z, visible ou non (mesuré le 2026-09-23). Même libellé que
+        // le placeholder, sans les points de suspension.
+        _hEditLabel = Win32.CreateWindowExW(0, "STATIC", L.Search_WindowTitle,
+            Win32.WS_CHILD, 0, 0, 0, 0,
+            _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+
         // Créer le champ de recherche (Edit control)
         _hEdit = Win32.CreateWindowExW(0, "EDIT", "",
             Win32.WS_CHILD | Win32.WS_VISIBLE | ES_AUTOHSCROLL,
@@ -874,6 +884,9 @@ sealed class CharacterSearch : IDisposable
         // Signal Défi du jour (v1.2.0) : compteur GLOBAL d'ouvertures uniquement —
         // jamais le contenu des requêtes (décision 2026-07-22).
         UsageStats.RecordSearchOpened();
+
+        // N8 : la langue a pu changer depuis la création (la fenêtre vit tout le processus).
+        Win32.SetWindowTextW(_hEditLabel, L.Search_WindowTitle);
 
         // Adapter la taille selon les résultats actuels, puis repositionner
         ResizeToFitResults();
