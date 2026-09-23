@@ -2,7 +2,9 @@
 # (ni certificat, ni paquet, ni hook). Pas besoin d'etre administrateur.
 #   powershell -ExecutionPolicy Bypass -File lancer-recette.ps1 -Bundle <chemin du .msixbundle>
 # Journal d'installation : ..\evidence\recette-<12 premiers caracteres du SHA-256>\.
-param([Parameter(Mandatory = $true)][string]$Bundle)
+# Option -AxeDir <dossier d'AxeWindowsCLI.exe> : enchaine l'analyse d'accessibilite
+# automatique de chaque fenetre (axe-scan.ps1), resultats dans ...\axe\.
+param([Parameter(Mandatory = $true)][string]$Bundle, [string]$AxeDir)
 $ErrorActionPreference = 'Stop'
 
 $bundle = (Resolve-Path $Bundle).Path
@@ -21,6 +23,14 @@ $candidate = Join-Path $env:TEMP ('azg-candidat-' + $short)
 New-Item -ItemType Directory -Force $candidate | Out-Null
 Copy-Item $bundle (Join-Path $candidate 'candidat.msixbundle') -Force
 
+$axeFolder = ''
+$command = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\installer-candidat.ps1'
+if ($AxeDir) {
+    $axePath = (Resolve-Path $AxeDir).Path
+    if (-not (Test-Path (Join-Path $axePath 'AxeWindowsCLI.exe'))) { throw "AxeWindowsCLI.exe introuvable dans $axePath" }
+    $axeFolder = "<MappedFolder><HostFolder>$axePath</HostFolder><SandboxFolder>C:\axe</SandboxFolder><ReadOnly>true</ReadOnly></MappedFolder>"
+    $command = 'cmd.exe /c "' + $command + ' &amp; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\axe-scan.ps1"'
+}
 $wsb = @"
 <Configuration>
   <MappedFolders>
@@ -28,8 +38,9 @@ $wsb = @"
     <MappedFolder><HostFolder>$sdk</HostFolder><SandboxFolder>C:\sdk</SandboxFolder><ReadOnly>true</ReadOnly></MappedFolder>
     <MappedFolder><HostFolder>$kit</HostFolder><SandboxFolder>C:\kit</SandboxFolder><ReadOnly>true</ReadOnly></MappedFolder>
     <MappedFolder><HostFolder>$results</HostFolder><SandboxFolder>C:\resultats</SandboxFolder><ReadOnly>false</ReadOnly></MappedFolder>
+    $axeFolder
   </MappedFolders>
-  <LogonCommand><Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\installer-candidat.ps1</Command></LogonCommand>
+  <LogonCommand><Command>$command</Command></LogonCommand>
 </Configuration>
 "@
 $wsbPath = Join-Path $candidate 'recette.wsb'

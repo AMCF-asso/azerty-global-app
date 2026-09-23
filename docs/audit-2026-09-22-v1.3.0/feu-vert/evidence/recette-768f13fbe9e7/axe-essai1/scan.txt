@@ -1,0 +1,14 @@
+[23:22:02] App pid 12796 ; fenetre de l icone 0
+[23:22:04] lancement : 'AZERTY Global' (AZERTYGlobal_Onboarding) -> -1 erreur(s)
+[23:22:07] parametres : aucune nouvelle fenetre visible
+[23:22:11] lecons : aucune nouvelle fenetre visible
+[23:22:15] clavier : aucune nouvelle fenetre visible
+[23:22:19] recherche : aucune nouvelle fenetre visible
+[23:22:23] statistiques : aucune nouvelle fenetre visible
+[23:22:27] apropos : aucune nouvelle fenetre visible
+[23:22:31] pause : aucune nouvelle fenetre visible
+[23:22:35] defi : aucune nouvelle fenetre visible
+[23:22:39] compatibilite : aucune nouvelle fenetre visible
+[23:22:43] confidentialite : aucune nouvelle fenetre visible
+[23:22:47] accueil : aucune nouvelle fenetre visible
+[23:22:49] fin du scan

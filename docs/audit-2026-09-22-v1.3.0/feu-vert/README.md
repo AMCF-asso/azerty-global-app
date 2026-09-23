@@ -29,12 +29,12 @@ Aucun brouillon n’est ouvert ; la soumission 15 (modifiée le 02/09) est en l
 | Nouveautés FR | « Version 1.1.0 : … » | Coller « Nouveautés de cette version » (FR) et « What’s new » (EN) de la fiche |
 | Description | Valeur masquée à la lecture automatique : mention des dons non vérifiée | Recoller la description longue FR/EN de la fiche, qui mentionne l’AMCF et HelloAsso |
 | Propriétés | Utilitaires ; données personnelles « oui », politique `https://azerty.global/mentions-legales` ; support `https://azerty.global` | Inchangé |
-| Déclaration d’accessibilité | Cochée | **Décision d’Antoine du 2026-09-22 : la garder et rendre la 1.3.0 conforme aux recommandations du Store avant soumission** (chantier ouvert, voir ci-dessous) |
+| Déclaration d’accessibilité | Cochée | **À décocher** (décision finale d’Antoine du 2026-09-22, 23 h) : correctifs rapides en 1.3.0, conformité complète en 1.3.1, puis on recoche. Voir [accessibilite-1.3.0.md](accessibilite-1.3.0.md) |
 | Classification | IARC 3+ / PEGI 3 / ESRB Everyone | Inchangé, la 1.3.0 n’ajoute aucun appel réseau |
 | Publication | « Dès la certification » | **Conservé** (décision du 2026-09-22) |
 | Paquets | 1.1.0.0 seul | Ajouter le bundle final ; le Store sert la version la plus haute |
 
-**Conséquence de la décision d’accessibilité :** le code va changer, donc le bundle `768f13fb…` n’est plus le candidat de soumission. La recette et le WACK se feront sur le bundle produit après ce chantier ; le kit reste valable tel quel, seule l’empreinte change.
+**Conséquence de la décision d’accessibilité :** le lot de correctifs rapides change le code, donc le bundle `768f13fb…` n’est plus le candidat de soumission. La recette et le WACK se feront sur le bundle produit après ce chantier ; le kit reste valable tel quel, seule l’empreinte change.
 
 ## À faire par Antoine, dans l’ordre
 
