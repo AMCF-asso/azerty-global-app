@@ -616,10 +616,30 @@ internal sealed class LessonsWindow : IDisposable
             rect.bottom = rect.top + newOuterH;
     }
 
+    /// <summary>
+    /// D3 (accessibilité 1.3.0) : minimum de zone client, borné à la zone de travail de l'écran
+    /// de la fenêtre (<see cref="WindowSizing.MinimumClientSize"/>).
+    /// </summary>
+    private (int Width, int Height) MinimumClientSize(IntPtr hwnd, double ratio)
+    {
+        int workW = 0;
+        int workH = 0;
+        var monitor = Win32.MonitorFromWindow(hwnd, Win32.MONITOR_DEFAULTTONEAREST);
+        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        if (monitor != IntPtr.Zero && Win32.GetMonitorInfo(monitor, ref monInfo))
+        {
+            workW = monInfo.rcWork.right - monInfo.rcWork.left;
+            workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        }
+        return WindowSizing.MinimumClientSize(D(BASE_MIN_W), D(BASE_MIN_H), ratio,
+            _nonClientW, _nonClientH, workW, workH);
+    }
+
     private void EnforceMinimumClientSize(ref int clientW, ref int clientH, double ratio)
     {
-        int minW = D(BASE_MIN_W);
-        int minH = D(BASE_MIN_H);
+        // D3 : le même minimum borné que WM_GETMINMAXINFO, sans quoi tirer un bord le
+        // repousserait hors de l'écran.
+        var (minW, minH) = MinimumClientSize(_hWnd, ratio);
         if (clientW < minW)
         {
             clientW = minW;
@@ -839,13 +859,15 @@ internal sealed class LessonsWindow : IDisposable
 
                 case Win32.WM_GETMINMAXINFO:
                     var mmi = Marshal.PtrToStructure<Win32.MINMAXINFO>(lParam);
-                    int minClientW = D(BASE_MIN_W);
-                    int minClientH = D(BASE_MIN_H);
-                    if (_baseClientW > 0 && _baseClientH > 0)
-                    {
-                        double ratio = _baseClientW / (double)_baseClientH;
-                        EnforceMinimumClientSize(ref minClientW, ref minClientH, ratio);
-                    }
+                    // D3 (accessibilité 1.3.0) : minimum borné à la zone de travail. Windows
+                    // l'applique aussi à CreateWindowEx et MoveWindow (mesuré le 2026-09-23) ;
+                    // non borné, il dépassait l'écran dès 175 % sur un 1920 × 1080 et annulait
+                    // le plafond d'AG130-42. Avant la création, aucun rapport n'est mesuré :
+                    // aucun n'est imposé, comme avant.
+                    double minRatio = _baseClientW > 0 && _baseClientH > 0
+                        ? _baseClientW / (double)_baseClientH
+                        : 0;
+                    var (minClientW, minClientH) = MinimumClientSize(hWnd, minRatio);
                     mmi.ptMinTrackSize.x = minClientW + _nonClientW;
                     mmi.ptMinTrackSize.y = minClientH + _nonClientH;
                     Marshal.StructureToPtr(mmi, lParam, false);

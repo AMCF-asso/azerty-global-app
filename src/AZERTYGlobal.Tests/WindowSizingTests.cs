@@ -188,4 +188,65 @@ public class WindowSizingTests
         Assert.Equal(520, WindowSizing.ScaleForDpi(520, 0));
         Assert.Equal(520, WindowSizing.ScaleForDpi(520, -96));
     }
+
+    // ── D3 (accessibilité 1.3.0) : le minimum des Leçons tient dans l'écran ──
+    // Rapport de la fenêtre des leçons (1120/760) et cadre typique à chaque échelle.
+    private const double RatioLeçons = BaseW / (double)BaseH;
+
+    [Fact]
+    public void D3_À100Pourcent_LeMinimumNeChangePas()
+    {
+        // 940 × 600 couvert au rapport 1120/760 : 940 × 638, comme le calculait déjà
+        // EnforceMinimumClientSize. Le bornage ne doit rien toucher quand tout tient.
+        Assert.Equal((940, 638), WindowSizing.MinimumClientSize(940, 600, RatioLeçons, 16, 39, WorkW, WorkH));
+    }
+
+    [Fact]
+    public void D3_LeCasMesuré_175Pourcent_TientDansLÉcran()
+    {
+        // ⛔ Le témoin qui compte. D(940) × D(600) à 175 % : 1645 × 1050, couvert en
+        // 1645 × 1116, pour une zone de travail de 1920 × 996 (barre des tâches à 84 px).
+        // Cadre compris, le minimum doit rester sous le plafond de 90 % : sinon Windows
+        // l'impose à CreateWindowEx et la fenêtre renaît hors écran.
+        const int cadreW = 28, cadreH = 68, zoneW = 1920, zoneH = 996;
+        var (w, h) = WindowSizing.MinimumClientSize(1645, 1050, RatioLeçons, cadreW, cadreH, zoneW, zoneH);
+
+        Assert.True(w + cadreW <= (int)(zoneW * 0.9f), $"largeur {w} + cadre dépasse le plafond");
+        Assert.True(h + cadreH <= (int)(zoneH * 0.9f), $"hauteur {h} + cadre dépasse le plafond");
+        // Et le rapport de la fenêtre est conservé : UpdateRenderScaleFromCurrentClient prend
+        // le plus petit des deux rapports.
+        Assert.True(Math.Abs(w / (double)h - RatioLeçons) < 0.01, $"rapport {w / (double)h:F3}");
+    }
+
+    [Fact]
+    public void D3_200Pourcent_TientDansLÉcran()
+    {
+        const int cadreW = 32, cadreH = 78, zoneW = 1920, zoneH = 984;
+        var (w, h) = WindowSizing.MinimumClientSize(1880, 1200, RatioLeçons, cadreW, cadreH, zoneW, zoneH);
+        Assert.True(w + cadreW <= (int)(zoneW * 0.9f));
+        Assert.True(h + cadreH <= (int)(zoneH * 0.9f));
+    }
+
+    [Fact]
+    public void D3_ÉcranPivoté_CEstLaLargeurQuiMord()
+    {
+        // L'autre branche : un 1080 × 1920 à 175 %. Sans ce cas, un bornage qui ignorerait
+        // la largeur passerait inaperçu.
+        const int cadreW = 28, cadreH = 68;
+        var (w, _) = WindowSizing.MinimumClientSize(1645, 1050, RatioLeçons, cadreW, cadreH, 1080, 1836);
+        Assert.Equal((int)(1080 * 0.9f) - cadreW, w);
+    }
+
+    [Fact]
+    public void D3_ZoneDeTravailNonMesurée_RendLeMinimumCouvert()
+    {
+        Assert.Equal((1645, 1116), WindowSizing.MinimumClientSize(1645, 1050, RatioLeçons, 28, 68, 0, 0));
+    }
+
+    [Fact]
+    public void D3_SansRapport_LeMinimumResteLeMinimum()
+    {
+        // Avant la création, aucun rapport n'est mesuré : le minimum brut, rien d'autre.
+        Assert.Equal((940, 600), WindowSizing.MinimumClientSize(940, 600, 0, 0, 0, WorkW, WorkH));
+    }
 }
