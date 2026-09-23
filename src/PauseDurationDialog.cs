@@ -156,11 +156,16 @@ sealed class PauseDurationDialog : IDisposable
 
     private void CreateControls(IntPtr hInstance)
     {
+        // N8 (accessibilité 1.3.0) : chaque étiquette précède son champ dans l'ordre Z. MSAA
+        // et UI Automation nomment un EDIT par le STATIC qui le précède ; l'ancien ordre, deux
+        // étiquettes puis deux champs, nommait « Minutes » le champ des heures et laissait
+        // celui des minutes sans nom (mesuré le 2026-09-23). L'ordre de tabulation, qui ne voit
+        // que les champs et les boutons, est inchangé.
         _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 16, 280, 22);
         _hHours = CreateStatic(hInstance, L.Pause_Hours, 28, 60, 72, 22);
-        _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 150, 60, 82, 22);
 
         _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 82, 54, 50, 26);
+        _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 150, 60, 82, 22);
         _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 218, 54, 50, 26);
         CreateButton(hInstance, IDC_HOURS_UP, "▲", 82, 38, 50, 15, BS_PUSHBUTTON);
         CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 82, 81, 50, 15, BS_PUSHBUTTON);

@@ -193,6 +193,11 @@ sealed class SettingsWindow : IDisposable
     private IntPtr _hWnd;
     private IntPtr _hWndEditKeyboard;
     private IntPtr _hWndEditSearch;
+    // N8 (accessibilité 1.3.0) : étiquettes jamais affichées qui nomment les deux champs de
+    // raccourci et la liste des apps suspendues, dont les libellés visibles sont dessinés.
+    private IntPtr _hWndLabelKeyboard;
+    private IntPtr _hWndLabelSearch;
+    private IntPtr _hWndLabelCompat;
     private IntPtr _hWndChkAutoStart;
     private IntPtr _hWndChkNotifications;
     private IntPtr _hWndChkOnboarding;
@@ -444,12 +449,24 @@ sealed class SettingsWindow : IDisposable
         Win32.EnableDarkTitleBar(_hWnd);
     }
 
+    /// <summary>
+    /// N8 (accessibilité 1.3.0) : étiquette STATIC jamais affichée, à créer juste avant le
+    /// contrôle qu'elle nomme. MSAA et UI Automation nomment un EDIT ou une LISTBOX par le
+    /// STATIC qui le précède dans l'ordre Z, visible ou non (mesuré le 2026-09-23) : sans
+    /// elle, ces contrôles, dont le libellé est dessiné en GDI, n'avaient aucun nom. Aucune
+    /// interop COM, rien que NativeAOT puisse élaguer.
+    /// </summary>
+    private IntPtr CreateHiddenLabel(IntPtr hInstance, string text) =>
+        Win32.CreateWindowExW(0, "STATIC", text, Win32.WS_CHILD,
+            0, 0, 0, 0, _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+
     private void CreateControls()
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
         CreateTabStrip(hInstance);
 
+        _hWndLabelKeyboard = CreateHiddenLabel(hInstance, L.Settings_ShortcutLabelKeyboard);
         _hWndEditKeyboard = Win32.CreateWindowExW(0, "EDIT",
             ConfigManager.GetShortcutDisplayName(_keyboardVk),
             Win32.WS_CHILD | Win32.WS_VISIBLE | ES_AUTOHSCROLL | ES_CENTER | ES_UPPERCASE | Win32.WS_TABSTOP,
@@ -458,6 +475,7 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndEditKeyboard, EM_SETREADONLY, (IntPtr)1, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndEditKeyboard, _shortcutSubclassProc, (UIntPtr)3, IntPtr.Zero);
 
+        _hWndLabelSearch = CreateHiddenLabel(hInstance, L.Settings_ShortcutLabelSearch);
         _hWndEditSearch = Win32.CreateWindowExW(0, "EDIT",
             ConfigManager.GetShortcutDisplayName(_searchVk),
             Win32.WS_CHILD | Win32.WS_VISIBLE | ES_AUTOHSCROLL | ES_CENTER | ES_UPPERCASE | Win32.WS_TABSTOP,
@@ -548,6 +566,7 @@ sealed class SettingsWindow : IDisposable
             _hWnd, (IntPtr)IDC_RESET_LESSONS_WINDOW, hInstance, IntPtr.Zero);
 
         // ── Section « Apps suspendues » (v1.2.0) ─────────────────────
+        _hWndLabelCompat = CreateHiddenLabel(hInstance, L.Settings_SectionCompat);
         _hWndCompatList = Win32.CreateWindowExW(0, "LISTBOX", "",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP |
             LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER,
@@ -1601,6 +1620,9 @@ sealed class SettingsWindow : IDisposable
         SetTabText(1, L.Settings_TabApplications);
         SetTabText(2, L.Settings_TabLanguageMaintenance);
         Win32.SetWindowTextW(_hWndLinkReset, L.Settings_LinkResetDefaults);
+        Win32.SetWindowTextW(_hWndLabelKeyboard, L.Settings_ShortcutLabelKeyboard);
+        Win32.SetWindowTextW(_hWndLabelSearch, L.Settings_ShortcutLabelSearch);
+        Win32.SetWindowTextW(_hWndLabelCompat, L.Settings_SectionCompat);
         Win32.SetWindowTextW(_hWndChkAutoStart, L.Settings_AutoStart);
         Win32.SetWindowTextW(_hWndChkNotifications, L.Settings_Notifications);
         Win32.SetWindowTextW(_hWndChkOnboarding, L.Settings_OnboardingWindow);
