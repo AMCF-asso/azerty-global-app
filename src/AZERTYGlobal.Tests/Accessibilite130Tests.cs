@@ -133,4 +133,25 @@ public class Accessibilite130Tests
         Assert.Equal(client, GdiHelpers.FocusRectForLink(R(0, 0, 0, 0), client));
         Assert.Equal(client, GdiHelpers.FocusRectForLink(R(0, 0, 80, 0), client));
     }
+
+    // ── K6 : nom accessible du drapeau de langue ───────────────────────
+
+    [Fact]
+    public void K6_LeDrapeauPorteLEndonymeDeLaLangueCible()
+    {
+        string avant = L.Language;
+        try
+        {
+            // Interface française : le drapeau mène à l'anglais, et le dit en anglais.
+            L.Language = "fr";
+            Assert.Equal("English", OnboardingWindow.FlagButtonName);
+            // Réciproque : le nom suit la langue, il n'est pas figé à la création.
+            L.Language = "en";
+            Assert.Equal("Français", OnboardingWindow.FlagButtonName);
+        }
+        finally
+        {
+            L.Language = avant;
+        }
+    }
 }
