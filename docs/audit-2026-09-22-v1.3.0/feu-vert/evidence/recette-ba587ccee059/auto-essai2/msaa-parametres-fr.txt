@@ -1,0 +1,26 @@
+﻿Window	client	AZERTY Global — Paramètres	True
+SysTabControl32	page tab list		True
+Static	text	Clavier virtuel	False
+Edit	editable text	Clavier virtuel	True
+Static	text	Recherche	False
+Edit	editable text	Recherche	True
+Static	text		True
+Button	push button	Valeurs par défaut	True
+Button	check box	Lancer au démarrage de Windows	True
+Button	check box	Notifications	True
+Button	check box	Fenêtre de bienvenue au démarrage	True
+Button	check box	Rappels d’entraînement « Défi du jour »	True
+Static	text	Géré par votre organisation	False
+Static	text	Géré par votre organisation	False
+Button	radio button	Français	False
+Button	radio button	English	False
+Static	text	Géré par votre organisation	False
+Button	push button	Réinitialiser clavier virtuel	False
+Button	push button	Réinitialiser module Leçons	False
+Static	text	Apps suspendues	False
+ListBox	list	Apps suspendues	False
+Button	push button	Ajouter…	False
+Button	push button	Retirer	False
+Button	radio button	Auto (détection automatique)	False
+Button	radio button	Forcer compatibilité jeu	False
+Button	radio button	Forcer désactivation	False

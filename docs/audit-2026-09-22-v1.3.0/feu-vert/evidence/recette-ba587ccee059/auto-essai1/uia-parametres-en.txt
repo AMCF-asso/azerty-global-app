@@ -1,0 +1,9 @@
+﻿Window	AZERTY Global — Paramètres
+Pane	
+Pane	Q
+Pane	W
+Pane	Valeurs par défaut
+Pane	Lancer au démarrage de Windows
+Pane	Notifications
+Pane	Fenêtre de bienvenue au démarrage
+Pane	Rappels d’entraînement « Défi du jour »

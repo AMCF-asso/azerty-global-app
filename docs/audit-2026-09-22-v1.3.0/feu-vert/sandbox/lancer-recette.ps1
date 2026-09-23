@@ -4,7 +4,9 @@
 # Journal d'installation : ..\evidence\recette-<12 premiers caracteres du SHA-256>\.
 # Option -AxeDir <dossier d'AxeWindowsCLI.exe> : enchaine l'analyse d'accessibilite
 # automatique de chaque fenetre (axe-scan.ps1), resultats dans ...\axe\.
-param([Parameter(Mandatory = $true)][string]$Bundle, [string]$AxeDir)
+# Option -Auto : enchaine ensuite la recette automatique (recette-auto.ps1), resultats dans
+# ...\auto\. Elle finit par desinstaller l'app : relancer sans -Auto pour la recette a la main.
+param([Parameter(Mandatory = $true)][string]$Bundle, [string]$AxeDir, [switch]$Auto)
 $ErrorActionPreference = 'Stop'
 
 $bundle = (Resolve-Path $Bundle).Path
@@ -24,13 +26,16 @@ New-Item -ItemType Directory -Force $candidate | Out-Null
 Copy-Item $bundle (Join-Path $candidate 'candidat.msixbundle') -Force
 
 $axeFolder = ''
-$command = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\installer-candidat.ps1'
+$steps = @('installer-candidat.ps1')
 if ($AxeDir) {
     $axePath = (Resolve-Path $AxeDir).Path
     if (-not (Test-Path (Join-Path $axePath 'AxeWindowsCLI.exe'))) { throw "AxeWindowsCLI.exe introuvable dans $axePath" }
     $axeFolder = "<MappedFolder><HostFolder>$axePath</HostFolder><SandboxFolder>C:\axe</SandboxFolder><ReadOnly>true</ReadOnly></MappedFolder>"
-    $command = 'cmd.exe /c "' + $command + ' &amp; powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\axe-scan.ps1"'
+    $steps += 'axe-scan.ps1'
 }
+if ($Auto) { $steps += 'recette-auto.ps1' }
+$steps = @($steps | ForEach-Object { 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\' + $_ })
+$command = if ($steps.Count -eq 1) { $steps[0] } else { 'cmd.exe /c "' + ($steps -join ' &amp; ') + '"' }
 $wsb = @"
 <Configuration>
   <MappedFolders>

@@ -6,22 +6,24 @@ Lancement : `powershell -ExecutionPolicy Bypass -File sandbox\lancer-recette.ps
 
 Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 
+**Recette automatique du 2026-09-23** : `sandbox\lancer-recette.ps1 -Bundle <bundle> -Auto` joue `sandbox\recette-auto.ps1` sans humain (A1, A2, A3, A5, A10, A11, A12, B12), puis désinstalle l'app. Les gestes passent par des messages Windows et des touches simulées ; le hook ne remappe pas ces touches (AG130-07), donc rien de ce qui dépend de la frappe remappée n'est jugé. Preuves de référence : `evidence\recette-ba587ccee059\auto-essai2\` (essai 1 : script erroné ; essai 3 : variante abandonnée). Les lignes marquées « auto, partiel » gardent leur **Reste** à jouer à la main, avec A4, A6 à A9, A13, B1 à B11 et B13.
+
 ## A. Bloquant — sans ces lignes, pas de soumission (≈ 45 min)
 
 | # | Geste | Attendu | Résultat |
 |---|---|---|---|
-| A1 | Journal d’installation | SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, shadow stack ON, CFG ON | |
-| A2 | Accueil : fermer par la croix, relancer ; refaire avec Échap | Clavier inchangé dans le Bloc-notes, aucun accord mémorisé | |
-| A3 | Accueil au clavier seul : Tab/Maj+Tab, puis Entrée sur « Activer et essayer » | Leçon ouverte, remappage actif | |
+| A1 | Journal d’installation | SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, shadow stack ON, CFG ON | ✅ auto : empreinte, paquet 1.3.0.0 x64, shadow stack ON, CFG ON |
+| A2 | Accueil : fermer par la croix, relancer ; refaire avec Échap | Clavier inchangé dans le Bloc-notes, aucun accord mémorisé | ✅ auto, partiel : fermé par la croix puis par Échap, app vivante, aucun accord mémorisé. **Reste** : clavier inchangé dans le Bloc-notes |
+| A3 | Accueil au clavier seul : Tab/Maj+Tab, puis Entrée sur « Activer et essayer » | Leçon ouverte, remappage actif | ✅ auto, partiel : focus initial sur « Activer et essayer », Entrée → accord enregistré, leçon ouverte. **Reste** : Tab/Maj+Tab, remappage actif |
 | A4 | Bloc-notes : `é è à ç ù`, majuscules accentuées, AltGr, deux touches mortes | Caractères attendus, aucun modificateur coincé | |
-| A5 | Quitter par l’icône, relancer depuis Démarrer | Clavier système dès la sortie ; accord conservé, remappage revenu | |
+| A5 | Quitter par l’icône, relancer depuis Démarrer | Clavier système dès la sortie ; accord conservé, remappage revenu | ✅ auto, partiel : sortie par Quitter, relance, accord conservé. **Reste** : clavier système à la sortie, remappage revenu |
 | A6 | Alt+Tab rapide Bloc-notes ↔ Edge en tapant | Chaque caractère dans la bonne fenêtre, pas de bulle en rafale | |
 | A7 | Edge : champ mot de passe puis champ normal | Fonctions avancées suspendues dans le premier, disponibles dans le second | |
 | A8 | Recherche de caractère, insertion | Bon symbole, dans la fenêtre d’origine | |
 | A9 | Paramètres : trois onglets au clavier, « Réinitialiser » par Entrée puis Espace, annuler | Focus visible, confirmation, rien ne change à l’annulation | |
-| A10 | Menu de l’icône : Couches ▸, Apprendre ▸, À propos et aide ▸, bascule FR/EN | Douze lignes, sous-menus ouverts, textes basculés | |
-| A11 | **Chemin d’erreur** : quitter l’app, remplacer le contenu de `config.json` par `[1]` (sous MSIX, chercher d’abord `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`, sinon `%LOCALAPPDATA%\AZERTY Global\`), relancer | L’app démarre (pas d’arrêt brutal) ; `error.log` porte `JsonException` ; le fichier n’est pas réécrit | |
-| A12 | Désinstaller (Paramètres > Applications) | Processus arrêté, clavier système utilisable | |
+| A10 | Menu de l’icône : Couches ▸, Apprendre ▸, À propos et aide ▸, bascule FR/EN | Douze lignes, sous-menus ouverts, textes basculés | ✅ auto : 12 lignes en FR et en EN ; sous-menus Couches, Apprendre, Compatibilité des applications, À propos et aide ; aucun texte identique entre FR et EN. **Reste** : ouverture des sous-menus |
+| A11 | **Chemin d’erreur** : quitter l’app, remplacer le contenu de `config.json` par `[1]` (sous MSIX, chercher d’abord `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`, sinon `%LOCALAPPDATA%\AZERTY Global\`), relancer | L’app démarre (pas d’arrêt brutal) ; `error.log` porte `JsonException` ; le fichier n’est pas réécrit | ✅ auto : l'app démarre, `JsonException` dans `error.log` (0 → 1), `config.json` non réécrit |
+| A12 | Désinstaller (Paramètres > Applications) | Processus arrêté, clavier système utilisable | ✅ auto, partiel : processus arrêté, paquet retiré. **Reste** : clavier système utilisable |
 | A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-ba587ccee059\resume.txt` | |
 
 ## B. Recommandé si le temps le permet
@@ -39,7 +41,7 @@ Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 | B9 | Leçons au clavier seul : Tab jusqu’aux boutons-icônes (indice, réglages…) | Chaque icône focalisée affiche la même infobulle qu’au survol ; un mouvement de souris rend l’infobulle de survol | |
 | B10 | Accueil étape 3, puis À propos : Tab sur chaque lien | Cadre pointillé autour du texte du lien focalisé, en plus de la couleur (À propos : la couleur suit aussi le focus, ce qu’elle ne faisait pas) ; aucune trace une fois le focus parti | |
 | B11 | Accueil : Tab jusqu’au drapeau, Entrée, puis Espace, puis un clic | Cadre de focus autour du drapeau ; la langue bascule à chaque geste et le focus reste sur le drapeau | |
-| B12 | Narrateur (Ctrl+Win+Entrée) ou Inspect : Pause (deux champs, quatre ▲▼), Paramètres (deux raccourcis, liste des apps suspendues), Recherche ; refaire en anglais | « Heures », « Minutes », « Augmenter les heures »…, « Clavier virtuel », « Recherche », « Apps suspendues », « Rechercher un caractère » ; noms anglais après la bascule | |
+| B12 | Narrateur (Ctrl+Win+Entrée) ou Inspect : Pause (deux champs, quatre ▲▼), Paramètres (deux raccourcis, liste des apps suspendues), Recherche ; refaire en anglais | « Heures », « Minutes », « Augmenter les heures »…, « Clavier virtuel », « Recherche », « Apps suspendues », « Rechercher un caractère » ; noms anglais après la bascule | ⚠️ auto, partiel (noms MSAA, pas le Narrateur) : Pause et Paramètres complets en FR et en EN, Recherche complète en EN ; Recherche FR non ouverte par le script (non expliqué). Onglets des Paramètres sans nom. **Reste** : Narrateur, Recherche en FR |
 | B13 | Affichage à 175 % puis 200 %, puis changement d’échelle fenêtre ouverte : Pause, couches maintenables, indicateur de couche (couche active dans le Bloc-notes), Leçons | Textes et contrôles à l’échelle, rien de coupé ni de superposé ; Leçons entièrement dans l’écran, commandes du bas atteignables | |
 
 Lignes B6 à B13 : lot d’accessibilité 1.3.0 (`accessibilite-1.3.0.md`), à jouer sur le candidat qui le contient, pas sur `768f13fb`. Les décisions pures du lot ont leurs témoins automatiques ; ces lignes couvrent ce qu’aucun test ne voit : le rendu à l’écran, les messages Windows et la lecture par le Narrateur.

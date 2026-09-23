@@ -1,0 +1,45 @@
+﻿Turn off [Ctrl+Shift+Caps Lock]
+Pause…
+----
+Virtual keyboard [Ctrl+Shift+Q]
+Find a character [Ctrl+Shift+W]
+Layers >
+    Greek
+    Cyrillic
+    Scientific
+    ----
+    Configure…
+----
+Learn >
+    Lessons
+    Daily challenge
+    Replay the welcome tour
+----
+Settings
+App compatibility >
+    Active application: rgnupdt.exe
+    ----
+    Auto (automatic detection)
+    Force game compatibility
+    Force disable
+    ----
+    About app compatibility…
+My statistics
+About and help >
+    Privacy && security
+    Resources >
+        Printable user guide
+        Website
+        The 5 changes
+        Keyboard cards
+        What's new in this version
+    Feedback && support >
+        Support the project
+        Give feedback
+        Join the Discord community
+        Report a bug
+    Rate on the Microsoft Store
+    About
+----
+Passer en français
+Quit

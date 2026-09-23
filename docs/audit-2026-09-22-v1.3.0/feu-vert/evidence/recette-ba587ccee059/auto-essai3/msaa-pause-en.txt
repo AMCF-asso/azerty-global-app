@@ -1,0 +1,12 @@
+﻿Window	client	Pause AZERTY Global	True
+Static	text	Temporary pause duration	True
+Static	text	Hours	True
+Edit	editable text	Hours	True
+Static	text	Minutes	True
+Edit	editable text	Minutes	True
+Button	push button	Increase hours	True
+Button	push button	Decrease hours	True
+Button	push button	Increase minutes	True
+Button	push button	Decrease minutes	True
+Button	push button	Pause	True
+Button	push button	Cancel	True

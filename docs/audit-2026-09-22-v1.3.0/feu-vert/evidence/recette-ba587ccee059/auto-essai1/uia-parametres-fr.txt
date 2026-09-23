@@ -1,0 +1,9 @@
+﻿Window	AZERTY Global — Settings
+Pane	
+Pane	Q
+Pane	W
+Pane	Default values
+Pane	Launch at Windows startup
+Pane	Notifications
+Pane	Welcome window at startup
+Pane	“Daily challenge” training reminders

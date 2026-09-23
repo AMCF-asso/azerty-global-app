@@ -1,0 +1,2 @@
+﻿Window	Find a character
+Pane	

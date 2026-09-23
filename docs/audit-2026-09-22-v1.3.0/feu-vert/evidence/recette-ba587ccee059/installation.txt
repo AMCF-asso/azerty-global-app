@@ -3,3 +3,18 @@
 [14:31:11] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
 [14:31:20] App lancee (pid 16952) ; shadow stack ON ; CFG ON
 [14:31:20] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.
+[14:49:46] SHA-256 candidat : ba587ccee0597a96d63b99052b0fd26dfabfb3830a81a07cb463cb3e1bb0a5c4
+[14:49:47] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[14:49:50] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[14:49:59] App lancee (pid 13168) ; shadow stack ON ; CFG ON
+[14:49:59] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.
+[14:58:26] SHA-256 candidat : ba587ccee0597a96d63b99052b0fd26dfabfb3830a81a07cb463cb3e1bb0a5c4
+[14:58:28] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[14:58:31] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[14:58:39] App lancee (pid 16960) ; shadow stack ON ; CFG ON
+[14:58:39] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.
+[15:02:17] SHA-256 candidat : ba587ccee0597a96d63b99052b0fd26dfabfb3830a81a07cb463cb3e1bb0a5c4
+[15:02:19] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[15:02:22] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[15:02:30] App lancee (pid 16808) ; shadow stack ON ; CFG ON
+[15:02:30] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.

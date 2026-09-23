@@ -1,0 +1,10 @@
+﻿Window	Mettre AZERTY Global en pause
+Pane	Durée de pause temporaire
+Pane	Heures
+Pane	0
+Pane	Minutes
+Pane	5
+Pane	▲
+Pane	▼
+Pane	Mettre en pause
+Pane	Annuler

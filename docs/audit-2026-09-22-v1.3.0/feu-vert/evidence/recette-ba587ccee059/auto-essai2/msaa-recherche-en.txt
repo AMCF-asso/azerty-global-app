@@ -1,0 +1,3 @@
+﻿Window	client	Find a character	True
+Static	text	Find a character	False
+Edit	editable text	Find a character	True

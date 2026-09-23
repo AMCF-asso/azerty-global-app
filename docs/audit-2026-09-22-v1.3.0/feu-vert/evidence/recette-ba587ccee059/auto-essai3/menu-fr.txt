@@ -1,0 +1,45 @@
+﻿Désactiver [Ctrl+Maj+Verr.Maj]
+Mettre en pause…
+----
+Clavier virtuel [Ctrl+Maj+Q]
+Rechercher un caractère [Ctrl+Maj+W]
+Couches >
+    Grec
+    Cyrillique
+    Scientifique
+    ----
+    Configurer…
+----
+Apprendre >
+    Leçons
+    Défi du jour
+    Revoir l’accueil
+----
+Paramètres
+Compatibilité des applications >
+    Application active : rgnupdt.exe
+    ----
+    Auto (détection automatique)
+    Forcer compatibilité jeu
+    Forcer désactivation
+    ----
+    Comprendre la compatibilité…
+Mes statistiques
+À propos et aide >
+    Confidentialité && sécurité
+    Ressources >
+        Guide utilisateur imprimable
+        Site web
+        Les 5 changements
+        Cartes du clavier
+        Nouveautés de la version
+    Retours et soutien >
+        Soutenir le projet
+        Donner mon avis
+        Rejoindre la communauté Discord
+        Signaler un bug
+    Noter sur le Microsoft Store
+    À propos
+----
+Switch to English
+Quitter

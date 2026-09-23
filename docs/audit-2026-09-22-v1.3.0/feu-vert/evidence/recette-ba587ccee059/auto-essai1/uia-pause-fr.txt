@@ -1,0 +1,10 @@
+﻿Window	Pause AZERTY Global
+Pane	Temporary pause duration
+Pane	Hours
+Pane	0
+Pane	Minutes
+Pane	5
+Pane	▲
+Pane	▼
+Pane	Pause
+Pane	Cancel

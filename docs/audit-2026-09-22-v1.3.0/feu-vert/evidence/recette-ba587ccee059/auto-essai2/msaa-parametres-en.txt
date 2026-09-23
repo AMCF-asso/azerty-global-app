@@ -1,0 +1,26 @@
+﻿Window	client	AZERTY Global — Settings	True
+SysTabControl32	page tab list		True
+Static	text	Virtual keyboard	False
+Edit	editable text	Virtual keyboard	True
+Static	text	Search	False
+Edit	editable text	Search	True
+Static	text		True
+Button	push button	Default values	True
+Button	check box	Launch at Windows startup	True
+Button	check box	Notifications	True
+Button	check box	Welcome window at startup	True
+Button	check box	“Daily challenge” training reminders	True
+Static	text	Managed by your organization	False
+Static	text	Managed by your organization	False
+Button	radio button	Français	False
+Button	radio button	English	False
+Static	text	Managed by your organization	False
+Button	push button	Reset virtual keyboard	False
+Button	push button	Reset Lessons module	False
+Static	text	Suspended apps	False
+ListBox	list	Suspended apps	False
+Button	push button	Add…	False
+Button	push button	Remove	False
+Button	radio button	Auto (automatic detection)	False
+Button	radio button	Force game compatibility	False
+Button	radio button	Force disable	False

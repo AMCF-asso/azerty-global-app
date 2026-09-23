@@ -1,0 +1,9 @@
+﻿[15:02:32] A1 : OK - empreinte ba587ccee059, paquet 1.3.0.0 x64, shadow stack et CFG lus dans installation.txt
+[15:02:33] A2 : OK - croix (SC_CLOSE) : fermee=True, app vivante=True, accord=False ; Echap au premier plan=True : fermee=True, app vivante=True, accord=False. Clavier du Bloc-notes non juge (frappe simulee).
+[15:02:33] A3 : OK - premier plan=True ; Tab x0 jusqu'au bouton=True () ; Entree : accord=True, lecon ouverte=True. Remappage actif non juge (frappe simulee).
+[15:03:00] A10 : OK - 12 lignes FR, 12 EN ; sous-menus : Couches >, Apprendre >, Compatibilité des applications >, À propos et aide > ; lignes identiques FR/EN : aucune. Releves menu-fr.txt, menu-en.txt. Ouverture des sous-menus a la souris non jugee.
+[15:03:00] B12 : A VOIR - noms MSAA de Pause, Parametres, Recherche. Absents FR : Rechercher un caract ; absents EN : Find a character. Lecture par le Narrateur non jugee. Releves msaa-*.txt.
+[15:03:01] A5 : OK (partiel) - sortie par Quitter=True ; relance=True ; accord conserve=True ; accueil reaffiche=True. Clavier systeme a la sortie et remappage revenu non juges (frappe simulee).
+[15:03:07] A11 : OK - config C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json ; demarrage=True, vivante 5 s apres=True ; JsonException dans error.log : 0 -> 1 ; fichier inchange=True
+[15:03:09] A12 : OK - processus arrete=True ; paquet retire=True. Clavier systeme utilisable non juge (frappe simulee).
+[15:03:09] fin de la recette automatique
