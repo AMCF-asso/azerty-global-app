@@ -146,4 +146,107 @@ public class WindowSizingTests
         // se voit ici plutôt qu'au rendu.
         Assert.Equal(0.9f, WindowSizing.MaxWorkAreaFraction);
     }
+
+    // ── D1 (accessibilité 1.3.0) : mise à l'échelle DPI de la Pause, des Couches et de
+    // l'indicateur de couche. Le branchement sur GetDpiForWindow et WM_DPICHANGED se
+    // recette ; c'est le calcul qui s'éprouve ici.
+
+    [Theory]
+    [InlineData(520, 96, 520)]   // 100 % : rien ne bouge
+    [InlineData(520, 120, 650)]  // 125 %
+    [InlineData(520, 144, 780)]  // 150 %
+    [InlineData(520, 168, 910)]  // 175 %
+    [InlineData(520, 192, 1040)] // 200 %
+    public void D1_ScaleForDpi_SuitLÉchelleDeLÉcran(int valeur, int dpi, int attendu)
+    {
+        Assert.Equal(attendu, WindowSizing.ScaleForDpi(valeur, dpi));
+    }
+
+    [Fact]
+    public void D1_ScaleForDpi_ArrondiAuPlusProche_CommeMulDiv()
+    {
+        // 15 × 1,25 = 18,75 : une troncature rendrait 18, et la police de l'indicateur
+        // perdrait un pixel à chaque échelle non entière.
+        Assert.Equal(19, WindowSizing.ScaleForDpi(15, 120));
+        // Le demi s'arrondit en s'éloignant de zéro, dans les deux signes.
+        Assert.Equal(2, WindowSizing.ScaleForDpi(1, 144));
+        Assert.Equal(-2, WindowSizing.ScaleForDpi(-1, 144));
+    }
+
+    [Fact]
+    public void D1_ScaleForDpi_HauteurDePoliceNégative()
+    {
+        // CreateFontW prend une hauteur négative (hauteur de caractère) : elle grandit en
+        // valeur absolue, elle ne change pas de signe.
+        Assert.Equal(-28, WindowSizing.ScaleForDpi(-14, 192));
+        Assert.Equal(-24, WindowSizing.ScaleForDpi(-16, 144));
+    }
+
+    [Fact]
+    public void D1_ScaleForDpi_DpiNonMesuré_RendLaValeurÀ100Pourcent()
+    {
+        Assert.Equal(520, WindowSizing.ScaleForDpi(520, 0));
+        Assert.Equal(520, WindowSizing.ScaleForDpi(520, -96));
+    }
+
+    // ── D3 (accessibilité 1.3.0) : le minimum des Leçons tient dans l'écran ──
+    // Rapport de la fenêtre des leçons (1120/760) et cadre typique à chaque échelle.
+    private const double RatioLeçons = BaseW / (double)BaseH;
+
+    [Fact]
+    public void D3_À100Pourcent_LeMinimumNeChangePas()
+    {
+        // 940 × 600 couvert au rapport 1120/760 : 940 × 638, comme le calculait déjà
+        // EnforceMinimumClientSize. Le bornage ne doit rien toucher quand tout tient.
+        Assert.Equal((940, 638), WindowSizing.MinimumClientSize(940, 600, RatioLeçons, 16, 39, WorkW, WorkH));
+    }
+
+    [Fact]
+    public void D3_LeCasMesuré_175Pourcent_TientDansLÉcran()
+    {
+        // ⛔ Le témoin qui compte. D(940) × D(600) à 175 % : 1645 × 1050, couvert en
+        // 1645 × 1116, pour une zone de travail de 1920 × 996 (barre des tâches à 84 px).
+        // Cadre compris, le minimum doit rester sous le plafond de 90 % : sinon Windows
+        // l'impose à CreateWindowEx et la fenêtre renaît hors écran.
+        const int cadreW = 28, cadreH = 68, zoneW = 1920, zoneH = 996;
+        var (w, h) = WindowSizing.MinimumClientSize(1645, 1050, RatioLeçons, cadreW, cadreH, zoneW, zoneH);
+
+        Assert.True(w + cadreW <= (int)(zoneW * 0.9f), $"largeur {w} + cadre dépasse le plafond");
+        Assert.True(h + cadreH <= (int)(zoneH * 0.9f), $"hauteur {h} + cadre dépasse le plafond");
+        // Et le rapport de la fenêtre est conservé : UpdateRenderScaleFromCurrentClient prend
+        // le plus petit des deux rapports.
+        Assert.True(Math.Abs(w / (double)h - RatioLeçons) < 0.01, $"rapport {w / (double)h:F3}");
+    }
+
+    [Fact]
+    public void D3_200Pourcent_TientDansLÉcran()
+    {
+        const int cadreW = 32, cadreH = 78, zoneW = 1920, zoneH = 984;
+        var (w, h) = WindowSizing.MinimumClientSize(1880, 1200, RatioLeçons, cadreW, cadreH, zoneW, zoneH);
+        Assert.True(w + cadreW <= (int)(zoneW * 0.9f));
+        Assert.True(h + cadreH <= (int)(zoneH * 0.9f));
+    }
+
+    [Fact]
+    public void D3_ÉcranPivoté_CEstLaLargeurQuiMord()
+    {
+        // L'autre branche : un 1080 × 1920 à 175 %. Sans ce cas, un bornage qui ignorerait
+        // la largeur passerait inaperçu.
+        const int cadreW = 28, cadreH = 68;
+        var (w, _) = WindowSizing.MinimumClientSize(1645, 1050, RatioLeçons, cadreW, cadreH, 1080, 1836);
+        Assert.Equal((int)(1080 * 0.9f) - cadreW, w);
+    }
+
+    [Fact]
+    public void D3_ZoneDeTravailNonMesurée_RendLeMinimumCouvert()
+    {
+        Assert.Equal((1645, 1116), WindowSizing.MinimumClientSize(1645, 1050, RatioLeçons, 28, 68, 0, 0));
+    }
+
+    [Fact]
+    public void D3_SansRapport_LeMinimumResteLeMinimum()
+    {
+        // Avant la création, aucun rapport n'est mesuré : le minimum brut, rien d'autre.
+        Assert.Equal((940, 600), WindowSizing.MinimumClientSize(940, 600, 0, 0, 0, WorkW, WorkH));
+    }
 }

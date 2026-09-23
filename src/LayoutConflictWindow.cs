@@ -15,6 +15,7 @@ sealed class LayoutConflictWindow : IDisposable
 {
     private const int IDC_BTN_QUIT = 5101;
     private const int IDC_BTN_KEEP = 5102;
+    private const uint BM_CLICK = 0x00F5;
 
     // Nom de classe Win32. Defini en const pour partage entre CreateMainWindow et Dispose
     // (UnregisterClassW au Dispose pour eviter que la classe survive l'instance et garde
@@ -263,6 +264,21 @@ sealed class LayoutConflictWindow : IDisposable
                     {
                         case IDC_BTN_QUIT: Close(true); break;
                         case IDC_BTN_KEEP: Close(false); break;
+                        // K2 (accessibilite 1.3.0) : IsDialogMessageW ne livre jamais Entree ni
+                        // Echap en WM_KEYDOWN, il les convertit en IDOK et IDCANCEL (voir
+                        // DialogNavigation.IsEscapeCommand). Le gestionnaire VK_ESCAPE plus bas
+                        // etait donc mort, et Entree ne pressait rien. Entree presse le bouton
+                        // focalise, et lui seul : cette fenetre peut surgir pendant une frappe
+                        // (bascule Ctrl+Maj), une Entree tapee pour un document ne doit pas
+                        // quitter l'application. Echap garde l'app, comme la croix.
+                        case DialogNavigation.IDOK:
+                        {
+                            IntPtr target = DialogNavigation.ButtonToPressOnEnter(id, Win32.GetFocus(),
+                                new[] { _hWndBtnQuit, _hWndBtnKeep });
+                            if (target != IntPtr.Zero) Win32.SendMessageW(target, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                            break;
+                        }
+                        case DialogNavigation.IDCANCEL: Close(false); break;
                     }
                     return IntPtr.Zero;
                 }

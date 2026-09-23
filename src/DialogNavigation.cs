@@ -100,6 +100,19 @@ static class DialogNavigation
     }
 
     /// <summary>
+    /// K3 (accessibilité 1.3.0) — arrêt de tabulation suivant dans une liste circulaire, pour
+    /// une surface de frappe qui reste hors d'<c>IsDialogMessageW</c> et fait circuler son focus
+    /// elle-même. Un départ hors de la liste entre par le premier arrêt, ou par le dernier à
+    /// reculons ; rend -1 quand la liste est vide.
+    /// </summary>
+    public static int NextFocusStop(int current, int count, bool backwards)
+    {
+        if (count <= 0) return -1;
+        if (current < 0 || current >= count) return backwards ? count - 1 : 0;
+        return (current + (backwards ? count - 1 : 1)) % count;
+    }
+
+    /// <summary>
     /// La décision, sans Win32 : ce message appartient-il à une fenêtre qui a demandé la
     /// navigation de dialogue ?
     /// </summary>

@@ -234,6 +234,8 @@ static class Win32
     public const uint WM_GETTEXTLENGTH = 0x000E;
     public const uint WM_DRAWITEM = 0x002B;
     public const uint BS_OWNERDRAW = 0x000B;
+    /// <summary>DRAWITEMSTRUCT.itemState : le contrôle owner-draw a le focus clavier.</summary>
+    public const uint ODS_FOCUS = 0x0010;
     public const int NULL_BRUSH = 5;  // GetStockObject index
 
     [StructLayout(LayoutKind.Sequential)]
@@ -471,6 +473,10 @@ static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int DrawTextW(IntPtr hdc, string text, int count, ref RECT rc, uint format);
 
+    /// <summary>Rectangle de focus système (pointillé, en XOR : à tracer une fois par dessin complet).</summary>
+    [DllImport("user32.dll")]
+    public static extern bool DrawFocusRect(IntPtr hDC, ref RECT lprc);
+
     [DllImport("user32.dll")]
     public static extern int FillRect(IntPtr hDC, ref RECT rc, IntPtr hbr);
 
@@ -663,6 +669,16 @@ static class Win32
 
     [DllImport("user32.dll")]
     public static extern int GetDpiForWindow(IntPtr hWnd);
+
+    /// <summary>
+    /// D1 (accessibilité 1.3.0) : DPI de l'écran qui porte la fenêtre, 96 quand la mesure
+    /// échoue (HWND nul ou détruit : GetDpiForWindow rend 0).
+    /// </summary>
+    public static int GetDpiForWindowOrDefault(IntPtr hWnd)
+    {
+        int dpi = hWnd != IntPtr.Zero ? GetDpiForWindow(hWnd) : 0;
+        return dpi > 0 ? dpi : 96;
+    }
 
     [DllImport("kernel32.dll")]
     public static extern uint GetCurrentThreadId();

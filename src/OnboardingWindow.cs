@@ -32,6 +32,7 @@ sealed class OnboardingWindow : IDisposable
     private const int IDC_BTN_TRY = 2011;       // « Essayer maintenant » — etape 1 uniquement
     private const int IDC_LINK_LESSONS = 2012;
     private const int IDC_CHK_TRAINING = 2013;  // opt-in Défi du jour (v1.2.0) — étape 3 uniquement
+    private const int IDC_BTN_FLAG = 2014;      // K6 : bouton du drapeau de langue (accessibilité 1.3.0)
 
     // Dimensions de base (96 DPI)
     private const int BASE_WIN_W = 560;
@@ -153,6 +154,11 @@ sealed class OnboardingWindow : IDisposable
     // Drapeau de bascule de langue (langue cible), dessiné en GDI+ dans le header —
     // pas un contrôle enfant. Le rect (coordonnées client) sert au hit-test souris.
     private Win32.RECT _flagRect;
+    // K6 (accessibilité 1.3.0) : bouton owner-draw posé sur ce rect, pour que le drapeau soit
+    // atteignable et activable au clavier. Il redessine le même drapeau (DrawFlagButton).
+    private IntPtr _hWndBtnFlag;
+    private Win32.RECT _flagButtonRect;
+    private bool _flagButtonShown;
 
     // Abonnement AppLanguageChanged (bascule initiée depuis le tray ou les Paramètres) —
     // désabonné dans Dispose (événement statique, sinon référence pendante).
@@ -536,6 +542,15 @@ sealed class OnboardingWindow : IDisposable
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+
+        // K6 (accessibilité 1.3.0) : le drapeau de langue n'était qu'une zone GDI du header,
+        // hors d'atteinte au clavier. Ce bouton se pose dessus (SyncFlagButton), se tabule,
+        // s'active par Entrée ou Espace et dessine son focus. Son texte, jamais affiché, est
+        // son nom accessible. Créé masqué : le premier dessin du header le place et l'affiche.
+        _hWndBtnFlag = Win32.CreateWindowExW(0, "BUTTON", FlagButtonName,
+            Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
+            0, 0, S(BASE_FLAG_W), S(BASE_FLAG_H),
+            _hWnd, (IntPtr)IDC_BTN_FLAG, hInstance, IntPtr.Zero);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -754,6 +769,17 @@ sealed class OnboardingWindow : IDisposable
                 return IntPtr.Zero;
             }
 
+            case Win32.WM_DRAWITEM:
+            {
+                var dis = Marshal.PtrToStructure<Win32.DRAWITEMSTRUCT>(lParam);
+                if (dis.CtlID == IDC_BTN_FLAG)
+                {
+                    DrawFlagButton(in dis);
+                    return (IntPtr)1;
+                }
+                break;
+            }
+
             case Win32.WM_COMMAND:
                 int id = wParam.ToInt32() & 0xFFFF;
                 int code = (wParam.ToInt32() >> 16) & 0xFFFF;
@@ -763,7 +789,7 @@ sealed class OnboardingWindow : IDisposable
                     {
                         IntPtr focused = Win32.GetFocus();
                         IntPtr button = DialogNavigation.ButtonToPressOnEnter(id, focused,
-                            new[] { _hWndBtnNext, _hWndBtnPrev, _hWndBtnTry });
+                            new[] { _hWndBtnNext, _hWndBtnPrev, _hWndBtnTry, _hWndBtnFlag });
                         if (button != IntPtr.Zero) Win32.SendMessageW(button, 0x00F5, IntPtr.Zero, IntPtr.Zero);
                         break;
                     }
@@ -794,6 +820,8 @@ sealed class OnboardingWindow : IDisposable
                         if (code == 0) OpenLink(ProductIdentity.DiscordInviteUrl); break;
                     case IDC_LINK_LESSONS:
                         if (code == 0) OpenLessonsRequested?.Invoke(); break;
+                    case IDC_BTN_FLAG:
+                        if (code == 0) ApplyLanguageChange(L.IsEnglish ? "fr" : "en"); break;
                     case IDC_CHK_TRAINING:
                         // Applique immédiatement (pas à la fermeture du wizard) — même pattern
                         // que IDC_CHK_TRAINING dans SettingsWindow.cs.
@@ -841,7 +869,7 @@ sealed class OnboardingWindow : IDisposable
                 if (wParam == _hWndLinkLessons ||
                     wParam == _hWndLinkGuide ||
                     wParam == _hWndLinkFeedback || wParam == _hWndLinkDiscord ||
-                    wParam == _hWndLinkFeedbackBanner)
+                    wParam == _hWndLinkFeedbackBanner || wParam == _hWndBtnFlag)
                 {
                     Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
                     return (IntPtr)1;
@@ -927,6 +955,87 @@ sealed class OnboardingWindow : IDisposable
             AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
+    /// <summary>
+    /// K6 : nom accessible du bouton du drapeau — l'endonyme de la langue cible, comme les
+    /// boutons radio des Paramètres (un nom de langue s'écrit dans sa propre langue).
+    /// </summary>
+    internal static string FlagButtonName => L.IsEnglish ? "Français" : "English";
+
+    /// <summary>
+    /// K6 : cale le bouton du drapeau sur le rect que le header vient de calculer, avec S(3)
+    /// de marge pour le cadre de focus, ou le retire de la tabulation quand la langue est
+    /// imposée (rect vide). Appelé depuis le dessin du header, seul endroit où ce rect est
+    /// connu ; ne touche à rien quand rien n'a changé, pour ne pas relancer de repeint.
+    /// </summary>
+    private void SyncFlagButton()
+    {
+        if (_hWndBtnFlag == IntPtr.Zero) return;
+        bool show = _flagRect.right > _flagRect.left;
+        if (show)
+        {
+            int pad = S(3);
+            var wanted = new Win32.RECT
+            {
+                left = _flagRect.left - pad,
+                top = _flagRect.top - pad,
+                right = _flagRect.right + pad,
+                bottom = _flagRect.bottom + pad
+            };
+            if (wanted.left != _flagButtonRect.left || wanted.top != _flagButtonRect.top ||
+                wanted.right != _flagButtonRect.right || wanted.bottom != _flagButtonRect.bottom)
+            {
+                _flagButtonRect = wanted;
+                Win32.MoveWindow(_hWndBtnFlag, wanted.left, wanted.top,
+                    wanted.right - wanted.left, wanted.bottom - wanted.top, true);
+            }
+        }
+        if (show != _flagButtonShown)
+        {
+            _flagButtonShown = show;
+            Win32.ShowWindow(_hWndBtnFlag, show ? 1 : 0);
+        }
+    }
+
+    /// <summary>K6 : le même drapeau que le header, plus le cadre de focus clavier.</summary>
+    private void DrawFlagButton(in Win32.DRAWITEMSTRUCT dis)
+    {
+        var rc = dis.rcItem;
+        Win32.FillRect(dis.hDC, ref rc, _hBgBrush);
+        int pad = S(3);
+        var inner = new Win32.RECT
+        {
+            left = rc.left + pad,
+            top = rc.top + pad,
+            right = rc.right - pad,
+            bottom = rc.bottom - pad
+        };
+        IntPtr flag = L.IsEnglish ? _gdipFlagFr : _gdipFlagEn;
+        IntPtr gfx = IntPtr.Zero;
+        if (flag != IntPtr.Zero)
+            Win32.GdipCreateFromHDC(dis.hDC, out gfx);
+        if (gfx != IntPtr.Zero)
+        {
+            Win32.GdipSetInterpolationMode(gfx, 7);
+            Win32.GdipDrawImageRectI(gfx, flag, inner.left, inner.top,
+                inner.right - inner.left, inner.bottom - inner.top);
+            Win32.GdipDeleteGraphics(gfx);
+        }
+        else
+        {
+            // Repli si la ressource manque : l'endonyme court, comme le header.
+            Win32.SelectObject(dis.hDC, _hFontSmall);
+            Win32.SetBkMode(dis.hDC, 1);
+            Win32.SetTextColor(dis.hDC, CLR_TEXT);
+            Win32.DrawTextW(dis.hDC, L.IsEnglish ? "FR" : "EN", -1, ref inner,
+                Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        }
+        if ((dis.itemState & Win32.ODS_FOCUS) != 0)
+        {
+            var focus = new Win32.RECT { left = rc.left + 1, top = rc.top + 1, right = rc.right - 1, bottom = rc.bottom - 1 };
+            Win32.DrawFocusRect(dis.hDC, ref focus);
+        }
+    }
+
     /// <summary>Curseur au-dessus du drapeau de langue du header (coordonnées client) ?</summary>
     private bool IsCursorOverFlag()
     {
@@ -970,6 +1079,7 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowTextW(_hWndChkAutoStart, L.Onboarding_ChkAutoStart);
         Win32.SetWindowTextW(_hWndChkDontShow, L.Onboarding_ChkDontShow);
         Win32.SetWindowTextW(_hWndChkTraining, L.Onboarding_ChkTraining);
+        Win32.SetWindowTextW(_hWndBtnFlag, FlagButtonName);
     }
 
     private void ShowAutoStartError()
@@ -1074,6 +1184,10 @@ sealed class OnboardingWindow : IDisposable
             case Win32.WM_KILLFOCUS:
                 Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 break;
+            case Win32.WM_PAINT:
+                // K5 (accessibilité 1.3.0) : le focus se signale aussi par un cadre, pas
+                // seulement par la couleur de WM_CTLCOLORSTATIC.
+                return GdiHelpers.PaintLinkWithFocusRect(hWnd, msg, wParam, lParam);
         }
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
@@ -1227,6 +1341,7 @@ sealed class OnboardingWindow : IDisposable
                     Win32.DT_CENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
             }
         }
+        SyncFlagButton();
 
         Win32.SelectObject(hdc, _hFontVersion);
         Win32.SetTextColor(hdc, 0x00888888);

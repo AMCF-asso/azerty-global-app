@@ -16,13 +16,14 @@ internal sealed class LayerIndicatorWindow : IDisposable
     private string _label = string.Empty;
     private MaintainableLayerMode _mode;
     private bool _visible;
+    // D1 (accessibilité 1.3.0) : DPI de l'écran qui porte l'indicateur.
+    private int _dpi = 96;
 
     public LayerIndicatorWindow()
     {
         _wndProcDelegate = WndProc;
         IntPtr instance = Win32.GetModuleHandleW(null);
         _hBrush = Win32.CreateSolidBrush(0x00352A20);
-        _hFont = Win32.CreateFontW(-15, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
 
         var wc = new Win32.WNDCLASSEXW
         {
@@ -39,6 +40,30 @@ internal sealed class LayerIndicatorWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(exStyle, ProductIdentity.WindowClass("LayerIndicator"), string.Empty,
             Win32.WS_POPUP, 0, 0, 112, 32,
             IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
+
+        // D1 (accessibilité 1.3.0) : police au DPI de l'écran de la fenêtre, et non plus
+        // 15 px fixes ; la taille suit dans RefreshPosition, WM_DPICHANGED suit le caret
+        // d'un écran à l'autre.
+        _dpi = Win32.GetDpiForWindowOrDefault(_hWnd);
+        RecreateFont();
+    }
+
+    /// <summary>
+    /// D1 : taille de l'indicateur pour un libellé de <paramref name="labelLength"/>
+    /// caractères. La formule et ses bornes (92 à 180 px de large, 32 de haut) valent à
+    /// 96 DPI ; le tout suit l'échelle. Fixes en pixels, la boîte et la police restaient à
+    /// la taille 100 % : à 200 %, un libellé moitié plus petit que voulu.
+    /// </summary>
+    internal static (int Width, int Height) IndicatorSize(int labelLength, int dpi)
+    {
+        int baseWidth = Math.Clamp(42 + labelLength * 7, 92, 180);
+        return (WindowSizing.ScaleForDpi(baseWidth, dpi), WindowSizing.ScaleForDpi(32, dpi));
+    }
+
+    private void RecreateFont()
+    {
+        if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
+        _hFont = Win32.CreateFontW(WindowSizing.ScaleForDpi(-15, _dpi), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
     }
 
     public void Update(MaintainableLayerState state, bool secureInput)
@@ -72,10 +97,11 @@ internal sealed class LayerIndicatorWindow : IDisposable
             return;
         }
 
-        // Largeur adaptée au libellé, bornée pour rester discrète.
-        int width = Math.Clamp(42 + _label.Length * 7, 92, 180);
-        Win32.SetWindowPos(_hWnd, Win32.HWND_TOPMOST, point.x + 8, point.y + 8,
-            width, 32, Win32.SWP_NOACTIVATE | Win32.SWP_SHOWWINDOW);
+        // Largeur adaptée au libellé, bornée pour rester discrète ; D1 : au DPI de l'écran.
+        var (width, height) = IndicatorSize(_label.Length, _dpi);
+        int offset = WindowSizing.ScaleForDpi(8, _dpi);
+        Win32.SetWindowPos(_hWnd, Win32.HWND_TOPMOST, point.x + offset, point.y + offset,
+            width, height, Win32.SWP_NOACTIVATE | Win32.SWP_SHOWWINDOW);
         _visible = true;
     }
 
@@ -118,6 +144,22 @@ internal sealed class LayerIndicatorWindow : IDisposable
             Win32.DrawTextW(hdc, _label, -1, ref rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             Win32.SelectObject(hdc, oldFont);
             Win32.EndPaint(hWnd, ref ps);
+            return IntPtr.Zero;
+        }
+        if (msg == Win32.WM_DPICHANGED)
+        {
+            // D1 : le caret a changé d'écran. Police et taille au nouveau DPI ; la position
+            // reste celle que RefreshPosition vient de donner.
+            int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
+            if (newDpi > 0 && newDpi != _dpi)
+            {
+                _dpi = newDpi;
+                RecreateFont();
+                var (width, height) = IndicatorSize(_label.Length, _dpi);
+                Win32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, width, height,
+                    Win32.SWP_NOMOVE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+                Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            }
             return IntPtr.Zero;
         }
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);

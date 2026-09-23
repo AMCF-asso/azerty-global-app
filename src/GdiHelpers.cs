@@ -8,6 +8,63 @@ namespace AZERTYGlobal;
 /// </summary>
 static class GdiHelpers
 {
+    /// <summary>WM_GETFONT : police avec laquelle un contrôle peint son texte.</summary>
+    private const uint WM_GETFONT = 0x0031;
+
+    /// <summary>
+    /// K5 (accessibilité 1.3.0) — un lien STATIC ne signalait son focus que par la couleur
+    /// (WCAG 1.4.1 et 2.4.7). À appeler depuis la sous-classe du lien sur <c>WM_PAINT</c> : le
+    /// contrôle se peint, puis le rectangle de focus système se pose autour de son texte.
+    /// </summary>
+    internal static IntPtr PaintLinkWithFocusRect(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        // wParam non nul : peinture dans un DC fourni par l'appelant, pas à l'écran.
+        bool focused = wParam == IntPtr.Zero && Win32.GetFocus() == hWnd;
+        // DrawFocusRect trace en XOR : sur un repeint partiel, il repasserait sur le cadre
+        // encore à l'écran et en effacerait une partie. Un lien focalisé se repeint en entier.
+        if (focused) Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
+        IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+        if (!focused) return result;
+
+        IntPtr hdc = Win32.GetDC(hWnd);
+        if (hdc == IntPtr.Zero) return result;
+        try
+        {
+            Win32.GetClientRect(hWnd, out var client);
+            var text = new System.Text.StringBuilder(256);
+            Win32.GetWindowTextW(hWnd, text, text.Capacity);
+            IntPtr font = Win32.SendMessageW(hWnd, WM_GETFONT, IntPtr.Zero, IntPtr.Zero);
+            IntPtr oldFont = font != IntPtr.Zero ? Win32.SelectObject(hdc, font) : IntPtr.Zero;
+            // Même mise en page que le STATIC (SS_LEFT) : retour à la ligne, préfixe & traité.
+            var bounds = new Win32.RECT { left = 0, top = 0, right = client.right, bottom = client.bottom };
+            Win32.DrawTextW(hdc, text.ToString(), -1, ref bounds, Win32.DT_WORDBREAK | Win32.DT_CALCRECT);
+            if (oldFont != IntPtr.Zero) Win32.SelectObject(hdc, oldFont);
+            var focus = FocusRectForLink(bounds, client);
+            Win32.DrawFocusRect(hdc, ref focus);
+        }
+        finally
+        {
+            Win32.ReleaseDC(hWnd, hdc);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// K5 : cadre de focus d'un lien — son texte mesuré, plus 2 px à droite et 1 px en bas,
+    /// borné au contrôle ; le contrôle entier quand le texte n'a pas pu être mesuré.
+    /// </summary>
+    internal static Win32.RECT FocusRectForLink(Win32.RECT text, Win32.RECT client)
+    {
+        if (text.right <= text.left || text.bottom <= text.top) return client;
+        return new Win32.RECT
+        {
+            left = Math.Max(client.left, text.left),
+            top = Math.Max(client.top, text.top),
+            right = Math.Min(client.right, text.right + 2),
+            bottom = Math.Min(client.bottom, text.bottom + 1)
+        };
+    }
+
     /// <summary>Taille du masque 1 bpp : chaque ligne est alignée sur un mot de 16 bits.</summary>
     internal static int MonochromeMaskByteCount(int width, int height)
     {
