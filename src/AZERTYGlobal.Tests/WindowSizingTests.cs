@@ -146,4 +146,46 @@ public class WindowSizingTests
         // se voit ici plutôt qu'au rendu.
         Assert.Equal(0.9f, WindowSizing.MaxWorkAreaFraction);
     }
+
+    // ── D1 (accessibilité 1.3.0) : mise à l'échelle DPI de la Pause, des Couches et de
+    // l'indicateur de couche. Le branchement sur GetDpiForWindow et WM_DPICHANGED se
+    // recette ; c'est le calcul qui s'éprouve ici.
+
+    [Theory]
+    [InlineData(520, 96, 520)]   // 100 % : rien ne bouge
+    [InlineData(520, 120, 650)]  // 125 %
+    [InlineData(520, 144, 780)]  // 150 %
+    [InlineData(520, 168, 910)]  // 175 %
+    [InlineData(520, 192, 1040)] // 200 %
+    public void D1_ScaleForDpi_SuitLÉchelleDeLÉcran(int valeur, int dpi, int attendu)
+    {
+        Assert.Equal(attendu, WindowSizing.ScaleForDpi(valeur, dpi));
+    }
+
+    [Fact]
+    public void D1_ScaleForDpi_ArrondiAuPlusProche_CommeMulDiv()
+    {
+        // 15 × 1,25 = 18,75 : une troncature rendrait 18, et la police de l'indicateur
+        // perdrait un pixel à chaque échelle non entière.
+        Assert.Equal(19, WindowSizing.ScaleForDpi(15, 120));
+        // Le demi s'arrondit en s'éloignant de zéro, dans les deux signes.
+        Assert.Equal(2, WindowSizing.ScaleForDpi(1, 144));
+        Assert.Equal(-2, WindowSizing.ScaleForDpi(-1, 144));
+    }
+
+    [Fact]
+    public void D1_ScaleForDpi_HauteurDePoliceNégative()
+    {
+        // CreateFontW prend une hauteur négative (hauteur de caractère) : elle grandit en
+        // valeur absolue, elle ne change pas de signe.
+        Assert.Equal(-28, WindowSizing.ScaleForDpi(-14, 192));
+        Assert.Equal(-24, WindowSizing.ScaleForDpi(-16, 144));
+    }
+
+    [Fact]
+    public void D1_ScaleForDpi_DpiNonMesuré_RendLaValeurÀ100Pourcent()
+    {
+        Assert.Equal(520, WindowSizing.ScaleForDpi(520, 0));
+        Assert.Equal(520, WindowSizing.ScaleForDpi(520, -96));
+    }
 }
