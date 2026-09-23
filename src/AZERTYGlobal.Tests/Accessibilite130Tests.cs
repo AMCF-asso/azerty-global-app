@@ -208,4 +208,32 @@ public class Accessibilite130Tests
             L.Language = avant;
         }
     }
+
+    // ── D1 : taille de l'indicateur de couche ──────────────────────────
+
+    [Theory]
+    [InlineData(3, 92)]    // libellé court : largeur plancher
+    [InlineData(10, 112)]  // 42 + 10 × 7
+    [InlineData(30, 180)]  // libellé long : largeur plafond
+    public void D1_Indicateur_À100Pourcent_GardeLaFormuleDAvant(int longueur, int largeur)
+    {
+        Assert.Equal((largeur, 32), LayerIndicatorWindow.IndicatorSize(longueur, 96));
+    }
+
+    [Fact]
+    public void D1_Indicateur_SuitLeDpi()
+    {
+        Assert.Equal((224, 64), LayerIndicatorWindow.IndicatorSize(10, 192));
+        Assert.Equal((168, 48), LayerIndicatorWindow.IndicatorSize(10, 144));
+    }
+
+    [Fact]
+    public void D1_Indicateur_LesBornesValentÀ96Dpi_PuisSuiventLÉchelle()
+    {
+        // ⛔ Borner après la mise à l'échelle écraserait le plafond : un libellé long à
+        // 200 % tiendrait dans 180 px au lieu de 360, et son texte, lui mis à l'échelle,
+        // serait coupé. Même chose pour le plancher.
+        Assert.Equal((360, 64), LayerIndicatorWindow.IndicatorSize(30, 192));
+        Assert.Equal((184, 64), LayerIndicatorWindow.IndicatorSize(3, 192));
+    }
 }

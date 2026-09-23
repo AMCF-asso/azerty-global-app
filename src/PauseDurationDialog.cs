@@ -20,6 +20,9 @@ sealed class PauseDurationDialog : IDisposable
     private const uint ES_NUMBER = 0x2000;
     private const uint BS_DEFPUSHBUTTON = 0x0001;
     private const uint BS_PUSHBUTTON = 0x0000;
+    // Zone client de référence, à 96 DPI.
+    private const int BASE_CLIENT_W = 330;
+    private const int BASE_CLIENT_H = 154;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
@@ -36,6 +39,10 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hBtnMinutesUp;
     private IntPtr _hBtnMinutesDown;
     private IntPtr _hFont;
+    // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
+    // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
+    private int _dpi = 96;
+    private readonly List<(IntPtr Hwnd, int X, int Y, int W, int H)> _layout = new();
     private Action<string>? _onAppLanguageChanged;
     private bool _done;
     private TimeSpan? _result;
@@ -102,8 +109,8 @@ sealed class PauseDurationDialog : IDisposable
         };
         Win32.RegisterClassExW(ref wc);
 
-        int clientW = 330;
-        int clientH = 154;
+        int clientW = BASE_CLIENT_W;
+        int clientH = BASE_CLIENT_H;
         uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var windowRect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
         Win32.AdjustWindowRectEx(ref windowRect, style, false, 0);
@@ -117,10 +124,17 @@ sealed class PauseDurationDialog : IDisposable
         _hWnd = Win32.CreateWindowExW(0, ClassName, L.Pause_WindowTitle,
             style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
 
+        // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
+        // l'accueille. Taille, positions et police en découlent : elles étaient fixes en
+        // pixels, et la fenêtre gardait sa taille 100 % à 200 %. Invisible jusqu'à ShowModal,
+        // le redimensionnement ne se voit pas.
+        _dpi = Win32.GetDpiForWindowOrDefault(_hWnd);
+        FitWindowToDpi(work);
+
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd);
 
-        _hFont = Win32.CreateFontW(-14, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFont = CreateScaledFont();
         CreateControls(hInstance);
         Win32.EnableDarkTitleBar(_hWnd);
 
@@ -142,6 +156,37 @@ sealed class PauseDurationDialog : IDisposable
         Win32.SetWindowTextW(_hBtnOk, L.Pause_BtnConfirm);
         Win32.SetWindowTextW(_hBtnCancel, L.Pause_BtnCancel);
         AnnotateSpinButtons();
+    }
+
+    private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
+
+    private IntPtr CreateScaledFont() =>
+        Win32.CreateFontW(S(-14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+
+    /// <summary>D1 : taille de la fenêtre au DPI courant, centrée dans la zone de travail.</summary>
+    private void FitWindowToDpi(Win32.RECT work)
+    {
+        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var rect = new Win32.RECT { left = 0, top = 0, right = S(BASE_CLIENT_W), bottom = S(BASE_CLIENT_H) };
+        Win32.AdjustWindowRectEx(ref rect, style, false, 0);
+        int windowW = rect.right - rect.left;
+        int windowH = rect.bottom - rect.top;
+        int x = work.left + Math.Max(0, (work.right - work.left - windowW) / 2);
+        int y = work.top + Math.Max(0, (work.bottom - work.top - windowH) / 2);
+        Win32.MoveWindow(_hWnd, x, y, windowW, windowH, false);
+    }
+
+    /// <summary>D1 : police et géométrie des contrôles au nouveau DPI (WM_DPICHANGED).</summary>
+    private void ApplyDpiToControls()
+    {
+        IntPtr oldFont = _hFont;
+        _hFont = CreateScaledFont();
+        foreach (var (hwnd, x, y, w, h) in _layout)
+        {
+            Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, IntPtr.Zero);
+            Win32.MoveWindow(hwnd, S(x), S(y), S(w), S(h), true);
+        }
+        if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
     }
 
     private static Win32.RECT GetWorkArea(IntPtr owner)
@@ -219,7 +264,8 @@ sealed class PauseDurationDialog : IDisposable
     {
         var hwnd = Win32.CreateWindowExW(0, "STATIC", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE,
-            x, y, w, h, _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+            S(x), S(y), S(w), S(h), _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+        _layout.Add((hwnd, x, y, w, h));
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         return hwnd;
     }
@@ -229,7 +275,8 @@ sealed class PauseDurationDialog : IDisposable
         var hwnd = Win32.CreateWindowExW(0, "EDIT", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP |
             ES_AUTOHSCROLL | ES_CENTER | ES_NUMBER,
-            x, y, w, h, _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
+            S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
+        _layout.Add((hwnd, x, y, w, h));
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         return hwnd;
     }
@@ -238,7 +285,8 @@ sealed class PauseDurationDialog : IDisposable
     {
         var hwnd = Win32.CreateWindowExW(0, "BUTTON", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | style,
-            x, y, w, h, _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
+            S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
+        _layout.Add((hwnd, x, y, w, h));
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         return hwnd;
     }
@@ -291,6 +339,18 @@ sealed class PauseDurationDialog : IDisposable
                         return IntPtr.Zero;
                     }
                     break;
+                case Win32.WM_DPICHANGED:
+                {
+                    // D1 : même traitement que LayoutConflictWindow — fenêtre au rectangle
+                    // suggéré par Windows, police et contrôles au nouveau DPI.
+                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
+                    if (newDpi > 0) _dpi = newDpi;
+                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
+                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
+                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    ApplyDpiToControls();
+                    return IntPtr.Zero;
+                }
                 case Win32.WM_CLOSE:
                     Close(null);
                     return IntPtr.Zero;

@@ -47,4 +47,16 @@ static class WindowSizing
 
         return (maxW, Math.Max(1, (int)(maxW / ratio)));
     }
+
+    /// <summary>
+    /// D1 (accessibilité 1.3.0) — une valeur de référence à 96 DPI portée au DPI de l'écran,
+    /// arrondie au plus proche comme <c>MulDiv</c>. Les hauteurs de police négatives de
+    /// <c>CreateFontW</c> se mettent à l'échelle comme le reste. Un DPI nul ou négatif, donc
+    /// une mesure qui a échoué, laisse la valeur à 100 %.
+    /// </summary>
+    public static int ScaleForDpi(int value, int dpi)
+    {
+        if (dpi <= 0) return value;
+        return (int)Math.Round(value * (double)dpi / 96.0, MidpointRounding.AwayFromZero);
+    }
 }
