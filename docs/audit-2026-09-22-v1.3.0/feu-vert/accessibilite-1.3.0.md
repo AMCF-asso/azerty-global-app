@@ -23,28 +23,32 @@ Microsoft écrit de ne pas cocher la case sans conception et tests dédiés. La 
 - Version 2.4.2 de [microsoft/axe-windows](https://github.com/microsoft/axe-windows), licence MIT, téléchargée avec l’accord d’Antoine. Archive `AxeWindowsCLI-2.4.2.zip`, SHA-256 `aeca43f41c89b3ffb1db84011539e609ecd7cb3badd6e78fada2ada327d10a64`.
 - `AxeWindowsCLI.exe` est signé par Microsoft Corporation (signature valide). Il est autonome, sans runtime à installer. Copie de travail : scratchpad de la session, hors dépôt.
 - Contrôlé sur l’hôte : sur le Bloc-notes, il rend « 0 errors were found » et écrit un `.a11ytest`.
-- Intégré au kit : `sandbox\lancer-recette.ps1 -Bundle <bundle> -AxeDir <dossier de la CLI>` installe le candidat, puis `sandbox\axe-scan.ps1` ouvre chaque fenêtre et l’analyse avec `--scanrootwindowhandle`. Les fenêtres s’ouvrent par un `WM_COMMAND` envoyé à `AZERTYGlobal_Wnd`, identifiants `IDM_*` de `TrayApplication.cs:28-63`.
-- **État du scanner : non validé.**
-  - Premier essai (`evidence/recette-768f13fbe9e7/axe-essai1/`) : l’accueil est bien analysé, mais la sortie de la CLI est vide. La cause supposée est le dossier monté en lecture seule, d’où la copie locale ajoutée depuis.
-  - Deux défauts corrigés depuis : la fenêtre de l’icône était introuvable, car `$null` devient `""` sous PowerShell (`[NullString]::Value` désormais), et le code de sortie de la CLI n’était pas consigné.
-  - Le second essai n’a pas démarré : aucun journal d’installation. Hypothèse : la Sandbox a été relancée pendant la fermeture de la précédente. À rejouer en premier.
+- Intégré au kit : `sandbox\lancer-recette.ps1 -Bundle <bundle> -AxeDir <dossier de la CLI>` installe le candidat, puis `sandbox\axe-scan.ps1` ouvre chaque fenêtre et l’analyse avec `--processid`, une seule fenêtre visible à la fois. Les fenêtres s’ouvrent par un `WM_COMMAND` envoyé à `AZERTYGlobal_Wnd`, identifiants `IDM_*` de `TrayApplication.cs:28-63`.
+- **Scanner validé le 2026-09-23.** Référence sur le bundle `768f13fb` (run CI 35779820283, Windows Sandbox) : 8 analyses, 0 erreur chacune. Preuves dans `evidence/recette-768f13fbe9e7/axe/`, synthèse `resume.json`.
+  - ⚠️ 8 analyses, mais 6 fenêtres distinctes seulement (lu dans `resume.json`) : les étapes « lancement », « accueil » et « lecons » portent le même HWND 196660, classe `AZERTYGlobal_Onboarding`. L’étape « lecons » a donc analysé l’accueil, pas les Leçons, qui ne le sont que par l’étape « defi » (`AZERTYGlobal_Lessons`). À corriger dans `axe-scan.ps1` avant le scan du prochain candidat.
+  - En 2.4.2, `--scanrootwindowhandle` est inopérant : sortie 2 sans message, mesuré aussi sur le Bloc-notes. `axe-scan.ps1` passe donc par `--processid`, avec une seule fenêtre visible à la fois. Les essais ratés restent dans `axe-essai1/` et `axe-essai2/`.
+  - ⚠️ 0 erreur ne prouve pas l’accessibilité : AxeWindows ne contrôle que ce qui est exposé à UI Automation, et les surfaces dessinées en GDI (Leçons, textes de l’accueil, résultats de la Recherche, clavier virtuel) n’y sont pas exposées du tout (N1 à N12 ci-dessous). C’est une base de comparaison avant/après, pas une preuve.
 
-## Lot 1.3.0 — correctifs rapides (proposé, à confirmer au démarrage)
+## Lot 1.3.0 — correctifs rapides (faits le 2026-09-23, recette à jouer)
 
 Les identifiants et les lignes viennent de l’inventaire du 2026-09-22 (lecture du code, section suivante).
 
-| # | Correctif | Fichier:ligne |
-|---|---|---|
-| K1 | Couches : inscription à `DialogNavigation` et focus initial | `MaintainableLayersWindow.cs:53-59, 97-127` |
-| K2 | Conflit : `IDOK` et `IDCANCEL` traités, pour qu’Échap et Entrée agissent | `LayoutConflictWindow.cs:259-276` |
-| K3 | Exercices : « Passer » atteignable au clavier, focus visible sur les boutons owner-draw | `LearningModule.cs:898-904, 1425, 2760-2782` |
-| K4 | Leçons : libellé des boutons-icônes affiché aussi au focus clavier | `LessonsWindow.cs:1839-1849, 2017` |
-| K5 | Liens de l’accueil et d’À propos : focus signalé autrement que par la seule couleur | `OnboardingWindow.cs:818, 825`, `AboutWindow.cs:366` |
-| K6 | Accueil : drapeau de langue activable au clavier | `OnboardingWindow.cs:857-869` |
-| N8 | Noms des champs (Paramètres, Recherche, Pause) ; le champ Heures serait nommé « Minutes » (supposé) | `SettingsWindow.cs:453-467, 551`, `CharacterSearch.cs:750`, `PauseDurationDialog.cs:160-164` |
-| N10 | Boutons ▲▼ de la Pause nommés autrement que par leur glyphe | `PauseDurationDialog.cs:165-168` |
-| D1 | Pause, Couches, Indicateur : mise à l’échelle DPI | `PauseDurationDialog.cs:100-118`, `MaintainableLayersWindow.cs:85-127`, `LayerIndicatorWindow.cs:25, 40` |
-| D3 | Leçons : taille minimale bornée à la zone de travail (à mesurer d’abord) | `LessonsWindow.cs:840-852` |
+| # | Correctif | Fichier:ligne (inventaire) | État au 2026-09-23 |
+|---|---|---|---|
+| K1 | Couches : inscription à `DialogNavigation` et focus initial | `MaintainableLayersWindow.cs:53-59, 97-127` | Fait, `44cd7e0`. Inscrite le temps d’être visible, focus initial sur la case principale, Entrée et Échap ferment en enregistrant. Pas de témoin automatique (il faudrait une fenêtre réelle) ; recette B6. |
+| K2 | Conflit : `IDOK` et `IDCANCEL` traités, pour qu’Échap et Entrée agissent | `LayoutConflictWindow.cs:259-276` | Fait, `4ab1a2c`. Échap garde l’app ; Entrée presse le bouton focalisé et lui seul, jamais « Quitter » par défaut, car la fenêtre peut surgir pendant une frappe. Témoins existants de `ButtonToPressOnEnter` ; recette B7. |
+| K3 | Exercices : « Passer » atteignable au clavier, focus visible sur les boutons owner-draw | `LearningModule.cs:898-904, 1425, 2760-2782` | Fait, `356cbcd`. Tab et Maj+Tab entre la surface de frappe, « Quitter » et « Passer » ; Entrée et Échap sur ces boutons ; cadre de focus owner-draw. Témoin `NextFocusStop`, 5 tests ; recette B8. |
+| K4 | Leçons : libellé des boutons-icônes affiché aussi au focus clavier | `LessonsWindow.cs:1839-1849, 2017` | Fait, `6155517`. Témoin `FindHoverAreaFor`, 3 tests ; recette B9. |
+| K5 | Liens de l’accueil et d’À propos : focus signalé autrement que par la seule couleur | `OnboardingWindow.cs:818, 825`, `AboutWindow.cs:366` | Fait, `770750f`. Cadre de focus autour du texte du lien. À propos ne repeignait pas le lien quand le focus changeait, si bien que même la couleur ne suivait pas : corrigé aussi. Témoin `FocusRectForLink`, 3 tests ; recette B10. |
+| K6 | Accueil : drapeau de langue activable au clavier | `OnboardingWindow.cs:857-869` | Fait, `b81fa3f`. Bouton owner-draw posé sur le drapeau, dernier arrêt de tabulation, nommé par l’endonyme de la langue cible, masqué quand la langue est imposée. Témoin `FlagButtonName`, 1 test ; recette B11. |
+| N8 | Noms des champs (Paramètres, Recherche, Pause) ; le champ Heures serait nommé « Minutes » (supposé) | `SettingsWindow.cs:453-467, 551`, `CharacterSearch.cs:750`, `PauseDurationDialog.cs:160-164` | Fait, `af2df9a`. Soupçon confirmé par une sonde hors dépôt : le champ Heures s’annonçait « Minutes », le champ Minutes n’avait aucun nom. Étiquette STATIC juste avant chaque champ, cachée quand le libellé visible est dessiné ; la liste des apps suspendues est ajoutée. Pas de témoin automatique ; recette B12. |
+| N10 | Boutons ▲▼ de la Pause nommés autrement que par leur glyphe | `PauseDurationDialog.cs:165-168` | Fait, `669444b`. Dynamic Annotation (`SetHwndPropStr`, `PROPID_ACC_NAME`), lue en MSAA et en UIA. Témoin `SpinButtons`, 3 tests ; recette B12. |
+| D1 | Pause, Couches, Indicateur : mise à l’échelle DPI | `PauseDurationDialog.cs:100-118`, `MaintainableLayersWindow.cs:85-127`, `LayerIndicatorWindow.cs:25, 40` | Fait, `1b1338d`. Témoins `ScaleForDpi`, 4 tests, et `IndicatorSize`, 3 tests ; recette B13. |
+| D3 | Leçons : taille minimale bornée à la zone de travail (à mesurer d’abord) | `LessonsWindow.cs:840-852` | Mesuré, puis fait, `af84b17`. Windows impose `ptMinTrackSize` jusqu’à `CreateWindowEx` et `MoveWindow`, et le minimum dépassait la zone de travail d’un 1920×1080 dès 175 %, annulant le plafond d’AG130-42. Témoin `MinimumClientSize`, 6 tests ; recette B13. |
+
+Vérifié en local le 2026-09-23 : build Release et publish win-x64 sans nouvel avertissement, 147 tests Python, et les trois suites .NET à 18, 235 et 507 tests, 0 échec. Application Control a laissé passer la suite application ce jour-là ; rien ne garantit qu’il le fera au run suivant, la CI reste la preuve. Mutations jouées : 9 sur `WindowSizing` (copie hors dépôt) et 10 sur les autres décisions pures, toutes rouges sur les bons tests, fichiers restaurés à l’identique.
+
+Non vérifié : le rendu à l’écran, la lecture par le Narrateur, et la Dynamic Annotation sous NativeAOT. Le banc AOT a été refusé par Application Control ; le même code tourne en JIT, et un autre processus y lit bien le nom posé, en MSAA comme en UIA.
 
 Règles du dépôt : jamais `Edit` sur un `.cs`, patch Python en `newline=''`, fin de ligne mesurée sur le fichier. Chaque correctif porte son témoin. Ensuite : CI par `ci/verif`, nouveau bundle attesté, scan AxeWindows avant/après, recette partie A.
 

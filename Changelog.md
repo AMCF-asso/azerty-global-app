@@ -81,6 +81,15 @@ L’audit complet du candidat 1.3.0 a rendu 52 constats, dont 4 bloquants (`docs
 - **Documents publics (AG130-12).** Le `README` annonçait « version 1.2.0 » et « aucun package n’a encore été produit ni soumis », trois assertions fausses ; la formule interdite « 99 % des habitudes » survivait dans trois fichiers. Le `README` entre dans le périmètre de `check-doc-versions.py`.
 - **Versions des documents de parc (AG130-02).** Les sept documents surveillés déclaraient encore `version-app: 1.2.0`, ce qui faisait sortir `check-doc-versions.py` en erreur et bloquait la CI avant même de compiler. La 1.2.0 est déclarée historique.
 
+**Accessibilité — correctifs rapides (décision d’Antoine du 2026-09-22)**
+
+La case « testé pour l’accessibilité » de Partner Center reste décochée pour cette version. Ce lot corrige ce qui tenait en une session ; l’exposition à UI Automation des surfaces dessinées et le contraste élevé partent en 1.3.1. Détail et état : `docs/audit-2026-09-22-v1.3.0/feu-vert/accessibilite-1.3.0.md`.
+
+- **Clavier.** La fenêtre des couches maintenables et celle du conflit de disposition répondent à Tab, Entrée et Échap ; « Passer cet exercice » s’atteint par Tab ; les boutons-icônes des Leçons montrent leur infobulle au focus clavier ; le drapeau de langue de l’accueil se tabule et s’active par Entrée ou Espace. Le focus se voit : cadre de focus sur les boutons dessinés des exercices, sur les liens de l’accueil et d’À propos, et sur le drapeau.
+- **Noms lus par le Narrateur.** Le champ des heures de la Pause s’annonçait « Minutes » et celui des minutes n’avait aucun nom (mesuré) ; les champs de raccourci et la liste des apps suspendues des Paramètres, comme le champ de la Recherche, n’en avaient pas non plus. Les boutons ▲▼ de la Pause s’annoncent « Augmenter les heures », etc., en français et en anglais.
+- **Mise à l’échelle.** La Pause, les couches maintenables et l’indicateur de couche suivent le DPI de l’écran. La taille minimale des Leçons dépassait l’écran dès 175 % sur un 1920×1080 : Windows l’impose jusqu’à la création de la fenêtre (mesuré), ce qui annulait le plafond d’AG130-42. Elle est bornée à la zone de travail.
+- 34 cas de test neufs sur les décisions pures, prouvés par mutation ; le reste se recette, lignes B6 à B13 de `docs/audit-2026-09-22-v1.3.0/feu-vert/recette.md`.
+
 **Vérifié**
 
 - Corrigé et vérifié en VM le 2026-09-19 à 13:44 : explorateur, Edge et zone de notification ouverts, `error.log` n’existe pas.

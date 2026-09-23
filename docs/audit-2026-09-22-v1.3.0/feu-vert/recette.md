@@ -33,6 +33,16 @@ Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 | B3 | Contraste élevé | Noter l’état : dette connue, non bloquante | |
 | B4 | Ancienne config sans `activationConsent` placée avant le 1er lancement | Demande unique, réglages conservés | |
 | B5 | Leçons, défi, statistiques puis remise à zéro | Progression et compteurs cohérents | |
+| B6 | Fenêtre des couches maintenables au clavier seul : Tab, Maj+Tab, Espace sur une case, Entrée ; rouvrir, Échap | Focus initial sur la case principale, puis circulation entre cases, champ et « Enregistrer » ; Entrée et Échap ferment en enregistrant | |
+| B7 | Conflit de disposition (disposition système AZERTY Global active au lancement, si elle s’installe dans le Sandbox, sinon ⏭️) : Tab jusqu’à « Garder l’application », Entrée ; rouvrir, Échap ; rouvrir, Entrée sans Tab | Entrée presse le bouton focalisé ; Échap garde l’app ; Entrée sans bouton focalisé ne fait rien | |
+| B8 | Exercices (5ᵉ ou 6ᵉ, « Passer » affiché) : Tab, Tab, Entrée ; au suivant, Tab puis Maj+Tab, et taper la suite | Cadre de focus sur « Quitter » puis « Passer » ; Entrée passe l’exercice et la frappe reprend sans clic ; Tab ne compte aucune faute | |
+| B9 | Leçons au clavier seul : Tab jusqu’aux boutons-icônes (indice, réglages…) | Chaque icône focalisée affiche la même infobulle qu’au survol ; un mouvement de souris rend l’infobulle de survol | |
+| B10 | Accueil étape 3, puis À propos : Tab sur chaque lien | Cadre pointillé autour du texte du lien focalisé, en plus de la couleur (À propos : la couleur suit aussi le focus, ce qu’elle ne faisait pas) ; aucune trace une fois le focus parti | |
+| B11 | Accueil : Tab jusqu’au drapeau, Entrée, puis Espace, puis un clic | Cadre de focus autour du drapeau ; la langue bascule à chaque geste et le focus reste sur le drapeau | |
+| B12 | Narrateur (Ctrl+Win+Entrée) ou Inspect : Pause (deux champs, quatre ▲▼), Paramètres (deux raccourcis, liste des apps suspendues), Recherche ; refaire en anglais | « Heures », « Minutes », « Augmenter les heures »…, « Clavier virtuel », « Recherche », « Apps suspendues », « Rechercher un caractère » ; noms anglais après la bascule | |
+| B13 | Affichage à 175 % puis 200 %, puis changement d’échelle fenêtre ouverte : Pause, couches maintenables, indicateur de couche (couche active dans le Bloc-notes), Leçons | Textes et contrôles à l’échelle, rien de coupé ni de superposé ; Leçons entièrement dans l’écran, commandes du bas atteignables | |
+
+Lignes B6 à B13 : lot d’accessibilité 1.3.0 (`accessibilite-1.3.0.md`), à jouer sur le candidat qui le contient, pas sur `768f13fb`. Les décisions pures du lot ont leurs témoins automatiques ; ces lignes couvrent ce qu’aucun test ne voit : le rendu à l’écran, les messages Windows et la lecture par le Narrateur.
 
 ## C. Écarts assumés (décisions datées, ne pas rouvrir ici)
 
