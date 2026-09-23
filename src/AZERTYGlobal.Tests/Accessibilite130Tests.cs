@@ -59,4 +59,46 @@ public class Accessibilite130Tests
         Assert.Equal(0, DialogNavigation.NextFocusStop(0, 1, backwards: false));
         Assert.Equal(0, DialogNavigation.NextFocusStop(0, 1, backwards: true));
     }
+
+    // ── K4 : infobulle de la cible focalisée (Leçons) ──────────────────
+
+    private static Win32.RECT R(int left, int top, int right, int bottom) =>
+        new() { left = left, top = top, right = right, bottom = bottom };
+
+    private static readonly List<(Win32.RECT, string, bool, bool)> Icônes = new()
+    {
+        (R(0, 0, 30, 30), "Indice", true, true),
+        (R(40, 0, 70, 30), "Réglages", true, true),
+    };
+
+    [Fact]
+    public void K4_BoutonIcône_RetrouveSonInfobulle()
+    {
+        Assert.Equal(1, LessonsWindow.FindHoverAreaFor(R(40, 0, 70, 30), Icônes));
+        Assert.Equal(0, LessonsWindow.FindHoverAreaFor(R(0, 0, 30, 30), Icônes));
+    }
+
+    [Fact]
+    public void K4_ChaqueBordDuRectangleCompte()
+    {
+        // Réciproque, un bord à la fois : une cible voisine sans infobulle (bouton à texte)
+        // ne doit pas emprunter celle d'une icône qui lui ressemble.
+        Assert.Equal(-1, LessonsWindow.FindHoverAreaFor(R(41, 0, 70, 30), Icônes));
+        Assert.Equal(-1, LessonsWindow.FindHoverAreaFor(R(40, 1, 70, 30), Icônes));
+        Assert.Equal(-1, LessonsWindow.FindHoverAreaFor(R(40, 0, 71, 30), Icônes));
+        Assert.Equal(-1, LessonsWindow.FindHoverAreaFor(R(40, 0, 70, 31), Icônes));
+    }
+
+    [Fact]
+    public void K4_InfobulleVide_NeCompteRien_EtLaPremièreGagne()
+    {
+        var zones = new List<(Win32.RECT, string, bool, bool)>
+        {
+            (R(0, 0, 30, 30), "", true, true),
+            (R(0, 0, 30, 30), "Indice", true, true),
+            (R(0, 0, 30, 30), "Doublon", false, false),
+        };
+        Assert.Equal(1, LessonsWindow.FindHoverAreaFor(R(0, 0, 30, 30), zones));
+        Assert.Equal(-1, LessonsWindow.FindHoverAreaFor(R(0, 0, 30, 30), new List<(Win32.RECT, string, bool, bool)>()));
+    }
 }
