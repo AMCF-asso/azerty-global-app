@@ -53,14 +53,23 @@ internal sealed class MaintainableLayersWindow : IDisposable
     public void Show()
     {
         LoadFromConfig();
+        // K1 (accessibilité 1.3.0) : Tab, Maj+Tab, Entrée et Échap entre les contrôles, comme
+        // les autres fenêtres à contrôles. Inscrite le temps d'être visible, comme l'accueil :
+        // inscrite en permanence, elle ferait passer chaque message du processus par
+        // GetAncestor (voir DialogNavigation.TryRoute).
+        DialogNavigation.Register(_hWnd);
         Win32.ShowWindow(_hWnd, 5);
         Win32.SetForegroundWindow(_hWnd);
+        // Focus initial sur le premier contrôle : sans lui, le focus restait sur la fenêtre
+        // elle-même, et rien n'était annoncé avant la première tabulation.
+        Win32.SetFocus(_hMaster);
         _visible = true;
     }
 
     public void Hide()
     {
         SaveToConfig();
+        DialogNavigation.Unregister(_hWnd);
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
     }
@@ -210,6 +219,15 @@ internal sealed class MaintainableLayersWindow : IDisposable
             {
                 case Win32.WM_COMMAND:
                     int id = wParam.ToInt32() & 0xFFFF;
+                    // K1 : Entrée et Échap arrivent d'IsDialogMessageW en IDOK et IDCANCEL,
+                    // jamais en WM_KEYDOWN (DialogNavigation, revue R5). Les deux ferment en
+                    // enregistrant, comme « Enregistrer », la croix et l'ancien Échap : cette
+                    // fenêtre n'a pas d'annulation.
+                    if (id == DialogNavigation.IDOK || DialogNavigation.IsEscapeCommand(id))
+                    {
+                        Hide();
+                        return IntPtr.Zero;
+                    }
                     if (id == IDC_MASTER)
                     {
                         UpdateEnabledState();
@@ -266,6 +284,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     {
         if (_hWnd != IntPtr.Zero)
         {
+            // Désinscrire AVANT de détruire : Windows recycle les HWND.
+            DialogNavigation.Unregister(_hWnd);
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
