@@ -101,4 +101,36 @@ public class Accessibilite130Tests
         Assert.Equal(1, LessonsWindow.FindHoverAreaFor(R(0, 0, 30, 30), zones));
         Assert.Equal(-1, LessonsWindow.FindHoverAreaFor(R(0, 0, 30, 30), new List<(Win32.RECT, string, bool, bool)>()));
     }
+
+    // ── K5 : cadre de focus des liens STATIC ───────────────────────────
+
+    [Fact]
+    public void K5_LeCadreEntoureLeTexte_PasToutLeContrôle()
+    {
+        // Un lien de l'accueil mesure 240 px de large pour un texte bien plus court : un
+        // cadre sur tout le contrôle entourerait du vide.
+        var cadre = GdiHelpers.FocusRectForLink(R(0, 0, 80, 20), R(0, 0, 240, 28));
+        Assert.Equal((0, 0, 82, 21), (cadre.left, cadre.top, cadre.right, cadre.bottom));
+    }
+
+    [Fact]
+    public void K5_LeCadreResteDansLeContrôle()
+    {
+        // DT_CALCRECT élargit le rectangle quand le mot le plus long déborde : le cadre ne
+        // doit pas sortir du contrôle, ni à droite ni en bas.
+        var cadre = GdiHelpers.FocusRectForLink(R(0, 0, 300, 40), R(0, 0, 240, 28));
+        Assert.Equal(240, cadre.right);
+        Assert.Equal(28, cadre.bottom);
+        var serré = GdiHelpers.FocusRectForLink(R(0, 0, 239, 28), R(0, 0, 240, 28));
+        Assert.Equal(240, serré.right);
+        Assert.Equal(28, serré.bottom);
+    }
+
+    [Fact]
+    public void K5_TexteSansMesure_CadreSurToutLeContrôle()
+    {
+        var client = R(0, 0, 240, 28);
+        Assert.Equal(client, GdiHelpers.FocusRectForLink(R(0, 0, 0, 0), client));
+        Assert.Equal(client, GdiHelpers.FocusRectForLink(R(0, 0, 80, 0), client));
+    }
 }

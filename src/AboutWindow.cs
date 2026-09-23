@@ -429,6 +429,15 @@ sealed class AboutWindow : IDisposable
                     Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 }
                 break;
+            // K5 (accessibilité 1.3.0) : la couleur de focus se décide dans WM_CTLCOLORSTATIC, qui
+            // ne passe qu'au repeint, et rien ne repeignait le lien quand le focus changeait :
+            // au clavier, le lien focalisé ne se distinguait donc pas. Repeint, et cadre de focus.
+            case Win32.WM_SETFOCUS:
+            case Win32.WM_KILLFOCUS:
+                Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
+                break;
+            case Win32.WM_PAINT:
+                return GdiHelpers.PaintLinkWithFocusRect(hWnd, msg, wParam, lParam);
             case Win32.WM_GETDLGCODE:
             {
                 // Revue du 2026-09-21, R2 : DLGC_WANTALLKEYS inconditionnel gardait Tab aussi,
