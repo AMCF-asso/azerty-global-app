@@ -56,7 +56,12 @@ function Scan-Visible([string]$step) {
         $scanned[$key] = $true
         $title = [Win]::Text($h); $cls = [Win]::Cls($h)
         $id = ($step + '-' + ($title -replace '[^A-Za-z0-9]+', '_')).Trim('_')
-        $text = & $axe --processid $appPid --scanrootwindowhandle ([int64]$h) --outputdirectory $out --scanid $id --alwayssavetestfile --verbosity Verbose 2>&1 | Out-String
+        # --scanrootwindowhandle sort en 2 sans message en 2.4.2 (mesure le 2026-09-23,
+        # meme sur le Bloc-notes) : on garde une seule fenetre visible et --processid
+        # analyse la fenetre principale du processus.
+        $visibleCount = ([Win]::Visible($appPid)).Count
+        if ($visibleCount -ne 1) { Say ($step + ' : ' + $visibleCount + ' fenetres visibles, resultat ambigu') }
+        $text = & $axe --processid $appPid --outputdirectory $out --scanid $id --alwayssavetestfile --verbosity Verbose 2>&1 | Out-String
         $text = 'exit=' + $LASTEXITCODE + [Environment]::NewLine + $text
         Set-Content -Path (Join-Path $out ($id + '.log')) -Value $text -Encoding UTF8
         $errors = if ($text -match '(\d+) errors? (was|were) found') { [int]$Matches[1] } else { -1 }
@@ -67,6 +72,9 @@ function Scan-Visible([string]$step) {
 
 Start-Sleep -Seconds 2
 Scan-Visible 'lancement'
+foreach ($h in [Win]::Visible($appPid)) { [void][Win]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) }
+Start-Sleep -Seconds 1
+foreach ($h in @($scanned.Keys)) { $scanned.Remove($h) }
 $commands = [ordered]@{ parametres = 1012; lecons = 1023; clavier = 1006; recherche = 1007; statistiques = 1032; apropos = 1016; pause = 1027; defi = 1035; compatibilite = 1034; confidentialite = 1028; accueil = 1010 }
 foreach ($name in $commands.Keys) {
     [void][Win]::PostMessage($tray, 0x0111, [IntPtr]$commands[$name], [IntPtr]::Zero)

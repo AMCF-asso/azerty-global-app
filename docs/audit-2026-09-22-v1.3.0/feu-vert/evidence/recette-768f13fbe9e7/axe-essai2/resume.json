@@ -1,0 +1,66 @@
+﻿[
+    {
+        "step":  "lancement",
+        "title":  "AZERTY Global",
+        "class":  "AZERTYGlobal_Onboarding",
+        "hwnd":  "196692",
+        "errors":  -1,
+        "report":  "lancement-AZERTY_Global"
+    },
+    {
+        "step":  "parametres",
+        "title":  "AZERTY Global — Settings",
+        "class":  "AZERTYGlobal_Settings",
+        "hwnd":  "328230",
+        "errors":  -1,
+        "report":  "parametres-AZERTY_Global_Settings"
+    },
+    {
+        "step":  "lecons",
+        "title":  "AZERTY Global",
+        "class":  "AZERTYGlobal_Onboarding",
+        "hwnd":  "196692",
+        "errors":  -1,
+        "report":  "lecons-AZERTY_Global"
+    },
+    {
+        "step":  "statistiques",
+        "title":  "AZERTY Global — My statistics",
+        "class":  "AZERTYGlobal_UsageStats",
+        "hwnd":  "459310",
+        "errors":  -1,
+        "report":  "statistiques-AZERTY_Global_My_statistics"
+    },
+    {
+        "step":  "apropos",
+        "title":  "AZERTY Global — About",
+        "class":  "AZERTYGlobal_About",
+        "hwnd":  "131238",
+        "errors":  -1,
+        "report":  "apropos-AZERTY_Global_About"
+    },
+    {
+        "step":  "defi",
+        "title":  "AZERTY Global — Lessons",
+        "class":  "AZERTYGlobal_Lessons",
+        "hwnd":  "131476",
+        "errors":  -1,
+        "report":  "defi-AZERTY_Global_Lessons"
+    },
+    {
+        "step":  "compatibilite",
+        "title":  "App compatibility",
+        "class":  "#32770",
+        "hwnd":  "327706",
+        "errors":  -1,
+        "report":  "compatibilite-App_compatibility"
+    },
+    {
+        "step":  "accueil",
+        "title":  "AZERTY Global",
+        "class":  "AZERTYGlobal_Onboarding",
+        "hwnd":  "196692",
+        "errors":  -1,
+        "report":  "accueil-AZERTY_Global"
+    }
+]

@@ -1,0 +1,14 @@
+[08:39:15] App pid 17168 ; fenetre de l icone 262200
+[08:39:17] lancement : 'AZERTY Global' (AZERTYGlobal_Onboarding) -> -1 erreur(s)
+[08:39:20] parametres : 'AZERTY Global — Settings' (AZERTYGlobal_Settings) -> -1 erreur(s)
+[08:39:24] lecons : 'AZERTY Global' (AZERTYGlobal_Onboarding) -> -1 erreur(s)
+[08:39:28] clavier : aucune nouvelle fenetre visible
+[08:39:32] recherche : aucune nouvelle fenetre visible
+[08:39:36] statistiques : 'AZERTY Global — My statistics' (AZERTYGlobal_UsageStats) -> -1 erreur(s)
+[08:39:41] apropos : 'AZERTY Global — About' (AZERTYGlobal_About) -> -1 erreur(s)
+[08:39:45] pause : aucune nouvelle fenetre visible
+[08:39:49] defi : 'AZERTY Global — Lessons' (AZERTYGlobal_Lessons) -> -1 erreur(s)
+[08:39:53] compatibilite : 'App compatibility' (#32770) -> -1 erreur(s)
+[08:39:57] confidentialite : aucune nouvelle fenetre visible
+[08:40:01] accueil : 'AZERTY Global' (AZERTYGlobal_Onboarding) -> -1 erreur(s)
+[08:40:02] fin du scan
