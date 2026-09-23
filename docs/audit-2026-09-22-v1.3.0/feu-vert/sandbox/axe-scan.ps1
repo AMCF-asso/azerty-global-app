@@ -75,7 +75,9 @@ Scan-Visible 'lancement'
 foreach ($h in [Win]::Visible($appPid)) { [void][Win]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) }
 Start-Sleep -Seconds 1
 foreach ($h in @($scanned.Keys)) { $scanned.Remove($h) }
-$commands = [ordered]@{ parametres = 1012; lecons = 1023; clavier = 1006; recherche = 1007; statistiques = 1032; apropos = 1016; pause = 1027; defi = 1035; compatibilite = 1034; confidentialite = 1028; accueil = 1010 }
+# Pas d'etape Lecons (1023) : sans consentement d'activation, ShowLessonsWindow rouvre
+# l'accueil (TrayApplication.cs) ; la fenetre Lecons est analysee par l'etape defi.
+$commands = [ordered]@{ parametres = 1012; clavier = 1006; recherche = 1007; statistiques = 1032; apropos = 1016; pause = 1027; defi = 1035; compatibilite = 1034; confidentialite = 1028; accueil = 1010 }
 foreach ($name in $commands.Keys) {
     [void][Win]::PostMessage($tray, 0x0111, [IntPtr]$commands[$name], [IntPtr]::Zero)
     Start-Sleep -Seconds 3

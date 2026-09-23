@@ -1,0 +1,7 @@
+﻿exit=0
+Axe.Windows Accessibility Scanner CLI (version 2.4.2)
+Scan Target: Process Name = AZERTY Global, Process ID = 16952
+Scan Id = accueil-AZERTY_Global
+0 errors were found
+Results were written to "C:\resultats\axe\accueil-AZERTY_Global.a11ytest"
+
