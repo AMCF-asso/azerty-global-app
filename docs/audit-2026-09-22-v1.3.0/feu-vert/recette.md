@@ -1,8 +1,8 @@
 # Recette du candidat Store 1.3.0 — à cocher dans Windows Sandbox
 
-Candidat : bundle CI du run [35779820283](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35779820283), commit `9350947` (contenu de `bd33c9d` sur `release/1.2.0-notation-store`), SHA-256 `768f13fbe9e79e98cc56009e34496916ca352f84dbf31c1350c4be6506c4250c`, attesté. **Une recompilation change l’empreinte et annule cette recette.**
+Candidat : bundle CI du run [35851382703](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35851382703), commit `585672f` sur `ci/verif` (sources de `34feb04` sur `release/1.2.0-notation-store`, lot d’accessibilité compris), SHA-256 `ba587ccee0597a96d63b99052b0fd26dfabfb3830a81a07cb463cb3e1bb0a5c4`, attesté. Le précédent, `768f13fb…`, ne contient pas le lot. **Une recompilation change l’empreinte et annule cette recette.**
 
-Lancement : `powershell -ExecutionPolicy Bypass -File sandbox\lancer-recette.ps1 -Bundle <bundle>`. Le journal `evidence\recette-768f13fbe9e7\installation.txt` doit finir par « Pret » avec **shadow stack ON ; CFG ON**. Le Sandbox applique réellement le shadow stack sur ce poste (mesuré le 22/09).
+Lancement : `powershell -ExecutionPolicy Bypass -File sandbox\lancer-recette.ps1 -Bundle <bundle>`. Le journal `evidence\recette-ba587ccee059\installation.txt` doit finir par « Pret » avec **shadow stack ON ; CFG ON**. Le Sandbox applique réellement le shadow stack sur ce poste (mesuré le 22/09).
 
 Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 
@@ -22,7 +22,7 @@ Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 | A10 | Menu de l’icône : Couches ▸, Apprendre ▸, À propos et aide ▸, bascule FR/EN | Douze lignes, sous-menus ouverts, textes basculés | |
 | A11 | **Chemin d’erreur** : quitter l’app, remplacer le contenu de `config.json` par `[1]` (sous MSIX, chercher d’abord `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`, sinon `%LOCALAPPDATA%\AZERTY Global\`), relancer | L’app démarre (pas d’arrêt brutal) ; `error.log` porte `JsonException` ; le fichier n’est pas réécrit | |
 | A12 | Désinstaller (Paramètres > Applications) | Processus arrêté, clavier système utilisable | |
-| A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-768f13fbe9e7\resume.txt` | |
+| A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-ba587ccee059\resume.txt` | |
 
 ## B. Recommandé si le temps le permet
 

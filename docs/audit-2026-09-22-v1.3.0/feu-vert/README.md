@@ -4,6 +4,8 @@ Suite des [corrections de l’audit](../corrections/README.md). Arbitrages d’A
 
 ## Candidat
 
+**Candidat actuel (2026-09-23) :** run [35851382703](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35851382703), vert (18 / 235 / 507 tests C#, 147 Python, BinSkim sans alerte bloquante), commit `585672f` sur `ci/verif`, contenu de `34feb04`, bundle attesté `ba587ccee0597a96d63b99052b0fd26dfabfb3830a81a07cb463cb3e1bb0a5c4`. Le tableau ci-dessous décrit le candidat précédent, sans le lot d’accessibilité.
+
 | Élément | Valeur |
 |---|---|
 | Source | `bd33c9d` sur `release/1.2.0-notation-store` ; contenu identique poussé en `9350947` sur `ci/verif` (décision 29) |
