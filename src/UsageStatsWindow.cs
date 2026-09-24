@@ -24,8 +24,10 @@ sealed class UsageStatsWindow : IDisposable
     // Section « Défi du jour » ajoutée en v1.2.0 : la fenêtre ne réserve sa hauteur
     // que lorsque la section se dessine (même prédicat que WM_PAINT, cf. plus bas).
     private const int CHALLENGE_SECTION_H = 130;
+    // 1.3.0 : Défi masqué (DailyChallenge.Enabled) ; les compteurs restent sur disque.
     private static bool ChallengeSectionVisible
-        => ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0;
+        => DailyChallenge.Enabled
+           && (ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0);
     private static int WinContentH
         => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0);
 

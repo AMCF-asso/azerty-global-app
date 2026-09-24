@@ -585,7 +585,8 @@ sealed class OnboardingWindow : IDisposable
         Win32.ShowWindow(_hWndLinkDiscord, PolicyManager.ExternalLinksEnabledNow ? step3Vis : 0);
         Win32.ShowWindow(_hWndChkAutoStart, step3Vis);
         Win32.ShowWindow(_hWndChkDontShow, step3Vis);
-        Win32.ShowWindow(_hWndChkTraining, step3Vis);
+        // Opt-in des rappels du Défi : masqué avec le Défi en 1.3.0 (DailyChallenge.Enabled).
+        Win32.ShowWindow(_hWndChkTraining, DailyChallenge.Enabled ? step3Vis : 0);
         if (step3Vis == 1)
         {
             // Resynchronisation à chaque affichage de l'étape 3 : l'utilisateur a pu
@@ -1497,8 +1498,18 @@ sealed class OnboardingWindow : IDisposable
             // sous les 2 cases existantes (même colonne, même largeur).
             checkboxTrainingY = checkboxY + checkboxSpacing * 2;
             trainingDescY = checkboxTrainingY + checkboxHeight + S(2);
-            trainingDescHeight = MeasureTextHeight(hdc, _hFontReassure, L.Onboarding_ChkTrainingDesc, checkboxWidth);
-            int prefsHeight = prefsPaddingTop + checkboxHeight * 3 + S(10) * 2 + S(2) + trainingDescHeight + prefsPaddingBottom;
+            int prefsHeight;
+            if (DailyChallenge.Enabled)
+            {
+                trainingDescHeight = MeasureTextHeight(hdc, _hFontReassure, L.Onboarding_ChkTrainingDesc, checkboxWidth);
+                prefsHeight = prefsPaddingTop + checkboxHeight * 3 + S(10) * 2 + S(2) + trainingDescHeight + prefsPaddingBottom;
+            }
+            else
+            {
+                // 1.3.0 : Défi masqué, le panneau ne garde que deux cases.
+                trainingDescHeight = 0;
+                prefsHeight = prefsPaddingTop + checkboxHeight * 2 + S(10) + prefsPaddingBottom;
+            }
             prefsPanel = new Win32.RECT
             {
                 left = margin,
@@ -1863,6 +1874,7 @@ sealed class OnboardingWindow : IDisposable
         // Texte descriptif sous la case « Défi du jour » (3e case du panneau Préférences) —
         // simple texte dessiné (comme la mention vie privée de l'étape 1), pas de contrôle
         // STATIC dédié : pas besoin d'interaction, juste une précision sous le libellé de la case.
+        if (!DailyChallenge.Enabled) return; // 1.3.0 : Défi masqué, ni case ni texte
         Win32.SelectObject(hdc, _hFontReassure);
         Win32.SetTextColor(hdc, CLR_REASSURE);
         var trainingDescRect = new Win32.RECT

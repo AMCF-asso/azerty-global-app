@@ -228,7 +228,9 @@ internal sealed class LessonsWindow : IDisposable
     private static LessonCatalog LoadCatalogWithChallenge()
     {
         var catalog = LessonCatalogLoader.LoadFromResource();
-        if (!ConfigManager.TrainingEnabled) return catalog;
+        // 1.3.0 : Défi masqué (DailyChallenge.Enabled), même avec l'opt-in déjà coché.
+        if (!DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled))
+            return catalog;
         var challenge = DailyChallenge.BuildModule(
             DateOnly.FromDateTime(DateTime.Now), ConfigManager.TrainingSequenceIndex);
         if (challenge == null) return catalog;
@@ -244,7 +246,7 @@ internal sealed class LessonsWindow : IDisposable
     /// </summary>
     private void RefreshChallengeModuleIfStale()
     {
-        string key = ConfigManager.TrainingEnabled
+        string key = DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled)
             ? $"{DateOnly.FromDateTime(DateTime.Now):yyyyMMdd}/{ConfigManager.TrainingSequenceIndex}/{L.Language}"
             : "off";
         if (_challengeLessonKey == key) return;
@@ -268,6 +270,7 @@ internal sealed class LessonsWindow : IDisposable
     /// </summary>
     public bool ShowChallenge()
     {
+        if (!DailyChallenge.Enabled) return false; // 1.3.0 : Défi masqué
         _challengeLessonKey = null; // forcer la reconstruction (date/étape du moment)
         RefreshChallengeModuleIfStale();
         for (int m = 0; m < _catalog.Modules.Count; m++)
@@ -292,6 +295,7 @@ internal sealed class LessonsWindow : IDisposable
         _mapper.RequestCapsLockOff();
         _mapper.SyncState();
         _visible = true;
+        LearningSessionTracker.Opened(this); // aucune demande d'avis pendant la séance
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
         Win32.SetFocus(_hWnd);
@@ -2824,6 +2828,9 @@ internal sealed class LessonsWindow : IDisposable
     {
         SaveWindowBounds();
         _visible = false;
+        // Avant ChallengeShared ci-dessous : la fin de séance est datée quand le partage
+        // se présente, et les dix minutes sans avis s'appliquent aussi à lui.
+        LearningSessionTracker.Closed(this);
         _settingsOpen = false;
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
@@ -2849,6 +2856,7 @@ internal sealed class LessonsWindow : IDisposable
 
     public void Dispose()
     {
+        LearningSessionTracker.Closed(this);
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
         if (_onAppLanguageChanged != null)
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;

@@ -400,6 +400,9 @@ sealed class LearningModule : IDisposable
         // Sur le chemin nominal elle est refermée dans Dispose, protégée par _disposed
         // contre une double fermeture.
         UsageStats.BeginExcludedTyping();
+        // Séance d'exercices : aucune demande d'avis tant qu'elle vit, ni dans les dix
+        // minutes qui suivent (décision d'Antoine du 2026-09-24).
+        LearningSessionTracker.Opened(this);
         try
         {
             _tweaks = LearningTweaks.Load(); // re-lu a chaque ctor → bouton "Reinitialiser onboarding" applique les changements
@@ -474,6 +477,7 @@ sealed class LearningModule : IDisposable
             // Le constructeur a levé : personne ne tient l'instance, donc personne
             // n'appellera Dispose. On referme ici avant de relancer.
             UsageStats.EndExcludedTyping();
+            LearningSessionTracker.Closed(this);
             throw;
         }
     }
@@ -3201,6 +3205,7 @@ sealed class LearningModule : IDisposable
 
         // Referme la plage ouverte par le ctor : la frappe redevient comptabilisée.
         UsageStats.EndExcludedTyping();
+        LearningSessionTracker.Closed(this);
 
         _mapper.StateChanged -= OnStateChanged;
         _hook.RawKeyDown -= OnRawKeyDown;

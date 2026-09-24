@@ -8,6 +8,9 @@ internal enum ReviewPromptTrigger
     Startup,
     /// <summary>Seuil de caractères enrichis armé, frappe dans cette session, puis silence.</summary>
     QuietTyping,
+    /// <summary>Partage d'un résultat (chemin <c>ReviewSharePrompt</c>). N'emprunte que la
+    /// garde des séances d'apprentissage (<see cref="ReviewPromptGate.LearningAllowsPrompt"/>).</summary>
+    Share,
 }
 
 /// <summary>
@@ -64,4 +67,37 @@ internal static class ReviewPromptGate
     internal static bool ShouldArmSignalAtLoad(int reviewPromptCount, bool stillPossible,
         long enrichedTotal, long threshold)
         => stillPossible && reviewPromptCount == 0 && enrichedTotal >= threshold;
+
+    /// <summary>Délai sans sollicitation après la fin d'une séance de Leçons ou d'un
+    /// tutoriel (décision d'Antoine du 2026-09-24).</summary>
+    internal const int LearningCooldownMinutes = 10;
+    internal const long LearningCooldownMs = LearningCooldownMinutes * 60_000L;
+
+    /// <summary>
+    /// Une séance d'apprentissage permet-elle de solliciter un avis ? Décision B d'Antoine
+    /// du 2026-09-24 : jamais pendant une séance de Leçons ou un tutoriel, ni dans les
+    /// <paramref name="cooldownMs"/> millisecondes qui suivent sa fin.
+    ///
+    /// Les frappes de la fenêtre Leçons passent par le moteur comme toutes les autres :
+    /// elles comptent dans les statistiques et peuvent armer le seuil de caractères
+    /// enrichis (le tutoriel de l'accueil, lui, en est exclu). Elles ne suffisent pas à
+    /// déclencher la demande : au fil de la frappe, il faut en plus une frappe remappée
+    /// après la fin de la séance (<paramref name="millisecondsSinceLastRemap"/> plus court
+    /// que <paramref name="millisecondsSinceLearningClosed"/>), que le tick suivra de son
+    /// silence habituel. Démarrage, relais de l'accueil et partage n'ont pas cette
+    /// condition : ils ne naissent pas d'une frappe.
+    /// </summary>
+    /// <param name="millisecondsSinceLearningClosed"><see cref="long.MaxValue"/> si aucune
+    /// séance ne s'est refermée dans ce processus.</param>
+    /// <param name="millisecondsSinceLastRemap"><see cref="long.MaxValue"/> si aucune frappe
+    /// remappée dans ce processus.</param>
+    internal static bool LearningAllowsPrompt(ReviewPromptTrigger trigger, bool learningOpen,
+        long millisecondsSinceLearningClosed, long millisecondsSinceLastRemap, long cooldownMs)
+    {
+        if (learningOpen) return false;
+        if (millisecondsSinceLearningClosed == long.MaxValue) return true;
+        if (millisecondsSinceLearningClosed < cooldownMs) return false;
+        if (trigger != ReviewPromptTrigger.QuietTyping) return true;
+        return millisecondsSinceLastRemap < millisecondsSinceLearningClosed;
+    }
 }

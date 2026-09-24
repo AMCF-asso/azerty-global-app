@@ -7,6 +7,10 @@
 //   caractères et du clavier virtuel (compteurs globaux, jamais le contenu) ;
 // - garde-fou anti-fatigue : 3 rappels ignorés → arrêt définitif (réactivable dans
 //   Paramètres) ; jamais deux balloons cliquables le même jour — l'avis J+7 prime.
+//
+// 1.3.0 (décision d'Antoine du 2026-09-24) : le rappel ne porte que sur le Défi — titre
+// « Défi du jour », clic vers la séance du Défi, signal 1 sur la séquence du Défi. Aucune
+// partie « Leçons » à garder : il se tait tant que DailyChallenge.Enabled est faux.
 using System.Globalization;
 
 namespace AZERTYGlobal;
@@ -22,7 +26,8 @@ readonly record struct TrainingSignals(
     DateOnly? LastSpecialCharDate,  // dernier caractère enrichi tapé
     int CurrentStreak,
     long HelperOpens,               // recherche + clavier virtuel (compteurs globaux)
-    DateOnly? ReviewPromptLastShown); // date persistée de la dernière sollicitation d'avis
+    DateOnly? ReviewPromptLastShown, // date persistée de la dernière sollicitation d'avis
+    bool ChallengeAvailable);        // DailyChallenge.Enabled : le rappel n'ouvre que le Défi
 
 static class TrainingReminders
 {
@@ -50,6 +55,7 @@ static class TrainingReminders
     /// </summary>
     public static bool ShouldRemind(DateTime now, TrainingSignals s)
     {
+        if (!s.ChallengeAvailable) return false;                // 1.3.0 : Défi masqué
         if (!s.Enabled) return false;
         if (s.IgnoredCount >= MaxIgnored) return false;         // arrêt définitif
 
@@ -98,7 +104,8 @@ static class TrainingReminders
             LastSpecialCharDate: UsageStats.LastSpecialCharDate,
             CurrentStreak: UsageStats.CurrentStreak,
             HelperOpens: UsageStats.SearchOpenCount + UsageStats.VirtualKeyboardOpenCount,
-            ReviewPromptLastShown: ConfigManager.ReviewPromptLastShown);
+            ReviewPromptLastShown: ConfigManager.ReviewPromptLastShown,
+            ChallengeAvailable: DailyChallenge.Enabled);
     }
 
     /// <summary>Marque le rappel du jour comme émis (avant l'affichage de la balloon).</summary>
