@@ -64,7 +64,7 @@ internal static partial class L
     public static string Challenge_ShareButton => T("Copier mon résultat", "Copy my result");
     public static string Challenge_ShareButtonCopied => T("Copié ✓", "Copied ✓");
     public static string Challenge_ShareTooltip => T(
-        "Copie ton résultat du jour, prêt à coller dans une conversation.",
+        "Copiez votre résultat du jour, prêt à coller dans une conversation.",
         "Copies today’s result, ready to paste into a conversation.");
 
     // ── Section « Défi du jour » dans Mes statistiques (v1.2.0) ──────

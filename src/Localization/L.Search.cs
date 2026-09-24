@@ -13,7 +13,7 @@ internal static partial class L
     // ── Libellés des méthodes de saisie (touche morte, couches) ──────
     public static string Search_SpaceKeyLabel => T("Espace", "Space");
     public static string Search_ThenWord => T("puis", "then");
-    public static string Search_CapsLockWord => T("Verr.Maj", "Caps Lock");
+    public static string Search_CapsLockWord => T("Verr. Maj.", "Caps Lock");
 
     /// <summary>Libellé d'une couche + touche (ex. "Maj + é", "Verr.Maj + AltGr + Maj + à").</summary>
     public static string Search_LayerKeyLabel(string layer, string keyLabel) => layer switch

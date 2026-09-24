@@ -48,10 +48,10 @@ internal static partial class L
 
     // ── Étape 2 — comment utiliser ────────────────────────────────────
     public static string Onboarding_Step2Title => T($"Comment utiliser {Product}", $"How to use {Product}");
-    public static string Onboarding_Card1Title => T("L’icône AG est dans la barre des tâches", "The AG icon is in the taskbar");
+    public static string Onboarding_Card1Title => T("L’icône AG est dans la zone de notification", "The AG icon is in the notification area");
     public static string Onboarding_Card1Desc => T(
-        "Elle indique si le remapping est actif. Clic droit pour accéder aux options.",
-        "It shows whether remapping is active. Right-click to access the options.");
+        "Près de l’horloge (parfois sous ^). Elle indique si le clavier amélioré est actif. Clic droit pour le menu.",
+        "Near the clock (sometimes under ^). It shows if the keyboard is on. Right-click for the menu.");
     public static string Onboarding_Card2Title => T("Activez / désactivez à tout moment", "Turn on / off at any time");
     public static string Onboarding_Card2ShortcutPrefix => T("Raccourci : ", "Shortcut: ");
     public static string Onboarding_CapsLockWord => T("Verr. Maj.", "Caps Lock");
@@ -61,6 +61,6 @@ internal static partial class L
         " to see every available character.");
     public static string Onboarding_Card4Title => T("Recherchez n’importe quel caractère", "Search for any character");
     public static string Onboarding_Card4Suffix => T(
-        " puis tapez le nom d’un caractère pour le copier et voir comment le taper sur le clavier virtuel.",
-        " then type a character's name to copy it and see how to type it on the virtual keyboard.");
+        " puis tapez le nom d’un caractère : Entrée l’insère dans votre texte et le clavier virtuel montre comment le taper.",
+        " then type a character's name: Enter inserts it into your text and the virtual keyboard shows how to type it.");
 }

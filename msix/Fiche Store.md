@@ -1,6 +1,8 @@
 # Fiche Microsoft Store — AZERTY Global
 
-> À copier-coller dans Partner Center → Submissions → Store listing
+> À copier-coller dans Partner Center → Submissions → Store listing.
+> Seuls les blocs des sections française, anglaise et « Informations communes » se collent.
+> Tout ce qui suit le titre « Archive — ne pas coller » sert d’historique interne.
 
 ---
 
@@ -12,80 +14,265 @@ AZERTY Global - Clavier français amélioré
 
 ### Description courte (max 100 caractères)
 
-Disposition clavier française améliorée. Majuscules accentuées, point direct, zéro réapprentissage.
+Clavier français amélioré : majuscules accentuées, point direct, presque aucun réapprentissage.
 
 ### Description longue
 
-AZERTY Global est l'AZERTY corrigé : les lettres A à Z ainsi que é, è, à et ç restent à leur place ; seul ù est déplacé. La ponctuation est améliorée, les majuscules accentuées sont directes et les symboles de programmation plus accessibles.
+AZERTY Global est l’AZERTY corrigé : les lettres A à Z ainsi que é, è, à et ç restent à leur place ; seul ù est déplacé. La ponctuation est améliorée, les majuscules accentuées sont directes et les symboles de programmation plus accessibles.
 
-Installez l'application, activez-la — c'est tout. Aucun droit administrateur requis.
+Installez l’application, activez-la dans l’accueil — c’est tout. Aucun droit administrateur requis, et presque aucun réapprentissage.
 
 
-🔤 5 AMÉLIORATIONS, 99 % DES FRAPPES PRÉSERVÉES
+5 AMÉLIORATIONS, 99 % DES FRAPPES PRÉSERVÉES
 
-1. Verrouillage Majuscule intelligent — n'affecte que les lettres → É, È, Ç, À en un appui
+1. Verrouillage Majuscule intelligent — n’affecte que les lettres → É, È, Ç, À, Ù en un appui
 2. Point en accès direct — point et point-virgule échangés
-3. @ et # sur la touche ²
+3. @ et # sur la touche en haut à gauche, à la place du ²
 4. Symboles de programmation sur la rangée de repos — { } [ ] | \ avec AltGr + D F G H J K
-5. Accents internationaux sur la touche ù — accent aigu ´ et grave ` remplacent le ù et le % qui sont déplacés
+5. Accents internationaux sur la touche ù — aigu ´, grave ` et tilde ~ pour écrire d’autres langues ; le ù et le % sont déplacés
 
 
-📝 TYPOGRAPHIE FRANÇAISE PARFAITE
-• Majuscules accentuées É, È, Ç, À Ù
+TYPOGRAPHIE FRANÇAISE COMPLÈTE
+• Majuscules accentuées É, È, Ç, À, Ù
 • Ligatures œ/Œ et æ/Æ
-• Guillemets français « » et étrangers
-• Tirets cadratin — et demi-cadratin –
+• Guillemets français « » et étrangers
+• Tirets cadratins — et demi-cadratins –
 • Points de suspension …
-• Apostrophe typographique '
-• Espace insécable et insécable fine
-• Et bien d'autres !
+• Apostrophe typographique ’
+• Espaces insécables (normale et fine) et trait d’union insécable
 
 
-💻 IDÉAL POUR LES DÉVELOPPEURS
-Accolades, crochets, pipe et backslash accessibles sans contorsion — sur la rangée de repos.
+POUR LES DÉVELOPPEURS
+Accolades, crochets, barre verticale et barre oblique inverse sur la rangée de repos, sans contorsion. #, ^ et ` (backtick) sont aussi en accès direct.
 
 
-🌍 TOUTES LES LANGUES D'EUROPE ET D'AFRIQUE FRANCOPHONE
-Espagnol, allemand, portugais, italien et toutes les autres langues européennes. Également les langues d'Afrique francophone : wolof, bambara, yoruba, haoussa et bien d'autres.
+LANGUES D’EUROPE ET D’AFRIQUE FRANCOPHONE
+Les caractères utiles à l’espagnol, à l’allemand, au portugais, à l’italien et à de nombreuses autres langues européennes, ainsi qu’à de nombreuses langues d’Afrique francophone : wolof, bambara, yoruba, haoussa et d’autres.
 
 
-🔢 DIVERS
-Signes mathématiques, symboles divers, alphabet grec et alphabet cyrillique.
+SYMBOLES ET ALPHABETS
+Signes mathématiques, symboles divers, alphabets grec et cyrillique. Les couches verrouillables, facultatives, permettent d’écrire plusieurs caractères grecs, cyrilliques ou scientifiques d’affilée.
 
 
-⌨️ CLAVIER VIRTUEL INTÉGRÉ
-Un clavier visuel interactif affiche les 4 couches de la disposition. Idéal pour découvrir les raccourcis sans mémorisation.
+CLAVIER VIRTUEL INTÉGRÉ
+Un clavier visuel interactif (Ctrl+Maj+Q) affiche les 4 niveaux de la disposition, pour retrouver un caractère sans rien mémoriser.
 
 
-🔍 RECHERCHE DE CARACTÈRES
-Vous cherchez un symbole ? Tapez son nom et l'application vous montre où il se trouve sur le clavier et l'insère directement dans votre document (copie en secours).
+RECHERCHE DE CARACTÈRES
+Vous cherchez un symbole ? Tapez son nom (Ctrl+Maj+W) : l’application l’insère directement dans votre texte, ou le copie dans le presse-papiers si l’insertion n’est pas possible, et montre où il se trouve sur le clavier.
 
 
-🔒 RESPECT DE LA VIE PRIVÉE
+LEÇONS ET DÉFI DU JOUR
+Un court tutoriel présente les principales améliorations. Le module Leçons propose des exercices progressifs et un mode libre. Le Défi du jour donne chaque jour le même extrait à tout le monde, avec votre record personnel et un résultat à copier. Votre progression reste sur votre appareil.
+
+
+RESPECT DE LA VIE PRIVÉE
 • Aucune télémétrie, aucun compte requis, aucun envoi réseau automatique
 • Les frappes ne sont jamais journalisées, stockées durablement ni transmises
-• Vos préférences, votre progression dans les leçons, les réglages de compatibilité par application et les journaux techniques restent localement sur votre appareil
-• La recherche de caractères copie uniquement le symbole choisi dans votre presse-papiers ; rien n'est transmis
-• Le lien de signalement de bug ne s'ouvre que si vous le choisissez et peut préremplir la version de l'app et de Windows
+• Vos préférences, vos statistiques, votre progression dans les leçons, les réglages de compatibilité par application et les journaux techniques restent sur votre appareil
+• La détection des jeux et des logiciels de bureau à distance est locale : aucun nom d’application n’est transmis
+• La recherche de caractères insère le symbole choisi dans votre texte, ou le copie dans votre presse-papiers en secours ; rien n’est transmis
+• Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous les choisissez, et peuvent indiquer la version de l’app et de Windows
 
 
-✅ GRATUIT ET OPEN SOURCE
+GRATUIT ET OPEN SOURCE
 Licence EUPL 1.2 — code source disponible sur GitHub.
 
-L'entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l'AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n'est ni le collecteur ni le parrain de la collecte.
+L’entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
 
-Site web : https://azerty.global
+Site web : https://azerty.global
 
 ### Nouveautés de cette version (notes de version)
 
+> Bloc à coller tel quel. La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
+
 Version 1.3.0 :
- • Le menu de la zone de notification passe de dix-huit à douze lignes. « Apprendre » regroupe les Leçons, le Défi du jour et la fenêtre d’accueil ; « À propos et aide » regroupe la confidentialité, les ressources, les retours, la notation et À propos. Aucune fonction n’a été retirée.
- • Les couches grecque, cyrillique et scientifique ont chacune leur entrée à cocher dans le sous-menu « Couches ». Cocher la première active le remapping des couches, décocher la dernière le désactive.
- • Correction : ouvrir la zone de notification ou cliquer la barre des tâches ne suspend plus le remapping par précaution. La bulle d’avertissement qui pouvait recouvrir l’icône de l’application ne se déclenche plus sur ce geste.
- • Correction : après un Alt+Tab, les caractères ne sortent plus en AZERTY traditionnel dans la fenêtre qui vient de passer au premier plan.
- • Correction : en mode compatibilité jeu, les caractères composés avec AltGr ou avec une touche morte ne se perdent plus.
- • Correction : le raccourci de recherche de caractères n’atteint plus les applications où vous avez désactivé le remapping, qui pouvaient le lire comme un Ctrl+W et fermer leur fenêtre.
- • La fenêtre Paramètres mesure son contenu, tient dans votre écran et défile ; la fenêtre des Leçons suit la mise à l’échelle de l’affichage.
+• Menu de l’icône plus court : « Apprendre » regroupe Leçons, Défi du jour et accueil ; « À propos et aide » regroupe confidentialité, ressources, retours et notation. Aucune fonction n’a été retirée.
+• Couches verrouillables grecque, cyrillique et scientifique : un double appui verrouille l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le sous-menu « Couches ». Fonction facultative.
+• La recherche de caractères insère le caractère directement dans votre texte.
+• Défi du jour : le même extrait pour tout le monde, chaque jour, avec « Copier mon résultat » et votre record personnel.
+• Vous pouvez noter l’application sans quitter AZERTY Global.
+• Votre clavier n’est modifié qu’après votre accord : après la mise à jour, l’accueil vous le demande.
+• Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
+• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global.
+• Les fenêtres Paramètres et Leçons s’adaptent à la taille et à la mise à l’échelle de l’écran.
+
+### Mots-clés de recherche (max 7, séparés par des points-virgules)
+
+clavier français ; AZERTY ; disposition clavier ; accent majuscule ; keyboard layout ; clavier amélioré ; français
+
+### Catégorie
+
+Utilities & tools (Utilitaires et outils)
+
+### Catégorie secondaire
+
+Productivity
+
+---
+
+## 🇬🇧 English
+
+### Display name
+
+AZERTY Global - Improved French Keyboard
+
+### Short description (max 100 characters)
+
+Improved French keyboard: accented capitals, direct period, almost no relearning.
+
+### Long description
+
+AZERTY Global is AZERTY, fixed: the letters A to Z as well as é, è, à and ç stay in place; only ù moves. Punctuation is improved, accented capitals are direct and programming symbols are easier to reach.
+
+Install the app, activate it in the welcome window — that's it. No admin rights required, and almost no relearning.
+
+
+5 IMPROVEMENTS, 99% OF YOUR KEYSTROKES PRESERVED
+
+1. Smart Caps Lock — only affects letters → É, È, Ç, À, Ù in one key press
+2. Direct period access — period and semicolon swapped
+3. @ and # on the top-left key, where ² usually is on French keyboards
+4. Programming symbols on the home row — { } [ ] | \ with AltGr + D F G H J K
+5. International accents on the ù key — acute ´, grave ` and tilde ~ for other languages; ù and % move elsewhere
+
+
+COMPLETE FRENCH TYPOGRAPHY
+• Accented capitals É, È, Ç, À, Ù
+• Ligatures œ/Œ and æ/Æ
+• French guillemets « » and foreign quotation marks
+• Em dash — and en dash –
+• Ellipsis …
+• Typographic apostrophe ’
+• Non-breaking spaces (regular and narrow) and non-breaking hyphen
+
+
+FOR DEVELOPERS
+Braces, brackets, pipe and backslash on the home row, without finger gymnastics. #, ^ and backtick also have direct access.
+
+
+EUROPEAN AND FRANCOPHONE AFRICAN LANGUAGES
+Useful characters for Spanish, German, Portuguese, Italian and many other European languages, and for many francophone African languages, including Wolof, Bambara, Yoruba and Hausa.
+
+
+SYMBOLS AND ALPHABETS
+Mathematical signs, various symbols, Greek and Cyrillic alphabets. Optional lockable layers let you type several Greek, Cyrillic or scientific characters in a row.
+
+
+BUILT-IN VIRTUAL KEYBOARD
+An interactive visual keyboard (Ctrl+Shift+Q) shows all 4 levels of the layout, so you can find a character without memorizing anything.
+
+
+CHARACTER SEARCH
+Looking for a symbol? Type its name (Ctrl+Shift+W): the app inserts it directly into your text, or copies it to the clipboard if insertion isn't possible, and shows where it is on the keyboard.
+
+
+LESSONS AND DAILY CHALLENGE
+A short tutorial introduces the main improvements. The Lessons module offers progressive exercises and a free typing mode. The Daily challenge gives everyone the same passage each day, with your personal best and a result you can copy. Your progress stays on your device.
+
+
+PRIVACY
+• No telemetry, no account required and no automatic network transfer
+• Keystrokes are never logged, persistently stored or transmitted
+• Preferences, statistics, lesson progress, per-application compatibility settings and technical logs stay on your device
+• Game and remote-desktop detection is local: no app name is transmitted
+• Character search inserts the selected symbol into your text, or copies it to your clipboard as a fallback; nothing is sent
+• The “Report a bug” and “Give feedback” links open only when you choose them, and may include the app and Windows version
+
+
+FREE AND OPEN SOURCE
+Licensed under EUPL 1.2 — source code available on GitHub.
+
+The “Support the project” entry opens azerty.global/soutien in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
+
+Website: https://azerty.global
+
+### What's new (release notes)
+
+Version 1.3.0:
+• Shorter icon menu: “Learn” groups Lessons, Daily challenge and the welcome tour; “About and help” groups privacy, resources, feedback and rating. No feature was removed.
+• Lockable Greek, Cyrillic and scientific layers: a double press locks the alphabet in the open app, Esc releases it. Each layer is ticked in the “Layers” submenu. Optional feature.
+• Character search inserts the character directly into your text.
+• Daily challenge: the same passage for everyone, every day, with “Copy my result” and your personal best.
+• You can rate the app without leaving AZERTY Global.
+• Your keyboard is only changed after you agree: after the update, the welcome window asks you.
+• If the app doesn't start with Windows, a one-time notification offers to turn it on.
+• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off.
+• The Settings and Lessons windows adapt to your screen size and display scaling.
+
+### Search terms (max 7, semicolon-separated)
+
+French keyboard; AZERTY; keyboard layout; accented capitals; clavier français; keyboard remapper; typing
+
+---
+
+## Informations communes (Partner Center)
+
+### URL de la politique de confidentialité
+
+https://azerty.global/mentions-legales
+
+### Site web
+
+https://azerty.global
+
+### E-mail de support
+
+contact@azerty.global
+
+### Configuration requise
+
+- **Système** : Windows 10 version 1809 (build 17763) ou ultérieur
+- **Architecture** : x64 et ARM64 (MSIX bundle dual)
+- **Espace disque** : ~5 Mo par architecture
+- **Connexion internet** : Non requise
+
+### Classification IARC
+
+- Pas de contenu violent, sexuel, ou lié aux jeux d'argent
+- Pas d'interaction utilisateur en ligne
+- Pas de partage de localisation
+→ Classification attendue : **3+** (Tous publics)
+
+### Notes pour l'équipe de certification Microsoft (à coller, en anglais)
+
+> Retirer les deux marqueurs entre crochets après vérification, avant de coller.
+
+AZERTY Global 1.3.0 is a notification-area (system tray) app that applies an improved French keyboard layout. After setup it has no main window.
+How to test: 1) Launch the app; the welcome window opens. Click "Activate and try" (French UI: "Activer et essayer"); the flag button switches the language. 2) The AG icon appears in the notification area (possibly in the ^ overflow); right-click it for the menu. 3) In Notepad: Caps Lock then é gives É; Ctrl+Shift+Caps Lock turns the layout off and on. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts the character).
+If the welcome window is closed without activating, relaunching from the Start menu reopens it. [à vérifier sur le bundle final : correctif de relance]
+Technical notes:
+• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Activate. Output is sent with SendInput. No DLL or code is injected into other processes.
+• Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, and running process names every 5 s) is used to pause in anti-cheat games and remote-desktop clients and to detect remote-control hosts. Nothing is logged by name or transmitted.
+• UI Automation IsPassword is read only to turn off advanced features in password fields.
+• The startup task is declared disabled. The last welcome step offers it pre-checked; it is registered only if the user confirms that step. Closing with X or Esc applies the checkbox only if the user changed it. A refusal in Settings > Apps > Startup is respected.
+• No account, no telemetry, no automatic network traffic. Links open in the browser only when clicked; in-app rating uses StoreContext.RequestRateAndReviewAppAsync. Toast clicks use the COM activator declared in the manifest.
+• runFullTrust: Win32 desktop app (.NET 8 Native AOT). WACK: PASS. The optional "Blocked executables" test fails because of ShellExecuteW (used to open links), as in previously accepted versions. [à vérifier sur le rapport WACK du bundle final]
+
+---
+
+## Captures d'écran
+
+Les fichiers suivants sont dans `msix/Assets/` :
+1. `Screenshot1.png` — Icône dans la zone de notification (tray)
+2. `Screenshot2.png` — Clavier virtuel avec GUI
+3. `Screenshot3.png` — Recherche de caractère
+4. `Screenshot4.png` — Onboarding / aperçu fonctionnalités
+
+> ⚠️ Le Store demande des captures d'écran d'au moins 1366×768 px.
+> Dimensions vérifiées le 2026-06-28 : Screenshot1 (1600×900), Screenshot2 (1902×1194), Screenshot3 (1707×960), Screenshot4 (1500×1057).
+> Screenshot1 est au format 16:9 standard ; Screenshot2, Screenshot3 et Screenshot4 ont des ratios non standards
+> susceptibles de générer des bandes noires en affichage Store — à éventuellement re-capturer.
+
+---
+
+## Archive — ne pas coller
+
+Tout ce qui suit est un historique interne. Rien ne se colle dans Partner Center.
+
+### Anciennes notes de version (FR, 1.2.0 et avant)
+
+La 1.2.0 n’a jamais été publiée : ses nouveautés sont reprises dans le bloc 1.3.0 ci-dessus.
 
 Version 1.2.0 :
  • En option : verrouillez une touche morte d'alphabet (grec, cyrillique, scientifique) dans une application d'un double appui. Activation depuis le menu.
@@ -131,106 +318,7 @@ Version 0.11.0 :
  • Corrections en jeu : plus de touches fantômes après bascule rapide, sprint/saut plus fiable, Ctrl+A restauré dans les cas concernés.
  • Notifications de bascule simplifiées : seule la fenêtre flottante reste affichée.
 
-### Mots-clés de recherche (max 7, séparés par des points-virgules)
-
-clavier français ; AZERTY ; disposition clavier ; accent majuscule ; keyboard layout ; clavier amélioré ; français
-
-### Catégorie
-
-Utilities & tools (Utilitaires et outils)
-
-### Catégorie secondaire
-
-Productivity
-
----
-
-## 🇬🇧 English
-
-### Display name
-
-AZERTY Global - Improved French Keyboard
-
-### Short description (max 100 characters)
-
-Improved French keyboard layout. Direct accented capitals, better punctuation, near-zero relearning.
-
-### Long description
-
-AZERTY Global is an improved French keyboard layout for Windows: the same AZERTY base, cleaner punctuation, easy accented capitals, accessible programming symbols and broad multilingual coverage.
-
-Install the app, enable it — that's it. No admin rights required, and almost no relearning.
-
-
-🔤 5 IMPROVEMENTS, 99% OF YOUR KEYSTROKES PRESERVED
-
-1. Smart Caps Lock — only affects letters → É, È, Ç, À, Ù in one key press
-2. Direct period access — period and semicolon swapped
-3. @ and # on the top-left key, where ² usually is on French keyboards
-4. Programming symbols on the home row — { } [ ] | \ with AltGr + D F G H J K
-5. International accents on the ù key — acute ´, grave ` and tilde ~ for multilingual typing
-
-
-📝 PERFECT FRENCH TYPOGRAPHY
-• Accented capitals É, È, Ç, À, Ù
-• Ligatures œ/Œ and æ/Æ
-• French guillemets « » and foreign quotation marks
-• Em dash — and en dash –
-• Ellipsis …
-• Typographic apostrophe ’
-• Non-breaking spaces and non-breaking hyphen
-• And much more!
-
-
-💻 DEVELOPER-FRIENDLY
-Braces, brackets, pipe and backslash are accessible without finger gymnastics — on the home row. Direct shortcuts for #, ^ and backtick are also included.
-
-
-🌍 EUROPEAN AND FRANCOPHONE AFRICAN LANGUAGES
-Useful characters for Spanish, German, Portuguese, Italian and many other European languages. Also supports many francophone African languages, including Wolof, Bambara, Yoruba, Hausa and more.
-
-
-🎓 BUILT-IN MINI-TUTORIAL
-Six guided exercises help you practice the main improvements: accented capitals, direct period access, programming symbols and international accents. It takes about ten minutes.
-
-
-🔢 MISCELLANEOUS
-Mathematical signs, various symbols, Greek alphabet and Cyrillic alphabet.
-
-
-⌨️ BUILT-IN VIRTUAL KEYBOARD
-An interactive visual keyboard displays all 4 layers of the layout. Perfect for discovering shortcuts without memorization.
-
-
-🔍 CHARACTER SEARCH
-Looking for a symbol? Type its name and the app shows where it is on the keyboard and inserts it directly into your document (clipboard fallback).
-
-
-🔒 PRIVACY-FIRST
-• No telemetry, no account required and no automatic network transfer
-• Keystrokes are never logged, persistently stored or transmitted
-• Preferences, lesson progress, per-application compatibility settings and technical logs stay local on your device
-• Character Search only copies the selected symbol to your clipboard; nothing is sent
-• The bug report link opens only when you choose it and may prefill the app and Windows version
-
-
-✅ FREE AND OPEN SOURCE
-Licensed under EUPL 1.2 — source code available on GitHub.
-
-The "Support the project" entry opens azerty.global/support in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
-
-Website: https://azerty.global
-
-### What's new (release notes)
-
-Version 1.3.0:
- • The notification area menu goes from eighteen lines down to twelve. “Learn” groups Lessons, the Daily challenge and the welcome window; “About and help” groups privacy, resources, feedback, rating and About. No feature was removed.
- • The Greek, Cyrillic and scientific layers each get their own checkable entry under the “Layers” submenu. Ticking the first one turns layer remapping on; unticking the last one turns it off.
- • Fixed: opening the notification area or clicking the taskbar no longer suspends remapping as a precaution. The warning balloon that could cover the app icon no longer appears on that gesture.
- • Fixed: after an Alt+Tab, characters no longer come out in traditional AZERTY in the window that has just come to the front.
- • Fixed: in game compatibility mode, characters composed with AltGr or with a dead key are no longer lost.
- • Fixed: the character search shortcut no longer reaches applications where you turned remapping off, which could read it as Ctrl+W and close their window.
- • The Settings window measures its content, fits your screen and scrolls; the Lessons window follows the display scaling.
+### Old release notes (EN, 1.2.0 and earlier)
 
 Version 1.2.0:
  • Optional: lock an alphabet dead key (Greek, Cyrillic, scientific) inside an application with a double press. Opt-in from the menu.
@@ -276,41 +364,9 @@ Version 0.11.0:
  • In-game fixes: no more phantom keys after rapid toggling, more reliable sprint/jump behavior, Ctrl+A restored in affected cases.
  • Simpler toggle notifications: only the floating status window remains.
 
-### Search terms (max 7, semicolon-separated)
+### Archive interne — anciennes notes de certification (ne pas coller)
 
-French keyboard; AZERTY; keyboard layout; accented capitals; clavier français; keyboard remapper; typing
-
----
-
-## Informations communes (Partner Center)
-
-### URL de la politique de confidentialité
-
-https://azerty.global/mentions-legales
-
-### Site web
-
-https://azerty.global
-
-### E-mail de support
-
-contact@azerty.global
-
-### Configuration requise
-
-- **Système** : Windows 10 version 1809 (build 17763) ou ultérieur
-- **Architecture** : x64 et ARM64 (MSIX bundle dual)
-- **Espace disque** : ~5 Mo par architecture
-- **Connexion internet** : Non requise
-
-### Classification IARC
-
-- Pas de contenu violent, sexuel, ou lié aux jeux d'argent
-- Pas d'interaction utilisateur en ligne
-- Pas de partage de localisation
-→ Classification attendue : **3+** (Tous publics)
-
-### Notes pour l'équipe de certification Microsoft
+Remplacées par la version anglaise ci-dessus le 2026-09-24. Conservées pour la traçabilité des soumissions précédentes.
 
 **v1.0.0** : version stable issue de la RC `0.12.0`, avec module Leçons (catalogue embarqué, progression locale sans caractères tapés persistés, mode libre non persistant), mutualisation du rendu clavier et correctifs de robustesse AltGr / dispositions sous-jacentes non-AZERTY. Bundle 1.0.0.0 reconstruit et vérifié le 2026-06-28 (`Verify-Release.ps1` PASS). Rapport WACK `Archives/wack/2026-06/wack-report-v1.0.0.xml` : `OVERALL_RESULT=PASS` (2026-06-28). Package accepté et publié par Microsoft le 2026-06-29.
 
@@ -336,14 +392,16 @@ APIs additionnelles introduites v0.9.7 pour la couche compatibilité jeux (toujo
  • OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ) + EnumProcessModulesEx + GetModuleFileNameExW — pour identifier les frameworks gaming chargés (GLFW, SDL, Unity, etc.) et basculer en mode d'injection compatible. Échoue gracieusement (try/catch) sur les processus protégés par un anti-cheat — comportement attendu et géré.
  • Aucune écriture, aucune injection de DLL ou de code dans les processus externes. Lecture seule des noms de modules pour déterminer le mode d'injection à utiliser.
 
-APIs additionnelles introduites v1.2.0 pour les couches maintenables opt-in et la protection des champs de mot de passe :
+APIs additionnelles introduites v1.2.0 pour les couches maintenables opt-in (renommées « couches verrouillables » en 1.3.0) et la protection des champs de mot de passe :
  • GetGUIThreadInfo + GetWindowLongW(GWL_STYLE) — identifier le contrôle focalisé et son style ES_PASSWORD, en lecture seule.
  • UI Automation (CUIAutomation COM : GetFocusedElement, get_CurrentIsPassword) — détecter les champs de mot de passe des navigateurs depuis un thread dédié à attente bornée (30 ms), jamais dans le callback clavier. Seul le booléen IsPassword est consulté, jamais le contenu du champ, et il sert à SUSPENDRE les fonctions avancées (couches, recherche, indicateur) dans ces champs — le remapping ordinaire continue.
  • SetWinEventHook(EVENT_OBJECT_FOCUS) — suivre les changements de focus pour cette suspension.
  • GetProcessTimes — associer un verrouillage de couche à l'instance exacte du processus au premier plan (PID + instant de création). Aucun suivi d'usage : rien n'est journalisé ni transmis.
  • Le remappage est automatiquement SUSPENDU dans les jeux et applications reconnus comme protégés par un anti-cheat (Vanguard, EAC, BattlEye, RICOCHET, etc.). La détection repose sur les applications et modules connus du registre de compatibilité.
 
-### Note WACK — DPIAwarenessValidation
+### Archive interne — notes WACK (à ressortir seulement si Microsoft les signale)
+
+#### Note WACK — DPIAwarenessValidation
 
 Le dernier rapport WACK exécuté disponible pour v1.0.0 (`Archives/wack/2026-06/wack-report-v1.0.0.xml`) passe `DPIAwarenessValidation`. Les versions précédentes pouvaient produire un WARNING faux positif lié au scanner WACK sur les binaires .NET 8 Native AOT ; cette note est conservée uniquement si Microsoft le signale à nouveau pendant la certification.
 
@@ -358,7 +416,7 @@ L'application est bel et bien DPI-aware en mode Per-Monitor V2, vérifiable de d
 
 Le comportement DPI réel est conforme aux exigences ; toutes les fenêtres de l'app gèrent `WM_DPICHANGED` explicitement et recréent leurs polices selon le DPI courant. Le WARNING ne reflète pas un défaut applicatif.
 
-### Note WACK — FAIL OPTIONAL « Fichiers exécutables bloqués »
+#### Note WACK — FAIL OPTIONAL « Fichiers exécutables bloqués »
 
 Ce test (`OPTIONAL=TRUE` dans le dernier rapport WACK disponible, v1.0.0) FAIL depuis la v0.9.5 (acceptée par Microsoft à la review précédente). Causes :
  • Référence `shell32.dll!ShellExecuteW` — usage légitime pour ouvrir les liens externes (site web, GitHub, Discord, EUPL) depuis le menu tray et la fenêtre À propos.
@@ -368,19 +426,4 @@ Tous les tests `OPTIONAL` ne comptent pas dans le verdict global selon la docume
 
 ---
 
-## Captures d'écran
-
-Les fichiers suivants sont dans `msix/Assets/` :
-1. `Screenshot1.png` — Icône dans la barre des tâches (tray)
-2. `Screenshot2.png` — Clavier virtuel avec GUI
-3. `Screenshot3.png` — Recherche de caractère
-4. `Screenshot4.png` — Onboarding / aperçu fonctionnalités
-
-> ⚠️ Le Store demande des captures d'écran d'au moins 1366×768 px.
-> Dimensions vérifiées le 2026-06-28 : Screenshot1 (1600×900), Screenshot2 (1902×1194), Screenshot3 (1707×960), Screenshot4 (1500×1057).
-> Screenshot1 est au format 16:9 standard ; Screenshot2, Screenshot3 et Screenshot4 ont des ratios non standards
-> susceptibles de générer des bandes noires en affichage Store — à éventuellement re-capturer.
-
----
-
-*Dernière mise à jour : 2026-09-22 (v1.3.0 — correctifs de recette VM et d’audit, non soumise)*
+*Dernière mise à jour : 2026-09-24 (v1.3.0 — textes de l’audit du 24 septembre, non soumise)*
