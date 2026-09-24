@@ -30,12 +30,12 @@ sealed class TrayApplication : IDisposable
     private const int IDM_KEYBOARD = 1006;
     private const int IDM_SEARCH = 1007;
     internal const int IDM_BUG = 1009;
-    private const int IDM_ONBOARDING = 1010;
+    internal const int IDM_ONBOARDING = 1010;
     private const int IDM_SETTINGS = 1012;
     internal const int IDM_SUPPORT = 1013;
     internal const int IDM_FEEDBACK = 1014;
     private const int IDM_ABOUT = 1016;
-    private const int IDM_EXERCISES = 1023;
+    internal const int IDM_EXERCISES = 1023;
     private const int IDM_GUIDE_CHANGES = 1024;
     private const int IDM_GUIDE_PDF = 1025;
     private const int IDM_CARDS = 1026;
@@ -57,7 +57,7 @@ sealed class TrayApplication : IDisposable
     private const int IDM_COMPAT_FORCE_ON = 1021;
     private const int IDM_COMPAT_FORCE_OFF = 1022;
     private const int IDM_COMPAT_INFO = 1034;
-    private const int IDM_CHALLENGE = 1035;
+    internal const int IDM_CHALLENGE = 1035;
     private const int IDM_AUTOSTART = 1036;
 #if DEBUG
     private const int IDM_RESET_ONBOARDING = 1015;
@@ -1433,9 +1433,10 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (ConfigManager.ChallengeAnnounceDone) return false;
-            if (ConfigManager.TrainingEnabled) return false; // déjà inscrit, rien à annoncer
-            if (!ConfigManager.NotificationsEnabled) return false;
+            if (!ShouldShowChallengeAnnouncement(DailyChallenge.Enabled,
+                    ConfigManager.ChallengeAnnounceDone, ConfigManager.TrainingEnabled,
+                    ConfigManager.NotificationsEnabled))
+                return false;
 
             ConfigManager.SetChallengeAnnounceDone(); // avant l'affichage : jamais deux fois,
                                                       // même si la balloon échoue ensuite
@@ -1449,6 +1450,19 @@ sealed class TrayApplication : IDisposable
             return false;
         }
     }
+
+    /// <summary>
+    /// L'annonce unique du Défi du jour doit-elle partir ? Décision pure. Défi masqué
+    /// (1.3.0, décision d'Antoine du 2026-09-24) : jamais, et rien n'est marqué — le
+    /// drapeau <c>challengeAnnounceDone</c> reste tel quel, pour que l'annonce reste
+    /// possible quand le Défi reviendra en 1.4.0.
+    /// </summary>
+    internal static bool ShouldShowChallengeAnnouncement(bool challengeEnabled, bool announceDone,
+        bool trainingEnabled, bool notificationsEnabled)
+        => challengeEnabled
+           && !announceDone
+           && !trainingEnabled      // déjà inscrit, rien à annoncer
+           && notificationsEnabled;
 
     /// <summary>
     /// Relance unique du lancement automatique (décision 2026-08-17). Le manifeste déclare
@@ -1527,6 +1541,9 @@ sealed class TrayApplication : IDisposable
     /// (clic sur le rappel ou entrée du menu tray).</summary>
     private void ShowChallengeWindow()
     {
+        // 1.3.0 : Défi masqué. Plus aucune porte n'y mène (menu, annonce, rappel) ; ce
+        // garde ferme le dernier appel resté possible, vers les Leçons ordinaires.
+        if (!DailyChallenge.Enabled) { ShowLessonsWindow(); return; }
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
         if (!_lessons!.ShowChallenge())
@@ -1596,6 +1613,25 @@ sealed class TrayApplication : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 
+    /// <summary>
+    /// Entrées du sous-menu « Apprendre ▸ », dans l'ordre d'affichage : Leçons, Défi du
+    /// jour, Revoir l'accueil. Le Défi n'y figure que si l'interrupteur
+    /// <see cref="DailyChallenge.Enabled"/> est levé ; en 1.3.0 le sous-menu garde Leçons
+    /// et l'accueil. Liste pure pour la même raison que <see cref="FeedbackMenuEntries"/>.
+    /// </summary>
+    internal static int[] LearnMenuEntries(bool challengeEnabled) =>
+        challengeEnabled
+            ? new[] { IDM_EXERCISES, IDM_CHALLENGE, IDM_ONBOARDING }
+            : new[] { IDM_EXERCISES, IDM_ONBOARDING };
+
+    private static string LearnMenuLabel(int id) => id switch
+    {
+        IDM_EXERCISES => L.Tray_MenuLessons,
+        IDM_CHALLENGE => L.Tray_MenuChallenge,
+        IDM_ONBOARDING => L.Tray_MenuWelcomeWindow,
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
+    };
+
     private void ShowContextMenu()
     {
         var hMenu = Win32.CreatePopupMenu();
@@ -1645,15 +1681,11 @@ sealed class TrayApplication : IDisposable
         // ⚠️ Le défi du jour perd la visibilité immédiate que lui donnait la décision du
         // 2026-08-16 — arbitrage assumé par Antoine au profit de la lisibilité du menu.
         var hLearnMenu = Win32.CreatePopupMenu();
-        Win32.AppendMenuW(hLearnMenu, MF_STRING, IDM_EXERCISES, L.Tray_MenuLessons);
-        // Défi du jour : toujours visible depuis la décision du 2026-08-16. L'entrée était
-        // conditionnée à `trainingEnabled`, qui vaut false par défaut : sur une installation
-        // neuve la fonction n'existait donc pas visuellement, alors que le défi commun est
-        // le seul contenu identique pour tous les utilisateurs — le seul comparable, et le
-        // seul partageable. L'opt-in ne gouverne plus que les rappels d'entraînement, qui
-        // sont des notifications et relèvent d'un consentement distinct.
-        Win32.AppendMenuW(hLearnMenu, MF_STRING, IDM_CHALLENGE, L.Tray_MenuChallenge);
-        Win32.AppendMenuW(hLearnMenu, MF_STRING, IDM_ONBOARDING, L.Tray_MenuWelcomeWindow);
+        // Défi du jour : toujours visible depuis la décision du 2026-08-16, sans condition
+        // d'opt-in — sauf interrupteur coupé (1.3.0 : masqué, revient en 1.4.0, décision
+        // d'Antoine du 2026-09-24). Voir LearnMenuEntries.
+        foreach (int id in LearnMenuEntries(DailyChallenge.Enabled))
+            Win32.AppendMenuW(hLearnMenu, MF_STRING, (nuint)id, LearnMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLearnMenu, L.Tray_MenuLearn);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
@@ -2464,6 +2496,12 @@ sealed class TrayApplication : IDisposable
             if (!PolicyManager.ExternalLinksEnabledNow) return false;
             if (!ConfigManager.NotificationsEnabled) return false;
 
+            // Décision d'Antoine du 2026-09-24 : jamais pendant une séance de Leçons ou un
+            // tutoriel, ni dans les dix minutes qui suivent ; au fil de la frappe, il faut
+            // en plus une frappe après la fin de la séance. Refus provisoire : le signal
+            // de frappe reste armé (ShouldConsumeEnrichedSignal).
+            if (!LearningAllowsReviewNow(trigger)) return false;
+
             int already = ConfigManager.ReviewPromptCount;
             if (already >= 2 || ConfigManager.ReviewPromptClicked) return false;
 
@@ -2491,7 +2529,10 @@ sealed class TrayApplication : IDisposable
                 // Même raison : au fil de la frappe, l'essai 1 peut tomber après le rappel
                 // Défi du jour (17 h). Une seule sollicitation par jour : si le rappel est
                 // déjà parti aujourd'hui, l'avis attend le lendemain (l'inverse est tenu
-                // par TrainingReminders, qui se tait le jour d'un avis).
+                // par TrainingReminders, qui se tait le jour d'un avis). Défi masqué en
+                // 1.3.0 : plus aucun rappel n'écrit cette date, la garde est inerte. Une
+                // date du jour ne peut venir que d'un rappel réellement affiché aujourd'hui
+                // par une version antérieure : c'est bien la sollicitation du jour.
                 if (ConfigManager.TrainingLastReminderDate ==
                         today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
                     return false;
@@ -2545,6 +2586,12 @@ sealed class TrayApplication : IDisposable
             return false;
         }
     }
+
+    /// <summary>Photographie de l'état des séances pour <see cref="ReviewPromptGate.LearningAllowsPrompt"/>.</summary>
+    private static bool LearningAllowsReviewNow(ReviewPromptTrigger trigger) =>
+        ReviewPromptGate.LearningAllowsPrompt(trigger, LearningSessionTracker.IsOpen,
+            LearningSessionTracker.MillisecondsSinceLastClose, UsageStats.MillisecondsSinceLastRemap,
+            ReviewPromptGate.LearningCooldownMs);
 
     /// <summary>
     /// Cible du clic sur la sollicitation d'avis. Le volet d'avis Store n'est ouvert
@@ -2632,6 +2679,10 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
+            // Même garde que MaybeShowReviewPrompt : le partage d'un défi se présente à la
+            // fermeture des Leçons, donc « juste après une séance » (2026-09-24).
+            if (!LearningAllowsReviewNow(ReviewPromptTrigger.Share)) return;
+
             var signals = ReviewSharePrompt.Snapshot();
             if (!ReviewSharePrompt.ShouldPrompt(signals)) return;
 

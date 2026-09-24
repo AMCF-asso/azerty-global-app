@@ -917,7 +917,7 @@ sealed class SettingsWindow : IDisposable
         Show(_hWndChkAutoStart, general);
         Show(_hWndChkNotifications, general);
         Show(_hWndChkOnboarding, general);
-        Show(_hWndChkTraining, general);
+        Show(_hWndChkTraining, general && DailyChallenge.Enabled);
         Show(_hWndManagedNotifications, general && _managedNotifications);
         Show(_hWndManagedOnboarding, general && _managedOnboarding);
 
@@ -1063,9 +1063,11 @@ sealed class SettingsWindow : IDisposable
             var managedOnboardingRect = Rect(labelX + managedIndent,
                 onboardingRect.bottom + managedGap, managedWidth,
                 tabGeneral && _managedOnboarding ? managedHeight : 0);
+            // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0).
             var trainingRect = Rect(labelX,
-                (tabGeneral && _managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom) + prefsGap,
-                innerWidth, prefsRowH);
+                (tabGeneral && _managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom)
+                    + (DailyChallenge.Enabled ? prefsGap : 0),
+                innerWidth, DailyChallenge.Enabled ? prefsRowH : 0);
 
             if (tabGeneral) cursorY = trainingRect.bottom;
 

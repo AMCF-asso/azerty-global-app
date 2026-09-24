@@ -62,8 +62,8 @@ RECHERCHE DE CARACTÈRES
 Vous cherchez un symbole ? Tapez son nom (Ctrl+Maj+W) : l’application l’insère directement dans votre texte, ou le copie dans le presse-papiers si l’insertion n’est pas possible, et montre où il se trouve sur le clavier.
 
 
-LEÇONS ET DÉFI DU JOUR
-Un court tutoriel présente les principales améliorations. Le module Leçons propose des exercices progressifs et un mode libre. Le Défi du jour donne chaque jour le même extrait à tout le monde, avec votre record personnel et un résultat à copier. Votre progression reste sur votre appareil.
+LEÇONS
+Un court tutoriel présente les principales améliorations. Le module Leçons propose des exercices progressifs et un mode libre. Votre progression reste sur votre appareil.
 
 
 RESPECT DE LA VIE PRIVÉE
@@ -87,10 +87,9 @@ Site web : https://azerty.global
 > Bloc à coller tel quel. La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
 
 Version 1.3.0 :
-• Menu de l’icône plus court : « Apprendre » regroupe Leçons, Défi du jour et accueil ; « À propos et aide » regroupe confidentialité, ressources, retours et notation. Aucune fonction n’a été retirée.
+• Menu de l’icône plus court : « Apprendre » regroupe Leçons et accueil ; « À propos et aide » regroupe confidentialité, ressources, retours et notation. Aucune fonction n’a été retirée.
 • Couches verrouillables grecque, cyrillique et scientifique : un double appui verrouille l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le sous-menu « Couches ». Fonction facultative.
 • La recherche de caractères insère le caractère directement dans votre texte.
-• Défi du jour : le même extrait pour tout le monde, chaque jour, avec « Copier mon résultat » et votre record personnel.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
 • Votre clavier n’est modifié qu’après votre accord : après la mise à jour, l’accueil vous le demande.
 • Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
@@ -167,8 +166,8 @@ CHARACTER SEARCH
 Looking for a symbol? Type its name (Ctrl+Shift+W): the app inserts it directly into your text, or copies it to the clipboard if insertion isn't possible, and shows where it is on the keyboard.
 
 
-LESSONS AND DAILY CHALLENGE
-A short tutorial introduces the main improvements. The Lessons module offers progressive exercises and a free typing mode. The Daily challenge gives everyone the same passage each day, with your personal best and a result you can copy. Your progress stays on your device.
+LESSONS
+A short tutorial introduces the main improvements. The Lessons module offers progressive exercises and a free typing mode. Your progress stays on your device.
 
 
 PRIVACY
@@ -190,10 +189,9 @@ Website: https://azerty.global
 ### What's new (release notes)
 
 Version 1.3.0:
-• Shorter icon menu: “Learn” groups Lessons, Daily challenge and the welcome tour; “About and help” groups privacy, resources, feedback and rating. No feature was removed.
+• Shorter icon menu: “Learn” groups Lessons and the welcome tour; “About and help” groups privacy, resources, feedback and rating. No feature was removed.
 • Lockable Greek, Cyrillic and scientific layers: a double press locks the alphabet in the open app, Esc releases it. Each layer is ticked in the “Layers” submenu. Optional feature.
 • Character search inserts the character directly into your text.
-• Daily challenge: the same passage for everyone, every day, with “Copy my result” and your personal best.
 • You can rate the app without leaving AZERTY Global.
 • Your keyboard is only changed after you agree: after the update, the welcome window asks you.
 • If the app doesn't start with Windows, a one-time notification offers to turn it on.

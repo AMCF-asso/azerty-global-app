@@ -40,6 +40,26 @@ sealed class ChallengeSession
 
 static class DailyChallenge
 {
+    /// <summary>
+    /// Interrupteur central du Défi du jour. 1.3.0 : masqué, revient en 1.4.0, décision
+    /// d'Antoine du 2026-09-24. Faux, il ferme toutes les portes d'entrée : entrée du
+    /// sous-menu « Apprendre ▸ », module des Leçons, annonce unique aux utilisateurs
+    /// existants, rappels d'entraînement (qui n'ouvrent que le Défi), cases d'opt-in de
+    /// l'accueil et des Paramètres, section de « Mes statistiques ». Le code reste compilé
+    /// et testé ; les données déjà enregistrées (records, séquence, opt-in, annonce) ne
+    /// sont ni effacées ni migrées. Le rétablir : passer à true et retourner le témoin
+    /// <c>DefiDuJourMasqueTests.L_interrupteur_est_coupe_en_1_3_0</c>.
+    ///
+    /// static readonly et non const : un const faux rendrait « inatteignable » (CS0162)
+    /// le code qu'il garde, et le compilateur l'éliminerait.
+    /// </summary>
+    internal static readonly bool Enabled = false;
+
+    /// <summary>Le module « Défi du jour » entre-t-il dans le catalogue des Leçons ?
+    /// Il faut l'interrupteur et l'opt-in d'entraînement (règle d'avant, inchangée).</summary>
+    internal static bool ShouldOfferModule(bool challengeEnabled, bool trainingEnabled)
+        => challengeEnabled && trainingEnabled;
+
     public const int WarmupRepetitions = 5; // décision 2026-07-29
     public const int SequenceLength = 5;    // les 5 changements
 

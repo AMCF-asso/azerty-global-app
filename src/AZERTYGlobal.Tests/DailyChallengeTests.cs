@@ -107,7 +107,10 @@ public class TrainingRemindersTests
         LastSpecialCharDate: today,                    // caractère enrichi tapé aujourd'hui
         CurrentStreak: 0,
         HelperOpens: 0,
-        ReviewPromptLastShown: null);
+        ReviewPromptLastShown: null,
+        // Ces témoins éprouvent la cadence du rappel quand le Défi existe (1.4.0). Défi
+        // masqué en 1.3.0 : voir DefiDuJourMasqueTests.
+        ChallengeAvailable: true);
 
     private static readonly DateOnly Today = new(2026, 8, 15);
     private static readonly DateTime Evening = new(2026, 8, 15, 18, 0, 0);
@@ -232,6 +235,7 @@ public class TrainingReminderReviewPriorityTests : IDisposable
         var evening = today.ToDateTime(new TimeOnly(TrainingReminders.EarliestHour + 1, 0));
         var signals = TrainingReminders.Snapshot() with
         {
+            ChallengeAvailable = true, // Défi masqué en 1.3.0 : on juge la priorité seule
             Enabled = true,
             IgnoredCount = 0,
             SequenceIndex = 0,        // séquence inachevée : signal 1 actif, rappel dû
