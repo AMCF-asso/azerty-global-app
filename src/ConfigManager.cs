@@ -433,6 +433,51 @@ static class ConfigManager
     /// <summary>Marque la sollicitation comme cliquée : plus aucune relance.</summary>
     public static void SetReviewPromptClicked() => SetBool("reviewPromptClicked", true);
 
+    /// <summary>Premier lancement de la version courante (audit 24/09).</summary>
+    /// <param name="Version">Version à laquelle se rapportent les deux autres champs.</param>
+    /// <param name="Date">Date locale de ce premier lancement.</param>
+    /// <param name="UpgradedWithUsage">Des statistiques d'usage existaient déjà à ce
+    /// moment : l'installation vient d'une version antérieure qui a servi.</param>
+    internal readonly record struct VersionFirstRun(string Version, DateOnly Date, bool UpgradedWithUsage);
+
+    /// <summary>
+    /// Enregistre, une fois par version, la date du premier lancement de cette version et
+    /// la présence de statistiques d'usage à ce moment, puis les rend telles quelles aux
+    /// lancements suivants. Sert à l'essai 1 de la sollicitation d'avis
+    /// (<c>ReviewPromptGate.FirstAttemptAllowed</c>) : un utilisateur actif de la 1.1
+    /// dépasse déjà les seuils d'usage, et doit avoir servi un jour de la version installée
+    /// avant qu'on lui demande de la noter.
+    ///
+    /// Trois clés à plat : <c>currentVersionFirstRunVersion</c>,
+    /// <c>currentVersionUpgradedWithUsage</c>, puis <c>currentVersionFirstRunDate</c>
+    /// (« yyyy-MM-dd », heure locale comme tous les comparateurs de la sollicitation).
+    /// La date est écrite en dernier et fait foi : absente ou illisible, les trois sont
+    /// réécrites. Une version différente les réécrit aussi : une mise à jour ultérieure
+    /// repose la même question pour la version qu'elle installe.
+    ///
+    /// <paramref name="hadUsageBefore"/> doit être lu avant toute frappe de ce lancement
+    /// (<c>UsageStats.FirstRemapDate != null</c> dans le constructeur du tray).
+    /// </summary>
+    internal static VersionFirstRun EnsureCurrentVersionFirstRun(string version, DateOnly today, bool hadUsageBefore)
+    {
+        lock (_lock)
+        {
+            var storedVersion = GetString("currentVersionFirstRunVersion");
+            var rawDate = GetString("currentVersionFirstRunDate");
+            if (storedVersion == version &&
+                DateOnly.TryParseExact(rawDate, "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var storedDate))
+                return new VersionFirstRun(version, storedDate, GetBool("currentVersionUpgradedWithUsage"));
+
+            SetString("currentVersionFirstRunVersion", version);
+            SetBool("currentVersionUpgradedWithUsage", hadUsageBefore);
+            SetString("currentVersionFirstRunDate",
+                today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+            return new VersionFirstRun(version, today, hadUsageBefore);
+        }
+    }
+
     /// <summary>
     /// Date de la dernière erreur journalisée par ce process, ou null. Sert de garde à la
     /// sollicitation d'avis : on ne demande pas un avis à quelqu'un qui vient de

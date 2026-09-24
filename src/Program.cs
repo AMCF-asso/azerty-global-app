@@ -113,6 +113,15 @@ static class Program
                     L.Startup_AlreadyRunning,
                     ProductIdentity.DisplayName, 0x40); // MB_ICONINFORMATION
             }
+            // Audit 24/09 : l'activation par Windows meurt toujours en silence, mais une
+            // relance depuis Démarrer n'en est pas une. Sans accord d'activation, l'instance
+            // vivante est inerte et son icône souvent cachée : la relance ne donnait rien à
+            // voir. On signale le geste à l'instance vivante, puis on sort (RelaunchSignal).
+            else if (!RelaunchSignal.IsSystemActivation(args))
+            {
+                bool signaled = RelaunchSignal.TrySignalLiveInstance();
+                ConfigManager.LogCompatEvent("RelaunchSignal", signaled ? "posted" : "not-posted");
+            }
             return;
         }
 

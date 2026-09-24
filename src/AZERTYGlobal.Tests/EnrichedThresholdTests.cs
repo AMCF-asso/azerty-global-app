@@ -120,9 +120,10 @@ public class EnrichedThresholdTests : IDisposable
     public void Seuil_DejaDepasseAuChargement_NArmePasLeSignal()
     {
         // Une installation ancienne démarre très au-dessus du seuil. Aucune transition
-        // n'a lieu dans cette session de processus, donc aucune notification au fil de la
-        // frappe : c'est le chemin de démarrage qui la rattrape, avec son propre test sur
-        // le total. Sans cette règle, toute mise à jour solliciterait tout le parc d'un coup.
+        // n'a lieu dans cette session de processus : la frappe seule n'arme rien. Depuis
+        // l'audit 24/09, c'est TrayApplication qui arme le signal au chargement, sous ses
+        // propres conditions (ReviewPromptGate.ShouldArmSignalAtLoad, témoins dans
+        // ReviewPromptFirstAttemptTests) ; le chemin de démarrage ne lance plus l'essai 1.
         File.WriteAllText(_statsPath,
             """
             {

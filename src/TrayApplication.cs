@@ -165,6 +165,10 @@ sealed class TrayApplication : IDisposable
     // dans le `else` du test d'accueil et se trouvait donc perdue, définitivement, pour
     // tout utilisateur qui revoyait l'accueil à chaque démarrage.
     private bool _reviewPromptDeferred;
+    // Premier lancement de la version installée et présence de statistiques d'usage à ce
+    // moment (audit 24/09) : l'essai 1 d'une installation migrée attend le lendemain.
+    // Null si l'écriture a échoué : l'essai 1 est alors refusé pour cette session.
+    private ConfigManager.VersionFirstRun? _versionFirstRun;
     private bool _activationConsent = ConfigManager.ActivationConsent;
     private bool _enabled = ConfigManager.ActivationConsent;
     private DateTimeOffset? _pauseUntilUtc;
@@ -284,6 +288,20 @@ sealed class TrayApplication : IDisposable
         // Charger le layout et démarrer le hook
         try
         {
+            // Audit 24/09 : lu AVANT LoadAndStart, donc avant toute frappe de ce lancement
+            // (le hook ne reçoit rien tant que la boucle de messages ne tourne pas). Des
+            // statistiques déjà présentes au premier lancement de cette version font de
+            // l'installation une mise à jour d'une version qui a servi.
+            try
+            {
+                _versionFirstRun = ConfigManager.EnsureCurrentVersionFirstRun(Program.Version,
+                    DateOnly.FromDateTime(DateTime.Now), hadUsageBefore: UsageStats.FirstRemapDate != null);
+            }
+            catch (Exception ex)
+            {
+                ConfigManager.Log("EnsureCurrentVersionFirstRun", ex);
+            }
+
             LoadAndStart();
             // Refléter l'état réel dans le tooltip dès le démarrage : le szTip posé au
             // NIM_ADD ne portait que « AZERTY Global vX.Y.Z » (sans « — Actif »), et
@@ -313,7 +331,8 @@ sealed class TrayApplication : IDisposable
             if (shouldShowOnboarding)
             {
                 // La sollicitation d'avis n'est plus subordonnée à l'absence d'accueil :
-                // elle est différée, pas annulée (cf. _reviewPromptDeferred).
+                // elle est différée, pas annulée (cf. _reviewPromptDeferred). Depuis l'audit
+                // 24/09, ce relais ne sert plus qu'à l'essai 2 : l'essai 1 attend la frappe.
                 _reviewPromptDeferred = true;
                 if (_layoutPopupOpen)
                 {
@@ -328,7 +347,8 @@ sealed class TrayApplication : IDisposable
                     ShowOnboardingNow();
                 }
             }
-            else if (!MaybeShowReviewPrompt() && !MaybeShowChallengeAnnouncement()
+            // Audit 24/09 : au démarrage, seul l'essai 2 peut partir (ReviewPromptGate).
+            else if (!MaybeShowReviewPrompt(ReviewPromptTrigger.Startup) && !MaybeShowChallengeAnnouncement()
                      && !MaybeShowAutoStartNudge())
             {
                 Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
@@ -542,6 +562,9 @@ sealed class TrayApplication : IDisposable
 
     // Message TaskbarCreated (Explorer restart / chargement tardif au boot)
     private readonly uint _wmTaskbarCreated = Win32.RegisterWindowMessageW("TaskbarCreated");
+    // Relance depuis Démarrer signalée par une seconde instance packagée (audit 24/09,
+    // RelaunchSignal) : même nom enregistré dans les deux processus.
+    private readonly uint _wmRelaunchRequested = RelaunchSignal.RegisterMessage();
 
     private bool IsPaused => _pauseUntilUtc.HasValue;
     private bool ShouldBlockHookCompletely => !_activationConsent || IsPaused || _suspendedForCompatibility;
@@ -635,6 +658,10 @@ sealed class TrayApplication : IDisposable
         // Chargement anticipé de usage-stats.json sur le thread UI : la première frappe
         // remappée ne doit déclencher aucune I/O dans le callback du hook.
         UsageStats.Preload();
+        // Audit 24/09 : l'essai 1 ne part plus du démarrage. Une installation déjà
+        // au-dessus du seuil n'aura jamais de transition : armer le signal pour que la
+        // prochaine frappe suivie du silence décide. Le timer ci-dessus tourne déjà.
+        ArmReviewSignalIfAlreadyAboveThreshold();
 
         int ret;
         while ((ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0)) != 0)
@@ -1005,6 +1032,11 @@ sealed class TrayApplication : IDisposable
                         ReinstallHook();
                         return IntPtr.Zero;
                     }
+                    if (_wmRelaunchRequested != 0 && msg == _wmRelaunchRequested)
+                    {
+                        OnRelaunchRequested();
+                        return IntPtr.Zero;
+                    }
                     break;
             }
         }
@@ -1265,6 +1297,10 @@ sealed class TrayApplication : IDisposable
             ConfigManager.AcceptActivation();
             _activationConsent = true;
             _enabled = true;
+            // Audit 24/09 : avant l'accord, OnForegroundChanged suit la suspension sans
+            // l'annoncer (_suspendedForCompatibility, _appliedSuspendReason à jour). Ce
+            // ApplyHookState l'applique donc au hook dès l'activation : dans une application
+            // suspendue, le hook reste transparent. L'annonce suivra au prochain premier plan.
             ApplyHookState(syncWhenActive: true);
             UpdateIcon();
             UpdateTooltip();
@@ -1298,7 +1334,47 @@ sealed class TrayApplication : IDisposable
     {
         if (!_activationConsent || !_reviewPromptDeferred) return;
         _reviewPromptDeferred = false;
-        MaybeShowReviewPrompt();
+        // Relais du démarrage : même règle que lui, seul l'essai 2 peut partir d'ici
+        // (audit 24/09). Lever le report rend la main au signal de frappe pour l'essai 1.
+        MaybeShowReviewPrompt(ReviewPromptTrigger.Startup);
+    }
+
+    /// <summary>
+    /// Relance depuis Démarrer alors que l'application tourne déjà (audit 24/09) : la
+    /// seconde instance est morte, elle nous a seulement signalé le geste. Le minimum sûr :
+    /// accueil déjà ouvert, le ramener devant ; sans accord, rouvrir l'accueil, seule issue
+    /// de l'utilisateur ; activée, la même bulle d'état qu'au démarrage, qui dit que
+    /// l'application tourne déjà, l'icône étant souvent cachée dans le débordement.
+    /// </summary>
+    private void OnRelaunchRequested()
+    {
+        try
+        {
+            if (_onboarding?.IsVisible == true)
+            {
+                _onboarding.BringToFront();
+                return;
+            }
+            // Conflit de disposition au démarrage : sa fenêtre passe avant l'accueil, qui
+            // suivra « Garder l'app » (_pendingOnboardingShow). Ne pas la court-circuiter.
+            if (_layoutPopupOpen) return;
+            if (!_activationConsent)
+            {
+                ShowOnboardingNow();
+                return;
+            }
+            // Suspension de compatibilité : sa bulle a déjà parlé, rien à ajouter.
+            if (ShouldProcessHook)
+                ShowBalloon(L.Tray_ActiveTitle, L.Tray_ActiveBalloonBody);
+            else if (IsPaused)
+                ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
+            else if (!_enabled)
+                ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("OnRelaunchRequested", ex);
+        }
     }
 
     private void ShowLessonsWindow()
@@ -2143,6 +2219,16 @@ sealed class TrayApplication : IDisposable
         return SuspensionTransition.None;
     }
 
+    /// <summary>
+    /// La suspension de compatibilité se montre-t-elle (icône, infobulle, bulle, journal) ?
+    /// Pas avant l'accord d'activation (audit 24/09) : l'application est alors inerte
+    /// partout, et annoncer « suspendu dans tel jeu » à qui n'a encore rien activé
+    /// contredisait l'accueil. Le suivi, lui, continue : c'est lui qu'ActivateWithConsent
+    /// applique au hook. Fonction pure pour être éprouvée sans fenêtre.
+    /// </summary>
+    internal static bool ShouldShowCompatibilitySuspension(bool suspendedForCompatibility, bool activationConsent)
+        => suspendedForCompatibility && activationConsent;
+
     private void UpdateIcon()
     {
         var oldIcon = _hIcon;
@@ -2152,7 +2238,8 @@ sealed class TrayApplication : IDisposable
         bool capsLock = _mapper?.CapsLockActive == true && active;
         string iconText = "AG";
 
-        _hIcon = CreateTextIcon(iconText, active, capsLock, _suspendedForCompatibility);
+        _hIcon = CreateTextIcon(iconText, active, capsLock,
+            ShouldShowCompatibilitySuspension(_suspendedForCompatibility, _activationConsent));
 
         _nid.hIcon = _hIcon;
         _nid.uFlags = NIF_ICON;
@@ -2164,7 +2251,7 @@ sealed class TrayApplication : IDisposable
     private void UpdateTooltip()
     {
         var parts = new List<string> { ProductIdentity.DisplayName + " v" + Program.Version };
-        if (_suspendedForCompatibility)
+        if (ShouldShowCompatibilitySuspension(_suspendedForCompatibility, _activationConsent))
             parts.Add(L.Tray_TooltipSuspendedCompat);
         else if (IsPaused)
             parts.Add(L.Tray_TooltipPaused(FormatPauseRemaining()));
@@ -2240,7 +2327,10 @@ sealed class TrayApplication : IDisposable
     ///
     /// Deux chemins y mènent : le démarrage de l'application, et
     /// <see cref="MaybeShowReviewAfterQuietTyping"/>, qui attend le franchissement du seuil
-    /// puis une pause dans la frappe. Les gardes ci-dessous valent pour les deux.
+    /// puis une pause dans la frappe. Les gardes ci-dessous valent pour les deux. Depuis
+    /// l'audit 24/09, l'essai 1 ne passe plus que par le second, et une installation mise
+    /// à jour depuis une version qui a servi attend le lendemain de son premier lancement
+    /// (<see cref="ReviewPromptGate.FirstAttemptAllowed"/>).
     ///
     /// Le second essai est abandonné si le premier a été cliqué (l'utilisateur a répondu,
     /// peu importe ce qu'il a fait ensuite) ou si l'application n'a plus servi depuis plus
@@ -2305,10 +2395,12 @@ sealed class TrayApplication : IDisposable
     /// la valeur du produit vient d'être ressentie et où l'interruption ne coupe rien.
     ///
     /// Le drapeau marque une TRANSITION observée dans cette session de processus, jamais
-    /// un état : quelqu'un qui démarre déjà au-dessus du seuil ne le lève pas, et c'est le
-    /// chemin de démarrage qui le rattrape. Il n'est désarmé que si la sollicitation est
-    /// partie, ou si plus aucune n'est possible : voir
-    /// <see cref="ShouldConsumeEnrichedSignal"/>.
+    /// un état. Quelqu'un qui démarre déjà au-dessus du seuil ne le lève pas : depuis
+    /// l'audit 24/09, <see cref="ArmReviewSignalIfAlreadyAboveThreshold"/> l'arme au
+    /// chargement tant que l'essai 1 reste dû, et il faut alors une frappe remappée de
+    /// cette session avant le silence (<see cref="ReviewPromptGate.ShouldTryAfterQuietTyping"/>).
+    /// Il n'est désarmé que si la sollicitation est partie, ou si plus aucune n'est
+    /// possible : voir <see cref="ShouldConsumeEnrichedSignal"/>.
     /// </summary>
     private void MaybeShowReviewAfterQuietTyping()
     {
@@ -2321,13 +2413,14 @@ sealed class TrayApplication : IDisposable
                 return;
             }
 
-            if (!UsageStats.EnrichedThresholdCrossed) return;
-            // Encore en train de taper : on repasse dans cinq secondes.
-            if (UsageStats.MillisecondsSinceLastRemap < REVIEW_QUIET_SILENCE_MS) return;
-            // Accueil ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
-            if (_reviewPromptDeferred) return;
+            // Signal armé, frappe dans cette session puis silence, accueil du démarrage
+            // refermé. Encore en train de taper : on repasse dans cinq secondes. Accueil
+            // ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
+            if (!ReviewPromptGate.ShouldTryAfterQuietTyping(UsageStats.EnrichedThresholdCrossed,
+                    UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS, _reviewPromptDeferred))
+                return;
 
-            bool shown = MaybeShowReviewPrompt();
+            bool shown = MaybeShowReviewPrompt(ReviewPromptTrigger.QuietTyping);
             if (ShouldConsumeEnrichedSignal(shown, ReviewPromptStillPossible()))
                 UsageStats.ClearEnrichedThresholdSignal();
         }
@@ -2337,7 +2430,26 @@ sealed class TrayApplication : IDisposable
         }
     }
 
-    private bool MaybeShowReviewPrompt()
+    /// <summary>
+    /// Arme le signal de frappe au chargement quand le total dépasse déjà le seuil et que
+    /// l'essai 1 reste dû (audit 24/09, <see cref="ReviewPromptGate.ShouldArmSignalAtLoad"/>).
+    /// </summary>
+    private static void ArmReviewSignalIfAlreadyAboveThreshold()
+    {
+        try
+        {
+            if (ReviewPromptGate.ShouldArmSignalAtLoad(ConfigManager.ReviewPromptCount,
+                    ReviewPromptStillPossible(), UsageStats.TotalSpecialCharsCount,
+                    UsageStats.EnrichedCharsReviewThreshold))
+                UsageStats.ArmEnrichedThresholdSignal();
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("ArmReviewSignalIfAlreadyAboveThreshold", ex);
+        }
+    }
+
+    private bool MaybeShowReviewPrompt(ReviewPromptTrigger trigger)
     {
         try
         {
@@ -2370,6 +2482,19 @@ sealed class TrayApplication : IDisposable
 
             if (attempt == 1)
             {
+                // Audit 24/09 : jamais depuis le démarrage, et le lendemain du premier
+                // lancement de cette version pour une installation mise à jour qui avait
+                // déjà servi. Refus provisoire : le signal de frappe reste armé.
+                if (!ReviewPromptGate.FirstAttemptAllowed(trigger, today,
+                        _versionFirstRun?.UpgradedWithUsage ?? true, _versionFirstRun?.Date))
+                    return false;
+                // Même raison : au fil de la frappe, l'essai 1 peut tomber après le rappel
+                // Défi du jour (17 h). Une seule sollicitation par jour : si le rappel est
+                // déjà parti aujourd'hui, l'avis attend le lendemain (l'inverse est tenu
+                // par TrainingReminders, qui se tait le jour d'un avis).
+                if (ConfigManager.TrainingLastReminderDate ==
+                        today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
+                    return false;
                 // v1.3.0 : preuve d'usage par les caractères qu'AZERTY Global apporte, et
                 // non par un compte de jours. Remplace les deux planchers calendaires.
                 if (UsageStats.TotalSpecialCharsCount < UsageStats.EnrichedCharsReviewThreshold)
@@ -2769,6 +2894,10 @@ sealed class TrayApplication : IDisposable
 
     private void AnnounceCompatibilityStateIfChanged(string procName, string procDisplay)
     {
+        // Audit 24/09 : avant l'accord, ni bulle ni ligne AntiCheatDetected/RemoteAccess
+        // dans error.log. L'état d'annonce n'avance pas non plus : après l'activation, la
+        // première annonce dira la suspension en cours comme une nouveauté.
+        if (!_activationConsent) return;
         var reason = _suspendedForCompatibility
             ? _appliedSuspendReason : CompatibilitySuspendReason.None;
         var application = _suspendedForCompatibility
