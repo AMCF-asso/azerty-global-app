@@ -878,8 +878,8 @@ sealed class CharacterSearch : IDisposable
         IntPtr foregroundBeforeSearch = preferredTarget != IntPtr.Zero
             ? preferredTarget
             : Win32.GetForegroundWindow();
-        if (foregroundBeforeSearch != _hWnd && Win32.IsWindow(foregroundBeforeSearch))
-            _targetWindow = foregroundBeforeSearch;
+        _targetWindow = ResolveInsertionTarget(foregroundBeforeSearch, _hWnd, _targetWindow,
+            Win32.IsWindow, ReadWindowClassName);
 
         // Signal Défi du jour (v1.2.0) : compteur GLOBAL d'ouvertures uniquement —
         // jamais le contenu des requêtes (décision 2026-07-22).
@@ -907,6 +907,52 @@ sealed class CharacterSearch : IDisposable
 
         // Sélectionner tout le texte existant
         Win32.SendMessageW(_hEdit, 0x00B1, IntPtr.Zero, (IntPtr)(-1)); // EM_SETSEL 0, -1
+    }
+
+    // Audit 24/09 B4 : fenêtres du shell refusées comme cible d'insertion. Au clic droit sur
+    // l'icône, le premier plan est la barre des tâches (ou le panneau de débordement de la
+    // zone de notification) : l'insertion y « réussissait », sans copie de secours, et le
+    // caractère n'arrivait nulle part.
+    private static readonly string[] RefusedTargetClasses =
+    {
+        "Shell_TrayWnd",
+        "Shell_SecondaryTrayWnd",
+        "NotifyIconOverflowWindow",
+        "TopLevelWindowForOverflowXamlIsland",
+    };
+
+    /// <summary>Audit 24/09 B4 : la classe de fenêtre est-elle celle d'une surface du shell ?</summary>
+    internal static bool IsRefusedTargetClass(string? className)
+    {
+        if (string.IsNullOrEmpty(className)) return false;
+        // Les noms de classe Win32 ne sont pas sensibles à la casse.
+        foreach (var refused in RefusedTargetClasses)
+            if (string.Equals(refused, className, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Audit 24/09 B4 : la fenêtre qui recevra l'insertion directe. La recherche elle-même
+    /// garde la cible connue (comportement antérieur) ; une cible nulle, détruite ou refusée
+    /// donne <see cref="IntPtr.Zero"/> — l'insertion rend alors NotInserted et retombe sur la
+    /// copie de secours avec notification, au lieu de viser une ancienne fenêtre ou le shell.
+    /// </summary>
+    internal static IntPtr ResolveInsertionTarget(IntPtr candidate, IntPtr self, IntPtr previous,
+        Func<IntPtr, bool> isWindow, Func<IntPtr, string?> getClassName)
+    {
+        if (candidate != IntPtr.Zero && candidate == self) return previous;
+        if (candidate == IntPtr.Zero || !isWindow(candidate)) return IntPtr.Zero;
+        return IsRefusedTargetClass(getClassName(candidate)) ? IntPtr.Zero : candidate;
+    }
+
+    private static string? ReadWindowClassName(IntPtr hWnd)
+    {
+        // GetClassNameW existe déjà côté moteur (Win32 de TypingEngine.Windows, public) :
+        // nom qualifié, la classe Win32 de l'application le masque dans ce namespace.
+        var className = new System.Text.StringBuilder(64);
+        return TypingEngine.Windows.Win32.GetClassNameW(hWnd, className, className.Capacity) > 0
+            ? className.ToString()
+            : null;
     }
 
     public void Hide()

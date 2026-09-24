@@ -76,7 +76,15 @@ sealed class PauseDurationDialog : IDisposable
             while (!_done)
             {
                 int ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0);
-                if (ret <= 0)
+                // Audit 24/09 : 0 = WM_QUIT retiré de la file. Le reposter, sinon la boucle
+                // principale ne le voit jamais et le processus survit sans icône. -1 (erreur)
+                // reste une sortie simple.
+                if (ret == 0)
+                {
+                    Win32.PostQuitMessage((int)msg.wParam);
+                    break;
+                }
+                if (ret < 0)
                     break;
                 // AG130-40 : cette boucle modale a la meme omission que la principale.
                 if (DialogNavigation.TryRoute(ref msg)) continue;
