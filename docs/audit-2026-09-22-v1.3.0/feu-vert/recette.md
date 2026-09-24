@@ -1,8 +1,8 @@
 # Recette du candidat Store 1.3.0 — à cocher sur le poste d’Antoine
 
-Candidat : bundle CI du run [35974855144](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35974855144), commit `a7e6151` sur `release/1.2.0-notation-store` (correctifs `5b56087` et `ad05d72` compris), SHA-256 `bbf64c28109f0486fe12bcc0c9632b869d9dc5287f8bee38128d0a5803718f40`, attestation vérifiée le 2026-09-24 (`sourceRepositoryDigest` = `a7e6151`). Tests CI : 18/18, 235/235, 536/536. **Une recompilation change l’empreinte et annule cette recette.** Le candidat précédent `ba587cce` est remplacé ; ses résultats (A1, A2, recette automatique) restent dans l’historique git jusqu’à `a7e6151` et dans `evidence\recette-ba587ccee059\`.
+Candidat : bundle CI du run [35987701131](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35987701131), commit `ade118f` sur `release/1.2.0-notation-store` (correctifs `5b56087`, `ad05d72` et `ade118f` compris), SHA-256 `01b18e114865a57a9ae4fe06ed04249602cb080666820aac678913f31b0f2507`, attestation vérifiée le 2026-09-24 (`sourceRepositoryDigest` = `ade118f`). Tests CI : 18/18, 252/252, 536/536. **Une recompilation change l’empreinte et annule cette recette.** Les candidats précédents `ba587cce` puis `bbf64c28` sont remplacés ; les résultats du premier (A1, A2, recette automatique) restent dans l’historique git jusqu’à `a7e6151` et dans `evidence\recette-ba587ccee059\`.
 
-Lancement, sur le poste (choix d’Antoine du 2026-09-23, le Sandbox reste possible via `sandbox\lancer-recette.ps1`) : quitter toute autre version d’AZERTY Global, puis `powershell -ExecutionPolicy Bypass -File installer-poste.ps1 -Bundle ..\..\..\msix\ci-35974855144\AZERTYGlobal-1.3.0.0.msixbundle`. Le journal `evidence\recette-bbf64c28109f\installation-poste.txt` doit finir par « Pret » avec **shadow stack ON ; CFG ON**. Ne pas toucher l’accueil avant A2.
+Lancement, sur le poste (choix d’Antoine du 2026-09-23, le Sandbox reste possible via `sandbox\lancer-recette.ps1`) : quitter toute autre version d’AZERTY Global, puis `powershell -ExecutionPolicy Bypass -File installer-poste.ps1 -Bundle ..\..\..\msix\ci-35987701131\AZERTYGlobal-1.3.0.0.msixbundle`. Le journal `evidence\recette-01b18e114865\installation-poste.txt` doit finir par « Pret » avec **shadow stack ON ; CFG ON**. Ne pas toucher l’accueil avant A2.
 
 Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 
@@ -22,7 +22,7 @@ Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 | A10 | Menu de l’icône : Couches ▸, Apprendre ▸, À propos et aide ▸, bascule FR/EN | Douze lignes, sous-menus ouverts, textes basculés | |
 | A11 | **Chemin d’erreur** : quitter l’app, remplacer le contenu de `config.json` par `[1]` (sous MSIX, chercher d’abord `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`, sinon `%LOCALAPPDATA%\AZERTY Global\`), relancer | L’app démarre (pas d’arrêt brutal) ; `error.log` porte `JsonException` ; le fichier n’est pas réécrit | |
 | A12 | Désinstaller (Paramètres > Applications) | Processus arrêté, clavier système utilisable | |
-| A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-bbf64c28109f\resume.txt` | |
+| A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-01b18e114865\resume.txt` | |
 
 ## B. Recommandé si le temps le permet
 
@@ -54,6 +54,7 @@ Lignes B6 à B13 : lot d’accessibilité 1.3.0 (`accessibilite-1.3.0.md`), à 
 | E4 | Avant l’accord (A2), puis après « Activer et essayer » | Icône grise avec infobulle « Désactivé/Off », puis bleue avec « Actif/Active » | |
 | E5 | App en anglais : clavier des Leçons, des exercices et clavier virtuel ; basculer FR ↔ EN fenêtre ouverte | « Enter », « Caps Lock », « Shift ⇧ », « Space » en anglais, textes français en français, redessin immédiat ; rien ne déborde | |
 | E6 | Paramètres : passer d’un onglet à l’autre, en FR puis en EN, à 100 % puis 175 % | La fenêtre ne change ni de taille ni de place ; aucun contrôle coupé ; Tab fait défiler si besoin | |
+| E7 | **Via Parsec** depuis le portable (app suspendue côté portable quand Parsec est au premier plan) : exercice 1 de l’accueil, puis Bloc-notes : `azerty`, Verr. Maj + é, AltGr+e, `^` puis e ; le journal de compatibilité porte `RemoteAccessHost: present` | Frappes reçues et remappées **une seule fois** (É, €, ê) ; touches allumées sur le clavier de l’exercice ; rien de doublé | |
 
 ## C. Écarts assumés (décisions datées, ne pas rouvrir ici)
 

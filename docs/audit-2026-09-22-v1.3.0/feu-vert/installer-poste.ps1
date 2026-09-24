@@ -40,6 +40,14 @@ try {
     & $signtool sign /fd SHA256 /sha1 $cert.Thumbprint $copy | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "signtool a rendu $LASTEXITCODE" }
 
+    # Un candidat precedent de meme version (1.3.0.0) bloque l'installation (0x80073CFB) :
+    # le retirer d'abord. Sa configuration part avec lui : la recette repart d'un premier lancement.
+    $previous = Get-AppxPackage -Name 'AZERTYGlobal.AZERTYGlobal' | Where-Object Version -eq '1.3.0.0'
+    foreach ($old in $previous) {
+        Remove-AppxPackage -Package $old.PackageFullName
+        Say ('Candidat precedent retire : ' + $old.PackageFullName)
+    }
+
     Add-AppxPackage -Path $copy
     $package = Get-AppxPackage -Name 'AZERTYGlobal.AZERTYGlobal' | Where-Object Version -eq '1.3.0.0' | Select-Object -First 1
     Say ('Installe : ' + $package.PackageFullName)
