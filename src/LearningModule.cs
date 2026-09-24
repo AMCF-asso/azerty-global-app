@@ -1671,23 +1671,65 @@ sealed class LearningModule : IDisposable
         if (next >= 0) Win32.SetFocus(stops[next]);
     }
 
+    /// <summary>Ce que fait une frappe reçue par un bouton d'en-tête (K3, revu audit 24/09).</summary>
+    internal enum HeaderKeyAction { None, CycleFocus, Click, Close, Swallow, ForwardToExercise }
+
     /// <summary>
     /// K3 : clavier des boutons d'en-tête. Hors d'IsDialogMessageW, un BUTTON ne rend pas Tab
-    /// et ne réagit pas à Entrée ; Espace, lui, clique déjà. Échap ferme, comme sur la surface.
+    /// et ne réagit pas à Entrée : Tab tourne le focus, Entrée clique, Échap ferme, comme sur
+    /// la surface.
+    ///
+    /// Audit 24/09 (régression K3) : un Tab accidentel laissait le focus sur « Quitter », et la
+    /// première espace de l'exercice fermait le tutoriel — un BUTTON s'enfonce sur WM_KEYDOWN
+    /// d'espace et clique au WM_KEYUP, dans sa propre procédure. L'espace est donc avalée sur
+    /// les deux, et tout caractère imprimable (espace comprise) retourne à l'exercice, où il
+    /// compte comme frappe. Entrée reste la seule activation clavier du bouton.
     /// </summary>
-    private bool HandleHeaderButtonKey(IntPtr hWnd, uint msg, IntPtr wParam)
+    internal static HeaderKeyAction ClassifyHeaderButtonKey(uint msg, int wParam)
     {
-        if (msg != Win32.WM_KEYDOWN || _inputPaused) return false;
-        switch (wParam.ToInt32())
+        switch (msg)
         {
-            case 0x09: // VK_TAB
+            case Win32.WM_KEYDOWN:
+                return wParam switch
+                {
+                    0x09 => HeaderKeyAction.CycleFocus, // VK_TAB
+                    0x0D => HeaderKeyAction.Click,      // VK_RETURN
+                    0x1B => HeaderKeyAction.Close,      // VK_ESCAPE
+                    0x20 => HeaderKeyAction.Swallow,    // VK_SPACE : sinon le bouton s'enfonce
+                    _ => HeaderKeyAction.None,
+                };
+            case Win32.WM_KEYUP:
+                // VK_SPACE : le relâchement est ce qui clique.
+                return wParam == 0x20 ? HeaderKeyAction.Swallow : HeaderKeyAction.None;
+            case Win32.WM_CHAR:
+            case Win32.WM_SYSCHAR: // même traitement que la surface (AltGr sous un layout US)
+                // Tab, Entrée, Échap, Retour arrière : caractères de contrôle, traités au keydown.
+                return char.IsControl((char)wParam) ? HeaderKeyAction.None : HeaderKeyAction.ForwardToExercise;
+        }
+        return HeaderKeyAction.None;
+    }
+
+    private bool HandleHeaderButtonKey(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        if (_inputPaused) return false;
+        switch (ClassifyHeaderButtonKey(msg, wParam.ToInt32()))
+        {
+            case HeaderKeyAction.CycleFocus:
                 CycleHeaderFocus(hWnd);
                 return true;
-            case 0x0D: // VK_RETURN
+            case HeaderKeyAction.Click:
                 Win32.SendMessageW(hWnd, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
                 return true;
-            case 0x1B: // VK_ESCAPE
+            case HeaderKeyAction.Close:
                 Close();
+                return true;
+            case HeaderKeyAction.Swallow:
+                return true;
+            case HeaderKeyAction.ForwardToExercise:
+                // Le focus revient à la surface avant la frappe : les suivantes (et le
+                // WM_KEYUP de cette espace) y arrivent directement.
+                Win32.SetFocus(_hWnd);
+                Win32.SendMessageW(_hWnd, msg, wParam, lParam);
                 return true;
         }
         return false;
@@ -2779,7 +2821,7 @@ sealed class LearningModule : IDisposable
     private IntPtr QuitButtonSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
-        if (HandleHeaderButtonKey(hWnd, msg, wParam)) return IntPtr.Zero;
+        if (HandleHeaderButtonKey(hWnd, msg, wParam, lParam)) return IntPtr.Zero;
         switch (msg)
         {
             case Win32.WM_MOUSEMOVE:
@@ -2854,7 +2896,7 @@ sealed class LearningModule : IDisposable
     private IntPtr SkipButtonSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
-        if (HandleHeaderButtonKey(hWnd, msg, wParam)) return IntPtr.Zero;
+        if (HandleHeaderButtonKey(hWnd, msg, wParam, lParam)) return IntPtr.Zero;
         switch (msg)
         {
             case Win32.WM_MOUSEMOVE:

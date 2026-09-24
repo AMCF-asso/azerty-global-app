@@ -540,25 +540,33 @@ internal sealed class LessonsWindow : IDisposable
 
     private void CaptureBaseWindowMetrics()
     {
-        if (Win32.GetClientRect(_hWnd, out var client))
+        // Le cadre non client se mesure toujours sur la fenêtre réelle.
+        if (Win32.GetClientRect(_hWnd, out var client) && Win32.GetWindowRect(_hWnd, out var window))
         {
-            _baseClientW = Math.Max(1, client.right - client.left);
-            _baseClientH = Math.Max(1, client.bottom - client.top);
-        }
-        else
-        {
-            _baseClientW = D(BASE_WIN_W);
-            _baseClientH = D(BASE_WIN_H);
+            int clientW = Math.Max(1, client.right - client.left);
+            int clientH = Math.Max(1, client.bottom - client.top);
+            _nonClientW = Math.Max(0, Math.Max(1, window.right - window.left) - clientW);
+            _nonClientH = Math.Max(0, Math.Max(1, window.bottom - window.top) - clientH);
         }
 
-        if (Win32.GetWindowRect(_hWnd, out var window))
-        {
-            int outerW = Math.Max(1, window.right - window.left);
-            int outerH = Math.Max(1, window.bottom - window.top);
-            _nonClientW = Math.Max(0, outerW - _baseClientW);
-            _nonClientH = Math.Max(0, outerH - _baseClientH);
-        }
+        // Audit 24/09 B3 : la référence est la zone client PRÉVUE au DPI courant, pas celle
+        // qu'on mesure. AG130-42 plafonne la fenêtre avant cette mesure : prendre la zone
+        // client déjà réduite donnait une échelle de 1 dans une fenêtre trop basse, et le
+        // clavier (ancré en bas) recouvrait la ligne cible et la saisie à 150-175 % sur 1080p.
+        (_baseClientW, _baseClientH) = ReferenceClientSize(D(BASE_WIN_W), D(BASE_WIN_H), _nonClientW, _nonClientH);
     }
+
+    /// <summary>
+    /// Audit 24/09 B3 : zone client de référence = taille de fenêtre prévue moins le cadre.
+    /// Hors plafond, elle vaut la zone client mesurée (échelle 1, comme avant) ; plafonnée,
+    /// elle reste plus grande et <see cref="RenderScale"/> descend sous 1.
+    /// </summary>
+    internal static (int Width, int Height) ReferenceClientSize(int designOuterW, int designOuterH, int nonClientW, int nonClientH)
+        => (Math.Max(1, designOuterW - Math.Max(0, nonClientW)), Math.Max(1, designOuterH - Math.Max(0, nonClientH)));
+
+    /// <summary>Échelle de rendu : le plus petit des deux rapports zone client / référence.</summary>
+    internal static float RenderScale(int clientW, int clientH, int baseClientW, int baseClientH)
+        => MathF.Max(0.1f, MathF.Min(clientW / (float)baseClientW, clientH / (float)baseClientH));
 
     private void UpdateRenderScaleFromCurrentClient(bool force = false)
     {
@@ -567,7 +575,7 @@ internal sealed class LessonsWindow : IDisposable
 
         int clientW = Math.Max(1, client.right - client.left);
         int clientH = Math.Max(1, client.bottom - client.top);
-        float nextScale = MathF.Max(0.1f, MathF.Min(clientW / (float)_baseClientW, clientH / (float)_baseClientH));
+        float nextScale = RenderScale(clientW, clientH, _baseClientW, _baseClientH);
         if (!force && MathF.Abs(nextScale - _windowScale) < 0.01f) return;
 
         _windowScale = nextScale;
@@ -2699,7 +2707,8 @@ internal sealed class LessonsWindow : IDisposable
 
     private static string FormatWpm(int? value)
     {
-        return value.HasValue ? $"{value.Value} WPM" : FormatNullable(value);
+        // Audit 24/09 : « WPM » s'affichait en français. Unité inline, faute de clé dédiée.
+        return value.HasValue ? L.LessonsWin_SpeedValue(value.Value) : FormatNullable(value);
     }
 
     private static uint GetAccuracyColor(int? accuracy)

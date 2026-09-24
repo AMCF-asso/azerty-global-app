@@ -16,6 +16,10 @@ public sealed class KeyboardHook : IDisposable
     // sur tout ce qui vient de SendInput/keybd_event, jamais sur une frappe physique.
     private const uint LLKHF_INJECTED = 0x10;
 
+    // Audit 24/09 B1 : VK_PACKET livre un caractere Unicode deja decide (SendInput
+    // KEYEVENTF_UNICODE) ; son scanCode contient ce caractere, pas une position de touche.
+    internal const uint VK_PACKET = 0xE7;
+
     // Audit sécu 2026-05 SEV-A3-01 : marker runtime random pour éviter qu'un
     // attaquant qui lit le code source (open source EUPL) puisse bypass le hook
     // en injectant des frappes avec le même flag. Bits hauts forcés à 0xA pour
@@ -238,6 +242,22 @@ public sealed class KeyboardHook : IDisposable
         return !IsForeignInjection(dwExtraInfo, flags, ourMarker) || remoteHostPresent;
     }
 
+    /// <summary>
+    /// Audit 24/09 B1 : la frappe entre-t-elle dans le traitement (modificateurs,
+    /// raccourcis, RawKeyDown, ProcessKey) ?
+    ///
+    /// Un VK_PACKET jamais : Espanso, AutoHotkey <c>SendText</c>, un gestionnaire de mots
+    /// de passe, la dictee ou une session RDP y livrent un caractere, et son scanCode
+    /// contient ce caractere. Depuis C5, un hote distant le faisait lire comme une touche
+    /// physique : « . » (U+002E) devenait la touche C (SC 0x2E), « (3) » donnait « ´.@ ».
+    /// Pour toute autre touche, <see cref="ShouldTreatAsPhysical"/> decide.
+    /// </summary>
+    internal static bool ShouldProcessKeystroke(uint vkCode, IntPtr dwExtraInfo, uint flags, IntPtr ourMarker, bool remoteHostPresent)
+    {
+        if (vkCode == VK_PACKET) return false;
+        return ShouldTreatAsPhysical(dwExtraInfo, flags, ourMarker, remoteHostPresent);
+    }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         // AG130-10 : avant tout filtrage. Un rappel prouve le hook vivant meme quand
@@ -263,7 +283,9 @@ public sealed class KeyboardHook : IDisposable
             // modificateurs desynchroniserait le remappage de la frappe physique
             // suivante. C5 : sauf sur un hote de prise en main a distance, ou ces
             // injections SONT les frappes de l'utilisateur (lecture d'un booleen).
-            if (!ShouldTreatAsPhysical(hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, _remoteHostPresent))
+            // Audit 24/09 B1 : jamais un VK_PACKET, hote distant ou non - son scanCode est
+            // un caractere, ni a remapper ni a faire entrer dans TrackModifiers.
+            if (!ShouldProcessKeystroke(hookStruct.vkCode, hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, _remoteHostPresent))
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();
