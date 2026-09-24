@@ -4,6 +4,14 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous. Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Correctifs de la recette du 23 et du 24 septembre (décisions d’Antoine)**
+
+- Accueil : « Lancer au démarrage de Windows » est proposée **cochée** à l’étape 3. Elle n’est appliquée qu’à la validation de cette étape, après activation. Un refus dans les paramètres Windows la laisse décochée. Décocher la case proposée compte comme un choix et éteint la relance.
+- Clavier affiché (Leçons, exercices, clavier virtuel) : en anglais, les touches se lisent « Enter », « Caps Lock », « Shift » et « Space ». Le clavier virtuel se redessine au changement de langue.
+- Zone de notification : l’icône est grise tant que l’app n’est pas activée, dès le démarrage. Elle était bleue alors que l’infobulle disait « Désactivé ».
+- Paramètres : la fenêtre garde la taille de l’onglet Général, quel que soit l’onglet affiché.
+- Prise en main à distance : sur un PC piloté à distance (Parsec, AnyDesk, TeamViewer, RustDesk, Bureau à distance Chrome), AZERTY Global remappe de nouveau les frappes reçues, une seule fois, et les exercices les reçoivent. Côté machine qui se connecte, l’app reste suspendue quand le logiciel distant est au premier plan. Depuis AG130-07 (21/09), ces frappes injectées étaient ignorées. Contrepartie : tant qu’un tel logiciel tourne, les frappes injectées par d’autres outils (clavier visuel, AutoHotkey) sont aussi remappées.
+
 **Menu de la zone de notification — cinq blocs puis douze lignes (décisions du 2026-09-02 et du 2026-09-19)**
 
 - Portage de la décision S2 : le menu est réordonné, et l’entrée unique à suffixe ✓ des couches maintenables devient un sous-menu « Couches ▸ » de trois entrées cochables — grec, cyrillique, scientifique.

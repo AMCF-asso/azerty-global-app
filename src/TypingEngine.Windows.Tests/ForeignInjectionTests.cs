@@ -77,4 +77,36 @@ public class ForeignInjectionTests
         Assert.False(KeyboardHook.IsForeignInjection(IntPtr.Zero, 0x80, Marqueur));
         Assert.True(KeyboardHook.IsForeignInjection(IntPtr.Zero, 0x10, Marqueur));
     }
+
+    // ── C5, AG130-07 revu le 2026-09-24 (décision d'Antoine, mesure sur un hôte Parsec) ──
+
+    [Fact]
+    public void SansHoteDistant_AG130_07_EstInchangé()
+    {
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: false));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_EXTENDED, Marqueur, remoteHostPresent: false));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent: false));
+        var sien = (IntPtr)unchecked((int)0xB0000001);
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(sien, LLKHF_INJECTED, Marqueur, remoteHostPresent: false));
+    }
+
+    [Fact]
+    public void AvecHoteDistant_LaFrappeInjectéeEtrangère_EstTraitéeCommePhysique()
+    {
+        // Ce que Parsec livre sur l'hôte : LLKHF_INJECTED, dwExtraInfo à 0.
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent: true));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteHostPresent: true));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: true));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NotreMarqueur_ResteExclu_AvecOuSansHoteDistant(bool remoteHostPresent)
+    {
+        // ⛔ Remapper nos propres émissions ferait une boucle : elles sortent toujours.
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, LLKHF_INJECTED, Marqueur, remoteHostPresent));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteHostPresent));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, flags: 0, Marqueur, remoteHostPresent));
+    }
 }

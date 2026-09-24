@@ -33,6 +33,36 @@ public static class GameRegistry
     };
 
     /// <summary>
+    /// Logiciels HÔTES de prise en main à distance : présents sur la machine pilotée, ils y
+    /// injectent les frappes reçues du poste client. Distincte de
+    /// <see cref="RemoteAccessProcesses"/>, qui sert côté CLIENT à suspendre l'application
+    /// quand le logiciel est au premier plan.
+    ///
+    /// Décision d'Antoine du 2026-09-24 (C5, revue d'AG130-07) : mesure faite sur un hôte
+    /// Parsec, 149 événements, tous LLKHF_INJECTED, dwExtraInfo à 0, scan codes physiques
+    /// réels. AG130-07 écartait donc toute frappe distante : plus aucun remappage, et les
+    /// exercices ne recevaient rien. Quand l'un de ces processus tourne dans la session,
+    /// une injection étrangère est traitée comme physique (KeyboardHook.ShouldTreatAsPhysical).
+    /// Le client étant suspendu quand le logiciel distant a le premier plan, la frappe
+    /// n'est remappée qu'une fois, sur l'hôte.
+    ///
+    /// ⛔ Pas de mstsc / msrdc : ce sont des clients RDP, et l'entrée RDP côté hôte n'arrive
+    /// pas injectée. Limite connue : parsecd.exe tourne aussi hors connexion et côté client ;
+    /// tant qu'il tourne, les autres injecteurs (AutoHotkey, clavier visuel) sont remappés
+    /// eux aussi — aucun drapeau Win32 ne les distingue de Parsec (extra 0 dans les deux cas).
+    /// </summary>
+    public static readonly string[] RemoteAccessHostProcesses =
+    {
+        "parsecd.exe",             // Parsec (processus utilisateur, session interactive)
+        "pservice.exe",            // Parsec (service, session 0)
+        "AnyDesk.exe",
+        "TeamViewer.exe",
+        "TeamViewer_Service.exe",
+        "rustdesk.exe",
+        "remoting_host.exe",       // Chrome Remote Desktop
+    };
+
+    /// <summary>
     /// Termes-clés (sous-chaîne, case-insensitive) qui identifient un process protégé
     /// par un anti-cheat kernel-level avec risque de ban pour injection de frappes.
     /// AZERTY Global se désactive complètement quand ces processes sont au foreground.
@@ -158,6 +188,52 @@ public static class GameRegistry
         if (string.IsNullOrEmpty(processName)) return false;
         return RemoteAccessProcesses.Any(candidate =>
             string.Equals(processName, candidate, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Décision pure : un hôte de prise en main à distance figure-t-il parmi ces noms de
+    /// processus ? Accepte les noms avec ou sans « .exe » (Process.ProcessName n'en a pas),
+    /// sans tenir compte de la casse.
+    /// </summary>
+    public static bool IsRemoteAccessHostPresent(IEnumerable<string?>? runningProcessNames)
+    {
+        if (runningProcessNames == null) return false;
+        foreach (var name in runningProcessNames)
+        {
+            if (string.IsNullOrEmpty(name)) continue;
+            string withExe = name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name : name + ".exe";
+            foreach (var host in RemoteAccessHostProcesses)
+                if (string.Equals(withExe, host, StringComparison.OrdinalIgnoreCase))
+                    return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Énumère les processus de la machine et applique <see cref="IsRemoteAccessHostPresent"/>.
+    /// Une seule énumération (Process.GetProcesses lit l'instantané système, sans ouvrir les
+    /// processus : le service Parsec de la session 0 est vu par son nom). À appeler hors du
+    /// rappel du hook ; rend false si l'énumération échoue.
+    /// </summary>
+    public static bool IsRemoteAccessHostRunning()
+    {
+        System.Diagnostics.Process[] processes;
+        try { processes = System.Diagnostics.Process.GetProcesses(); }
+        catch { return false; }
+        try
+        {
+            return IsRemoteAccessHostPresent(processes.Select(SafeName));
+        }
+        finally
+        {
+            foreach (var p in processes) p.Dispose();
+        }
+
+        static string? SafeName(System.Diagnostics.Process p)
+        {
+            try { return p.ProcessName; }
+            catch { return null; } // processus terminé entre l'instantané et la lecture
+        }
     }
 
     /// <summary>
