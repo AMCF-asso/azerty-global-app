@@ -265,6 +265,10 @@ sealed class SettingsWindow : IDisposable
     private readonly SettingsScrollState _scrollInput = new();
     private int _contentHeight;
     private int _viewportHeight;
+    // Barre réservée sur tous les onglets dès que l'un d'eux défile : affichée grisée
+    // quand l'onglet courant tient, pour que la largeur de la fenêtre ne bouge pas (C4).
+    private bool _reserveScrollBar;
+    private const uint SIF_DISABLENOSCROLL = 0x0008;
 
     private IntPtr _hFontTitle;
     private IntPtr _hFontVersion;
@@ -614,17 +618,23 @@ sealed class SettingsWindow : IDisposable
     /// Le modèle v2.0.0 (audit du 2026-08-28, § 17) pose la règle : aucune fenêtre ne
     /// dépasse la zone de travail, et une fenêtre mesure son contenu plutôt que de le
     /// supposer. BASE_WIN_H ne sert donc plus que d'amorce avant la première mesure.
+    ///
+    /// C4, décision d'Antoine du 2026-09-24 : la fenêtre changeait de taille à chaque
+    /// changement d'onglet, ce qui dérangeait. Elle prend désormais toujours la taille de
+    /// l'onglet « Général », ligne du message de validation comprise, pour que ce message
+    /// ne la fasse pas grandir non plus. Un onglet plus court laisse du vide en bas ; un
+    /// onglet plus haut défile. La mesure est refaite à chaque appel, donc à l'échelle
+    /// courante : un changement de DPI ou de langue la recalcule, toujours sur « Général ».
     /// </summary>
     private void FitWindowToContent()
     {
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
 
-        // Mesure sans défilement : la hauteur du contenu ne dépend pas de la position.
-        int savedScroll = _scrollY;
-        _scrollY = 0;
-        int contentHeight = GetLayout(S(BASE_WIN_W), S(BASE_WIN_H)).ContentHeight;
-        _scrollY = savedScroll;
-        _contentHeight = contentHeight;
+        // Mesures sans défilement : la hauteur du contenu ne dépend pas de la position.
+        int referenceHeight = MeasureContentHeight(SettingsTab.General, showValidationRow: true);
+        int applicationsHeight = MeasureContentHeight(SettingsTab.Applications, showValidationRow: false);
+        int languageHeight = MeasureContentHeight(SettingsTab.LanguageMaintenance, showValidationRow: false);
+        _contentHeight = MeasureContentHeight(_activeTab, !string.IsNullOrEmpty(_validationMessage));
 
         Win32.GetWindowRect(_hWnd, out var currentRect);
         int cx = (currentRect.left + currentRect.right) / 2;
@@ -637,32 +647,43 @@ sealed class SettingsWindow : IDisposable
 
         // Hauteur de client maximale : la zone de travail moins les bordures et le
         // titre, mesurés par AdjustWindowRectEx plutôt que devinés.
-        var frame = new Win32.RECT { left = 0, top = 0, right = S(BASE_WIN_W), bottom = contentHeight };
+        var frame = new Win32.RECT { left = 0, top = 0, right = S(BASE_WIN_W), bottom = referenceHeight };
         Win32.AdjustWindowRectEx(ref frame, dwStyle, false, 0);
-        int chromeH = (frame.bottom - frame.top) - contentHeight;
+        int chromeH = (frame.bottom - frame.top) - referenceHeight;
         int chromeW = (frame.right - frame.left) - S(BASE_WIN_W);
         int maxClientH = Math.Max(S(200), workH - chromeH);
 
-        int clientH = Math.Min(contentHeight, maxClientH);
-        bool needsScroll = contentHeight > clientH;
+        var (clientH, reserveScrollBar) = SettingsScrollState.FixedViewport(
+            referenceHeight, maxClientH, referenceHeight, applicationsHeight, languageHeight);
         _viewportHeight = clientH;
+        _reserveScrollBar = reserveScrollBar;
 
         // La barre de défilement mange de la largeur du client : l'ajouter à la
-        // fenêtre pour que le contenu garde sa largeur de mise en page.
-        int clientW = S(BASE_WIN_W) + (needsScroll ? Win32.GetSystemMetrics(Win32.SM_CXVSCROLL) : 0);
+        // fenêtre pour que le contenu garde sa largeur de mise en page. Réservée pour
+        // tous les onglets dès que l'un d'eux défile, sinon la largeur varierait.
+        int clientW = S(BASE_WIN_W) + (reserveScrollBar ? Win32.GetSystemMetrics(Win32.SM_CXVSCROLL) : 0);
         int windowW = Math.Min(clientW + chromeW, workW);
         int windowH = clientH + chromeH;
 
-        // Replacer dans la zone de travail : centrer puis ramener si un bord sort.
-        int x = cx - windowW / 2;
-        int y = cy - windowH / 2;
+        // Replacer dans la zone de travail : centrer puis ramener si un bord sort. À
+        // taille inchangée (changement d'onglet), garder la position : recentrer par
+        // division entière décalerait la fenêtre d'un pixel en coordonnées négatives.
+        bool sameSize = currentRect.right - currentRect.left == windowW
+            && currentRect.bottom - currentRect.top == windowH;
+        int x = sameSize ? currentRect.left : cx - windowW / 2;
+        int y = sameSize ? currentRect.top : cy - windowH / 2;
         x = Math.Max(monInfo.rcWork.left, Math.Min(x, monInfo.rcWork.right - windowW));
         y = Math.Max(monInfo.rcWork.top, Math.Min(y, monInfo.rcWork.bottom - windowH));
-        Win32.MoveWindow(_hWnd, x, y, windowW, windowH, true);
+        if (!sameSize || x != currentRect.left || y != currentRect.top)
+            Win32.MoveWindow(_hWnd, x, y, windowW, windowH, true);
 
         ClampScroll();
-        UpdateScrollBar(needsScroll);
+        UpdateScrollBar();
     }
+
+    /// <summary>Hauteur de contenu d'un onglet, sans défilement, à l'échelle courante.</summary>
+    private int MeasureContentHeight(SettingsTab tab, bool showValidationRow) =>
+        GetLayout(S(BASE_WIN_W), S(BASE_WIN_H), tab, showValidationRow, scrollY: 0).ContentHeight;
 
     private void ClampScroll()
     {
@@ -670,14 +691,18 @@ sealed class SettingsWindow : IDisposable
         _scrollY = Math.Max(0, Math.Min(_scrollY, maxScroll));
     }
 
-    private void UpdateScrollBar(bool visible)
+    private void UpdateScrollBar()
     {
+        // Onglet qui tient dans une fenêtre dont la barre est réservée : barre grisée
+        // (SIF_DISABLENOSCROLL) plutôt que masquée, la largeur du client ne bouge pas.
+        bool needed = _contentHeight > _viewportHeight;
+        bool visible = needed || _reserveScrollBar;
         Win32.ShowScrollBar(_hWnd, Win32.SB_VERT, visible);
         if (!visible) return;
         var si = new Win32.SCROLLINFO
         {
             cbSize = (uint)Marshal.SizeOf<Win32.SCROLLINFO>(),
-            fMask = Win32.SIF_RANGE | Win32.SIF_PAGE | Win32.SIF_POS,
+            fMask = Win32.SIF_RANGE | Win32.SIF_PAGE | Win32.SIF_POS | (needed ? 0u : SIF_DISABLENOSCROLL),
             nMin = 0,
             nMax = Math.Max(0, _contentHeight - 1),
             nPage = (uint)Math.Max(1, _viewportHeight),
@@ -703,7 +728,7 @@ sealed class SettingsWindow : IDisposable
         _scrollY = newScroll;
         ClampScroll();
         if (_scrollY == before) return;
-        UpdateScrollBar(_contentHeight > _viewportHeight);
+        UpdateScrollBar();
         RepositionControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
@@ -921,7 +946,9 @@ sealed class SettingsWindow : IDisposable
         _hWndCompatAdd, _hWndCompatRemove, _hWndResetVirtualKeyboardWindow, _hWndResetLessonsWindow, _hWndLinkReset
     };
 
-    /// <summary>Change d'onglet, remesure la fenêtre et la redessine.</summary>
+    /// <summary>Change d'onglet et le redessine. La taille de la fenêtre ne change pas (C4) :
+    /// FitWindowToContent ne fait que remesurer le contenu du nouvel onglet et armer ou
+    /// griser le défilement.</summary>
     private void SetActiveTab(SettingsTab tab)
     {
         if (_activeTab == tab) return;
@@ -934,7 +961,12 @@ sealed class SettingsWindow : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
-    private LayoutInfo GetLayout(int winW, int winH)
+    private LayoutInfo GetLayout(int winW, int winH) =>
+        GetLayout(winW, winH, _activeTab, !string.IsNullOrEmpty(_validationMessage), _scrollY);
+
+    /// <summary>Mise en page d'un onglet donné. Les paramètres explicites permettent de
+    /// mesurer un autre onglet que l'onglet affiché (taille fixe, C4).</summary>
+    private LayoutInfo GetLayout(int winW, int winH, SettingsTab tab, bool showValidationRow, int scrollY)
     {
         int margin = S(8);
         int contentWidth = winW - margin * 2;
@@ -984,9 +1016,9 @@ sealed class SettingsWindow : IDisposable
             // exact du geste 36 de la recette VM.
             var tabStripRect = Rect(margin, headerBottom + S(4), contentWidth, S(24));
 
-            bool tabGeneral = _activeTab == SettingsTab.General;
-            bool tabApps = _activeTab == SettingsTab.Applications;
-            bool tabLangMaint = _activeTab == SettingsTab.LanguageMaintenance;
+            bool tabGeneral = tab == SettingsTab.General;
+            bool tabApps = tab == SettingsTab.Applications;
+            bool tabLangMaint = tab == SettingsTab.LanguageMaintenance;
 
             // Curseur vertical. Chaque section visible l'avance ; les sections des
             // autres onglets sont repliées à hauteur nulle à sa position courante et
@@ -1008,7 +1040,7 @@ sealed class SettingsWindow : IDisposable
             int resetWidth = Math.Max(S(150), MeasureSingleLineWidth(hdc, _hFontButton, L.Settings_LinkResetDefaults) + S(24));
             var resetRect = Rect(labelX, resetY, resetWidth, tabGeneral ? Math.Max(S(28), linkHeight + S(10)) : 0);
 
-            bool showValidation = tabGeneral && !string.IsNullOrEmpty(_validationMessage);
+            bool showValidation = tabGeneral && showValidationRow;
             int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
             int currentValidationHeight = showValidation ? Math.Max(S(15), validationHeight) : 0;
             var validationRect = Rect(labelX, validationTop, innerWidth, currentValidationHeight);
@@ -1127,7 +1159,7 @@ sealed class SettingsWindow : IDisposable
                 ContentHeight = panelBottom + margin,
             };
 
-            ShiftLayout(ref layoutInfo, -_scrollY);
+            ShiftLayout(ref layoutInfo, -scrollY);
             return layoutInfo;
         }
         finally
