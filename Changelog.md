@@ -4,6 +4,21 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous. Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Correctifs de l’audit du 24 septembre (décisions d’Antoine, rapport `docs/audit-2026-09-24-v1.3.0-bugs/rapport.md`)**
+
+- Frappe : un caractère Unicode envoyé par un autre logiciel (VK_PACKET : Espanso, AutoHotkey `SendText`, gestionnaire de mots de passe, dictée, session RDP) n’est plus jamais remappé. Depuis `ade118f`, sur un PC où tourne un service de prise en main à distance, « (3) » sortait « ´.@ ». Témoin : `UnicodePacketTests`.
+- Accueil : fermer par la croix, Échap ou Alt+F4 à l’étape 3 n’applique plus la case « Lancer au démarrage de Windows » cochée par défaut ; seul le bouton final l’applique, ou une case que l’utilisateur a lui-même modifiée. Même règle pour « Ne plus afficher ». Témoin : `OnboardingCloseDecisionTests`.
+- Relancer AZERTY Global depuis le menu Démarrer quand il tourne déjà rouvre l’accueil s’il n’est pas activé, sinon affiche la bulle d’état. Une activation de notification reste silencieuse.
+- Sollicitation d’avis : le premier essai ne part plus jamais du démarrage ni de la fermeture de l’accueil, seulement après une vraie frappe suivie de 15 s de silence. Une installation qui migre avec des statistiques existantes attend en plus le lendemain du premier lancement de cette version. Témoins : `ReviewPromptFirstAttemptTests`.
+- Avant tout accord, l’app n’annonce plus de suspension de compatibilité (ni bulle, ni icône « suspendu », ni ligne dans error.log) ; le suivi continue, pour qu’une activation dans un jeu anti-triche reste suspendue.
+- Recherche ouverte depuis le menu de l’icône : la barre des tâches n’est plus prise pour cible ; sans application valide, le caractère est copié avec notification.
+- Leçons : à 150 et 175 % sur un écran 1080p, la fenêtre plafonnée à l’écran réduit aussi son contenu ; le clavier dessiné ne recouvre plus la ligne à taper ni la saisie (confirmé par le calcul, à vérifier à l’écran).
+- Exercices : un Tab accidentel suivi d’une espace ne ferme plus le tutoriel ; un caractère tapé sur un bouton d’en-tête revient à l’exercice, Entrée reste l’activation clavier.
+- Fenêtre Pause : « Quitter » pendant qu’elle est ouverte ferme bien l’application (le WM_QUIT est retransmis).
+- Textes : « Couches maintenables » devient « Couches verrouillables » (“Lockable layers”) ; l’erreur de démarrage renvoie vers contact@azerty.global et non vers la page de dons ; la recherche « insère » ; vouvoiement du Défi ; « anti-triche », « mots/min », « 12 s », « avant l’ouverture de session », « Verr. Maj. » harmonisé, boutons des Leçons en français.
+- Fiche Store : Nouveautés ramenées sous 1 500 caractères, notes de certification réécrites en anglais avec une procédure de test, description alignée FR/EN.
+- Reportés en 1.3.1 : `config.json` illisible qui bloque toute sauvegarde, Verr. Maj tenu, raccourci Ctrl+Maj+Verr. Maj exécuté dans le hook, consoles de VM absentes des hôtes distants, messages des onglets Applications et Langue, manifeste sans texte anglais.
+
 **Correctifs de la recette du 23 et du 24 septembre (décisions d’Antoine)**
 
 - Accueil : « Lancer au démarrage de Windows » est proposée **cochée** à l’étape 3. Elle n’est appliquée qu’à la validation de cette étape, après activation. Un refus dans les paramètres Windows la laisse décochée. Décocher la case proposée compte comme un choix et éteint la relance.
