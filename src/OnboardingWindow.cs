@@ -667,7 +667,8 @@ sealed class OnboardingWindow : IDisposable
         // Étape 3 : « Lancer au démarrage » cochée par défaut au premier accueil, sinon l'état
         // réel ; un refus dans Windows n'est jamais contourné (AutoStart.DefaultOnboardingCheck,
         // décision du 2026-09-23). Rien n'est appliqué ici : Close() ne persiste la case que si
-        // l'étape 3 a été vue et l'activation acceptée.
+        // l'étape 3 a été vue, l'activation acceptée, et la case validée par le bouton
+        // final ou changée par l'utilisateur (audit 24/09, B2).
         // « Ne plus afficher »
         // UNCHECKED par defaut (v0.9.7.1) -> l'opt-out doit etre explicite. Avant, la default-checked
         // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
@@ -709,31 +710,77 @@ sealed class OnboardingWindow : IDisposable
         _learningModule?.Close();
     }
 
-    public void Close()
+    /// <summary>
+    /// Faut-il persister une case de l'étape 3 à la fermeture de l'accueil ? Décision pure
+    /// (audit 24/09, B2). Rien tant que l'étape 3 n'a pas été vue ou que l'activation n'a
+    /// pas été acceptée (décision v0.9.7.1). Ensuite, seul le bouton final vaut validation :
+    /// la case « Lancer au démarrage » est cochée par défaut depuis la 1.3.0, et la croix,
+    /// Échap ou un WM_CLOSE l'appliquaient comme un accord. Sur ces gestes, une case n'est
+    /// persistée que si l'utilisateur l'a lui-même changée depuis son affichage.
+    /// </summary>
+    internal static bool ShouldApplyPreferenceOnClose(bool validated, bool step3Reached,
+        bool activationAccepted, bool checkedNow, bool shownChecked)
+    {
+        if (!step3Reached || !activationAccepted) return false;
+        return validated || checkedNow != shownChecked;
+    }
+
+    /// <summary>
+    /// Ramène au premier plan la fenêtre déjà affichée, sans la remettre à l'étape 1
+    /// comme le ferait <see cref="Show"/> (relance depuis Démarrer, audit 24/09).
+    /// </summary>
+    public void BringToFront()
+    {
+        if (!_visible || _hWnd == IntPtr.Zero) return;
+        Win32.ShowWindow(_hWnd, 9); // SW_RESTORE : réaffiche aussi une fenêtre réduite
+        Win32.SetForegroundWindow(_hWnd);
+    }
+
+    /// <param name="validated">Vrai seulement depuis le bouton final de l'étape 3 (ou la
+    /// flèche qui l'actionne), activation acceptée. Faux pour la croix, Échap, IDCANCEL et
+    /// tout WM_CLOSE, y compris celui qu'un updater MSIX envoie à la fenêtre masquée.</param>
+    public void Close(bool validated)
     {
         // Ne persister les preferences visibles QUE si l'utilisateur a vu l'etape 3.
         // Sinon, fermer le wizard a l'etape 1 ou 2 (croix, Esc, Quitter) ne touche ni
         // ShowOnboardingAtStartup ni l'autostart. Les checkboxes sont initialisees par
         // defaut dans Show(), mais ne deviennent un choix utilisateur qu'une fois visibles.
-        if (_step3Reached && _activationAccepted)
+        //
+        // Audit 24/09 (B2) : l'étape 3 vue ne suffit plus, voir ShouldApplyPreferenceOnClose.
+        // Le drapeau est consommé dès l'entrée : un WM_CLOSE ultérieur sur la fenêtre
+        // masquée (updater MSIX, cf. AutoStart.SetStartupTask), ou reçu pendant la boîte
+        // d'erreur ci-dessous, ne réapplique plus rien.
+        bool step3Reached = _step3Reached;
+        _step3Reached = false;
+        if (step3Reached && _activationAccepted)
         {
-            var checkState = Win32.SendMessageW(_hWndChkDontShow, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
-            ConfigManager.SetShowOnboardingAtStartup(checkState != (IntPtr)BST_CHECKED);
+            // « Ne plus afficher » est toujours affichée décochée (Show) : sur croix ou
+            // Échap, seule une case cochée par l'utilisateur est un choix. Avant, un
+            // simple Échap à l'étape 3 réécrivait « afficher au démarrage » et défaisait
+            // en silence un refus posé dans les Paramètres ou hérité de la v1.1.
+            bool dontShow = Win32.SendMessageW(_hWndChkDontShow, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, dontShow, shownChecked: false))
+                ConfigManager.SetShowOnboardingAtStartup(!dontShow);
 
             var autoStartState = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
             bool autoStart = autoStartState == (IntPtr)BST_CHECKED;
-            bool autoStartWasRegistered = AutoStart.IsRegistered;
-            bool autoStartSaved = AutoStart.Set(autoStart);
-            RefreshAutoStartCheckbox();
-            if (!autoStartSaved)
-                ShowAutoStartError();
-            // Ce bloc n'est atteint que si _step3Reached : la case a donc été vue, et la
-            // modifier est un choix, qui éteint la relance dans un sens comme dans
-            // l'autre (R2 de l'audit v1.2.0). Une case jamais vue reste hors de ce
-            // chemin, la décision v0.9.7.1 est intacte.
-            // Depuis la case cochée par défaut (v1.3.0), la décocher est aussi un choix.
-            else if (autoStart != autoStartWasRegistered || autoStart != _autoStartShownChecked)
-                AutoStartNudge.MarkPromptShown();
+            if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, autoStart, _autoStartShownChecked))
+            {
+                bool autoStartWasRegistered = AutoStart.IsRegistered;
+                bool autoStartSaved = AutoStart.Set(autoStart);
+                RefreshAutoStartCheckbox();
+                if (!autoStartSaved)
+                    ShowAutoStartError();
+                // Ce bloc n'est atteint que si _step3Reached : la case a donc été vue, et la
+                // modifier est un choix, qui éteint la relance dans un sens comme dans
+                // l'autre (R2 de l'audit v1.2.0). Une case jamais vue reste hors de ce
+                // chemin, la décision v0.9.7.1 est intacte.
+                // Depuis la case cochée par défaut (v1.3.0), la décocher est aussi un choix.
+                else if (autoStart != autoStartWasRegistered || autoStart != _autoStartShownChecked)
+                    AutoStartNudge.MarkPromptShown();
+            }
+            // Croix ou Échap sans toucher la case : rien n'est enregistré, la relance
+            // unique (AutoStartNudge) reste due, comme pour qui ferme avant l'étape 3.
         }
 
         Win32.ShowWindow(_hWnd, 0);
@@ -802,13 +849,13 @@ sealed class OnboardingWindow : IDisposable
                         break;
                     }
                     case DialogNavigation.IDCANCEL:
-                        Close();
+                        Close(validated: false);
                         break;
                     case IDC_BTN_NEXT:
                         // Etape 1 ou 2 : passer a la suivante. Etape 3 : fermer l'onboarding.
                         // (Le bouton « Essayer maintenant » est un controle distinct IDC_BTN_TRY.)
                         if (_currentStep < 2) { _currentStep++; if (_currentStep == 2) _step3Reached = true; UpdateStepVisibility(); }
-                        else if (RequestActivation()) Close();
+                        else if (RequestActivation()) Close(validated: true);
                         break;
                     case IDC_BTN_TRY:
                         // Etape 1 uniquement (visible seulement si !_learningModuleDone).
@@ -909,7 +956,7 @@ sealed class OnboardingWindow : IDisposable
                 int vk = wParam.ToInt32();
                 if (vk == 0x1B) // VK_ESCAPE
                 {
-                    Close();
+                    Close(validated: false);
                     return IntPtr.Zero;
                 }
                 // Navigation par flèches : ↓/→ = bouton principal, ↑/← = bouton Précédent.
@@ -927,7 +974,7 @@ sealed class OnboardingWindow : IDisposable
                         UpdateStepVisibility();
                     }
                     else if (_activationAccepted)
-                        Close();
+                        Close(validated: true); // flèche = bouton principal (« C'est parti ! »)
                     else
                         Win32.SetFocus(_hWndBtnNext);
                     return IntPtr.Zero;
@@ -945,7 +992,7 @@ sealed class OnboardingWindow : IDisposable
             }
 
             case Win32.WM_CLOSE:
-                Close();
+                Close(validated: false);
                 return IntPtr.Zero;
         }
         }

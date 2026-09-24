@@ -65,8 +65,10 @@ static class UsageStats
     // Sollicitation d'avis (v1.3.0) : le seuil de caracteres enrichis vient d'etre
     // franchi PENDANT cette session de processus. Non persiste, et c'est deliberé :
     // ce qui declenche la sollicitation est la transition, pas l'etat. Une installation
-    // qui demarre deja au-dessus du seuil est rattrapee par le chemin de demarrage de
-    // TrayApplication.MaybeShowReviewPrompt, qui teste le total et non la transition.
+    // qui demarre deja au-dessus du seuil n'a pas de transition : depuis l'audit 24/09,
+    // l'essai 1 ne part plus du demarrage, et TrayApplication arme ce drapeau au
+    // chargement (ArmEnrichedThresholdSignal) pour que la prochaine frappe suivie du
+    // silence decide.
     private static bool _enrichedThresholdCrossed;
     // Horloge monotone de la derniere frappe remappee. Environment.TickCount64 et non
     // DateTime : un changement d'heure ou un passage a l'heure d'ete ne doit pas
@@ -187,6 +189,15 @@ static class UsageStats
     internal static void ClearEnrichedThresholdSignal()
     {
         lock (_lock) { _enrichedThresholdCrossed = false; }
+    }
+
+    /// <summary>Arme le signal hors transition (audit 24/09) : installation deja au-dessus
+    /// du seuil au chargement, essai 1 encore du. La decision vit dans
+    /// <c>ReviewPromptGate.ShouldArmSignalAtLoad</c> ; ne partira qu'apres une frappe
+    /// remappee de cette session puis le silence.</summary>
+    internal static void ArmEnrichedThresholdSignal()
+    {
+        lock (_lock) { _enrichedThresholdCrossed = true; }
     }
 
     /// <summary>Ouverture de la recherche de caractères (compteur global, aucun contenu).</summary>
