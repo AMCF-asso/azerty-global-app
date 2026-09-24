@@ -9,10 +9,10 @@ internal static partial class L
     public static string Tray_StartupError => T(
         $"{Product} n’a pas pu démarrer correctement.\n\n" +
         "Le détail technique a été enregistré dans error.log. " +
-        $"Si le problème persiste, contactez le support : {ProductIdentity.Url("/soutien")}",
+        $"Si le problème persiste, écrivez à contact@{ProductIdentity.SiteDomain}.",
         $"{Product} couldn't start properly.\n\n" +
         "Technical details were recorded in error.log. " +
-        $"If the problem persists, contact support: {ProductIdentity.Url("/soutien")}");
+        $"If the problem persists, email contact@{ProductIdentity.SiteDomain}.");
 
     // ── Balloons d'état ───────────────────────────────────────────────
     // ── Titres des notifications (audit du 2026-08-23) ────────────────
@@ -37,13 +37,13 @@ internal static partial class L
     public static string Tray_ForceRefusedTitle =>
         T("Compatibilité forcée refusée", "Can't force compatibility");
     public static string Tray_ActiveBalloonBody => T(
-        $"Ctrl+Maj+Verr. Maj pour activer ou désactiver {Product}.",
+        $"Ctrl+Maj+Verr. Maj. pour activer ou désactiver {Product}.",
         $"Ctrl+Shift+Caps Lock turns {Product} on and off.");
     public static string Tray_PausedBalloonBody => T(
-        $"Ctrl+Maj+Verr. Maj ou le menu de l’icône pour reprendre {Product}.",
+        $"Ctrl+Maj+Verr. Maj. ou le menu de l’icône pour reprendre {Product}.",
         $"Ctrl+Shift+Caps Lock or the icon menu resumes {Product}.");
     public static string Tray_DisabledBalloonBody => T(
-        $"Ctrl+Maj+Verr. Maj pour réactiver {Product}.",
+        $"Ctrl+Maj+Verr. Maj. pour réactiver {Product}.",
         $"Ctrl+Shift+Caps Lock turns {Product} back on.");
     public static string Tray_ActiveAgain => T(
         $"L’application qui suspendait {Product} n’est plus au premier plan.",
@@ -51,14 +51,14 @@ internal static partial class L
 
     public static string Tray_GameCompatDisabledTitle => T("Compatibilité jeu désactivée", "Game compatibility disabled");
     public static string Tray_GameCompatDisabledBody(string list) => T(
-        $"Ces jeux sont protégés par un anti-cheat : {list}. {Product} se mettra en pause à leur ouverture.",
+        $"Ces jeux sont protégés par un système anti-triche : {list}. {Product} se mettra en pause à leur ouverture.",
         $"These games are anti-cheat protected: {list}. {Product} will pause when they open.");
 
     public static string Tray_ThisGameFallback => T("ce jeu", "this game");
     // Refus de bascule ET refus de compatibilite forcee : meme situation vue par
     // l'utilisateur, deux chemins de code. Le nom du process vit dans le titre.
     public static string Tray_AntiCheatRefusedBody => T(
-        $"L’anti-cheat du jeu peut y voir de la triche et bannir votre compte. {Product} reste désactivé.",
+        $"Le système anti-triche du jeu peut y voir une fraude et bannir votre compte. {Product} reste désactivé.",
         $"The game's anti-cheat could see it as cheating and ban your account. {Product} stays off.");
 
     public static string Tray_PausedForDuration => T(
@@ -73,7 +73,7 @@ internal static partial class L
         $"{Product} s’est suspendu : l’application au premier plan est inconnue.",
         $"{Product} suspended itself: the foreground app is unknown.");
     public static string Tray_DisabledForAntiCheat => T(
-        $"L’anti-cheat du jeu interdit l’injection de frappes. {Product} se désactive.",
+        $"Le système anti-triche du jeu interdit l’injection de frappes. {Product} se désactive.",
         $"The game's anti-cheat doesn't allow keystroke injection. {Product} turns itself off.");
     public static string Tray_DisabledForRemoteAccess => T(
         $"{Product} se suspend pour ne pas s’appliquer deux fois, ici et à distance.",
@@ -139,8 +139,8 @@ internal static partial class L
     public static string Tray_ToastBtnEnable => T("Activer", "Turn on");
 
     // ── Menu tray ────────────────────────────────────────────────────
-    public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr.Maj", "Turn off\tCtrl+Shift+Caps Lock");
-    public static string Tray_MenuEnable => T("Activer\tCtrl+Maj+Verr.Maj", "Turn on\tCtrl+Shift+Caps Lock");
+    public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr. Maj.", "Turn off\tCtrl+Shift+Caps Lock");
+    public static string Tray_MenuEnable => T("Activer\tCtrl+Maj+Verr. Maj.", "Turn on\tCtrl+Shift+Caps Lock");
     public static string Tray_MenuResumeNow => T("Reprendre maintenant", "Resume now");
     public static string Tray_MenuPauseEllipsis => T("Mettre en pause…", "Pause…");
     public static string Tray_MenuHideVirtualKeyboard(string key) => T($"Masquer le clavier virtuel\tCtrl+Maj+{key}", $"Hide virtual keyboard\tCtrl+Shift+{key}");
@@ -192,8 +192,8 @@ internal static partial class L
         "Lancement au démarrage activé",
         "Launch at startup enabled");
     public static string Tray_AutoStartEnabledBody => T(
-        $"{Product} démarrera avec Windows. Réversible depuis le menu ou les Paramètres.",
-        $"{Product} will start with Windows. You can undo this from the menu or Settings.");
+        $"{Product} démarrera avec Windows. Vous pouvez changer ce choix dans les Paramètres.",
+        $"{Product} will start with Windows. You can change this in Settings.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");

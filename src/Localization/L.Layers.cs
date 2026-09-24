@@ -3,14 +3,14 @@ namespace AZERTYGlobal;
 internal static partial class L
 {
     // ── Fenêtre des couches maintenables ─────────────────────────────
-    public static string Layers_WindowTitleSuffix => T("Couches maintenables", "Maintainable layers");
+    public static string Layers_WindowTitleSuffix => T("Couches verrouillables", "Lockable layers");
     public static string Layers_Title => T("Écrire plusieurs caractères dans un autre alphabet", "Type several characters in another alphabet");
     public static string Layers_Explainer => T(
         "Appui simple : la prochaine frappe.\r\n" +
         "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",
         "Single press: the next keystroke.\r\n" +
         "Double press: lock inside the active application.   Esc: unlock.");
-    public static string Layers_MasterCheckbox => T("Activer les couches maintenables", "Enable maintainable layers");
+    public static string Layers_MasterCheckbox => T("Activer les couches verrouillables", "Enable lockable layers");
     public static string Layers_AvailableLabel => T("Couches disponibles", "Available layers");
     public static string Layers_GreekCheckbox => T("Grec — Maj + *", "Greek — Shift + *");
     public static string Layers_CyrillicCheckbox => T("Cyrillique — AltGr + *", "Cyrillic — AltGr + *");
@@ -32,7 +32,7 @@ internal static partial class L
     public static string Layers_IndicatorLockedSuffix => T(" · verrou", " · lock");
 
     // ── Entrées du menu et infobulle ──────────────────────────────────
-    public static string Layers_MenuEntry => T("Couches maintenables", "Maintainable layers");
+    public static string Layers_MenuEntry => T("Couches verrouillables", "Lockable layers");
     public static string Layers_TooltipLayer(string label) => T($"Couche : {label}", $"Layer: {label}");
 
     // ── Notifications (gabarit : état au titre, action au corps) ─────

@@ -18,9 +18,9 @@ internal static partial class L
     public static string LessonsWin_ToggleInvisibleMarkers => T("Marqueurs invisibles", "Invisible markers");
     public static string LessonsWin_ToggleOn => T("Activé", "On");
     public static string LessonsWin_ToggleOff => T("Désactivé", "Off");
-    public static string LessonsWin_BtnResetFreeStats => T("Reset stats libre", "Reset free stats");
-    public static string LessonsWin_BtnResetProgress => T("Reset progression", "Reset progress");
-    public static string LessonsWin_BtnResetStats => T("Reset stats", "Reset stats");
+    public static string LessonsWin_BtnResetFreeStats => T("Effacer les stats libres", "Reset free stats");
+    public static string LessonsWin_BtnResetProgress => T("Réinitialiser la progression", "Reset progress");
+    public static string LessonsWin_BtnResetStats => T("Effacer les stats", "Reset stats");
 
     // ── Exercice en cours ────────────────────────────────────────────
     public static string LessonsWin_ExerciseLabel(int current, int total) => T($"Exercice {current}/{total}", $"Exercise {current}/{total}");
@@ -31,11 +31,14 @@ internal static partial class L
     public static string LessonsWin_MetricAccuracy => T("Précision", "Accuracy");
     public static string LessonsWin_MetricErrors => T("Erreurs", "Errors");
     public static string LessonsWin_MetricBest => T("Record", "Best");
+    /// <summary>Vitesse affichée au récapitulatif (« 42 mots/min » / "42 WPM"). Destinée à
+    /// LessonsWindow.FormatWpm, qui écrit encore « WPM » en dur dans les deux langues.</summary>
+    public static string LessonsWin_SpeedValue(int wpm) => T($"{wpm} mots/min", $"{wpm} WPM");
     public static string LessonsWin_DetailNoHardChar(int seconds) => T(
-        $"Temps : {seconds}s    Aucun caractère difficile sur cette tentative.",
+        $"Temps : {seconds} s    Aucun caractère difficile sur cette tentative.",
         $"Time: {seconds}s    No difficult character on this attempt.");
     public static string LessonsWin_DetailHardChars(int seconds, string chars) => T(
-        $"Temps : {seconds}s    À retravailler : {chars}",
+        $"Temps : {seconds} s    À retravailler : {chars}",
         $"Time: {seconds}s    To practice: {chars}");
 
     // ── Boutons icônes (tooltips) ──────────────────────────────────────
@@ -51,10 +54,10 @@ internal static partial class L
         "Tapez librement pour mesurer le rythme. Rien n’est enregistré après fermeture.",
         "Type freely to measure your pace. Nothing is recorded after closing.");
     public static string LessonsWin_FreeStatsEmpty => T(
-        "WPM : —    Caractères/min : —    Durée : 0s    Corrections : 0",
+        "Mots/min : —    Caractères/min : —    Durée : 0 s    Corrections : 0",
         "WPM: —    Characters/min: —    Duration: 0s    Corrections: 0");
     public static string LessonsWin_FreeStatsFilled(string wpm, int cpm, int seconds, int backspaces) => T(
-        $"WPM : {wpm}    Caractères/min : {cpm}    Durée : {seconds}s    Corrections : {backspaces}",
+        $"Mots/min : {wpm}    Caractères/min : {cpm}    Durée : {seconds} s    Corrections : {backspaces}",
         $"WPM: {wpm}    Characters/min: {cpm}    Duration: {seconds}s    Corrections: {backspaces}");
 
     // ── Réinitialisation de la progression ──────────────────────────────

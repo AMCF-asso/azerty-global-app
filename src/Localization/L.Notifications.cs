@@ -40,18 +40,18 @@ internal static partial class L
         $"An {Product} system layout has just been enabled on this computer.");
     public static string LayoutConflict_Question => T("Quel est votre besoin ?", "What do you need?");
     public static string LayoutConflict_Option1Heading => T(
-        $"▸ Taper avec {Product} AVANT le login",
-        $"▸ Type with {Product} BEFORE login");
+        $"▸ Taper avec {Product} avant l’ouverture de session",
+        $"▸ Type with {Product} before sign-in");
     public static string LayoutConflict_Option1Subline => T(
         "(mot de passe Windows, écran de verrouillage, UAC, BitLocker)",
         "(Windows password, lock screen, UAC, BitLocker)");
     public static string LayoutConflict_Option1Body => T(
-        "→ Gardez la disposition système et quittez cette application — elle fait double emploi et ne tourne pas avant le login de toute façon.",
-        "→ Keep the system layout and quit this application — it's redundant here and doesn't run before login anyway.");
+        "→ Gardez la disposition système et quittez cette application — elle ferait double emploi et ne fonctionne pas avant l’ouverture de session.",
+        "→ Keep the system layout and quit this application — it would be redundant, and it doesn't run before sign-in.");
     public static string LayoutConflict_Option2Heading => T(
         "▸ Profiter du clavier virtuel et de la recherche de caractère",
         "▸ Enjoy the virtual keyboard and character search");
     public static string LayoutConflict_Option2Body => T(
-        $"→ Utilisez plutôt cette application. Enlevez {Product} de la liste des dispositions chargées dans les options de langue (Paramètres Windows → Heure et langue → Langue → Options de la langue concernée). N’oubliez pas alors de cocher « Lancer au démarrage de Windows » dans cette application pour qu’elle soit toujours active après le login.",
-        $"→ Use this application instead. Remove {Product} from the list of loaded layouts in the language options (Windows Settings → Time & language → Language → Options for the relevant language). Then remember to check \"Launch at Windows startup\" in this application so it stays active after login.");
+        $"→ Utilisez plutôt cette application. Enlevez {Product} de la liste des dispositions chargées dans les options de langue (Paramètres Windows → Heure et langue → Langue et région → Options de la langue concernée). N’oubliez pas alors de cocher « Lancer au démarrage de Windows » dans cette application pour qu’elle soit toujours active après l’ouverture de session.",
+        $"→ Use this application instead. Remove {Product} from the list of loaded layouts in the language options (Windows Settings → Time & language → Language & region → Options for the relevant language). Then remember to check \"Launch at Windows startup\" in this application so it stays active after sign-in.");
 }

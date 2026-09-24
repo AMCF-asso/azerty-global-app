@@ -18,8 +18,8 @@ internal static partial class L
         $"You've been using {Product} since {dateText}.");
 
     public static string Stats_DaysLine(int days, int streak, int best) => T(
-        $"{days} jour(s) d’utilisation — série actuelle : {streak} jour(s), record : {best} jour(s).",
-        $"{days} day(s) of use — current streak: {streak} day(s), record: {best} day(s).");
+        $"{days} {Stats_ShareDayWord(days)} d’utilisation — série actuelle : {streak} {Stats_ShareDayWord(streak)}, record : {best} {Stats_ShareDayWord(best)}.",
+        $"{days} {Stats_ShareDayWord(days)} of use — current streak: {streak} {Stats_ShareDayWord(streak)}, record: {best} {Stats_ShareDayWord(best)}.");
 
     public static string Stats_ActiveTimeLine(string activeTime, string? avgTime) => T(
         avgTime != null
@@ -54,7 +54,7 @@ internal static partial class L
         $"Je viens tout juste de commencer à utiliser {Product}.",
         $"I've only just started using {Product}.");
 
-    public static string Stats_ShareDayWord(int count) => T(count > 1 ? "jours" : "jour", count > 1 ? "days" : "day");
+    public static string Stats_ShareDayWord(int count) => T(count > 1 ? "jours" : "jour", count == 1 ? "day" : "days");
 
     public static string Stats_ShareBase(string dateText, int days, string dayWord, string intensityText) => T(
         $"J’utilise {Product} depuis le {dateText} — {days} {dayWord} d’utilisation{intensityText}",
@@ -87,6 +87,6 @@ internal static partial class L
         total > 1 ? "special characters typed" : "special character typed");
 
     public static string Stats_ShareFull(string baseText, long total, string charWord, string detailText) => T(
-        $"{baseText}, {total} {charWord} directement grâce au remapping{detailText}.",
-        $"{baseText}, {total} {charWord} directly thanks to the remapping{detailText}.");
+        $"{baseText}, {total} {charWord} directement grâce au clavier amélioré{detailText}.",
+        $"{baseText}, {total} {charWord} directly thanks to the improved layout{detailText}.");
 }
