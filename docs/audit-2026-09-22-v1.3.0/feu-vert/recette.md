@@ -13,7 +13,7 @@ Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 | # | Geste | Attendu | Résultat |
 |---|---|---|---|
 | A1 | Journal d’installation | SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, shadow stack ON, CFG ON | ✅ auto : empreinte, paquet 1.3.0.0 x64, shadow stack ON, CFG ON |
-| A2 | Accueil : fermer par la croix, relancer ; refaire avec Échap | Clavier inchangé dans le Bloc-notes, aucun accord mémorisé | ✅ auto, partiel : fermé par la croix puis par Échap, app vivante, aucun accord mémorisé. **Reste** : clavier inchangé dans le Bloc-notes |
+| A2 | Accueil : fermer par la croix, relancer ; refaire avec Échap | Clavier inchangé dans le Bloc-notes, aucun accord mémorisé | ✅ auto, partiel : fermé par la croix puis par Échap, app vivante, aucun accord mémorisé. **Reste** : clavier inchangé dans le Bloc-notes. ✅ main (23/09, 18:37, Win+R faute de Bloc-notes dans le Sandbox 24H2) : Verr. Maj + é → `2`, après la croix puis après Échap. ⚠️ Icône bleue alors que l'infobulle dit « Off » : l'icône du démarrage est créée active (`TrayApplication.cs:236`) et seule l'infobulle est recalculée (`:290`). Mineur, candidat 1.3.1 |
 | A3 | Accueil au clavier seul : Tab/Maj+Tab, puis Entrée sur « Activer et essayer » | Leçon ouverte, remappage actif | ✅ auto, partiel : focus initial sur « Activer et essayer », Entrée → accord enregistré, leçon ouverte. **Reste** : Tab/Maj+Tab, remappage actif |
 | A4 | Bloc-notes : `é è à ç ù`, majuscules accentuées, AltGr, deux touches mortes | Caractères attendus, aucun modificateur coincé | |
 | A5 | Quitter par l’icône, relancer depuis Démarrer | Clavier système dès la sortie ; accord conservé, remappage revenu | ✅ auto, partiel : sortie par Quitter, relance, accord conservé. **Reste** : clavier système à la sortie, remappage revenu |
@@ -53,3 +53,10 @@ Lignes B6 à B13 : lot d’accessibilité 1.3.0 (`accessibilite-1.3.0.md`), à 
 - **Mise à jour depuis la 1.1.0 Store** : le Sandbox n’a pas de Store. Preuve antérieure : 1.1.0 Store → 1.2.0 signée localement acceptée le 2026-08-18, identité remplacée le 2026-09-19 (VM-02).
 - **Anti-cheat réel, veille/reprise, verrouillage** : non exerçables dans le Sandbox.
 - **Reports 1.3.1** déjà arbitrés : R7 (repli Alt+code, scan codes droits), reprise d’un `SendInput` refusé.
+
+## D. Relevé pendant la recette à la main du 2026-09-23 (soir)
+
+- **Pas de Bloc-notes dans le Sandbox** (Windows 24H2, Bloc-notes livré par le Store) : Win+R le remplace, la barre d’adresse d’Edge pour A6.
+- **1.3.1, décision d’Antoine du 23/09** : noms des touches du clavier affiché en anglais quand l’app est en anglais (« Verr. Maj. », « Entrée », « Maj ⇧ » restent en français). Le libellé sert aussi d’identifiant (`VirtualKeyboard.cs:175-203`, `KeyboardRenderer.cs`, `LearningModule.cs`, `LessonsWindow.cs:2445`) : séparer identifiant et texte affiché.
+- **1.3.1** : icône bleue alors que l’app est « Off » avant l’accord (voir A2).
+- **Observé, non reproduit** : pendant l’exercice 2/6, la touche `.` a mis en surbrillance la touche C, et d’autres touches d’autres cases, sans lien avec la lettre attendue. Au même moment, Verr. Maj s’est retrouvé désactivé en plein mot. Hypothèse non démontrée : resynchronisation de Verr. Maj par le Sandbox au changement de fenêtre.
