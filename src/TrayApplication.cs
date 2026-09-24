@@ -506,6 +506,14 @@ sealed class TrayApplication : IDisposable
     // d'une frappe interrompue, sans peser sur la boucle de messages.
     private const uint TIMER_FOREGROUND_WATCHDOG = 9006;
     private const uint FOREGROUND_WATCHDOG_INTERVAL_MS = 250;
+    // C5 (décision d'Antoine du 2026-09-24) : présence d'un hôte de prise en main à
+    // distance (Parsec, AnyDesk…). L'énumération des processus part sur le pool de
+    // threads : le rappel du hook tourne sur ce thread UI et ne doit jamais attendre
+    // (LowLevelHooksTimeout). Il ne lit que le booléen du hook. 5 s suffisent : une
+    // session distante s'ouvre après le lancement du logiciel, pas dans la même seconde.
+    private const uint TIMER_REMOTE_HOST_PROBE = 9060;
+    private const uint REMOTE_HOST_PROBE_INTERVAL_MS = 5_000;
+    private int _remoteHostProbeRunning;
     private const uint TIMER_SINGLECLICK = 9010;
     private const uint TIMER_LAYOUT_CHECK = 9020;
     private const uint TIMER_PAUSE = 9030;
@@ -620,6 +628,10 @@ sealed class TrayApplication : IDisposable
             Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero);
         // Chien de garde du snapshot foreground (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_FOREGROUND_WATCHDOG, FOREGROUND_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
+        // Sonde des hôtes de prise en main à distance (non tuée : périodique), plus une
+        // mesure immédiate pour qu'une session déjà ouverte soit servie dès le lancement (C5).
+        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REMOTE_HOST_PROBE, REMOTE_HOST_PROBE_INTERVAL_MS, IntPtr.Zero);
+        ProbeRemoteHost();
         // Chargement anticipé de usage-stats.json sur le thread UI : la première frappe
         // remappée ne doit déclencher aucune I/O dans le callback du hook.
         UsageStats.Preload();
@@ -930,6 +942,11 @@ sealed class TrayApplication : IDisposable
                         if (_foregroundMonitor?.IsSnapshotStale == true)
                             _foregroundMonitor.Recompute();
                     }
+                    else if (timerId == TIMER_REMOTE_HOST_PROBE)
+                    {
+                        // Timer récurrent : présence d'un hôte de prise en main à distance (C5).
+                        ProbeRemoteHost();
+                    }
                     else if (timerId == ForegroundMonitor.TIMER_FOREGROUND_DEBOUNCE)
                     {
                         Win32.KillTimer(_hWnd, (UIntPtr)ForegroundMonitor.TIMER_FOREGROUND_DEBOUNCE);
@@ -1205,6 +1222,36 @@ sealed class TrayApplication : IDisposable
         // post-mise à jour destinée aux utilisateurs existants n'a plus lieu d'être.
         try { ConfigManager.SetChallengeAnnounceDone(); } catch { }
         return onboarding;
+    }
+
+    /// <summary>
+    /// C5 : met à jour KeyboardHook.RemoteHostPresent depuis le pool de threads. Une seule
+    /// sonde à la fois ; une transition est journalisée (nom générique, aucune frappe).
+    /// </summary>
+    private void ProbeRemoteHost()
+    {
+        if (Interlocked.Exchange(ref _remoteHostProbeRunning, 1) == 1) return;
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try
+            {
+                bool present = GameRegistry.IsRemoteAccessHostRunning();
+                var hook = _hook;
+                if (hook != null && hook.RemoteHostPresent != present)
+                {
+                    hook.RemoteHostPresent = present;
+                    ConfigManager.LogCompatEvent("RemoteAccessHost", present ? "present" : "absent");
+                }
+            }
+            catch (Exception ex)
+            {
+                ConfigManager.Log("ProbeRemoteHost", ex);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _remoteHostProbeRunning, 0);
+            }
+        });
     }
 
     private bool ActivateWithConsent()

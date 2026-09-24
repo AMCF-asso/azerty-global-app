@@ -45,6 +45,9 @@ public sealed class KeyboardHook : IDisposable
     private readonly IWindowsTypingHost _host;
     private bool _enabled = true;
     private bool _passThroughAll;
+    // C5 : un hote de prise en main a distance tourne dans la session. Ecrit par une
+    // sonde hors du rappel (toutes les 5 s), lu seul par le rappel : volatile suffit.
+    private volatile bool _remoteHostPresent;
 
     // VK codes des raccourcis configurables (lus depuis config.json)
     private uint _vkSearch;
@@ -69,6 +72,17 @@ public sealed class KeyboardHook : IDisposable
     {
         get => _enabled;
         set => _enabled = value;
+    }
+
+    /// <summary>
+    /// C5 : vrai quand un logiciel hote de prise en main a distance tourne dans la session
+    /// (GameRegistry.RemoteAccessHostProcesses). Les injections etrangeres sont alors
+    /// traitees comme des frappes physiques. Mis a jour par l'hote, jamais dans le rappel.
+    /// </summary>
+    public bool RemoteHostPresent
+    {
+        get => _remoteHostPresent;
+        set => _remoteHostPresent = value;
     }
 
     public bool PassThroughAll
@@ -208,6 +222,22 @@ public sealed class KeyboardHook : IDisposable
     internal static bool IsForeignInjection(IntPtr dwExtraInfo, uint flags, IntPtr ourMarker)
         => (flags & LLKHF_INJECTED) != 0 && dwExtraInfo != ourMarker;
 
+    /// <summary>
+    /// AG130-07 revu le 2026-09-24 (C5, decision d'Antoine) : la frappe suit-elle le
+    /// chemin physique (modificateurs, raccourcis, RawKeyDown, ProcessKey) ?
+    ///
+    /// Mesure sur un hote Parsec : toutes les frappes distantes arrivent LLKHF_INJECTED,
+    /// dwExtraInfo a 0, avec les scan codes physiques du poste client. AG130-07 les
+    /// ecartait toutes : plus aucun remappage, exercices muets. Quand un hote distant
+    /// tourne, une injection etrangere est donc traitee comme physique ; sinon AG130-07
+    /// est inchange. Nos propres injections (marqueur) restent exclues dans tous les cas.
+    /// </summary>
+    internal static bool ShouldTreatAsPhysical(IntPtr dwExtraInfo, uint flags, IntPtr ourMarker, bool remoteHostPresent)
+    {
+        if (dwExtraInfo == ourMarker) return false;
+        return !IsForeignInjection(dwExtraInfo, flags, ourMarker) || remoteHostPresent;
+    }
+
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         // AG130-10 : avant tout filtrage. Un rappel prouve le hook vivant meme quand
@@ -231,8 +261,9 @@ public sealed class KeyboardHook : IDisposable
             // AG130-07 : ni celles d'un tiers. Sortie avant TrackModifiers : un Maj
             // injecte n'est pas un Maj physique, et le faire entrer dans l'etat des
             // modificateurs desynchroniserait le remappage de la frappe physique
-            // suivante.
-            if (IsForeignInjection(hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG))
+            // suivante. C5 : sauf sur un hote de prise en main a distance, ou ces
+            // injections SONT les frappes de l'utilisateur (lecture d'un booleen).
+            if (!ShouldTreatAsPhysical(hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, _remoteHostPresent))
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();

@@ -140,6 +140,55 @@ public class GameRegistryTests
         Assert.True(GameRegistry.IsRemoteAccessProcess(processName));
     }
 
+    // ── Hôtes de prise en main à distance (C5, décision d'Antoine du 2026-09-24) ──
+
+    [Theory]
+    [InlineData("parsecd.exe")]
+    [InlineData("pservice.exe")]
+    [InlineData("AnyDesk.exe")]
+    [InlineData("TeamViewer.exe")]
+    [InlineData("TeamViewer_Service.exe")]
+    [InlineData("rustdesk.exe")]
+    [InlineData("remoting_host.exe")]
+    public void RemoteAccessHostProcesses_ContientLesHotesDecides(string processName)
+    {
+        Assert.Contains(processName, GameRegistry.RemoteAccessHostProcesses);
+    }
+
+    [Fact]
+    public void RemoteAccessHostProcesses_ExclutLesClientsRdp()
+    {
+        // L'entrée RDP côté hôte n'est pas injectée : mstsc/msrdc sont des clients.
+        Assert.Equal(7, GameRegistry.RemoteAccessHostProcesses.Length);
+        foreach (var client in new[] { "mstsc.exe", "msrdc.exe", "msrdcw.exe" })
+            Assert.DoesNotContain(GameRegistry.RemoteAccessHostProcesses,
+                h => string.Equals(h, client, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("parsecd")]          // Process.ProcessName, sans extension
+    [InlineData("PSERVICE")]
+    [InlineData("remoting_host.exe")]
+    public void IsRemoteAccessHostPresent_ReconnaitLeNomAvecOuSansExtension(string name)
+    {
+        Assert.True(GameRegistry.IsRemoteAccessHostPresent(new[] { "explorer", name, "svchost" }));
+    }
+
+    [Fact]
+    public void IsRemoteAccessHostPresent_SansHote_RendFalse()
+    {
+        Assert.False(GameRegistry.IsRemoteAccessHostPresent(new[] { "explorer", "mstsc", "msrdc", "notepad", null, "" }));
+        Assert.False(GameRegistry.IsRemoteAccessHostPresent(null));
+        Assert.False(GameRegistry.IsRemoteAccessHostPresent(Array.Empty<string>()));
+    }
+
+    [Fact]
+    public void IsRemoteAccessHostRunning_NeLeveJamais()
+    {
+        // Énumération réelle : la valeur dépend du poste, seule l'absence d'exception compte.
+        _ = GameRegistry.IsRemoteAccessHostRunning();
+    }
+
     // ────────────────────────────────────────────────────────────────
     // HasGameFrameworkLoaded
     // ────────────────────────────────────────────────────────────────
