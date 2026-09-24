@@ -1,30 +1,28 @@
-# Recette du candidat Store 1.3.0 — à cocher dans Windows Sandbox
+# Recette du candidat Store 1.3.0 — à cocher sur le poste d’Antoine
 
-Candidat : bundle CI du run [35851382703](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35851382703), commit `585672f` sur `ci/verif` (sources de `34feb04` sur `release/1.2.0-notation-store`, lot d’accessibilité compris), SHA-256 `ba587ccee0597a96d63b99052b0fd26dfabfb3830a81a07cb463cb3e1bb0a5c4`, attesté. Le précédent, `768f13fb…`, ne contient pas le lot. **Une recompilation change l’empreinte et annule cette recette.**
+Candidat : bundle CI du run [35974855144](https://github.com/AMCF-asso/azerty-global-app/actions/runs/35974855144), commit `a7e6151` sur `release/1.2.0-notation-store` (correctifs `5b56087` et `ad05d72` compris), SHA-256 `bbf64c28109f0486fe12bcc0c9632b869d9dc5287f8bee38128d0a5803718f40`, attestation vérifiée le 2026-09-24 (`sourceRepositoryDigest` = `a7e6151`). Tests CI : 18/18, 235/235, 536/536. **Une recompilation change l’empreinte et annule cette recette.** Le candidat précédent `ba587cce` est remplacé ; ses résultats (A1, A2, recette automatique) restent dans l’historique git jusqu’à `a7e6151` et dans `evidence\recette-ba587ccee059\`.
 
-Lancement : `powershell -ExecutionPolicy Bypass -File sandbox\lancer-recette.ps1 -Bundle <bundle>`. Le journal `evidence\recette-ba587ccee059\installation.txt` doit finir par « Pret » avec **shadow stack ON ; CFG ON**. Le Sandbox applique réellement le shadow stack sur ce poste (mesuré le 22/09).
+Lancement, sur le poste (choix d’Antoine du 2026-09-23, le Sandbox reste possible via `sandbox\lancer-recette.ps1`) : quitter toute autre version d’AZERTY Global, puis `powershell -ExecutionPolicy Bypass -File installer-poste.ps1 -Bundle ..\..\..\msix\ci-35974855144\AZERTYGlobal-1.3.0.0.msixbundle`. Le journal `evidence\recette-bbf64c28109f\installation-poste.txt` doit finir par « Pret » avec **shadow stack ON ; CFG ON**. Ne pas toucher l’accueil avant A2.
 
-Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
-
-**Recette automatique du 2026-09-23** : `sandbox\lancer-recette.ps1 -Bundle <bundle> -Auto` joue `sandbox\recette-auto.ps1` sans humain (A1, A2, A3, A5, A10, A11, A12, B12), puis désinstalle l'app. Les gestes passent par des messages Windows et des touches simulées ; le hook ne remappe pas ces touches (AG130-07), donc rien de ce qui dépend de la frappe remappée n'est jugé. Preuves de référence : `evidence\recette-ba587ccee059\auto-essai2\` (essai 1 : script erroné ; essai 3 : variante abandonnée). Les lignes marquées « auto, partiel » gardent leur **Reste** à jouer à la main, avec A4, A6 à A9, A13, B1 à B11 et B13.
+Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 
 ## A. Bloquant — sans ces lignes, pas de soumission (≈ 45 min)
 
 | # | Geste | Attendu | Résultat |
 |---|---|---|---|
-| A1 | Journal d’installation | SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, shadow stack ON, CFG ON | ✅ auto : empreinte, paquet 1.3.0.0 x64, shadow stack ON, CFG ON |
-| A2 | Accueil : fermer par la croix, relancer ; refaire avec Échap | Clavier inchangé dans le Bloc-notes, aucun accord mémorisé | ✅ auto, partiel : fermé par la croix puis par Échap, app vivante, aucun accord mémorisé. **Reste** : clavier inchangé dans le Bloc-notes. ✅ main (23/09, 18:37, Win+R faute de Bloc-notes dans le Sandbox 24H2) : Verr. Maj + é → `2`, après la croix puis après Échap. ⚠️ Icône bleue alors que l'infobulle dit « Off » : l'icône du démarrage est créée active (`TrayApplication.cs:236`) et seule l'infobulle est recalculée (`:290`). Mineur, candidat 1.3.1 |
-| A3 | Accueil au clavier seul : Tab/Maj+Tab, puis Entrée sur « Activer et essayer » | Leçon ouverte, remappage actif | ✅ auto, partiel : focus initial sur « Activer et essayer », Entrée → accord enregistré, leçon ouverte. **Reste** : Tab/Maj+Tab, remappage actif |
+| A1 | Journal d’installation | SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, shadow stack ON, CFG ON | |
+| A2 | Accueil : fermer par la croix, relancer ; refaire avec Échap | Clavier inchangé dans le Bloc-notes, aucun accord mémorisé | |
+| A3 | Accueil au clavier seul : Tab/Maj+Tab, puis Entrée sur « Activer et essayer » | Leçon ouverte, remappage actif | |
 | A4 | Bloc-notes : `é è à ç ù`, majuscules accentuées, AltGr, deux touches mortes | Caractères attendus, aucun modificateur coincé | |
-| A5 | Quitter par l’icône, relancer depuis Démarrer | Clavier système dès la sortie ; accord conservé, remappage revenu | ✅ auto, partiel : sortie par Quitter, relance, accord conservé. **Reste** : clavier système à la sortie, remappage revenu |
+| A5 | Quitter par l’icône, relancer depuis Démarrer | Clavier système dès la sortie ; accord conservé, remappage revenu | |
 | A6 | Alt+Tab rapide Bloc-notes ↔ Edge en tapant | Chaque caractère dans la bonne fenêtre, pas de bulle en rafale | |
 | A7 | Edge : champ mot de passe puis champ normal | Fonctions avancées suspendues dans le premier, disponibles dans le second | |
 | A8 | Recherche de caractère, insertion | Bon symbole, dans la fenêtre d’origine | |
 | A9 | Paramètres : trois onglets au clavier, « Réinitialiser » par Entrée puis Espace, annuler | Focus visible, confirmation, rien ne change à l’annulation | |
-| A10 | Menu de l’icône : Couches ▸, Apprendre ▸, À propos et aide ▸, bascule FR/EN | Douze lignes, sous-menus ouverts, textes basculés | ✅ auto : 12 lignes en FR et en EN ; sous-menus Couches, Apprendre, Compatibilité des applications, À propos et aide ; aucun texte identique entre FR et EN. **Reste** : ouverture des sous-menus |
-| A11 | **Chemin d’erreur** : quitter l’app, remplacer le contenu de `config.json` par `[1]` (sous MSIX, chercher d’abord `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`, sinon `%LOCALAPPDATA%\AZERTY Global\`), relancer | L’app démarre (pas d’arrêt brutal) ; `error.log` porte `JsonException` ; le fichier n’est pas réécrit | ✅ auto : l'app démarre, `JsonException` dans `error.log` (0 → 1), `config.json` non réécrit |
-| A12 | Désinstaller (Paramètres > Applications) | Processus arrêté, clavier système utilisable | ✅ auto, partiel : processus arrêté, paquet retiré. **Reste** : clavier système utilisable |
-| A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-ba587ccee059\resume.txt` | |
+| A10 | Menu de l’icône : Couches ▸, Apprendre ▸, À propos et aide ▸, bascule FR/EN | Douze lignes, sous-menus ouverts, textes basculés | |
+| A11 | **Chemin d’erreur** : quitter l’app, remplacer le contenu de `config.json` par `[1]` (sous MSIX, chercher d’abord `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\`, sinon `%LOCALAPPDATA%\AZERTY Global\`), relancer | L’app démarre (pas d’arrêt brutal) ; `error.log` porte `JsonException` ; le fichier n’est pas réécrit | |
+| A12 | Désinstaller (Paramètres > Applications) | Processus arrêté, clavier système utilisable | |
+| A13 | Hors Sandbox : `wack.ps1 -Bundle <bundle>` en administrateur | `OVERALL_RESULT : PASS` dans `evidence\wack-bbf64c28109f\resume.txt` | |
 
 ## B. Recommandé si le temps le permet
 
@@ -41,10 +39,21 @@ Noter pour chaque ligne : ✅, ❌ + observation, ou ⏭️ + raison.
 | B9 | Leçons au clavier seul : Tab jusqu’aux boutons-icônes (indice, réglages…) | Chaque icône focalisée affiche la même infobulle qu’au survol ; un mouvement de souris rend l’infobulle de survol | |
 | B10 | Accueil étape 3, puis À propos : Tab sur chaque lien | Cadre pointillé autour du texte du lien focalisé, en plus de la couleur (À propos : la couleur suit aussi le focus, ce qu’elle ne faisait pas) ; aucune trace une fois le focus parti | |
 | B11 | Accueil : Tab jusqu’au drapeau, Entrée, puis Espace, puis un clic | Cadre de focus autour du drapeau ; la langue bascule à chaque geste et le focus reste sur le drapeau | |
-| B12 | Narrateur (Ctrl+Win+Entrée) ou Inspect : Pause (deux champs, quatre ▲▼), Paramètres (deux raccourcis, liste des apps suspendues), Recherche ; refaire en anglais | « Heures », « Minutes », « Augmenter les heures »…, « Clavier virtuel », « Recherche », « Apps suspendues », « Rechercher un caractère » ; noms anglais après la bascule | ⚠️ auto, partiel (noms MSAA, pas le Narrateur) : Pause et Paramètres complets en FR et en EN, Recherche complète en EN ; Recherche FR non ouverte par le script (non expliqué). Onglets des Paramètres sans nom. **Reste** : Narrateur, Recherche en FR |
+| B12 | Narrateur (Ctrl+Win+Entrée) ou Inspect : Pause (deux champs, quatre ▲▼), Paramètres (deux raccourcis, liste des apps suspendues), Recherche ; refaire en anglais | « Heures », « Minutes », « Augmenter les heures »…, « Clavier virtuel », « Recherche », « Apps suspendues », « Rechercher un caractère » ; noms anglais après la bascule | |
 | B13 | Affichage à 175 % puis 200 %, puis changement d’échelle fenêtre ouverte : Pause, couches maintenables, indicateur de couche (couche active dans le Bloc-notes), Leçons | Textes et contrôles à l’échelle, rien de coupé ni de superposé ; Leçons entièrement dans l’écran, commandes du bas atteignables | |
 
 Lignes B6 à B13 : lot d’accessibilité 1.3.0 (`accessibilite-1.3.0.md`), à jouer sur le candidat qui le contient, pas sur `768f13fb`. Les décisions pures du lot ont leurs témoins automatiques ; ces lignes couvrent ce qu’aucun test ne voit : le rendu à l’écran, les messages Windows et la lecture par le Narrateur.
+
+## E. Correctifs du candidat (à vérifier en plus)
+
+| # | Geste | Attendu | Résultat |
+|---|---|---|---|
+| E1 | Accueil, premier lancement : aller jusqu’à l’étape 3 après « Activer et essayer » | Case « Lancer au démarrage de Windows » **cochée** ; après validation, l’app figure activée dans Paramètres Windows > Applications > Démarrage | |
+| E2 | Rouvrir l’accueil (menu de l’icône), décocher la case, valider ; relancer l’app | Démarrage désactivé dans Windows ; pas de relance proposant de l’activer | |
+| E3 | Désactiver l’app dans Paramètres Windows > Démarrage, réinitialiser l’accueil, aller à l’étape 3 | Case **décochée** : le refus Windows est respecté | |
+| E4 | Avant l’accord (A2), puis après « Activer et essayer » | Icône grise avec infobulle « Désactivé/Off », puis bleue avec « Actif/Active » | |
+| E5 | App en anglais : clavier des Leçons, des exercices et clavier virtuel ; basculer FR ↔ EN fenêtre ouverte | « Enter », « Caps Lock », « Shift ⇧ », « Space » en anglais, textes français en français, redessin immédiat ; rien ne déborde | |
+| E6 | Paramètres : passer d’un onglet à l’autre, en FR puis en EN, à 100 % puis 175 % | La fenêtre ne change ni de taille ni de place ; aucun contrôle coupé ; Tab fait défiler si besoin | |
 
 ## C. Écarts assumés (décisions datées, ne pas rouvrir ici)
 
@@ -57,6 +66,6 @@ Lignes B6 à B13 : lot d’accessibilité 1.3.0 (`accessibilite-1.3.0.md`), à 
 ## D. Relevé pendant la recette à la main du 2026-09-23 (soir)
 
 - **Pas de Bloc-notes dans le Sandbox** (Windows 24H2, Bloc-notes livré par le Store) : Win+R le remplace, la barre d’adresse d’Edge pour A6.
-- **1.3.1, décision d’Antoine du 23/09** : noms des touches du clavier affiché en anglais quand l’app est en anglais (« Verr. Maj. », « Entrée », « Maj ⇧ » restent en français). Le libellé sert aussi d’identifiant (`VirtualKeyboard.cs:175-203`, `KeyboardRenderer.cs`, `LearningModule.cs`, `LessonsWindow.cs:2445`) : séparer identifiant et texte affiché.
-- **1.3.1** : icône bleue alors que l’app est « Off » avant l’accord (voir A2).
+- **Corrigé dans ce candidat** (décision d’Antoine du 23/09, `5b56087`) : noms des touches du clavier affiché en anglais quand l’app est en anglais. Voir E5.
+- **Corrigé dans ce candidat** (`5b56087`) : icône bleue alors que l’app est « Off » avant l’accord. Voir E4.
 - **Observé, non reproduit** : pendant l’exercice 2/6, la touche `.` a mis en surbrillance la touche C, et d’autres touches d’autres cases, sans lien avec la lettre attendue. Au même moment, Verr. Maj s’est retrouvé désactivé en plein mot. Hypothèse non démontrée : resynchronisation de Verr. Maj par le Sandbox au changement de fenêtre.
