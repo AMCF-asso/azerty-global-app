@@ -105,3 +105,28 @@ La phrase sur la tâche de démarrage n'est vraie qu'une fois B2 corrigé. La de
 5. B3 : Leçons à 150 % et 175 % sur 1080p : rien ne se superpose (ligne B13).
 6. Exercices : Tab puis espace, le tutoriel reste ouvert ; Tab puis Entrée sur Quitter le ferme.
 7. Avant accord : un jeu anti-triche au premier plan ne déclenche aucune bulle. Après activation, revenir dans le jeu : bulle de suspension et frappe non remappée.
+
+## Suite du 24/09 au soir : Défi masqué, avis hors séance (`59567f0`)
+
+Décisions d'Antoine : le Défi du jour est masqué en 1.3.0 et revient revu en 1.4.0, avec les Leçons. Aucune demande d'avis pendant une séance ni dans les 10 minutes qui suivent. La 1.3.0 sera publiée avant la V2 du site, sans promotion.
+
+**Candidat de recette :** CI [36024620213](https://github.com/AMCF-asso/azerty-global-app/actions/runs/36024620213), verte :
+
+- tests C# : 18 / 257 / 619 ;
+- BinSkim : aucun contrôle bloquant, x64 et ARM64 ;
+- bundle `AZERTYGlobal-1.3.0.0.msixbundle`, SHA-256 `D5FFD859F7B4C298B82C0ED3B851A15949C58D23B81FF356361B7277C6A59C04`.
+
+L'empreinte est lue dans le journal CI : la troisième ligne `Get-FileHash`, après les exe x64 et ARM64. À vérifier sur le fichier téléchargé.
+
+Le bundle `C88BEDA8…` (run 36010524255) est remplacé.
+
+Lignes de recette à ajouter :
+
+8. Menu de l'icône › Apprendre ▸ : seulement Leçons et Revoir l'accueil.
+9. Avec `trainingEnabled: true` dans `config.json` : pas de module Défi dans les Leçons, pas de section Défi dans Mes statistiques, aucun rappel après 17 h.
+10. Accueil, étape 3 : deux cases seulement, sans vide. Paramètres › Général : pas de case « Rappels d'entraînement », pas de trou.
+11. `challengeAnnounceDone` absent : pas de bulle « Nouveau : le Défi du jour » au démarrage.
+12. Avis, installation neuve : plus de 20 caractères enrichis tapés dans les Leçons, puis fermeture → aucune demande, ni après 15 s ni dans les 10 min. Taper ensuite dans le Bloc-notes puis attendre 15 s → la demande apparaît.
+13. Tutoriel de l'accueil fait puis fermé, puis accueil fermé : aucune demande.
+
+À revoir en 1.4.0 (relevé par l'agent) : la demande d'avis après un partage de Défi part à la fermeture des Leçons, donc la garde des 10 minutes la bloquera ; une fenêtre Leçons minimisée bloque la demande tant qu'elle reste ouverte ; à HEAD `ae2b903`, le module Défi exigeait encore `trainingEnabled`, contrairement à la décision du 16/08.
