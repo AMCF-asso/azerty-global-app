@@ -1235,7 +1235,7 @@ sealed class SettingsWindow : IDisposable
         if (!autoStartSaved)
             ShowAutoStartError();
         // Un choix fait à la main éteint la relance, dans un sens comme dans l'autre —
-        // même doctrine que ToggleAutoStart pour le menu tray (R2 de l'audit v1.2.0).
+        // même doctrine que l'accueil et que l'ancienne entrée du menu tray (R2 de l'audit v1.2.0).
         // Seul un changement réel compte : refermer Paramètres sans toucher la case
         // n'est pas un choix, et ne doit pas consommer la proposition.
         else if (autoStart != autoStartWasRegistered)

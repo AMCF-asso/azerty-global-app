@@ -31,8 +31,7 @@ internal static partial class L
     public static string Layers_LabelScientific => T("Scientifique", "Scientific");
     public static string Layers_IndicatorLockedSuffix => T(" · verrou", " · lock");
 
-    // ── Entrées du menu et infobulle ──────────────────────────────────
-    public static string Layers_MenuEntry => T("Couches verrouillables", "Lockable layers");
+    // ── Infobulle ─────────────────────────────────────────────────────
     public static string Layers_TooltipLayer(string label) => T($"Couche : {label}", $"Layer: {label}");
 
     // ── Notifications (gabarit : état au titre, action au corps) ─────

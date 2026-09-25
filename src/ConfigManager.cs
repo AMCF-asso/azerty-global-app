@@ -285,8 +285,8 @@ static class ConfigManager
     public static void SetMaintainableVisualFeedbackEnabled(bool enabled) =>
         SetBool("maintainableVisualFeedbackEnabled", enabled);
 
-    public static bool MaintainableTutorialCompleted => GetBool("maintainableTutorialCompleted");
-
+    // Plus aucune lecture en 1.3.0 (audit du 25/09, X-03). L'écriture reste, pour que
+    // config.json garde le même contenu qu'avant (compatibilité de config).
     public static void SetMaintainableTutorialCompleted(bool completed) =>
         SetBool("maintainableTutorialCompleted", completed);
 

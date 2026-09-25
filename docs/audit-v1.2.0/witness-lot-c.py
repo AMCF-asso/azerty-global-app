@@ -76,7 +76,7 @@ MUTATIONS = [
         "7. Les statistiques retombent sur le seul defaut de canal",
         "src/UsageStats.cs", LF,
         "        PolicyManager.UsageStatsEnabled(PolicyManager.Current.UsageStats, AppChannel.Current);",
-        "        !AppChannel.CurrentIsSober;",
+        "        !AppChannel.IsSober(AppChannel.Current);",
     ),
     (
         "8. Le lecteur registre ne rend jamais de REG_DWORD",
