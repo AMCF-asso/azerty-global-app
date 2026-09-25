@@ -112,8 +112,6 @@ internal static class KeyboardRenderer
         ["’"] = ("APOSTROPHE TYPOGRAPHIQUE", "TYPOGRAPHIC APOSTROPHE"),
     };
 
-    private static readonly Lazy<Dictionary<string, (string Fr, string En)>> CharacterNames = new(LoadCharacterNames);
-
     // Cache : BuildKeyLayout() alloue un tableau ; VisualKeys est lu 2× par WM_PAINT
     // de la fenêtre Leçons (audit 2026-07 n5). Le layout est immuable.
     private static readonly VirtualKeyboard.VisualKey[] _visualKeysCache = VirtualKeyboard.BuildKeyLayout();
@@ -282,8 +280,8 @@ internal static class KeyboardRenderer
             return;
         }
 
-        if (CharacterNames.Value.TryGetValue(value, out var name) ||
-            CharacterNames.Value.TryGetValue(display, out name))
+        if (CharacterIndex.Shared.Names.TryGetValue(value, out var name) ||
+            CharacterIndex.Shared.Names.TryGetValue(display, out name))
         {
             // Nom selon la langue de l'UI ; repli sur l'autre langue si absent
             // (même logique que VirtualKeyboard / LearningModule).
@@ -293,50 +291,6 @@ internal static class KeyboardRenderer
             if (chosen.Length > 0)
                 sb.Append(" — ").Append(chosen.ToUpperInvariant());
         }
-    }
-
-    private static Dictionary<string, (string Fr, string En)> LoadCharacterNames()
-    {
-        var names = new Dictionary<string, (string Fr, string En)>(StringComparer.Ordinal);
-        try
-        {
-            string json;
-            using (var stream = typeof(KeyboardRenderer).Assembly.GetManifestResourceStream("character-index.json"))
-            {
-                if (stream == null)
-                {
-                    var path = Path.Combine(AppContext.BaseDirectory, "character-index.json");
-                    if (!File.Exists(path))
-                        return names;
-                    json = File.ReadAllText(path);
-                }
-                else
-                {
-                    using var reader = new StreamReader(stream);
-                    json = reader.ReadToEnd();
-                }
-            }
-
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            var characters = doc.RootElement.GetProperty("characters");
-            foreach (var entry in characters.EnumerateObject())
-            {
-                if (entry.Name.StartsWith("dk:", StringComparison.Ordinal))
-                    continue;
-                string frName = entry.Value.TryGetProperty("unicodeNameFr", out var nameFr)
-                    ? nameFr.GetString() ?? "" : "";
-                string enName = entry.Value.TryGetProperty("unicodeName", out var nameEn)
-                    ? nameEn.GetString() ?? "" : "";
-                if (frName.Length > 0 || enName.Length > 0)
-                    names[entry.Name] = (frName, enName);
-            }
-        }
-        catch
-        {
-            // Tooltips remain usable without names if the resource is unavailable.
-        }
-
-        return names;
     }
 
     private static void DrawKey(

@@ -415,7 +415,7 @@ sealed class TrayApplication : IDisposable
 
         try
         {
-            _virtualKeyboard = new VirtualKeyboard(layout, _characterSearch?.GetCharacterNames());
+            _virtualKeyboard = new VirtualKeyboard(layout);
         }
         catch (Exception ex)
         {
@@ -2011,7 +2011,7 @@ sealed class TrayApplication : IDisposable
             OnStateChanged();
     }
 
-    private void OnSearchSelectionChanged(CharacterSearch.MethodData? method)
+    private void OnSearchSelectionChanged(MethodData? method)
     {
         _virtualKeyboard?.HighlightMethod(method);
     }

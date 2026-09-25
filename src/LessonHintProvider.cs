@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace AZERTYGlobal;
 
 internal sealed record LessonHintMethod(
@@ -25,7 +23,18 @@ internal sealed class LessonHintProvider
 
     public LessonHintProvider()
     {
-        LoadCharacterIndex();
+        // Vue sur l'index partagé (audit du 25/09, V-04) : la méthode recommandée, sinon la première.
+        foreach (var entry in CharacterIndex.Shared.Entries)
+        {
+            if (entry.Preferred is not { } m) continue;
+            _methods[entry.Character] = new LessonHintMethod(
+                m.Type,
+                NullIfEmpty(m.Key),
+                NullIfEmpty(m.Layer),
+                NullIfEmpty(m.DeadKey),
+                NullIfEmpty(m.DkActivationKey),
+                NullIfEmpty(m.DkActivationLayer));
+        }
     }
 
     public LessonHintMethod? GetRecommendedMethod(char ch)
@@ -69,78 +78,5 @@ internal sealed class LessonHintProvider
         return new LessonHintKeyStep(method.Key, method.Layer);
     }
 
-    private void LoadCharacterIndex()
-    {
-        try
-        {
-            using var stream = typeof(LessonHintProvider).Assembly.GetManifestResourceStream("character-index.json");
-            if (stream == null) return;
-            using var doc = JsonDocument.Parse(stream);
-            if (!doc.RootElement.TryGetProperty("characters", out var characters)) return;
-
-            var dkActivations = new Dictionary<string, (string Key, string Layer)>(StringComparer.Ordinal);
-            foreach (var entry in characters.EnumerateObject())
-            {
-                if (!entry.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
-                if (!entry.Value.TryGetProperty("methods", out var methods) || methods.ValueKind != JsonValueKind.Array)
-                    continue;
-
-                foreach (var method in methods.EnumerateArray())
-                {
-                    if (!string.Equals(ReadString(method, "type"), "deadkey_activation", StringComparison.Ordinal))
-                        continue;
-                    string? deadKey = ReadString(method, "deadkey");
-                    string? key = ReadString(method, "key");
-                    string? layer = ReadString(method, "layer");
-                    if (!string.IsNullOrEmpty(deadKey) && !string.IsNullOrEmpty(key))
-                        dkActivations[deadKey] = (key, layer ?? "Base");
-                    break;
-                }
-            }
-
-            foreach (var entry in characters.EnumerateObject())
-            {
-                if (entry.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
-                if (!entry.Value.TryGetProperty("methods", out var methods) || methods.ValueKind != JsonValueKind.Array)
-                    continue;
-
-                JsonElement? selected = null;
-                foreach (var method in methods.EnumerateArray())
-                {
-                    if (method.TryGetProperty("recommended", out var rec) && rec.ValueKind == JsonValueKind.True)
-                    {
-                        selected = method;
-                        break;
-                    }
-                    selected ??= method;
-                }
-
-                if (!selected.HasValue) continue;
-                var el = selected.Value;
-                string type = ReadString(el, "type") ?? "";
-                string? key = ReadString(el, "key");
-                string? layer = ReadString(el, "layer");
-                string? deadKey = ReadString(el, "deadkey");
-                dkActivations.TryGetValue(deadKey ?? "", out var activation);
-                _methods[entry.Name] = new LessonHintMethod(
-                    type,
-                    key,
-                    layer,
-                    deadKey,
-                    activation.Key,
-                    activation.Layer);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-        {
-            ConfigManager.Log("LessonHintProvider.LoadCharacterIndex", ex);
-        }
-    }
-
-    private static string? ReadString(JsonElement element, string property)
-    {
-        return element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
-    }
+    private static string? NullIfEmpty(string value) => value.Length > 0 ? value : null;
 }
