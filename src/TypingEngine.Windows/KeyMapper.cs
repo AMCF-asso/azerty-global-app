@@ -90,11 +90,8 @@ public sealed class KeyMapper
     /// <summary>Événement déclenché quand Ctrl+Shift+CapsLock est pressé (toggle on/off).</summary>
     public event Action? ToggleRequested;
 
-    public KeyMapper(Layout layout) : this(layout, new RealWin32Api()) { }
-
     /// <summary>
     /// Constructeur principal pour les tests (IWin32Api injecté).
-    /// La version <see cref="KeyMapper(Layout)"/> appelle celle-ci avec un RealWin32Api.
     /// </summary>
     public KeyMapper(Layout layout, IWin32Api api, IWindowsTypingHost? host = null)
     {
@@ -245,11 +242,11 @@ public sealed class KeyMapper
     /// ignore proprement). Évite les "stuck keys" côté apps qui suivent l'état
     /// up/down par scancode.
     /// </summary>
-    public void ClearPassedThroughKeys(bool emitReleases = true)
+    public void ClearPassedThroughKeys()
     {
         // Pendant la suspension, conserver les touches possédées en quarantaine.
         // La reprise sûre envoie leurs relâchements ; un échec ne détruit pas la trace.
-        if (!emitReleases || IsEmissionSuspended || !FlushInputRecovery()) return;
+        if (IsEmissionSuspended || !FlushInputRecovery()) return;
         var releases = new List<(uint Scan, ushort? Vk, Win32.INPUT Input)>();
         lock (_passedThroughKeysLock)
         {
@@ -518,11 +515,8 @@ public sealed class KeyMapper
 
     private bool ProcessKeyCore(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
     {
-        if (IsEmissionSuspended)
-        {
-            ClearPassedThroughKeys(emitReleases: false);
-            return false;
-        }
+        // Suspendu : conserver les relâchements jusqu'à la reprise sûre.
+        if (IsEmissionSuspended) return false;
         bool isExtended = (flags & LLKHF_EXTENDED) != 0;
 
         // Les modificateurs sont déjà trackés par TrackModifiers() en amont dans le hook.

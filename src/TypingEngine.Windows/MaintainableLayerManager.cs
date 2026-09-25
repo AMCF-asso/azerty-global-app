@@ -311,15 +311,6 @@ internal sealed class MaintainableLayerManager
         return true;
     }
 
-    public void ClearAll()
-    {
-        var before = CurrentState;
-        ResetTransient();
-        ClearTapHistory();
-        _lockedLayers.Clear();
-        NotifyIfChanged(before);
-    }
-
     public void ResetTransientState()
     {
         var before = CurrentState;

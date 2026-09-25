@@ -41,9 +41,6 @@ public sealed class ForegroundMonitor : IDisposable
     private readonly Func<long> _clock;
     private long _secureRetryAfter;
 
-    /// <summary>ID du timer Win32 utilisé pour le debounce. Doit être unique côté wndproc.</summary>
-    public const uint TIMER_FOREGROUND_DEBOUNCE = 0xF00100;
-
     // Anti-GC : le delegate doit rester rooté tant que le hook est installé
     private Win32.WinEventDelegate? _winEventDelegate;
     private IntPtr _winEventHook = IntPtr.Zero;
@@ -88,9 +85,6 @@ public sealed class ForegroundMonitor : IDisposable
 
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
     public string? CurrentProcessName => _snapshot?.ProcessName;
-
-    /// <summary>Chemin complet du process foreground.</summary>
-    public string? CurrentFullPath => _snapshot?.FullPath;
 
     /// <summary>HKL du layout natif du thread foreground.</summary>
     public IntPtr CurrentHkl => _snapshot?.Hkl ?? IntPtr.Zero;

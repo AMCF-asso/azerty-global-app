@@ -974,11 +974,6 @@ sealed class TrayApplication : IDisposable
                         // Timer récurrent : présence d'un hôte de prise en main à distance (C5).
                         ProbeRemoteHost();
                     }
-                    else if (timerId == ForegroundMonitor.TIMER_FOREGROUND_DEBOUNCE)
-                    {
-                        Win32.KillTimer(_hWnd, (UIntPtr)ForegroundMonitor.TIMER_FOREGROUND_DEBOUNCE);
-                        _foregroundMonitor?.Recompute();
-                    }
                     return IntPtr.Zero;
 
                 case Win32.WM_INPUTLANGCHANGE:
@@ -2823,8 +2818,7 @@ sealed class TrayApplication : IDisposable
                 if (_enabled && ShouldProcessHook)
                 {
                     _wasEnabledBeforeAutoDisable = true;
-                    // La cible est déjà active : conserver les relâchements jusqu'à la reprise sûre.
-                    _mapper.ClearPassedThroughKeys(emitReleases: false);
+                    // La cible est déjà active : aucun relâchement ici, ils attendent la reprise sûre.
                 }
                 _suspendedForCompatibility = true;
                 _appliedSuspendReason = reason;

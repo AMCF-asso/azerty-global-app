@@ -148,10 +148,6 @@ public static class Win32
     [DllImport("user32.dll")]
     public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
-    [DllImport("user32.dll")]
-    public static extern UIntPtr SetTimer(IntPtr hWnd, UIntPtr nIDEvent, uint uElapse,
-        IntPtr lpTimerFunc);
-
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
     {
