@@ -11,12 +11,9 @@ sealed class SettingsWindow : IDisposable
     private const uint BM_SETCHECK = 0x00F1;
     private const uint BM_CLICK = 0x00F5;
     private const uint BST_CHECKED = 0x0001;
-    private const uint SS_NOTIFY = 0x0100;
     private const uint ES_AUTOHSCROLL = 0x0080;
     private const uint ES_CENTER = 0x0001;
     private const uint ES_UPPERCASE = 0x0008;
-    private const uint EN_CHANGE = 0x0300;
-    private const uint EM_SETLIMITTEXT = 0x00C5;
     private const uint EM_SETREADONLY = 0x00CF;
 
     private const int VK_TAB = 0x09;
@@ -68,9 +65,7 @@ sealed class SettingsWindow : IDisposable
     private const uint CLR_VERSION = 0x00888888;
     private const uint CLR_PANEL_BG = 0x00EEEEEE;
     private const uint CLR_PANEL_BORDER = 0x00D1D1D1;
-    private const uint CLR_PANEL_ACCENT = 0x00D47800;
     private const uint CLR_LINK = 0x00D47800;
-    private const uint CLR_LINK_HOVER = 0x000078D4;
     private const uint CLR_INLINE_HIGHLIGHT = 0x000078D4;
     private const uint CLR_VALID = 0x00228B22;
     private const uint CLR_INVALID = 0x000000CC;
@@ -78,7 +73,6 @@ sealed class SettingsWindow : IDisposable
     private const uint CLR_KEY_BORDER = 0x00CBCBCB;
     private const uint CLR_KEY_BORDER_INVALID = 0x00A8A8FF;
     private const uint CLR_SEPARATOR = 0x00D7D7D7;
-    private const uint CLR_SUBTITLE = 0x003A342E;
 
     private struct LayoutInfo
     {
@@ -232,9 +226,7 @@ sealed class SettingsWindow : IDisposable
     private readonly List<string> _compatProcesses = new();
 
     private readonly Win32.WNDPROC _wndProcDelegate;
-    private readonly Win32.SUBCLASSPROC _linkSubclassProc;
     private readonly Win32.SUBCLASSPROC _shortcutSubclassProc;
-    private IntPtr _hoveredLink;
     private IntPtr _focusedShortcut;
 
     private readonly IntPtr _hBgBrush;
@@ -272,12 +264,10 @@ sealed class SettingsWindow : IDisposable
 
     private IntPtr _hFontTitle;
     private IntPtr _hFontVersion;
-    private IntPtr _hFontSubtitle;
     private IntPtr _hFontPanelTitle;
     private IntPtr _hFontText;
     private IntPtr _hFontBold;
     private IntPtr _hFontEdit;
-    private IntPtr _hFontLink;
     private IntPtr _hFontLinkStrong;
     private IntPtr _hFontSmall;
     private IntPtr _hFontButton;
@@ -295,7 +285,6 @@ sealed class SettingsWindow : IDisposable
     public SettingsWindow()
     {
         _wndProcDelegate = WndProc;
-        _linkSubclassProc = LinkSubclassProc;
         _shortcutSubclassProc = ShortcutSubclassProc;
         _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
         _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
@@ -345,12 +334,10 @@ sealed class SettingsWindow : IDisposable
     {
         _hFontTitle = Win32.CreateFontW(-S(18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontVersion = Win32.CreateFontW(-S(9), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSubtitle = Win32.CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontPanelTitle = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontText = Win32.CreateFontW(-S(11), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontBold = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontEdit = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLink = Win32.CreateFontW(-S(11), 0, 0, 0, 400, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontLinkStrong = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontSmall = Win32.CreateFontW(-S(9), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontButton = Win32.CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
@@ -360,12 +347,10 @@ sealed class SettingsWindow : IDisposable
     {
         Win32.DeleteObject(_hFontTitle);
         Win32.DeleteObject(_hFontVersion);
-        Win32.DeleteObject(_hFontSubtitle);
         Win32.DeleteObject(_hFontPanelTitle);
         Win32.DeleteObject(_hFontText);
         Win32.DeleteObject(_hFontBold);
         Win32.DeleteObject(_hFontEdit);
-        Win32.DeleteObject(_hFontLink);
         Win32.DeleteObject(_hFontLinkStrong);
         Win32.DeleteObject(_hFontSmall);
         Win32.DeleteObject(_hFontButton);
@@ -497,7 +482,6 @@ sealed class SettingsWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_RESET, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkReset, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
         _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Settings_AutoStart,
             Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
@@ -1443,13 +1427,6 @@ sealed class SettingsWindow : IDisposable
             {
                 IntPtr hdcStatic = wParam;
                 IntPtr hCtrl = lParam;
-                if (hCtrl == _hWndLinkReset)
-                {
-                    Win32.SetBkMode(hdcStatic, 1);
-                    Win32.SetTextColor(hdcStatic, _hoveredLink == hCtrl ? CLR_LINK_HOVER : CLR_LINK);
-                    return _hPanelBrush;
-                }
-
                 if (hCtrl == _hWndValidation)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
@@ -1970,36 +1947,6 @@ sealed class SettingsWindow : IDisposable
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
-    private IntPtr LinkSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
-    {
-        switch (msg)
-        {
-            case Win32.WM_MOUSEMOVE:
-                if (_hoveredLink != hWnd)
-                {
-                    _hoveredLink = hWnd;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                    var tme = new Win32.TRACKMOUSEEVENT
-                    {
-                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
-                        dwFlags = Win32.TME_LEAVE,
-                        hwndTrack = hWnd
-                    };
-                    Win32.TrackMouseEvent(ref tme);
-                }
-                break;
-            case Win32.WM_MOUSELEAVE:
-                if (_hoveredLink == hWnd)
-                {
-                    _hoveredLink = IntPtr.Zero;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                }
-                break;
-        }
-
-        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-    }
-
     private void OnPaint(IntPtr hWnd)
     {
         var hdcPaint = Win32.BeginPaint(hWnd, out var ps);
@@ -2248,10 +2195,6 @@ sealed class SettingsWindow : IDisposable
     }
 
     // Méthodes GDI factorisées dans GdiHelpers.cs — wrappers d'instance pour le DPI scaling
-    private int MeasureTextHeight(IntPtr hdc, IntPtr hFont, string text, int width,
-        uint format = Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX)
-        => GdiHelpers.MeasureTextHeight(hdc, hFont, text, width, format);
-
     private int MeasureSingleLineWidth(IntPtr hdc, IntPtr hFont, string text)
         => GdiHelpers.MeasureSingleLineWidth(hdc, hFont, text);
 
@@ -2269,19 +2212,6 @@ sealed class SettingsWindow : IDisposable
         };
     }
 
-    private (string Text, uint Color, IntPtr Font)[] GetShortcutRuns(params string[] keys)
-    {
-        var runs = new List<(string Text, uint Color, IntPtr Font)>();
-        for (int i = 0; i < keys.Length; i++)
-        {
-            if (i > 0)
-                runs.Add((" + ", CLR_TEXT, _hFontText));
-            runs.Add((keys[i], CLR_INLINE_HIGHLIGHT, _hFontBold));
-        }
-
-        return runs.ToArray();
-    }
-
     public void Dispose()
     {
         if (_onAppLanguageChanged != null)
@@ -2290,8 +2220,6 @@ sealed class SettingsWindow : IDisposable
             Win32.RemoveWindowSubclass(_hWndEditKeyboard, _shortcutSubclassProc, (UIntPtr)3);
         if (_hWndEditSearch != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndEditSearch, _shortcutSubclassProc, (UIntPtr)4);
-        if (_hWndLinkReset != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkReset, _linkSubclassProc, (UIntPtr)2);
         if (_hWnd != IntPtr.Zero)
         {
             // AG130-40 : desinscrire AVANT de detruire — Windows recycle les HWND.

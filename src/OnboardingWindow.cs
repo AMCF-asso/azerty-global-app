@@ -18,7 +18,6 @@ sealed class OnboardingWindow : IDisposable
     private const uint BM_SETCHECK = 0x00F1;
     private const uint BST_CHECKED = 0x0001;
     private const uint SS_NOTIFY = 0x0100;
-    private const uint SS_CENTER = 0x0001;
 
     // ── Control IDs ──────────────────────────────────────────────────
     private const int IDC_CHK_DONT_SHOW = 2001;
@@ -26,7 +25,6 @@ sealed class OnboardingWindow : IDisposable
     private const int IDC_BTN_PREV = 2003;
     private const int IDC_LINK_GUIDE = 2004;
     private const int IDC_CHK_AUTOSTART = 2006;
-    private const int IDC_LINK_FEEDBACK_BANNER = 2007;
     private const int IDC_LINK_FEEDBACK = 2008;
     private const int IDC_LINK_DISCORD = 2010;
     private const int IDC_BTN_TRY = 2011;       // « Essayer maintenant » — etape 1 uniquement
@@ -45,12 +43,9 @@ sealed class OnboardingWindow : IDisposable
     private const float ONBOARDING_UI_SCALE = 0.75f;
     private const int BASE_MARGIN = 28;
     private const int BASE_BOTTOM_MARGIN = 52;
-    private const int BASE_LINK_H = 24;
-    private const int BASE_LINK_SPACING = 30;
     private const int BASE_BTN_H = 36;
     private const int BASE_BTN_W_NEXT_MIN = 140;
     private const int BASE_BTN_W_PREV = 120;
-    private const int BASE_LINK_BANNER_W = 160;
     private const int BASE_BTN_TEXT_PAD = 28;
     private const int STEP_CARD_MIN_H = 78;
     private const int FEATURE_CARD_MIN_H = 73;
@@ -58,34 +53,18 @@ sealed class OnboardingWindow : IDisposable
     // ── Colors (COLORREF = 0x00BBGGRR) ───────────────────────────────
     private const uint CLR_BG = 0x00DDDDDD;
     private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_FEATURE_TITLE = 0x00D47800;
     private const uint CLR_TEXT = 0x00333333;
     private const uint CLR_LINK = 0x00D47800;
     private const uint CLR_LINK_HOVER = 0x00FF9830;
-    private const uint CLR_BANNER_BG = 0x00E8E8E8;
-    private const uint CLR_BANNER_BORDER = 0x000078D4;
-    private const uint CLR_BANNER_TEXT = 0x00333333;
-    private const uint CLR_BANNER_TITLE = 0x000078D4;
     private const uint CLR_STEP_TITLE = 0x00D47800;
-    private const uint CLR_HIGHLIGHT = 0x000078D4;
     private const uint CLR_PROGRESS_ACTIVE = 0x00D47800;
     private const uint CLR_PROGRESS_INACTIVE = 0x00C8C8C8;
-    private const uint CLR_SECTION = 0x00D47800;
     private const uint CLR_PANEL_BG = 0x00EEEEEE;
     private const uint CLR_PANEL_BORDER = 0x00D1D1D1;
-    private const uint CLR_NOTE_BG = 0x00D8F4FF;
-    private const uint CLR_NOTE_BORDER = 0x007BC2EB;
-    private const uint CLR_NOTE_ACCENT = 0x002A98E2;
     private const uint CLR_BADGE_BG = 0x00D47800;
     private const uint CLR_BADGE_TEXT = 0x00FFFFFF;
-    private const uint CLR_PILL_BG = 0x00FBECD8;
-    private const uint CLR_PILL_TEXT = 0x00201C18;
-    private const uint CLR_WARNING_TEXT = 0x00174D6E;
     private const uint CLR_INLINE_HIGHLIGHT = 0x000078D4;
-    private const uint CLR_SEPARATOR = 0x00D0D0D0;
     private const uint CLR_REASSURE = 0x00666666;
-    private const uint ARGB_STEP_CIRCLE = 0xFF0078D4;
-    private const uint ARGB_WHITE = 0xFFFFFFFF;
 
     // ── Colors ARGB pour GDI+ (0xAARRGGBB) ──────────────────────────
 
@@ -152,8 +131,6 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _hWndBtnPrev;
     private IntPtr _hWndBtnTry; // visible uniquement etape 1 + !_learningModuleDone
 
-    // Contrôles — Étape 1
-    private IntPtr _hWndLinkFeedbackBanner;
     // Drapeau de bascule de langue (langue cible), dessiné en GDI+ dans le header —
     // pas un contrôle enfant. Le rect (coordonnées client) sert au hit-test souris.
     private Win32.RECT _flagRect;
@@ -184,13 +161,11 @@ sealed class OnboardingWindow : IDisposable
 
     // GDI resources
     private readonly IntPtr _hBgBrush;
-    private readonly IntPtr _hBannerBgBrush;
     private readonly IntPtr _hPanelBrush;
 
     // GDI+ resources
     private IntPtr _gdipToken;
     private IntPtr _gdipLogo;
-    private IntPtr _gdipDiscord;
     private IntPtr _gdipFlagEn;
     private IntPtr _gdipFlagFr;
     private IntPtr _hIcon;
@@ -205,16 +180,12 @@ sealed class OnboardingWindow : IDisposable
     private IntPtr _hFontTitle;
     private IntPtr _hFontSubtitle;
     private IntPtr _hFontText;
-    private IntPtr _hFontFeatureDesc;
     private IntPtr _hFontBold;
-    private IntPtr _hFontLink;
     private IntPtr _hFontSmall;
     private IntPtr _hFontReassure; // mention vie privée étape 1 — plus petite que _hFontSmall pour tenir sur une ligne en 175% DPI
     private IntPtr _hFontVersion; // numéro de version sous le drapeau de langue (header)
     private IntPtr _hFontButton;
-    private IntPtr _hFontBannerBold;
     private IntPtr _hFontStepSummary;
-    private IntPtr _hFontSection;
     private IntPtr _hFontPageTitle;
     private IntPtr _hFontLinkStrong;
 
@@ -226,7 +197,6 @@ sealed class OnboardingWindow : IDisposable
         _linkSubclassProc = LinkSubclassProc;
         _buttonArrowSubclassProc = ButtonArrowSubclassProc;
         _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
-        _hBannerBgBrush = Win32.CreateSolidBrush(CLR_BANNER_BG);
         _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
 
         // DPI initial (moniteur principal — sera corrigé par GetDpiForWindow après création)
@@ -240,7 +210,6 @@ sealed class OnboardingWindow : IDisposable
         Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
 
         _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), ProductIdentity.LogoResourceName);
-        _gdipDiscord = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "discord-icon.png");
         _gdipFlagEn = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-en.png");
         _gdipFlagFr = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-fr.png");
         CreateFonts();
@@ -275,18 +244,14 @@ sealed class OnboardingWindow : IDisposable
         _hFontTitle = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontSubtitle = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontText = Win32.CreateFontW(-S(17), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontFeatureDesc = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontBold = Win32.CreateFontW(-S(17), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLink = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontSmall = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontVersion = Win32.CreateFontW(-S(21), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         // Scaling proportionnel calibre sur 17 a 175% (taille validee visuellement).
         // 17 / 1.75 = 9.71 logique → 10 a 100%, 12 a 125%, 15 a 150%, 17 a 175%, 19 a 200%.
         _hFontReassure = Win32.CreateFontW(-(int)Math.Round(17.0 * _dpiScale / 1.75), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontButton = Win32.CreateFontW(-S(17), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBannerBold = Win32.CreateFontW(-S(21), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontStepSummary = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSection = Win32.CreateFontW(-S(15), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontPageTitle = Win32.CreateFontW(-S(26), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontLinkStrong = Win32.CreateFontW(-S(16), 0, 0, 0, 700, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
     }
@@ -296,16 +261,12 @@ sealed class OnboardingWindow : IDisposable
         Win32.DeleteObject(_hFontTitle);
         Win32.DeleteObject(_hFontSubtitle);
         Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontFeatureDesc);
         Win32.DeleteObject(_hFontBold);
-        Win32.DeleteObject(_hFontLink);
         Win32.DeleteObject(_hFontSmall);
         Win32.DeleteObject(_hFontVersion);
         Win32.DeleteObject(_hFontReassure);
         Win32.DeleteObject(_hFontButton);
-        Win32.DeleteObject(_hFontBannerBold);
         Win32.DeleteObject(_hFontStepSummary);
-        Win32.DeleteObject(_hFontSection);
         Win32.DeleteObject(_hFontPageTitle);
         Win32.DeleteObject(_hFontLinkStrong);
     }
@@ -321,7 +282,6 @@ sealed class OnboardingWindow : IDisposable
     {
         Win32.SendMessageW(_hWndBtnNext, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnPrev, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndLinkFeedbackBanner, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkLessons, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
@@ -488,15 +448,6 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowSubclass(_hWndBtnPrev, _buttonArrowSubclassProc, (UIntPtr)21, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndBtnTry, _buttonArrowSubclassProc, (UIntPtr)22, IntPtr.Zero);
 
-        // ══ Étape 1 — ancien lien de retours, conserve masque pour compatibilite des handlers ══
-        // Position initiale temporaire — repositionné dynamiquement dans UpdateStepVisibility
-        _hWndLinkFeedbackBanner = Win32.CreateWindowExW(0, "STATIC", "",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
-            margin, 0, S(160), S(26),
-            _hWnd, (IntPtr)IDC_LINK_FEEDBACK_BANNER, hInstance, IntPtr.Zero);
-        Win32.SendMessageW(_hWndLinkFeedbackBanner, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
-        Win32.SetWindowSubclass(_hWndLinkFeedbackBanner, _linkSubclassProc, (UIntPtr)10, IntPtr.Zero);
-
         // ══ Étape 3 — Liens et checkboxes ══
         // Positions initiales temporaires — repositionnés dans RepositionControls
         int y = 0;
@@ -571,8 +522,6 @@ sealed class OnboardingWindow : IDisposable
             ? Win32.HWND_TOPMOST : Win32.HWND_NOTOPMOST;
         Win32.SetWindowPos(_hWnd, insertAfter, 0, 0, 0, 0,
             Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
-
-        Win32.ShowWindow(_hWndLinkFeedbackBanner, 0);
 
         int step3Vis = _currentStep == 2 ? 1 : 0;
         Win32.ShowWindow(_hWndLinkLessons, step3Vis);
@@ -867,7 +816,7 @@ sealed class OnboardingWindow : IDisposable
                     case IDC_BTN_PREV:
                         if (_currentStep > 0) { _currentStep--; UpdateStepVisibility(); }
                         break;
-                    case IDC_LINK_FEEDBACK_BANNER: case IDC_LINK_FEEDBACK:
+                    case IDC_LINK_FEEDBACK:
                         if (code == 0) OpenLink(ProductIdentity.DiagnosticUrl("/feedback",
                             Program.Version, ProductIdentity.OsDescription(), "onboarding")); break;
                     case IDC_LINK_GUIDE:
@@ -903,13 +852,6 @@ sealed class OnboardingWindow : IDisposable
                     Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
                     return _hPanelBrush;
                 }
-                if (hCtrl == _hWndLinkFeedbackBanner)
-                {
-                    Win32.SetBkMode(hdcStatic, 1);
-                    bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                    Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
-                    return _hBannerBgBrush;
-                }
                 if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkDontShow || hCtrl == _hWndChkTraining)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
@@ -925,7 +867,7 @@ sealed class OnboardingWindow : IDisposable
                 if (wParam == _hWndLinkLessons ||
                     wParam == _hWndLinkGuide ||
                     wParam == _hWndLinkFeedback || wParam == _hWndLinkDiscord ||
-                    wParam == _hWndLinkFeedbackBanner || wParam == _hWndBtnFlag)
+                    wParam == _hWndBtnFlag)
                 {
                     Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
                     return (IntPtr)1;
@@ -1651,20 +1593,6 @@ sealed class OnboardingWindow : IDisposable
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
-    private void DrawPill(IntPtr hdc, int x, int y, string text)
-    {
-        int pillPadX = S(10);
-        int pillH = S(24);
-        int pillW = MeasureSingleLineWidth(hdc, _hFontSmall, text) + pillPadX * 2;
-        var pillRect = new Win32.RECT { left = x, top = y, right = x + pillW, bottom = y + pillH };
-        GdiHelpers.FillSolidRect(hdc, pillRect, CLR_PILL_BG);
-
-        Win32.SelectObject(hdc, _hFontSmall);
-        Win32.SetTextColor(hdc, CLR_PILL_TEXT);
-        Win32.DrawTextW(hdc, text, -1, ref pillRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
     private (string Text, uint Color, IntPtr Font)[] GetStyledDescriptionRuns(string number, string description)
     {
         return number switch
@@ -1907,7 +1835,6 @@ sealed class OnboardingWindow : IDisposable
         _learningModule?.Dispose();
         _learningModule = null;
 
-        if (_hWndLinkFeedbackBanner != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkFeedbackBanner, _linkSubclassProc, (UIntPtr)10);
         if (_hWndLinkLessons != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkLessons, _linkSubclassProc, (UIntPtr)6);
         if (_hWndLinkGuide != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkGuide, _linkSubclassProc, (UIntPtr)1);
         if (_hWndLinkFeedback != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)3);
@@ -1920,13 +1847,11 @@ sealed class OnboardingWindow : IDisposable
         if (_hWnd != IntPtr.Zero) { Win32.DestroyWindow(_hWnd); _hWnd = IntPtr.Zero; }
         if (_hIcon != IntPtr.Zero) { Win32.DestroyIcon(_hIcon); _hIcon = IntPtr.Zero; }
         if (_gdipLogo != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipLogo); _gdipLogo = IntPtr.Zero; }
-        if (_gdipDiscord != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipDiscord); _gdipDiscord = IntPtr.Zero; }
         if (_gdipFlagEn != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagEn); _gdipFlagEn = IntPtr.Zero; }
         if (_gdipFlagFr != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagFr); _gdipFlagFr = IntPtr.Zero; }
         if (_gdipToken != IntPtr.Zero) { Win32.GdiplusShutdown(_gdipToken); _gdipToken = IntPtr.Zero; }
         DestroyFonts();
         Win32.DeleteObject(_hBgBrush);
-        Win32.DeleteObject(_hBannerBgBrush);
         Win32.DeleteObject(_hPanelBrush);
 
         // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.

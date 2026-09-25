@@ -57,7 +57,6 @@ sealed class AboutWindow : IDisposable
     private IntPtr _hFontTitle;
     private IntPtr _hFontVersion;
     private IntPtr _hFontText;
-    private IntPtr _hFontBold;
     private IntPtr _hFontLink;
     private IntPtr _hFontButton;
 
@@ -107,7 +106,6 @@ sealed class AboutWindow : IDisposable
         _hFontTitle = Win32.CreateFontW(-S(22), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontVersion = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontText = Win32.CreateFontW(-S(13), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontLink = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontButton = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
     }
@@ -117,7 +115,6 @@ sealed class AboutWindow : IDisposable
         Win32.DeleteObject(_hFontTitle);
         Win32.DeleteObject(_hFontVersion);
         Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontBold);
         Win32.DeleteObject(_hFontLink);
         Win32.DeleteObject(_hFontButton);
     }
