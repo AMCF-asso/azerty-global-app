@@ -1,6 +1,5 @@
 // Recherche de caractère — fenêtre permettant de trouver comment taper un caractère
 using System.Runtime.InteropServices;
-using System.Text.Json;
 
 namespace AZERTYGlobal;
 
@@ -58,18 +57,6 @@ sealed class CharacterSearch : IDisposable
     // Données de recherche
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>Données brutes de méthode de saisie (pour le highlight clavier virtuel).</summary>
-    public sealed class MethodData
-    {
-        public string Type { get; set; } = "";       // "direct", "deadkey", "deadkey_activation"
-        public string Key { get; set; } = "";        // Web API key code (ex: "KeyQ", "Digit2")
-        public string Layer { get; set; } = "";      // "Base", "Shift", "AltGr", etc.
-        public string DeadKey { get; set; } = "";    // dk name (pour type="deadkey")
-        // Pour type="deadkey" : comment activer la touche morte
-        public string DkActivationKey { get; set; } = "";
-        public string DkActivationLayer { get; set; } = "";
-    }
-
     /// <summary>Entrée dans l'index des caractères.</summary>
     private sealed class CharEntry
     {
@@ -102,7 +89,7 @@ sealed class CharacterSearch : IDisposable
     private IntPtr _hEditLabel;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Win32.SUBCLASSPROC _editSubclassProc;
-    private List<CharEntry> _allEntries = new();
+    private List<CharEntry>? _allEntries; // construit à la première recherche (audit du 25/09, V-04)
     private List<CharEntry> _filteredResults = new();
     private int _totalMatches; // correspondances avant le plafond MAX_RESULTS (audit du 25/09, V-08)
     private int _selectedIndex;
@@ -127,11 +114,6 @@ sealed class CharacterSearch : IDisposable
     private IntPtr _hFontFooter;
     private IntPtr _hFontPlaceholder;
     private IntPtr _hFontEdit;
-
-    // Mapping des touches mortes : dk_name → méthode d'activation lisible
-    private Dictionary<string, string> _deadKeyActivations = new();
-    // Mapping des touches mortes : dk_name → (key, layer) brut pour le highlight
-    private Dictionary<string, (string key, string layer)> _deadKeyActivationRaw = new();
 
     // Séparateurs pour tokeniser les noms/alias (doit matcher le site : tester-search.js)
     private static readonly char[] SearchSeparators = { ' ', '-', '\'', '\u2019', '(', ')' };
@@ -206,24 +188,11 @@ sealed class CharacterSearch : IDisposable
             SelectionChanged?.Invoke(null);
     }
 
-    /// <summary>Retourne un dictionnaire caractère → nom français (pour le clavier virtuel).</summary>
-    public Dictionary<string, (string Fr, string En)> GetCharacterNames()
-    {
-        var names = new Dictionary<string, (string Fr, string En)>();
-        foreach (var entry in _allEntries)
-        {
-            if (!string.IsNullOrEmpty(entry.NameFr) || !string.IsNullOrEmpty(entry.NameEn))
-                names[entry.Character] = (entry.NameFr, entry.NameEn);
-        }
-        return names;
-    }
-
     public CharacterSearch(TextInsertionService insertionService)
     {
         _insertionService = insertionService;
         _wndProcDelegate = WndProcCallback;
         _editSubclassProc = EditSubclassProc;
-        LoadCharacterIndex();
         CreateWindow();
     }
 
@@ -231,122 +200,25 @@ sealed class CharacterSearch : IDisposable
     // Chargement des données
     // ═══════════════════════════════════════════════════════════════
 
-    private void LoadCharacterIndex()
+    private List<CharEntry> LoadCharacterIndex()
     {
-        string json;
-        // Essayer la ressource embarquée d'abord, puis le fichier à côté de l'exe
-        using (var stream = typeof(CharacterSearch).Assembly.GetManifestResourceStream("character-index.json"))
+        var entries = new List<CharEntry>();
+        foreach (var item in CharacterIndex.Shared.Entries)
         {
-            if (stream != null)
-            {
-                using var reader = new StreamReader(stream);
-                json = reader.ReadToEnd();
-            }
-            else
-            {
-                var path = Path.Combine(AppContext.BaseDirectory, "character-index.json");
-                json = File.ReadAllText(path);
-            }
-        }
-
-        using var doc = JsonDocument.Parse(json);
-        var characters = doc.RootElement.GetProperty("characters");
-
-        // Première passe : collecter les activations de touches mortes
-        foreach (var entry in characters.EnumerateObject())
-        {
-            if (!entry.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
-            if (!entry.Value.TryGetProperty("methods", out var methods)) continue;
-
-            foreach (var method in methods.EnumerateArray())
-            {
-                if (method.GetProperty("type").GetString() != "deadkey_activation") continue;
-                var dkName = method.GetProperty("deadkey").GetString() ?? "";
-                var key = method.GetProperty("key").GetString() ?? "";
-                var layer = method.GetProperty("layer").GetString() ?? "";
-                _deadKeyActivations[dkName] = FormatDirectMethod(key, layer);
-                _deadKeyActivationRaw[dkName] = (key, layer);
-                break;
-            }
-        }
-
-        // Deuxième passe : construire les entrées
-        foreach (var entry in characters.EnumerateObject())
-        {
-            // Ignorer les entrées de touche morte elles-mêmes (dk:xxx). Écart avec le site, qui
-            // les propose (avec un bonus de 30 au classement) : audit du 25/09, V-05.
-            if (entry.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
-
-            var charStr = entry.Name;
-            var codePoint = entry.Value.TryGetProperty("codePoint", out var cp) ? cp.GetString() ?? "" : "";
-            var nameFr = entry.Value.TryGetProperty("unicodeNameFr", out var nf) ? nf.GetString() ?? "" : "";
-            var nameEn = entry.Value.TryGetProperty("unicodeName", out var ne) ? ne.GetString() ?? "" : "";
-
-            var aliases = new List<string>();
-            if (entry.Value.TryGetProperty("frenchAliases", out var fa) && fa.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var alias in fa.EnumerateArray())
-                    if (alias.GetString() is string a)
-                        aliases.Add(a);
-            }
-
-            var englishAliases = new List<string>();
-            if (entry.Value.TryGetProperty("englishAliases", out var ea) && ea.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var alias in ea.EnumerateArray())
-                    if (alias.GetString() is string a)
-                        englishAliases.Add(a);
-            }
-
-            // Trouver la méthode recommandée, tout en gardant les alternatives
-            // pour les cas où la requête doit distinguer caractère vif et accent.
-            string methodDisplay = "";
-            bool isDirectAccess = false;
-            MethodData? methodData = null;
-            var methodEntries = new List<MethodData>();
-            if (entry.Value.TryGetProperty("methods", out var methods))
-            {
-                // Chercher la méthode recommandée
-                JsonElement? recommended = null;
-                JsonElement? fallback = null;
-                MethodData? recommendedData = null;
-                MethodData? fallbackData = null;
-                foreach (var method in methods.EnumerateArray())
-                {
-                    var currentData = CreateMethodData(method);
-                    methodEntries.Add(currentData);
-
-                    fallback ??= method;
-                    fallbackData ??= currentData;
-
-                    if (method.TryGetProperty("recommended", out var rec) && rec.GetBoolean())
-                    {
-                        recommended = method;
-                        recommendedData = currentData;
-                    }
-                }
-                var chosen = recommended ?? fallback;
-                var chosenData = recommendedData ?? fallbackData;
-                if (chosen.HasValue && chosenData != null)
-                {
-                    methodDisplay = FormatMethod(chosenData);
-                    isDirectAccess = chosen.Value.TryGetProperty("recommended", out var r) && r.GetBoolean()
-                        && chosen.Value.GetProperty("type").GetString() == "direct";
-
-                    methodData = chosenData;
-                }
-            }
-
+            var charStr = item.Character;
+            var nameFr = item.NameFr;
+            var nameEn = item.NameEn;
+            var methodData = item.Preferred;
             var entry2 = new CharEntry
             {
                 Character = charStr,
-                CodePoint = codePoint,
+                CodePoint = item.CodePoint,
                 NameFr = nameFr,
                 NameEn = nameEn,
-                MethodDisplay = methodDisplay,
-                IsDirectAccess = isDirectAccess,
+                MethodDisplay = methodData != null ? FormatMethod(methodData) : "",
+                IsDirectAccess = item.Recommended?.Type == "direct",
                 Method = methodData,
-                Methods = methodEntries,
+                Methods = item.Methods,
             };
 
             // Pré-normaliser pour la recherche (évite NormalizeForSearch à chaque frappe)
@@ -355,36 +227,16 @@ sealed class CharacterSearch : IDisposable
             entry2.NormalizedNameFrWords = entry2.NormalizedNameFr.Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries);
             entry2.NormalizedNameEnWords = entry2.NormalizedNameEn.Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries);
             entry2.NormalizedChar = NormalizeForSearch(charStr);
-            entry2.NormalizedAliasWords = aliases.Select(a =>
+            entry2.NormalizedAliasWords = item.FrenchAliases.Select(a =>
                 NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
             ).ToArray();
-            entry2.NormalizedEnglishAliasWords = englishAliases.Select(a =>
+            entry2.NormalizedEnglishAliasWords = item.EnglishAliases.Select(a =>
                 NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
             ).ToArray();
 
-            _allEntries.Add(entry2);
+            entries.Add(entry2);
         }
-    }
-
-    private MethodData CreateMethodData(JsonElement method)
-    {
-        var mType = method.GetProperty("type").GetString() ?? "";
-        var mKey = method.TryGetProperty("key", out var mk) ? mk.GetString() ?? "" : "";
-        var mLayer = method.TryGetProperty("layer", out var ml) ? ml.GetString() ?? "" : "";
-        var methodData = new MethodData { Type = mType, Key = mKey, Layer = mLayer };
-
-        if (mType == "deadkey")
-        {
-            var dkName = method.GetProperty("deadkey").GetString() ?? "";
-            methodData.DeadKey = dkName;
-            if (_deadKeyActivationRaw.TryGetValue(dkName, out var dkAct))
-            {
-                methodData.DkActivationKey = dkAct.key;
-                methodData.DkActivationLayer = dkAct.layer;
-            }
-        }
-
-        return methodData;
+        return entries;
     }
 
     /// <summary>Formate une méthode de saisie en texte lisible.</summary>
@@ -397,7 +249,9 @@ sealed class CharacterSearch : IDisposable
 
         if (method.Type == "deadkey")
         {
-            var activation = _deadKeyActivations.GetValueOrDefault(method.DeadKey, method.DeadKey);
+            var activation = CharacterIndex.Shared.DeadKeyActivations.TryGetValue(method.DeadKey, out var dk)
+                ? FormatDirectMethod(dk.Key, dk.Layer)
+                : method.DeadKey;
             var keyLabel = GetKeyLabel(method.Key);
             var afterDk = L.Search_AfterDeadKeyLabel(method.Layer, keyLabel);
             return $"{activation}\n{afterDk}";
@@ -478,7 +332,7 @@ sealed class CharacterSearch : IDisposable
 
         // Score et tri
         var scored = new List<(CharEntry entry, int score)>();
-        foreach (var entry in _allEntries)
+        foreach (var entry in _allEntries ??= LoadCharacterIndex())
         {
             int score = MatchScore(entry, query, lowerQuery, normalizedQuery, queryWords, querySynonyms, originalQueryWords);
             if (score > 0)

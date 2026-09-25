@@ -1,6 +1,5 @@
 ﻿// Clavier virtuel — affiche la disposition AZERTY Global en temps réel
 using System.Runtime.InteropServices;
-using System.Text.Json;
 
 namespace AZERTYGlobal;
 
@@ -230,7 +229,6 @@ sealed class VirtualKeyboard : IDisposable
     private IntPtr _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Layout _layout;
-    private readonly Dictionary<string, (string Fr, string En)> _charNames; // char → noms FR/EN (tooltip selon L.IsEnglish)
 
     private bool _visible;
     private IntPtr _preferredMonitorWindow;
@@ -257,7 +255,7 @@ sealed class VirtualKeyboard : IDisposable
     private readonly HashSet<string> _highlightedLabels = new();
     private readonly HashSet<string> _highlightedContextIds = new();
     private string _highlightType = ""; // "direct", "dk", "step1", "step2"
-    private CharacterSearch.MethodData? _pendingStep2; // Données pour l'étape 2 d'une séquence DK
+    private MethodData? _pendingStep2; // Données pour l'étape 2 d'une séquence DK
 
     // Polices cachées (recréées sur WM_SIZE)
     private IntPtr _hCharFont;
@@ -327,10 +325,9 @@ sealed class VirtualKeyboard : IDisposable
         _cachedCh = ch;
     }
 
-    public VirtualKeyboard(Layout layout, Dictionary<string, (string Fr, string En)>? charNames = null)
+    public VirtualKeyboard(Layout layout)
     {
         _layout = layout;
-        _charNames = charNames ?? LoadCharacterNames();
         _wndProcDelegate = WndProc;
 
         var hInstance = Win32.GetModuleHandleW(null);
@@ -471,41 +468,6 @@ sealed class VirtualKeyboard : IDisposable
         {
             Marshal.FreeHGlobal(ptr);
         }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Chargement des noms de caractères
-    // ═══════════════════════════════════════════════════════════════
-    private static Dictionary<string, (string Fr, string En)> LoadCharacterNames()
-    {
-        var names = new Dictionary<string, (string Fr, string En)>();
-
-        try
-        {
-            using var stream = typeof(VirtualKeyboard).Assembly.GetManifestResourceStream("character-index.json");
-            if (stream == null) return names;
-            using var reader = new StreamReader(stream);
-            var json = reader.ReadToEnd();
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("characters", out var chars))
-            {
-                foreach (var entry in chars.EnumerateObject())
-                {
-                    string frName = entry.Value.TryGetProperty("unicodeNameFr", out var nameFr)
-                        ? nameFr.GetString() ?? "" : "";
-                    string enName = entry.Value.TryGetProperty("unicodeName", out var nameEn)
-                        ? nameEn.GetString() ?? "" : "";
-                    if (frName.Length > 0 || enName.Length > 0)
-                        names[entry.Name] = (frName, enName);
-                }
-            }
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-        {
-            // Pas critique — on continue sans tooltips
-        }
-
-        return names;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -667,7 +629,7 @@ sealed class VirtualKeyboard : IDisposable
     }
 
     /// <summary>Met en surbrillance les touches correspondant à une méthode de saisie.</summary>
-    public void HighlightMethod(CharacterSearch.MethodData? method)
+    public void HighlightMethod(MethodData? method)
     {
         // Annuler les timers de highlight en cours
         Win32.KillTimer(_hWnd, TIMER_HIGHLIGHT_STEP2);
@@ -1338,7 +1300,7 @@ sealed class VirtualKeyboard : IDisposable
             if (hitIndex >= 0 && !_visualKeys[hitIndex].IsContextual)
             {
                 string? ch2 = GetDisplayChar(_visualKeys[hitIndex].Scancode);
-                if (ch2 != null && !ch2.StartsWith("dk_") && _charNames.TryGetValue(ch2, out var name))
+                if (ch2 != null && !ch2.StartsWith("dk_") && CharacterIndex.Shared.Names.TryGetValue(ch2, out var name))
                     UpdateTooltipText(L.IsEnglish
                         ? (name.En.Length > 0 ? name.En : name.Fr)
                         : (name.Fr.Length > 0 ? name.Fr : name.En));

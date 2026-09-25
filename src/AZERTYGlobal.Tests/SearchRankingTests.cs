@@ -26,10 +26,6 @@ public class SearchRankingTests
         var type = typeof(CharacterSearch);
         var search = RuntimeHelpers.GetUninitializedObject(type);
         var entree = type.GetNestedType("CharEntry", BindingFlags.NonPublic)!;
-        type.GetField("_allEntries", Prive)!.SetValue(search, Activator.CreateInstance(typeof(List<>).MakeGenericType(entree)));
-        type.GetField("_deadKeyActivations", Prive)!.SetValue(search, new Dictionary<string, string>());
-        type.GetField("_deadKeyActivationRaw", Prive)!.SetValue(search, new Dictionary<string, (string, string)>());
-        type.GetMethod("LoadCharacterIndex", Prive)!.Invoke(search, null);
         return (search, type.GetMethod("ScoreEntries", Prive)!, entree.GetProperty("Character")!);
     }
 

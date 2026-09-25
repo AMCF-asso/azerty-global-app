@@ -560,21 +560,21 @@ public class LessonCoreTests
     [Fact]
     public void LearningModule_ResolvesStep2FromActiveDeadKeyOrAsksForBackspace()
     {
-        var strokeMethod = new CharacterSearch.MethodData
+        var strokeMethod = new MethodData
         {
             Type = "deadkey",
             DeadKey = "dk_stroke",
             Key = "KeyO",
             Layer = "Base"
         };
-        var acuteMethod = new CharacterSearch.MethodData
+        var acuteMethod = new MethodData
         {
             Type = "deadkey",
             DeadKey = "dk_acute",
             Key = "KeyA",
             Layer = "Base"
         };
-        var methodsByCharacter = new Dictionary<string, List<CharacterSearch.MethodData>>
+        var methodsByCharacter = new Dictionary<string, List<MethodData>>
         {
             ["ø"] = new() { strokeMethod, acuteMethod }
         };

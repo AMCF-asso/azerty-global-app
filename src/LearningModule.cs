@@ -251,16 +251,12 @@ sealed class LearningModule : IDisposable
     private readonly KeyboardHook _hook;
     private readonly Layout _layout;
 
-    // Données de highlight (character-index.json)
-    private readonly Dictionary<string, CharacterSearch.MethodData> _charMethods = new();        // recommended (Shift pour majuscules)
-    private readonly Dictionary<string, CharacterSearch.MethodData> _charMethodsCaps = new();    // alternative Caps (utilisée si l'exercice a KeepCapsHighlight=true)
-    private readonly Dictionary<string, List<CharacterSearch.MethodData>> _charDeadKeyMethods = new(); // toutes les méthodes DK d'un caractère
-    private readonly Dictionary<string, (string key, string layer)> _dkActivations = new();
-    private readonly Dictionary<string, (string Fr, string En)> _charNames = new(); // char → noms FR/EN (tooltip selon L.IsEnglish)
+    // Données de highlight et noms des infobulles : index partagé (audit du 25/09, V-04 et L-03).
+    private static CharacterIndex Index => CharacterIndex.Shared;
 
     /// <summary>
     /// Overrides explicites des noms de caractères pour les tooltips du clavier mini-onboarding,
-    /// quand le nom Unicode officiel est trop technique. Prioritaire sur _charNames.
+    /// quand le nom Unicode officiel est trop technique. Prioritaire sur Index.Names.
     /// </summary>
     private static readonly Dictionary<string, (string Fr, string En)> CharNamesOverride = new()
     {
@@ -415,8 +411,6 @@ sealed class LearningModule : IDisposable
             _dpiScale = dpi / 96f;
             ConfigManager.LogCrashTraceDebug($"LM.ctor: dpi={dpi}, scale={_dpiScale}");
 
-            LoadCharacterMethods();
-            ConfigManager.LogCrashTraceDebug("LM.ctor: LoadCharacterMethods done");
             CreateFonts();
             ConfigManager.LogCrashTraceDebug("LM.ctor: CreateFonts done");
             CreateMainWindow();
@@ -612,7 +606,7 @@ sealed class LearningModule : IDisposable
             if (combined != null)
             {
                 sb.Append(label).Append(" : ").Append(combined);
-                if (_charNames.TryGetValue(combined, out var combinedName))
+                if (Index.Names.TryGetValue(combined, out var combinedName))
                     sb.Append(" — ").Append(PickCharName(combinedName).ToUpperInvariant());
                 sb.Append('\n');
             }
@@ -636,90 +630,9 @@ sealed class LearningModule : IDisposable
         }
         else if (CharNamesOverride.TryGetValue(disp, out var overrideName))
             sb.Append(" — ").Append(PickCharName(overrideName).ToUpperInvariant());
-        else if (_charNames.TryGetValue(disp, out var name))
+        else if (Index.Names.TryGetValue(disp, out var name))
             sb.Append(" — ").Append(PickCharName(name).ToUpperInvariant());
         sb.Append('\n');
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Chargement character-index.json
-    // ═══════════════════════════════════════════════════════════════
-    private void LoadCharacterMethods()
-    {
-        string json;
-        using (var stream = typeof(LearningModule).Assembly.GetManifestResourceStream("character-index.json"))
-        {
-            if (stream == null) return;
-            using var reader = new StreamReader(stream);
-            json = reader.ReadToEnd();
-        }
-
-        using var doc = JsonDocument.Parse(json);
-        var characters = doc.RootElement.GetProperty("characters");
-
-        // Première passe : activations de touches mortes
-        foreach (var entry in characters.EnumerateObject())
-        {
-            if (!entry.Name.StartsWith("dk:")) continue;
-            if (!entry.Value.TryGetProperty("methods", out var methods)) continue;
-            foreach (var method in methods.EnumerateArray())
-            {
-                if (method.GetProperty("type").GetString() != "deadkey_activation") continue;
-                var dkName = method.GetProperty("deadkey").GetString() ?? "";
-                var key = method.GetProperty("key").GetString() ?? "";
-                var layer = method.GetProperty("layer").GetString() ?? "";
-                _dkActivations[dkName] = (key, layer);
-                break;
-            }
-        }
-
-        // Deuxième passe : méthodes par caractère
-        foreach (var entry in characters.EnumerateObject())
-        {
-            if (entry.Name.StartsWith("dk:")) continue;
-            if (!entry.Value.TryGetProperty("methods", out var methods)) continue;
-
-            JsonElement? recommended = null;
-            JsonElement? capsMethod = null;
-            JsonElement? fallback = null;
-            var deadKeyMethods = new List<CharacterSearch.MethodData>();
-            foreach (var method in methods.EnumerateArray())
-            {
-                var layer = method.TryGetProperty("layer", out var l) ? l.GetString() ?? "" : "";
-                if (capsMethod == null && layer.StartsWith("Caps")) capsMethod = method;
-                if (recommended == null
-                    && method.TryGetProperty("recommended", out var rec) && rec.GetBoolean())
-                    recommended = method;
-                fallback ??= method;
-
-                var methodData = CreateMethodData(method);
-                if (methodData.Type == "deadkey" && !string.IsNullOrEmpty(methodData.DeadKey))
-                    deadKeyMethods.Add(methodData);
-            }
-            // Méthode par défaut = recommended (généralement Shift pour les majuscules).
-            // L'exercice peut décider d'utiliser la variante Caps si KeepCapsHighlight=true,
-            // via le dict _charMethodsCaps.
-            JsonElement? chosen = recommended ?? fallback;
-            if (!chosen.HasValue) continue;
-
-            _charMethods[entry.Name] = CreateMethodData(chosen.Value);
-            if (deadKeyMethods.Count > 0)
-                _charDeadKeyMethods[entry.Name] = deadKeyMethods;
-
-            // Méthode alternative Caps (utilisée pour les exercices KeepCapsHighlight=true)
-            if (capsMethod.HasValue)
-            {
-                _charMethodsCaps[entry.Name] = CreateMethodData(capsMethod.Value);
-            }
-
-            // Noms FR/EN pour les tooltips (champs "unicodeNameFr"/"unicodeName" du character-index).
-            string charNameFr = entry.Value.TryGetProperty("unicodeNameFr", out var nameFr)
-                ? nameFr.GetString() ?? "" : "";
-            string charNameEn = entry.Value.TryGetProperty("unicodeName", out var nameEn)
-                ? nameEn.GetString() ?? "" : "";
-            if (charNameFr.Length > 0 || charNameEn.Length > 0)
-                _charNames[entry.Name] = (charNameFr, charNameEn);
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1064,27 +977,6 @@ sealed class LearningModule : IDisposable
             if (_hWnd != IntPtr.Zero)
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
         }
-    }
-
-    private CharacterSearch.MethodData CreateMethodData(JsonElement method)
-    {
-        var mType = method.GetProperty("type").GetString() ?? "";
-        var mKey = method.TryGetProperty("key", out var mk) ? mk.GetString() ?? "" : "";
-        var mLayer = method.TryGetProperty("layer", out var ml) ? ml.GetString() ?? "" : "";
-        var methodData = new CharacterSearch.MethodData { Type = mType, Key = mKey, Layer = mLayer };
-
-        if (mType == "deadkey")
-        {
-            var dkName = method.GetProperty("deadkey").GetString() ?? "";
-            methodData.DeadKey = dkName;
-            if (_dkActivations.TryGetValue(dkName, out var dkAct))
-            {
-                methodData.DkActivationKey = dkAct.key;
-                methodData.DkActivationLayer = dkAct.layer;
-            }
-        }
-
-        return methodData;
     }
 
     private static bool IsPausedInputMessage(uint msg)
@@ -1747,21 +1639,21 @@ sealed class LearningModule : IDisposable
         _highlightedScancodes.Add(0x0E);
     }
 
-    private CharacterSearch.MethodData? CreateDeadKeyMethod(string deadKey, string key, string layer)
+    private MethodData? CreateDeadKeyMethod(string deadKey, string key, string layer)
     {
-        if (!_dkActivations.TryGetValue(deadKey, out var dkAct)) return null;
-        return new CharacterSearch.MethodData
+        if (!Index.DeadKeyActivations.TryGetValue(deadKey, out var dkAct)) return null;
+        return new MethodData
         {
             Type = "deadkey",
             DeadKey = deadKey,
             Key = key,
             Layer = layer,
-            DkActivationKey = dkAct.key,
-            DkActivationLayer = dkAct.layer,
+            DkActivationKey = dkAct.Key,
+            DkActivationLayer = dkAct.Layer,
         };
     }
 
-    private CharacterSearch.MethodData? GetLanguageExerciseMethod(string character)
+    private MethodData? GetLanguageExerciseMethod(string character)
     {
         return character switch
         {
@@ -1785,12 +1677,12 @@ sealed class LearningModule : IDisposable
         if (_cursorPosition >= target.Length) return;
 
         var nextChar = target[_cursorPosition].ToString();
-        if (!_charMethods.TryGetValue(nextChar, out var method)) return;
+        if (!Index.ByCharacter.TryGetValue(nextChar, out var indexEntry) || indexEntry.Preferred is not { } method) return;
 
         // Si l'exercice demande de garder Verr.Maj activée et qu'une variante Caps existe
         // pour ce caractère, l'utiliser (= ne pas demander Maj redondant à l'utilisateur).
         if (Steps[_currentStep].KeepCapsHighlight
-            && _charMethodsCaps.TryGetValue(nextChar, out var capsAlt))
+            && indexEntry.Caps is { } capsAlt)
         {
             method = capsAlt;
         }
@@ -1836,7 +1728,7 @@ sealed class LearningModule : IDisposable
                     nextChar,
                     method,
                     activeDeadKey,
-                    _charDeadKeyMethods);
+                    Index.DeadKeyMethodsByCharacter);
                 if (activeMethod != null)
                     AddKeyHighlight(activeMethod.Key, activeMethod.Layer);
                 else
@@ -1895,11 +1787,11 @@ sealed class LearningModule : IDisposable
         return false;
     }
 
-    internal static CharacterSearch.MethodData? ResolveStep2MethodForActiveDeadKey(
+    internal static MethodData? ResolveStep2MethodForActiveDeadKey(
         string character,
-        CharacterSearch.MethodData preferredMethod,
+        MethodData preferredMethod,
         string activeDeadKey,
-        IReadOnlyDictionary<string, List<CharacterSearch.MethodData>> deadKeyMethodsByCharacter)
+        IReadOnlyDictionary<string, List<MethodData>> deadKeyMethodsByCharacter)
     {
         if (!string.Equals(preferredMethod.Type, "deadkey", StringComparison.OrdinalIgnoreCase))
             return null;
