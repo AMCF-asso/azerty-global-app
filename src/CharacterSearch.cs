@@ -251,7 +251,7 @@ sealed class CharacterSearch : IDisposable
         // Première passe : collecter les activations de touches mortes
         foreach (var entry in characters.EnumerateObject())
         {
-            if (!entry.Name.StartsWith("dk:")) continue;
+            if (!entry.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
             if (!entry.Value.TryGetProperty("methods", out var methods)) continue;
 
             foreach (var method in methods.EnumerateArray())
@@ -271,7 +271,7 @@ sealed class CharacterSearch : IDisposable
         {
             // Ignorer les entrées de touche morte elles-mêmes (dk:xxx). Écart avec le site, qui
             // les propose (avec un bonus de 30 au classement) : audit du 25/09, V-05.
-            if (entry.Name.StartsWith("dk:")) continue;
+            if (entry.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
 
             var charStr = entry.Name;
             var codePoint = entry.Value.TryGetProperty("codePoint", out var cp) ? cp.GetString() ?? "" : "";
@@ -432,6 +432,24 @@ sealed class CharacterSearch : IDisposable
             return;
         }
 
+        var scored = ScoreEntries(query);
+        _totalMatches = scored.Count;
+        foreach (var (entry, _) in scored.Take(MAX_RESULTS))
+            _filteredResults.Add(entry);
+
+        ResizeToFitResults();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        // Ne PAS appeler NotifySelectionChanged ici : le highlight ne doit
+        // se déclencher que sur Entrée, clic ou navigation flèches.
+    }
+
+    /// <summary>
+    /// Correspondances d'une requête non vide, triées par score décroissant. Séparé de
+    /// <see cref="Search"/>, qui touche à la fenêtre, pour que le classement ait un témoin
+    /// (audit du 25/09, V-03 : SearchRankingTests).
+    /// </summary>
+    private List<(CharEntry entry, int score)> ScoreEntries(string query)
+    {
         query = query.Trim();
         var lowerQuery = query.ToLowerInvariant();
         var normalizedQuery = NormalizeForSearch(query);
@@ -469,14 +487,7 @@ sealed class CharacterSearch : IDisposable
         }
 
         scored.Sort((a, b) => b.score.CompareTo(a.score));
-        _totalMatches = scored.Count;
-        foreach (var (entry, _) in scored.Take(MAX_RESULTS))
-            _filteredResults.Add(entry);
-
-        ResizeToFitResults();
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-        // Ne PAS appeler NotifySelectionChanged ici : le highlight ne doit
-        // se déclencher que sur Entrée, clic ou navigation flèches.
+        return scored;
     }
 
     /// <summary>Nom affiché dans les résultats, selon la langue de l'UI (fallback croisé si le champ est vide).</summary>
@@ -553,7 +564,10 @@ sealed class CharacterSearch : IDisposable
     /// Si un mot de la requête fait 1 caractère, il doit correspondre exactement (pas de StartsWith)
     /// pour éviter que "a" matche "avec", "aigu", etc.
     /// <paramref name="querySynonyms"/> (aligné sur queryWords, éléments null autorisés) offre
-    /// une alternative par mot : « upper… » matche aussi « capital » (cf. Search).</summary>
+    /// une alternative par mot : « upper… » matche aussi « capital » (cf. Search).
+    /// Audit du 25/09 (V-03) : comparaisons ordinales. Les deux côtés sont déjà normalisés
+    /// (minuscules, sans diacritiques) ; la comparaison culturelle coûtait 8,5 fois plus
+    /// pour le même classement (SearchRankingTests).</summary>
     private static bool AllWordsMatch(string[] queryWords, string?[] querySynonyms, string[] textWords)
     {
         for (int i = 0; i < queryWords.Length; i++)
@@ -563,12 +577,12 @@ sealed class CharacterSearch : IDisposable
             bool found = false;
             foreach (var tw in textWords)
             {
-                if (qw.Length == 1 ? tw == qw : (tw == qw || tw.StartsWith(qw)))
+                if (qw.Length == 1 ? tw == qw : (tw == qw || tw.StartsWith(qw, StringComparison.Ordinal)))
                 {
                     found = true;
                     break;
                 }
-                if (syn != null && (tw == syn || tw.StartsWith(syn)))
+                if (syn != null && (tw == syn || tw.StartsWith(syn, StringComparison.Ordinal)))
                 {
                     found = true;
                     break;
@@ -623,7 +637,7 @@ sealed class CharacterSearch : IDisposable
         }
 
         // Code Unicode (U+xxxx)
-        if (score == 0 && lowerQuery.StartsWith("u+") &&
+        if (score == 0 && lowerQuery.StartsWith("u+", StringComparison.Ordinal) &&
             entry.CodePoint.Equals(query, StringComparison.OrdinalIgnoreCase))
         {
             score = 90;
@@ -663,7 +677,7 @@ sealed class CharacterSearch : IDisposable
             score += 10;
 
         // Bonus si le nom français commence par la requête (match plus spécifique)
-        if (entry.NormalizedNameFr.Length > 0 && entry.NormalizedNameFr.StartsWith(normalizedQuery))
+        if (entry.NormalizedNameFr.Length > 0 && entry.NormalizedNameFr.StartsWith(normalizedQuery, StringComparison.Ordinal))
             score += 15;
 
         return score;
