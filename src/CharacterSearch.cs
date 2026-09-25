@@ -109,6 +109,7 @@ sealed class CharacterSearch : IDisposable
     private readonly Win32.SUBCLASSPROC _editSubclassProc;
     private List<CharEntry> _allEntries = new();
     private List<CharEntry> _filteredResults = new();
+    private int _totalMatches; // correspondances avant le plafond MAX_RESULTS (audit du 25/09, V-08)
     private int _selectedIndex;
     private int _scrollOffset;
     private float _dpiScale = 1.0f;
@@ -452,6 +453,7 @@ sealed class CharacterSearch : IDisposable
     private void Search(string query)
     {
         _filteredResults.Clear();
+        _totalMatches = 0;
         _selectedIndex = 0;
         _scrollOffset = 0;
 
@@ -499,6 +501,7 @@ sealed class CharacterSearch : IDisposable
         }
 
         scored.Sort((a, b) => b.score.CompareTo(a.score));
+        _totalMatches = scored.Count;
         foreach (var (entry, _) in scored.Take(MAX_RESULTS))
             _filteredResults.Add(entry);
 
@@ -1162,21 +1165,35 @@ sealed class CharacterSearch : IDisposable
         int searchH = Scale(BASE_SEARCH_H) + Scale(8) * 2;
         if (mouseY < searchH) return; // Clic dans la zone de recherche
 
-        // Trouver quel résultat a été cliqué — on calcule les hauteurs de lignes
-        int y = searchH;
-        for (int i = _scrollOffset; i < _filteredResults.Count && i < _scrollOffset + VISIBLE_RESULTS; i++)
+        int rowCount = Math.Min(VISIBLE_RESULTS, _filteredResults.Count - _scrollOffset);
+        int i = RowIndexAt(mouseY, searchH, _scrollOffset, rowCount, GetRowHeight);
+        if (i < 0) return;
+
+        _selectedIndex = i;
+        NotifySelectionChanged();
+        InsertSelectedCharacter();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>
+    /// Ligne de résultat sous l'ordonnée <paramref name="mouseY"/>, sur la géométrie
+    /// d'<see cref="OnPaint"/> : la liste commence un pixel sous le séparateur de la
+    /// recherche, et chaque ligne est suivie d'un séparateur de 1 px qui n'appartient à
+    /// aucune ligne. Rend -1 hors des lignes. Audit du 25/09 (V-07) : l'ancien calcul
+    /// ignorait ces séparateurs, et le bas de la k-ième ligne visible insérait le
+    /// caractère de la ligne suivante.
+    /// </summary>
+    internal static int RowIndexAt(int mouseY, int searchAreaH, int firstIndex, int rowCount, Func<int, int> rowHeight)
+    {
+        int y = searchAreaH + 1;
+        for (int k = 0; k < rowCount; k++)
         {
-            int rowH = GetRowHeight(i);
-            if (mouseY >= y && mouseY < y + rowH)
-            {
-                _selectedIndex = i;
-                NotifySelectionChanged();
-                InsertSelectedCharacter();
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-                return;
-            }
-            y += rowH;
+            int index = firstIndex + k;
+            int h = rowHeight(index);
+            if (mouseY >= y && mouseY < y + h) return index;
+            y += h + 1;
         }
+        return -1;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1458,9 +1475,7 @@ sealed class CharacterSearch : IDisposable
         else if (_filteredResults.Count > 0)
         {
             Win32.SetTextColor(hdcMem, CLR_FOOTER);
-            var countText = _filteredResults.Count == 1
-                ? L.Search_ResultCountSingular
-                : L.Search_ResultCountPlural(_filteredResults.Count);
+            var countText = FooterCountText(_filteredResults.Count, _totalMatches);
             Win32.DrawTextW(hdcMem, countText, countText.Length, ref footerRect,
                 Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         }
@@ -1474,6 +1489,33 @@ sealed class CharacterSearch : IDisposable
         Win32.DeleteDC(hdcMem);
 
         Win32.EndPaint(hWnd, ref ps);
+    }
+
+    /// <summary>
+    /// Texte du pied de la liste. Audit du 25/09 (V-08) : la liste est plafonnée à
+    /// <see cref="MAX_RESULTS"/> lignes, et le pied annonçait « 20 résultats » quand il y
+    /// en avait 98 ; il dit maintenant « 20 sur 98 ».
+    /// </summary>
+    internal static string FooterCountText(int shown, int total)
+    {
+        if (total > shown) return L.Search_ResultCountCapped(shown, total);
+        return shown == 1 ? L.Search_ResultCountSingular : L.Search_ResultCountPlural(shown);
+    }
+
+    internal enum MethodToken { Key, AltGr, Shift, Separator }
+
+    /// <summary>
+    /// Genre d'un mot de la méthode de saisie, comparé aux libellés de la langue courante.
+    /// Audit du 25/09 (V-06) : les mots étaient comparés à « Maj » et « puis » en dur, et en
+    /// anglais « Shift » et « then » prenaient la couleur d'une touche. « Verr. Maj. » et
+    /// « Caps Lock » restent sans couleur propre dans les deux langues, comme avant.
+    /// </summary>
+    internal static MethodToken ClassifyMethodToken(string token)
+    {
+        if (token == "AltGr") return MethodToken.AltGr;
+        if (token == L.Settings_ShortcutModifier2) return MethodToken.Shift;
+        if (token == "+" || token == L.Search_ThenWord) return MethodToken.Separator;
+        return MethodToken.Key;
     }
 
     /// <summary>Dessine la méthode de saisie avec des couleurs par token.</summary>
@@ -1502,15 +1544,13 @@ sealed class CharacterSearch : IDisposable
                 }
 
                 // Couleur selon le token
-                uint color;
-                if (token == "AltGr")
-                    color = CLR_METHOD_ALTGR;
-                else if (token == "Maj")
-                    color = CLR_METHOD_MAJ;
-                else if (token == "+" || token == "puis")
-                    color = CLR_METHOD_SEP;
-                else
-                    color = CLR_METHOD_KEY;
+                uint color = ClassifyMethodToken(token) switch
+                {
+                    MethodToken.AltGr => CLR_METHOD_ALTGR,
+                    MethodToken.Shift => CLR_METHOD_MAJ,
+                    MethodToken.Separator => CLR_METHOD_SEP,
+                    _ => CLR_METHOD_KEY,
+                };
 
                 Win32.SetTextColor(hdc, color);
                 var tokenRect = new Win32.RECT { left = x, top = lineY, right = right, bottom = bottom };
