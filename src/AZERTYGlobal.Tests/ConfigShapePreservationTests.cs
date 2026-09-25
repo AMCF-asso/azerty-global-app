@@ -43,7 +43,10 @@ public class ConfigShapePreservationTests : IDisposable
     {
         File.WriteAllText(_configPath, json);
         ConfigManager.OverrideConfigPathForTests(_configPath); // vide le cache, force EnsureLoaded
-        ConfigManager.SetCompatibilityOverride("temoin.exe", "forceOn"); // déclenche Save()
+        ConfigManager.SetCompatibilityOverride("temoin.exe", "forceOn");
+        // Le setter ne fait que marquer le cache (audit du 25/09, A-05) : sans ce Flush, le
+        // fichier relu serait l'original, déjà conforme, et la série passerait à vide.
+        ConfigManager.Flush();
         using var doc = JsonDocument.Parse(File.ReadAllText(_configPath));
         return doc.RootElement.Clone();
     }
@@ -156,6 +159,7 @@ public class ConfigShapePreservationTests : IDisposable
         Directory.CreateDirectory(ConfigManager.BuildTempPath(_configPath, Environment.ProcessId));
 
         ConfigManager.SetCompatibilityOverride("temoin.exe", "forceOn");
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         Assert.False(File.Exists(_configPath)); // le chemin par PID était barré, rien n'a pu s'écrire
     }
@@ -170,6 +174,7 @@ public class ConfigShapePreservationTests : IDisposable
         Directory.CreateDirectory(_configPath + ".tmp");
 
         ConfigManager.SetCompatibilityOverride("temoin.exe", "forceOn");
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         Assert.True(File.Exists(_configPath));
     }

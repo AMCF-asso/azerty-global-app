@@ -101,6 +101,7 @@ public class AutoStartNudgeTests : IDisposable
     public void MarkPromptShown_PersistsAndSuppressesFurtherPrompts()
     {
         AutoStartNudge.MarkPromptShown();
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         Assert.True(ConfigManager.AutoStartNudgeDone);
         Assert.Contains("autoStartNudgeDone", File.ReadAllText(_configPath));

@@ -33,6 +33,13 @@ static class UsageStats
     // Audit du 25/09 (A-11) : le fichier existait mais n'a pas pu être lu. Il n'est jamais
     // réécrit pendant cette session ; le prochain lancement relit.
     private static bool _readFailed;
+    // Audit du 25/09 : une écriture à la fois, dans l'ordre des instantanés. Toujours prise
+    // avant _lock, jamais sous _lock.
+    private static readonly object _fileLock = new();
+    private static int _backgroundFlushQueued;
+
+    /// <summary>Hook de test : appelé pendant l'écriture disque, hors de <c>_lock</c>.</summary>
+    internal static Action? WritePhaseForTests;
 
     private static string? _firstRemapDate; // "yyyy-MM-dd", null tant qu'aucune frappe remappée
     private static string? _lastActiveDate; // "yyyy-MM-dd"
@@ -609,71 +616,118 @@ static class UsageStats
         root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out long n) ? n : 0L;
 
     /// <summary>
-    /// Écrit usage-stats.json sur disque si des données ont changé depuis le dernier flush.
-    /// À appeler depuis un timer périodique (jamais depuis le hook clavier) et à la
-    /// fermeture de l'app. Écriture atomique (fichier temporaire + remplacement), même
-    /// pattern que <see cref="ConfigManager"/>.
+    /// Écrit usage-stats.json sur disque si des données ont changé depuis le dernier flush,
+    /// sur le fil appelant : fermeture de l'app, WM_QUERYENDSESSION, tests. Jamais depuis le
+    /// hook clavier ; le minuteur périodique passe par <see cref="FlushInBackground"/>.
+    /// Écriture atomique (fichier temporaire + remplacement), même pattern que
+    /// <see cref="ConfigManager"/>.
+    ///
+    /// Audit du 25/09 : l'écriture se faisait sous <c>_lock</c>, le verrou que prend
+    /// <see cref="RecordEmittedText"/> dans le rappel du hook, et sur le fil du hook. Les
+    /// compteurs sont maintenant copiés en JSON sous <c>_lock</c>, sans I/O, puis écrits
+    /// hors de <c>_lock</c>. Une écriture ratée laisse les compteurs marqués.
     /// </summary>
     public static void Flush()
     {
-        lock (_lock)
+        lock (_fileLock)
         {
-            EnsureLoaded();
-            if (!_dirty) return;
-            if (SaveLocked())
+            string path;
+            byte[]? content;
+            lock (_lock)
+            {
+                EnsureLoaded();
+                if (!_dirty) return;
+                content = SnapshotLocked();
+                path = _statsPath;
                 _dirty = false;
+            }
+
+            if (content == null) return;
+            if (!WriteFile(path, content))
+            {
+                lock (_lock)
+                {
+                    // Même fichier seulement : un test a pu rediriger les statistiques entre-temps.
+                    if (path == _statsPath) _dirty = true;
+                }
+            }
         }
     }
 
-    private static bool SaveLocked()
+    /// <summary>Flush sur le pool de threads (minuteur de 5 min, changement de session) :
+    /// le fil du hook n'attend plus le disque. Une seule demande en vol à la fois.</summary>
+    public static void FlushInBackground()
+    {
+        if (Interlocked.Exchange(ref _backgroundFlushQueued, 1) == 1) return;
+        ThreadPool.QueueUserWorkItem(static _ =>
+        {
+            // Pool de threads : une exception non rattrapée ici terminerait le processus.
+            try { Flush(); }
+            catch (Exception ex) { ConfigManager.Log("UsageStats.FlushInBackground", ex); }
+            finally { Interlocked.Exchange(ref _backgroundFlushQueued, 0); }
+        });
+    }
+
+    /// <summary>Instantané JSON des compteurs, sous <c>_lock</c>, sans I/O. Null quand
+    /// rien ne doit être écrit.</summary>
+    private static byte[]? SnapshotLocked()
     {
         // Collecte éteinte : aucun fichier créé, aucune écriture, pas même un JSON de zéros.
         // Unique porte vers le disque de ce fichier, donc le seul endroit où ce test doit
-        // vivre : tout appelant présent ou futur y passe. Le <c>true</c> annonce « plus rien
-        // à écrire » et non « écrit » — un false ferait réessayer à chaque flush et laisserait
-        // _dirty armé pour toujours.
-        if (!CollectionEnabled) return true;
+        // vivre : tout appelant présent ou futur y passe. Null annonce « plus rien à
+        // écrire » et non « échec » : _dirty retombe, sinon chaque flush réessaierait et
+        // le laisserait armé pour toujours.
+        if (!CollectionEnabled) return null;
 
         // Lecture ratée au chargement (A-11) : même réponse, pour la même raison — rien ne
         // doit remplacer un fichier qu'on n'a pas pu lire.
-        if (_readFailed) return true;
+        if (_readFailed) return null;
 
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+        {
+            writer.WriteStartObject();
+            if (_firstRemapDate != null) writer.WriteString("firstRemapDate", _firstRemapDate);
+            if (_lastActiveDate != null) writer.WriteString("lastActiveDate", _lastActiveDate);
+            writer.WriteNumber("activeDaysCount", _activeDaysCount);
+            writer.WriteNumber("currentStreak", _currentStreak);
+            writer.WriteNumber("bestStreak", _bestStreak);
+            writer.WriteNumber("totalActiveMinutes", _totalActiveMinutes);
+            writer.WriteNumber("accentedUppercaseCount", _accentedUppercaseCount);
+            writer.WriteNumber("frenchTypographyCount", _frenchTypographyCount);
+            writer.WriteNumber("internationalCount", _internationalCount);
+            writer.WriteNumber("symbolsCount", _symbolsCount);
+            writer.WriteNumber("searchOpenCount", _searchOpenCount);
+            writer.WriteNumber("virtualKeyboardOpenCount", _virtualKeyboardOpenCount);
+            writer.WriteNumber("challengesCompletedCount", _challengesCompletedCount);
+            if (_lastSpecialCharDate != null) writer.WriteString("lastSpecialCharDate", _lastSpecialCharDate);
+            writer.WriteEndObject();
+        }
+        return stream.ToArray();
+    }
+
+    private static bool WriteFile(string path, byte[] content)
+    {
         // AG130-11 (b) : .tmp suffixe par le PID, deux instances du meme compte
         // (RDP + console) ecrivant sinon dans le meme fichier temporaire.
-        string tempPath = $"{_statsPath}.{Environment.ProcessId}.tmp";
+        string tempPath = $"{path}.{Environment.ProcessId}.tmp";
         try
         {
-            var dir = Path.GetDirectoryName(_statsPath);
+            var dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
 
             using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-                writer.WriteStartObject();
-                if (_firstRemapDate != null) writer.WriteString("firstRemapDate", _firstRemapDate);
-                if (_lastActiveDate != null) writer.WriteString("lastActiveDate", _lastActiveDate);
-                writer.WriteNumber("activeDaysCount", _activeDaysCount);
-                writer.WriteNumber("currentStreak", _currentStreak);
-                writer.WriteNumber("bestStreak", _bestStreak);
-                writer.WriteNumber("totalActiveMinutes", _totalActiveMinutes);
-                writer.WriteNumber("accentedUppercaseCount", _accentedUppercaseCount);
-                writer.WriteNumber("frenchTypographyCount", _frenchTypographyCount);
-                writer.WriteNumber("internationalCount", _internationalCount);
-                writer.WriteNumber("symbolsCount", _symbolsCount);
-                writer.WriteNumber("searchOpenCount", _searchOpenCount);
-                writer.WriteNumber("virtualKeyboardOpenCount", _virtualKeyboardOpenCount);
-                writer.WriteNumber("challengesCompletedCount", _challengesCompletedCount);
-                if (_lastSpecialCharDate != null) writer.WriteString("lastSpecialCharDate", _lastSpecialCharDate);
-                writer.WriteEndObject();
-                writer.Flush();
+                stream.Write(content);
                 stream.Flush(true);
             }
 
-            if (File.Exists(_statsPath))
-                File.Replace(tempPath, _statsPath, null, true);
+            WritePhaseForTests?.Invoke();
+            if (File.Exists(path))
+                File.Replace(tempPath, path, null, true);
             else
-                File.Move(tempPath, _statsPath);
+                File.Move(tempPath, path);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

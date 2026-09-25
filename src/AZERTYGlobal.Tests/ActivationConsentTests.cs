@@ -32,6 +32,7 @@ public class ActivationConsentTests : IDisposable
     {
         File.WriteAllText(ConfigPath, "{\"appLanguage\":\"en\",\"future\":{\"x\":1}}");
         ConfigManager.AcceptActivation();
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
         ConfigManager.OverrideConfigPathForTests(ConfigPath);
         Assert.True(ConfigManager.ActivationConsent);
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ConfigPath));

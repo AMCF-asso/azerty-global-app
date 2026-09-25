@@ -31,6 +31,11 @@ static class ConfigManager
             _cache = null;
             _compatibilityCache = null;
             _loadFailed = false;
+            _dirty = false;
+            // Écritures différées coupées : un test écrit par Flush(), au moment qu'il
+            // choisit, jamais pendant le test suivant ni dans un dossier déjà supprimé.
+            // Les témoins du regroupement les rallument (audit du 25/09, A-05).
+            SaveDelayMilliseconds = -1;
         }
     }
 
@@ -139,8 +144,7 @@ static class ConfigManager
         {
             EnsureLoaded();
             using var doc = JsonDocument.Parse("true");
-            _cache!["activationConsent"] = doc.RootElement.Clone();
-            Save();
+            SetValueLocked("activationConsent", doc.RootElement.Clone());
         }
     }
 
@@ -175,8 +179,7 @@ static class ConfigManager
                 }
 
                 using var doc = JsonDocument.Parse(show ? "true" : "false");
-                _cache["showOnboardingAtStartup"] = doc.RootElement.Clone();
-                Save();
+                SetValueLocked("showOnboardingAtStartup", doc.RootElement.Clone());
                 return show;
             }
         }
@@ -427,6 +430,11 @@ static class ConfigManager
                 date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
             SetBool("reviewPromptDone", true);
         }
+        // Durable avant l'affichage (audit du 25/09, A-05) : une seule écriture pour les
+        // trois clés, mais tout de suite, pour qu'un arrêt brutal juste après la bulle ne
+        // rende pas un essai. Au plus deux fois sur la vie de l'installation. Hors du lock
+        // ci-dessus : Flush ne doit jamais être appelé sous _lock.
+        Flush();
     }
 
     /// <summary>Marque la sollicitation comme cliquée : plus aucune relance.</summary>
@@ -486,7 +494,7 @@ static class ConfigManager
     /// uniquement : la date d'écriture d'error.log ne conviendrait pas puisque le même
     /// fichier reçoit les événements de compatibilité jeux, qui ne sont pas des erreurs et
     /// bloqueraient un joueur régulier en permanence. Persister ici est également exclu —
-    /// <see cref="Save"/> journalise ses propres échecs, une écriture de config depuis le
+    /// <see cref="Flush"/> journalise ses propres échecs, une écriture de config depuis le
     /// chemin d'erreur se rappellerait elle-même.
     /// </summary>
     public static DateTime? LastErrorUtc => _lastErrorUtc;
@@ -643,7 +651,7 @@ static class ConfigManager
                 _compatibilityCache.Remove(processName);
             else
                 _compatibilityCache[processName] = mode;
-            Save();
+            MarkDirty();
         }
     }
 
@@ -750,7 +758,7 @@ static class ConfigManager
             EnsureLoaded();
             changed = _cache!.Remove(key);
             if (changed)
-                Save();
+                MarkDirty();
         }
         WindowBoundsCleared?.Invoke(key);
     }
@@ -866,6 +874,38 @@ static class ConfigManager
         AppendLogEntry(logDir, logFile, logEntry);
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<string> _deferredLogEntries = new();
+    private static int _deferredLogDraining;
+
+    /// <summary>
+    /// Audit du 25/09 (M-07) : variante pour le rappel du hook. Un refus de SendInput y
+    /// journalisait par <see cref="LogCompatCriticalEvent"/> : Directory.CreateDirectory et
+    /// File.AppendAllText sous <c>_logFlushLock</c>, partagé avec le pool de threads. La ligne
+    /// est maintenant datée ici, mise en file, et écrite par un seul vidage à la fois sur le
+    /// pool de threads, dans l'ordre d'arrivée. Un plantage juste après peut la perdre.
+    /// </summary>
+    public static void LogCompatEventDeferred(string eventName, string details)
+    {
+        _deferredLogEntries.Enqueue($"[{DateTime.Now:s}] {eventName}: {details}\n");
+        if (Interlocked.Exchange(ref _deferredLogDraining, 1) == 0)
+            ThreadPool.QueueUserWorkItem(static _ => DrainDeferredLog());
+    }
+
+    private static void DrainDeferredLog()
+    {
+        do
+        {
+            var logDir = LogDirectory;
+            var logFile = Path.Combine(logDir, "error.log");
+            while (_deferredLogEntries.TryDequeue(out var entry))
+                AppendLogEntry(logDir, logFile, entry);
+            Volatile.Write(ref _deferredLogDraining, 0);
+            // Une ligne arrivée entre le dernier TryDequeue et la remise à zéro n'a pas
+            // relancé de vidage : la reprendre ici, sauf si un autre vidage l'a déjà fait.
+        }
+        while (!_deferredLogEntries.IsEmpty && Interlocked.Exchange(ref _deferredLogDraining, 1) == 0);
+    }
+
     /// <summary>
     /// Trace de debug pour le crash post-Reset (cf. project_crash_lm_post_reset_hypothesis).
     /// Compilee en no-op en Release via [Conditional("DEBUG")] : aucun appel n'est emis dans
@@ -925,8 +965,7 @@ static class ConfigManager
         {
             EnsureLoaded();
             using var doc = JsonDocument.Parse(value ? "true" : "false");
-            _cache![key] = doc.RootElement.Clone();
-            Save();
+            SetValueLocked(key, doc.RootElement.Clone());
         }
     }
 
@@ -962,8 +1001,7 @@ static class ConfigManager
             // Sérialisation sûre via JsonEncodedText (échappe guillemets, backslash, etc.)
             var encoded = JsonEncodedText.Encode(value);
             using var doc = JsonDocument.Parse($"\"{encoded}\"");
-            _cache![key] = doc.RootElement.Clone();
-            Save();
+            SetValueLocked(key, doc.RootElement.Clone());
         }
     }
 
@@ -973,8 +1011,7 @@ static class ConfigManager
         {
             EnsureLoaded();
             using var doc = JsonDocument.Parse(value.ToString());
-            _cache![key] = doc.RootElement.Clone();
-            Save();
+            SetValueLocked(key, doc.RootElement.Clone());
         }
     }
 
@@ -1031,7 +1068,7 @@ static class ConfigManager
             catch { derived = "fr"; }
             using var doc = JsonDocument.Parse($"\"{derived}\"");
             _cache["appLanguage"] = doc.RootElement.Clone();
-            Save();
+            MarkDirty();
         }
     }
 
@@ -1046,58 +1083,177 @@ static class ConfigManager
     internal static string BuildTempPath(string finalPath, int processId) =>
         $"{finalPath}.{processId}.tmp";
 
-    private static void Save()
+    // ═══════════════════════════════════════════════════════════════
+    // Écriture groupée, hors du fil du hook (audit du 25/09, A-05 et F-18)
+    // ═══════════════════════════════════════════════════════════════
+    //
+    // Chaque setter réécrivait tout config.json, FlushFileBuffers compris (3,3 ms
+    // mesurées), sur le fil qui sert aussi le rappel du hook clavier : 4 écritures pour
+    // une couche cochée au menu, 7 pour un enregistrement des Couches maintenables, une
+    // par WM_SIZE pendant un redimensionnement du clavier virtuel. Un setter ne fait plus
+    // que poser la valeur et marquer le cache ; une écriture unique part du pool de
+    // threads SaveDelayMilliseconds après le dernier changement. La fermeture de l'app,
+    // WM_QUERYENDSESSION, WM_ENDSESSION et les changements de session écrivent aussi ce
+    // qui attend (TrayApplication).
+    //
+    // Deux verrous, toujours pris dans cet ordre : _fileLock (une écriture à la fois,
+    // dans l'ordre des instantanés), puis _lock (le cache). L'instantané est sérialisé
+    // sous _lock, sans aucune I/O ; le disque est écrit hors de _lock. Un appelant qui
+    // tient _lock ne doit donc jamais appeler Flush : la garde de Flush le refuse.
+
+    private static bool _dirty;
+    private static readonly object _fileLock = new();
+    private static System.Threading.Timer? _saveTimer;
+
+    /// <summary>Délai de regroupement des écritures, en millisecondes. Négatif : aucune
+    /// écriture différée, seul <see cref="Flush"/> écrit (hook de test).</summary>
+    internal static int SaveDelayMilliseconds = 400;
+
+    /// <summary>Écritures de config.json réussies depuis le lancement. Instrumentation
+    /// des témoins : combien d'écritures coûte un geste.</summary>
+    internal static int DiskWriteCount;
+
+    /// <summary>Hook de test : appelé pendant l'écriture disque, hors de <c>_lock</c>.</summary>
+    internal static Action? DiskWritePhaseForTests;
+
+    /// <summary>Pose une valeur dans le cache, sous <c>_lock</c>. Une valeur identique ne
+    /// marque rien : refermer une fenêtre sans rien changer n'écrit plus le fichier (F-18).</summary>
+    private static void SetValueLocked(string key, JsonElement value)
     {
-        string tempPath = BuildTempPath(_configPath, Environment.ProcessId);
-        try
+        if (_cache!.TryGetValue(key, out var current) && current.ValueKind == value.ValueKind
+            && current.GetRawText() == value.GetRawText())
+            return;
+        _cache[key] = value;
+        MarkDirty();
+    }
+
+    /// <summary>Marque le cache à écrire et réarme l'écriture groupée. Appelé sous
+    /// <c>_lock</c> : aucune I/O.</summary>
+    private static void MarkDirty()
+    {
+        _dirty = true;
+        if (SaveDelayMilliseconds < 0) return;
+        _saveTimer ??= new System.Threading.Timer(static _ => FlushInBackgroundCore(), null,
+            Timeout.Infinite, Timeout.Infinite);
+        _saveTimer.Change(SaveDelayMilliseconds, Timeout.Infinite);
+    }
+
+    /// <summary>Écrit ce qui attend sur le pool de threads, sans attendre (changement de
+    /// session). N'écrit rien si le cache n'a pas changé.</summary>
+    public static void FlushInBackground() =>
+        ThreadPool.QueueUserWorkItem(static _ => FlushInBackgroundCore());
+
+    private static void FlushInBackgroundCore()
+    {
+        // Pool de threads : une exception non rattrapée ici terminerait le processus.
+        try { Flush(); }
+        catch (Exception ex) { Log("ConfigManager.FlushInBackground", ex); }
+    }
+
+    /// <summary>
+    /// Écrit config.json maintenant, sur le fil appelant, si le cache a changé depuis la
+    /// dernière écriture réussie : fermeture de l'app, WM_QUERYENDSESSION, écriture
+    /// différée, tests. Une écriture ratée laisse le cache marqué, la suivante réessaie.
+    /// </summary>
+    public static void Flush()
+    {
+        // Prendre _fileLock en tenant _lock inverserait l'ordre des verrous : interblocage
+        // avec une écriture différée qui tient _fileLock et attend _lock.
+        if (Monitor.IsEntered(_lock))
+            throw new InvalidOperationException("ConfigManager.Flush appelé sous verrou.");
+
+        lock (_fileLock)
         {
-            if (_loadFailed && File.Exists(_configPath))
+            string path;
+            byte[] content;
+            bool loadFailed;
+            lock (_lock)
             {
-                Log("ConfigManager.Save", new IOException("Sauvegarde ignoree: config.json existant non charge."));
-                return;
+                if (!_dirty || _cache == null) return;
+                content = SerializeLocked();
+                path = _configPath;
+                loadFailed = _loadFailed;
+                _dirty = false;
             }
 
-            var configDir = Path.GetDirectoryName(_configPath);
+            if (!WriteFile(path, content, loadFailed))
+            {
+                lock (_lock)
+                {
+                    // Même fichier seulement : un test a pu rediriger la config entre-temps.
+                    if (path == _configPath) _dirty = true;
+                }
+            }
+        }
+    }
+
+    /// <summary>Instantané du cache en JSON, sous <c>_lock</c>, sans I/O : les mêmes
+    /// octets qu'avant, écrits en mémoire au lieu du fichier temporaire.</summary>
+    private static byte[] SerializeLocked()
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+        {
+            writer.WriteStartObject();
+            foreach (var (key, val) in _cache!)
+            {
+                writer.WritePropertyName(key);
+                // AG130-11 (a) : ecrire l'element tel qu'il a ete lu. L'ancien switch
+                // repassait tout nombre par double (un entier long y perdait ses
+                // derniers chiffres) et serialisait objet, tableau et null en CHAINE :
+                // {"x":{"a":1}} ressortait en "x":"{\"a\":1}". Une cle inconnue
+                // survivait donc a la sauvegarde, mais pas sa forme - et la version qui
+                // l'avait ecrite ne la relisait plus.
+                if (val.ValueKind == JsonValueKind.Undefined) continue;
+                val.WriteTo(writer);
+            }
+            // Sous-objet compatibility (overrides utilisateur par process)
+            if (_compatibilityCache != null && _compatibilityCache.Count > 0)
+            {
+                writer.WritePropertyName("compatibility");
+                writer.WriteStartObject();
+                foreach (var (proc, mode) in _compatibilityCache)
+                {
+                    writer.WritePropertyName(proc);
+                    writer.WriteStringValue(mode);
+                }
+                writer.WriteEndObject();
+            }
+            writer.WriteEndObject();
+        }
+        return stream.ToArray();
+    }
+
+    /// <summary>Écriture atomique et durable de l'instantané : fichier temporaire par PID,
+    /// Flush(true), puis remplacement. Rend false sur un échec à réessayer.</summary>
+    private static bool WriteFile(string path, byte[] content, bool loadFailed)
+    {
+        string tempPath = BuildTempPath(path, Environment.ProcessId);
+        try
+        {
+            if (loadFailed && File.Exists(path))
+            {
+                Log("ConfigManager.Save", new IOException("Sauvegarde ignoree: config.json existant non charge."));
+                return true; // rien à réessayer : ce fichier-là n'est jamais écrasé
+            }
+
+            var configDir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(configDir))
                 Directory.CreateDirectory(configDir);
 
             using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-                writer.WriteStartObject();
-                foreach (var (key, val) in _cache!)
-                {
-                    writer.WritePropertyName(key);
-                    // AG130-11 (a) : ecrire l'element tel qu'il a ete lu. L'ancien switch
-                    // repassait tout nombre par double (un entier long y perdait ses
-                    // derniers chiffres) et serialisait objet, tableau et null en CHAINE :
-                    // {"x":{"a":1}} ressortait en "x":"{\"a\":1}". Une cle inconnue
-                    // survivait donc a la sauvegarde, mais pas sa forme - et la version qui
-                    // l'avait ecrite ne la relisait plus.
-                    if (val.ValueKind == JsonValueKind.Undefined) continue;
-                    val.WriteTo(writer);
-                }
-                // Sous-objet compatibility (overrides utilisateur par process)
-                if (_compatibilityCache != null && _compatibilityCache.Count > 0)
-                {
-                    writer.WritePropertyName("compatibility");
-                    writer.WriteStartObject();
-                    foreach (var (proc, mode) in _compatibilityCache)
-                    {
-                        writer.WritePropertyName(proc);
-                        writer.WriteStringValue(mode);
-                    }
-                    writer.WriteEndObject();
-                }
-                writer.WriteEndObject();
-                writer.Flush();
+                stream.Write(content);
                 stream.Flush(true);
             }
 
-            if (File.Exists(_configPath))
-                File.Replace(tempPath, _configPath, null, true);
+            DiskWritePhaseForTests?.Invoke();
+            if (File.Exists(path))
+                File.Replace(tempPath, path, null, true);
             else
-                File.Move(tempPath, _configPath);
+                File.Move(tempPath, path);
+            Interlocked.Increment(ref DiskWriteCount);
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -1109,6 +1265,7 @@ static class ConfigManager
                     File.Delete(tempPath);
             }
             catch { }
+            return false;
         }
     }
 }

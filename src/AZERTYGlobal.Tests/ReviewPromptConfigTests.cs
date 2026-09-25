@@ -35,6 +35,7 @@ public class ReviewPromptConfigTests : IDisposable
         var after = DateTimeOffset.UtcNow.AddSeconds(2);
 
         Assert.InRange(stamp, before, after);
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
         Assert.True(File.Exists(_configPath));
         Assert.Contains("firstRunTimestamp", File.ReadAllText(_configPath));
     }
@@ -51,6 +52,7 @@ public class ReviewPromptConfigTests : IDisposable
     public void EnsureFirstRunTimestamp_ExistingValue_SurvivesReload()
     {
         var first = ConfigManager.EnsureFirstRunTimestamp();
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         // Simuler un redémarrage de l'app : vider le cache et relire depuis le disque
         ConfigManager.OverrideConfigPathForTests(_configPath);
@@ -184,6 +186,7 @@ public class ReviewPromptConfigTests : IDisposable
     {
         ConfigManager.SetReviewPromptClicked();
         Assert.True(ConfigManager.ReviewPromptClicked);
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         ConfigManager.OverrideConfigPathForTests(_configPath);
         Assert.True(ConfigManager.ReviewPromptClicked);
