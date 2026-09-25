@@ -4,6 +4,14 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, sauf le Défi du jour, masqué en 1.3.0 (voir « Correctifs de l’audit du 24 septembre »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Correctifs de l’audit du 25 septembre (décisions d’Antoine, rapport `docs/audit-2026-09-25-v1.3.0-simplicite/rapport.md`)**
+
+- Accueil : Échap ferme aussi l’accueil quand un lien de l’étape 3 a le focus. Il ne faisait rien, alors qu’À propos et Mes statistiques le faisaient déjà. Même sortie que la croix, avec la même règle pour les cases de l’étape 3.
+- Recherche : un clic dans le bas d’une ligne de résultat insère bien le caractère de cette ligne. Le calcul du clic ignorait les séparateurs de 1 px, si bien que les derniers pixels de chaque ligne visaient la suivante. Témoin : `SearchResultListTests`.
+- Recherche : quand plus de 20 caractères correspondent, le pied de liste dit « 20 sur 98 résultats » au lieu de « 20 résultats ».
+- Recherche, en anglais : dans la méthode de saisie, « Shift » et « then » prennent les couleurs de « Maj » et « puis » en français. Elles étaient peintes comme des touches.
+- Statistiques : un `usage-stats.json` présent mais illisible au lancement (verrou d’un antivirus ou d’une sauvegarde, droits) n’est plus écrasé par des compteurs repartis de zéro ; le lancement suivant le relit. Un fichier corrompu repart de zéro, comme avant. Témoin : `UsageStatsReadFailureTests`.
+
 **Correctifs de l’audit du 24 septembre (décisions d’Antoine, rapport `docs/audit-2026-09-24-v1.3.0-bugs/rapport.md`)**
 
 - Frappe : un caractère Unicode envoyé par un autre logiciel (VK_PACKET : Espanso, AutoHotkey `SendText`, gestionnaire de mots de passe, dictée, session RDP) n’est plus jamais remappé. Depuis `ade118f`, sur un PC où tourne un service de prise en main à distance, « (3) » sortait « ´.@ ». Témoin : `UnicodePacketTests`.
