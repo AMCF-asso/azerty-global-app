@@ -65,6 +65,13 @@ internal sealed class LessonsWindow : IDisposable
     private readonly List<(Win32.RECT Rect, Action Action)> _clickActions = new();
     private readonly List<(Win32.RECT Rect, Action Action)> _doubleClickActions = new();
     private readonly List<(Win32.RECT Rect, string Tooltip, bool PreferAbove, bool Compact)> _hoverAreas = new();
+    // Audit du 25/09 (L-06) : les infobulles des 62 touches ne sont plus construites à chaque
+    // repeint. Le repeint retient le cadre du clavier et l'état dessiné ; OnMouseMove en tire,
+    // pour la seule touche survolée, le texte que _hoverAreas aurait porté.
+    private (Win32.RECT Bounds, KeyboardRenderProfile Profile, KeyboardRenderState State)? _keyboardHover;
+    // L-06 : largeur d'un caractère de la ligne de leçon, par caractère et selon l'affichage
+    // des invisibles ; vidée avec les polices (CreateScaledFonts), seules à la faire varier.
+    private readonly Dictionary<(char Ch, bool Markers), int> _lessonCharWidths = new();
 
     private IntPtr _hWnd;
     private bool _visible;
@@ -312,6 +319,7 @@ internal sealed class LessonsWindow : IDisposable
 
     private void CreateScaledFonts()
     {
+        _lessonCharWidths.Clear(); // L-06 : mesurées avec les polices et l'échelle d'avant
         _hFontTitle = Win32.CreateFontW(-S(22), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontSubtitle = Win32.CreateFontW(-S(14), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontText = Win32.CreateFontW(-S(13), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
@@ -986,6 +994,7 @@ internal sealed class LessonsWindow : IDisposable
         _clickActions.Clear();
         _doubleClickActions.Clear();
         _hoverAreas.Clear();
+        _keyboardHover = null;
 
         DrawHeader(hdc, rc);
         var body = new Win32.RECT { left = S(16), top = S(74), right = rc.right - S(16), bottom = rc.bottom - S(16) };
@@ -1251,8 +1260,16 @@ internal sealed class LessonsWindow : IDisposable
 
     private int MeasureLessonCharacterWidth(IntPtr hdc, char ch)
     {
-        string display = FormatVisibleCharacter(ch.ToString());
-        return Math.Max(S(12), GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, display) + S(4));
+        // L-06 : chaque caractère était mesuré quatre fois par repeint (deux préfixes pour le
+        // défilement, cellule attendue, cellule tapée). Même texte que FormatVisibleCharacter,
+        // sur une seule lecture du réglage, qui fait partie de la clé.
+        bool markers = ConfigManager.LessonInvisibleMarkersVisible;
+        if (_lessonCharWidths.TryGetValue((ch, markers), out int width))
+            return width;
+        string display = markers ? KeyboardRenderer.DisplayInvisible(ch.ToString()) : ch.ToString();
+        width = Math.Max(S(12), GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, display) + S(4));
+        _lessonCharWidths[(ch, markers)] = width;
+        return width;
     }
 
     private void DrawTargetCharacters(IntPtr hdc, Win32.RECT box, IReadOnlyList<LessonCharacterSnapshot> characters, int scrollOffset)
@@ -1488,14 +1505,42 @@ internal sealed class LessonsWindow : IDisposable
         AddKeyboardHoverAreas(rect, profile, state);
     }
 
+    /// <summary>
+    /// L-06 : retient de quoi construire au survol l'infobulle d'une touche, au lieu des 62
+    /// textes à chaque repeint. Le clavier est dessiné en dernier dans les deux modes : ses
+    /// touches venaient après toutes les zones de <see cref="_hoverAreas"/>, et
+    /// <see cref="OnMouseMove"/> les consulte dans le même ordre. Aucune touche n'est une
+    /// cible cliquable : l'infobulle de la cible focalisée (K4) n'en dépend pas.
+    /// </summary>
     private void AddKeyboardHoverAreas(Win32.RECT rect, KeyboardRenderProfile profile, KeyboardRenderState state)
     {
-        foreach (var hit in KeyboardRenderer.BuildHitTestRects(rect))
+        _keyboardHover = (rect, profile, state);
+    }
+
+    /// <summary>
+    /// L-06 : infobulle de la touche sous (<paramref name="x"/>, <paramref name="y"/>), telle
+    /// que le repeint la déclarait : touches dans l'ordre de
+    /// <see cref="KeyboardRenderer.BuildHitTestRects"/>, bornes incluses, touches sans texte
+    /// ignorées. Fonction pure pour le témoin (LessonKeyboardTooltipTests).
+    /// </summary>
+    internal static bool TryGetKeyboardTooltip(Layout layout, Win32.RECT bounds, KeyboardRenderProfile profile,
+        KeyboardRenderState state, int x, int y, out string tooltip, out Win32.RECT anchor)
+    {
+        foreach (var hit in KeyboardRenderer.BuildHitTestRects(bounds))
         {
-            string tooltip = KeyboardRenderer.BuildTooltipText(_layout, profile, state, hit.Scancode, hit.Label);
-            if (!string.IsNullOrWhiteSpace(tooltip))
-                AddHover(hit.Rect, tooltip);
+            var rect = hit.Rect;
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)
+                continue;
+            string text = KeyboardRenderer.BuildTooltipText(layout, profile, state, hit.Scancode, hit.Label);
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+            tooltip = text;
+            anchor = rect;
+            return true;
         }
+        tooltip = "";
+        anchor = new Win32.RECT();
+        return false;
     }
 
     private void DrawFreeContent(IntPtr hdc, Win32.RECT rect)
@@ -2061,6 +2106,7 @@ internal sealed class LessonsWindow : IDisposable
         var anchor = new Win32.RECT();
         bool preferAbove = false;
         bool compact = false;
+        bool found = false;
         foreach (var (rect, candidate, candidatePreferAbove, candidateCompact) in _hoverAreas)
         {
             if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
@@ -2069,8 +2115,18 @@ internal sealed class LessonsWindow : IDisposable
                 anchor = rect;
                 preferAbove = candidatePreferAbove;
                 compact = candidateCompact;
+                found = true;
                 break;
             }
+        }
+        // L-06 : les touches du clavier après toutes les autres zones, comme au repeint, avec
+        // l'état qu'il a dessiné ; ni au-dessus, ni compactes (valeurs par défaut d'AddHover).
+        if (!found && _keyboardHover is { } keyboard &&
+            TryGetKeyboardTooltip(_layout, keyboard.Bounds, keyboard.Profile, keyboard.State, x, y,
+                out var keyTooltip, out var keyAnchor))
+        {
+            tooltip = keyTooltip;
+            anchor = keyAnchor;
         }
 
         if (!StringComparer.Ordinal.Equals(_hoverTooltip, tooltip) ||
