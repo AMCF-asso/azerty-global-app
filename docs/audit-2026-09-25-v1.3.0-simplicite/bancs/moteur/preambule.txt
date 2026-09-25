@@ -1,0 +1,40 @@
+RÉSULTATS BRUTS — micro-benchmarks du moteur AZERTY Global 1.3.0 (audit simplicité, zone moteur)
+Date : 2026-09-25, 20:26 à 20:37 (heure locale). Dépôt lu au commit f0a98ba (branche release/1.2.0-notation-store).
+
+Machine et conditions
+- CPU 13th Gen Intel Core i5-13600K (20 processeurs logiques), 64 Go de RAM, Windows 11 Pro for Workstations build 26200.
+- SDK .NET 8.0.425, runtime .NET 8.0.31 x64. GC station de travail, concurrent, LatencyMode=Interactive.
+- Priorité du processus de banc : High. Machine en usage normal (session interactive ouverte, autres applications
+  actives) : les queues (p99.9, max) contiennent des préemptions de l'OS et des GC gen0, pas seulement le moteur.
+- QueryPerformanceCounter à 10 MHz : chaque échantillon par séquence est quantifié à 100 ns. Les moyennes
+  (temps total / 200 000) sont plus fines que les médianes.
+- Application AZERTY Global NON lancée pendant le banc (tasklist vérifié). Un hôte de prise en main à distance
+  tourne sur la machine (GameRegistry.IsRemoteAccessHostRunning = True).
+
+Ce qui est exécuté
+- Le vrai rappel KeyboardHook.HookCallback (délégué privé _proc lu par réflexion), qui appelle KeyMapper,
+  ForegroundMonitor et CompositionEngine réels, sur la disposition réelle « AZERTY Global 2026.json ».
+- AUCUN hook installé (SetWindowsHookEx jamais appelé), AUCUN SendInput réel (l'API de banc rend le nombre
+  d'événements demandés). CallNextHookEx est appelé réellement pour les touches laissées passer : hors chaîne
+  de hooks il rend 0.
+- IWin32Api de banc (BenchApi dans Program.cs) : équivalent de MockWin32Api sans enregistrement des lots
+  (MockWin32Api copie chaque lot dans une liste et fausserait les allocations).
+- Passe « mock » : Win32 entièrement simulé (coût managé pur). Passe « ombre » : chaque fonction Win32 en lecture
+  seule appelée par le moteur est aussi appelée réellement (mêmes P/Invoke TypingEngine.Windows.Win32) ; ToUnicode
+  drapeau 0 remplacé par ToUnicodeEx drapeau 4 (aucun effet sur l'état des touches mortes) ; GetAsyncKeyState
+  visé sur VK_F24. Le coût de SendInput n'est pas mesuré (interdit : il injecterait des frappes).
+- UsageStats.RecordEmittedText (hôte produit) n'est pas dans la mesure : l'hôte de banc ne fait rien.
+- IsWindowPasswordField (requête UIA) n'est pas appelé : il activerait l'arbre d'accessibilité d'une
+  application Chromium de l'utilisateur. Son attente est bornée à 30 ms par le code (SecureInputDetector.cs:28).
+
+Construction (rien d'écrit dans le dépôt : vérifié par find -newer après chaque build/test)
+- JIT : dotnet build BenchMoteur.csproj -c Release --artifacts-path <scratchpad>/audit/build-moteur
+- AOT : PATH+=vswhere ; dotnet publish -c Release -r win-x64 -p:PublishAot=true -p:OptimizationPreference=Size
+        --artifacts-path <scratchpad>/audit/build-moteur-aot   (sans vswhere dans le PATH : « 'vswhere.exe' is not
+        recognized as an internal or external command », link.exe exited with code 3)
+- Application Control n'a rien bloqué (TypingEngine.* seulement ; AZERTY Global.dll non référencé).
+- Référence : dotnet test TypingEngine.Windows.Tests 257/257 et TypingEngine.Core.Tests 18/18 verts (Release).
+
+Fichiers : resultats-release-1.txt, resultats-release-2.txt (JIT), resultats-aot.txt (NativeAOT Size),
+resultats-hors-rappel.txt (section 3 seule, avec l'alternative Toolhelp32). Concaténés ci-dessous.
+

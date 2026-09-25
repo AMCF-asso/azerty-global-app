@@ -1,0 +1,47 @@
+Banc hors application — zone visuel (V-), audit 2026-09-25, commit de référence f0a98ba
+======================================================================================
+
+Méthode
+- Programme console .NET 8 (JIT, Release) : bench-visuel/Program.cs + Bench.csproj,
+  construit avec --artifacts-path scratchpad/audit/build-visuel. Aucune référence à
+  AZERTY Global.dll, aucune fenêtre, aucun hook.
+- Recherche : copie fidèle de CharacterSearch.LoadCharacterIndex, NormalizeForSearch,
+  Search, MatchScore, AllWordsMatch, ApplyQuerySpecificMethod, WithPreferredMethod
+  (src/CharacterSearch.cs @ f0a98ba) ; L.* remplacé par le texte français. Culture fr-FR.
+  Frappe incrémentale : chaque préfixe de 15 phrases = 120 requêtes ; 40 répétitions par
+  requête, médiane retenue. Ne mesure PAS ResizeToFitResults ni le repeint qui suivent.
+- Variante « ordinal » : seuls AllWordsMatch et le bonus « nom commence par » passent en
+  StringComparison.Ordinal ; lowerQuery.StartsWith("u+") (appelé pour chaque entrée
+  sans score) reste en culture dans les deux variantes.
+- GDI : réplique du repeint dans un DC mémoire 864×336 (taille par défaut du clavier
+  virtuel), 62 touches, BitBlt vers un second DC mémoire, GdiFlush. A = chemin
+  VirtualKeyboard.PaintContent de f0a98ba ; B = chemin KeyboardRenderer.DrawKey (pinceau
+  et stylo créés par touche, jusqu'à 4 glyphes) ; B' = B avec pinceau/stylo en cache.
+- Limites : l'application publiée est NativeAOT (pas de JIT) — les ordres de grandeur
+  valent, pas les valeurs exactes. Rien n'a été mesuré dans l'application elle-même.
+
+Synthèse (preuves mesurées sur réplique)
+- Index : 1 005 entrées (1 034 clés dont 29 « dk: » ignorées), JSON de 605 678 octets.
+- Chargement : 17 ms chaud (médiane, 15 passages ; 11,5–17 ms selon les passages),
+  27–32 ms au premier passage JIT compris ; 7,6 Mo alloués ; 1,86 Mo retenus par l'index
+  (mesure sur une 2e instance). Parse JSON seul : 3,5–10 ms ; normalisation FormD de
+  l'index : 0,6–0,7 ms. La normalisation n'est PAS refaite par frappe (seule la requête
+  l'est, une fois).
+- Recherche, code actuel, ICU (défaut .NET 8 sur Windows 11) : 2,19 ms médiane par
+  frappe, p90 2,25 ms, max 2,37 ms ; 115 Ko alloués par frappe.
+  Même code avec StartsWith ordinal : 0,26 ms médiane (×8,5 plus rapide), max 0,54 ms.
+  Sous NLS : 0,47 ms (culture) contre 0,12 ms (ordinal).
+  Top 20 identique entre culture et ordinal sur les 120 requêtes (0 divergence).
+  Requêtes à un seul mot d'un caractère (« e », « é ») ou commençant par un tel mot
+  (« e accent aigu ») : 0,25–0,43 ms, car la comparaison exacte évite StartsWith.
+  ~11 000 comparaisons mot à mot par frappe (scan linéaire des 1 005 entrées).
+- Compte affiché : « cyrillique » a 98 correspondances, le pied de fenêtre affiche au
+  plus 20 (MAX_RESULTS).
+- Repeint GDI : A 0,82 ms (p95 1,03 ms) ; B 2,26 ms (p95 2,77 ms) ; B' 2,15 ms.
+  Mettre pinceau/stylo en cache ne gagne que ~5 % : le coût est dans DrawTextW.
+  Objets GDI du processus stables (11–12, cache interne de pinceaux) : pas de fuite
+  dans la réplique. Créations GDI par repeint : A = 8, B = 127.
+
+Sorties brutes : resultats-icu.txt (défaut) et resultats-nls.txt
+(DOTNET_SYSTEM_GLOBALIZATION_USENLS=1). resultats-brut.txt est un premier passage
+dont l'étiquette ICU était inversée : ne pas le citer.

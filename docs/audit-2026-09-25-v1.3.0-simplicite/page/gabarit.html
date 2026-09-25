@@ -1,0 +1,174 @@
+<title>Audit simplicité AZERTY 1.3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,650&family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --papier: #FAF8F1; --surface: #FFFFFF; --encre: #1B1813; --texte-2: #5B554A;
+  --bordure: #D9D2C3; --action: #1A3EF2; --focus: #1A3EF2;
+  --succes: #186339; --avertissement: #8A5200; --erreur: #B02A1E;
+  --succes-fond: #E9F2EA; --avertissement-fond: #F7EDDC; --erreur-fond: #F9E9E6;
+  --touche: #F1EDE3; --touche-bord: #BDB4A2;
+  --serif: "Literata", Georgia, serif;
+  --sans: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "Source Code Pro", Consolas, monospace;
+  --rayon: 3px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --papier: #1B1813; --surface: #241F17; --encre: #FAF8F1; --texte-2: #B3A996;
+    --bordure: #453D30; --action: #8FA6FF; --focus: #8FA6FF;
+    --succes: #6FBF8B; --avertissement: #D9A045; --erreur: #E88070;
+    --succes-fond: #1E2A20; --avertissement-fond: #2C2212; --erreur-fond: #2D1A16;
+    --touche: #2E281E; --touche-bord: #5A5040;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --papier: #1B1813; --surface: #241F17; --encre: #FAF8F1; --texte-2: #B3A996;
+  --bordure: #453D30; --action: #8FA6FF; --focus: #8FA6FF;
+  --succes: #6FBF8B; --avertissement: #D9A045; --erreur: #E88070;
+  --succes-fond: #1E2A20; --avertissement-fond: #2C2212; --erreur-fond: #2D1A16;
+  --touche: #2E281E; --touche-bord: #5A5040;
+}
+* { box-sizing: border-box; }
+body { background: var(--papier); color: var(--encre); font: 400 16px/1.55 var(--sans); padding-inline: 16px; padding-block: 0 64px; }
+@media (min-width: 768px) { body { padding-inline: 32px; font-size: 17px; } }
+.page { max-width: 1120px; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 650; text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 42px); }
+h2 { font-size: clamp(23px, 3.2vw, 30px); }
+h3 { font-size: 19px; font-weight: 500; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--action); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+.entete { display: grid; gap: 16px; padding-block: 40px 28px; border-bottom: 1px solid var(--bordure); }
+.surtitre { font: 600 13px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--texte-2); }
+.chapo { color: var(--texte-2); font-size: 1.05em; }
+.chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; border: 1px solid var(--bordure); border-radius: var(--rayon); background: var(--surface); margin-top: 8px; }
+.chiffre { padding: 14px 16px; border-right: 1px solid var(--bordure); }
+.chiffre:last-child { border-right: 0; }
+.chiffre b { display: block; font: 600 26px/1.1 var(--serif); font-variant-numeric: tabular-nums; }
+.chiffre span { font-size: 14px; color: var(--texte-2); }
+section { padding-block: 36px 8px; display: grid; gap: 18px; }
+.grille2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.bloc { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 18px 20px; display: grid; gap: 10px; align-content: start; }
+.bloc ul, .bloc ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.bloc li { max-width: 68ch; }
+.note { font-size: 14px; color: var(--texte-2); }
+/* Touches : étiquettes ponytail dessinées comme des capuchons de touche */
+.touche { display: inline-block; font: 500 12px/1 var(--mono); padding: 4px 6px 3px; border: 1px solid var(--touche-bord); border-bottom-width: 3px; border-radius: 4px; background: var(--touche); color: var(--encre); white-space: nowrap; }
+.pastille { display: inline-block; font: 600 12px/1 var(--sans); padding: 4px 7px; border-radius: 999px; white-space: nowrap; }
+.g-majeur { background: var(--erreur-fond); color: var(--erreur); }
+.g-moyen { background: var(--avertissement-fond); color: var(--avertissement); }
+.g-mineur { background: var(--touche); color: var(--texte-2); }
+.v-CONFIRME { background: var(--succes-fond); color: var(--succes); }
+.v-NUANCE { background: var(--avertissement-fond); color: var(--avertissement); }
+.v-REFUTE { background: var(--erreur-fond); color: var(--erreur); }
+.filtres { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 14px 16px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; }
+.filtres label { display: grid; gap: 4px; font-size: 13px; color: var(--texte-2); }
+.filtres select, .filtres input { font: 400 15px var(--sans); color: var(--encre); background: var(--papier); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 7px 8px; min-height: 38px; }
+.filtres input { min-width: 0; width: min(240px, 100%); }
+.compte { margin-left: auto; font-size: 14px; color: var(--texte-2); font-variant-numeric: tabular-nums; }
+.liste { display: grid; gap: 8px; }
+details.constat { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); }
+details.constat[data-verdict="REFUTE"] summary .titre { text-decoration: line-through; color: var(--texte-2); }
+details.constat summary { list-style: none; cursor: pointer; padding: 12px 14px; display: grid; grid-template-columns: 58px 1fr; gap: 4px 12px; align-items: baseline; }
+details.constat summary::-webkit-details-marker { display: none; }
+.id { font: 500 13px var(--mono); color: var(--texte-2); }
+.titre { font-weight: 600; }
+.meta { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--texte-2); }
+.gain { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; }
+.corps { padding: 0 14px 16px 84px; display: grid; gap: 10px; }
+@media (max-width: 560px) { .corps { padding-left: 14px; } details.constat summary { grid-template-columns: 1fr; } .meta { grid-column: 1; } }
+.corps dl { margin: 0; display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; }
+@media (max-width: 560px) { .corps dl { grid-template-columns: 1fr; } }
+.corps dt { font-size: 13px; font-weight: 600; color: var(--texte-2); }
+.corps dd { margin: 0; max-width: 72ch; overflow-wrap: anywhere; }
+.fichiers { font: 400 13px/1.5 var(--mono); overflow-wrap: anywhere; }
+.verdict-texte { border-left: 3px solid var(--bordure); padding-left: 10px; }
+.vide { padding: 24px; text-align: center; color: var(--texte-2); }
+@media (prefers-reduced-motion: no-preference) { details.constat[open] .corps { animation: ouvre 160ms ease-out; } @keyframes ouvre { from { opacity: .4; transform: translateY(-3px); } } }
+</style>
+
+<div class="page">
+<!--SYNTHESE-->
+
+<section id="constats" aria-labelledby="t-constats">
+  <h2 id="t-constats">Tous les constats</h2>
+  <p class="note">Chaque ligne s'ouvre sur le constat, sa preuve, la proposition, le risque et, pour les majeurs et les constats de comportement, le verdict de la contre-expertise. Les gains en lignes ne s'additionnent pas : plusieurs constats décrivent le même chantier vu depuis deux zones.</p>
+  <form class="filtres" id="filtres" role="search" aria-label="Filtrer les constats">
+    <label for="f-zone">Zone<select id="f-zone"><option value="">Toutes</option></select></label>
+    <label for="f-gravite">Gravité<select id="f-gravite"><option value="">Toutes</option><option>majeur</option><option>moyen</option><option>mineur</option></select></label>
+    <label for="f-axe">Axe<select id="f-axe"><option value="">Tous</option><option value="exec">exécution</option><option value="eco">économie</option><option value="lisi">lisibilité</option></select></label>
+    <label for="f-cible">Cible<select id="f-cible"><option value="">Toutes</option><option>1.4.0</option><option>v2</option><option>les deux</option></select></label>
+    <label for="f-verdict">Contre-expertise<select id="f-verdict"><option value="">Tous</option><option value="CONFIRME">confirmé</option><option value="NUANCE">nuancé</option><option value="REFUTE">réfuté</option><option value="-">non relu</option></select></label>
+    <label for="f-texte">Texte ou fichier<input id="f-texte" type="search" placeholder="KeyMapper, config.json…"></label>
+    <span class="compte" id="compte" aria-live="polite"></span>
+  </form>
+  <div class="liste" id="liste"></div>
+</section>
+</div>
+
+<script type="application/json" id="donnees">/*DONNEES*/</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('donnees').textContent);
+  var ZONES = { moteur: 'Moteur de frappe', app: 'Application', lecons: 'Leçons et Défi', fenetres: 'Fenêtres', visuel: 'Clavier visuel et recherche', transversal: 'Transversal' };
+  var AXES = { exec: 'exécution', eco: 'économie', lisi: 'lisibilité' };
+  var VERD = { CONFIRME: 'confirmé', NUANCE: 'nuancé', REFUTE: 'réfuté' };
+  var ORD = { majeur: 0, moyen: 1, mineur: 2 };
+  var $ = function (id) { return document.getElementById(id); };
+  var fz = $('f-zone');
+  Object.keys(ZONES).forEach(function (z) { var o = document.createElement('option'); o.value = z; o.textContent = ZONES[z]; fz.appendChild(o); });
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function gain(c) { var l = c.gain && c.gain.lignes; if (l === null || l === undefined || l === 0) return ''; return (l > 0 ? '+' : '−') + Math.abs(l) + ' l.'; }
+  function ligne(dt, dd) { return dd ? '<dt>' + dt + '</dt><dd>' + dd + '</dd>' : ''; }
+  function carte(c) {
+    var v = c.verdict || '-';
+    var h = '<details class="constat" data-verdict="' + v + '"><summary><span class="id">' + esc(c.id) + '</span><span class="titre">' + esc(c.titre) + '</span><span class="meta">'
+      + '<span class="pastille g-' + esc(c.gravite) + '">' + esc(c.gravite) + '</span>'
+      + '<span class="touche">' + esc(c.etiquette) + '</span>'
+      + '<span>' + esc(ZONES[c.zone] || c.zone) + ' · ' + esc(AXES[c.axe] || c.axe) + ' · ' + esc(c.cible) + '</span>'
+      + (gain(c) ? '<span class="gain">' + gain(c) + '</span>' : '')
+      + (c.verdict ? '<span class="pastille v-' + v + '">' + VERD[v] + '</span>' : '')
+      + (c.suite && /^(Corrigé|Garde corrigée)/.test(c.suite) ? '<span class="pastille v-CONFIRME">corrigé en 1.3.0</span>' : '')
+      + '</span></summary><div class="corps"><dl>'
+      + ligne('Suite donnée', c.suite ? '<div class="verdict-texte">' + esc(c.suite) + '</div>' : '')
+      + ligne('Fichiers', '<span class="fichiers">' + (c.fichiers || []).map(esc).join('<br>') + '</span>')
+      + ligne('Constat', esc(c.constat))
+      + ligne('Preuve', esc(c.preuve))
+      + ligne('Proposition', esc(c.proposition))
+      + ligne('Gain', esc([gain(c), c.gain && c.gain.exec, c.gain && c.gain.nature ? '(' + c.gain.nature + ')' : ''].filter(Boolean).join(' ')))
+      + ligne('Risque', esc(c.risque))
+      + ligne('Leçon v2', esc(c.lecon_v2))
+      + ligne('Confiance', esc(c.confiance))
+      + ligne('Contre-expertise', c.verdict_texte ? '<div class="verdict-texte">' + esc(c.verdict_texte) + '</div>' : '')
+      + ligne('Recoupe', esc((c.recoupe || []).join(', ')))
+      + '</dl></div></details>';
+    return h;
+  }
+  function filtre() {
+    var z = fz.value, g = $('f-gravite').value, a = $('f-axe').value, ci = $('f-cible').value, ve = $('f-verdict').value, t = $('f-texte').value.trim().toLowerCase();
+    var r = D.filter(function (c) {
+      if (z && c.zone !== z) return false;
+      if (g && c.gravite !== g) return false;
+      if (a && c.axe !== a) return false;
+      if (ci && c.cible !== ci) return false;
+      if (ve && (c.verdict || '-') !== ve) return false;
+      if (t && (c.id + ' ' + c.titre + ' ' + (c.fichiers || []).join(' ') + ' ' + c.constat).toLowerCase().indexOf(t) < 0) return false;
+      return true;
+    }).sort(function (x, y) { return (ORD[x.gravite] - ORD[y.gravite]) || x.id.localeCompare(y.id, 'fr', { numeric: true }); });
+    $('liste').innerHTML = r.length ? r.map(carte).join('') : '<p class="vide">Aucun constat ne correspond à ces filtres.</p>';
+    $('compte').textContent = r.length + ' constat' + (r.length > 1 ? 's' : '') + ' sur ' + D.length;
+    try { localStorage.setItem('audit130-filtres', JSON.stringify({ z: z, g: g, a: a, ci: ci, ve: ve })); } catch (e) {}
+  }
+  try { var s = JSON.parse(localStorage.getItem('audit130-filtres') || 'null'); if (s) { fz.value = s.z || ''; $('f-gravite').value = s.g || ''; $('f-axe').value = s.a || ''; $('f-cible').value = s.ci || ''; $('f-verdict').value = s.ve || ''; } } catch (e) {}
+  $('filtres').addEventListener('input', filtre);
+  $('filtres').addEventListener('submit', function (e) { e.preventDefault(); });
+  filtre();
+})();
+</script>

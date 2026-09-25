@@ -1,0 +1,22 @@
+Runtime : .NET 8.0.31 (JIT ; l'app publiée est AOT)
+character-index.json : 605,678 octets ; lessons.json : 36,635 octets
+
+1. Tutoriel : LoadCharacterMethods (ReadToEnd + JsonDocument + 2 passes)
+   1er passage (JIT compris) 26.5 ms, alloué 6.58 Mo ; chaud : médiane 17.37 ms, min 16.38 ms (15 passages)
+2. Leçons : LessonHintProvider.LoadCharacterIndex (Parse(stream))
+   1er passage (JIT compris) 12.7 ms, alloué 0.38 Mo ; chaud : médiane 11.85 ms, min 11.58 ms (15 passages)
+3. Leçons : LessonCatalog (parse + 79 SHA-256)
+   1er passage (JIT compris) 4.5 ms, alloué 0.40 Mo ; chaud : médiane 0.72 ms, min 0.67 ms (15 passages)
+Mémoire retenue : index du tutoriel 1406 Ko ; index des indices Leçons 280 Ko
+
+4. Repeint LessonsWindow, part hors GDI répliquée (en-tête + barre latérale + caractères requis)
+   79 exercices, 9 modules : 27.0 µs et 41.5 Ko alloués par repeint (moyenne sur 2000)
+   variante clé mémorisée (CountCompleted seul) : 3.8 µs et 0.0 Ko par repeint
+
+5. Tutoriel : propriété Steps reconstruite à chaque accès
+   62 accès/repeint : 4.06 µs et 13.1 Ko alloués par repeint
+
+6. LessonsWindow : mesures de largeur par caractère (4 x 62 DrawTextW DT_CALCRECT par repeint)
+   692 µs par repeint (DC mémoire, Consolas 17 px)
+7. Tampon 1088x721 : CreateCompatibleDC + CreateCompatibleBitmap + SelectObject + remplissage + suppression = 150 µs par repeint
+7. Tampon 1632x1082 : CreateCompatibleDC + CreateCompatibleBitmap + SelectObject + remplissage + suppression = 310 µs par repeint

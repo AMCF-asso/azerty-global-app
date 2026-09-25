@@ -1,0 +1,12 @@
+== JIT
+Runtime .NET 8.0.31, AOT=False
+Apartment du fil principal : STA
+WaitOne(300) : début 0.0 ms, fin 302.3 ms (durée 302.3 ms, signalé=False)
+SendMessage : envoyé à 53.7 ms, traité à 53.7 ms, rendu à 53.8 ms ; traité PENDANT l'attente = True
+PostMessage : traité à 303.9 ms ; traité PENDANT l'attente = False
+== NativeAOT
+Runtime .NET 8.0.31, AOT=True
+Apartment du fil principal : STA
+WaitOne(300) : début 0.0 ms, fin 313.3 ms (durée 313.3 ms, signalé=False)
+SendMessage : envoyé à 62.2 ms, traité à 62.3 ms, rendu à 62.3 ms ; traité PENDANT l'attente = True
+PostMessage : traité à 313.4 ms ; traité PENDANT l'attente = False

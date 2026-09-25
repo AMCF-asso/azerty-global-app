@@ -1,0 +1,60 @@
+Runtime : .NET 8.0.31, Microsoft Windows 10.0.26200, JIT (l'application publiée est AOT)
+Globalisation ICU : True  (DOTNET_SYSTEM_GLOBALIZATION_USENLS=non défini)
+Fichier : D:/My files/Keyboard Layouts/projects/azerty-global/components/microsoft-store/src/character-index.json (605 678 octets)
+
+=== 1. Recherche de caractère (réplique CharacterSearch @ f0a98ba) ===
+Entrées chargées : 1005
+Chargement 1er passage (JIT compris) : 32,3 ms ; alloué 7,58 Mo
+Mémoire retenue, 1re instance (inclut les caches statiques du runtime) : 4435 Ko
+Mémoire retenue par une 2e instance (index seul) : 1863 Ko
+Dictionnaire GetCharacterNames() (copie pour le clavier virtuel, chaînes partagées) : 68 Ko
+Chargement chaud : médiane 17,3 ms, min 16,8 ms (15 passages)
+  dont JsonDocument.Parse seul : médiane 10,10 ms
+  dont normalisation FormD de l'index : médiane 0,62 ms
+
+-- Code actuel : string.StartsWith(string) = culture courante fr-FR --
+  « e » (1 frappes) : médiane/frappe     252 µs, pire frappe     252 µs, 47 correspondances
+  « é » (1 frappes) : médiane/frappe     265 µs, pire frappe     265 µs, 47 correspondances
+  « euro » (4 frappes) : médiane/frappe    2233 µs, pire frappe    2236 µs, 2 correspondances
+  « accent aigu » (11 frappes) : médiane/frappe    2109 µs, pire frappe    2340 µs, 44 correspondances
+  « e accent aigu » (13 frappes) : médiane/frappe     338 µs, pire frappe     361 µs, 2 correspondances
+  « guillemet » (9 frappes) : médiane/frappe    2203 µs, pire frappe    2217 µs, 13 correspondances
+  « fleche droite » (13 frappes) : médiane/frappe    2191 µs, pire frappe    2207 µs, 6 correspondances
+  « espace insecable » (16 frappes) : médiane/frappe    2214 µs, pire frappe    2269 µs, 2 correspondances
+  « alpha » (5 frappes) : médiane/frappe    2225 µs, pire frappe    2229 µs, 6 correspondances
+  « cyrillique » (10 frappes) : médiane/frappe    2179 µs, pire frappe    2212 µs, 98 correspondances
+  « u+00e9 » (6 frappes) : médiane/frappe    2262 µs, pire frappe    2368 µs, 1 correspondances
+  « e uppercase » (11 frappes) : médiane/frappe     410 µs, pire frappe     420 µs, 20 correspondances
+  « oe » (2 frappes) : médiane/frappe    2226 µs, pire frappe    2226 µs, 2 correspondances
+  « tiret cadratin » (14 frappes) : médiane/frappe    2224 µs, pire frappe    2257 µs, 2 correspondances
+  « zzzz » (4 frappes) : médiane/frappe    2212 µs, pire frappe    2217 µs, 0 correspondances
+  Toutes frappes (120) : médiane 2190 µs, p90 2250 µs, max 2368 µs ; alloué moyen/frappe 115,2 Ko
+
+-- Variante : StartsWith(..., StringComparison.Ordinal) (proposition) --
+  « e » (1 frappes) : médiane/frappe     236 µs, pire frappe     236 µs, 47 correspondances
+  « é » (1 frappes) : médiane/frappe     250 µs, pire frappe     250 µs, 47 correspondances
+  « euro » (4 frappes) : médiane/frappe     246 µs, pire frappe     250 µs, 2 correspondances
+  « accent aigu » (11 frappes) : médiane/frappe     266 µs, pire frappe     277 µs, 44 correspondances
+  « e accent aigu » (13 frappes) : médiane/frappe     235 µs, pire frappe     243 µs, 2 correspondances
+  « guillemet » (9 frappes) : médiane/frappe     250 µs, pire frappe     259 µs, 13 correspondances
+  « fleche droite » (13 frappes) : médiane/frappe     260 µs, pire frappe     267 µs, 6 correspondances
+  « espace insecable » (16 frappes) : médiane/frappe     260 µs, pire frappe     538 µs, 2 correspondances
+  « alpha » (5 frappes) : médiane/frappe     292 µs, pire frappe     527 µs, 6 correspondances
+  « cyrillique » (10 frappes) : médiane/frappe     275 µs, pire frappe     301 µs, 98 correspondances
+  « u+00e9 » (6 frappes) : médiane/frappe     296 µs, pire frappe     308 µs, 1 correspondances
+  « e uppercase » (11 frappes) : médiane/frappe     236 µs, pire frappe     245 µs, 20 correspondances
+  « oe » (2 frappes) : médiane/frappe     242 µs, pire frappe     242 µs, 2 correspondances
+  « tiret cadratin » (14 frappes) : médiane/frappe     257 µs, pire frappe     264 µs, 2 correspondances
+  « zzzz » (4 frappes) : médiane/frappe     248 µs, pire frappe     250 µs, 0 correspondances
+  Toutes frappes (120) : médiane 256 µs, p90 280 µs, max 538 µs ; alloué moyen/frappe 115,2 Ko
+
+Comparaisons mot/mot pour « accent aigu » : 11 650
+Comparaisons mot/mot pour « e » : 10 792
+Requêtes dont le top 20 diffère entre culture et ordinal : 0
+
+=== 2. Repeint GDI du clavier (réplique, DC mémoire 864×336, sans fenêtre) ===
+  A. VirtualKeyboard @ f0a98ba (1 glyphe, 5 objets/repeint)          médiane    822 µs, p95   1031 µs, objets GDI du processus ensuite : 11
+  B. KeyboardRenderer (pinceau+stylo par touche, 4 glyphes)          médiane   2256 µs, p95   2769 µs, objets GDI du processus ensuite : 12
+  B'. idem avec pinceau/stylo mis en cache (proposition)             médiane   2148 µs, p95   2515 µs, objets GDI du processus ensuite : 12
+  Objets GDI du processus avant/après 1400 repeints : 6 → 12 (réplique sans fuite)
+  Créations GDI par repeint : A = 2 (DC, bitmap) + 1 fond + 5 = 8 ; B = 2 + 1 + 2 × 62 touches = 127

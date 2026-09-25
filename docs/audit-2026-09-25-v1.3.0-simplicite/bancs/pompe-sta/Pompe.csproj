@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Contre-avis M-06 : une attente WaitOne sur un fil STA sert-elle les messages envoyés
+       (SendMessage, même mécanisme que la livraison d'un rappel WH_KEYBOARD_LL) ? Aucun hook. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+</Project>

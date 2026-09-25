@@ -1,0 +1,99 @@
+Bench moteur AZERTY Global 1.3.0 — 2026-09-25 20:28:10
+Runtime : .NET 8.0.31 ; X64 ; OS Microsoft Windows NT 10.0.26200.0
+CPU logiques : 20 ; ServerGC=False ; LatencyMode=Interactive
+Stopwatch : Frequency=10,000,000 Hz (résolution 100 ns), HighResolution=True
+Configuration : RELEASE (JIT, TieredPGO par défaut) — la production est NativeAOT OptimizationPreference=Size
+Priorité processus : High
+
+=== 1. Rappel complet HookCallback, par séquence (une « frappe » = tous ses rappels) ===
+    échauffement 50,000 x2, mesure 200,000 séquences ; temps en µs ; octets GC par séquence
+
+--- passe « mock » (Win32 entièrement simulé) ---
+A lettre simple 'a' (pass-through natif) [mock]
+   contrôle : texte émis «  » attendu «  » -> OK ; retours du rappel [0,0] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 4, GetKeyState 2, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 0 (0 évén.)
+   médiane 0.800 µs ; p99 1.400 µs ; p99.9 2.200 µs ; max 119.6 µs ; moyenne 0.838 µs ; par rappel ~0.419 µs
+   allocations : 480.0 octets/séquence (240.0 octets/rappel) ; GC gen0 pendant la mesure : 8
+B caractère émis '.' (Unicode, SC 0x33) [mock]
+   contrôle : texte émis « . » attendu « . » -> OK ; retours du rappel [1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 9, GetKeyState 3, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 1, VkKeyScanExW 1, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 0.800 µs ; p99 1.400 µs ; p99.9 3.400 µs ; max 635.9 µs ; moyenne 0.922 µs ; par rappel ~0.461 µs
+   allocations : 1280.0 octets/séquence (640.0 octets/rappel) ; GC gen0 pendant la mesure : 21
+C AltGr + e -> '€' (6 rappels) [mock]
+   contrôle : texte émis « € » attendu « € » -> OK ; retours du rappel [0,0,1,1,0,0] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 16, GetKeyState 3, GetAsyncKeyState 4, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 2.100 µs ; p99 2.800 µs ; p99.9 5.600 µs ; max 70.7 µs ; moyenne 2.206 µs ; par rappel ~0.368 µs
+   allocations : 1440.0 octets/séquence (240.0 octets/rappel) ; GC gen0 pendant la mesure : 23
+D touche morte ^ puis e -> 'ê' (4 rappels) [mock]
+   contrôle : texte émis « ê » attendu « ê » -> OK ; retours du rappel [1,1,1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 14, GetKeyState 5, GetAsyncKeyState 0, ToUnicode 2, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 1.600 µs ; p99 2.300 µs ; p99.9 5.900 µs ; max 266.9 µs ; moyenne 1.746 µs ; par rappel ~0.436 µs
+   allocations : 1728.0 octets/séquence (432.0 octets/rappel) ; GC gen0 pendant la mesure : 28
+E Verr. Maj. intelligent : é -> 'É' [mock]
+   contrôle : texte émis « É » attendu « É » -> OK ; retours du rappel [1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 8, GetKeyState 3, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 0.800 µs ; p99 1.400 µs ; p99.9 1.800 µs ; max 62.8 µs ; moyenne 0.894 µs ; par rappel ~0.447 µs
+   allocations : 1280.0 octets/séquence (640.0 octets/rappel) ; GC gen0 pendant la mesure : 20
+F mode NativeCombo (glfw3.dll) '.' [mock]
+   contrôle : texte émis « . » attendu « . » -> OK ; retours du rappel [1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 9, GetKeyState 3, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 1, MapVirtualKeyExW 2, VkKeyScanExW 2, GetKeyboardLayout 0, SendInput 1 (4 évén.)
+   médiane 0.900 µs ; p99 1.400 µs ; p99.9 1.900 µs ; max 105.6 µs ; moyenne 0.958 µs ; par rappel ~0.479 µs
+   allocations : 1360.0 octets/séquence (680.0 octets/rappel) ; GC gen0 pendant la mesure : 23
+
+--- passe « ombre » (Win32 lecture seule réellement appelé, SendInput simulé) ---
+A lettre simple 'a' (pass-through natif) [ombre]
+   contrôle : texte émis «  » attendu «  » -> OK ; retours du rappel [0,0] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 4, GetKeyState 2, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 0 (0 évén.)
+   médiane 1.500 µs ; p99 2.600 µs ; p99.9 28.900 µs ; max 946.1 µs ; moyenne 1.687 µs ; par rappel ~0.844 µs
+   allocations : 480.0 octets/séquence (240.0 octets/rappel) ; GC gen0 pendant la mesure : 8
+B caractère émis '.' (Unicode, SC 0x33) [ombre]
+   contrôle : texte émis « . » attendu « . » -> OK ; retours du rappel [1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 9, GetKeyState 3, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 1, VkKeyScanExW 1, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 2.400 µs ; p99 5.000 µs ; p99.9 48.600 µs ; max 954.9 µs ; moyenne 2.673 µs ; par rappel ~1.337 µs
+   allocations : 1280.0 octets/séquence (640.0 octets/rappel) ; GC gen0 pendant la mesure : 22
+C AltGr + e -> '€' (6 rappels) [ombre]
+   contrôle : texte émis « € » attendu « € » -> OK ; retours du rappel [0,0,1,1,0,0] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 16, GetKeyState 3, GetAsyncKeyState 4, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 4.700 µs ; p99 9.000 µs ; p99.9 94.600 µs ; max 1038.8 µs ; moyenne 5.169 µs ; par rappel ~0.862 µs
+   allocations : 1440.0 octets/séquence (240.0 octets/rappel) ; GC gen0 pendant la mesure : 23
+D touche morte ^ puis e -> 'ê' (4 rappels) [ombre]
+   contrôle : texte émis « ê » attendu « ê » -> OK ; retours du rappel [1,1,1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 14, GetKeyState 5, GetAsyncKeyState 0, ToUnicode 2, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 3.500 µs ; p99 7.700 µs ; p99.9 76.800 µs ; max 1538.1 µs ; moyenne 3.864 µs ; par rappel ~0.966 µs
+   allocations : 1728.1 octets/séquence (432.0 octets/rappel) ; GC gen0 pendant la mesure : 28
+E Verr. Maj. intelligent : é -> 'É' [ombre]
+   contrôle : texte émis « É » attendu « É » -> OK ; retours du rappel [1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 8, GetKeyState 3, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 0, MapVirtualKeyExW 0, VkKeyScanExW 0, GetKeyboardLayout 0, SendInput 1 (2 évén.)
+   médiane 1.900 µs ; p99 3.200 µs ; p99.9 47.900 µs ; max 990.7 µs ; moyenne 2.135 µs ; par rappel ~1.067 µs
+   allocations : 1280.0 octets/séquence (640.0 octets/rappel) ; GC gen0 pendant la mesure : 20
+F mode NativeCombo (glfw3.dll) '.' [ombre]
+   contrôle : texte émis « . » attendu « . » -> OK ; retours du rappel [1,1] (1 = touche bloquée)
+   appels par séquence : GetForegroundWindow 9, GetKeyState 3, GetAsyncKeyState 0, ToUnicode 1, ToUnicodeEx 1, MapVirtualKeyExW 2, VkKeyScanExW 2, GetKeyboardLayout 0, SendInput 1 (4 évén.)
+   médiane 3.000 µs ; p99 6.100 µs ; p99.9 64.900 µs ; max 1029.4 µs ; moyenne 3.366 µs ; par rappel ~1.683 µs
+   allocations : 1360.0 octets/séquence (680.0 octets/rappel) ; GC gen0 pendant la mesure : 23
+
+=== 2. Coûts unitaires (attribution) ===
+   Marshal.PtrToStructure<KBDLLHOOKSTRUCT> (production, KeyboardHook.cs:275)                         17.4 ns/op     40.0 o/op
+   lecture directe *(KBDLLHOOKSTRUCT*)lParam (alternative)                                            1.5 ns/op      0.0 o/op
+   KeyMapper.MatchesShortcutKey(W, 'a') — 1 des 2 appels faits à CHAQUE rappel                      147.7 ns/op      0.0 o/op
+   KeyMapper.MatchesShortcutKey(Q, 'a') — 2e appel                                                  112.4 ns/op      0.0 o/op
+   réplique KeyMapper.cs:743 : string[3].Contains(x, StringComparer.Ordinal) (LINQ)                  17.8 ns/op     32.0 o/op
+   alternative : Array.IndexOf(string[3], x) >= 0                                                    19.8 ns/op      0.0 o/op
+   réplique KeyMapper.cs:309-310 : new StringBuilder(8) + new byte[256]                              16.4 ns/op    368.0 o/op
+   réplique KeyMapper.cs:974+1007 : new List<INPUT>(16) + 2 Add + ToArray()                          38.4 ns/op    800.0 o/op
+   Win32.GetForegroundWindow() réel                                                                   5.2 ns/op      0.0 o/op
+   Win32.GetKeyState(VK_CAPITAL) réel                                                                 4.2 ns/op      0.0 o/op
+   Win32.GetAsyncKeyState(VK_F24) réel                                                              345.9 ns/op      0.0 o/op
+   Win32.GetKeyboardLayout(0) réel                                                                  232.8 ns/op      0.0 o/op
+   Win32.MapVirtualKeyExW(0x33, VSC_TO_VK) réel                                                     219.6 ns/op      0.0 o/op
+   Win32.VkKeyScanExW('.') réel                                                                     345.9 ns/op      0.0 o/op
+   Win32.ToUnicodeEx(espace, drapeau 4) réel, StringBuilder marshalé                                711.7 ns/op      0.0 o/op
+   sonde AG130-10 : 247 x GetAsyncKeyState (sur VK_F24) — par tick de 2 s                         84508.8 ns/op      0.0 o/op
+
+=== 3. Travaux hors rappel mais sur le fil du hook ou périodiques ===
+   LayoutJsonParser.Parse(33 Ko) — démarrage                                                    médiane    1.394 ms ; p95    1.436 ms ;    280.0 Kio/op
+   premier plan au moment du banc : claude.exe ; modules : 136
+   RealWin32Api.TryGetWindowProcess (OpenProcess + QueryFullProcessImageName)                   médiane    0.017 ms ; p95    0.019 ms ;     64.3 Kio/op
+   RealWin32Api.TryGetProcessStartTime                                                          médiane    0.001 ms ; p95    0.002 ms ;      0.0 Kio/op
+   RealWin32Api.TryEnumProcessModules (136 modules) — à chaque Recompute non surclassé          médiane    4.705 ms ; p95    5.072 ms ;     26.2 Kio/op
+   GameRegistry.IsRemoteAccessHostRunning (442 processus) — toutes les 5 s, pool de threads     médiane    3.498 ms ; p95    3.714 ms ;    801.1 Kio/op

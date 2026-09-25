@@ -1,0 +1,28 @@
+# Zone lecons (L-) : tutoriel, Leçons, Défi — synthèse
+
+**Vue d'ensemble.** Il y a deux fichiers de 3 000 lignes parce que deux générations coexistent. `LearningModule` (0.9.7, en réalité le **tutoriel** de l'accueil) contient tout : rendu du clavier, guidage, validation de frappe, info-bulles Win32, réglages en direct. La version 0.12.0 (b20c42c) a refait ces briques proprement pour les Leçons (`KeyboardRenderer`, `LessonTypingSession`, `LessonHintProvider`, `LessonProgressStore`), mais le tutoriel n'a jamais été migré ; le profil `Onboarding` de KeyboardRenderer n'a aucun appelant (L-01, L-02, L-03, L-04, L-12). `LessonsWindow` est grosse pour une autre raison : c'est une petite boîte à outils d'interface immédiate (clics, focus, info-bulles reconstruits à chaque dessin, L-10) qui porte quatre écrans, 370 lignes de plomberie DPI et redimensionnement, et le Défi (L-18). Dans les deux fichiers, la logique métier est mêlée au dessin GDI et l'état de séance est implicite (L-09, L-11).
+
+**Découpage cible 1.4.0** (blocs actuels → destination) :
+| Actuel | Destination |
+|---|---|
+| LM 2370-3195 rendu clavier, 577-655 info-bulles, 134-155 et 3025-3133 tables | `KeyboardRenderer` (profil Onboarding réel + genres de surlignage) ; LM ne garde que le voile 2553-2591 |
+| LM 1771-1988 guidage + LW 2353-2458 indices + LHP 61-70 | `LessonHintProvider.Guide(...)` unique, couches typées |
+| LM 657-736 et 1084-1103 + LHP 72-138 (+ 3 analyseurs hors zone) | `CharacterIndex` partagé (Lazy) |
+| LM 1174-1226 et 1577-1600 = LW 2749-2825 | `PhysicalKeyEcho` |
+| LM 1528-1575 (validation en ligne) + LM 23-43 = LessonCatalog 201-240 | `LessonTypingSession` Strict + `TutorialSteps` unique |
+| LM 157-240 LearningTweaks | constantes (ou `#if DEBUG`) |
+| LW 1511-1867 mode libre | `FreeTypingBuffer` pur (texte, curseur, statistiques) + retour à la ligne par fonction de largeur |
+| LW 1869-2139 primitives, clic, focus | liste de contrôles à identifiant stable, construite au changement d'état |
+| LW 224-286, 1365-1385, 1437-1452, 2263-2340 Défi | `ChallengeController` (dormant, conservé) |
+| LW 379-749 et LM 805-1038 fenêtre, DPI | aide commune « fenêtre à l'échelle » (hors zone, 7 fenêtres) |
+Estimation : LM 3 245 → ~1 200 lignes, LW 2 874 → ~2 000 réparties en 4 fichiers ; gain net ~-1 300 lignes (somme des constats, estimation).
+
+**Mort ou dormant (Défi masqué, 59567f0).** Le masquage n'a pas créé de code mort : tout est **dormant** derrière `DailyChallenge.Enabled` et ne coûte rien à l'exécution, puisque defi-corpus.json n'est chargé que par BuildModule et SessionFor, tous deux gardés. Il occupe seulement 110 Ko dans le binaire. Dormant à conserver : DailyChallenge.cs (275 l.), ChallengeShare.cs (56 l.), ~160 lignes de LW (L-18). Le code **mort** date d'avant et ne dépend pas de l'interrupteur : L-07 (~135 l. : transition, légende, IsStep2Key, replayMode, TIMER_AUTO_HINT jamais armé) et L-17 (API du modèle). À préparer pour le retour du Défi : croissance du fichier de progression, deux clés par jour (L-13).
+
+**Points forts à garder.** (1) `LessonTypingSession` et `LessonAttemptStats` : purs, horloge injectable, bien testés ; c'est la base du tutoriel migré. (2) `LessonProgressStore` : .tmp suffixé par le PID + File.Replace atomique, retour arrière en mémoire si l'écriture échoue, refus d'écraser un fichier illisible, format versionné, écriture seulement à la navigation et en fin d'exercice (jamais par frappe) ; manquent la durabilité et la copie de secours (L-14). (3) Le Défi masqué par un interrupteur unique `static readonly`, gardé par des tests témoins, avec `ChallengeShare.Build` pur et `LearningSessionTracker` petit et idempotent.
+
+**Chiffres.** 11 fichiers, 13 835 lignes (dont JSON 6 176). 18 constats : 3 majeurs, 11 moyens, 4 mineurs. Banc `bench-lecons/` (réplique hors application, JIT) : character-index analysé en 17 ms, 6,6 Mo alloués et 1,4 Mo retenus à chaque ouverture du tutoriel ; catalogue des leçons 0,8 ms, négligeable même chargé deux fois. Un repeint des Leçons vaut ~3,5 ms, estimation composée : clavier 2,26 ms (banc de la zone visuel) + mesures de caractères 0,69 ms + tampon 0,15 à 0,31 ms. Il y en a au moins deux par frappe, sur le fil du crochet. Champs d'instance : LM 64 (12 booléens), LW 76 (13). S(littéral) : LW 258, LM 70.
+
+**Hors zone (signalé, non instruit).** KeyboardHook.cs:357-359 : RawKeyDown est invoqué dans le LowLevelKeyboardProc, avant ProcessKey (zone moteur). Cinq analyseurs de character-index.json : CharacterSearch.cs:238, KeyboardRenderer.cs:304, VirtualKeyboard.cs:489, plus les deux de la zone. Bloc TRACKMOUSEEVENT recopié dans 7 fenêtres ; 89 appels CreateFontW à 14 arguments positionnels. Contrôles dessinés de LessonsWindow sans exposition UIA (aucun WM_GETOBJECT dans src/, zone accessibilité). LearningModule.OnPaint:2051 : EndPaint toujours hors du finally (F1.3 du 20/09, non corrigé). OnboardingWindow.cs:687 : tutoriel « fait » dès 3 étapes sur 6, troisième lecture de la progression. UsageStats.cs:203-204 : deux <summary> empilés.
+
+**Limites.** Lus en entier : LearningModule, LessonsWindow, LessonProgressStore, LessonTypingSession, LessonCatalog, LessonHintProvider, LearningSessionTracker, DailyChallenge, ChallengeShare. KeyboardRenderer lu en partie (lignes 1-640), VirtualKeyboard seulement pour BuildKeyLayout, OnboardingWindow et TrayApplication par extraits. Tests : LessonCoreTests lu en partie, les autres par leurs noms de tests. lessons.json et defi-corpus.json : structure seulement, ni contenu ni droits. Application non lancée ; les temps sont en JIT alors que le binaire publié est AOT. Latence ajoutée au crochet : estimation, non mesurée.

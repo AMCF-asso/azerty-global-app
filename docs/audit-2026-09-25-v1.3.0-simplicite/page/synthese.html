@@ -1,0 +1,137 @@
+<header class="entete">
+  <span class="surtitre">AZERTY Global · application Windows 1.3.0 · commit f0a98ba · 25 septembre 2026</span>
+  <h1>Audit de simplicité du code 1.3.0</h1>
+  <p class="chapo">Efficacité à l'exécution, économie du code et facilité de lecture. Six revues par zone, des bancs hors application, puis une contre-expertise adverse de 28 constats. Aucune ligne de <code>src/</code> n'a été modifiée. Les constats servent à alléger la 1.4.0 et à ne pas refaire les mêmes choses dans la v2 en Rust.</p>
+  <div class="chiffres" role="list">
+    <div class="chiffre" role="listitem"><b>103</b><span>constats, dont 14 majeurs</span></div>
+    <div class="chiffre" role="listitem"><b>2,2–6,5 µs</b><span>par frappe (NativeAOT, médiane)</span></div>
+    <div class="chiffre" role="listitem"><b>41 %</b><span>du code dans 5 classes</span></div>
+    <div class="chiffre" role="listitem"><b>≈ −2 000</b><span>lignes possibles (estimation, ≈ 6 %)</span></div>
+    <div class="chiffre" role="listitem"><b>0 réfuté</b><span>sur 28 relus : 8 confirmés, 20 nuancés</span></div>
+  </div>
+</header>
+
+<section aria-labelledby="t-bref">
+  <h2 id="t-bref">À retenir</h2>
+  <div class="grille2">
+    <div class="bloc">
+      <h3>Rapide là où ça compte</h3>
+      <p>Une frappe coûte de 2,2 à 6,5 µs dans la pile de production, soit plus de 10 000 fois moins que le délai de coupure du hook. Rien n'est à optimiser dans le chemin chaud.</p>
+    </div>
+    <div class="bloc">
+      <h3>Complexe par copie, pas par abstraction</h3>
+      <p>Seuls 6 constats sur 103 portent l'étiquette <span class="touche">yagni</span>. Le code ne sur-abstrait pas, il se recopie :</p>
+      <ul>
+        <li>3 moteurs de rendu du clavier ;</li>
+        <li>5 chargeurs du même <code>character-index.json</code> ;</li>
+        <li>un squelette de fenêtre recopié dans 14 fichiers ;</li>
+        <li>69 membres morts.</li>
+      </ul>
+    </div>
+    <div class="bloc">
+      <h3>Les vrais coûts sont hors du chemin chaud</h3>
+      <p>Ils tombent tous sur le fil qui sert le hook :</p>
+      <ul>
+        <li><code>config.json</code> est réécrit avec synchronisation disque 3 à 7 fois par geste (3,3 ms par écriture) ;</li>
+        <li>environ 5 ms de calcul à chaque changement de focus ;</li>
+        <li>deux repeints complets des Leçons à chaque frappe.</li>
+      </ul>
+    </div>
+    <div class="bloc">
+      <h3>Une décision avant la 1.4.0</h3>
+      <p>La branche <code>main</code> locale contient déjà trois des socles que l'audit propose : <code>ThemeWindow</code>, <code>KeyboardTheme</code> et le clavier virtuel sur le moteur unifié (CH4b). Ses 17 derniers commits ne sont pas poussés, et aucun de ces socles n'est dans la release. Il faut choisir la base de la 1.4.0 avant de planifier ces chantiers.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-chantiers">
+  <h2 id="t-chantiers">Chantiers proposés pour la 1.4.0, du plus sûr au plus lourd</h2>
+  <div class="bloc">
+    <ol>
+      <li><b>Retirer le code mort vérifié</b>, environ 500 lignes : 69 membres, soit 0 faux positif sur 15 tirés au hasard ; restes de la transition et de la légende des Leçons ; liens et images jamais dessinés ; 16 P/Invoke morts ; replis « Windows 8.1 » inatteignables. <span class="note">X-03, L-07, F-05, F-07, F-11, V-05, A-12, X-04</span></li>
+      <li><b>Petits gains d'exécution sans risque</b> :
+        <ul>
+          <li>recherche en comparaison ordinale, 8,5 fois plus rapide, avec un top 20 identique ;</li>
+          <li>infobulle non renvoyée à Explorer quand elle n'a pas changé ;</li>
+          <li>62 infobulles construites au survol et non à chaque repeint ;</li>
+          <li>allocations par frappe.</li>
+        </ul>
+        <span class="note">V-03, A-08, L-06, M-05</span></li>
+      <li><b>Grouper les écritures de config</b> hors du fil du hook, et rendre durable celle de la progression. <span class="note">A-05, F-18, M-07, L-14</span></li>
+      <li><b>Un seul chargeur de <code>character-index.json</code></b>, partagé et chargé à la demande : de −100 à −150 lignes, environ 17 ms et 1,86 Mo de moins au démarrage. <span class="note">V-04, L-03</span></li>
+      <li><b>Un seul rendu du clavier et la refonte du tutoriel et des Leçons</b> : de −650 à −800 lignes. Le tutoriel passerait de 3 245 à environ 1 200 lignes. Ce chantier dépend de la base choisie. <span class="note">V-01, L-01, L-02, L-04, L-09, L-10, L-12, L-18</span></li>
+      <li><b>Un socle de fenêtre commun</b> : de −350 à −460 lignes. Deux règles : pas de pinceau de classe, et vérifier le retour de <code>RegisterClassExW</code>. <span class="note">X-01, F-01, F-02, F-10, F-15, V-16</span></li>
+      <li><b>Paramètres : une table de descripteurs</b> au lieu de 8 à 11 listes parallèles, qui ont déjà produit deux bugs : environ −150 lignes. <span class="note">F-03, F-04, F-06</span></li>
+      <li><b>Sollicitations d'avis : un état persistant et une fonction de décision</b> au lieu de 11 fonctions et 25 conditions. Tu dois d'abord trancher la règle du « budget unique ». <span class="note">A-02, A-13</span></li>
+    </ol>
+  </div>
+</section>
+
+<section aria-labelledby="t-recette">
+  <h2 id="t-recette">Défauts de comportement</h2>
+  <div class="grille2">
+    <div class="bloc">
+      <h3>Corrigés dans la 1.3.0 le 25/09 au soir</h3>
+      <p class="note">Ta décision, prise par QCM : 3 commits sur la release, 22 tests neufs, et des mutations qui font rougir chaque témoin. La recette correspond aux lignes 14 à 18 du rapport.</p>
+      <ul>
+        <li><b>Accueil, étape 3</b> : Échap sur un lien ferme maintenant la fenêtre, comme la croix. <span class="note">F-10 · 4dbfa9d</span></li>
+        <li><b>Recherche</b> : le clic tombe sur la ligne dessinée. Le pied affiche « 20 sur 98 », et « Shift » et « then » sont colorés en anglais. <span class="note">V-07, V-08, V-06 · 7b5d71c</span></li>
+        <li><b>Statistiques</b> : un fichier illisible au lancement n'est plus écrasé. <span class="note">A-11 · 62c7d4e</span></li>
+        <li><b>Reporté</b> : la progression des Leçons bloquée en silence si son fichier est illisible. La règle et les textes restent à décider. <span class="note">L-14</span></li>
+      </ul>
+    </div>
+    <div class="bloc">
+      <h3>Points d'attention, non démontrés</h3>
+      <ul>
+        <li>Pendant l'attente UIA, un rappel du hook peut s'exécuter en réentrance au milieu du calcul du premier plan. <span class="note">M-06</span></li>
+        <li>Le retour de <code>RegisterClassExW</code> n'est jamais vérifié. <span class="note">X-01</span></li>
+        <li><code>IsLayoutAZERTYGlobal</code> appelle <code>ToUnicodeEx</code> avec le drapeau 0, qui peut modifier l'état des touches mortes du système. Signalé, non instruit.</li>
+        <li>Toujours ouverts : AG130-44 (peinture sans <code>finally</code>), AG130-48 (<code>WS_CLIPCHILDREN</code> absent), AG130-42 (Accueil non borné à l'écran).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-v2">
+  <h2 id="t-v2">À laisser à la v2, avec ses leçons</h2>
+  <div class="grille2">
+    <div class="bloc">
+      <h3>Ne pas restructurer en C#</h3>
+      <p>Découper <code>TrayApplication</code> (3 076 lignes) et <code>KeyMapper</code> (1 569 lignes) ne ferait gagner presque aucune ligne. Des tests appellent leurs méthodes privées par leur nom. La v2 les réécrit de toute façon. Les couches de surveillance du hook, nées de vrais bugs, restent telles quelles.</p>
+    </div>
+    <div class="bloc">
+      <h3>À ne pas reproduire en Rust</h3>
+      <ul>
+        <li>Un état d'activité nommé, avec sa table de transitions, au lieu de 5 champs et 4 booléens posés séparément.</li>
+        <li>Rien de bloquant sur le fil du hook : pas d'écriture disque, pas de calcul du premier plan, pas de repeint.</li>
+        <li>Le contexte de premier plan capturé une fois par frappe, en gardant la vérification juste avant l'émission (défaut b2).</li>
+        <li>Un chargeur, un rendu du clavier et un socle de fenêtre, chacun unique. Une seule déclaration d'interop.</li>
+        <li>Des types plutôt que des chaînes pour les couches et les genres de surlignage.</li>
+        <li>Pour les fichiers persistés : les clés inconnues sont gardées, on refuse d'écraser un fichier illisible, et l'écriture est synchronisée sur disque.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="t-ponytail">
+  <h2 id="t-ponytail">Ponytail pour tes projets</h2>
+  <div class="grille2">
+    <div class="bloc">
+      <h3>Ce que disent les mesures</h3>
+      <ul>
+        <li><b>JetBrains</b>, sur 80 paires de tâches, avec Sonnet 5 : coût −10,3 % (p = 0,004) ; code écrit −15,4 % (p = 0,088, non significatif). Pour la qualité, JetBrains parle d'un « null result, not a clean bill of health ».</li>
+        <li><b>Installé comme simple skill</b>, il ne s'est jamais déclenché seul. Il n'agit que par son hook, qui injecte environ 1 300 jetons à chaque démarrage et dans chaque sous-agent.</li>
+        <li><b>Banc indépendant</b> de l'issue #236 (480 builds) : environ −44 % de code, mais la gestion des entrées invalides lâche sur 5 tâches sur 24.</li>
+        <li><b>Aucune donnée</b> pour C#, Rust ou un site statique.</li>
+      </ul>
+    </div>
+    <div class="bloc">
+      <h3>Verdict</h3>
+      <ul>
+        <li><b>App 1.x en C#</b> : ne pas l'installer. Sa grille a servi à classer cet audit. Mais son angle mort (la correction, et le « Replacement: nothing ») est précisément là où la contre-expertise a dû corriger : la proposition de M-01 faisait revenir le défaut b2, celle d'A-11 pouvait effacer les statistiques.</li>
+        <li><b>v2 en Rust</b> : c'est là que l'échelle aide le plus. Mieux vaut recopier ses 7 marches et sa règle « Lazy, not negligent » dans les règles du projet que d'installer le plugin.</li>
+        <li><b>Site et outils Python</b> : peu d'intérêt.</li>
+      </ul>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,30 @@
+# Mots français repérés dans les identifiants (minuscules, sans accent si l'identifiant n'en a pas).
+# Tout mot contenant une lettre accentuée est aussi compté français (règle dans metriques.py).
+le la les un une de du des est ne pas sans et sur apres avant rien en par non avec dans ou plus au aux
+pendant hors que qui meme jamais deux son sa ses se ce cette ces tout toute toutes tous quand puis entre
+ni aucun aucune chaque aussi deja seul seule autre autres sous vers depuis toujours encore fois lui notre
+reste rend garde porte arme arment tient suit suivent suivi suivie suivante suivant prend perd donne donnent
+vaut valent suffit montre prouve relit relue lit lu ecrit ecrite reecrite ouvre ouvert ouvertes retourne revient
+reprend reprise demarre conserve conservent conservee gardee laissee laissent efface enregistre applique
+touche touches frappe clavier couche defi jour jours seance seances avis masque fenetre fenetres reglage saisie
+saisi essai niveau lettre caractere compteur comptage seuil canal cible cibles langue utilisateur compte
+ordinaire politique morte mort cle echap maj casse coche cochee decochee case chemin fichier fichiers
+premier premiere dernier derniere nouveau nouvel nouvelle ancien ancienne etat valeur valeurs liste nombre texte
+ligne titre aide accueil bienvenue parametre precedent annule annuler fermer fermeture ouvrir quitter demarrage
+redemarrage attente recherche rappel liens externes raccourci raccourcis lot accord restaure physique retour
+passe invalide defaut cadre exercice choix nulle nul relache relachement compensation cran interrupteur
+entree entrees plage pourcent securise securisee securite sobre zero propre reel reelle bloque indicateur echelle
+processus sondes presse echec requete erreur perte volontaire statistiques dix survit emis rendu inscrite
+inscription francais anglais controle abandonne abandon mission marqueur leve lecons lecon sollicitation
+sollicite franchissement eteints eteinte identite migree demande refuse refusee refus resultat inconnu inconnue
+acceptee systeme triche suspendu suspendue aller preservante preservant revision balayage libelle traitee injectee
+raison racine croix cas mesure mesuree rapport travail illisible derive noms associe contient soutien interdit
+utilise fixe neuve nom boutons bouton infobulle strategie produit bien forme historique mise valide imposee delai
+autant fin respecte reserve retours noter partage emet inattendu toute retirer chargement rechargement collecte
+existant existante corps objet milieu tableau barre jeux vraie vrai explicite differe differee tentative reconnue
+etendue accentuee nue deduit signaler procedure etrangere lie grand renvoye imprimable trad changer modificateur
+reflete detruite cinquante cinquantieme affilee journalisent ailleurs partielle rejouer temps primes ecraser
+modifiee registre bornes formule couvert pivote largeur mord necessitent temporaires muettes consecutives
+reinstalle jusqu desinscrire arrive ete absorbe focalise quatre onglet arret cartee tiers chaine compose
+recontrole evenement gere des qu passee passees laisse garder rester sauvegarde compteurs ecart ferme ouverture
+dessine dessin couleur couleurs taille hauteur largeur marge police suivantes precedente etape etapes

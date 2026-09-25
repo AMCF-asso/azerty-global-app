@@ -1,0 +1,154 @@
+total 69
+0 PaintLegend methode src/LearningModule.cs:2297 44
+1 FindExercise methode src/LessonCatalog.cs:31 14
+2 DrawPill methode src/OnboardingWindow.cs:1646 13
+3 ClearAll methode src/TypingEngine.Windows/MaintainableLayerManager.cs:314 8
+4 DrawPanelTitle methode src/SettingsWindow.cs:2242 7
+5 GdipDrawString pinvoke src/Win32.cs:842 2
+6 CurrentIsSober propriete src/AppChannel.cs:100 1
+7 EM_SETCUEBANNER constante src/CharacterSearch.cs:26 1
+8 CLR_METHOD constante src/CharacterSearch.cs:34 1
+9 CLR_HINT_LIGHT constante src/CharacterSearch.cs:43 1
+10 MaintainableTutorialCompleted propriete src/ConfigManager.cs:288 1
+11 TRANSITION_DURATION_MS constante src/LearningModule.cs:82 1
+12 CLR_CHAR_ACTIVE constante src/LearningModule.cs:116 1
+13 CLR_CHAR_ALTGR_ACCENT constante src/LearningModule.cs:119 1
+14 CompletedAt propriete src/LessonTypingSession.cs:40 1
+15 ErrorCountsByExpected propriete src/LessonTypingSession.cs:41 1
+16 TypedLine propriete src/LessonTypingSession.cs:143 1
+17 WMSZ_BOTTOMRIGHT constante src/LessonsWindow.cs:20 1
+18 Common_Cancel cle_L src/Localization/L.Common.cs:6 1
+19 Common_Ok cle_L src/Localization/L.Common.cs:7 1
+20 Layers_MenuEntry cle_L src/Localization/L.Layers.cs:35 1
+21 Tray_MenuAutoStart cle_L src/Localization/L.Tray.cs:176 1
+22 SS_CENTER constante src/OnboardingWindow.cs:21 1
+23 BASE_LINK_H constante src/OnboardingWindow.cs:48 1
+24 BASE_LINK_SPACING constante src/OnboardingWindow.cs:49 1
+25 BASE_LINK_BANNER_W constante src/OnboardingWindow.cs:53 1
+26 CLR_FEATURE_TITLE constante src/OnboardingWindow.cs:61 1
+27 CLR_BANNER_BORDER constante src/OnboardingWindow.cs:66 1
+28 CLR_BANNER_TEXT constante src/OnboardingWindow.cs:67 1
+29 CLR_BANNER_TITLE constante src/OnboardingWindow.cs:68 1
+30 CLR_SECTION constante src/OnboardingWindow.cs:73 1
+31 CLR_NOTE_BG constante src/OnboardingWindow.cs:76 1
+32 CLR_NOTE_BORDER constante src/OnboardingWindow.cs:77 1
+33 CLR_NOTE_ACCENT constante src/OnboardingWindow.cs:78 1
+34 CLR_WARNING_TEXT constante src/OnboardingWindow.cs:83 1
+35 ARGB_STEP_CIRCLE constante src/OnboardingWindow.cs:87 1
+36 ARGB_WHITE constante src/OnboardingWindow.cs:88 1
+37 EM_SETLIMITTEXT constante src/SettingsWindow.cs:19 1
+38 CLR_PANEL_ACCENT constante src/SettingsWindow.cs:71 1
+39 CLR_SUBTITLE constante src/SettingsWindow.cs:81 1
+40 NIIF_INFO constante src/TrayApplication.cs:74 1
+41 CurrentFullPath propriete src/TypingEngine.Windows/ForegroundMonitor.cs:93 1
+42 CW_USEDEFAULT constante src/VirtualKeyboard.cs:378 1
+43 TTM_DELTOOLW constante src/VirtualKeyboard.cs:384 1
+44 TTM_TRACKACTIVATE constante src/VirtualKeyboard.cs:387 1
+45 TTM_TRACKPOSITION constante src/VirtualKeyboard.cs:388 1
+46 TCS_FOCUSNEVER constante src/Win32.cs:161 1
+47 TCM_ADJUSTRECT constante src/Win32.cs:167 1
+48 TCM_SETITEMSIZE constante src/Win32.cs:168 1
+49 TCM_DELETEALLITEMS constante src/Win32.cs:169 1
+50 WM_NCHITTEST constante src/Win32.cs:231 1
+51 WM_SYSCOMMAND constante src/Win32.cs:232 1
+52 DT_BOTTOM constante src/Win32.cs:300 1
+53 Rectangle pinvoke src/Win32.cs:585 1
+54 GetDesktopWindow pinvoke src/Win32.cs:668 1
+55 GdipGetImageWidth pinvoke src/Win32.cs:788 1
+56 GdipGetImageHeight pinvoke src/Win32.cs:791 1
+57 GdipCreateSolidFill pinvoke src/Win32.cs:809 1
+58 GdipDeleteBrush pinvoke src/Win32.cs:812 1
+59 GdipFillEllipseI pinvoke src/Win32.cs:815 1
+60 GdipCreateFontFamilyFromName pinvoke src/Win32.cs:818 1
+61 GdipDeleteFontFamily pinvoke src/Win32.cs:821 1
+62 GdipCreateFont pinvoke src/Win32.cs:824 1
+63 GdipDeleteFont pinvoke src/Win32.cs:827 1
+64 GdipCreateStringFormat pinvoke src/Win32.cs:830 1
+65 GdipDeleteStringFormat pinvoke src/Win32.cs:833 1
+66 GdipSetStringFormatAlign pinvoke src/Win32.cs:836 1
+67 GdipSetStringFormatLineAlign pinvoke src/Win32.cs:839 1
+68 MF_BYPOSITION constante src/Win32.cs:949 1
+TIRAGE [25, 27, 28, 35, 36, 41, 45, 47, 51, 52, 53, 56, 59, 62, 63]
+===== 25 BASE_LINK_BANNER_W src/OnboardingWindow.cs:53
+-- mot entier:
+f0a98ba:src/OnboardingWindow.cs:53:    private const int BASE_LINK_BANNER_W = 160;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/OnboardingWindow.cs:1
+===== 27 CLR_BANNER_BORDER src/OnboardingWindow.cs:66
+-- mot entier:
+f0a98ba:src/OnboardingWindow.cs:66:    private const uint CLR_BANNER_BORDER = 0x000078D4;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/OnboardingWindow.cs:1
+===== 28 CLR_BANNER_TEXT src/OnboardingWindow.cs:67
+-- mot entier:
+f0a98ba:src/OnboardingWindow.cs:67:    private const uint CLR_BANNER_TEXT = 0x00333333;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/OnboardingWindow.cs:1
+===== 35 ARGB_STEP_CIRCLE src/OnboardingWindow.cs:87
+-- mot entier:
+f0a98ba:src/OnboardingWindow.cs:87:    private const uint ARGB_STEP_CIRCLE = 0xFF0078D4;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/OnboardingWindow.cs:1
+===== 36 ARGB_WHITE src/OnboardingWindow.cs:88
+-- mot entier:
+f0a98ba:src/OnboardingWindow.cs:88:    private const uint ARGB_WHITE = 0xFFFFFFFF;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/OnboardingWindow.cs:1
+===== 41 CurrentFullPath src/TypingEngine.Windows/ForegroundMonitor.cs:93
+-- mot entier:
+f0a98ba:src/TypingEngine.Windows/ForegroundMonitor.cs:93:    public string? CurrentFullPath => _snapshot?.FullPath;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/TypingEngine.Windows/ForegroundMonitor.cs:1
+===== 45 TTM_TRACKPOSITION src/VirtualKeyboard.cs:388
+-- mot entier:
+f0a98ba:src/VirtualKeyboard.cs:388:    private const uint TTM_TRACKPOSITION = 0x0412;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/VirtualKeyboard.cs:1
+===== 47 TCM_ADJUSTRECT src/Win32.cs:167
+-- mot entier:
+f0a98ba:src/Win32.cs:167:    public const uint TCM_ADJUSTRECT = TCM_FIRST + 40;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/Win32.cs:1
+===== 51 WM_SYSCOMMAND src/Win32.cs:232
+-- mot entier:
+f0a98ba:docs/audit-2026-09-22-v1.3.0/feu-vert/sandbox/recette-auto.ps1:99:$WM_COMMAND = 0x0111; $WM_CLOSE = 0x0010; $WM_SYSCOMMAND = 0x0112; $SC_CLOSE = 0xF060
+f0a98ba:docs/audit-2026-09-22-v1.3.0/feu-vert/sandbox/recette-auto.ps1:168:    [void][W]::PostMessage($ob, $WM_SYSCOMMAND, [IntPtr]$SC_CLOSE, [IntPtr]::Zero)
+f0a98ba:src/Win32.cs:232:    public const uint WM_SYSCOMMAND = 0x0112;
+-- sous-chaine (fichiers:compte):
+f0a98ba:docs/audit-2026-09-22-v1.3.0/feu-vert/sandbox/recette-auto.ps1:2
+f0a98ba:src/Win32.cs:1
+===== 52 DT_BOTTOM src/Win32.cs:300
+-- mot entier:
+f0a98ba:src/Win32.cs:300:    public const uint DT_BOTTOM = 0x08;
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/Win32.cs:1
+===== 53 Rectangle src/Win32.cs:585
+-- mot entier:
+f0a98ba:src/LearningModule.cs:2884:        // le focus clavier ne se voyait pas. Rectangle système, en retrait du cadre arrondi.
+f0a98ba:src/Win32.cs:476:    /// <summary>Rectangle de focus système (pointillé, en XOR : à tracer une fois par dessin complet).</summary>
+f0a98ba:src/Win32.cs:585:    public static extern bool Rectangle(IntPtr hdc, int left, int top, int right, int bottom);
+-- sous-chaine (fichiers:compte):
+f0a98ba:docs/audit-2026-09-15-v1.2.0/inventaire.json:1
+f0a98ba:src/AZERTYGlobal.Tests/Accessibilite130Tests.cs:1
+f0a98ba:src/LearningModule.cs:1
+f0a98ba:src/Win32.cs:2
+===== 56 GdipGetImageHeight src/Win32.cs:791
+-- mot entier:
+f0a98ba:src/Win32.cs:791:    public static extern int GdipGetImageHeight(IntPtr image, out uint height);
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/Win32.cs:1
+===== 59 GdipFillEllipseI src/Win32.cs:815
+-- mot entier:
+f0a98ba:src/Win32.cs:815:    public static extern int GdipFillEllipseI(IntPtr graphics, IntPtr brush, int x, int y, int w, int h);
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/Win32.cs:1
+===== 62 GdipCreateFont src/Win32.cs:824
+-- mot entier:
+f0a98ba:src/Win32.cs:824:    public static extern int GdipCreateFont(IntPtr family, float emSize, int style, int unit, out IntPtr font);
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/Win32.cs:2
+===== 63 GdipDeleteFont src/Win32.cs:827
+-- mot entier:
+f0a98ba:src/Win32.cs:827:    public static extern int GdipDeleteFont(IntPtr font);
+-- sous-chaine (fichiers:compte):
+f0a98ba:src/Win32.cs:2

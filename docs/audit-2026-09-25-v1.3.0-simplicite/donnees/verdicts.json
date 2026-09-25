@@ -1,0 +1,163 @@
+{
+ "X-01": {
+  "verdict": "NUANCE",
+  "texte": "Chiffre corrigé : les six premières familles font 463 lignes en trop, pas 413 (famille LinkSubclassProc oubliée dans la somme). Pas de plantage à la 2e instance : les 8 fenêtres qui mettent leur pinceau dans la classe appellent UnregisterClassW après DestroyWindow (ex. AboutWindow.cs:590 puis 614) ; essai hors app confirmé. Défaut réel : Windows supprime lui-même le pinceau de classe au désenregistrement, et les 8 fenêtres le suppriment aussi (double DeleteObject, sans effet aujourd'hui). Vrai risque : le retour de RegisterClassExW n'est jamais vérifié (erreur 1410 si la classe existe déjà, la fenêtre repart sur l'ancienne procédure). Règle pour le socle commun : hbrBackground = IntPtr.Zero et vérifier RegisterClassExW.",
+  "corrige": {
+   "lignes": -463
+  }
+ },
+ "X-03": {
+  "verdict": "CONFIRME",
+  "texte": "15 membres tirés au hasard parmi les 49 non vérifiés à la main : 0 faux positif. Balayage git grep -w des 69 sur tout l'arbre : aucun usage en production ni en tests ; ni nameof, ni DynamicDependency, ni UnmanagedCallersOnly. Attention : CurrentIsSober sert à la mutation 7 de docs/audit-v1.2.0/witness-lot-c.py:79, à réécrire si on le supprime ; le setter de MaintainableTutorialCompleted écrit encore une clé que personne ne relit."
+ },
+ "X-04": {
+  "verdict": "NUANCE",
+  "texte": "Repli Windows 8.1 bien inatteignable : tous les MSIX (Store et AMCF) sortent d'un manifeste MinVersion 10.0.17763.0, entreprise/ ne contient que des modèles de stratégie, aucun build hors package. Risque à reformuler : seules À propos et Statistiques remontent au catch journalisé de WndProcCallback ; ailleurs, une exception de mise en page sortirait du constructeur avec la fenêtre et sa classe laissées en place (fenêtre de conflit : _layoutPopupOpen resterait à true, TrayApplication.cs:1212). Plausible, surface faible."
+ },
+ "X-05": {
+  "verdict": "NUANCE",
+  "texte": "Chiffres justes à ±1 (112 catch, 95 attrape-tout). Sur 6 catch « non défendables » vérifiés, un seul perd vraiment de l'information, et peu (AutoStart 352/370) ; les autres sont redondants (erreur déjà journalisée au-dessus, Save qui journalise déjà) ou défendables (fil de détection de saisie sécurisée). Dans TypingEngine.*, journaliser passe par IWindowsTypingHost.Log, pas ConfigManager.Log.",
+  "corrige": {
+   "gravite": "mineur"
+  }
+ },
+ "X-08": {
+  "verdict": "CONFIRME",
+  "texte": "Recompte wc -l au commit : 32 476 lignes de production, 12 469 de tests ; les cinq fichiers font 13 444 lignes, soit 41,4 % (43,0 % en lignes de code seules)."
+ },
+ "A-01": {
+  "verdict": "NUANCE",
+  "texte": "Constat de structure confirmé (3 076 lignes, huit responsabilités, WndProc de 369 lignes). Le gain en lignes ne tient pas : découper déplace le code plus qu'il ne l'enlève, gain réel ≈ 0 ± 50 lignes. La valeur est la lisibilité, pas la taille. Risque : 7 tests atteignent des méthodes privées par réflexion sur typeof(TrayApplication).",
+  "corrige": {
+   "lignes": 0
+  }
+ },
+ "A-02": {
+  "verdict": "NUANCE",
+  "texte": "Constat confirmé. −150 lignes est une borne haute : un « budget unique » de sollicitations changerait le comportement actuel (règles « une par jour » croisées), à décider par Antoine avant de simplifier."
+ },
+ "A-03": {
+  "verdict": "NUANCE",
+  "texte": "Constat confirmé, gain ramené à −20 à −40 lignes. M-12 est la même chose vue du moteur : à fusionner ici. Les tests SuspensionTransitionTests et SearchWhileSuspendedTests trouvent les fonctions pures par leur nom sur typeof(TrayApplication) : les déplacer casse ces tests à l'exécution.",
+  "corrige": {
+   "lignes": -30
+  }
+ },
+ "A-04": {
+  "verdict": "NUANCE",
+  "texte": "Exact, mais la gravité dépend de la décision D8 (canal hors package) : si D8 mène au retrait, −150 à −190 lignes ; si le canal est gardé, un COM généré ramène à −40/−60 lignes. En attendant D8 : moyen.",
+  "corrige": {
+   "gravite": "moyen"
+  }
+ },
+ "M-01": {
+  "verdict": "NUANCE",
+  "texte": "Le lien avec acec0dd est exact, mais la proposition fait revenir le défaut b2 : avec une seule vérification avant SendInput, la touche morte est consommée (KeyMapper.cs:820) puis l'émission refusée, et le caractère disparaît. b2 n'a d'ailleurs jamais été observé (message de acec0dd). Garder la double vérification, capturer le contexte une fois et écrire pourquoi il est relu : gain −5 à −10 lignes, gravité moyenne.",
+  "corrige": {
+   "gravite": "moyen",
+   "lignes": -8
+  }
+ },
+ "M-02": {
+  "verdict": "CONFIRME",
+  "texte": "Chiffres vérifiés : 1 569 lignes, ProcessKeyCore de 320 lignes avec 34 return. Gain en lignes nul : la valeur est le découpage."
+ },
+ "M-03": {
+  "verdict": "NUANCE",
+  "texte": "Les trois structures existent, mais la quarantaine des relâchements n'est pas la propriété de l'appui : une seule table ne les remplace pas toutes. Gain −10 à −20 lignes, gravité moyenne.",
+  "corrige": {
+   "gravite": "moyen",
+   "lignes": -15
+  }
+ },
+ "M-06": {
+  "verdict": "NUANCE",
+  "texte": "Prémisse en partie fausse : le fil principal est STA (Program.cs:36) et attend par _done.WaitOne (SecureInputProbe.cs:50), qui sert les messages envoyés ; le rappel WH_KEYBOARD_LL est livré par message envoyé, donc traité pendant l'attente UIA (testé en JIT et NativeAOT par SendMessage, sans hook). Reste ≈ 5 ms de blocage par l'énumération des modules à chaque focus ; « jusqu'à 35 ms » est à retirer. Nouveau point d'attention : ce rappel s'exécute alors en réentrance au milieu de Recompute, avec l'instantané précédent. Citation fausse : RealWin32Api.cs:158-231 (le fichier fait 178 lignes).",
+  "corrige": {
+   "gravite": "moyen"
+  }
+ },
+ "M-12": {
+  "verdict": "NUANCE",
+  "texte": "Les quatre valeurs d'activité ne s'écrivent qu'à un seul endroit (TrayApplication.cs:597-616). La lecture de DisabledAntiCheat par le moteur est un garde-fou en cas d'échec (ne jamais injecter dans un jeu protégé) : à garder. Fusionné dans A-03.",
+  "corrige": {
+   "gravite": "mineur",
+   "lignes": 0
+  }
+ },
+ "A-05": {
+  "verdict": "CONFIRME",
+  "texte": "Comptes d'écritures vérifiés ; 3,3 ms par écriture mesurée, et une écriture disque, contrairement à l'attente UIA, ne sert pas les messages : le hook attend réellement. Non mesuré sur disque dur ou sous antivirus d'entreprise."
+ },
+ "F-18": {
+  "verdict": "NUANCE",
+  "texte": "Même constat qu'A-05, à fusionner. Paramètres fait au moins 3 écritures à la fermeture, pas 2 : AutoStart.Set sauvegarde aussi (AutoStart.cs:136)."
+ },
+ "A-11": {
+  "verdict": "NUANCE",
+  "texte": "Perte des clés inconnues confirmée. Mais la proposition est dangereuse telle quelle : un désérialiseur strict remettrait tout à zéro au premier champ mal typé, puis le flush suivant écraserait le fichier. UsageStats n'a pas non plus la garde _loadFailed de ConfigManager : une erreur de lecture passagère peut déjà faire écraser les vraies statistiques. Reprendre le modèle de ConfigManager (sac clé par clé + refus d'écraser).",
+  "suite": "Garde corrigée en 1.3.0 (62c7d4e) : un fichier illisible n'est plus écrasé, un fichier corrompu repart de zéro comme avant. Témoin UsageStatsReadFailureTests. Les clés inconnues restent pour la 1.4.0. Recette : ligne 18."
+ },
+ "F-01": {
+  "verdict": "NUANCE",
+  "texte": "Duplication confirmée. Mais la branche main locale contient déjà ce socle (ThemeWindow.cs : DPI, fond de classe, icône, chrome) : partir de lui plutôt que créer une nouvelle classe. Le gain dépend de la base choisie pour la 1.4.0 (main ou release)."
+ },
+ "F-03": {
+  "verdict": "CONFIRME",
+  "texte": "Listes parallèles et bugs d'oubli confirmés. Deux précisions pour la table de descripteurs : elle doit gérer un libellé propre à certains contrôles (la bande d'onglets passe par TCM_SETITEMW), et les rectangles de clic doivent suivre le décalage de défilement."
+ },
+ "L-01": {
+  "verdict": "NUANCE",
+  "texte": "Le profil Onboarding de KeyboardRenderer ne couvre pas tout le tutoriel (8 écarts relevés : surlignages d'étapes, voile, états propres). Partir du genre de surlignage KeyHighlight (Direct / DeadKeyActivation / Step1 / Step2) déjà écrit sur main dans KeyboardTheme.cs. Gain réaliste −500 à −650 lignes. Risque oublié : LessonCoreTests.cs:588 lit des champs par réflexion.",
+  "corrige": {
+   "lignes": -575
+  }
+ },
+ "L-02": {
+  "verdict": "NUANCE",
+  "texte": "L'exemple donné est faux : le tutoriel tire bien Maj de « Caps+Shift » (LearningModule.cs:1862). La vraie divergence est de conception : le tutoriel guide pas à pas, les Leçons montrent tout d'un coup. Un défaut latent subsiste (LearningModule.cs:1919, variantes Verr. Maj. en touche morte)."
+ },
+ "L-07": {
+  "verdict": "CONFIRME",
+  "texte": "Aucun usage par réflexion ni par JSON. Précisions : la minuterie d'indice est tuée 10 fois, pas 12 ; ajouter _hFontTransition et CLR_TRANSITION à la liste."
+ },
+ "V-01": {
+  "verdict": "NUANCE",
+  "texte": "Exact : CH4b (fb0b854, b8dcdda) n'est pas dans la release. Mais il ne se reprend pas seul : il dépend de Theme.cs et KeyboardTheme.cs, absents de la release. La vraie décision est la base de la 1.4.0 (main ou release)."
+ },
+ "V-04": {
+  "verdict": "NUANCE",
+  "texte": "Cinq chargeurs confirmés. Gain réaliste −100 à −150 lignes ; environ 17 ms au démarrage, aussi en NativeAOT. Majeur à la limite. Même chantier que L-03.",
+  "corrige": {
+   "lignes": -125
+  }
+ },
+ "F-10": {
+  "verdict": "NUANCE",
+  "texte": "Échap sur un lien de l'étape 3 de l'Accueil : bug probable, les liens gardent la touche et rien ne la traite ensuite (OnboardingWindow.cs:1226-1237), alors qu'À propos le fait (AboutWindow.cs:463-467). Recette : étape 3, Tab jusqu'à « Guide », Échap ; attendu fermeture, prédit rien. Pause, Entrée sur « Annuler » : non démontré et probablement faux (comportement d'IsDialogMessageW) ; recette : Tab jusqu'à « Annuler », regarder si le cadre du bouton par défaut s'y déplace, puis Entrée.",
+  "suite": "Corrigé en 1.3.0 (4dbfa9d) : Échap sur un lien de l'étape 3 ferme l'accueil par la sortie de la croix. Recette : ligne 14. La mutualisation des sous-classes de liens reste pour la 1.4.0."
+ },
+ "V-07": {
+  "verdict": "CONFIRME",
+  "texte": "Bug réel, mineur : 1 à 3 px au bas des lignes insèrent le caractère de la ligne suivante. Recette à 100 % avec la Loupe : cliquer la dernière rangée de pixels de la ligne 2 doit insérer le caractère de la ligne 3. Extraire le test de clic en fonction testée.",
+  "suite": "Corrigé en 1.3.0 (7b5d71c) : le clic passe par CharacterSearch.RowIndexAt, sur la géométrie d'OnPaint. Témoin SearchResultListTests. Le dimensionnement et le rognage restent pour la 1.4.0. Recette : ligne 15."
+ },
+ "L-14": {
+  "verdict": "CONFIRME",
+  "texte": "Défaut réel, rare, déjà visible dans le test LessonCoreTests.cs:447 : fichier illisible refusé en silence. Le refus d'écraser est voulu (même règle que la config) ; manquent Flush(true) et un message. Un échec passager bloque aussi les sauvegardes jusqu'au redémarrage. Recette : remplacer lessons-progress.json par « { invalid », relancer, réussir un exercice ; attendu exercice non coché, aucun message.",
+  "suite": "Reporté : la règle de mise en quarantaine et les textes du message sont à décider."
+ },
+ "V-03": {
+  "verdict": "NUANCE",
+  "texte": "Mesure juste, mais 2 ms par frappe dans la recherche, hors hook : gravité mineure. Le passage en comparaison ordinale est sans risque (chaînes déjà normalisées).",
+  "corrige": {
+   "gravite": "mineur"
+  }
+ },
+ "V-08": {
+  "suite": "Corrigé en 1.3.0 (7b5d71c) : le pied dit « 20 sur 98 résultats ». Recette : ligne 16."
+ },
+ "V-06": {
+  "suite": "Corrigé en 1.3.0 (7b5d71c) pour « Shift » et « then ». « Verr. Maj. » sans couleur propre : choix d'affichage laissé à la 1.4.0. Recette : ligne 17."
+ }
+}
