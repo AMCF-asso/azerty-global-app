@@ -115,6 +115,10 @@ sealed class CharacterSearch : IDisposable
     private IntPtr _targetWindow;
     private IntPtr _hEditBgBrush;
     private IntPtr _hClassBgBrush; // Brush de fond passé à WNDCLASSEXW
+    // Audit du 25/09 (V-15) : zone de travail de l'écran retenu à l'ouverture. Chaque frappe
+    // redimensionne la fenêtre ; relire l'écran du curseur à chaque fois la faisait changer
+    // d'écran si la souris y passait pendant la saisie.
+    private Win32.RECT _workArea;
 
     // Polices cachées (créées une fois, détruites au Dispose)
     private IntPtr _hFontChar;
@@ -704,6 +708,7 @@ sealed class CharacterSearch : IDisposable
         Win32.RegisterClassExW(ref wc);
 
         // Calculer la position en bas à droite — démarrer avec la hauteur minimale
+        CaptureWorkArea();
         var (x, y) = GetBottomRightPosition(BASE_WIN_W, BASE_WIN_H_MIN);
 
         _hWnd = Win32.CreateWindowExW(
@@ -791,7 +796,9 @@ sealed class CharacterSearch : IDisposable
         Win32.MoveWindow(_hEdit, editPad, editPad, Scale(BASE_WIN_W) - editPad * 2, searchH, true);
     }
 
-    private (int x, int y) GetBottomRightPosition(int winW, int winH)
+    /// <summary>Retient la zone de travail de l'écran du curseur : à la création, puis à
+    /// chaque ouverture (<see cref="Show"/>), jamais pendant la saisie (V-15).</summary>
+    private void CaptureWorkArea()
     {
         // Trouver l'écran principal (ou celui où se trouve la souris)
         Win32.GetCursorPos(out var pt);
@@ -800,8 +807,13 @@ sealed class CharacterSearch : IDisposable
         Win32.GetMonitorInfo(hMonitor, ref mi);
 
         // rcWork = zone de travail (exclut la barre des tâches)
-        int x = mi.rcWork.right - winW - 10;
-        int y = mi.rcWork.bottom - winH - 10;
+        _workArea = mi.rcWork;
+    }
+
+    private (int x, int y) GetBottomRightPosition(int winW, int winH)
+    {
+        int x = _workArea.right - winW - 10;
+        int y = _workArea.bottom - winH - 10;
         return (x, y);
     }
 
@@ -867,7 +879,9 @@ sealed class CharacterSearch : IDisposable
         // N8 : la langue a pu changer depuis la création (la fenêtre vit tout le processus).
         Win32.SetWindowTextW(_hEditLabel, L.Search_WindowTitle);
 
-        // Adapter la taille selon les résultats actuels, puis repositionner
+        // Adapter la taille selon les résultats actuels, puis repositionner sur l'écran
+        // du curseur, retenu jusqu'à la prochaine ouverture (V-15).
+        CaptureWorkArea();
         ResizeToFitResults();
 
         // Forcer le focus — AttachThreadInput pour voler le foreground
