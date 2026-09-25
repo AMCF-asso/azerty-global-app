@@ -1,0 +1,151 @@
+name: Captures des fenêtres
+
+# Banc de capture (CaptureBench, KeyboardContextBench) : rend les fenêtres de l'application en
+# PNG depuis le processus de test, sans lancer l'application, pour un contrôle visuel
+# avant/après. Déclenché à la main seulement : aucun push, aucune pull request ne le lance.
+#
+# Pour un avant/après : un lancement par ref, puis, sur le poste,
+#   python scripts/compare-captures.py --avant avant/passe1 avant/passe2 --apres apres/passe1 apres/passe2 --diff diff
+#
+# Le runner est à 96 DPI : 125, 150 et 175 % sont simulés par un WM_DPICHANGED synthétique
+# (voir src/AZERTYGlobal.Tests/CaptureSupport.cs), et les fenêtres qui se bornent à la zone de
+# travail (Leçons, Paramètres) y sont réduites selon l'écran du runner.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit, branche ou tag à rendre"
+        required: true
+        type: string
+      banc:
+        description: "Branche d'où déposer le banc quand la ref ne l'a pas"
+        required: false
+        default: "lot/banc-capture"
+        type: string
+      dpi:
+        description: "DPI à rendre, séparés par des virgules"
+        required: false
+        default: "96,120,144,168"
+        type: string
+      langues:
+        description: "Langues à rendre (fr, en)"
+        required: false
+        default: "fr,en"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  captures:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout de la ref demandée
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Identifier le commit rendu
+        id: ident
+        shell: bash
+        run: echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Une ref antérieure au banc ne l'a pas : il est déposé depuis la tête de la branche du
+      # banc. Il ne touche pas src/ hors du projet de test, donc le produit rendu reste celui de
+      # la ref. Les trois fichiers C# forment un tout : CaptureSupport.cs manquant, les trois
+      # sont déposés, ce qui remplace aussi un ancien banc de main, incompatible.
+      - name: Déposer le banc s'il manque
+        shell: bash
+        env:
+          BANC: ${{ inputs.banc }}
+        run: |
+          set -euo pipefail
+          source="origin/${BANC}"
+          if ! git rev-parse --verify --quiet "${source}^{commit}" > /dev/null; then
+            git fetch --no-tags origin "+refs/heads/${BANC}:refs/remotes/origin/${BANC}"
+          fi
+          banc=(src/AZERTYGlobal.Tests/CaptureSupport.cs src/AZERTYGlobal.Tests/CaptureBench.cs src/AZERTYGlobal.Tests/KeyboardContextBench.cs)
+          if [ -f src/AZERTYGlobal.Tests/CaptureSupport.cs ]; then
+            echo "Banc présent dans la ref."
+          else
+            for f in "${banc[@]}"; do
+              git show "${source}:${f}" > "$f"
+              echo "Déposé depuis ${source} : $f"
+            done
+          fi
+          if [ ! -f scripts/compare-captures.py ]; then
+            git show "${source}:scripts/compare-captures.py" > scripts/compare-captures.py
+            echo "Déposé depuis ${source} : scripts/compare-captures.py"
+          fi
+
+      - name: Compiler le projet de test
+        run: dotnet build src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release
+
+      - name: Passe 1
+        env:
+          AZERTY_CAPTURE: "1"
+          AZERTY_CONTEXTE: "1"
+          AZERTY_CAPTURE_DIR: ${{ github.workspace }}/captures/passe1
+          AZERTY_CAPTURE_DPI: ${{ inputs.dpi }}
+          AZERTY_CAPTURE_LANG: ${{ inputs.langues }}
+        run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CaptureBench|FullyQualifiedName~KeyboardContextBench"
+
+      - name: Passe 2
+        if: always()
+        env:
+          AZERTY_CAPTURE: "1"
+          AZERTY_CONTEXTE: "1"
+          AZERTY_CAPTURE_DIR: ${{ github.workspace }}/captures/passe2
+          AZERTY_CAPTURE_DPI: ${{ inputs.dpi }}
+          AZERTY_CAPTURE_LANG: ${{ inputs.langues }}
+        run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CaptureBench|FullyQualifiedName~KeyboardContextBench"
+
+      # Le code de retour des passes ne suffit pas : on compte les PNG. Deux passes qui ne
+      # rendent pas le même nombre d'images, ou aucune, font échouer le run.
+      - name: Compter les PNG et mesurer la stabilité
+        if: always()
+        shell: bash
+        env:
+          REF: ${{ inputs.ref }}
+          SHA: ${{ steps.ident.outputs.sha }}
+        run: |
+          set -uo pipefail
+          n1=$(find captures/passe1 -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)
+          n2=$(find captures/passe2 -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)
+          {
+            echo "### Captures de \`${REF}\` (${SHA})"
+            echo ""
+            echo "- passe 1 : ${n1} PNG"
+            echo "- passe 2 : ${n2} PNG"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$n1" -gt 0 ] && [ "$n2" -gt 0 ]; then
+            python scripts/compare-captures.py --avant captures/passe1 captures/passe2 --diff captures/diff-stabilite > captures/stabilite.txt
+            echo "Code du comparateur : $?"
+            cat captures/stabilite.txt
+            { echo ""; echo '```'; cat captures/stabilite.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$n1" -eq 0 ] || [ "$n1" -ne "$n2" ]; then
+            echo "::error::passe 1 : ${n1} PNG, passe 2 : ${n2} PNG"
+            exit 1
+          fi
+
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-${{ steps.ident.outputs.sha }}
+          path: captures/
+          if-no-files-found: warn
+          retention-days: 30
