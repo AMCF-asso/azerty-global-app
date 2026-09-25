@@ -112,4 +112,27 @@ public class LocalizationTests : IDisposable
         L.Language = "en";
         Assert.Equal("en-US", L.DisplayCulture.Name);
     }
+
+    [Fact]
+    public void L_DisplayCulture_UneInstanceParLangue_AvecLesReglagesDeLUtilisateur()
+    {
+        // Audit du 25/09 : lue pendant la peinture (UsageStatsWindow), la culture était
+        // recréée à chaque accès. Une instance par langue, en lecture seule puisque partagée,
+        // et toujours construite avec les personnalisations régionales de l'utilisateur.
+        L.Language = "fr";
+        var fr = L.DisplayCulture;
+        Assert.Same(fr, L.DisplayCulture);
+
+        L.Language = "en";
+        var en = L.DisplayCulture;
+        Assert.Same(en, L.DisplayCulture);
+        Assert.NotSame(fr, en);
+
+        L.Language = "fr";
+        Assert.Same(fr, L.DisplayCulture);
+        Assert.True(fr.IsReadOnly);
+        Assert.True(en.IsReadOnly);
+        Assert.True(fr.UseUserOverride);
+        Assert.True(en.UseUserOverride);
+    }
 }

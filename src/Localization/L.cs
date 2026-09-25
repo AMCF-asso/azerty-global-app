@@ -10,11 +10,18 @@ internal static partial class L
 
     public static bool IsEnglish => Language == "en";
 
-    /// <summary>Culture utilisée pour formater dates et nombres affichés à l'utilisateur.</summary>
+    /// <summary>Culture utilisée pour formater dates et nombres affichés à l'utilisateur.
+    /// Une instance par langue, créée au premier accès et en lecture seule : lue pendant la
+    /// peinture (UsageStatsWindow), la propriété en créait une à chaque fois (audit du 25/09).
+    /// Même constructeur qu'avant, donc mêmes personnalisations régionales de l'utilisateur
+    /// (UseUserOverride), que CultureInfo.GetCultureInfo ignorerait.</summary>
     public static System.Globalization.CultureInfo DisplayCulture =>
         IsEnglish
-            ? new System.Globalization.CultureInfo("en-US")
-            : new System.Globalization.CultureInfo("fr-FR");
+            ? s_displayCultureEn ??= System.Globalization.CultureInfo.ReadOnly(new System.Globalization.CultureInfo("en-US"))
+            : s_displayCultureFr ??= System.Globalization.CultureInfo.ReadOnly(new System.Globalization.CultureInfo("fr-FR"));
+
+    private static System.Globalization.CultureInfo? s_displayCultureFr;
+    private static System.Globalization.CultureInfo? s_displayCultureEn;
 
     /// <summary>Nom du produit à l'intérieur d'une phrase traduite. Alias local de
     /// <see cref="ProductIdentity.DisplayName"/> : les chaînes de Localization/ en portent
