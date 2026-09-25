@@ -58,7 +58,6 @@ sealed class TrayApplication : IDisposable
     private const int IDM_COMPAT_FORCE_OFF = 1022;
     private const int IDM_COMPAT_INFO = 1034;
     internal const int IDM_CHALLENGE = 1035;
-    private const int IDM_AUTOSTART = 1036;
 #if DEBUG
     private const int IDM_RESET_ONBOARDING = 1015;
 #endif
@@ -71,7 +70,6 @@ sealed class TrayApplication : IDisposable
     private const uint NIF_ICON = 0x02;
     private const uint NIF_TIP = 0x04;
     private const uint NIF_INFO = 0x10;
-    private const uint NIIF_INFO = 0x01;
     private const uint NIIF_WARNING = 0x02;
     // Icone fournie par l'application plutot que glyphe systeme (NIIF_ICON_MASK).
     private const uint NIIF_USER = 0x04;
@@ -815,7 +813,6 @@ sealed class TrayApplication : IDisposable
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
                         case IDM_FEEDBACK: OpenFeedback("tray-menu"); break;
                         case IDM_RATE_STORE: OnRateStoreFromMenu(); break;
-                        case IDM_AUTOSTART: ToggleAutoStart(); break;
                         case IDM_BUG: OnReportBug(); break;
                         case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/soutien"), null, null, 1); break;
                         case IDM_ONBOARDING:
@@ -1510,28 +1507,6 @@ sealed class TrayApplication : IDisposable
         }
     }
 
-    /// <summary>Bascule « Lancer au démarrage » depuis le menu de la zone de notification.
-    /// Un choix fait à la main éteint la relance, dans un sens comme dans l'autre.</summary>
-    private void ToggleAutoStart()
-    {
-        try
-        {
-            bool target = !AutoStart.IsRegistered;
-            if (!AutoStart.Set(target))
-            {
-                ShowBalloon(L.Common_ErrorTitle, AutoStart.GetFailureMessage());
-                return;
-            }
-            AutoStartNudge.MarkPromptShown();
-            if (target)
-                ShowBalloon(L.Tray_AutoStartEnabledTitle, L.Tray_AutoStartEnabledBody);
-        }
-        catch (Exception ex)
-        {
-            ConfigManager.Log("ToggleAutoStart", ex);
-        }
-    }
-
     /// <summary>Ouvre la fenêtre Leçons directement sur la séance Défi du jour
     /// (clic sur le rappel ou entrée du menu tray).</summary>
     private void ShowChallengeWindow()
@@ -1686,8 +1661,7 @@ sealed class TrayApplication : IDisposable
 
         // ── Réglages et infos ───────────────────────────────────────
         // « Lancer au démarrage de Windows » ne figure plus ici (S2-8) : le réglage vit dans
-        // Paramètres › Préférences, qui porte déjà la case (`SettingsWindow.cs`). IDM_AUTOSTART
-        // reste déclaré et gardé : l'accueil et les notifications l'empruntent encore.
+        // Paramètres › Préférences, qui porte déjà la case (`SettingsWindow.cs`).
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_SETTINGS, L.Tray_MenuSettings);
 
         // Compatibilité des applications ▸ (S2-5) : toujours visible. Sans application

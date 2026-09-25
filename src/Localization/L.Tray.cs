@@ -171,9 +171,6 @@ internal static partial class L
     public static string Tray_MenuGiveFeedback => T("Donner mon avis", "Give feedback");
     public static string Tray_MenuReportBug => T("Signaler un bug", "Report a bug");
     public static string Tray_MenuFeedbackSupport => T("Retours et soutien", "Feedback && support");
-    // Lancement automatique : affordance permanente, cochée quand la tâche est
-    // enregistrée. Seul chemin visible pour qui a fermé l'accueil avant l'étape 3.
-    public static string Tray_MenuAutoStart => T("Lancer au démarrage de Windows", "Launch at Windows startup");
     public static string Tray_MenuSettings => T("Paramètres", "Settings");
     // Annonce unique du Défi du jour aux utilisateurs existants (v1.2.0, jamais réémise).
     public static string Tray_ChallengeAnnounceTitle =>

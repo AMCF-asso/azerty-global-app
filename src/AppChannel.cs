@@ -96,9 +96,6 @@ static class AppChannel
     internal static bool IsSober(DistributionChannel channel) =>
         channel == DistributionChannel.Amcf;
 
-    /// <summary>Raccourci de <see cref="IsSober"/> pour le canal de cette instance.</summary>
-    internal static bool CurrentIsSober => IsSober(Current);
-
     /// <summary>
     /// Hook de test : force le canal jusqu'au <c>Dispose</c>, qui restaure la valeur
     /// précédente — y compris quand le corps du <c>using</c> lève. À n'utiliser que dans le
