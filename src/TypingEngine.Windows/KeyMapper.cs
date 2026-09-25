@@ -301,10 +301,18 @@ public sealed class KeyMapper
     /// Appelé avant chaque émission de caractère pour éviter que le buffer DK système
     /// ne s'accumule (ex: si ^ sur AZERTY trad est traité par Windows malgré le hook).
     /// </summary>
+    // Audit du 25/09 (M-05) : tampons de CompensateSystemDeadKey, réutilisés à chaque
+    // caractère au lieu d'être alloués (368 octets). Le rappel du hook est mono-fil (cf.
+    // _isDkCache). Remis à zéro avant usage : l'état porte les bits de Maj et d'AltGr.
+    private readonly byte[] _compensateKeyState = new byte[256];
+    private readonly System.Text.StringBuilder _compensateBuffer = new(8);
+
     private void CompensateSystemDeadKey(uint vkCode, uint scanCode)
     {
-        var buf = new System.Text.StringBuilder(8);
-        var keyState = new byte[256];
+        var buf = _compensateBuffer;
+        var keyState = _compensateKeyState;
+        buf.Clear();
+        Array.Clear(keyState);
         // Refléter les modificateurs actuels pour détecter correctement les DK
         // (ex: ¨ = Shift+^ sur AZERTY trad)
         if (IsShiftDown) { keyState[0x10] = 0x80; keyState[0xA0] = 0x80; }
@@ -734,7 +742,7 @@ public sealed class KeyMapper
         string? triggerOutput = keyDef.GetOutput(IsShiftDown, IsAltGrDown, _capsLockState);
         if (isKeyDown && _composition.ActiveDeadKey == null && !_leftWinDown && !_rightWinDown &&
             triggerOutput != null &&
-            MaintainableLayerManager.SupportedLayers.Contains(triggerOutput, StringComparer.Ordinal) &&
+            Array.IndexOf(MaintainableLayerManager.SupportedLayers, triggerOutput) >= 0 && // M-05 : ordinal, sans LINQ
             _maintainableLayers.BeginTrigger(triggerOutput, scanCode))
         {
             _suppressShiftForLayer |= IsShiftDown;
@@ -957,6 +965,12 @@ public sealed class KeyMapper
     /// </summary>
     public void EmitText(string text) => TryEmitText(text);
 
+    // Audit du 25/09 (M-05) : liste de construction des événements, réutilisée au lieu d'une
+    // List(16 × longueur) par émission. Prise puis rendue : un appel imbriqué ou concurrent
+    // reçoit la sienne. SendInput reçoit toujours un tableau exact (ToArray) : InputRecovery
+    // le garde, et l'API de test le copie.
+    private List<Win32.INPUT>? _emitInputs = new();
+
     /// <summary>Rapporte les événements acceptés par Windows, sans réessayer un lot partiel.</summary>
     public TextEmissionResult TryEmitText(string text)
     {
@@ -965,7 +979,22 @@ public sealed class KeyMapper
         // ForegroundMonitor. Évite race mode/hkl discordants pendant alt-tab.
         var (mode, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
 
-        var inputs = new List<Win32.INPUT>(text.Length * 16);
+        var inputs = Interlocked.Exchange(ref _emitInputs, null) ?? new List<Win32.INPUT>(text.Length * 16);
+        try
+        {
+            return BuildAndSendText(text, mode, hkl, inputs);
+        }
+        finally
+        {
+            inputs.Clear();
+            _emitInputs = inputs;
+        }
+    }
+
+    /// <summary>Corps de <see cref="TryEmitText"/> : les événements de <paramref name="text"/>
+    /// dans <paramref name="inputs"/> (vide), puis un seul SendInput.</summary>
+    private TextEmissionResult BuildAndSendText(string text, CompatibilityMode mode, IntPtr hkl, List<Win32.INPUT> inputs)
+    {
         for (int i = 0; i < text.Length; i++)
         {
             char c = text[i];
