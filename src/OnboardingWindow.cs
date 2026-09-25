@@ -1235,6 +1235,14 @@ sealed class OnboardingWindow : IDisposable
                     Win32.SendMessageW(_hWnd, Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
                     return IntPtr.Zero;
                 }
+                // Échap est gardé par le lien (WANTALLKEYS) : IsDialogMessageW n'en fait pas
+                // un IDCANCEL. Même sortie que la croix (audit du 25/09, F-10 ; À propos et
+                // les statistiques le faisaient déjà).
+                if (wParam == (IntPtr)0x1B) // VK_ESCAPE
+                {
+                    Close(validated: false);
+                    return IntPtr.Zero;
+                }
                 break;
             case Win32.WM_SETFOCUS:
             case Win32.WM_KILLFOCUS:
