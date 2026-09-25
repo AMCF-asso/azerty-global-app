@@ -19,12 +19,25 @@ public class ActivationConsentTests : IDisposable
     [InlineData("{\"onboardingDone\":true,\"appLanguage\":\"fr\"}")]
     [InlineData("{\"activationConsent\":false}")]
     [InlineData("{\"activationConsent\":\"true\"}")]
-    [InlineData("configuration illisible")]
     public void Aucun_accord_ne_se_deduit_du_passe_ou_d_un_fichier_invalide(string? json)
     {
         if (json != null) File.WriteAllText(ConfigPath, json);
         Assert.False(ConfigManager.ActivationConsent);
         if (json != null) Assert.Equal(json, File.ReadAllText(ConfigPath));
+    }
+
+    /// <summary>
+    /// Ancien cas « configuration illisible » de la théorie ci-dessus. Audit du 25/09 : le
+    /// fichier corrompu n'est plus conservé en place, où il bloquait toute sauvegarde (l'accord
+    /// n'était jamais mémorisé). Il est mis de côté, intact, et aucun accord ne s'en déduit.
+    /// </summary>
+    [Fact]
+    public void Fichier_illisible_mis_de_cote_sans_accord()
+    {
+        File.WriteAllText(ConfigPath, "configuration illisible");
+        Assert.False(ConfigManager.ActivationConsent);
+        var copie = Assert.Single(Directory.GetFiles(_directory, "config.json" + FileQuarantine.Marker + "*"));
+        Assert.Equal("configuration illisible", File.ReadAllText(copie));
     }
 
     [Fact]

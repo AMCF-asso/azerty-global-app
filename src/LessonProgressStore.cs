@@ -11,6 +11,16 @@ internal sealed class LessonProgressStore
     private readonly string _path;
     private readonly Dictionary<string, LessonExerciseProgress> _exercises = new(StringComparer.Ordinal);
     private bool _loadFailed;
+    // Fichier corrompu mis de côté (audit du 25/09, L-14) : message à montrer une seule
+    // fois. Statique : la fenêtre Leçons crée le magasin, le tray affiche la bulle.
+    private static int _quarantineNoticePending;
+
+    /// <summary>Copie mise de côté par le chargement, ou null.</summary>
+    internal string? QuarantinedPath { get; private set; }
+
+    /// <summary>Vrai une seule fois après une mise de côté : le tray dit alors que la
+    /// progression a été remise à zéro et qu'une copie est gardée.</summary>
+    internal static bool TakeQuarantineNotice() => Interlocked.Exchange(ref _quarantineNoticePending, 0) == 1;
 
     public LessonProgressStore(string? path = null)
     {
@@ -183,6 +193,15 @@ internal sealed class LessonProgressStore
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(_path));
             var root = doc.RootElement;
+            if (IsNewerFormat(root))
+            {
+                // Écrit par une version plus récente (retour arrière) : intact, mais pas pour
+                // nous. Ni quarantaine ni écriture : la version récente le retrouvera tel quel.
+                _loadFailed = true;
+                ConfigManager.Log("LessonProgressStore.Load",
+                    new IOException("Progression d'un format plus récent ; fichier conservé."));
+                return;
+            }
             if (root.ValueKind != JsonValueKind.Object ||
                 !root.TryGetProperty("version", out var version) ||
                 version.ValueKind != JsonValueKind.Number ||
@@ -226,17 +245,43 @@ internal sealed class LessonProgressStore
             if (legacyErrorMatrixFound)
                 Save("LessonProgressStore.MigrateLegacyErrorMatrix");
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException || FileQuarantine.IsCorruption(ex))
         {
-            _loadFailed = true;
             ConfigManager.Log("LessonProgressStore.Load", ex);
             _exercises.Clear();
             LastModuleId = null;
             LastLessonId = null;
             LastExerciseIndex = 0;
             OnboardingSyncedMaxStep = 0;
+
+            if (FileQuarantine.IsReadFailure(ex))
+            {
+                // Lecture impossible pour l'instant (verrou, droits) : sans doute intact.
+                // Aucune écriture pendant la session, le prochain lancement relit.
+                _loadFailed = true;
+            }
+            else if (FileQuarantine.IsCorruption(ex))
+            {
+                // Contenu corrompu (L-14) : le refus d'écrire bloquait en silence toute
+                // progression nouvelle. Fichier mis de côté, jamais supprimé ; on repart de
+                // zéro et les sauvegardes reprennent. Renommage raté : même règle qu'une
+                // lecture impossible.
+                QuarantinedPath = FileQuarantine.TryMoveAside(_path, "LessonProgressStore.Quarantine");
+                if (QuarantinedPath != null)
+                    Interlocked.Exchange(ref _quarantineNoticePending, 1);
+                else
+                    _loadFailed = true;
+            }
+            // Sinon : fichier disparu entre File.Exists et la lecture, comme absent.
         }
     }
+
+    /// <summary>Numéro de format supérieur au nôtre : fichier d'une version plus récente.</summary>
+    private static bool IsNewerFormat(JsonElement root) =>
+        root.ValueKind == JsonValueKind.Object &&
+        root.TryGetProperty("version", out var version) &&
+        version.ValueKind == JsonValueKind.Number &&
+        version.TryGetDouble(out double value) && value > CurrentVersion;
 
     private bool Save(string operation)
     {
@@ -283,6 +328,10 @@ internal sealed class LessonProgressStore
                 }
                 writer.WriteEndObject();
                 writer.WriteEndObject();
+                // L-14 : atomique, mais pas durable sans ceci — après une coupure de courant,
+                // le fichier remplacé pouvait rester vide ou illisible.
+                writer.Flush();
+                stream.Flush(true);
             }
 
             if (File.Exists(_path))
