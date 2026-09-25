@@ -30,6 +30,9 @@ static class UsageStats
 
     private static bool _loaded;
     private static bool _dirty;
+    // Audit du 25/09 (A-11) : le fichier existait mais n'a pas pu être lu. Il n'est jamais
+    // réécrit pendant cette session ; le prochain lancement relit.
+    private static bool _readFailed;
 
     private static string? _firstRemapDate; // "yyyy-MM-dd", null tant qu'aucune frappe remappée
     private static string? _lastActiveDate; // "yyyy-MM-dd"
@@ -86,6 +89,7 @@ static class UsageStats
             _statsPath = path;
             _loaded = false;
             _dirty = false;
+            _readFailed = false;
             ResetInMemoryState();
         }
     }
@@ -576,7 +580,17 @@ static class UsageStats
                 _lastSpecialCharDate = GetStringProp(root, "lastSpecialCharDate");
             }
         }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or FormatException)
+        catch (Exception ex) when (ex is UnauthorizedAccessException
+                                   or (IOException and not FileNotFoundException and not DirectoryNotFoundException))
+        {
+            // Audit du 25/09 (A-11) : fichier présent mais illisible pour l'instant (verrou d'un
+            // antivirus ou d'une sauvegarde, droits). Il est sans doute intact : repartir de
+            // zéro en mémoire, mais ne jamais l'écraser avec ces compteurs-là.
+            ResetInMemoryState();
+            _readFailed = true;
+            ConfigManager.Log("UsageStats.EnsureLoaded", ex);
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or FormatException)
         {
             // Fichier absent ou corrompu : redémarrer avec des statistiques vides plutôt
             // que de planter l'app (cf. Plan implémentation v1.1.md § 1d).
@@ -619,6 +633,10 @@ static class UsageStats
         // à écrire » et non « écrit » — un false ferait réessayer à chaque flush et laisserait
         // _dirty armé pour toujours.
         if (!CollectionEnabled) return true;
+
+        // Lecture ratée au chargement (A-11) : même réponse, pour la même raison — rien ne
+        // doit remplacer un fichier qu'on n'a pas pu lire.
+        if (_readFailed) return true;
 
         // AG130-11 (b) : .tmp suffixe par le PID, deux instances du meme compte
         // (RDP + console) ecrivant sinon dans le meme fichier temporaire.
