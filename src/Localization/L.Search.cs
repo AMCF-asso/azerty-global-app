@@ -9,6 +9,7 @@ internal static partial class L
     public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"\"{ch}\" copied!");
     public static string Search_ResultCountSingular => T("1 résultat — Entrée pour insérer", "1 result — Enter to insert");
     public static string Search_ResultCountPlural(int count) => T($"{count} résultats — Entrée pour insérer", $"{count} results — Enter to insert");
+    public static string Search_ResultCountCapped(int shown, int total) => T($"{shown} sur {total} résultats — Entrée pour insérer", $"{shown} of {total} results — Enter to insert");
 
     // ── Libellés des méthodes de saisie (touche morte, couches) ──────
     public static string Search_SpaceKeyLabel => T("Espace", "Space");
