@@ -52,7 +52,7 @@ public class CharacterIndexTests
         }
         Assert.Equal(activations.OrderBy(a => a.Key), index.DeadKeyActivations.OrderBy(a => a.Key).Select(a => new KeyValuePair<string, (string, string)>(a.Key, (a.Value.Key, a.Value.Layer))));
 
-        int rang = 0;
+        int rang = 0, noms = 0, parTouche = 0;
         foreach (var entree in caracteres.EnumerateObject())
         {
             if (entree.Name.StartsWith("dk:", StringComparison.Ordinal)) continue;
@@ -76,6 +76,8 @@ public class CharacterIndexTests
 
             // Méthodes par touche morte, avec leur activation.
             var parTouchesMortes = attendu.Where(m => Lire(m, "type") == "deadkey" && Lire(m, "deadkey").Length > 0).Select(Cle).ToList();
+            if (parTouchesMortes.Count > 0)
+                parTouche++;
             if (parTouchesMortes.Count == 0)
                 Assert.False(index.DeadKeyMethodsByCharacter.ContainsKey(entree.Name));
             else
@@ -84,14 +86,20 @@ public class CharacterIndexTests
                 Assert.Equal(activations[m.DeadKey], (m.DkActivationKey, m.DkActivationLayer));
 
             // Noms des infobulles : présents dès qu'un des deux noms existe.
-            var noms = (Lire(entree.Value, "unicodeNameFr"), Lire(entree.Value, "unicodeName"));
-            if (noms.Item1.Length > 0 || noms.Item2.Length > 0)
-                Assert.Equal(noms, index.Names[entree.Name]);
+            var nomsAttendus = (Lire(entree.Value, "unicodeNameFr"), Lire(entree.Value, "unicodeName"));
+            if (nomsAttendus.Item1.Length > 0 || nomsAttendus.Item2.Length > 0)
+            {
+                noms++;
+                Assert.Equal(nomsAttendus, index.Names[entree.Name]);
+            }
             else
                 Assert.False(index.Names.ContainsKey(entree.Name));
         }
+        // Ensembles comparés par leur taille exacte, pas seulement par inclusion.
         Assert.Equal(rang, index.Entries.Count);
-        Assert.DoesNotContain(index.Names.Keys, k => k.StartsWith("dk:", StringComparison.Ordinal));
+        Assert.Equal(rang, index.ByCharacter.Count);
+        Assert.Equal(noms, index.Names.Count);
+        Assert.Equal(parTouche, index.DeadKeyMethodsByCharacter.Count);
     }
 
     [Fact]
