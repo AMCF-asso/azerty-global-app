@@ -833,8 +833,6 @@ internal static class KeyboardRenderer
         {
             "\u202F" => L.Keyboard_NarrowNbsp,
             "\u00A0" => L.Keyboard_Nbsp,
-            "\u2011" => "‑",
-            " " => " ",
             _ => value
         };
     }

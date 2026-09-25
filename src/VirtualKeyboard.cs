@@ -375,17 +375,13 @@ sealed class VirtualKeyboard : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Tooltip Win32
     // ═══════════════════════════════════════════════════════════════
-    private const uint CW_USEDEFAULT = 0x80000000;
     private const uint TTS_ALWAYSTIP = 0x01;
     private const uint TTS_NOPREFIX = 0x02;
     private const uint TTF_SUBCLASS = 0x0010;
     private const uint TTF_TRANSPARENT = 0x0100;
     private const uint TTM_ADDTOOLW = 0x0432;
-    private const uint TTM_DELTOOLW = 0x0433;
     private const uint TTM_UPDATETIPTEXTW = 0x0439;
     private const uint TTM_NEWTOOLRECTW = 0x0434;
-    private const uint TTM_TRACKACTIVATE = 0x0411;
-    private const uint TTM_TRACKPOSITION = 0x0412;
     private const uint TTM_SETMAXTIPWIDTH = 0x0418;
     private const uint TTM_SETDELAYTIME = 0x0403;
     private const uint TTDT_INITIAL = 3;    // Délai avant apparition
