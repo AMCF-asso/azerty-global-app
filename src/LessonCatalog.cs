@@ -27,21 +27,6 @@ internal sealed class LessonCatalog
     public int SiteModuleCount => Modules.Count(module => !module.IsSynthetic);
     public int SiteLessonCount => Modules.Where(module => !module.IsSynthetic).SelectMany(module => module.Lessons).Count();
     public int SiteExerciseCount => Modules.Where(module => !module.IsSynthetic).SelectMany(module => module.Lessons).SelectMany(lesson => lesson.Exercises).Count();
-
-    public LessonExercise? FindExercise(string moduleId, string lessonId, int exerciseIndex)
-    {
-        foreach (var module in Modules)
-        {
-            if (!StringComparer.Ordinal.Equals(module.Id, moduleId)) continue;
-            foreach (var lesson in module.Lessons)
-            {
-                if (!StringComparer.Ordinal.Equals(lesson.Id, lessonId)) continue;
-                return lesson.Exercises.FirstOrDefault(exercise => exercise.ExerciseIndex == exerciseIndex);
-            }
-        }
-
-        return null;
-    }
 }
 
 internal sealed class LessonModule

@@ -58,7 +58,6 @@ internal static partial class L
 
     // ── Écrans de fin d'exercice ──────────────────────────────────────
     public static string Learning_BravoShort => T("✓ Bravo !", "✓ Well done!");
-    public static string Learning_LegendDeadKey => T("Touche morte", "Dead key");
     public static string Learning_FinalTitle => T("Bravo !", "Well done!");
     public static string Learning_FinalSubtitle => T($"Vous maîtrisez les bases d’{Product}.", $"You've mastered the basics of {Product}.");
 

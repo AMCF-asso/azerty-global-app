@@ -17,10 +17,8 @@ internal sealed class LessonsWindow : IDisposable
     private const int WMSZ_TOPRIGHT = 5;
     private const int WMSZ_BOTTOM = 6;
     private const int WMSZ_BOTTOMLEFT = 7;
-    private const int WMSZ_BOTTOMRIGHT = 8;
     private const uint CS_DBLCLKS = 0x0008;
     private const uint TIMER_LINE_ADVANCE = 8301;
-    private const uint TIMER_AUTO_HINT = 8302;
     private const uint TIMER_KEYPRESS = 8303;
     private const uint TIMER_HINT_CLEAR = 8304;
     private const uint TIMER_HINT_FLASH_CLEAR = 8305;
@@ -50,7 +48,6 @@ internal sealed class LessonsWindow : IDisposable
 
     private const uint MB_YESNO = 0x00000004;
     private const uint MB_ICONWARNING = 0x00000030;
-    private const uint MB_ICONINFORMATION = 0x00000040;
     private const int IDYES = 6;
 
     private enum WindowMode { Lessons, Free }
@@ -124,7 +121,6 @@ internal sealed class LessonsWindow : IDisposable
     private LessonHintMethod? _hintMethod;
     private bool _hintBackspace;
     private bool _hintButtonActive;
-    private int _consecutiveErrors;
     private uint _pressedScancode;
     private string? _pendingPhysicalText;
     private int _pendingPhysicalTextIndex;
@@ -796,7 +792,6 @@ internal sealed class LessonsWindow : IDisposable
 
     private void StartCurrentSession(bool savePosition)
     {
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_LINE_ADVANCE);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
@@ -810,7 +805,6 @@ internal sealed class LessonsWindow : IDisposable
         _hintMethod = null;
         _hintBackspace = false;
         _hintButtonActive = false;
-        _consecutiveErrors = 0;
         ClearPendingPhysicalText();
         if (savePosition)
             _progress.SetLastPosition(CurrentExercise);
@@ -2194,14 +2188,9 @@ internal sealed class LessonsWindow : IDisposable
         var result = _session.TypeChar(c);
         if (!result.Accepted) return;
         ClearHint();
-        if (result.WasError)
-            RegisterError(result.Expected, result.Actual);
-        else
-            ResetErrorState();
 
         if (result.LineCompleted)
         {
-            ResetErrorState();
             ClearHint();
             if (result.ExerciseCompleted)
                 CompleteExercise();
@@ -2225,11 +2214,6 @@ internal sealed class LessonsWindow : IDisposable
             ClearHint();
             UpdateAutoHintIfEnabled();
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-        }
-        else if (timerId == TIMER_AUTO_HINT)
-        {
-            Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
-            UpdateAutoHintIfEnabled();
         }
         else if (timerId == TIMER_KEYPRESS)
         {
@@ -2278,7 +2262,6 @@ internal sealed class LessonsWindow : IDisposable
         _summaryIsNewBest = previousBestWpm.HasValue && _session.Stats.Wpm.HasValue &&
                             _session.Stats.Wpm.Value > previousBestWpm.Value;
         _showSummary = true;
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         ClearHint();
 
         // Défi du jour : le dernier exercice de la leçon du jour clôt la séance —
@@ -2339,17 +2322,6 @@ internal sealed class LessonsWindow : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
-    private void RegisterError(char? expected, char? actual)
-    {
-        _consecutiveErrors++;
-    }
-
-    private void ResetErrorState()
-    {
-        _consecutiveErrors = 0;
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
-    }
-
     private void ShowHint()
     {
         ShowHintCore(automatic: false);
@@ -2359,7 +2331,6 @@ internal sealed class LessonsWindow : IDisposable
     {
         if (_session.NeedsBackspaceCorrection)
         {
-            Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
             if (_hintBackspace)
             {
                 ArmHintTimers(clearAfterDuration: !automatic);
@@ -2377,7 +2348,6 @@ internal sealed class LessonsWindow : IDisposable
 
         char? next = _session.GetNextExpectedCharacter();
         if (!next.HasValue) return;
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         if (_hintCharacter == next.Value && _hintMethod != null)
         {
             ArmHintTimers(clearAfterDuration: !automatic);
@@ -2460,7 +2430,6 @@ internal sealed class LessonsWindow : IDisposable
     private void ToggleAutoHints()
     {
         ConfigManager.SetLessonAutoHints(!ConfigManager.LessonAutoHintsEnabled);
-        ResetErrorState();
         if (ConfigManager.LessonAutoHintsEnabled)
             UpdateAutoHintIfEnabled();
         else
@@ -2473,7 +2442,6 @@ internal sealed class LessonsWindow : IDisposable
         _settingsOpen = !_settingsOpen;
         if (_settingsOpen)
         {
-            Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
             Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
         }
         else
@@ -2503,7 +2471,6 @@ internal sealed class LessonsWindow : IDisposable
         }
         else
         {
-            Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
             ClearHint();
             ArmFreeStatsTimerIfNeeded();
         }
@@ -2512,7 +2479,6 @@ internal sealed class LessonsWindow : IDisposable
 
     private void UpdateAutoHintIfEnabled()
     {
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         if (!_visible ||
             _settingsOpen ||
             _mode != WindowMode.Lessons ||
@@ -2832,7 +2798,6 @@ internal sealed class LessonsWindow : IDisposable
         // se présente, et les dix minutes sans avis s'appliquent aussi à lui.
         LearningSessionTracker.Closed(this);
         _settingsOpen = false;
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_AUTO_HINT);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
