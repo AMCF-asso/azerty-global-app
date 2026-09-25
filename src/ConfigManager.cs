@@ -271,8 +271,7 @@ static class ConfigManager
             if (configured != 0)
                 return Math.Clamp((int)configured, 150, 1000);
 
-            try { return Math.Clamp((int)Win32.GetDoubleClickTime(), 150, 1000); }
-            catch { return 500; }
+            return Math.Clamp((int)Win32.GetDoubleClickTime(), 150, 1000);
         }
     }
 

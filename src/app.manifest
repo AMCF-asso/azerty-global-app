@@ -5,8 +5,8 @@
     Objectif : déclarer la DPI awareness en mode déclaratif pour que le WACK la détecte
     (sinon WARNING « DPIAwarenessValidation » au scanner — cf. wack-report-v0.9.7.xml).
 
-    L'appel runtime SetProcessDpiAwarenessContext((IntPtr)(-4)) dans Program.cs:16 reste
-    en place en fallback Windows 8.1- (ce manifest est ignoré sur OS antérieurs à Win 10).
+    L'appel runtime SetProcessDpiAwarenessContext((IntPtr)(-4)) de Program.Main double ce
+    manifeste ; plus de repli Windows 8.1 (le paquet exige Windows 10 17763).
   -->
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>

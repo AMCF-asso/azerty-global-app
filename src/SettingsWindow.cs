@@ -314,19 +314,18 @@ sealed class SettingsWindow : IDisposable
         _onAppLanguageChanged = _ => OnLanguageChanged();
         ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
 
-        try
+        int realDpi = Win32.GetDpiForWindow(_hWnd);
+        if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
         {
-            int realDpi = Win32.GetDpiForWindow(_hWnd);
-            if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+            _dpiScale = realDpi / 96f;
+            // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
+            try
             {
-                _dpiScale = realDpi / 96f;
                 RecreateFonts();
                 FitWindowToContent();
                 RepositionControls();
             }
-        }
-        catch
-        {
+            catch { }
         }
     }
 

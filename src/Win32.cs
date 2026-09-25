@@ -541,8 +541,8 @@ static class Win32
     {
         if (hwnd == IntPtr.Zero) return;
         int useDarkMode = 1;
-        try { DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int)); }
-        catch { /* Win10 1809- ou DWMWA non supporté — silent fallback */ }
+        // Rend un HRESULT d'erreur, sans lever, quand l'attribut n'est pas géré (Windows 10 1809).
+        DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -852,9 +852,6 @@ static class Win32
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — DPI
     // ═══════════════════════════════════════════════════════════════
-
-    [DllImport("user32.dll")]
-    public static extern bool SetProcessDPIAware();
 
     [DllImport("user32.dll")]
     public static extern int SetProcessDpiAwarenessContext(IntPtr value);
