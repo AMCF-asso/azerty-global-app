@@ -108,8 +108,9 @@ l'historique disponible. Les API à rétention limitée ajustent automatiquement
 leur date de début.
 
 Le workflow planifié s'exécute ensuite chaque jour à `05:15 UTC`, soit le matin
-en heure de Paris. Il échoue explicitement si un seul jeu de données manque et
-conserve un artefact de diagnostic pendant 14 jours.
+en heure de Paris. Il échoue explicitement si un seul jeu de données manque.
+Il ne publie aucun artefact : l'archive détaillée ne quitte pas le conteneur
+Azure privé (commit 1013d2b du 2026-09-05).
 
 ## 4. Exécution locale du collecteur
 
@@ -132,6 +133,12 @@ Installer l'extra MCP :
 ```powershell
 python -m pip install -e ".\store-analytics[mcp]"
 ```
+
+⚠️ **Le workflow ne produit plus d'artefact depuis le 2026-09-05** (commit
+1013d2b) : `tools/refresh_snapshot.py` n'a plus rien à rapatrier et le dit. Les
+cumuls se relèvent avec `python tools\fetch_totals.py`, qui lit le journal du
+dernier run et écrit `out/totals.json` ; le détail se lit dans le conteneur
+Azure privé (plus bas).
 
 Pour lire un export local, rapatrier d'abord le dernier snapshot :
 
