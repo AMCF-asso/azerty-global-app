@@ -18,12 +18,10 @@ internal sealed class LessonsWindow : IDisposable
     private const int WMSZ_BOTTOM = 6;
     private const int WMSZ_BOTTOMLEFT = 7;
     private const uint CS_DBLCLKS = 0x0008;
-    private const uint TIMER_LINE_ADVANCE = 8301;
     private const uint TIMER_KEYPRESS = 8303;
     private const uint TIMER_HINT_CLEAR = 8304;
     private const uint TIMER_HINT_FLASH_CLEAR = 8305;
     private const uint TIMER_FREE_STATS = 8306;
-    private const uint LINE_ADVANCE_MS = 300;
     private const uint KEYPRESS_DURATION_MS = 120;
     private const uint HINT_DIRECT_MS = 3000;
     private const uint HINT_DEADKEY_MS = 4500;
@@ -122,9 +120,8 @@ internal sealed class LessonsWindow : IDisposable
     private bool _hintBackspace;
     private bool _hintButtonActive;
     private uint _pressedScancode;
-    private string? _pendingPhysicalText;
-    private int _pendingPhysicalTextIndex;
-    private long _pendingPhysicalTextTick;
+    private readonly PhysicalTextInputBuffer _pendingPhysicalText =
+        new(PENDING_PHYSICAL_TEXT_TIMEOUT_MS);
     private bool _trackingMouseLeave;
     private int _focusedActionIndex = -1;
     private string? _hoverTooltip;
@@ -793,7 +790,6 @@ internal sealed class LessonsWindow : IDisposable
     private void StartCurrentSession(bool savePosition)
     {
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_LINE_ADVANCE);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
         _session = new LessonTypingSession(CurrentExercise);
@@ -2185,7 +2181,7 @@ internal sealed class LessonsWindow : IDisposable
         }
 
         if (_showSummary) return;
-        var result = _session.TypeChar(c);
+        var result = _session.TypeCharAndAdvanceLine(c);
         if (!result.Accepted) return;
         ClearHint();
 
@@ -2195,7 +2191,7 @@ internal sealed class LessonsWindow : IDisposable
             if (result.ExerciseCompleted)
                 CompleteExercise();
             else
-                Win32.SetTimer(_hWnd, (UIntPtr)TIMER_LINE_ADVANCE, LINE_ADVANCE_MS, IntPtr.Zero);
+                UpdateAutoHintIfEnabled();
         }
         else
         {
@@ -2207,15 +2203,7 @@ internal sealed class LessonsWindow : IDisposable
 
     private void OnTimer(uint timerId)
     {
-        if (timerId == TIMER_LINE_ADVANCE)
-        {
-            Win32.KillTimer(_hWnd, (UIntPtr)TIMER_LINE_ADVANCE);
-            _session.AdvanceCompletedLine();
-            ClearHint();
-            UpdateAutoHintIfEnabled();
-            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-        }
-        else if (timerId == TIMER_KEYPRESS)
+        if (timerId == TIMER_KEYPRESS)
         {
             Win32.KillTimer(_hWnd, (UIntPtr)TIMER_KEYPRESS);
             _pressedScancode = 0;
@@ -2714,8 +2702,6 @@ internal sealed class LessonsWindow : IDisposable
 
     private void CaptureExpectedTextForPhysicalKey(uint scancode)
     {
-        ClearPendingPhysicalText();
-
         if (!_visible || _settingsOpen || _showSummary) return;
         if (_mode == WindowMode.Lessons && _session.IsExerciseComplete) return;
         if (!_layout.Keys.TryGetValue(scancode, out var keyDef)) return;
@@ -2756,38 +2742,17 @@ internal sealed class LessonsWindow : IDisposable
 
         if (string.IsNullOrEmpty(expectedText)) return;
 
-        _pendingPhysicalText = expectedText;
-        _pendingPhysicalTextTick = Environment.TickCount64;
+        _pendingPhysicalText.Enqueue(expectedText);
     }
 
     private char ResolveTypedCharacter(char received)
     {
-        if (string.IsNullOrEmpty(_pendingPhysicalText))
-            return received;
-
-        if (Environment.TickCount64 - _pendingPhysicalTextTick > PENDING_PHYSICAL_TEXT_TIMEOUT_MS)
-        {
-            ClearPendingPhysicalText();
-            return received;
-        }
-
-        if (_pendingPhysicalTextIndex >= _pendingPhysicalText.Length)
-        {
-            ClearPendingPhysicalText();
-            return received;
-        }
-
-        char expected = _pendingPhysicalText[_pendingPhysicalTextIndex++];
-        if (_pendingPhysicalTextIndex >= _pendingPhysicalText.Length)
-            ClearPendingPhysicalText();
-        return expected;
+        return _pendingPhysicalText.Resolve(received);
     }
 
     private void ClearPendingPhysicalText()
     {
-        _pendingPhysicalText = null;
-        _pendingPhysicalTextIndex = 0;
-        _pendingPhysicalTextTick = 0;
+        _pendingPhysicalText.Clear();
     }
 
     private void Hide()
