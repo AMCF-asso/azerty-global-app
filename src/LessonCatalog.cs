@@ -88,6 +88,9 @@ internal sealed class LessonExercise
         Content = content.Replace("\r\n", "\n");
         TypingMode = typingMode;
         Hash = LessonCatalogLoader.ComputeExerciseHash(type, instruction, Content);
+        // Audit du 25/09 (L-06) : calculée une fois. Interpolée à chaque lecture, elle l'était
+        // plus de 160 fois par repeint (IsCompleted, comptes de la barre latérale).
+        StableKey = $"{ModuleId}/{LessonId}/{ExerciseIndex}/{Hash}";
     }
 
     public string ModuleId { get; }
@@ -98,7 +101,7 @@ internal sealed class LessonExercise
     public string Content { get; }
     public LessonTypingMode TypingMode { get; }
     public string Hash { get; }
-    public string StableKey => $"{ModuleId}/{LessonId}/{ExerciseIndex}/{Hash}";
+    public string StableKey { get; }
     public string[] Lines => Content.Split('\n');
 }
 

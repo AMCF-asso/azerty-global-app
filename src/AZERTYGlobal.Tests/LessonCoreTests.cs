@@ -60,6 +60,16 @@ public class LessonCoreTests
     }
 
     [Fact]
+    public void StableKey_GardeSonFormat_EtNEstCalculeeQuUneFois()
+    {
+        // Clé du fichier de progression : un autre format perdrait la progression enregistrée.
+        // Audit du 25/09 (L-06) : calculée à la construction, et non plus à chaque lecture.
+        var a = new LessonExercise("m", "l", 3, "practice", "Tapez", "abc", LessonTypingMode.Flexible);
+        Assert.Equal("m/l/3/" + a.Hash, a.StableKey);
+        Assert.Same(a.StableKey, a.StableKey);
+    }
+
+    [Fact]
     public void TypingSession_StrictMode_RejectsBackspaceAndCountsErrors()
     {
         var clock = new FakeClock();
