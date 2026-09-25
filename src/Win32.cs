@@ -105,9 +105,6 @@ static class Win32
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct RectF { public float X, Y, Width, Height; }
-
-    [StructLayout(LayoutKind.Sequential)]
     public struct TRACKMOUSEEVENT
     {
         public uint cbSize;
@@ -158,15 +155,11 @@ static class Win32
     // est annoncé comme « onglet 1 sur 3 » par les lecteurs d'écran et répond aux
     // flèches gauche/droite sans code de notre part.
     public const string WC_TABCONTROL = "SysTabControl32";
-    public const uint TCS_FOCUSNEVER = 0x8000;
     public const uint TCM_FIRST = 0x1300;
     public const uint TCM_GETCURSEL = TCM_FIRST + 11;
     public const uint TCM_SETCURSEL = TCM_FIRST + 12;
     public const uint TCM_INSERTITEMW = TCM_FIRST + 62;
     public const uint TCM_SETITEMW = TCM_FIRST + 61;
-    public const uint TCM_ADJUSTRECT = TCM_FIRST + 40;
-    public const uint TCM_SETITEMSIZE = TCM_FIRST + 41;
-    public const uint TCM_DELETEALLITEMS = TCM_FIRST + 9;
     public const int TCN_FIRST = -550;
     public const int TCN_SELCHANGE = TCN_FIRST - 1;
     public const uint TCIF_TEXT = 0x0001;
@@ -228,8 +221,6 @@ static class Win32
     public const uint WM_UNDO = 0x0304;
     public const uint WM_CONTEXTMENU = 0x007B;
     public const uint WM_SETCURSOR = 0x0020;
-    public const uint WM_NCHITTEST = 0x0084;
-    public const uint WM_SYSCOMMAND = 0x0112;
     public const uint WM_GETTEXT = 0x000D;
     public const uint WM_GETTEXTLENGTH = 0x000E;
     public const uint WM_DRAWITEM = 0x002B;
@@ -297,7 +288,6 @@ static class Win32
     public const uint DT_LEFT = 0x00;
     public const uint DT_CENTER = 0x01;
     public const uint DT_VCENTER = 0x04;
-    public const uint DT_BOTTOM = 0x08;
     public const uint DT_WORDBREAK = 0x10;
     public const uint DT_SINGLELINE = 0x20;
     public const uint DT_NOCLIP = 0x100;
@@ -582,9 +572,6 @@ static class Win32
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("gdi32.dll")]
-    public static extern bool Rectangle(IntPtr hdc, int left, int top, int right, int bottom);
-
-    [DllImport("gdi32.dll")]
     public static extern bool Ellipse(IntPtr hdc, int left, int top, int right, int bottom);
 
     // ═══════════════════════════════════════════════════════════════
@@ -663,9 +650,6 @@ static class Win32
 
     [DllImport("user32.dll")]
     public static extern IntPtr SetFocus(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetDesktopWindow();
 
     [DllImport("user32.dll")]
     public static extern int GetDpiForWindow(IntPtr hWnd);
@@ -785,12 +769,6 @@ static class Win32
     public static extern int GdipDisposeImage(IntPtr image);
 
     [DllImport("gdiplus.dll")]
-    public static extern int GdipGetImageWidth(IntPtr image, out uint width);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipGetImageHeight(IntPtr image, out uint height);
-
-    [DllImport("gdiplus.dll")]
     public static extern int GdipCreateFromHDC(IntPtr hdc, out IntPtr graphics);
 
     [DllImport("gdiplus.dll")]
@@ -804,43 +782,6 @@ static class Win32
 
     [DllImport("gdiplus.dll")]
     public static extern int GdipDrawImageRectI(IntPtr graphics, IntPtr image, int x, int y, int w, int h);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipCreateSolidFill(uint color, out IntPtr brush);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipDeleteBrush(IntPtr brush);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipFillEllipseI(IntPtr graphics, IntPtr brush, int x, int y, int w, int h);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipCreateFontFamilyFromName([MarshalAs(UnmanagedType.LPWStr)] string name, IntPtr collection, out IntPtr family);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipDeleteFontFamily(IntPtr family);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipCreateFont(IntPtr family, float emSize, int style, int unit, out IntPtr font);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipDeleteFont(IntPtr font);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipCreateStringFormat(int formatAttributes, int language, out IntPtr format);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipDeleteStringFormat(IntPtr format);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipSetStringFormatAlign(IntPtr format, int align);
-
-    [DllImport("gdiplus.dll")]
-    public static extern int GdipSetStringFormatLineAlign(IntPtr format, int align);
-
-    [DllImport("gdiplus.dll", CharSet = CharSet.Unicode)]
-    public static extern int GdipDrawString(IntPtr graphics, string str, int length, IntPtr font,
-        ref RectF layoutRect, IntPtr stringFormat, IntPtr brush);
 
     [DllImport("gdiplus.dll")]
     public static extern int GdipSetTextRenderingHint(IntPtr graphics, int mode);
@@ -946,7 +887,6 @@ static class Win32
     public static extern bool CheckMenuRadioItem(IntPtr hMenu, uint idFirst, uint idLast, uint idCheck, uint flags);
 
     public const uint MF_BYCOMMAND = 0x00000000;
-    public const uint MF_BYPOSITION = 0x00000400;
 
     // ═══════════════════════════════════════════════════════════════
     // Constantes additionnelles (changement de disposition)
