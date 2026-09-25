@@ -37,8 +37,6 @@ internal sealed class LessonAttemptStats
     public int BackspaceCount { get; private set; }
     public int HintCount { get; private set; }
     public DateTimeOffset? StartedAt => _startedAt;
-    public DateTimeOffset? CompletedAt => _completedAt;
-    public IReadOnlyDictionary<char, int> ErrorCountsByExpected => _errorCountsByExpected;
 
     public void RecordChar(char actual, char? expected)
     {
@@ -140,7 +138,6 @@ internal sealed class LessonTypingSession
     public bool IsLineComplete { get; private set; }
     public bool IsExerciseComplete { get; private set; }
     public string CurrentLine => _lines[Math.Min(LineIndex, _lines.Length - 1)];
-    public string TypedLine => _typedLine;
     public int TotalLines => _lines.Length;
     public bool NeedsBackspaceCorrection =>
         Mode != LessonTypingMode.Strict &&

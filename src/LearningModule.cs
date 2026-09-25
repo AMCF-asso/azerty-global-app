@@ -73,13 +73,11 @@ sealed class LearningModule : IDisposable
 
     // ── Timer IDs ───────────────────────────────────────────────────
     private const uint TIMER_KEYPRESS = 8001;
-    private const uint TIMER_TRANSITION = 8002;
     private const uint TIMER_REFOCUS = 8003;
     private const uint TIMER_FOCUS_LOST_CONFIRM = 8004;
     private const uint TIMER_CAPS_RESYNC = 8005;
     private const uint FOCUS_LOSS_DEBOUNCE_MS = 250;
     private const uint KEYPRESS_DURATION_MS = 120;
-    private const uint TRANSITION_DURATION_MS = 800;
     private const int REFOCUS_MAX_ATTEMPTS = 6;     // ~6 × 80ms = 480ms total
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
@@ -113,10 +111,8 @@ sealed class LearningModule : IDisposable
     private const uint CLR_KEY_CTX = 0x002D2D2D;             // Fond touche contextuelle/modif — légèrement plus sombre
     private const uint CLR_KEY_DISABLED = 0x002A2A2A;        // Fond touche désactivée pendant les exercices (Backspace) — plus terne
     private const uint CLR_CHAR_BASE = 0x00E0E0E0;           // Caractères couches affichées non-actives — blanc cassé
-    private const uint CLR_CHAR_ACTIVE = 0x00E0E0E0;         // (legacy) caractère principal des touches lettres — blanc cassé. Phase B: à scinder en CLR_CHAR_ACTIVE_BLUE pour le caractère réellement actif.
     private const uint CLR_CHAR_ACTIVE_BLUE = 0x00FFB366;    // Caractère actif (qui sera tapé selon modificateurs courants) — bleu vif BGR (#66B3FF)
     private const uint CLR_CHAR_DIM = 0x00999999;            // Caractères inactifs (couches non sélectionnées) — gris moyen
-    private const uint CLR_CHAR_ALTGR_ACCENT = 0x00FFB366;   // Identique à CLR_CHAR_ACTIVE_BLUE (placeholder, à revoir plus tard)
     private const uint CLR_DK_CHAR = 0x006666FF;             // Touche morte active — rouge clair BGR (#FF6666)
     private const uint CLR_CTX_TEXT = 0x00E0E0E0;            // Texte touches contextuelles — blanc cassé
     private const uint CLR_MOD_ACTIVE = 0x009A5A1A;          // Fond modificateur activé — bleu BGR (#1A5A9A) — utilisé en cas (b) Q5
@@ -300,9 +296,8 @@ sealed class LearningModule : IDisposable
     private int _cursorPosition;
     private bool _currentCharError;
     private bool _completed; // écran final
-    private bool _inTransition;
     // Page de choix affichee a la fin de chaque exercice : Reessayer / Suivant.
-    // Remplace l'ancienne transition automatique apres TIMER_TRANSITION.
+    // Remplace l'ancienne transition automatique entre exercices.
     private bool _awaitingChoice;
     // Compteur de succes pour l'exercice courant. Reset a chaque AdvanceToNextStep.
     // Le titre « ✓ Bravo ! » et le sous-titre ne s'affichent qu'au 1er succes (=1).
@@ -357,7 +352,6 @@ sealed class LearningModule : IDisposable
     private IntPtr _hFontCharDeadKey;
     private IntPtr _hFontCharSmall;
     private IntPtr _hFontCtx;
-    private IntPtr _hFontProgress;
     private IntPtr _hFontTransition;
     private IntPtr _hFontBadge;
 
@@ -373,22 +367,15 @@ sealed class LearningModule : IDisposable
     /// </summary>
     public Action<bool>? OnClosed;
 
-    // replayMode = true : lancement depuis le menu tray (« Exercices »). On ne persiste
-    // pas la progression dans config (ConfigManager.SetLearningMaxStepCompleted), car
-    // la state sauvegardee doit refleter UNIQUEMENT le 1er passage onboarding. Replay
-    // depuis le tray = entrainement, pas de side-effect sur la progression officielle.
-    private readonly bool _replayMode;
-
-    public LearningModule(IntPtr hWndOnboarding, KeyMapper? mapper, KeyboardHook? hook, Layout? layout, bool replayMode = false)
+    public LearningModule(IntPtr hWndOnboarding, KeyMapper? mapper, KeyboardHook? hook, Layout? layout)
     {
         ConfigManager.LogCrashTraceDebug("LM.ctor: enter");
-        ConfigManager.LogCrashTraceDebug($"LM.ctor: params hWndOnb={hWndOnboarding}, mapper={mapper != null}, hook={hook != null}, layout={layout != null}, replay={replayMode}");
+        ConfigManager.LogCrashTraceDebug($"LM.ctor: params hWndOnb={hWndOnboarding}, mapper={mapper != null}, hook={hook != null}, layout={layout != null}");
         // Validation explicite après le log diagnostic : si l'un est null, on aura logué
         // l'état exact des params avant de lever (utile pour le bug crash post-Reset).
         ArgumentNullException.ThrowIfNull(mapper);
         ArgumentNullException.ThrowIfNull(hook);
         ArgumentNullException.ThrowIfNull(layout);
-        _replayMode = replayMode;
         // Frappe non comptabilisée tant que ce module vit. Les 6 exercices produisent
         // à eux seuls 21 caractères enrichis, pour un seuil de sollicitation d'avis de 20
         // (UsageStats.EnrichedCharsReviewThreshold) : sans cette exclusion, terminer
@@ -750,7 +737,6 @@ sealed class LearningModule : IDisposable
         _hFontCharDeadKey = Win32.CreateFontW(S(Math.Max(1, (int)Math.Round(_tweaks.FontSizeMain * 0.85))), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hFontCharSmall = Win32.CreateFontW(S(_tweaks.FontSizeSmall), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hFontCtx = Win32.CreateFontW(S(_tweaks.FontSizeCtx), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
-        _hFontProgress = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontTransition = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontBadge = Win32.CreateFontW(S(9), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
     }
@@ -766,7 +752,6 @@ sealed class LearningModule : IDisposable
         Win32.DeleteObject(_hFontCharDeadKey);
         Win32.DeleteObject(_hFontCharSmall);
         Win32.DeleteObject(_hFontCtx);
-        Win32.DeleteObject(_hFontProgress);
         Win32.DeleteObject(_hFontTransition);
         Win32.DeleteObject(_hFontBadge);
         // Cache des fontes per-char (CharOverrides) : libere et vide
@@ -1175,7 +1160,7 @@ sealed class LearningModule : IDisposable
     {
         ClearPendingPhysicalText();
 
-        if (!_hasFocus || _completed || _inTransition || _awaitingChoice) return;
+        if (!_hasFocus || _completed || _awaitingChoice) return;
         if (!_layout.Keys.TryGetValue(scancode, out var keyDef)) return;
 
         string? output = keyDef.GetOutput(_mapper.ShiftDown, _mapper.AltGrDown, _mapper.CapsLockActive);
@@ -1452,12 +1437,6 @@ sealed class LearningModule : IDisposable
                         _pressedScancode = 0;
                         Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
-                    else if (timerId == TIMER_TRANSITION)
-                    {
-                        Win32.KillTimer(hWnd, (UIntPtr)TIMER_TRANSITION);
-                        _inTransition = false;
-                        AdvanceToNextStep();
-                    }
                     else if (timerId == TIMER_REFOCUS)
                     {
                         Win32.KillTimer(hWnd, (UIntPtr)TIMER_REFOCUS);
@@ -1530,7 +1509,7 @@ sealed class LearningModule : IDisposable
         // K3 : le WM_CHAR de Tab arrive encore ici après que WM_KEYDOWN a déplacé le focus
         // (TranslateMessage l'a posté à cette fenêtre) ; ce n'est pas une frappe d'exercice.
         if (c == '\t') return;
-        if (_completed || _inTransition || _awaitingChoice) return;
+        if (_completed || _awaitingChoice) return;
         if (_currentStep >= Steps.Length) return;
 
         var target = Steps[_currentStep].Target;
@@ -1551,10 +1530,7 @@ sealed class LearningModule : IDisposable
                 _currentStepSuccessCount++;
                 // Persister la progression : exercice (_currentStep + 1) valide. Setter monotone,
                 // donc safe meme en cas de Recommencer puis nouveau succes (no-op si deja persiste).
-                // En replayMode (lancement depuis menu tray « Exercices »), on ne persiste pas :
-                // la progression sauvegardee reflete uniquement le 1er passage onboarding.
-                if (!_replayMode)
-                    ConfigManager.SetLearningMaxStepCompleted(_currentStep + 1);
+                ConfigManager.SetLearningMaxStepCompleted(_currentStep + 1);
                 _mapper.RequestCapsLockOff(); // reinciter a appuyer sur Verr.Maj. au prochain exercice
                 ClearHighlight();
                 UpdateControlVisibility();
@@ -1825,7 +1801,7 @@ sealed class LearningModule : IDisposable
     private void UpdateHighlight()
     {
         ClearHighlight();
-        if (_completed || _inTransition) return;
+        if (_completed) return;
         if (_currentStep >= Steps.Length) return;
 
         var target = Steps[_currentStep].Target;
@@ -1962,22 +1938,15 @@ sealed class LearningModule : IDisposable
             string.Equals(method.DeadKey, activeDeadKey, StringComparison.Ordinal));
     }
 
-    private bool IsStep2Key(in VirtualKeyboard.VisualKey vk)
+    private (uint border, uint bg) GetHighlightColors(in VirtualKeyboard.VisualKey vk)
     {
-        return false;
-    }
-
-    private (uint border, uint bg) GetHighlightColors(bool isStep2, in VirtualKeyboard.VisualKey vk)
-    {
-        if (!isStep2
-            && vk.Label == "Verr. Maj."
+        if (vk.Label == "Verr. Maj."
             && _currentStep < Steps.Length
             && Steps[_currentStep].KeepCapsHighlight)
         {
             return (CLR_HL_DIRECT, CLR_HL_DIRECT_BG);
         }
 
-        if (isStep2) return (CLR_HL_STEP2, CLR_HL_STEP2_BG);
         return _highlightType switch
         {
             "direct" => (CLR_HL_DIRECT, CLR_HL_DIRECT_BG),
@@ -2023,9 +1992,7 @@ sealed class LearningModule : IDisposable
 
             Win32.SetBkMode(hdc, Win32.TRANSPARENT);
 
-            if (_inTransition)
-                PaintTransition(hdc, cw, kbTop);
-            else if (_completed)
+            if (_completed)
                 PaintFinalScreen(hdc, cw, kbTop);
             else if (_awaitingChoice)
                 PaintChoiceScreen(hdc, cw, kbTop);
@@ -2243,17 +2210,6 @@ sealed class LearningModule : IDisposable
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
-    private void PaintTransition(IntPtr hdc, int cw, int kbTop)
-    {
-        int centerY = kbTop / 2;
-        var hOldFont = Win32.SelectObject(hdc, _hFontTransition);
-        Win32.SetTextColor(hdc, CLR_TRANSITION);
-        string text = L.Learning_BravoShort;
-        var rect = new Win32.RECT { left = 0, top = centerY - S(20), right = cw, bottom = centerY + S(20) };
-        Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-        Win32.SelectObject(hdc, hOldFont);
-    }
-
     /// <summary>
     /// Page de choix affichee apres chaque exercice reussi.
     /// 1er succes de l'exercice : \u00ab \u2713 Bravo ! \u00bb (gros vert) + sous-titre + 2 boutons.
@@ -2286,57 +2242,6 @@ sealed class LearningModule : IDisposable
         }
         // n-ieme succes : pas de titre, juste les boutons (positionnes par RepositionControls
         // au centre vertical de la zone superieure).
-    }
-
-    /// <summary>
-    /// Affiche une légende centrée. Maj./Verr.Maj./AltGr ne sont plus utiles depuis qu'on
-    /// met en bleu le caractère actif (selon modificateurs courants) et non un layer fixe.
-    /// On garde uniquement « Touche morte » (en rouge) pour expliquer la couleur des dk_*
-    /// affichés sur le clavier.
-    /// </summary>
-    private void PaintLegend(IntPtr hdc, int cw, int footerTop)
-    {
-        var hOldFont = Win32.SelectObject(hdc, _hFontStatus);
-        try
-        {
-            var items = new (string Text, uint Color)[]
-            {
-                (L.Learning_LegendDeadKey, CLR_DK_CHAR),
-            };
-            const string sep = "  —  ";
-            int sepW = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontStatus, sep);
-            int totalW = 0;
-            int[] widths = new int[items.Length];
-            for (int i = 0; i < items.Length; i++)
-            {
-                widths[i] = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontStatus, items[i].Text);
-                totalW += widths[i];
-                if (i < items.Length - 1) totalW += sepW;
-            }
-            int x = (cw - totalW) / 2;
-            int y = footerTop + S(8);
-            int h = S(20);
-            for (int i = 0; i < items.Length; i++)
-            {
-                Win32.SetTextColor(hdc, items[i].Color);
-                var r = new Win32.RECT { left = x, top = y, right = x + widths[i], bottom = y + h };
-                Win32.DrawTextW(hdc, items[i].Text, items[i].Text.Length, ref r,
-                    Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-                x += widths[i];
-                if (i < items.Length - 1)
-                {
-                    Win32.SetTextColor(hdc, CLR_BTN_QUIT_TEXT);
-                    var rs = new Win32.RECT { left = x, top = y, right = x + sepW, bottom = y + h };
-                    Win32.DrawTextW(hdc, sep, sep.Length, ref rs,
-                        Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-                    x += sepW;
-                }
-            }
-        }
-        finally
-        {
-            Win32.SelectObject(hdc, hOldFont);
-        }
     }
 
     private void PaintFinalScreen(IntPtr hdc, int cw, int kbTop)
@@ -2399,7 +2304,6 @@ sealed class LearningModule : IDisposable
             // Déterminer couleur de fond
             bool isPressed = _pressedScancode != 0 && vk.Scancode == _pressedScancode;
             bool isHighlighted = IsKeyHighlighted(vk);
-            bool isStep2 = IsStep2Key(vk);
             bool isModActive = IsModifierActive(vk);
 
             // Sémantique highlight pédagogique :
@@ -2411,7 +2315,7 @@ sealed class LearningModule : IDisposable
             bool isDisabledKey = vk.IsContextual && vk.Scancode == 0x0E;
             uint bgColor, borderColor;
             int borderWidth = 1;
-            if (isDisabledKey && !isHighlighted && !isStep2)
+            if (isDisabledKey && !isHighlighted)
             {
                 bgColor = CLR_KEY_DISABLED;
                 borderColor = CLR_KEY_BORDER;
@@ -2421,19 +2325,19 @@ sealed class LearningModule : IDisposable
                 bgColor = CLR_KEY_PRESSED;
                 borderColor = CLR_KEY_BORDER;
             }
-            else if ((isHighlighted || isStep2) && isModActive)
+            else if (isHighlighted && isModActive)
             {
                 // À appuyer + activé → vert plein
-                var (hlBorder, hlBg) = GetHighlightColors(isStep2, vk);
+                var (hlBorder, hlBg) = GetHighlightColors(vk);
                 bgColor = hlBg;
                 borderColor = hlBorder;
                 borderWidth = 2;
             }
-            else if (isHighlighted || isStep2)
+            else if (isHighlighted)
             {
                 // À appuyer (pas encore activé) → contour seul
                 bgColor = vk.IsContextual ? CLR_KEY_CTX : CLR_KEY;
-                var (hlBorder, _) = GetHighlightColors(isStep2, vk);
+                var (hlBorder, _) = GetHighlightColors(vk);
                 borderColor = hlBorder;
                 borderWidth = 2;
             }
@@ -2514,7 +2418,7 @@ sealed class LearningModule : IDisposable
                 // dans la colonne droite (la partie commune du L) et non sur la pleine largeur.
                 // Backspace inactive : label gris. Quand elle est highlightée, elle redevient lisible.
                 var hOldFont = Win32.SelectObject(hdc, _hFontCtx);
-                Win32.SetTextColor(hdc, isDisabledKey && !isHighlighted && !isStep2 ? 0x00606060u : CLR_CTX_TEXT);
+                Win32.SetTextColor(hdc, isDisabledKey && !isHighlighted ? 0x00606060u : CLR_CTX_TEXT);
                 int ctxLeft = isIsoEnter
                     ? geo.OffsetX + (int)((vk.X + (vk.W - 1.25f)) * geo.Scale)
                     : kx;
@@ -2537,7 +2441,7 @@ sealed class LearningModule : IDisposable
             {
                 PaintBadge(hdc, kx + kw - S(12), ky + S(1), "1", CLR_HL_STEP1);
             }
-            else if (((isHighlighted && _highlightType == "step2") || isStep2) && !keepCapsStatusKey)
+            else if (isHighlighted && _highlightType == "step2" && !keepCapsStatusKey)
             {
                 PaintBadge(hdc, kx + kw - S(12), ky + S(1), "2", CLR_HL_STEP2);
             }
