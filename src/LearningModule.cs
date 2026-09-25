@@ -428,17 +428,18 @@ sealed class LearningModule : IDisposable
             ConfigManager.LogCrashTraceDebug("LM.ctor: UpdateControlVisibility done");
 
             // Corriger le DPI avec le vrai DPI du moniteur
-            try
+            int realDpi = Win32.GetDpiForWindow(_hWnd);
+            if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
             {
-                int realDpi = Win32.GetDpiForWindow(_hWnd);
-                if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+                _dpiScale = realDpi / 96f;
+                // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
+                try
                 {
-                    _dpiScale = realDpi / 96f;
                     RecreateFonts();
                     ResizeWindow();
                 }
+                catch { }
             }
-            catch { }
 
             // S'abonner aux événements
             _mapper.StateChanged += OnStateChanged;

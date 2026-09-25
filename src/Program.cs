@@ -36,9 +36,9 @@ static class Program
     [STAThread]
     static void Main()
     {
-        // Déclarer l'app DPI-aware AVANT toute création de fenêtre
-        try { Win32.SetProcessDpiAwarenessContext((IntPtr)(-4)); } // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
-        catch { try { Win32.SetProcessDPIAware(); } catch { } }   // Fallback Windows 8.1-
+        // Déclarer l'app DPI-aware AVANT toute création de fenêtre. app.manifest le déclare déjà :
+        // l'appel échoue alors sans lever (retour BOOL). Plus de repli Windows 8.1 (X-04, A-20).
+        Win32.SetProcessDpiAwarenessContext((IntPtr)(-4)); // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 
         // Langue de l'UI : lue en tout premier, avant tout message affichable (mutex, erreurs fatales).
         L.Language = ConfigManager.AppLanguage;

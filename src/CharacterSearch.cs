@@ -702,7 +702,7 @@ sealed class CharacterSearch : IDisposable
         Win32.EnableDarkTitleBar(_hWnd);
 
         // Récupérer le DPI
-        try { _dpiScale = Win32.GetDpiForWindow(_hWnd) / 96.0f; } catch { }
+        _dpiScale = Win32.GetDpiForWindow(_hWnd) / 96.0f;
 
         // Redimensionner selon le DPI
         {
