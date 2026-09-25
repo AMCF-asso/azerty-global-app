@@ -47,15 +47,6 @@ jobs:
       - name: Collecter toutes les statistiques Store
         run: python -m azerty_store_analytics.collector
 
-      - name: Conserver une copie de diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: microsoft-store-analytics-${{ github.run_id }}
-          path: store-analytics/out
-          if-no-files-found: warn
-          retention-days: 14
-
       - name: Se connecter à Azure par OIDC
         uses: azure/login@v2
         with:
