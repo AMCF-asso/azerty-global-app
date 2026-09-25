@@ -185,15 +185,23 @@ public class ConfigManagerCompatTests : IDisposable
         Assert.Null(ConfigManager.GetCompatibilityOverride(""));
     }
 
+    /// <summary>
+    /// Audit du 25/09 : le refus d'écraser un config.json illisible bloquait toute sauvegarde
+    /// pour toujours. Le fichier est mis de côté, intact, et les sauvegardes reprennent.
+    /// </summary>
     [Fact]
-    public void Save_DoesNotOverwriteExistingConfig_WhenLoadFailed()
+    public void Save_PutsUnreadableConfigAside_ThenResumes()
     {
         const string invalidJson = "{ invalid";
         File.WriteAllText(_configPath, invalidJson);
         ConfigManager.OverrideConfigPathForTests(_configPath);
 
         ConfigManager.SetNotifications(false);
+        ConfigManager.Flush();
 
-        Assert.Equal(invalidJson, File.ReadAllText(_configPath));
+        var copy = Assert.Single(Directory.GetFiles(_tempDir, "config.json" + FileQuarantine.Marker + "*"));
+        Assert.Equal(invalidJson, File.ReadAllText(copy));
+        Assert.False(ConfigManager.NotificationsUserSetting);
+        Assert.Contains("\"notificationsEnabled\": false", File.ReadAllText(_configPath));
     }
 }

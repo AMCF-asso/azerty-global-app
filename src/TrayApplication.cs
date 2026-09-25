@@ -351,6 +351,12 @@ sealed class TrayApplication : IDisposable
             {
                 Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
             }
+
+            // config.json corrompu, mis de côté au chargement : le dire une fois. L'accord
+            // manque désormais, donc l'accueil s'ouvre et la bulle « Actif » ne part pas.
+            _settingsResetNoticePending = ConfigManager.TakeQuarantineNotice();
+            if (_settingsResetNoticePending)
+                Win32.SetTimer(_hWnd, (UIntPtr)TIMER_SETTINGS_RESET_NOTICE, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
         }
         catch (Exception ex)
         {
@@ -541,6 +547,10 @@ sealed class TrayApplication : IDisposable
     // n'apparaissait jamais, quand les mêmes bulles émises plus tard s'affichent).
     private const uint TIMER_STARTUP_BALLOON = 9040;
     private const uint STARTUP_BALLOON_DELAY_MS = 1500;
+    // Réglages remis à zéro après un config.json corrompu (audit du 25/09) : même délai
+    // que la bulle du démarrage, pour la même raison.
+    private const uint TIMER_SETTINGS_RESET_NOTICE = 9041;
+    private bool _settingsResetNoticePending;
     // Sollicitation d'avis au fil de la frappe (v1.3.0). Le chemin de démarrage ne voit
     // l'utilisateur qu'au lancement, c'est-à-dire au pire moment : il n'a encore rien
     // tapé. Ce timer attend qu'il vienne de franchir le seuil de caractères enrichis,
@@ -933,6 +943,15 @@ sealed class TrayApplication : IDisposable
                         // d'état correspondante est déjà passée : ne pas la recouvrir.
                         if (ShouldProcessHook)
                             ShowBalloon(L.Tray_ActiveTitle, L.Tray_ActiveBalloonBody);
+                    }
+                    else if (timerId == TIMER_SETTINGS_RESET_NOTICE)
+                    {
+                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_SETTINGS_RESET_NOTICE);
+                        if (_settingsResetNoticePending)
+                        {
+                            _settingsResetNoticePending = false;
+                            ShowBalloon(L.Tray_SettingsResetTitle, L.Tray_SettingsResetBody);
+                        }
                     }
                     else if (timerId == TIMER_HOOK_WATCHDOG)
                     {
@@ -1405,6 +1424,10 @@ sealed class TrayApplication : IDisposable
         {
             _lessons = new LessonsWindow(_layout, _mapper, _hook);
             _lessons.ChallengeShared = OnChallengeShared;
+            // La fenêtre vient de charger la progression. Fichier corrompu mis de côté
+            // (audit du 25/09, L-14) : le dire une fois.
+            if (LessonProgressStore.TakeQuarantineNotice())
+                ShowBalloon(L.Tray_ProgressResetTitle, L.Tray_ProgressResetBody);
         }
         return true;
     }

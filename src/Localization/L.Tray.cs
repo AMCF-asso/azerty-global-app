@@ -191,6 +191,16 @@ internal static partial class L
     public static string Tray_AutoStartEnabledBody => T(
         $"{Product} démarrera avec Windows. Vous pouvez changer ce choix dans les Paramètres.",
         $"{Product} will start with Windows. You can change this in Settings.");
+    // Fichier illisible mis de côté (audit du 25/09) : une seule bulle, au démarrage pour
+    // les réglages, à l'ouverture des Leçons pour la progression.
+    public static string Tray_SettingsResetTitle => T("Réglages remis à zéro", "Settings reset");
+    public static string Tray_SettingsResetBody => T(
+        $"Le fichier des réglages d’{Product} était illisible. Une copie en est gardée. Refaites vos choix dans l’accueil.",
+        $"{Product}'s settings file couldn't be read. A copy of it is kept. Make your choices again in the welcome tour.");
+    public static string Tray_ProgressResetTitle => T("Progression remise à zéro", "Lesson progress reset");
+    public static string Tray_ProgressResetBody => T(
+        $"Le fichier de progression d’{Product} était illisible. Une copie en est gardée, les leçons repartent du début.",
+        $"{Product}'s lesson progress file couldn't be read. A copy of it is kept, and lessons start over.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");

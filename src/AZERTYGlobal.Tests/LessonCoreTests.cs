@@ -454,7 +454,9 @@ public class LessonCoreTests
     }
 
     [Fact]
-    public void ProgressStore_DoesNotOverwriteExistingProgress_WhenLoadFailed()
+    // Audit du 25/09 (L-14) : l'ancien refus d'écraser une progression illisible bloquait en
+    // silence toute progression nouvelle. Le fichier est mis de côté, intact, et l'on repart.
+    public void ProgressStore_PutsUnreadableProgressAside_ThenResumes()
     {
         string path = Path.Combine(Path.GetTempPath(), "azerty-lessons-test-" + Guid.NewGuid() + ".json");
         const string invalidJson = "{ invalid";
@@ -469,12 +471,16 @@ public class LessonCoreTests
             var store = new LessonProgressStore(path);
             store.RecordSuccess(exercise, session.Stats);
 
-            Assert.Equal(invalidJson, File.ReadAllText(path));
-            Assert.False(store.IsCompleted(exercise));
+            Assert.NotNull(store.QuarantinedPath);
+            Assert.Equal(invalidJson, File.ReadAllText(store.QuarantinedPath!));
+            Assert.True(store.IsCompleted(exercise));
+            Assert.True(new LessonProgressStore(path).IsCompleted(exercise));
         }
         finally
         {
             if (File.Exists(path)) File.Delete(path);
+            foreach (var copy in Directory.GetFiles(Path.GetTempPath(), Path.GetFileName(path) + FileQuarantine.Marker + "*"))
+                File.Delete(copy);
         }
     }
 

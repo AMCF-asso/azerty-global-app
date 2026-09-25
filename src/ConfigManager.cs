@@ -32,6 +32,7 @@ static class ConfigManager
             _compatibilityCache = null;
             _loadFailed = false;
             _dirty = false;
+            _quarantineNoticePending = false;
             // Écritures différées coupées : un test écrit par Flush(), au moment qu'il
             // choisit, jamais pendant le test suivant ni dans un dossier déjà supprimé.
             // Les témoins du regroupement les rallument (audit du 25/09, A-05).
@@ -1015,6 +1016,24 @@ static class ConfigManager
         }
     }
 
+    // config.json corrompu, mis de côté au chargement : message à montrer une fois.
+    private static bool _quarantineNoticePending;
+
+    /// <summary>
+    /// Vrai une seule fois après la mise de côté d'un config.json corrompu : le tray dit
+    /// alors, une fois, que les réglages ont été remis à zéro et qu'une copie est gardée.
+    /// </summary>
+    internal static bool TakeQuarantineNotice()
+    {
+        lock (_lock)
+        {
+            EnsureLoaded();
+            bool pending = _quarantineNoticePending;
+            _quarantineNoticePending = false;
+            return pending;
+        }
+    }
+
     private static void EnsureLoaded()
     {
         if (_cache != null) return;
@@ -1049,18 +1068,42 @@ static class ConfigManager
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        catch (Exception ex) when (FileQuarantine.IsReadFailure(ex))
         {
+            // Lecture impossible pour l'instant (verrou d'un antivirus ou d'une sauvegarde,
+            // droits) : le fichier est sans doute intact. Aucune écriture pendant cette
+            // session (WriteFile refuse d'écraser un fichier non chargé), le prochain
+            // lancement relit. L'accord reste absent pour la session : rien ne s'active seul.
             _loadFailed = true;
             Log("ConfigManager.EnsureLoaded", ex);
         }
+        catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
+        {
+            // Contenu corrompu (report du 24/09) : l'ancien refus d'écrire bloquait toute
+            // sauvegarde pour toujours ; l'accord n'était jamais mémorisé et l'application
+            // restait inactive à chaque démarrage. Le fichier est mis de côté, jamais
+            // supprimé, et l'on repart de zéro : accord et réglages sont à refaire, l'accueil
+            // revient. Renommage raté : même règle qu'une lecture impossible.
+            Log("ConfigManager.EnsureLoaded", ex);
+            _cache.Clear();
+            _compatibilityCache = null;
+            if (FileQuarantine.TryMoveAside(_configPath, "ConfigManager.Quarantine") != null)
+                _quarantineNoticePending = true;
+            else
+                _loadFailed = true;
+        }
+        catch (IOException ex)
+        {
+            // Fichier disparu entre File.Exists et la lecture : comme une installation neuve.
+            Log("ConfigManager.EnsureLoaded", ex);
+        }
 
-        // Installation neuve (aucun fichier) : la langue initiale suit l'interface
-        // Windows et s'écrit tout de suite — un défaut qui changerait d'une session à
-        // l'autre serait pire qu'un choix. Une config existante sans clé garde le
-        // « fr » historique : une mise à jour ne bascule jamais de langue (décision
-        // d'Antoine, 2026-08-24). Jamais après un échec de lecture : Save() refuse
-        // déjà d'écraser un fichier existant non chargé.
+        // Installation neuve (aucun fichier, ou fichier corrompu mis de côté) : la langue
+        // initiale suit l'interface Windows et s'écrit à la première écriture — un défaut
+        // qui changerait d'une session à l'autre serait pire qu'un choix. Une config
+        // existante sans clé garde le « fr » historique : une mise à jour ne bascule jamais
+        // de langue (décision d'Antoine, 2026-08-24). Jamais après un échec de lecture :
+        // WriteFile refuse déjà d'écraser un fichier existant non chargé.
         if (!_loadFailed && _cache.Count == 0 && !File.Exists(_configPath))
         {
             string derived;
