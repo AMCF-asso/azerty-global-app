@@ -75,6 +75,10 @@ internal sealed class LessonsWindow : IDisposable
 
     private IntPtr _hWnd;
     private bool _visible;
+    // Report de 1911581 (lot 2) : la file du texte attendu (PhysicalTextInputBuffer) n'est
+    // alimentée que si les Leçons ont le focus clavier, comme le tutoriel (_hasFocus de
+    // LearningModule). Tenu par WM_SETFOCUS et WM_KILLFOCUS.
+    private bool _hasFocus;
     private float _dpiScale = 1f;
     private float _windowScale = 1f;
     private int _baseClientW;
@@ -883,8 +887,16 @@ internal sealed class LessonsWindow : IDisposable
                     Marshal.StructureToPtr(mmi, lParam, false);
                     return IntPtr.Zero;
                 case Win32.WM_SETFOCUS:
+                    // Ce qui reste dans la file date d'avant : frappe traitée par le hook juste
+                    // avant la perte du focus, dont le WM_CHAR est parti ailleurs. Au retour, il
+                    // serait pris pour les premiers caractères tapés ici (moins d'une seconde).
+                    _hasFocus = true;
+                    ClearPendingPhysicalText();
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
                     return IntPtr.Zero;
+                case Win32.WM_KILLFOCUS:
+                    _hasFocus = false;
+                    break; // traitement par défaut, comme avant
                 case Win32.WM_LBUTTONUP:
                     OnClick(lParam);
                     return IntPtr.Zero;
@@ -2756,9 +2768,17 @@ internal sealed class LessonsWindow : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
+    /// <summary>
+    /// Le texte attendu d'une frappe physique entre-t-il dans la file ? Report de 1911581 :
+    /// seulement si les Leçons ont le focus, faute de quoi le WM_CHAR part dans une autre
+    /// fenêtre et le texte resterait en file jusqu'à une seconde. Fonction pure pour le témoin.
+    /// </summary>
+    internal static bool ShouldCaptureExpectedText(bool visible, bool hasFocus, bool settingsOpen, bool showSummary) =>
+        visible && hasFocus && !settingsOpen && !showSummary;
+
     private void CaptureExpectedTextForPhysicalKey(uint scancode)
     {
-        if (!_visible || _settingsOpen || _showSummary) return;
+        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary)) return;
         if (_mode == WindowMode.Lessons && _session.IsExerciseComplete) return;
         if (!_layout.Keys.TryGetValue(scancode, out var keyDef)) return;
 
