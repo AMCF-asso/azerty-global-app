@@ -23,7 +23,6 @@ sealed class CharacterSearch : IDisposable
     // ── Edit control ──────────────────────────────────────────────
     private const int IDC_SEARCH = 3001;
     private const int IDC_TIMER_COPYFEEDBACK = 3002;
-    private const uint EM_SETCUEBANNER = 0x1501;
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────
     private const uint CLR_BG = 0x00282828;           // Fond sombre
@@ -31,7 +30,6 @@ sealed class CharacterSearch : IDisposable
     private const uint CLR_SEPARATOR = 0x00404040;    // Séparateur
     private const uint CLR_CHAR = 0x00FF9040;          // Caractère (bleu vif)
     private const uint CLR_NAME = 0x00DDDDDD;          // Nom (gris clair)
-    private const uint CLR_METHOD = 0x00F0A050;        // Méthode de saisie — fallback
     private const uint CLR_METHOD_ALTGR = 0x00E8A848;  // AltGr (jaune doré)
     private const uint CLR_METHOD_MAJ = 0x006EAAF0;    // Maj (bleu ciel)
     private const uint CLR_METHOD_SEP = 0x00808080;    // + et "puis" (gris)
@@ -40,7 +38,6 @@ sealed class CharacterSearch : IDisposable
     private const uint CLR_SELECTED = 0x00483828;      // Fond sélectionné (brun chaud)
     private const uint CLR_COPIED = 0x0060D060;        // Vert "Copié !"
     private const uint CLR_HINT = 0x00777777;          // Texte d'aide (gris moyen)
-    private const uint CLR_HINT_LIGHT = 0x00606060;    // Exemples (gris discret)
 
     // ── Dimensions (base 96 DPI) ─────────────────────────────────
     private const int BASE_WIN_W = 520;
@@ -80,8 +77,6 @@ sealed class CharacterSearch : IDisposable
         public string CodePoint { get; set; } = "";
         public string NameFr { get; set; } = "";
         public string NameEn { get; set; } = "";
-        public string[] Aliases { get; set; } = Array.Empty<string>();
-        public string[] EnglishAliases { get; set; } = Array.Empty<string>();
         public string MethodDisplay { get; set; } = "";
         public bool IsDirectAccess { get; set; }
         public MethodData? Method { get; set; }
@@ -274,7 +269,8 @@ sealed class CharacterSearch : IDisposable
         // Deuxième passe : construire les entrées
         foreach (var entry in characters.EnumerateObject())
         {
-            // Ignorer les entrées de touche morte elles-mêmes (dk:xxx)
+            // Ignorer les entrées de touche morte elles-mêmes (dk:xxx). Écart avec le site, qui
+            // les propose (avec un bonus de 30 au classement) : audit du 25/09, V-05.
             if (entry.Name.StartsWith("dk:")) continue;
 
             var charStr = entry.Name;
@@ -343,8 +339,6 @@ sealed class CharacterSearch : IDisposable
                 CodePoint = codePoint,
                 NameFr = nameFr,
                 NameEn = nameEn,
-                Aliases = aliases.ToArray(),
-                EnglishAliases = englishAliases.ToArray(),
                 MethodDisplay = methodDisplay,
                 IsDirectAccess = isDirectAccess,
                 Method = methodData,
@@ -402,32 +396,6 @@ sealed class CharacterSearch : IDisposable
             var activation = _deadKeyActivations.GetValueOrDefault(method.DeadKey, method.DeadKey);
             var keyLabel = GetKeyLabel(method.Key);
             var afterDk = L.Search_AfterDeadKeyLabel(method.Layer, keyLabel);
-            return $"{activation}\n{afterDk}";
-        }
-
-        return "";
-    }
-
-    /// <summary>Formate une méthode de saisie en texte lisible.</summary>
-    private string FormatMethod(JsonElement method)
-    {
-        var type = method.GetProperty("type").GetString() ?? "";
-        var key = method.TryGetProperty("key", out var k) ? k.GetString() ?? "" : "";
-        var layer = method.TryGetProperty("layer", out var l) ? l.GetString() ?? "" : "";
-
-        if (type == "direct")
-        {
-            return FormatDirectMethod(key, layer);
-        }
-
-        if (type == "deadkey")
-        {
-            var dkName = method.GetProperty("deadkey").GetString() ?? "";
-            var activation = _deadKeyActivations.GetValueOrDefault(dkName, dkName);
-            var keyLabel = GetKeyLabel(key);
-            // Le layer de la touche après la DK : si c'est "Shift", il faut Maj + touche
-            var afterDk = L.Search_AfterDeadKeyLabel(layer, keyLabel);
-            // 2 lignes : activation en haut, association en bas
             return $"{activation}\n{afterDk}";
         }
 
@@ -566,8 +534,6 @@ sealed class CharacterSearch : IDisposable
             CodePoint = entry.CodePoint,
             NameFr = entry.NameFr,
             NameEn = entry.NameEn,
-            Aliases = entry.Aliases,
-            EnglishAliases = entry.EnglishAliases,
             MethodDisplay = FormatMethod(method),
             IsDirectAccess = type == "direct",
             Method = method,
@@ -695,10 +661,6 @@ sealed class CharacterSearch : IDisposable
         // Bonus accès direct (méthode recommandée est directe, pas touche morte)
         if (entry.IsDirectAccess)
             score += 10;
-
-        // Bonus pour les touches mortes (dk:name)
-        if (entry.Character.StartsWith("dk:"))
-            score += 30;
 
         // Bonus si le nom français commence par la requête (match plus spécifique)
         if (entry.NormalizedNameFr.Length > 0 && entry.NormalizedNameFr.StartsWith(normalizedQuery))
@@ -1345,7 +1307,6 @@ sealed class CharacterSearch : IDisposable
         int methodColW = cw - charColW - nameColW - pad;
         int rowPad = Scale(BASE_ROW_PAD);
         int footerH = Scale(BASE_FOOTER_H);
-        int availableH = ch - y - footerH;
 
         if (_filteredResults.Count > 0)
         {
