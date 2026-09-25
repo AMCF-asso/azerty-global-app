@@ -31,14 +31,19 @@ public class LocalizationTests : IDisposable
     public void InstallationNeuve_EcritLaLangueDeriveDeWindows()
     {
         // Fichier absent = installation neuve : la langue suit l'interface Windows
-        // (QW-2) et s'écrit immédiatement pour rester stable d'une session à l'autre.
+        // (QW-2) et s'écrit dès la première écriture groupée (audit du 25/09, A-05), pour
+        // rester stable d'une session à l'autre.
         // Comparée au LANGID réel du poste : sur une CI anglophone le défaut est
         // « en », et un « fr » codé en dur y rougirait.
         string derived = ConfigManager.DefaultAppLanguage(ConfigManager.WindowsUiLanguageIdForTests());
         Assert.Equal(derived, ConfigManager.AppLanguage);
         Assert.Equal(derived, ConfigManager.AppLanguageUserSetting);
 
-        // Persistée : un rechargement du même fichier relit la clé écrite.
+        // Persistée : un rechargement du même fichier relit la clé écrite. Sans le Flush,
+        // le rechargement retombait sur une installation neuve et redérivait la même
+        // langue : le test passait sans rien prouver.
+        ConfigManager.Flush();
+        Assert.Contains("\"appLanguage\"", File.ReadAllText(_configPath));
         ConfigManager.OverrideConfigPathForTests(_configPath);
         Assert.Equal(derived, ConfigManager.AppLanguageUserSetting);
     }
@@ -72,6 +77,7 @@ public class LocalizationTests : IDisposable
     {
         ConfigManager.SetAppLanguage("en");
         Assert.Equal("en", ConfigManager.AppLanguage);
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         ConfigManager.OverrideConfigPathForTests(_configPath);
         Assert.Equal("en", ConfigManager.AppLanguage);

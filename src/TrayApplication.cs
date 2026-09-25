@@ -947,8 +947,9 @@ sealed class TrayApplication : IDisposable
                     }
                     else if (timerId == TIMER_STATS_FLUSH)
                     {
-                        // Timer récurrent : sauvegarde différée des statistiques locales.
-                        UsageStats.Flush();
+                        // Timer récurrent : sauvegarde différée des statistiques locales, sur
+                        // le pool de threads (audit du 25/09) : ce fil sert aussi le hook.
+                        UsageStats.FlushInBackground();
                         // Rappel Défi du jour (v1.2.0) : décision pure à chaque tick, tous
                         // les gardes (opt-in, un par jour, fenêtre horaire) sont dedans.
                         MaybeShowTrainingReminder();
@@ -993,6 +994,10 @@ sealed class TrayApplication : IDisposable
                     // (correctif audit 2026-07 M2 ; item TO-DO « RDP » v1.0).
                     {
                         int sessionEvent = wParam.ToInt32();
+                        // Tout changement de session (verrouillage, déconnexion, fermeture) :
+                        // écrire ce qui attend, sur le pool de threads (audit du 25/09, A-05).
+                        ConfigManager.FlushInBackground();
+                        UsageStats.FlushInBackground();
                         if (sessionEvent == Win32.WTS_SESSION_UNLOCK ||
                             sessionEvent == Win32.WTS_CONSOLE_CONNECT ||
                             sessionEvent == Win32.WTS_REMOTE_CONNECT)
@@ -1001,6 +1006,10 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case Win32.WM_QUERYENDSESSION:
+                    // Arrêt ou déconnexion annoncé : écrire tout de suite ce qui attend, sans
+                    // compter sur WM_ENDSESSION (audit du 25/09, A-05). Deux écritures au plus.
+                    ConfigManager.Flush();
+                    UsageStats.Flush();
                     return (IntPtr)1; // ne jamais bloquer l'arrêt/déconnexion
 
                 case Win32.WM_ENDSESSION:
@@ -2084,7 +2093,6 @@ sealed class TrayApplication : IDisposable
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH);
-        UsageStats.Flush(); // dernière sauvegarde avant fermeture
         Win32.WTSUnRegisterSessionNotification(_hWnd);
         _mapper?.ClearPassedThroughKeys();
         SecureInputDetector.ResultChangedLate -= OnSecureInputLateResult;
@@ -2101,6 +2109,11 @@ sealed class TrayApplication : IDisposable
         _toggleNotification?.Dispose(); _toggleNotification = null;
         _lessons?.Dispose(); _lessons = null;
         _layoutConflictWindow?.Dispose(); _layoutConflictWindow = null;
+        // Dernières écritures, après les fenêtres : leur Dispose peut encore poser des
+        // réglages (bornes des fenêtres). Le hook est déjà décroché (audit du 25/09, A-05).
+        // Chacune dans son try : un échec ne doit couper ni l'autre ni le reste du nettoyage.
+        try { UsageStats.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.Flush", ex); }
+        try { ConfigManager.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.Flush", ex); }
         ToastActivation.Unregister();
         Win32.Shell_NotifyIconW(NIM_DELETE, ref _nid);
         if (_hIcon != IntPtr.Zero)

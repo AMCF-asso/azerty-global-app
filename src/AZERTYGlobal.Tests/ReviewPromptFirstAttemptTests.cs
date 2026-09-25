@@ -118,6 +118,7 @@ public class ReviewPromptFirstAttemptTests : IDisposable
         EcrireStatistiquesV11();
         ConfigManager.EnsureCurrentVersionFirstRun("1.3.0", JourDeMiseAJour,
             hadUsageBefore: UsageStats.FirstRemapDate != null);
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
 
         // Lendemain : nouveau lancement, la date du premier lancement ne bouge pas.
         ConfigManager.OverrideConfigPathForTests(_configPath);
@@ -197,6 +198,7 @@ public class ReviewPromptFirstAttemptTests : IDisposable
     public void Date_ecrite_une_fois_par_version_et_relue_apres_redemarrage()
     {
         var premier = ConfigManager.EnsureCurrentVersionFirstRun("1.3.0", JourDeMiseAJour, hadUsageBefore: true);
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
         var json = File.ReadAllText(_configPath);
         Assert.Contains("currentVersionFirstRunDate", json);
         Assert.Contains("currentVersionFirstRunVersion", json);

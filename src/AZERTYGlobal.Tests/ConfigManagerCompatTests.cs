@@ -37,6 +37,7 @@ public class ConfigManagerCompatTests : IDisposable
         ConfigManager.SetCompatibilityOverride("Minecraft.exe", "forceOn");
         Assert.Equal("forceOn", ConfigManager.GetCompatibilityOverride("Minecraft.exe"));
         // Persistance disque
+        ConfigManager.Flush(); // écriture groupée (audit du 25/09, A-05) : ce que fait la fermeture
         Assert.True(File.Exists(_configPath));
         var json = File.ReadAllText(_configPath);
         Assert.Contains("compatibility", json);
