@@ -272,7 +272,9 @@ public sealed class KeyboardHook : IDisposable
         {
         if (nCode >= 0)
         {
-            var hookStruct = Marshal.PtrToStructure<Win32.KBDLLHOOKSTRUCT>(lParam);
+            // Audit du 25/09 (M-05) : lecture directe. Marshal.PtrToStructure rendait une boîte
+            // à chaque rappel (104 octets en AOT) ; la structure est blittable, la copie identique.
+            var hookStruct = ReadHookStruct(lParam);
 
             // Ne pas traiter nos propres injections
             if (hookStruct.dwExtraInfo == INJECTED_FLAG)
@@ -334,10 +336,13 @@ public sealed class KeyboardHook : IDisposable
                     return (IntPtr)1; // Bloquer le CapsLock — seul le toggle on/off est voulu
                 }
 
-                // Détecter Ctrl+Shift+<touche> → ouvrir/fermer la recherche de caractère
-                if (ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkSearch) &&
-                    _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode) &&
-                    isKeyDown && _mapper.IsToggleShortcut())
+                // Détecter Ctrl+Shift+<touche> → ouvrir/fermer la recherche de caractère.
+                // Audit du 25/09 (M-04) : l'appui et Ctrl+Maj d'abord. MatchesShortcutKey parcourt
+                // la disposition, et le faisait à chaque rappel ; les quatre prédicats sont purs,
+                // sans effet de bord : l'ordre ne change pas le résultat (HookCallbackTests).
+                if (isKeyDown && _mapper.IsToggleShortcut() &&
+                    ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkSearch) &&
+                    _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode))
                 {
                     SearchRequested?.Invoke();
                     return (IntPtr)1;
@@ -346,9 +351,9 @@ public sealed class KeyboardHook : IDisposable
                 // Détecter Ctrl+Shift+<touche> → ouvrir/fermer le clavier virtuel
                 // R11 : même garde « saisie sécurisée » que la recherche — sans elle, le
                 // clavier virtuel s'affiche au-dessus d'un champ mot de passe.
-                if (ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkVirtualKeyboard) &&
-                    _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode) &&
-                    isKeyDown && _mapper.IsToggleShortcut())
+                if (isKeyDown && _mapper.IsToggleShortcut() &&
+                    ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkVirtualKeyboard) &&
+                    _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode))
                 {
                     VirtualKeyboardRequested?.Invoke();
                     return (IntPtr)1;
@@ -387,6 +392,8 @@ public sealed class KeyboardHook : IDisposable
             return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
     }
+
+    private static unsafe Win32.KBDLLHOOKSTRUCT ReadHookStruct(IntPtr lParam) => *(Win32.KBDLLHOOKSTRUCT*)lParam;
 
     /// <summary>
     /// R11 : un raccourci qui fait surgir une fenêtre par-dessus le premier plan ne
