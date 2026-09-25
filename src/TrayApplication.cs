@@ -1936,10 +1936,12 @@ sealed class TrayApplication : IDisposable
 
     /// <summary>
     /// Déclenché depuis le callback WH_KEYBOARD_LL à chaque transition d'état
-    /// (touche morte, couche, CapsLock). Ne rien faire de coûteux ici :
-    /// Shell_NotifyIcon (tooltip) et SetWindowPos (indicateur) sont des appels
-    /// bloquants qui retarderaient le hook — tout part en différé, coalescé,
-    /// sur la boucle de messages.
+    /// (touche morte, couche, CapsLock, et chaque appui de Maj, Ctrl ou AltGr). Ne rien
+    /// faire de coûteux ici : Shell_NotifyIcon (tooltip) et SetWindowPos (indicateur)
+    /// sont des appels bloquants — tout part en différé, coalescé, sur la boucle de
+    /// messages. Le report les sort du rappel, pas du fil : la boucle et le hook
+    /// partagent le même, et la frappe suivante attend leur fin. D'où la garde de
+    /// l'infobulle, renvoyée seulement quand son texte change (audit du 25/09, A-08).
     /// </summary>
     private void OnStateChanged()
     {
@@ -2249,6 +2251,36 @@ sealed class TrayApplication : IDisposable
         if (oldIcon != IntPtr.Zero) Win32.DestroyIcon(oldIcon);
     }
 
+    /// <summary>
+    /// Audit du 25/09 (A-08) : dernier texte d'infobulle accepté par Explorer. Le texte ne
+    /// dépend ni de Maj, ni de Ctrl, ni d'Alt, mais chaque appui renvoyait un NIM_MODIFY,
+    /// appel inter-processus. Il n'est renvoyé que s'il a changé ; un envoi refusé n'est
+    /// pas retenu, et le suivant réessaie comme avant. Après un redémarrage d'Explorer,
+    /// NIM_ADD réannonce szTip, qui vaut toujours le dernier texte retenu.
+    /// </summary>
+    internal sealed class TooltipPublisher
+    {
+        private string? _shown;
+
+        /// <summary>Envoie <paramref name="tip"/> sauf si Explorer l'affiche déjà ; vrai
+        /// si un envoi a eu lieu.</summary>
+        internal bool Publish(string tip, Func<string, bool> send)
+        {
+            if (string.Equals(tip, _shown, StringComparison.Ordinal)) return false;
+            _shown = send(tip) ? tip : null;
+            return true;
+        }
+    }
+
+    private readonly TooltipPublisher _tooltip = new();
+
+    private bool SendTooltip(string tip)
+    {
+        _nid.szTip = tip;
+        _nid.uFlags = NIF_TIP;
+        return Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+    }
+
     private void UpdateTooltip()
     {
         var parts = new List<string> { ProductIdentity.DisplayName + " v" + Program.Version };
@@ -2269,9 +2301,7 @@ sealed class TrayApplication : IDisposable
             if (layerState.Mode is MaintainableLayerMode.Locked)
                 parts.Add(L.Layers_TooltipLayer(GetMaintainableLayerLabel(layerState.LayerId)));
         }
-        _nid.szTip = string.Join(" — ", parts);
-        _nid.uFlags = NIF_TIP;
-        Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+        _tooltip.Publish(string.Join(" — ", parts), SendTooltip);
     }
 
     /// <summary>Retourne le symbole d'affichage d'une touche morte (partagé avec LearningModule).</summary>
