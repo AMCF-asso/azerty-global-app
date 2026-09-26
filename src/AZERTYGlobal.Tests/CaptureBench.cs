@@ -136,6 +136,12 @@ public class CaptureBench
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, "duree-de-pause", windowDpi);
+
+            // Le même état sur une surface noircie : ce qu'une fenêtre n'efface pas n'a
+            // pas de couleur garantie. Sous DWM il sort en noir (vu par Antoine le 26/09 sur
+            // cette fenêtre), le runner le rend blanc. Voir BancCapture.BlackenClient.
+            BancCapture.BlackenClient(hwnd);
+            target.Shoot(hwnd, "duree-de-pause-fond", windowDpi);
         }
         finally
         {

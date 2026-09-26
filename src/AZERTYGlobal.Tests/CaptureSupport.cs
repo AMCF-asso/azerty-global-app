@@ -366,6 +366,32 @@ internal static class BancCapture
     }
 
     /// <summary>
+    /// Noircit la zone cliente, enfants compris, sans rien invalider. La capture qui suit
+    /// repeint la fenêtre avec effacement (<see cref="Capture"/>) : tout ce que la fenêtre
+    /// n'efface ni ne peint reste noir. C'est ce que montre DWM à l'écran, alors que le
+    /// runner rend ces zones en blanc et cachait le fond noir de la Durée de pause.
+    /// </summary>
+    internal static void BlackenClient(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+            throw new InvalidOperationException("handle nul avant le noircissement");
+
+        Win32.GetClientRect(hwnd, out var client);
+        IntPtr hdc = Native.GetDCEx(hwnd, IntPtr.Zero, Native.DCX_CACHE);
+        IntPtr black = Win32.CreateSolidBrush(0x00000000);
+        try
+        {
+            Win32.FillRect(hdc, ref client, black);
+            Native.GdiFlush();
+        }
+        finally
+        {
+            Win32.DeleteObject(black);
+            Win32.ReleaseDC(hwnd, hdc);
+        }
+    }
+
+    /// <summary>
     /// Laisse les fenêtres se peindre. Une boucle GetMessage bloquerait : la fenêtre ne se
     /// ferme pas d'elle-même, et rien ne posterait le WM_QUIT qui en sortirait.
     /// </summary>
