@@ -85,35 +85,10 @@ sealed class TrayApplication : IDisposable
     // Deep link vers le volet « Donner un avis » de la fiche Microsoft Store de l'app
     private const string StoreReviewUrl = ProductIdentity.StoreReviewUrl;
 
-    // ── Sollicitation d'avis (v1.2.0) ───────────────────────────────
-    // Essai 1 — v1.3.0, décision d'Antoine du 2026-09-21 : le déclencheur n'est plus le
-    // calendrier mais la PREUVE D'USAGE de ce qu'AZERTY Global apporte. Le seuil vit dans
-    // UsageStats.EnrichedCharsReviewThreshold, avec le compteur qu'il borne.
-    //
-    // Les deux planchers de jours qu'il remplace (3 jours d'usage distincts, 3 jours
-    // écoulés depuis la première frappe) disaient « l'application a servi » par un proxy.
-    // Le compte de caractères enrichis le dit directement, et dit en plus QUOI a servi :
-    // UsageStats.TryCategorize exclut par construction tout ce que l'AZERTY traditionnel
-    // de Windows donne déjà. ⛔ Ne pas les recumuler : la 1.1.0 a fait 0 notation pour 394
-    // utilisateurs actifs en juillet 2026, le risque n'est pas de trop demander.
-    // Plancher de temps de frappe actif à l'essai 1, en minutes distinctes avec au moins
-    // une frappe remappée (UsageStats.TotalActiveMinutes). Décision d'Antoine du
-    // 2026-09-21, après observation en VM : le compte de caractères enrichis seul se
-    // franchit en une poignée de secondes dès qu'un texte est riche en accents, alors
-    // qu'une durée ne se fabrique pas. Les deux gardes sont cumulatives et disent deux
-    // choses différentes : QUOI a servi (20 caractères enrichis) et COMBIEN (10 minutes).
-    private const int ReviewPromptFirstMinActiveMinutes = 10;
-    private const int ReviewPromptSecondActiveDays = 10;
-    // Plancher calendaire de l'essai 2 seulement : sept jours au moins après le premier,
-    // sinon le second tombe dans la même semaine et se lit comme une relance. C'est un
-    // garde-fou d'espacement, pas une preuve d'usage — il survit au changement ci-dessus.
-    private const int ReviewPromptSecondMinGapDays = 7;
-    // Au-delà, l'utilisateur est considéré comme parti : on ne relance pas un absent.
-    private const int ReviewPromptStaleDays = 3;
-    // Pas de sollicitation dans la foulée d'une erreur. Internal parce que
-    // ReviewSharePrompt applique le même silence au chemin partage : une seule source
-    // évite que les deux valeurs divergient.
-    internal const int ReviewPromptErrorCooldownHours = 48;
+    // ── Sollicitation d'avis ────────────────────────────────────────
+    // Plafond, seuils et décision : ReviewPromptGate (audit du 25/09, A-02). Même valeur
+    // que ReviewPromptGate.ErrorCooldownHours, gardée ici pour les témoins qui la lisent.
+    internal const int ReviewPromptErrorCooldownHours = ReviewPromptGate.ErrorCooldownHours;
 
     // ── Menu flags ──────────────────────────────────────────────────
     private const uint MF_STRING = 0x0000;
@@ -2379,54 +2354,17 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// Sollicitation d'avis : deux essais au maximum sur toute la vie de l'installation,
-    /// déclenchés par l'usage réel et non par le calendrier. Quelqu'un qui a installé
-    /// l'application puis l'a oubliée n'a rien à en dire ; le J+7 calendaire de la v1.1
-    /// le sollicitait quand même.
-    ///
-    /// Essai 1 (v1.3.0) : <see cref="UsageStats.EnrichedCharsReviewThreshold"/> caractères
-    /// que l'AZERTY traditionnel de Windows ne donne pas. Aucun plancher de jours — le
-    /// compte de caractères dit ce qu'un compte de jours ne disait pas : ce qui a servi.
-    /// Essai 2 : <see cref="ReviewPromptSecondActiveDays"/> jours d'usage distincts, et
-    /// <see cref="ReviewPromptSecondMinGapDays"/> jours au moins après l'essai 1 — sans ce
-    /// plancher les deux notifications tombent dans la même semaine et la seconde n'a rien
-    /// de neuf à dire.
-    ///
-    /// Deux chemins y mènent : le démarrage de l'application, et
-    /// <see cref="MaybeShowReviewAfterQuietTyping"/>, qui attend le franchissement du seuil
-    /// puis une pause dans la frappe. Les gardes ci-dessous valent pour les deux. Depuis
-    /// l'audit 24/09, l'essai 1 ne passe plus que par le second, et une installation mise
-    /// à jour depuis une version qui a servi attend le lendemain de son premier lancement
-    /// (<see cref="ReviewPromptGate.FirstAttemptAllowed"/>).
-    ///
-    /// Le second essai est abandonné si le premier a été cliqué (l'utilisateur a répondu,
-    /// peu importe ce qu'il a fait ensuite) ou si l'application n'a plus servi depuis plus
-    /// de <see cref="ReviewPromptStaleDays"/> jours. Aucune sollicitation dans les
-    /// <see cref="ReviewPromptErrorCooldownHours"/> heures qui suivent une erreur
-    /// journalisée : on ne demande pas un avis à quelqu'un qui vient d'avoir un problème.
-    ///
-    /// En packagé la cible est toujours la fiche Store — le tirage 50/50 de la v1.1
-    /// envoyait une sollicitation sur deux vers un canal privé, alors que la note publique
-    /// est le seul levier qui manque. Hors package, toujours la page feedback, faute de
-    /// fiche à noter.
-    ///
-    /// Marquée comme faite dès l'affichage : une notification manquée consomme l'essai,
-    /// mais il en reste un second, ce que la v1.1 n'offrait pas.
-    /// Retourne true si la notification a été affichée.
-    /// </summary>
-    /// <summary>
     /// Reste-t-il une sollicitation d'avis à faire sur cette installation ? Ne lit que des
     /// réglages persistés, jamais l'usage : sert à décider si le timer de quiétude a une
-    /// raison de tourner, pas si la sollicitation doit partir.
+    /// raison de tourner, pas si la sollicitation doit partir
+    /// (<see cref="ReviewPromptGate.StillPossible"/>).
     /// </summary>
     private static bool ReviewPromptStillPossible()
     {
         try
         {
-            return PolicyManager.ExternalLinksEnabledNow
-                && ConfigManager.NotificationsEnabled
-                && !ConfigManager.ReviewPromptClicked
-                && ConfigManager.ReviewPromptCount < 2;
+            return ReviewPromptGate.StillPossible(PolicyManager.ExternalLinksEnabledNow,
+                ConfigManager.NotificationsEnabled, ReviewState.Load());
         }
         catch (Exception ex)
         {
@@ -2505,7 +2443,7 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (ReviewPromptGate.ShouldArmSignalAtLoad(ConfigManager.ReviewPromptCount,
+            if (ReviewPromptGate.ShouldArmSignalAtLoad(ReviewState.Load().Attempts,
                     ReviewPromptStillPossible(), UsageStats.TotalSpecialCharsCount,
                     UsageStats.EnrichedCharsReviewThreshold))
                 UsageStats.ArmEnrichedThresholdSignal();
@@ -2516,88 +2454,32 @@ sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sollicitation d'avis par notification : photographie des signaux, décision pure
+    /// (<see cref="ReviewPromptGate.ShouldShowNotification"/>, qui porte les règles des deux
+    /// essais), puis affichage. Deux chemins y mènent : le démarrage, relayé par la fermeture
+    /// de l'accueil, et <see cref="MaybeShowReviewAfterQuietTyping"/>.
+    ///
+    /// En packagé la cible est toujours la fiche Store — le tirage 50/50 de la v1.1
+    /// envoyait une sollicitation sur deux vers un canal privé, alors que la note publique
+    /// est le seul levier qui manque. Hors package, toujours la page feedback, faute de
+    /// fiche à noter.
+    ///
+    /// Marquée comme faite dès l'affichage : une notification manquée consomme l'essai,
+    /// mais il en reste un second, ce que la v1.1 n'offrait pas.
+    /// Retourne true si la notification a été affichée.
+    /// </summary>
     private bool MaybeShowReviewPrompt(ReviewPromptTrigger trigger)
     {
         try
         {
-            // Canal sobre : aucune sollicitation d'avis (D3). Second garde nécessaire et non
-            // redondant — le chemin par partage a le sien dans ReviewSharePrompt, les deux
-            // sont séparés depuis le 2026-08-18, et éteindre celui-ci n'éteint pas l'autre.
-            //
-            // Depuis le lot C, la condition est « les liens externes sont-ils permis » : elle
-            // dit strictement plus que le canal sobre, une politique pouvant aussi les
-            // éteindre sur le canal Store. Cette sollicitation ouvre la fiche Store, donc
-            // elle tombe avec eux.
-            if (!PolicyManager.ExternalLinksEnabledNow) return false;
-            if (!ConfigManager.NotificationsEnabled) return false;
-
-            // Décision d'Antoine du 2026-09-24 : jamais pendant une séance de Leçons ou un
-            // tutoriel, ni dans les dix minutes qui suivent ; au fil de la frappe, il faut
-            // en plus une frappe après la fin de la séance. Refus provisoire : le signal
-            // de frappe reste armé (ShouldConsumeEnrichedSignal).
-            if (!LearningAllowsReviewNow(trigger)) return false;
-
-            int already = ConfigManager.ReviewPromptCount;
-            if (already >= 2 || ConfigManager.ReviewPromptClicked) return false;
-
-            var lastError = ConfigManager.LastErrorUtc;
-            if (lastError.HasValue &&
-                DateTime.UtcNow - lastError.Value < TimeSpan.FromHours(ReviewPromptErrorCooldownHours))
+            var signals = ReviewPromptGate.Snapshot(_versionFirstRun);
+            if (!ReviewPromptGate.ShouldShowNotification(trigger, signals, out int attempt))
                 return false;
-
-            // Sans première frappe remappée, l'application n'a jamais servi : rien à noter.
-            var firstRemap = UsageStats.FirstRemapDate;
-            if (firstRemap == null) return false;
-
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            int activeDays = UsageStats.ActiveDaysCount;
-            int attempt = already + 1;
-
-            if (attempt == 1)
-            {
-                // Audit 24/09 : jamais depuis le démarrage, et le lendemain du premier
-                // lancement de cette version pour une installation mise à jour qui avait
-                // déjà servi. Refus provisoire : le signal de frappe reste armé.
-                if (!ReviewPromptGate.FirstAttemptAllowed(trigger, today,
-                        _versionFirstRun?.UpgradedWithUsage ?? true, _versionFirstRun?.Date))
-                    return false;
-                // Même raison : au fil de la frappe, l'essai 1 peut tomber après le rappel
-                // Défi du jour (17 h). Une seule sollicitation par jour : si le rappel est
-                // déjà parti aujourd'hui, l'avis attend le lendemain (l'inverse est tenu
-                // par TrainingReminders, qui se tait le jour d'un avis). Défi masqué en
-                // 1.3.0 : plus aucun rappel n'écrit cette date, la garde est inerte. Une
-                // date du jour ne peut venir que d'un rappel réellement affiché aujourd'hui
-                // par une version antérieure : c'est bien la sollicitation du jour.
-                if (ConfigManager.TrainingLastReminderDate ==
-                        today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
-                    return false;
-                // v1.3.0 : preuve d'usage par les caractères qu'AZERTY Global apporte, et
-                // non par un compte de jours. Remplace les deux planchers calendaires.
-                if (UsageStats.TotalSpecialCharsCount < UsageStats.EnrichedCharsReviewThreshold)
-                    return false;
-                // ... et l'application doit avoir servi assez longtemps. Sans ce plancher,
-                // un seul texte accentué suffit à solliciter.
-                if (UsageStats.TotalActiveMinutes < ReviewPromptFirstMinActiveMinutes)
-                    return false;
-            }
-            else
-            {
-                if (activeDays < ReviewPromptSecondActiveDays) return false;
-                // Null pour une installation migrée depuis la v1.1, qui ne connaissait pas
-                // cette date : l'essai 1 y est forcément ancien, le plancher est acquis.
-                var lastShown = ConfigManager.ReviewPromptLastShown;
-                if (lastShown.HasValue &&
-                    today.DayNumber - lastShown.Value.DayNumber < ReviewPromptSecondMinGapDays)
-                    return false;
-                var lastActive = UsageStats.LastActiveDate;
-                if (lastActive == null ||
-                    today.DayNumber - lastActive.Value.DayNumber > ReviewPromptStaleDays)
-                    return false;
-            }
 
             // La date persistée ici est aussi ce qui fait primer l'avis sur le rappel
             // Défi du jour : TrainingReminders la relit dans ses signaux.
-            ConfigManager.RecordReviewPromptShown(today);
+            ConfigManager.RecordReviewPromptShown(signals.Today);
             bool toStore = ConfigManager.IsPackaged;
             string title = L.Tray_ReviewPromptTitle(attempt);
             string body = toStore ? L.Tray_ReviewPromptBodyStore(attempt) : L.Tray_ReviewPromptBodyFeedback(attempt);
