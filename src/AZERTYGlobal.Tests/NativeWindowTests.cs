@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using AZERTYGlobal;
 using Xunit;
@@ -157,6 +159,49 @@ public class NativeWindowTests
     }
 
     [Fact]
+    public void ConflitDeDisposition_SurUneClasseIndélogeable_NEstPasCréé()
+    {
+        // L'erreur 1410 au bout de la chaîne : une fenêtre de l'ancienne classe vit encore,
+        // la nouvelle ne doit pas naître sur l'ancienne procédure.
+        WithBlockedClass(ProductIdentity.WindowClass("LayoutConflict"), () =>
+        {
+            using var fenêtre = new LayoutConflictWindow(true, () => { }, () => { });
+            Assert.Equal(IntPtr.Zero, Handle(fenêtre));
+        });
+    }
+
+    [Fact]
+    public void DuréeDePause_SurUneClasseIndélogeable_NEstPasCréée()
+    {
+        WithBlockedClass(ProductIdentity.WindowClass("PauseDuration"), () =>
+        {
+            using var dialogue = new PauseDurationDialog();
+            typeof(PauseDurationDialog).GetMethod("CreateWindow", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(dialogue, new object[] { IntPtr.Zero });
+            Assert.Equal(IntPtr.Zero, Handle(dialogue));
+        });
+    }
+
+    [Fact]
+    public void SeulLeSocleEnregistreEtDésenregistreDesClasses()
+    {
+        // X-01 : quatorze fenêtres enregistraient leur classe elles-mêmes, sans lire le
+        // retour de RegisterClassExW, et huit y mettaient un pinceau qu'elles détruisaient
+        // ensuite. Une fenêtre qui y revient échappe à la règle du socle.
+        string src = Path.Combine(FindMicrosoftStoreRoot(), "src");
+        var fautifs = Directory.GetFiles(src, "*.cs")
+            .Where(f => Path.GetFileName(f) is not ("NativeWindow.cs" or "Win32.cs"))
+            .SelectMany(f => File.ReadLines(f)
+                .Where(l => l.Contains("RegisterClassExW(") || l.Contains("UnregisterClassW(")
+                    || l.Contains("hbrBackground ="))
+                .Where(l => !l.TrimStart().StartsWith("//"))
+                .Select(l => $"{Path.GetFileName(f)} : {l.Trim()}"))
+            .ToList();
+
+        Assert.True(fautifs.Count == 0, string.Join(Environment.NewLine, fautifs));
+    }
+
+    [Fact]
     public void FondDeClasse_SansFenêtre_NeCréeRien()
     {
         Assert.Equal(IntPtr.Zero, NativeWindow.ApplyClassBackground(IntPtr.Zero, 0x00DDDDDD));
@@ -242,6 +287,57 @@ public class NativeWindowTests
     }
 
     // ═══ Outillage ═══
+
+    /// <summary>
+    /// Enregistre la classe avec une procédure étrangère et y garde une fenêtre
+    /// message-only : Windows refuse alors de la désenregistrer. Le refus est journalisé,
+    /// d'où une configuration temporaire.
+    /// </summary>
+    private static void WithBlockedClass(string className, Action body)
+    {
+        string dossier = Path.Combine(Path.GetTempPath(), "AZGSocle_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dossier);
+        ConfigManager.OverrideConfigPathForTests(Path.Combine(dossier, "config.json"));
+
+        IntPtr module = Win32.GetModuleHandleW(null);
+        Win32.WNDPROC étrangère = (h, m, w, l) => Win32.DefWindowProcW(h, m, w, l);
+        var wc = new Win32.WNDCLASSEXW
+        {
+            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
+            lpfnWndProc = étrangère,
+            hInstance = module,
+            lpszClassName = className,
+        };
+        Assert.NotEqual(0, Win32.RegisterClassExW(ref wc));
+        IntPtr bloqueuse = Win32.CreateWindowExW(0, className, string.Empty, 0, 0, 0, 0, 0,
+            HWND_MESSAGE, IntPtr.Zero, module, IntPtr.Zero);
+        try
+        {
+            Assert.NotEqual(IntPtr.Zero, bloqueuse);
+            body();
+        }
+        finally
+        {
+            Win32.DestroyWindow(bloqueuse);
+            Win32.UnregisterClassW(className, module);
+            GC.KeepAlive(étrangère);
+        }
+    }
+
+    private static IntPtr Handle(object fenêtre) =>
+        (IntPtr)fenêtre.GetType().GetField("_hWnd", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(fenêtre)!;
+
+    private static string FindMicrosoftStoreRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "src", "NativeWindow.cs")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        throw new DirectoryNotFoundException("Racine Microsoft Store introuvable depuis les tests.");
+    }
 
     private static string UniqueClassName() => "AZERTYGlobal.Tests.Socle." + Guid.NewGuid().ToString("N");
 

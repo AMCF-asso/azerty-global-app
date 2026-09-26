@@ -90,7 +90,6 @@ internal sealed class LessonsWindow : IDisposable
     private int _resizeSnapshotW;
     private int _resizeSnapshotH;
 
-    private IntPtr _hBgBrush;
     private IntPtr _hFontTitle;
     private IntPtr _hFontSubtitle;
     private IntPtr _hFontText;
@@ -317,7 +316,6 @@ internal sealed class LessonsWindow : IDisposable
 
     private void CreateFonts()
     {
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
         CreateScaledFonts();
     }
 
@@ -344,7 +342,6 @@ internal sealed class LessonsWindow : IDisposable
 
     private void DestroyFonts()
     {
-        DeleteObject(ref _hBgBrush);
         DestroyScaledFonts();
     }
 
@@ -384,17 +381,9 @@ internal sealed class LessonsWindow : IDisposable
     private void CreateWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = _hBgBrush,
-            lpszClassName = WND_CLASS_NAME,
-            style = CS_DBLCLKS
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(WND_CLASS_NAME, _wndProcDelegate, CS_DBLCLKS))
+            return;
 
         int winW = D(BASE_WIN_W);
         int winH = D(BASE_WIN_H);
@@ -416,6 +405,8 @@ internal sealed class LessonsWindow : IDisposable
 
         _hWnd = Win32.CreateWindowExW(0, WND_CLASS_NAME, L.LessonsWin_WindowTitle,
             style, x, y, winW, winH, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        // Fond de la classe, que Windows détruit au désenregistrement.
+        NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
 
         // AG130-42 : le constructeur a lu le DPI du moniteur PRINCIPAL, faute de fenetre
         // a interroger. Maintenant qu'elle existe, prendre le sien : sur un poste a deux
@@ -2873,7 +2864,7 @@ internal sealed class LessonsWindow : IDisposable
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
-        Win32.UnregisterClassW(WND_CLASS_NAME, Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(WND_CLASS_NAME);
         DisposeResizeSnapshot();
         DestroyFonts();
     }

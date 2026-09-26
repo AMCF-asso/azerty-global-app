@@ -184,17 +184,12 @@ sealed class TrayApplication : IDisposable
         var hInstance = Win32.GetModuleHandleW(null);
         var className = ProductIdentity.WindowClass("Wnd");
 
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            lpszClassName = className
-        };
-        Win32.RegisterClassExW(ref wc);
-
-        _hWnd = Win32.CreateWindowExW(0, className, ProductIdentity.DisplayName,
-            0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre, et l'erreur
+        // ci-dessous s'affiche.
+        _hWnd = NativeWindow.RegisterClass(className, _wndProcDelegate, arrowCursor: false)
+            ? Win32.CreateWindowExW(0, className, ProductIdentity.DisplayName,
+                0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero)
+            : IntPtr.Zero;
         if (_hWnd == IntPtr.Zero)
         {
             // Sans fenêtre de messages, rien ne peut fonctionner (tray, timers, hook events).

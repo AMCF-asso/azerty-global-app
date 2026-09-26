@@ -101,7 +101,6 @@ sealed class CharacterSearch : IDisposable
     private readonly TextInsertionService _insertionService;
     private IntPtr _targetWindow;
     private IntPtr _hEditBgBrush;
-    private IntPtr _hClassBgBrush; // Brush de fond passé à WNDCLASSEXW
     // Audit du 25/09 (V-15) : zone de travail de l'écran retenu à l'ouverture. Chaque frappe
     // redimensionne la fenêtre ; relire l'écran du curseur à chaque fois la faisait changer
     // d'écran si la souris y passait pendant la saisie.
@@ -549,17 +548,10 @@ sealed class CharacterSearch : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
         var className = ProductIdentity.WindowClass("CharSearch");
-
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            style = 0x0003, // CS_HREDRAW | CS_VREDRAW
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hbrBackground = _hClassBgBrush = Win32.CreateSolidBrush(CLR_BG),
-            lpszClassName = className,
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(className, _wndProcDelegate, 0x0003 /* CS_HREDRAW | CS_VREDRAW */,
+                arrowCursor: false))
+            return;
 
         // Calculer la position en bas à droite — démarrer avec la hauteur minimale
         CaptureWorkArea();
@@ -572,6 +564,7 @@ sealed class CharacterSearch : IDisposable
             Win32.WS_POPUP | Win32.WS_BORDER | Win32.WS_CLIPCHILDREN,
             x, y, BASE_WIN_W, BASE_WIN_H_MIN,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
         Win32.EnableDarkTitleBar(_hWnd);
 
         // Récupérer le DPI
@@ -1469,14 +1462,12 @@ sealed class CharacterSearch : IDisposable
             _hEditBgBrush = IntPtr.Zero;
         }
         DestroyFonts();
-        if (_hClassBgBrush != IntPtr.Zero) { Win32.DeleteObject(_hClassBgBrush); _hClassBgBrush = IntPtr.Zero; }
         if (_hWnd != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
 
-        // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW(ProductIdentity.WindowClass("CharSearch"), Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(ProductIdentity.WindowClass("CharSearch"));
     }
 }

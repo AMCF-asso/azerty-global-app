@@ -704,25 +704,11 @@ sealed class LearningModule : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
-        // hbrBackground = IntPtr.Zero : ne PAS référencer _hBgBrush dans la WNDCLASSEXW.
-        // La classe Win32 reste enregistrée au-delà de la durée de vie de l'instance
-        // (RegisterClassExW est idempotent par className). Si on libère _hBgBrush au Dispose
-        // (DeleteObject), la classe garde un pointeur invalide → CreateWindowExW crash à la
-        // 2e instance (bug Reset → Essayer après 1ère complétion, traces error.log 2026-05-01).
-        // L'effacement du fond est géré côté instance via WM_ERASEBKGND (return 1) + FillRect
-        // dans OnPaint avec _hBgBrush, donc la classe n'a pas besoin d'un brush.
-        // Couplé avec UnregisterClassW au Dispose pour permettre la 2e instance avec un
-        // delegate WndProc frais (sans cela la classe garde un delegate potentiellement collecté).
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = IntPtr.Zero,
-            lpszClassName = WND_CLASS_NAME
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Sans fond de classe : WM_ERASEBKGND rend 1 et OnPaint remplit le fond avec
+        // _hBgBrush, qui reste à cette instance (bug Reset → Essayer du 2026-05-01).
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(WND_CLASS_NAME, _wndProcDelegate))
+            return;
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
@@ -3004,12 +2990,9 @@ sealed class LearningModule : IDisposable
             _hWnd = IntPtr.Zero;
         }
 
-        // Desenregistrer la classe Win32 maintenant que plus aucune fenetre ne l'utilise.
-        // Sans cet appel, RegisterClassExW lors d'une future instance est ignore (classe
-        // deja enregistree), donc la classe garde le delegate WndProc et le hbrBackground
-        // de la 1ere instance. Le delegate peut etre collecte par GC + le brush peut etre
-        // libere au Dispose => crash de la 2e instance des CreateWindowExW.
-        Win32.UnregisterClassW(WND_CLASS_NAME, Win32.GetModuleHandleW(null));
+        // Desenregistrer la classe Win32 maintenant que plus aucune fenetre ne l'utilise
+        // (voir NativeWindow.RegisterClass).
+        NativeWindow.UnregisterClass(WND_CLASS_NAME);
 
         DestroyFonts();
         Win32.DeleteObject(_hBgBrush);

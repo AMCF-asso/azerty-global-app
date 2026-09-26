@@ -178,7 +178,8 @@ sealed class SettingsWindow : IDisposable
     private readonly Win32.SUBCLASSPROC _shortcutSubclassProc;
     private IntPtr _focusedShortcut;
 
-    private readonly IntPtr _hBgBrush;
+    // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
+    private IntPtr _hBgBrush;
     private readonly IntPtr _hPanelBrush;
     private readonly IntPtr _hKeyBrush;
 
@@ -236,7 +237,6 @@ sealed class SettingsWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         _shortcutSubclassProc = ShortcutSubclassProc;
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
         _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
         _hKeyBrush = Win32.CreateSolidBrush(CLR_KEY_BG);
 
@@ -361,17 +361,9 @@ sealed class SettingsWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
         string className = ProductIdentity.WindowClass("Settings");
-
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = _hBgBrush,
-            lpszClassName = className
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(className, _wndProcDelegate))
+            return;
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
@@ -396,6 +388,7 @@ sealed class SettingsWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(0, className, L.Settings_WindowTitle,
             dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd, EnsureFocusVisible);
@@ -2066,7 +2059,6 @@ sealed class SettingsWindow : IDisposable
         }
 
         DestroyFonts();
-        Win32.DeleteObject(_hBgBrush);
         Win32.DeleteObject(_hPanelBrush);
         Win32.DeleteObject(_hKeyBrush);
 
@@ -2081,7 +2073,6 @@ sealed class SettingsWindow : IDisposable
             _gdipToken = IntPtr.Zero;
         }
 
-        // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW(ProductIdentity.WindowClass("Settings"), Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(ProductIdentity.WindowClass("Settings"));
     }
 }

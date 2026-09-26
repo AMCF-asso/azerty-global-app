@@ -125,23 +125,10 @@ sealed class LayoutConflictWindow : IDisposable
     private void CreateMainWindow()
     {
         var hInstance = Win32.GetModuleHandleW(null);
-
-        // hbrBackground = IntPtr.Zero : NE PAS reference _hBgBrush dans la WNDCLASSEXW.
-        // La classe Win32 reste enregistree au-dela de la duree de vie de l'instance ;
-        // si on libere _hBgBrush au Dispose, la classe garde un pointeur invalide → crash
-        // a la 2e instance. L'effacement du fond est gere via WM_ERASEBKGND (return 1) +
-        // FillRect dans OnPaint. Couple avec UnregisterClassW au Dispose pour permettre
-        // la 2e instance avec un delegate WndProc frais.
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = IntPtr.Zero,
-            lpszClassName = WND_CLASS_NAME
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Sans fond de classe : WM_ERASEBKGND rend 1 et OnPaint remplit tout le fond.
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(WND_CLASS_NAME, _wndProcDelegate))
+            return;
 
         int winW = S(BASE_WIN_W);
         int winH = S(BASE_WIN_H);
@@ -426,9 +413,6 @@ sealed class LayoutConflictWindow : IDisposable
         DestroyFonts();
         Win32.DeleteObject(_hBgBrush);
 
-        // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        // Sans cela, la classe garde un pointeur vers _wndProcDelegate de cette instance
-        // (potentiellement collecte par GC apres ce Dispose) → crash a la 2e instanciation.
-        Win32.UnregisterClassW(WND_CLASS_NAME, Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(WND_CLASS_NAME);
     }
 }
