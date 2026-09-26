@@ -830,7 +830,7 @@ sealed class LearningModule : IDisposable
         if (_keyboardPlacement is { } placement)
         {
             int i = 0;
-            foreach (var key in KeyboardRenderer.BuildHitTestRects(placement, KeyboardRenderProfile.Onboarding))
+            foreach (var key in KeyboardRenderer.BuildHitTestRects(placement))
             {
                 var rc = key.Rect;
                 if (mx >= rc.left && mx < rc.right && my >= rc.top && my < rc.bottom)
