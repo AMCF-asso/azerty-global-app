@@ -225,6 +225,20 @@ static class Win32
     public const uint WM_GETTEXTLENGTH = 0x000E;
     public const uint WM_DRAWITEM = 0x002B;
     public const uint BS_OWNERDRAW = 0x000B;
+    // Audit du 25/09, X-02 : styles et messages de contrôles que neuf fenêtres redéclaraient.
+    public const uint SS_NOTIFY = 0x0100;
+    public const uint BS_PUSHBUTTON = 0x0000;
+    public const uint BS_DEFPUSHBUTTON = 0x0001;
+    public const uint BS_AUTOCHECKBOX = 0x0003;
+    public const uint BS_AUTORADIOBUTTON = 0x0009;
+    public const uint BM_GETCHECK = 0x00F0;
+    public const uint BM_SETCHECK = 0x00F1;
+    public const uint BM_CLICK = 0x00F5;
+    public const uint BST_CHECKED = 0x0001;
+    public const uint ES_CENTER = 0x0001;
+    public const uint ES_UPPERCASE = 0x0008;
+    public const uint ES_AUTOHSCROLL = 0x0080;
+    public const uint ES_NUMBER = 0x2000;
     /// <summary>DRAWITEMSTRUCT.itemState : le contrôle owner-draw a le focus clavier.</summary>
     public const uint ODS_FOCUS = 0x0010;
     public const int NULL_BRUSH = 5;  // GetStockObject index
@@ -636,22 +650,10 @@ static class Win32
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern bool Shell_NotifyIconW(uint dwMessage, ref NOTIFYICONDATAW lpData);
 
-    // ═══════════════════════════════════════════════════════════════
-    // P/Invoke — Input
-    // ═══════════════════════════════════════════════════════════════
-
-    [DllImport("user32.dll")]
-    public static extern short GetKeyState(int nVirtKey);
-
-    [DllImport("user32.dll")]
-    public static extern uint MapVirtualKeyExW(uint uCode, uint uMapType, IntPtr dwhkl);
-
-    [DllImport("user32.dll")]
-    public static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
-        [Out] System.Text.StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetKeyboardLayout(uint idThread);
+    // Audit du 25/09, M-08 et X-02 : GetKeyState, MapVirtualKeyExW, ToUnicodeEx,
+    // GetKeyboardLayout, GetGUIThreadInfo (et GUITHREADINFO) et
+    // GetWindowThreadProcessIdOut ne sont déclarés qu'une fois, dans le moteur :
+    // TypingEngine.Windows.Win32, à écrire en entier, puisqu'ici « Win32 » désigne cette classe.
 
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — Focus / Thread
@@ -671,23 +673,6 @@ static class Win32
 
     [DllImport("user32.dll")]
     public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct GUITHREADINFO
-    {
-        public uint cbSize;
-        public uint flags;
-        public IntPtr hwndActive;
-        public IntPtr hwndFocus;
-        public IntPtr hwndCapture;
-        public IntPtr hwndMenuOwner;
-        public IntPtr hwndMoveSize;
-        public IntPtr hwndCaret;
-        public RECT rcCaret;
-    }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
@@ -866,14 +851,6 @@ static class Win32
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetWindowTextW(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
-
-    // ═══════════════════════════════════════════════════════════════
-    // P/Invoke — PID de la fenêtre au premier plan
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>Surcharge avec out uint pour récupérer le PID en plus du TID.</summary>
-    [DllImport("user32.dll", EntryPoint = "GetWindowThreadProcessId")]
-    public static extern uint GetWindowThreadProcessIdOut(IntPtr hWnd, out uint lpdwProcessId);
 
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — Menu radio items (sous-menu compatibilité)

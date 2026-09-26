@@ -14,11 +14,6 @@ sealed class PauseDurationDialog : IDisposable
     private const int IDC_MINUTES_UP = 4305;
     private const int IDC_MINUTES_DOWN = 4306;
 
-    private const uint ES_AUTOHSCROLL = 0x0080;
-    private const uint ES_CENTER = 0x0001;
-    private const uint ES_NUMBER = 0x2000;
-    private const uint BS_DEFPUSHBUTTON = 0x0001;
-    private const uint BS_PUSHBUTTON = 0x0000;
     // Zone client de référence, à 96 DPI.
     private const int BASE_CLIENT_W = 330;
     private const int BASE_CLIENT_H = 154;
@@ -179,13 +174,13 @@ sealed class PauseDurationDialog : IDisposable
         _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 82, 54, 50, 26);
         _hMinutes = CreateStatic(hInstance, L.Pause_Minutes, 150, 60, 82, 22);
         _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, "5", 218, 54, 50, 26);
-        _hBtnHoursUp = CreateButton(hInstance, IDC_HOURS_UP, "▲", 82, 38, 50, 15, BS_PUSHBUTTON);
-        _hBtnHoursDown = CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 82, 81, 50, 15, BS_PUSHBUTTON);
-        _hBtnMinutesUp = CreateButton(hInstance, IDC_MINUTES_UP, "▲", 218, 38, 50, 15, BS_PUSHBUTTON);
-        _hBtnMinutesDown = CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 218, 81, 50, 15, BS_PUSHBUTTON);
+        _hBtnHoursUp = CreateButton(hInstance, IDC_HOURS_UP, "▲", 82, 38, 50, 15, Win32.BS_PUSHBUTTON);
+        _hBtnHoursDown = CreateButton(hInstance, IDC_HOURS_DOWN, "▼", 82, 81, 50, 15, Win32.BS_PUSHBUTTON);
+        _hBtnMinutesUp = CreateButton(hInstance, IDC_MINUTES_UP, "▲", 218, 38, 50, 15, Win32.BS_PUSHBUTTON);
+        _hBtnMinutesDown = CreateButton(hInstance, IDC_MINUTES_DOWN, "▼", 218, 81, 50, 15, Win32.BS_PUSHBUTTON);
 
-        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 96, 106, 120, 32, BS_DEFPUSHBUTTON);
-        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 224, 106, 84, 32, BS_PUSHBUTTON);
+        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 96, 106, 120, 32, Win32.BS_DEFPUSHBUTTON);
+        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 224, 106, 84, 32, Win32.BS_PUSHBUTTON);
         AnnotateSpinButtons();
     }
 
@@ -235,7 +230,7 @@ sealed class PauseDurationDialog : IDisposable
     {
         var hwnd = Win32.CreateWindowExW(0, "EDIT", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP |
-            ES_AUTOHSCROLL | ES_CENTER | ES_NUMBER,
+            Win32.ES_AUTOHSCROLL | Win32.ES_CENTER | Win32.ES_NUMBER,
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);

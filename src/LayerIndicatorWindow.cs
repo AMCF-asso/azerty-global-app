@@ -114,8 +114,8 @@ internal sealed class LayerIndicatorWindow : IDisposable
 
         uint threadId = Win32.GetWindowThreadProcessId(foreground, IntPtr.Zero);
         if (threadId == 0) return false;
-        var info = new Win32.GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<Win32.GUITHREADINFO>() };
-        if (!Win32.GetGUIThreadInfo(threadId, ref info)) return false;
+        var info = new TypingEngine.Windows.Win32.GUITHREADINFO { cbSize = (uint)Marshal.SizeOf<TypingEngine.Windows.Win32.GUITHREADINFO>() };
+        if (!TypingEngine.Windows.Win32.GetGUIThreadInfo(threadId, ref info)) return false;
 
         IntPtr caretWindow = info.hwndCaret != IntPtr.Zero ? info.hwndCaret : info.hwndFocus;
         if (caretWindow == IntPtr.Zero) return false;

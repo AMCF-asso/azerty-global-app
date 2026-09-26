@@ -11,7 +11,6 @@ namespace AZERTYGlobal;
 /// </summary>
 sealed class UsageStatsWindow : IDisposable
 {
-    private const uint SS_NOTIFY = 0x0100;
 
     private const int IDC_BTN_COPY = 4201;
     private const int IDC_BTN_CLOSE = 4202;
@@ -163,7 +162,7 @@ sealed class UsageStatsWindow : IDisposable
         var hInstance = Win32.GetModuleHandleW(null);
 
         _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkFeedback,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkFeedback, 1);
@@ -173,7 +172,7 @@ sealed class UsageStatsWindow : IDisposable
         // se déplace, et un STATIC invisible ne reçoit ni clic ni survol. Ne pas le créer du
         // tout obligerait à dénuller les huit sites qui le manipulent, pour un résultat
         // identique à l'écran.
-        uint discordStyle = Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP;
+        uint discordStyle = Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP;
         if (PolicyManager.ExternalLinksEnabledNow) discordStyle |= Win32.WS_VISIBLE;
         _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkDiscord,
             discordStyle,
