@@ -422,16 +422,7 @@ sealed class LearningModule : IDisposable
             // Corriger le DPI avec le vrai DPI du moniteur
             int realDpi = Win32.GetDpiForWindow(_hWnd);
             if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
-            {
-                _dpiScale = realDpi / 96f;
-                // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
-                try
-                {
-                    RecreateFonts();
-                    ResizeWindow();
-                }
-                catch { }
-            }
+                AdoptWindowDpi(realDpi);
 
             // S'abonner aux événements
             _mapper.StateChanged += OnStateChanged;
@@ -750,6 +741,25 @@ sealed class LearningModule : IDisposable
             windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         Win32.EnableDarkTitleBar(_hWnd);
+    }
+
+    /// <summary>
+    /// Passe la fenêtre, née au DPI du système, au DPI de son écran : polices, taille, puis
+    /// place des boutons. Sans ce dernier pas, « Quitter les exercices » gardait sa place
+    /// calculée au DPI du système et sortait du bord quand l'écran en avait un autre
+    /// (lot 9 du 26/09) ; WM_DPICHANGED, lui, replaçait déjà les boutons.
+    /// </summary>
+    internal void AdoptWindowDpi(int dpi)
+    {
+        _dpiScale = dpi / 96f;
+        // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
+        try
+        {
+            RecreateFonts();
+            ResizeWindow();
+            RepositionControls();
+        }
+        catch { }
     }
 
     private void ResizeWindow()
