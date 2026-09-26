@@ -1770,16 +1770,7 @@ sealed class SettingsWindow : IDisposable
             case Win32.WM_GETDLGCODE:
             {
                 IntPtr baseResult = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-                uint inputMessage = 0;
-                long inputVk = 0;
-                if (lParam != IntPtr.Zero)
-                {
-                    var inputMsg = Marshal.PtrToStructure<Win32.MSG>(lParam);
-                    inputMessage = inputMsg.message;
-                    inputVk = inputMsg.wParam.ToInt64();
-                }
-
-                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), inputMessage, inputVk);
+                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), lParam);
             }
 
             case Win32.WM_SETFOCUS:

@@ -40,8 +40,8 @@ sealed class AboutWindow : IDisposable
     private IntPtr _hWndBtnClose;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
-    private readonly Win32.SUBCLASSPROC _linkSubclassProc;
-    private IntPtr _hoveredLink;
+    // F-10 : survol, Entrée, Échap et Tab des quatre liens.
+    private readonly LinkBehavior _links;
 
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
@@ -70,7 +70,7 @@ sealed class AboutWindow : IDisposable
     public AboutWindow()
     {
         _wndProcDelegate = WndProc;
-        _linkSubclassProc = LinkSubclassProc;
+        _links = new LinkBehavior(() => _hWnd, Close, focusFrame: true);
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
@@ -192,26 +192,26 @@ sealed class AboutWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkSite, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
+        _links.Attach(_hWndLinkSite, 1);
 
         _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkGithub, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
+        _links.Attach(_hWndLinkGithub, 2);
 
         _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkLicense, _linkSubclassProc, (UIntPtr)3, IntPtr.Zero);
+        _links.Attach(_hWndLinkLicense, 3);
 
         // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure)
         _hWndLinkAmcf = Win32.CreateWindowExW(0, "STATIC", L.About_LinkAmcf,
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_AMCF, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkAmcf, _linkSubclassProc, (UIntPtr)4, IntPtr.Zero);
+        _links.Attach(_hWndLinkAmcf, 4);
 
         _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", L.About_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
@@ -322,22 +322,18 @@ sealed class AboutWindow : IDisposable
                 {
                     IntPtr hdcStatic = wParam;
                     IntPtr hCtrl = lParam;
-                    if (hCtrl == _hWndLinkSite || hCtrl == _hWndLinkGithub || hCtrl == _hWndLinkLicense || hCtrl == _hWndLinkAmcf)
+                    if (_links.Contains(hCtrl))
                     {
                         Win32.SetBkMode(hdcStatic, 1);
-                        bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                        Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
+                        Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? CLR_LINK_HOVER : CLR_LINK);
                         return _hBgBrush;
                     }
                     break;
                 }
 
                 case Win32.WM_SETCURSOR:
-                    if (wParam == _hWndLinkSite || wParam == _hWndLinkGithub || wParam == _hWndLinkLicense || wParam == _hWndLinkAmcf)
-                    {
-                        Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
+                    if (_links.TrySetHandCursor(wParam))
                         return (IntPtr)1;
-                    }
                     break;
 
                 case Win32.WM_KEYDOWN:
@@ -364,72 +360,6 @@ sealed class AboutWindow : IDisposable
     private void OpenLink(string url)
     {
         Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
-    }
-
-    private IntPtr LinkSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
-    {
-        switch (msg)
-        {
-            case Win32.WM_MOUSEMOVE:
-                if (_hoveredLink != hWnd)
-                {
-                    _hoveredLink = hWnd;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                    var tme = new Win32.TRACKMOUSEEVENT
-                    {
-                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
-                        dwFlags = Win32.TME_LEAVE,
-                        hwndTrack = hWnd
-                    };
-                    Win32.TrackMouseEvent(ref tme);
-                }
-                break;
-            case Win32.WM_MOUSELEAVE:
-                if (_hoveredLink == hWnd)
-                {
-                    _hoveredLink = IntPtr.Zero;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                }
-                break;
-            // K5 (accessibilité 1.3.0) : la couleur de focus se décide dans WM_CTLCOLORSTATIC, qui
-            // ne passe qu'au repeint, et rien ne repeignait le lien quand le focus changeait :
-            // au clavier, le lien focalisé ne se distinguait donc pas. Repeint, et cadre de focus.
-            case Win32.WM_SETFOCUS:
-            case Win32.WM_KILLFOCUS:
-                Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                break;
-            case Win32.WM_PAINT:
-                return GdiHelpers.PaintLinkWithFocusRect(hWnd, msg, wParam, lParam);
-            case Win32.WM_GETDLGCODE:
-            {
-                // Revue du 2026-09-21, R2 : DLGC_WANTALLKEYS inconditionnel gardait Tab aussi,
-                // et le focus ne sortait plus jamais d'un lien. Tab est rendu à IsDialogMessageW.
-                IntPtr baseResult = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-                uint inputMessage = 0;
-                long inputVk = 0;
-                if (lParam != IntPtr.Zero)
-                {
-                    var inputMsg = Marshal.PtrToStructure<Win32.MSG>(lParam);
-                    inputMessage = inputMsg.message;
-                    inputVk = inputMsg.wParam.ToInt64();
-                }
-                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), inputMessage, inputVk);
-            }
-            case Win32.WM_KEYDOWN:
-                if (wParam == (IntPtr)0x0D) // VK_RETURN
-                {
-                    int ctrlId = Win32.GetDlgCtrlID(hWnd);
-                    Win32.SendMessageW(_hWnd, Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
-                    return IntPtr.Zero;
-                }
-                if (wParam == (IntPtr)0x1B) // VK_ESCAPE — gardé par le lien (WANTALLKEYS), il ferme la fenêtre
-                {
-                    Close();
-                    return IntPtr.Zero;
-                }
-                break;
-        }
-        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
     private void OnPaint(IntPtr hWnd)
@@ -537,14 +467,7 @@ sealed class AboutWindow : IDisposable
 
     public void Dispose()
     {
-        if (_hWndLinkSite != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkSite, _linkSubclassProc, (UIntPtr)1);
-        if (_hWndLinkGithub != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkGithub, _linkSubclassProc, (UIntPtr)2);
-        if (_hWndLinkLicense != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkLicense, _linkSubclassProc, (UIntPtr)3);
-        if (_hWndLinkAmcf != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkAmcf, _linkSubclassProc, (UIntPtr)4);
+        _links.Detach();
         if (_hWnd != IntPtr.Zero)
         {
             // AG130-40 : desinscrire AVANT de detruire — Windows recycle les HWND.
