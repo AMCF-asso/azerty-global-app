@@ -170,11 +170,10 @@ sealed class LearningModule : IDisposable
     private readonly PhysicalTextInputBuffer _pendingPhysicalText =
         new(PENDING_PHYSICAL_TEXT_TIMEOUT_MS);
 
-    // Highlight du prochain caractère
-    private readonly HashSet<uint> _highlightedScancodes = new();
-    private readonly HashSet<string> _highlightedLabels = new();
-    private readonly HashSet<string> _highlightedContextIds = new();
-    private string _highlightType = ""; // "direct", "step1", "step2"
+    // Surlignage du prochain caractère : touches, genre (direct, étape 1, étape 2). Calculé
+    // par LessonHintProvider.Guide, le guidage des Leçons réglé pour le tutoriel (audit du
+    // 25/09, L-02) ; seuls les ensembles et le genre en sont lus.
+    private KeyboardRenderState _guidance = new();
 
     // Contrôles
     private IntPtr _hWndBtnQuit;
@@ -1222,7 +1221,7 @@ sealed class LearningModule : IDisposable
 
         // Backspace peut aussi annuler une mauvaise touche morte activee dans le mapper.
         // On rafraichit alors le guidage vers l'etape 1.
-        if (_highlightedScancodes.Contains(0x0E))
+        if (_guidance.HighlightedScancodes.Contains(0x0E))
         {
             UpdateHighlight();
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
@@ -1378,25 +1377,7 @@ sealed class LearningModule : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private void ClearHighlight()
     {
-        _highlightedScancodes.Clear();
-        _highlightedLabels.Clear();
-        _highlightedContextIds.Clear();
-        _highlightType = "";
-    }
-
-    private void AddContextHighlight(string contextId)
-    {
-        _highlightedContextIds.Add(contextId);
-    }
-
-    private void AddShiftHighlight()
-    {
-        AddContextHighlight(VirtualKeyboard.ContextShiftLeft);
-    }
-
-    private void AddBackspaceHighlight()
-    {
-        _highlightedScancodes.Add(0x0E);
+        _guidance = new KeyboardRenderState();
     }
 
     private MethodData? CreateDeadKeyMethod(string deadKey, string key, string layer)
@@ -1453,109 +1434,8 @@ sealed class LearningModule : IDisposable
             method = languageMethod;
         }
 
-        // Cas spécial : layer "Caps" — gestion dynamique
-        if (method.Layer.StartsWith("Caps") && method.Type == "direct")
-        {
-            // Verr.Maj reste TOUJOURS highlighted tant qu'elle est requise pour ce caractere
-            // (contour vert si pas activee, fond vert plein si activee).
-            _highlightType = "direct";
-            _highlightedLabels.Add("Verr. Maj.");
-            if (_mapper.CapsLockActive)
-            {
-                if (VirtualKeyboard.KeyCodeToScancode.TryGetValue(method.Key, out var sc))
-                    _highlightedScancodes.Add(sc);
-                if (method.Layer == "Caps+Shift" || method.Layer == "CapsShift")
-                    AddShiftHighlight();
-            }
-            return;
-        }
-
-        if (method.Type == "direct" || method.Type == "deadkey_activation")
-        {
-            _highlightType = "direct";
-            AddKeyHighlight(method.Key, method.Layer);
-        }
-        else if (method.Type == "deadkey" && !string.IsNullOrEmpty(method.DkActivationKey))
-        {
-            var activeDeadKey = _mapper.ActiveDeadKey;
-            // Si une touche morte est déjà active, guider selon la touche morte réellement active :
-            // - bonne DK, ou alternative qui produit le même caractère : étape 2 sur la touche compatible ;
-            // - mauvaise DK sans alternative : Backspace pour annuler avant de recommencer.
-            if (activeDeadKey != null)
-            {
-                _highlightType = "step2";
-                var activeMethod = ResolveStep2MethodForActiveDeadKey(
-                    nextChar,
-                    method,
-                    activeDeadKey,
-                    Index.DeadKeyMethodsByCharacter);
-                if (activeMethod != null)
-                    AddKeyHighlight(activeMethod.Key, activeMethod.Layer);
-                else
-                    AddBackspaceHighlight();
-            }
-            else
-            {
-                // Montrer seulement l'étape 1. L'étape 2 apparaîtra après activation de la touche morte.
-                _highlightType = "step1";
-                AddKeyHighlight(method.DkActivationKey, method.DkActivationLayer);
-            }
-        }
-
-        // KeepCapsHighlight : exercices qui demandent de garder Verr.Maj activée pendant
-        // toute la durée de l'exercice (1 et 2). On force Verr.Maj dans le highlight même
-        // pour les caractères dont la méthode ne nécessite pas Caps (espace, virgule, !).
-        if (Steps[_currentStep].KeepCapsHighlight)
-        {
-            _highlightedLabels.Add("Verr. Maj.");
-            if (string.IsNullOrEmpty(_highlightType)) _highlightType = "direct";
-        }
-    }
-
-    private void AddKeyHighlight(string keyCode, string layer)
-    {
-        bool isLetter = false;
-        if (VirtualKeyboard.KeyCodeToScancode.TryGetValue(keyCode, out var scancode))
-        {
-            _highlightedScancodes.Add(scancode);
-            isLetter = KeyboardRenderer.IsLetterKey(scancode);
-        }
-
-        bool needsShift = layer == "Shift" || layer == "Shift+AltGr" || layer == "AltGr+Shift";
-        bool needsAltGr = layer == "AltGr" || layer == "Shift+AltGr" || layer == "AltGr+Shift";
-
-        // Smart Caps Lock : si Verr.Maj est d\u00e9j\u00e0 active ET la touche cible est une lettre,
-        // Shift devient redondant (la majuscule sortira via Caps). On highlight Verr.Maj
-        // au lieu de Maj pour rester coh\u00e9rent avec ce que l'utilisateur doit faire.
-        if (needsShift)
-        {
-            if (_mapper.CapsLockActive && isLetter)
-                _highlightedLabels.Add("Verr. Maj.");
-            else
-                AddShiftHighlight();
-        }
-        if (needsAltGr)
-            _highlightedLabels.Add("AltGr");
-    }
-
-    internal static MethodData? ResolveStep2MethodForActiveDeadKey(
-        string character,
-        MethodData preferredMethod,
-        string activeDeadKey,
-        IReadOnlyDictionary<string, List<MethodData>> deadKeyMethodsByCharacter)
-    {
-        if (!string.Equals(preferredMethod.Type, "deadkey", StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        if (string.Equals(preferredMethod.DeadKey, activeDeadKey, StringComparison.Ordinal))
-            return preferredMethod;
-
-        if (!deadKeyMethodsByCharacter.TryGetValue(character, out var methods))
-            return null;
-
-        return methods.FirstOrDefault(method =>
-            string.Equals(method.Type, "deadkey", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(method.DeadKey, activeDeadKey, StringComparison.Ordinal));
+        LessonHintProvider.Guide(_guidance, method, nextChar, _mapper.ActiveDeadKey, _mapper.CapsLockActive,
+            GuideOptions.Tutorial(keepCapsLock: Steps[_currentStep].KeepCapsHighlight));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1915,17 +1795,12 @@ sealed class LearningModule : IDisposable
             PressedScancode = _pressedScancode,
             ShowInvisibleMarkers = false,
             UiScale = _dpiScale,
-            HighlightKind = _highlightType switch
-            {
-                "step1" => KeyHighlight.Step1,
-                "step2" => KeyHighlight.Step2,
-                _ => KeyHighlight.Direct,
-            },
+            HighlightKind = _guidance.HighlightKind,
             KeepCapsLockHighlight = _currentStep < Steps.Length && Steps[_currentStep].KeepCapsHighlight,
         };
-        state.HighlightedScancodes.UnionWith(_highlightedScancodes);
-        state.HighlightedLabels.UnionWith(_highlightedLabels);
-        state.HighlightedContextIds.UnionWith(_highlightedContextIds);
+        state.HighlightedScancodes.UnionWith(_guidance.HighlightedScancodes);
+        state.HighlightedLabels.UnionWith(_guidance.HighlightedLabels);
+        state.HighlightedContextIds.UnionWith(_guidance.HighlightedContextIds);
         if (_currentStep == Steps.Length - 1)
             state.LessonVisibleCharacters.UnionWith(LanguageExerciseCharacters);
         return state;

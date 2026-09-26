@@ -553,8 +553,16 @@ public class LessonCoreTests
         Assert.Equal("Backquote", method.DkActivationKey);
         Assert.Equal("AltGr", method.DkActivationLayer);
         Assert.Equal("dk:misc_symbols", method.DeadKeyToken);
-        Assert.Equal(new LessonHintKeyStep("Backquote", "AltGr"), LessonHintProvider.GetCurrentStep(method, activeDeadKey: null));
-        Assert.Equal(new LessonHintKeyStep("KeyC", "Base"), LessonHintProvider.GetCurrentStep(method, activeDeadKey: "dk_misc_symbols"));
+
+        // Leçons : l'armement (AltGr + @), puis la touche finale une fois la touche morte armée.
+        var armement = new KeyboardRenderState();
+        LessonHintProvider.Guide(armement, method, "©", activeDeadKey: null, capsLockActive: false, GuideOptions.Lessons);
+        Assert.Equal(new[] { VirtualKeyboard.KeyCodeToScancode["Backquote"] }, armement.HighlightedScancodes);
+        Assert.Equal(new[] { "AltGr" }, armement.HighlightedLabels);
+        var finale = new KeyboardRenderState();
+        LessonHintProvider.Guide(finale, method, "©", activeDeadKey: "dk_misc_symbols", capsLockActive: false, GuideOptions.Lessons);
+        Assert.Equal(new[] { VirtualKeyboard.KeyCodeToScancode["KeyC"] }, finale.HighlightedScancodes);
+        Assert.Empty(finale.HighlightedLabels);
     }
 
     [Fact]
@@ -579,17 +587,17 @@ public class LessonCoreTests
             ["ø"] = new() { strokeMethod, acuteMethod }
         };
 
-        var preferred = LearningModule.ResolveStep2MethodForActiveDeadKey(
+        var preferred = LessonHintProvider.ResolveStep2MethodForActiveDeadKey(
             "ø",
             strokeMethod,
             "dk_stroke",
             methodsByCharacter);
-        var alternative = LearningModule.ResolveStep2MethodForActiveDeadKey(
+        var alternative = LessonHintProvider.ResolveStep2MethodForActiveDeadKey(
             "ø",
             strokeMethod,
             "dk_acute",
             methodsByCharacter);
-        var invalid = LearningModule.ResolveStep2MethodForActiveDeadKey(
+        var invalid = LessonHintProvider.ResolveStep2MethodForActiveDeadKey(
             "ø",
             strokeMethod,
             "dk_tilde",
@@ -605,9 +613,6 @@ public class LessonCoreTests
     {
         var module = (LearningModule)System.Runtime.CompilerServices.RuntimeHelpers
             .GetUninitializedObject(typeof(LearningModule));
-        typeof(LearningModule).GetField("_highlightedScancodes",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .SetValue(module, new HashSet<uint>());
         typeof(LearningModule).GetField("_currentCharError",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .SetValue(module, true);

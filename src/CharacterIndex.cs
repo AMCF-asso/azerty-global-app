@@ -12,6 +12,11 @@ internal sealed class MethodData
     // Pour type="deadkey" : comment activer la touche morte
     public string DkActivationKey { get; init; } = "";
     public string DkActivationLayer { get; init; } = "";
+
+    public bool IsDeadKey => string.Equals(Type, "deadkey", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Jeton qui révèle la touche morte sur le clavier simplifié (« dk:tilde »).</summary>
+    public string? DeadKeyToken => DeadKey.StartsWith("dk_", StringComparison.Ordinal) ? "dk:" + DeadKey[3..] : null;
 }
 
 /// <summary>
