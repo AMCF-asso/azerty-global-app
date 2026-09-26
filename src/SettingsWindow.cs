@@ -962,7 +962,8 @@ sealed class SettingsWindow : IDisposable
         int ValidationRow(int top)
         {
             int rowTop = showValidationRow ? top + S(5) : top;
-            layout.ValidationRect = Rect(labelX, rowTop, innerWidth, showValidationRow ? Math.Max(S(15), m.Small) : 0);
+            layout.ValidationRect = Rect(labelX, rowTop, innerWidth,
+                showValidationRow ? Math.Max(S(15), ValidationTextHeight(tab, innerWidth, m.Small)) : 0);
             return layout.ValidationRect.bottom;
         }
 
@@ -1431,9 +1432,35 @@ sealed class SettingsWindow : IDisposable
     private void SetValidationMessage(string text, bool captureHint = false)
         => ShowValidationMessage(text, captureHint, false);
 
+    /// <summary>Hauteur du message de validation, sur autant de lignes qu'il en faut. Le
+    /// STATIC revient à la ligne, mais on ne lui donnait qu'une ligne : en français à 100 %,
+    /// le refus de compatibilité jeu s'arrêtait sur « …ou de connexion à » (décision
+    /// d'Antoine du 26/09). Seul l'onglet affiché porte un message : les mesures des autres
+    /// onglets, qui fixent la taille de la fenêtre (C4), gardent une ligne.</summary>
+    private int ValidationTextHeight(SettingsTab tab, int width, int oneLine)
+    {
+        if (tab != _activeTab || string.IsNullOrEmpty(_validationMessage) || _hWnd == IntPtr.Zero)
+            return oneLine;
+        IntPtr hdc = Win32.GetDC(_hWnd);
+        try
+        {
+            return Math.Max(oneLine, GdiHelpers.MeasureTextHeight(hdc, _hFontSmall, _validationMessage, width));
+        }
+        finally
+        {
+            Win32.ReleaseDC(_hWnd, hdc);
+        }
+    }
+
+    /// <summary>Un message neuf peut changer le nombre de lignes : il remesure. Seul le
+    /// même texte réaffiché, ou un effacement sur une ligne déjà vide, ne remesure rien.</summary>
+    internal static bool ValidationNeedsRelayout(string current, string text)
+        => string.IsNullOrEmpty(current) != string.IsNullOrEmpty(text)
+           || (!string.IsNullOrEmpty(text) && text != current);
+
     private void ShowValidationMessage(string text, bool captureHint, bool refused)
     {
-        bool rowChanged = string.IsNullOrEmpty(_validationMessage) != string.IsNullOrEmpty(text);
+        bool rowChanged = ValidationNeedsRelayout(_validationMessage, text);
         _validationMessage = text;
         _validationRefused = refused;
         _showCaptureHint = captureHint;
@@ -1444,8 +1471,8 @@ sealed class SettingsWindow : IDisposable
             // la fenêtre gardait sa hauteur et le message débordait sans que le défilement
             // s'arme : le bas du contenu devenait inatteignable (R12 de la revue du
             // 2026-09-21). Même enchaînement que OnLanguageChanged, pour la même raison.
-            // Seule l'apparition ou la disparition de la ligne change la mise en page : un
-            // message qui en remplace un autre ne remesure plus rien (audit du 25/09, F-12).
+            // Un message qui en remplace un autre peut passer d'une à deux lignes : il
+            // remesure aussi (26/09). Les mesures de police restent gardées (F-12).
             FitWindowToContent();
             RepositionControls();
         }

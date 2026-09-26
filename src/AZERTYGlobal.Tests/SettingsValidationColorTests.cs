@@ -34,4 +34,17 @@ public class SettingsValidationColorTests
         Assert.Equal(Rouge, SettingsWindow.ValidationTextColor(refused: true));
         Assert.Equal(Vert, SettingsWindow.ValidationTextColor(refused: false));
     }
+
+    // Retour à la ligne (26/09) : un message neuf peut passer d'une à deux lignes, la
+    // mise en page doit donc être refaite, même quand la ligne était déjà visible.
+    [Theory]
+    [InlineData("", "fait", true)]
+    [InlineData("fait", "", true)]
+    [InlineData("court", "un message bien plus long", true)]
+    [InlineData("fait", "fait", false)]
+    [InlineData("", "", false)]
+    public void Un_message_neuf_refait_la_mise_en_page(string avant, string apres, bool attendu)
+    {
+        Assert.Equal(attendu, SettingsWindow.ValidationNeedsRelayout(avant, apres));
+    }
 }
