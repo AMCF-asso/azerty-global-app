@@ -24,13 +24,13 @@ sealed class AboutWindow : IDisposable
     private const int BASE_WIN_H = 230;
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
-    private const uint CLR_BG = 0x00DDDDDD;
-    private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_TEXT = 0x00333333;
-    private const uint CLR_VERSION = 0x00888888;
-    private const uint CLR_LINK = 0x00D47800;
-    private const uint CLR_LINK_HOVER = 0x000078D4;
-    private const uint CLR_SEPARATOR = 0x00D7D7D7;
+    private const uint CLR_BG = LightTheme.Background;
+    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TEXT = LightTheme.Text;
+    private const uint CLR_VERSION = LightTheme.Faint;
+    private const uint CLR_LINK = LightTheme.Accent;
+    private const uint CLR_LINK_HOVER = LightTheme.Highlight;
+    private const uint CLR_SEPARATOR = LightTheme.Separator;
 
     private IntPtr _hWnd;
     private IntPtr _hWndLinkSite;

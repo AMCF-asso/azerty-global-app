@@ -51,20 +51,22 @@ sealed class OnboardingWindow : IDisposable
     private const int FEATURE_CARD_MIN_H = 73;
 
     // ── Colors (COLORREF = 0x00BBGGRR) ───────────────────────────────
-    private const uint CLR_BG = 0x00DDDDDD;
-    private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_TEXT = 0x00333333;
-    private const uint CLR_LINK = 0x00D47800;
+    private const uint CLR_BG = LightTheme.Background;
+    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TEXT = LightTheme.Text;
+    private const uint CLR_LINK = LightTheme.Accent;
+    // Audit du 25/09, F-14 : écart à trancher par Antoine, les autres fenêtres survolent
+    // leurs liens en LightTheme.Highlight (0x000078D4).
     private const uint CLR_LINK_HOVER = 0x00FF9830;
-    private const uint CLR_STEP_TITLE = 0x00D47800;
-    private const uint CLR_PROGRESS_ACTIVE = 0x00D47800;
+    private const uint CLR_STEP_TITLE = LightTheme.Accent;
+    private const uint CLR_PROGRESS_ACTIVE = LightTheme.Accent;
     private const uint CLR_PROGRESS_INACTIVE = 0x00C8C8C8;
-    private const uint CLR_PANEL_BG = 0x00EEEEEE;
-    private const uint CLR_PANEL_BORDER = 0x00D1D1D1;
-    private const uint CLR_BADGE_BG = 0x00D47800;
+    private const uint CLR_PANEL_BG = LightTheme.Panel;
+    private const uint CLR_PANEL_BORDER = LightTheme.PanelBorder;
+    private const uint CLR_BADGE_BG = LightTheme.Accent;
     private const uint CLR_BADGE_TEXT = 0x00FFFFFF;
-    private const uint CLR_INLINE_HIGHLIGHT = 0x000078D4;
-    private const uint CLR_REASSURE = 0x00666666;
+    private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Highlight;
+    private const uint CLR_REASSURE = LightTheme.Muted;
 
     // ── Colors ARGB pour GDI+ (0xAARRGGBB) ──────────────────────────
 
