@@ -16,7 +16,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const uint ES_NUMBER = 0x2000;
     private const uint ES_CENTER = 0x0001;
     // Même fond que SettingsWindow et UsageStatsWindow.
-    private const uint CLR_BG = 0x00DDDDDD;
+    private const uint CLR_BG = LightTheme.Background;
 
     private const int IDC_MASTER = 5201;
     private const int IDC_GREEK = 5202;

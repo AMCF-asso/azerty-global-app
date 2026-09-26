@@ -29,11 +29,11 @@ sealed class LayoutConflictWindow : IDisposable
     private const int BASE_WIN_H = 440;
 
     // Couleurs alignees sur AboutWindow / SettingsWindow
-    private const uint CLR_BG = 0x00DDDDDD;
-    private const uint CLR_TITLE = 0x00201C18;
-    private const uint CLR_TEXT = 0x00333333;
-    private const uint CLR_HIGHLIGHT = 0x000078D4;
-    private const uint CLR_SUBTLE = 0x00666666;
+    private const uint CLR_BG = LightTheme.Background;
+    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TEXT = LightTheme.Text;
+    private const uint CLR_HIGHLIGHT = LightTheme.Highlight;
+    private const uint CLR_SUBTLE = LightTheme.Muted;
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnQuit;
