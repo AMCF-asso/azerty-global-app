@@ -2753,45 +2753,7 @@ internal sealed class LessonsWindow : IDisposable
     {
         if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary)) return;
         if (_mode == WindowMode.Lessons && _session.IsExerciseComplete) return;
-        if (!_layout.Keys.TryGetValue(scancode, out var keyDef)) return;
-
-        string? output = keyDef.GetOutput(_mapper.ShiftDown, _mapper.AltGrDown, _mapper.CapsLockActive);
-        if (string.IsNullOrEmpty(output)) return;
-
-        string? expectedText = null;
-        if (output.StartsWith("dk_", StringComparison.Ordinal))
-        {
-            // Une activation de touche morte seule ne produit pas de WM_CHAR.
-            if (_mapper.ActiveDeadKey != null &&
-                _layout.DeadKeys.TryGetValue(_mapper.ActiveDeadKey, out var activeDk))
-            {
-                var isolated = activeDk.GetIsolated();
-                if (isolated != null)
-                {
-                    var newDk = _layout.DeadKeys.GetValueOrDefault(output);
-                    expectedText = newDk?.Apply(isolated) ?? isolated;
-                }
-            }
-        }
-        else if (_mapper.ActiveDeadKey != null &&
-            _layout.DeadKeys.TryGetValue(_mapper.ActiveDeadKey, out var dk))
-        {
-            var transformed = dk.Apply(output);
-            if (transformed != null)
-                expectedText = transformed;
-            else if (dk.GetIsolated() is { } isolated)
-                expectedText = isolated + output;
-            else
-                expectedText = output;
-        }
-        else
-        {
-            expectedText = output;
-        }
-
-        if (string.IsNullOrEmpty(expectedText)) return;
-
-        _pendingPhysicalText.Enqueue(expectedText);
+        _pendingPhysicalText.CaptureKey(_layout, scancode, _mapper);
     }
 
     private char ResolveTypedCharacter(char received)
