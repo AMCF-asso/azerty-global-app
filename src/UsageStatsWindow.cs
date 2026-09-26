@@ -48,8 +48,8 @@ sealed class UsageStatsWindow : IDisposable
     private IntPtr _hWndLinkDiscord;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
-    private readonly Win32.SUBCLASSPROC _linkSubclassProc;
-    private IntPtr _hoveredLink;
+    // F-10 : survol, Entrée, Échap et Tab des deux liens. Pas encore de cadre de focus (K5).
+    private readonly LinkBehavior _links;
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
 
@@ -75,7 +75,7 @@ sealed class UsageStatsWindow : IDisposable
     public UsageStatsWindow()
     {
         _wndProcDelegate = WndProc;
-        _linkSubclassProc = LinkSubclassProc;
+        _links = new LinkBehavior(() => _hWnd, Close, focusFrame: false);
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
@@ -166,7 +166,7 @@ sealed class UsageStatsWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
+        _links.Attach(_hWndLinkFeedback, 1);
 
         // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. Le contrôle
         // est créé mais jamais affiché — il est le dernier de la ligne de liens, donc rien ne
@@ -179,7 +179,7 @@ sealed class UsageStatsWindow : IDisposable
             discordStyle,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
-        Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2, IntPtr.Zero);
+        _links.Attach(_hWndLinkDiscord, 2);
 
         _hWndBtnCopy = Win32.CreateWindowExW(0, "BUTTON", L.Stats_BtnCopy,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
@@ -327,22 +327,18 @@ sealed class UsageStatsWindow : IDisposable
                 {
                     IntPtr hdcStatic = wParam;
                     IntPtr hCtrl = lParam;
-                    if (hCtrl == _hWndLinkFeedback || hCtrl == _hWndLinkDiscord)
+                    if (_links.Contains(hCtrl))
                     {
                         Win32.SetBkMode(hdcStatic, 1);
-                        bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                        Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
+                        Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? CLR_LINK_HOVER : CLR_LINK);
                         return _hBgBrush;
                     }
                     break;
                 }
 
                 case Win32.WM_SETCURSOR:
-                    if (wParam == _hWndLinkFeedback || wParam == _hWndLinkDiscord)
-                    {
-                        Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
+                    if (_links.TrySetHandCursor(wParam))
                         return (IntPtr)1;
-                    }
                     break;
 
                 case Win32.WM_TIMER:
@@ -373,63 +369,6 @@ sealed class UsageStatsWindow : IDisposable
         }
 
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
-    }
-
-    private IntPtr LinkSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
-    {
-        switch (msg)
-        {
-            case Win32.WM_MOUSEMOVE:
-                if (_hoveredLink != hWnd)
-                {
-                    _hoveredLink = hWnd;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                    var tme = new Win32.TRACKMOUSEEVENT
-                    {
-                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
-                        dwFlags = Win32.TME_LEAVE,
-                        hwndTrack = hWnd
-                    };
-                    Win32.TrackMouseEvent(ref tme);
-                }
-                break;
-            case Win32.WM_MOUSELEAVE:
-                if (_hoveredLink == hWnd)
-                {
-                    _hoveredLink = IntPtr.Zero;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                }
-                break;
-            case Win32.WM_GETDLGCODE:
-            {
-                // Revue du 2026-09-21, R2 : DLGC_WANTALLKEYS inconditionnel gardait Tab aussi,
-                // et le focus ne sortait plus jamais d'un lien. Tab est rendu à IsDialogMessageW.
-                IntPtr baseResult = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-                uint inputMessage = 0;
-                long inputVk = 0;
-                if (lParam != IntPtr.Zero)
-                {
-                    var inputMsg = Marshal.PtrToStructure<Win32.MSG>(lParam);
-                    inputMessage = inputMsg.message;
-                    inputVk = inputMsg.wParam.ToInt64();
-                }
-                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), inputMessage, inputVk);
-            }
-            case Win32.WM_KEYDOWN:
-                if (wParam == (IntPtr)0x0D) // VK_RETURN
-                {
-                    int ctrlId = Win32.GetDlgCtrlID(hWnd);
-                    Win32.SendMessageW(_hWnd, Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
-                    return IntPtr.Zero;
-                }
-                if (wParam == (IntPtr)0x1B) // VK_ESCAPE — gardé par le lien (WANTALLKEYS), il ferme la fenêtre
-                {
-                    Close();
-                    return IntPtr.Zero;
-                }
-                break;
-        }
-        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
     /// <summary>
@@ -629,10 +568,7 @@ sealed class UsageStatsWindow : IDisposable
 
     public void Dispose()
     {
-        if (_hWndLinkFeedback != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)1);
-        if (_hWndLinkDiscord != IntPtr.Zero)
-            Win32.RemoveWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)2);
+        _links.Detach();
         if (_hWnd != IntPtr.Zero)
         {
             // AG130-40 : desinscrire AVANT de detruire — Windows recycle les HWND.

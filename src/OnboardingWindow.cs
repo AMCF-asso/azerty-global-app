@@ -155,9 +155,9 @@ sealed class OnboardingWindow : IDisposable
 
     // Delegates (prevent GC)
     private readonly Win32.WNDPROC _wndProcDelegate;
-    private readonly Win32.SUBCLASSPROC _linkSubclassProc;
     private readonly Win32.SUBCLASSPROC _buttonArrowSubclassProc;
-    private IntPtr _hoveredLink;
+    // F-10 : survol, Entrée, Échap et Tab des liens de l'étape 3.
+    private readonly LinkBehavior _links;
 
     // GDI resources
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
@@ -195,7 +195,8 @@ sealed class OnboardingWindow : IDisposable
     public OnboardingWindow()
     {
         _wndProcDelegate = WndProc;
-        _linkSubclassProc = LinkSubclassProc;
+        _links = new LinkBehavior(() => _hWnd, () => Close(validated: false), focusFrame: true,
+            staticDialogCode: false, swallow: msg => _inputPaused && IsPausedInputMessage(msg));
         _buttonArrowSubclassProc = ButtonArrowSubclassProc;
         _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
 
@@ -423,25 +424,25 @@ sealed class OnboardingWindow : IDisposable
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(240), linkH,
             _hWnd, (IntPtr)IDC_LINK_LESSONS, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkLessons, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
-        Win32.SetWindowSubclass(_hWndLinkLessons, _linkSubclassProc, (UIntPtr)6, IntPtr.Zero);
+        _links.Attach(_hWndLinkLessons, 6);
 
         _hWndLinkGuide = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkGuide,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(200), linkH,
             _hWnd, (IntPtr)IDC_LINK_GUIDE, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
-        Win32.SetWindowSubclass(_hWndLinkGuide, _linkSubclassProc, (UIntPtr)1, IntPtr.Zero);
+        _links.Attach(_hWndLinkGuide, 1);
 
         _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Tray_MenuGiveFeedback,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(280), linkH,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
-        Win32.SetWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)3, IntPtr.Zero);
+        _links.Attach(_hWndLinkFeedback, 3);
 
         _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkDiscord,
             Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(380), linkH,
             _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
-        Win32.SetWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)5, IntPtr.Zero);
+        _links.Attach(_hWndLinkDiscord, 5);
 
         _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkAutoStart,
             Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
@@ -807,13 +808,10 @@ sealed class OnboardingWindow : IDisposable
             {
                 IntPtr hdcStatic = wParam;
                 IntPtr hCtrl = lParam;
-                if (hCtrl == _hWndLinkLessons ||
-                    hCtrl == _hWndLinkGuide ||
-                    hCtrl == _hWndLinkFeedback || hCtrl == _hWndLinkDiscord)
+                if (_links.Contains(hCtrl))
                 {
                     Win32.SetBkMode(hdcStatic, 1);
-                    bool isActive = _hoveredLink == hCtrl || Win32.GetFocus() == hCtrl;
-                    Win32.SetTextColor(hdcStatic, isActive ? CLR_LINK_HOVER : CLR_LINK);
+                    Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? CLR_LINK_HOVER : CLR_LINK);
                     return _hPanelBrush;
                 }
                 if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkDontShow || hCtrl == _hWndChkTraining)
@@ -828,10 +826,7 @@ sealed class OnboardingWindow : IDisposable
             }
 
             case Win32.WM_SETCURSOR:
-                if (wParam == _hWndLinkLessons ||
-                    wParam == _hWndLinkGuide ||
-                    wParam == _hWndLinkFeedback || wParam == _hWndLinkDiscord ||
-                    wParam == _hWndBtnFlag)
+                if (_links.Contains(wParam) || wParam == _hWndBtnFlag)
                 {
                     Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649));
                     return (IntPtr)1;
@@ -1096,70 +1091,6 @@ sealed class OnboardingWindow : IDisposable
         ConfigManager.LogCrashTraceDebug("LaunchLearningModule: about to call Show");
         _learningModule.Show();
         ConfigManager.LogCrashTraceDebug("LaunchLearningModule: Show returned, exiting");
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Sous-classe liens (hover)
-    // ═══════════════════════════════════════════════════════════════
-    private IntPtr LinkSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
-    {
-        if (_inputPaused && IsPausedInputMessage(msg))
-            return IntPtr.Zero;
-
-        switch (msg)
-        {
-            case Win32.WM_MOUSEMOVE:
-                if (_hoveredLink != hWnd)
-                {
-                    _hoveredLink = hWnd;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                    var tme = new Win32.TRACKMOUSEEVENT
-                    {
-                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
-                        dwFlags = Win32.TME_LEAVE,
-                        hwndTrack = hWnd
-                    };
-                    Win32.TrackMouseEvent(ref tme);
-                }
-                break;
-            case Win32.WM_MOUSELEAVE:
-                if (_hoveredLink == hWnd)
-                {
-                    _hoveredLink = IntPtr.Zero;
-                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                }
-                break;
-            case 0x0087: // WM_GETDLGCODE : Entrée au lien, Tab à la navigation.
-            {
-                var input = lParam != IntPtr.Zero ? Marshal.PtrToStructure<Win32.MSG>(lParam) : default;
-                return (IntPtr)DialogNavigation.DialogCodeKeepingTab(0, input.message, input.wParam.ToInt64());
-            }
-            case Win32.WM_KEYDOWN:
-                if (wParam == (IntPtr)0x0D) // VK_RETURN
-                {
-                    int ctrlId = Win32.GetDlgCtrlID(hWnd);
-                    Win32.SendMessageW(_hWnd, Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
-                    return IntPtr.Zero;
-                }
-                // Échap est gardé par le lien (WANTALLKEYS) : IsDialogMessageW n'en fait pas
-                // un IDCANCEL. Même sortie que la croix (audit du 25/09, F-10 ; À propos et
-                // les statistiques le faisaient déjà).
-                if (wParam == (IntPtr)0x1B) // VK_ESCAPE
-                {
-                    Close(validated: false);
-                    return IntPtr.Zero;
-                }
-                break;
-            case Win32.WM_SETFOCUS:
-            case Win32.WM_KILLFOCUS:
-                Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
-                break;
-            case Win32.WM_PAINT:
-                // K5 (accessibilité 1.3.0) : le focus se signale aussi par un cadre, pas
-                // seulement par la couleur de WM_CTLCOLORSTATIC.
-                return GdiHelpers.PaintLinkWithFocusRect(hWnd, msg, wParam, lParam);
-        }
-        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
     // Sous-classe pour les boutons Next/Prev/Try : relaie les flèches et Esc au WndProc parent.
@@ -1799,10 +1730,7 @@ sealed class OnboardingWindow : IDisposable
         _learningModule?.Dispose();
         _learningModule = null;
 
-        if (_hWndLinkLessons != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkLessons, _linkSubclassProc, (UIntPtr)6);
-        if (_hWndLinkGuide != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkGuide, _linkSubclassProc, (UIntPtr)1);
-        if (_hWndLinkFeedback != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkFeedback, _linkSubclassProc, (UIntPtr)3);
-        if (_hWndLinkDiscord != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndLinkDiscord, _linkSubclassProc, (UIntPtr)5);
+        _links.Detach();
         if (_hWndBtnNext != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnNext, _buttonArrowSubclassProc, (UIntPtr)20);
         if (_hWndBtnPrev != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnPrev, _buttonArrowSubclassProc, (UIntPtr)21);
         if (_hWndBtnTry != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnTry, _buttonArrowSubclassProc, (UIntPtr)22);

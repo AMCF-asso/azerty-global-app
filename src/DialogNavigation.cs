@@ -80,6 +80,18 @@ static class DialogNavigation
     }
 
     /// <summary>
+    /// Audit du 25/09, F-10 : la même règle, en lisant le MSG que pointe le lParam de
+    /// <c>WM_GETDLGCODE</c> ; nul quand <c>IsDialogMessageW</c> n'interroge pas pour une
+    /// touche. Ce décodage était recopié dans chaque sous-classe.
+    /// </summary>
+    public static long DialogCodeKeepingTab(long baseCode, IntPtr lParam)
+    {
+        if (lParam == IntPtr.Zero) return DialogCodeKeepingTab(baseCode, 0, 0);
+        var input = System.Runtime.InteropServices.Marshal.PtrToStructure<Win32.MSG>(lParam);
+        return DialogCodeKeepingTab(baseCode, input.message, input.wParam.ToInt64());
+    }
+
+    /// <summary>
     /// Revue du 2026-09-21, R5 — <c>IsDialogMessageW</c> ne livre jamais Entrée ni Échap à la
     /// fenêtre : il les convertit en <c>WM_COMMAND</c> portant <c>IDOK</c> ou <c>IDCANCEL</c>, et
     /// retourne TRUE sans dispatcher. Les gestionnaires <c>WM_KEYDOWN</c>/<c>VK_ESCAPE</c> des
