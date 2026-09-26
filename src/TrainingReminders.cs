@@ -6,7 +6,7 @@
 //   en danger, N jours sans caractère enrichi, usage soutenu de la recherche de
 //   caractères et du clavier virtuel (compteurs globaux, jamais le contenu) ;
 // - garde-fou anti-fatigue : 3 rappels ignorés → arrêt définitif (réactivable dans
-//   Paramètres) ; jamais deux balloons cliquables le même jour — l'avis J+7 prime.
+//   Paramètres) ; jamais deux balloons cliquables le même jour — l'avis prime.
 //
 // 1.3.0 (décision d'Antoine du 2026-09-24) : le rappel ne porte que sur le Défi — titre
 // « Défi du jour », clic vers la séance du Défi, signal 1 sur la séquence du Défi. Aucune
@@ -46,7 +46,7 @@ static class TrainingReminders
 
     /// <summary>
     /// Décision pure : faut-il émettre un rappel maintenant ? Ne touche à aucun état.
-    /// La priorité de l'avis J+7 (décision 2026-07-29) se lit dans les signaux, sur la
+    /// La priorité de l'avis (décision du 2026-07-29) se lit dans les signaux, sur la
     /// date persistée par ConfigManager : elle était auparavant passée en paramètre par
     /// TrayApplication, qui la calculait depuis un champ d'instance nul à chaque
     /// démarrage du processus — même défaut que R1, au même endroit, un cran plus loin.
@@ -60,7 +60,7 @@ static class TrainingReminders
         if (s.IgnoredCount >= MaxIgnored) return false;         // arrêt définitif
 
         var today = DateOnly.FromDateTime(now);
-        if (s.ReviewPromptLastShown == today) return false;     // l'avis J+7 prime
+        if (s.ReviewPromptLastShown == today) return false;     // l'avis du jour prime
         if (now.Hour < EarliestHour) return false;
 
         if (s.LastReminderDate == today) return false;          // un rappel par jour max
