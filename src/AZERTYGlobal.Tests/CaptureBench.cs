@@ -212,6 +212,14 @@ public class CaptureBench
                 BancCapture.Call(window, "SetValidationMessage", SettingsMessages[tab](), false);
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}-message", windowDpi);
+
+                // Un refus, « Forcer compatibilité » sur une app protégée : en rouge.
+                if (SettingsTabs[tab] == "applications")
+                {
+                    BancCapture.Call(window, "SetRefusalMessage", L.Settings_CompatForceOnRefused);
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-applications-refus", windowDpi);
+                }
                 BancCapture.Call(window, "SetValidationMessage", string.Empty, false);
             }
         }

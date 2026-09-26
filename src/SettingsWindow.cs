@@ -193,6 +193,7 @@ sealed class SettingsWindow : IDisposable
     private uint _searchVk;
     private bool _showCaptureHint;
     private string _validationMessage = string.Empty;
+    private bool _validationRefused;
 
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
@@ -1315,7 +1316,7 @@ sealed class SettingsWindow : IDisposable
                 if (hCtrl == _hWndValidation)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
-                    Win32.SetTextColor(hdcStatic, (_keyboardValid && _searchValid) ? CLR_VALID : CLR_INVALID);
+                    Win32.SetTextColor(hdcStatic, ValidationTextColor(_validationRefused));
                     return _hPanelBrush;
                 }
 
@@ -1420,10 +1421,21 @@ sealed class SettingsWindow : IDisposable
         Win32.SetWindowTextW(hWndShortcut, ConfigManager.GetShortcutDisplayName(vk));
     }
 
+    /// <summary>Couleur de la ligne de validation : rouge pour un refus, vert sinon. Elle ne
+    /// dépend que du message affiché : un raccourci resté invalide ne teint plus en rouge
+    /// le message d'un autre geste, et un refus ne s'affiche plus en vert.</summary>
+    internal static uint ValidationTextColor(bool refused) => refused ? CLR_INVALID : CLR_VALID;
+
+    private void SetRefusalMessage(string text) => ShowValidationMessage(text, false, true);
+
     private void SetValidationMessage(string text, bool captureHint = false)
+        => ShowValidationMessage(text, captureHint, false);
+
+    private void ShowValidationMessage(string text, bool captureHint, bool refused)
     {
         bool rowChanged = string.IsNullOrEmpty(_validationMessage) != string.IsNullOrEmpty(text);
         _validationMessage = text;
+        _validationRefused = refused;
         _showCaptureHint = captureHint;
         Win32.SetWindowTextW(_hWndValidation, text);
         if (rowChanged && _hWnd != IntPtr.Zero && _hWndValidation != IntPtr.Zero)
@@ -1609,7 +1621,7 @@ sealed class SettingsWindow : IDisposable
         if (mode == "forceOn" &&
             (GameRegistry.IsAntiCheatProcess(proc, null) || GameRegistry.IsRemoteAccessProcess(proc)))
         {
-            SetValidationMessage(L.Settings_CompatForceOnRefused);
+            SetRefusalMessage(L.Settings_CompatForceOnRefused);
             RefreshCompatSelectionUi(); // re-cocher le radio du mode réel
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
@@ -1712,7 +1724,7 @@ sealed class SettingsWindow : IDisposable
         if (!ConfigManager.IsShortcutAllowedVk(vk))
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetValidationMessage(L.Settings_ShortcutReserved);
+            SetRefusalMessage(L.Settings_ShortcutReserved);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -1720,7 +1732,7 @@ sealed class SettingsWindow : IDisposable
         if (vk == otherVk)
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetValidationMessage(L.Settings_ShortcutAlreadyUsed);
+            SetRefusalMessage(L.Settings_ShortcutAlreadyUsed);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
