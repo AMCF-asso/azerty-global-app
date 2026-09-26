@@ -183,6 +183,36 @@ public class NativeWindowTests
     }
 
     [Fact]
+    public void DuréeDePause_ALeFondDesFenêtresÀContrôles()
+    {
+        // Le fond noir vu par Antoine le 26/09 : la classe n'avait aucun pinceau, et rien
+        // n'effaçait la fenêtre. La fenêtre est créée sans être affichée.
+        using var dialogue = new PauseDurationDialog();
+        typeof(PauseDurationDialog).GetMethod("CreateWindow", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(dialogue, new object[] { IntPtr.Zero });
+        IntPtr hwnd = Handle(dialogue);
+        Assert.NotEqual(IntPtr.Zero, hwnd);
+
+        IntPtr fond = GetClassLongPtrW(hwnd, Win32.GCLP_HBRBACKGROUND);
+        Assert.Equal(OBJ_BRUSH, GetObjectType(fond));
+        Assert.Equal(Marshal.SizeOf<LOGBRUSH>(), GetObjectW(fond, Marshal.SizeOf<LOGBRUSH>(), out var pinceau));
+        Assert.Equal(LightTheme.Background, pinceau.lbColor);
+
+        // Les étiquettes se posent sur ce fond, et non sur le gris du système.
+        IntPtr étiquette = typeof(PauseDurationDialog).GetField("_hLabel", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(dialogue) is IntPtr h ? h : IntPtr.Zero;
+        IntPtr hdc = CreateCompatibleDC(IntPtr.Zero);
+        try
+        {
+            Assert.Equal(fond, Win32.SendMessageW(hwnd, Win32.WM_CTLCOLORSTATIC, hdc, étiquette));
+        }
+        finally
+        {
+            DeleteDC(hdc);
+        }
+    }
+
+    [Fact]
     public void SeulLeSocleEnregistreEtDésenregistreDesClasses()
     {
         // X-01 : quatorze fenêtres enregistraient leur classe elles-mêmes, sans lire le
@@ -445,6 +475,24 @@ public class NativeWindowTests
 
     [DllImport("gdi32.dll")]
     private static extern int GetObjectType(IntPtr h);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LOGBRUSH
+    {
+        public uint lbStyle;
+        public uint lbColor;
+        public UIntPtr lbHatch;
+    }
+
+    [DllImport("gdi32.dll")]
+    private static extern int GetObjectW(IntPtr h, int size, out LOGBRUSH brush);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteDC(IntPtr hdc);
 
     [DllImport("gdi32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

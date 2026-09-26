@@ -34,6 +34,8 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hBtnMinutesUp;
     private IntPtr _hBtnMinutesDown;
     private IntPtr _hFont;
+    // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
+    private IntPtr _hBgBrush;
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
     private int _dpi = 96;
@@ -112,6 +114,10 @@ sealed class PauseDurationDialog : IDisposable
 
         _hWnd = Win32.CreateWindowExW(0, ClassName, L.Pause_WindowTitle,
             Style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
+        // La classe n'avait aucun fond : rien n'effaçait la fenêtre, que DWM montrait en
+        // noir sous des étiquettes grises (vu par Antoine le 26/09). Même fond que les
+        // autres fenêtres à contrôles.
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, LightTheme.Background);
 
         // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
         // l'accueille. Taille, positions et police en découlent : elles étaient fixes en
@@ -288,6 +294,10 @@ sealed class PauseDurationDialog : IDisposable
                     }
                     break;
                 }
+                case Win32.WM_CTLCOLORSTATIC:
+                    // Les étiquettes posent leur texte sur le fond de la fenêtre.
+                    Win32.SetBkMode(wParam, 1);
+                    return _hBgBrush;
                 case Win32.WM_KEYDOWN:
                     if (wParam == (IntPtr)0x1B)
                     {
