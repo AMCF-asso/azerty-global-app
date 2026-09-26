@@ -65,6 +65,41 @@ static class GdiHelpers
         };
     }
 
+    /// <summary>
+    /// Audit du 25/09, F-15 — le logo en icône carrée, rendu par GDI+ (démarré par l'appelant)
+    /// depuis une image déjà chargée. À propos, l'accueil et le tray en tenaient trois
+    /// copies ; celle du tray lisait les retours et alignait le masque, c'est elle qui reste.
+    /// Rend IntPtr.Zero quand l'image manque ou que GDI+ refuse une étape.
+    /// </summary>
+    internal static IntPtr CreateLogoIcon(IntPtr logo, int size)
+    {
+        if (logo == IntPtr.Zero || size <= 0) return IntPtr.Zero;
+        IntPtr bmp32 = IntPtr.Zero;
+        try
+        {
+            // 0x0026200A = PixelFormat32bppARGB.
+            if (Win32.GdipCreateBitmapFromScan0(size, size, 0, 0x0026200A, IntPtr.Zero, out bmp32) != 0) return IntPtr.Zero;
+            if (Win32.GdipGetImageGraphicsContext(bmp32, out IntPtr g) != 0) return IntPtr.Zero;
+            Win32.GdipSetSmoothingMode(g, 4);
+            Win32.GdipSetInterpolationMode(g, 7);
+            Win32.GdipDrawImageRectI(g, logo, 0, 0, size, size);
+            Win32.GdipDeleteGraphics(g);
+            if (Win32.GdipCreateHBITMAPFromBitmap(bmp32, out IntPtr hBmp, 0x00000000) != 0) return IntPtr.Zero;
+            // Lignes du masque 1 bpp alignées au mot : 6 octets par ligne à 40 px, pas 5.
+            var maskBits = new byte[MonochromeMaskByteCount(size, size)];
+            IntPtr hMask = Win32.CreateBitmap(size, size, 1, 1, maskBits);
+            var iconInfo = new Win32.ICONINFO { fIcon = true, hbmMask = hMask, hbmColor = hBmp };
+            IntPtr hIcon = Win32.CreateIconIndirect(ref iconInfo);
+            Win32.DeleteObject(hMask);
+            Win32.DeleteObject(hBmp);
+            return hIcon;
+        }
+        finally
+        {
+            if (bmp32 != IntPtr.Zero) Win32.GdipDisposeImage(bmp32);
+        }
+    }
+
     /// <summary>Taille du masque 1 bpp : chaque ligne est alignée sur un mot de 16 bits.</summary>
     internal static int MonochromeMaskByteCount(int width, int height)
     {
