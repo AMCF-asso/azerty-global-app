@@ -11,34 +11,27 @@ namespace AZERTYGlobal;
 sealed class LearningModule : IDisposable
 {
     // ── Étapes ──────────────────────────────────────────────────────
-    // KeepCapsHighlight : si true, Verr.Maj reste systematiquement dans le highlight
-    // (contour vert si pas activee, fond vert plein si activee) tant que l'exercice tourne.
-    private record struct LearningStep(string Title, string Instruction, string Target,
-        bool Skippable, bool KeepCapsHighlight);
+    // Textes et réglages des six exercices : TutorialSteps, partagé avec le module
+    // Initiation des Leçons. Ici, les titres et consignes propres au tutoriel.
+    // KeepCapsHighlight : Verr. Maj. reste surlignée tant que l'exercice tourne.
+    private readonly record struct LearningStep(string Title, string Instruction, TutorialSteps.Step Content)
+    {
+        public string Target => Content.Target;
+        public bool Skippable => Content.Skippable;
+        public bool KeepCapsHighlight => Content.KeepCapsLock;
+    }
 
     // Propriété (pas un champ static readonly) : reconstruite à chaque accès pour refléter
     // la langue courante — LearningModule est recréé à chaque lancement (pas un singleton),
     // mais un tableau static readonly ne serait initialisé qu'une seule fois par processus.
     private static LearningStep[] Steps => new LearningStep[]
     {
-        new(L.Learning_Step0Title,
-            L.Learning_Step0Instruction,
-            "É", false, true),
-        new(L.Learning_Step1Title,
-            L.Learning_Step1Instruction,
-            "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !", false, true),
-        new(L.Learning_Step2Title,
-            L.Learning_Step2Instruction,
-            "jean.dupont@education.gouv.fr", false, false),
-        new(L.Learning_Step3Title,
-            L.Learning_Step3Instruction,
-            "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %.", false, false),
-        new(L.Learning_Step4Title,
-            L.Learning_Step4Instruction,
-            "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };", true, false),
-        new(L.Learning_Step5Title,
-            L.Learning_Step5Instruction,
-            "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe", true, false),
+        new(L.Learning_Step0Title, L.Learning_Step0Instruction, TutorialSteps.All[0]),
+        new(L.Learning_Step1Title, L.Learning_Step1Instruction, TutorialSteps.All[1]),
+        new(L.Learning_Step2Title, L.Learning_Step2Instruction, TutorialSteps.All[2]),
+        new(L.Learning_Step3Title, L.Learning_Step3Instruction, TutorialSteps.All[3]),
+        new(L.Learning_Step4Title, L.Learning_Step4Instruction, TutorialSteps.All[4]),
+        new(L.Learning_Step5Title, L.Learning_Step5Instruction, TutorialSteps.All[5]),
     };
 
     // ── Window constants ────────────────────────────────────────────

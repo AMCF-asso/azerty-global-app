@@ -190,12 +190,13 @@ internal static class LessonCatalogLoader
     {
         var exercises = new List<LessonExercise>
         {
-            InitiationExercise(0, L.Lessons_Init0, "É"),
-            InitiationExercise(1, L.Lessons_Init1, "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !"),
-            InitiationExercise(2, L.Lessons_Init2, "jean.dupont@education.gouv.fr"),
-            InitiationExercise(3, L.Lessons_Init3, "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %."),
-            InitiationExercise(4, L.Lessons_Init4, "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };"),
-            InitiationExercise(5, L.Lessons_Init5, "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe")
+            // Les six exercices du tutoriel (TutorialSteps), avec les consignes des Leçons.
+            InitiationExercise(0, L.Lessons_Init0, TutorialSteps.All[0].Target),
+            InitiationExercise(1, L.Lessons_Init1, TutorialSteps.All[1].Target),
+            InitiationExercise(2, L.Lessons_Init2, TutorialSteps.All[2].Target),
+            InitiationExercise(3, L.Lessons_Init3, TutorialSteps.All[3].Target),
+            InitiationExercise(4, L.Lessons_Init4, TutorialSteps.All[4].Target),
+            InitiationExercise(5, L.Lessons_Init5, TutorialSteps.All[5].Target)
         };
 
         var lesson = new LessonLesson(
