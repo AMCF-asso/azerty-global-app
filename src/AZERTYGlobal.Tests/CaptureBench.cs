@@ -35,6 +35,14 @@ public class CaptureBench
     /// <summary>Les onglets de Paramètres, dans l'ordre de l'énumération privée <c>SettingsTab</c>.</summary>
     private static readonly string[] SettingsTabs = { "general", "applications", "langue-maintenance" };
 
+    /// <summary>Un message que laisse un geste de chaque onglet, dans le même ordre.</summary>
+    private static readonly Func<string>[] SettingsMessages =
+    {
+        () => L.Settings_ShortcutsReset,
+        () => L.Settings_CompatAdded("notepad.exe"),
+        () => L.Settings_VirtualKeyboardWindowReset,
+    };
+
     /// <summary>Les étapes de l'accueil. <c>_currentStep</c> va de 0 à 2.</summary>
     private const int OnboardingSteps = 3;
 
@@ -198,6 +206,13 @@ public class CaptureBench
                 BancCapture.Call(window, "SetActiveTab", Enum.ToObject(tabType, tab));
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}", windowDpi);
+
+                // Le même onglet après un geste qui laisse un message : la ligne de
+                // validation doit se voir sur l'onglet qui l'a produit.
+                BancCapture.Call(window, "SetValidationMessage", SettingsMessages[tab](), false);
+                BancCapture.MarkActive(hwnd);
+                target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}-message", windowDpi);
+                BancCapture.Call(window, "SetValidationMessage", string.Empty, false);
             }
         }
         finally
