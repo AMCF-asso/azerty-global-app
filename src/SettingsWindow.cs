@@ -329,8 +329,44 @@ sealed class SettingsWindow : IDisposable
         }
     }
 
+    /// <summary>Mesures de texte de la mise en page (audit du 25/09, F-12). Elles ne changent
+    /// qu'avec les polices, et avec la langue pour le bouton de réinitialisation : GetLayout,
+    /// appelé cinq fois par remesure, n'ouvre plus de DC pour les reprendre.</summary>
+    private struct LineMetrics
+    {
+        public int Title, Version, PanelTitle, Text, Bold, Link, Small, ResetText;
+    }
+
+    private LineMetrics? _metrics; // remis à zéro par CreateFonts et RefreshLanguageTexts
+
+    private LineMetrics Metrics => _metrics ??= MeasureLineMetrics();
+
+    private LineMetrics MeasureLineMetrics()
+    {
+        IntPtr hdc = Win32.GetDC(_hWnd);
+        try
+        {
+            return new LineMetrics
+            {
+                Title = MeasureSingleLineHeight(hdc, _hFontTitle),
+                Version = MeasureSingleLineHeight(hdc, _hFontVersion),
+                PanelTitle = MeasureSingleLineHeight(hdc, _hFontPanelTitle),
+                Text = MeasureSingleLineHeight(hdc, _hFontText),
+                Bold = MeasureSingleLineHeight(hdc, _hFontBold),
+                Link = MeasureSingleLineHeight(hdc, _hFontLinkStrong),
+                Small = MeasureSingleLineHeight(hdc, _hFontSmall),
+                ResetText = MeasureSingleLineWidth(hdc, _hFontButton, L.Settings_LinkResetDefaults),
+            };
+        }
+        finally
+        {
+            Win32.ReleaseDC(_hWnd, hdc);
+        }
+    }
+
     private void CreateFonts()
     {
+        _metrics = null;
         _hFontTitle = Win32.CreateFontW(-S(18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontVersion = Win32.CreateFontW(-S(9), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontPanelTitle = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
@@ -666,7 +702,7 @@ sealed class SettingsWindow : IDisposable
 
     /// <summary>Hauteur de contenu d'un onglet, sans défilement, à l'échelle courante.</summary>
     private int MeasureContentHeight(SettingsTab tab, bool showValidationRow) =>
-        GetLayout(S(BASE_WIN_W), S(BASE_WIN_H), tab, showValidationRow, scrollY: 0).ContentHeight;
+        GetLayout(S(BASE_WIN_W), tab, showValidationRow, scrollY: 0).ContentHeight;
 
     private void ClampScroll()
     {
@@ -783,9 +819,7 @@ sealed class SettingsWindow : IDisposable
 
     private void RepositionControls()
     {
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
-        LayoutInfo layout = GetLayout(winW, winH);
+        LayoutInfo layout = GetLayout(S(BASE_WIN_W));
 
         Win32.MoveWindow(_hWndEditKeyboard,
             layout.KeyboardEditRect.left, layout.KeyboardEditRect.top,
@@ -944,212 +978,167 @@ sealed class SettingsWindow : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
-    private LayoutInfo GetLayout(int winW, int winH) =>
-        GetLayout(winW, winH, _activeTab, !string.IsNullOrEmpty(_validationMessage), _scrollY);
+    private LayoutInfo GetLayout(int winW) =>
+        GetLayout(winW, _activeTab, !string.IsNullOrEmpty(_validationMessage), _scrollY);
 
     /// <summary>Mise en page d'un onglet donné. Les paramètres explicites permettent de
-    /// mesurer un autre onglet que l'onglet affiché (taille fixe, C4).</summary>
-    private LayoutInfo GetLayout(int winW, int winH, SettingsTab tab, bool showValidationRow, int scrollY)
+    /// mesurer un autre onglet que l'onglet affiché (taille fixe, C4). Seuls l'en-tête et
+    /// l'onglet demandé sont calculés, chacun par sa fonction : les rectangles des autres
+    /// onglets restent vides, leurs contrôles étant masqués par ApplyTabVisibility, jamais
+    /// déplacés hors écran (audit du 25/09, F-04).</summary>
+    private LayoutInfo GetLayout(int winW, SettingsTab tab, bool showValidationRow, int scrollY)
     {
+        var m = Metrics;
         int margin = S(8);
         int contentWidth = winW - margin * 2;
         int headerTop = S(8);
         int logoSize = S(24);
         int panelPadX = S(9);
+        int headerLineHeight = Math.Max(logoSize, Math.Max(m.Title, m.Version) + S(4));
+        int headerBottom = headerTop + headerLineHeight + S(9);
 
-        IntPtr hdc = Win32.GetDC(_hWnd);
-        try
+        int labelX = margin + panelPadX;
+        int labelWidth = S(120); // assez pour « Virtual keyboard » sans troncature
+        int keyOuterW = S(28);
+        int keyOuterH = S(24);
+        int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
+        int shortcutX = labelX + labelWidth + S(6);
+        int innerWidth = contentWidth - panelPadX * 2;
+
+        // Espacements communs aux trois onglets.
+        int sectionTitleH = m.PanelTitle + S(9);
+        int rowH = Math.Max(S(18), m.Bold);
+        int rowGap = S(6);
+        int managedHeight = Math.Max(S(13), m.Small);
+        int managedIndent = S(18);
+        int managedGap = S(2);
+        int managedWidth = innerWidth - managedIndent;
+        int buttonHeight = S(28);
+
+        // ── Bande d'onglets ─────────────────────────────────────────────
+        // Trois onglets au lieu d'une colonne de cinq sections. La fenêtre se cale
+        // alors sur l'onglet le plus haut au lieu de la somme de tout. Découpage
+        // décidé par Antoine le 2026-09-21 après mesure des hauteurs : Général
+        // ~224 px, Applications ~196 px, Langue et maintenance ~175 px, contre
+        // ~631 px cumulés. ⛔ « Langue » appartient au troisième onglet et non au
+        // premier : avec elle, « Général » culminait à ~310 px et commandait seul
+        // la hauteur, ce qui ramenait le défilement à 175 % sur 1366×768 — le cas
+        // exact du geste 36 de la recette VM.
+        var layout = new LayoutInfo
         {
-            int titleHeight = MeasureSingleLineHeight(hdc, _hFontTitle);
-            int versionHeight = MeasureSingleLineHeight(hdc, _hFontVersion);
-            int headerLineHeight = Math.Max(logoSize, Math.Max(titleHeight, versionHeight) + S(4));
-            int logoY = headerTop + Math.Max(0, (headerLineHeight - logoSize) / 2);
-            int headerTitleY = headerTop + Math.Max(0, (headerLineHeight - titleHeight) / 2);
-            int headerBottom = headerTop + headerLineHeight + S(9);
+            Margin = margin,
+            TabStripRect = Rect(margin, headerBottom + S(4), contentWidth, S(24)),
+            HeaderTitleX = margin + logoSize + S(6),
+            HeaderTitleY = headerTop + Math.Max(0, (headerLineHeight - m.Title) / 2),
+            HeaderDividerY = headerBottom,
+            LogoRect = Rect(margin, headerTop + Math.Max(0, (headerLineHeight - logoSize) / 2), logoSize, logoSize),
+            ShortcutsLabelX = labelX,
+            ShortcutsLabelWidth = labelWidth,
+            ShortcutsShortcutX = shortcutX,
+            ShortcutsShortcutWidth = keyOuterX - shortcutX - S(8),
+        };
 
-            int panelTitleHeight = MeasureSingleLineHeight(hdc, _hFontPanelTitle);
-            int textLineHeight = MeasureSingleLineHeight(hdc, _hFontText);
-            int checkboxHeight = Math.Max(S(18), MeasureSingleLineHeight(hdc, _hFontBold));
-            int linkHeight = MeasureSingleLineHeight(hdc, _hFontLinkStrong);
-            int validationHeight = MeasureSingleLineHeight(hdc, _hFontSmall);
+        int contentTop = layout.TabStripRect.bottom + S(7);
+        int contentBottom = tab switch
+        {
+            SettingsTab.General => LayoutGeneral(),
+            SettingsTab.Applications => LayoutApplications(),
+            _ => LayoutLanguageMaintenance(),
+        };
 
-            int labelX = margin + panelPadX;
-            int labelWidth = S(120); // assez pour « Virtual keyboard » sans troncature
-            int keyOuterW = S(28);
-            int keyOuterH = S(24);
-            int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
-            int shortcutX = labelX + labelWidth + S(6);
-            int shortcutWidth = keyOuterX - shortcutX - S(8);
-            int innerWidth = contentWidth - panelPadX * 2;
-            int checkboxGap = S(6);
-            int managedHeight = Math.Max(S(13), validationHeight);
-            int managedIndent = S(18);
-            int managedGap = S(2);
-            int managedWidth = innerWidth - managedIndent;
-            int buttonHeight = S(28);
+        // Le panneau de fond couvre tout l'onglet ; chaque section en garde le bas.
+        int panelBottom = contentBottom + S(12);
+        layout.ShortcutsPanel = Rect(margin, contentTop, contentWidth, panelBottom - contentTop);
+        CloseSection(ref layout.PreferencesPanel);
+        CloseSection(ref layout.CompatPanel);
+        CloseSection(ref layout.LanguagePanel);
+        CloseSection(ref layout.WindowsPanel);
+        layout.ContentHeight = panelBottom + margin;
 
-            // ── Bande d'onglets ─────────────────────────────────────────────
-            // Trois onglets au lieu d'une colonne de cinq sections. La fenêtre se cale
-            // alors sur l'onglet le plus haut au lieu de la somme de tout. Découpage
-            // décidé par Antoine le 2026-09-21 après mesure des hauteurs : Général
-            // ~224 px, Applications ~196 px, Langue et maintenance ~175 px, contre
-            // ~631 px cumulés. ⛔ « Langue » appartient au troisième onglet et non au
-            // premier : avec elle, « Général » culminait à ~310 px et commandait seul
-            // la hauteur, ce qui ramenait le défilement à 175 % sur 1366×768 — le cas
-            // exact du geste 36 de la recette VM.
-            var tabStripRect = Rect(margin, headerBottom + S(4), contentWidth, S(24));
+        ShiftLayout(ref layout, -scrollY);
+        return layout;
 
-            bool tabGeneral = tab == SettingsTab.General;
-            bool tabApps = tab == SettingsTab.Applications;
-            bool tabLangMaint = tab == SettingsTab.LanguageMaintenance;
+        void CloseSection(ref Win32.RECT section)
+        {
+            if (section.right > section.left) section.bottom = panelBottom;
+        }
 
-            // Curseur vertical. Chaque section visible l'avance ; les sections des
-            // autres onglets sont repliées à hauteur nulle à sa position courante et
-            // ne le bougent pas. Elles gardent ainsi des rectangles valides — les
-            // contrôles correspondants sont masqués par RepositionControls, jamais
-            // déplacés hors écran, sinon leur ordre de tabulation devient incohérent.
-            int cursorY = tabStripRect.bottom + S(7);
+        Win32.RECT Section(int top) => Rect(margin, top, contentWidth, 0);
 
-            // ── Onglet « Général » : Raccourcis puis Préférences ────────────
-            int shortcutsPanelTop = cursorY;
-            int keyboardRowY = shortcutsPanelTop + (tabGeneral ? S(30) : 0);
-            int searchRowY = keyboardRowY + (tabGeneral ? Math.Max(S(28), textLineHeight + S(11)) : 0);
-            int shortcutRowH = tabGeneral ? keyOuterH : 0;
-            var keyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, shortcutRowH);
-            var searchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, shortcutRowH);
-            var keyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, Math.Max(0, shortcutRowH - 2));
-            var searchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, Math.Max(0, shortcutRowH - 2));
-            int resetY = searchRowY + (tabGeneral ? Math.Max(S(20), textLineHeight + S(7)) : 0);
-            int resetWidth = Math.Max(S(150), MeasureSingleLineWidth(hdc, _hFontButton, L.Settings_LinkResetDefaults) + S(24));
-            var resetRect = Rect(labelX, resetY, resetWidth, tabGeneral ? Math.Max(S(28), linkHeight + S(10)) : 0);
+        // ── Onglet « Général » : Raccourcis puis Préférences ────────────
+        int LayoutGeneral()
+        {
+            int keyboardRowY = contentTop + S(30);
+            int searchRowY = keyboardRowY + Math.Max(S(28), m.Text + S(11));
+            layout.KeyboardRowY = keyboardRowY;
+            layout.SearchRowY = searchRowY;
+            layout.KeyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, keyOuterH);
+            layout.SearchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, keyOuterH);
+            layout.KeyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, Math.Max(0, keyOuterH - 2));
+            layout.SearchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, Math.Max(0, keyOuterH - 2));
+            int resetY = searchRowY + Math.Max(S(20), m.Text + S(7));
+            int resetWidth = Math.Max(S(150), m.ResetText + S(24));
+            layout.ResetRect = Rect(labelX, resetY, resetWidth, Math.Max(S(28), m.Link + S(10)));
 
-            bool showValidation = tabGeneral && showValidationRow;
-            int validationTop = showValidation ? resetRect.bottom + S(5) : resetRect.bottom;
-            int currentValidationHeight = showValidation ? Math.Max(S(15), validationHeight) : 0;
-            var validationRect = Rect(labelX, validationTop, innerWidth, currentValidationHeight);
+            int validationTop = showValidationRow ? layout.ResetRect.bottom + S(5) : layout.ResetRect.bottom;
+            layout.ValidationRect = Rect(labelX, validationTop, innerWidth, showValidationRow ? Math.Max(S(15), m.Small) : 0);
 
-            int prefsTitleTop = (showValidation ? validationRect.bottom : resetRect.bottom) + (tabGeneral ? S(10) : 0);
-            int prefsRowH = tabGeneral ? checkboxHeight : 0;
-            int prefsGap = tabGeneral ? checkboxGap : 0;
-            int prefsTitleH = tabGeneral ? panelTitleHeight + S(9) : 0;
-            var autoStartRect = Rect(labelX, prefsTitleTop + prefsTitleH, innerWidth, prefsRowH);
-            var notificationsRect = Rect(labelX, autoStartRect.bottom + prefsGap, innerWidth, prefsRowH);
+            int prefsTitleTop = layout.ValidationRect.bottom + S(10);
+            layout.PreferencesPanel = Section(prefsTitleTop);
+            layout.AutoStartRect = Rect(labelX, prefsTitleTop + sectionTitleH, innerWidth, rowH);
+            layout.NotificationsRect = Rect(labelX, layout.AutoStartRect.bottom + rowGap, innerWidth, rowH);
             // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur
             // de la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est
             // imposé — la fenêtre est alors exactement celle d'avant le lot C.
-            var managedNotificationsRect = Rect(labelX + managedIndent,
-                notificationsRect.bottom + managedGap, managedWidth,
-                tabGeneral && _managedNotifications ? managedHeight : 0);
-            var onboardingRect = Rect(labelX,
-                (tabGeneral && _managedNotifications ? managedNotificationsRect.bottom : notificationsRect.bottom) + prefsGap,
-                innerWidth, prefsRowH);
-            var managedOnboardingRect = Rect(labelX + managedIndent,
-                onboardingRect.bottom + managedGap, managedWidth,
-                tabGeneral && _managedOnboarding ? managedHeight : 0);
+            layout.ManagedNotificationsRect = Rect(labelX + managedIndent,
+                layout.NotificationsRect.bottom + managedGap, managedWidth,
+                _managedNotifications ? managedHeight : 0);
+            layout.OnboardingRect = Rect(labelX,
+                (_managedNotifications ? layout.ManagedNotificationsRect.bottom : layout.NotificationsRect.bottom) + rowGap,
+                innerWidth, rowH);
+            layout.ManagedOnboardingRect = Rect(labelX + managedIndent,
+                layout.OnboardingRect.bottom + managedGap, managedWidth,
+                _managedOnboarding ? managedHeight : 0);
             // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0).
-            var trainingRect = Rect(labelX,
-                (tabGeneral && _managedOnboarding ? managedOnboardingRect.bottom : onboardingRect.bottom)
-                    + (DailyChallenge.Enabled ? prefsGap : 0),
-                innerWidth, DailyChallenge.Enabled ? prefsRowH : 0);
+            layout.TrainingRect = Rect(labelX,
+                (_managedOnboarding ? layout.ManagedOnboardingRect.bottom : layout.OnboardingRect.bottom)
+                    + (DailyChallenge.Enabled ? rowGap : 0),
+                innerWidth, DailyChallenge.Enabled ? rowH : 0);
+            return layout.TrainingRect.bottom;
+        }
 
-            if (tabGeneral) cursorY = trainingRect.bottom;
-
-            // ── Onglet « Applications » : apps suspendues ───────────────────
-            int compatTitleTop = cursorY;
-            int compatTitleH = tabApps ? panelTitleHeight + S(9) : 0;
-            var compatListRect = Rect(labelX, compatTitleTop + compatTitleH, innerWidth, tabApps ? S(58) : 0);
+        // ── Onglet « Applications » : apps suspendues ───────────────────
+        int LayoutApplications()
+        {
+            layout.CompatPanel = Section(contentTop);
+            layout.CompatListRect = Rect(labelX, contentTop + sectionTitleH, innerWidth, S(58));
             int compatBtnW = (innerWidth - S(6)) / 2;
-            int compatBtnH = tabApps ? S(24) : 0;
-            var compatAddRect = Rect(labelX, compatListRect.bottom + (tabApps ? S(6) : 0), compatBtnW, compatBtnH);
-            var compatRemoveRect = Rect(labelX + compatBtnW + S(6), compatAddRect.top,
-                innerWidth - compatBtnW - S(6), compatBtnH);
-            int compatRowH = tabApps ? checkboxHeight : 0;
-            var compatAutoRect = Rect(labelX, compatAddRect.bottom + (tabApps ? S(8) : 0), innerWidth, compatRowH);
-            var compatForceOnRect = Rect(labelX, compatAutoRect.bottom + (tabApps ? S(4) : 0), innerWidth, compatRowH);
-            var compatForceOffRect = Rect(labelX, compatForceOnRect.bottom + (tabApps ? S(4) : 0), innerWidth, compatRowH);
+            layout.CompatAddRect = Rect(labelX, layout.CompatListRect.bottom + S(6), compatBtnW, S(24));
+            layout.CompatRemoveRect = Rect(labelX + compatBtnW + S(6), layout.CompatAddRect.top,
+                innerWidth - compatBtnW - S(6), S(24));
+            layout.CompatAutoRect = Rect(labelX, layout.CompatAddRect.bottom + S(8), innerWidth, rowH);
+            layout.CompatForceOnRect = Rect(labelX, layout.CompatAutoRect.bottom + S(4), innerWidth, rowH);
+            layout.CompatForceOffRect = Rect(labelX, layout.CompatForceOnRect.bottom + S(4), innerWidth, rowH);
+            return layout.CompatForceOffRect.bottom;
+        }
 
-            if (tabApps) cursorY = compatForceOffRect.bottom;
-
-            // ── Onglet « Langue et maintenance » ────────────────────────────
-            int languageTitleTop = cursorY;
-            int langTitleH = tabLangMaint ? panelTitleHeight + S(9) : 0;
-            int langRowH = tabLangMaint ? checkboxHeight : 0;
-            int langGap = tabLangMaint ? checkboxGap : 0;
-            var languageFrRect = Rect(labelX, languageTitleTop + langTitleH, innerWidth, langRowH);
-            var languageEnRect = Rect(labelX, languageFrRect.bottom + langGap, innerWidth, langRowH);
-            var managedLanguageRect = Rect(labelX + managedIndent,
-                languageEnRect.bottom + managedGap, managedWidth,
-                tabLangMaint && _managedLanguage ? managedHeight : 0);
+        // ── Onglet « Langue et maintenance » ────────────────────────────
+        int LayoutLanguageMaintenance()
+        {
+            layout.LanguagePanel = Section(contentTop);
+            layout.LanguageFrRect = Rect(labelX, contentTop + sectionTitleH, innerWidth, rowH);
+            layout.LanguageEnRect = Rect(labelX, layout.LanguageFrRect.bottom + rowGap, innerWidth, rowH);
+            layout.ManagedLanguageRect = Rect(labelX + managedIndent,
+                layout.LanguageEnRect.bottom + managedGap, managedWidth,
+                _managedLanguage ? managedHeight : 0);
 
             int windowsTitleTop =
-                (tabLangMaint && _managedLanguage ? managedLanguageRect.bottom : languageEnRect.bottom)
-                + (tabLangMaint ? S(18) : 0);
-            int maintBtnH = tabLangMaint ? buttonHeight : 0;
-            var resetVirtualKeyboardWindowRect = Rect(labelX,
-                windowsTitleTop + langTitleH, innerWidth, maintBtnH);
-            var resetLessonsWindowRect = Rect(labelX,
-                resetVirtualKeyboardWindowRect.bottom + (tabLangMaint ? S(7) : 0), innerWidth, maintBtnH);
-
-            if (tabLangMaint) cursorY = resetLessonsWindowRect.bottom;
-
-            int panelBottom = cursorY + S(12);
-            var shortcutsPanel = Rect(margin, shortcutsPanelTop, contentWidth, panelBottom - shortcutsPanelTop);
-            var preferencesPanel = Rect(margin, prefsTitleTop, contentWidth, panelBottom - prefsTitleTop);
-            var languagePanel = Rect(margin, languageTitleTop, contentWidth, panelBottom - languageTitleTop);
-            var windowsPanel = Rect(margin, windowsTitleTop, contentWidth, panelBottom - windowsTitleTop);
-            var compatPanel = Rect(margin, compatTitleTop, contentWidth, panelBottom - compatTitleTop);
-
-            var layoutInfo = new LayoutInfo
-            {
-                Margin = margin,
-                TabStripRect = tabStripRect,
-                HeaderTitleX = margin + logoSize + S(6),
-                HeaderTitleY = headerTitleY,
-                HeaderDividerY = headerBottom,
-                LogoRect = Rect(margin, logoY, logoSize, logoSize),
-                ShortcutsPanel = shortcutsPanel,
-                ShortcutsLabelX = labelX,
-                ShortcutsLabelWidth = labelWidth,
-                ShortcutsShortcutX = shortcutX,
-                ShortcutsShortcutWidth = shortcutWidth,
-                KeyboardRowY = keyboardRowY,
-                SearchRowY = searchRowY,
-                KeyboardBoxRect = keyboardBoxRect,
-                SearchBoxRect = searchBoxRect,
-                KeyboardEditRect = keyboardEditRect,
-                SearchEditRect = searchEditRect,
-                ValidationRect = validationRect,
-                ResetRect = resetRect,
-                PreferencesPanel = preferencesPanel,
-                AutoStartRect = autoStartRect,
-                NotificationsRect = notificationsRect,
-                ManagedNotificationsRect = managedNotificationsRect,
-                OnboardingRect = onboardingRect,
-                ManagedOnboardingRect = managedOnboardingRect,
-                TrainingRect = trainingRect,
-                LanguagePanel = languagePanel,
-                LanguageFrRect = languageFrRect,
-                LanguageEnRect = languageEnRect,
-                ManagedLanguageRect = managedLanguageRect,
-                WindowsPanel = windowsPanel,
-                ResetVirtualKeyboardWindowRect = resetVirtualKeyboardWindowRect,
-                ResetLessonsWindowRect = resetLessonsWindowRect,
-                CompatPanel = compatPanel,
-                CompatListRect = compatListRect,
-                CompatAddRect = compatAddRect,
-                CompatRemoveRect = compatRemoveRect,
-                CompatAutoRect = compatAutoRect,
-                CompatForceOnRect = compatForceOnRect,
-                CompatForceOffRect = compatForceOffRect,
-                ContentHeight = panelBottom + margin,
-            };
-
-            ShiftLayout(ref layoutInfo, -scrollY);
-            return layoutInfo;
-        }
-        finally
-        {
-            Win32.ReleaseDC(_hWnd, hdc);
+                (_managedLanguage ? layout.ManagedLanguageRect.bottom : layout.LanguageEnRect.bottom) + S(18);
+            layout.WindowsPanel = Section(windowsTitleTop);
+            layout.ResetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + sectionTitleH, innerWidth, buttonHeight);
+            layout.ResetLessonsWindowRect = Rect(labelX,
+                layout.ResetVirtualKeyboardWindowRect.bottom + S(7), innerWidth, buttonHeight);
+            return layout.ResetLessonsWindowRect.bottom;
         }
     }
 
@@ -1536,15 +1525,18 @@ sealed class SettingsWindow : IDisposable
 
     private void SetValidationMessage(string text, bool captureHint = false)
     {
+        bool rowChanged = string.IsNullOrEmpty(_validationMessage) != string.IsNullOrEmpty(text);
         _validationMessage = text;
         _showCaptureHint = captureHint;
         Win32.SetWindowTextW(_hWndValidation, text);
-        if (_hWnd != IntPtr.Zero && _hWndValidation != IntPtr.Zero)
+        if (rowChanged && _hWnd != IntPtr.Zero && _hWndValidation != IntPtr.Zero)
         {
             // Le message fait grandir le contenu, parfois de deux lignes. Sans remesure,
             // la fenêtre gardait sa hauteur et le message débordait sans que le défilement
             // s'arme : le bas du contenu devenait inatteignable (R12 de la revue du
             // 2026-09-21). Même enchaînement que OnLanguageChanged, pour la même raison.
+            // Seule l'apparition ou la disparition de la ligne change la mise en page : un
+            // message qui en remplace un autre ne remesure plus rien (audit du 25/09, F-12).
             FitWindowToContent();
             RepositionControls();
         }
@@ -1622,6 +1614,7 @@ sealed class SettingsWindow : IDisposable
     /// <summary>R\u00e9applique tous les libell\u00e9s traduits de cette fen\u00eatre (appel\u00e9 apr\u00e8s un changement de langue).</summary>
     private void RefreshLanguageTexts()
     {
+        _metrics = null; // largeur du bouton de réinitialisation, dans la nouvelle langue
         Win32.SetWindowTextW(_hWnd, L.Settings_WindowTitle);
         // La bande d'onglets n'est pas un contrôle à texte de fenêtre : ses trois libellés
         // vivent dans le contrôle onglet et ne se réécrivent qu'avec TCM_SETITEMW. Ils
@@ -1952,7 +1945,7 @@ sealed class SettingsWindow : IDisposable
         Win32.GetClientRect(hWnd, out var clientRect);
         int cw = clientRect.right;
         int ch = clientRect.bottom;
-        LayoutInfo layout = GetLayout(cw, ch);
+        LayoutInfo layout = GetLayout(cw);
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         var hdc = Win32.CreateCompatibleDC(hdcScreen);
@@ -1979,16 +1972,16 @@ sealed class SettingsWindow : IDisposable
         if (_activeTab == SettingsTab.General)
         {
             PaintShortcutPanel(hdc, layout);
-            PaintPreferencesPanel(hdc, layout);
+            DrawSectionTitle(hdc, layout.PreferencesPanel, L.Settings_SectionPreferences);
         }
         else if (_activeTab == SettingsTab.Applications)
         {
-            PaintCompatPanel(hdc, layout);
+            DrawSectionTitle(hdc, layout.CompatPanel, L.Settings_SectionCompat);
         }
         else
         {
-            PaintLanguagePanel(hdc, layout);
-            PaintWindowsPanel(hdc, layout);
+            DrawSectionTitle(hdc, layout.LanguagePanel, L.Settings_SectionLanguage);
+            DrawSectionTitle(hdc, layout.WindowsPanel, L.Settings_SectionWindows);
         }
 
         if (gfx != IntPtr.Zero)
@@ -2053,17 +2046,8 @@ sealed class SettingsWindow : IDisposable
     private void PaintShortcutPanel(IntPtr hdc, LayoutInfo layout)
     {
         int titleX = layout.ShortcutsPanel.left + S(12);
-        int titleY = layout.ShortcutsPanel.top + S(8);
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.ShortcutsPanel.right - S(12),
-            bottom = titleY + S(20)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionShortcuts, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        DrawPanelTitle(hdc, titleX, layout.ShortcutsPanel.top + S(8),
+            layout.ShortcutsPanel.right - S(12) - titleX, L.Settings_SectionShortcuts);
 
         DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.KeyboardRowY,
             L.Settings_ShortcutLabelKeyboard, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
@@ -2072,86 +2056,15 @@ sealed class SettingsWindow : IDisposable
         DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.SearchRowY,
             L.Settings_ShortcutLabelSearch, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
         DrawKeyBox(hdc, layout.SearchBoxRect, _searchValid, _focusedShortcut == _hWndEditSearch);
-
-        int dividerY = layout.PreferencesPanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
     }
 
-    private void PaintPreferencesPanel(IntPtr hdc, LayoutInfo layout)
+    /// <summary>Titre d'une section et, au-dessus, son séparateur (audit du 25/09, F-06 :
+    /// quatre méthodes recopiaient ce bloc à côté de DrawPanelTitle, qui ne servait pas).</summary>
+    private void DrawSectionTitle(IntPtr hdc, Win32.RECT section, string title)
     {
-        int titleX = layout.PreferencesPanel.left + S(12);
-        int titleY = layout.PreferencesPanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.ShortcutsPanel.right - S(12),
-            bottom = titleY + S(20)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionPreferences, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
-    private void PaintLanguagePanel(IntPtr hdc, LayoutInfo layout)
-    {
-        int dividerY = layout.LanguagePanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
-
-        int titleX = layout.LanguagePanel.left + S(12);
-        int titleY = layout.LanguagePanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.LanguagePanel.right - S(12),
-            bottom = titleY + S(20)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionLanguage, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
-    private void PaintWindowsPanel(IntPtr hdc, LayoutInfo layout)
-    {
-        int dividerY = layout.WindowsPanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
-
-        int titleX = layout.WindowsPanel.left + S(12);
-        int titleY = layout.WindowsPanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.WindowsPanel.right - S(12),
-            bottom = titleY + S(20)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionWindows, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
-    private void PaintCompatPanel(IntPtr hdc, LayoutInfo layout)
-    {
-        int dividerY = layout.CompatPanel.top - S(8);
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.ShortcutsPanel.left + S(12), dividerY,
-            layout.ShortcutsPanel.right - layout.ShortcutsPanel.left - S(24), 1), CLR_SEPARATOR);
-
-        int titleX = layout.CompatPanel.left + S(12);
-        int titleY = layout.CompatPanel.top;
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var titleRect = new Win32.RECT
-        {
-            left = titleX,
-            top = titleY,
-            right = layout.CompatPanel.right - S(12),
-            bottom = titleY + S(20)
-        };
-        Win32.DrawTextW(hdc, L.Settings_SectionCompat, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        int x = section.left + S(12);
+        GdiHelpers.FillSolidRect(hdc, Rect(x, section.top - S(8), section.right - section.left - S(24), 1), CLR_SEPARATOR);
+        DrawPanelTitle(hdc, x, section.top, section.right - S(12) - x, title);
     }
 
     private void DrawShortcutRow(IntPtr hdc, int labelX, int labelWidth, int rowY,
@@ -2189,7 +2102,7 @@ sealed class SettingsWindow : IDisposable
     {
         Win32.SelectObject(hdc, _hFontPanelTitle);
         Win32.SetTextColor(hdc, CLR_LINK);
-        var rect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + S(22) };
+        var rect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + S(20) };
         Win32.DrawTextW(hdc, title, -1, ref rect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
