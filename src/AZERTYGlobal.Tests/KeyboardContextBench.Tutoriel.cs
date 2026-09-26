@@ -192,7 +192,9 @@ public partial class KeyboardContextBench
     private static void ShowFinalPage(LearningModule module)
     {
         BancCapture.SetField(module, "_currentStep", 6);
-        BancCapture.SetField(module, "_completed", true);
+        var page = typeof(LearningModule).GetField("_page", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new MissingFieldException(nameof(LearningModule), "_page");
+        page.SetValue(module, Enum.Parse(page.FieldType, "Final"));
         BancCapture.Call(module, "ClearHighlight");
         BancCapture.Call(module, "UpdateControlVisibility");
         BancCapture.Call(module, "RepositionControls");

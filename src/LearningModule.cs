@@ -150,10 +150,11 @@ sealed class LearningModule : IDisposable
     private int _currentStep;
     private int _cursorPosition;
     private bool _currentCharError;
-    private bool _completed; // écran final
-    // Page de choix affichee a la fin de chaque exercice : Reessayer / Suivant.
-    // Remplace l'ancienne transition automatique entre exercices.
-    private bool _awaitingChoice;
+    // Page affichée : l'exercice, le choix après un succès (Recommencer / Suivant, à la
+    // place de l'ancienne transition automatique), la page finale après le sixième. Une
+    // seule valeur au lieu de deux booléens croisés (audit du 25/09, L-09).
+    internal enum TutorialPage { Exercise, Choice, Final }
+    private TutorialPage _page = TutorialPage.Exercise;
     // Compteur de succes pour l'exercice courant. Reset a chaque AdvanceToNextStep.
     // Le titre « ✓ Bravo ! » et le sous-titre ne s'affichent qu'au 1er succes (=1).
     // Aux reussites suivantes (apres Recommencer), on n'affiche que les boutons.
@@ -611,7 +612,7 @@ sealed class LearningModule : IDisposable
         int kbTop = S(BASE_HEADER_H + BASE_INSTRUCTION_H + BASE_TARGET_H);
 
         int choiceY;
-        if (_awaitingChoice && _currentStepSuccessCount <= 1)
+        if (_page == TutorialPage.Choice && _currentStepSuccessCount <= 1)
         {
             // Block Bravo + gap + boutons, centre verticalement
             int titleH = S(40);
@@ -638,7 +639,7 @@ sealed class LearningModule : IDisposable
 
     private void UpdateControlVisibility()
     {
-        if (_completed)
+        if (_page == TutorialPage.Final)
         {
             // Page « Bravo ! » finale (apres les 6 exercices) : seul Terminer
             Win32.ShowWindow(_hWndBtnQuit, 0);
@@ -647,7 +648,7 @@ sealed class LearningModule : IDisposable
             Win32.ShowWindow(_hWndBtnRetry, 0);
             Win32.ShowWindow(_hWndBtnContinue, 0);
         }
-        else if (_awaitingChoice)
+        else if (_page == TutorialPage.Choice)
         {
             // Page de choix fin d'exercice : Reessayer + Suivant. On masque tout le reste.
             Win32.ShowWindow(_hWndBtnQuit, 0);
@@ -770,7 +771,7 @@ sealed class LearningModule : IDisposable
         Win32.ShowWindow(_hWnd, 0);
         Win32.EnableWindow(_hWndOnboarding, true);
         Win32.SetForegroundWindow(_hWndOnboarding);
-        OnClosed?.Invoke(_completed);
+        OnClosed?.Invoke(_page == TutorialPage.Final);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -802,7 +803,7 @@ sealed class LearningModule : IDisposable
 
     private void CaptureExpectedTextForPhysicalKey(uint scancode)
     {
-        if (!_hasFocus || _completed || _awaitingChoice) return;
+        if (!_hasFocus || _page != TutorialPage.Exercise) return;
         if (!_layout.Keys.TryGetValue(scancode, out var keyDef)) return;
 
         string? output = keyDef.GetOutput(_mapper.ShiftDown, _mapper.AltGrDown, _mapper.CapsLockActive);
@@ -1030,14 +1031,14 @@ sealed class LearningModule : IDisposable
                 case Win32.WM_KEYDOWN:
                 {
                     int vk = wParam.ToInt32();
-                    if (_completed)
+                    if (_page == TutorialPage.Final)
                     {
                         // Page finale « Bravo ! » : flèches droite/bas ou Esc → Terminer (Close).
                         if (vk == 0x27 || vk == 0x28 || vk == 0x1B) // VK_RIGHT, VK_DOWN, VK_ESCAPE
                             Close();
                         return IntPtr.Zero;
                     }
-                    if (_awaitingChoice)
+                    if (_page == TutorialPage.Choice)
                     {
                         // Page de choix fin d'exercice : flèches gauche/haut → Recommencer,
                         // flèches droite/bas → Suivant (ou Terminer au dernier exercice).
@@ -1157,7 +1158,7 @@ sealed class LearningModule : IDisposable
         // K3 : le WM_CHAR de Tab arrive encore ici après que WM_KEYDOWN a déplacé le focus
         // (TranslateMessage l'a posté à cette fenêtre) ; ce n'est pas une frappe d'exercice.
         if (c == '\t') return;
-        if (_completed || _awaitingChoice) return;
+        if (_page != TutorialPage.Exercise) return;
         if (_currentStep >= Steps.Length) return;
 
         var target = Steps[_currentStep].Target;
@@ -1174,7 +1175,7 @@ sealed class LearningModule : IDisposable
                 // Exercice termine : afficher la page de choix Reessayer / Suivant
                 // (au lieu d'enchainer automatiquement comme avant). L'utilisateur decide
                 // s'il refait l'exercice ou passe au suivant.
-                _awaitingChoice = true;
+                _page = TutorialPage.Choice;
                 _currentStepSuccessCount++;
                 // Persister la progression : exercice (_currentStep + 1) valide. Setter monotone,
                 // donc safe meme en cas de Recommencer puis nouveau succes (no-op si deja persiste).
@@ -1234,13 +1235,13 @@ sealed class LearningModule : IDisposable
         _currentStep++;
         _cursorPosition = 0;
         _currentCharError = false;
-        _awaitingChoice = false;
+        _page = TutorialPage.Exercise;
         _currentStepSuccessCount = 0; // reset pour le nouvel exercice (1er succes => « Bravo ! » s'affiche)
         ClearPendingPhysicalText();
 
         if (_currentStep >= Steps.Length)
         {
-            _completed = true;
+            _page = TutorialPage.Final;
             ClearHighlight();
         }
         else
@@ -1350,7 +1351,7 @@ sealed class LearningModule : IDisposable
     /// </summary>
     private void RetryCurrentStep()
     {
-        _awaitingChoice = false;
+        _page = TutorialPage.Exercise;
         _cursorPosition = 0;
         _currentCharError = false;
         ClearPendingPhysicalText();
@@ -1364,7 +1365,7 @@ sealed class LearningModule : IDisposable
 
     /// <summary>
     /// Page de choix fin d'exercice → bouton « Exercice suivant » / « Terminer les exercices ».
-    /// Avance au prochain exercice ; au dernier, AdvanceToNextStep mettra _completed = true et
+    /// Avance au prochain exercice ; au dernier, AdvanceToNextStep mettra _page = TutorialPage.Final et
     /// affichera la page « Bravo ! » finale.
     /// </summary>
     private void ContinueAfterChoice()
@@ -1411,7 +1412,7 @@ sealed class LearningModule : IDisposable
     private void UpdateHighlight()
     {
         ClearHighlight();
-        if (_completed) return;
+        if (_page == TutorialPage.Final) return;
         if (_currentStep >= Steps.Length) return;
 
         var target = Steps[_currentStep].Target;
@@ -1474,9 +1475,9 @@ sealed class LearningModule : IDisposable
 
             Win32.SetBkMode(hdc, Win32.TRANSPARENT);
 
-            if (_completed)
+            if (_page == TutorialPage.Final)
                 PaintFinalScreen(hdc, cw, kbTop);
-            else if (_awaitingChoice)
+            else if (_page == TutorialPage.Choice)
                 PaintChoiceScreen(hdc, cw, kbTop);
             else
                 PaintExercise(hdc, cw, kbTop);
@@ -1703,7 +1704,7 @@ sealed class LearningModule : IDisposable
         if (_currentStepSuccessCount <= 1)
         {
             // Block \u00ab \u2713 Bravo ! \u00bb + gap + boutons : centre verticalement dans la zone superieure.
-            // Cette geometrie doit matcher RepositionControls (branche _awaitingChoice + 1er succes).
+            // Cette geometrie doit matcher RepositionControls (page de choix + 1er succes).
             int margin = S(BASE_MARGIN);
             int titleH = S(40);
             int gapTitleButtons = S(14);
