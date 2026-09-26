@@ -5,8 +5,9 @@ name: Captures des fenêtres
 # avant/après. Deux déclenchements, aucune pull request :
 #   - à la main (workflow_dispatch), une fois ce fichier présent sur la branche par défaut ;
 #   - par le push d'une branche captures/<ref> : le fichier vient du commit poussé, et la ref
-#     rendue est le suffixe du nom (captures/4161a0f rend 4161a0f). Décision d'Antoine du
-#     26/09 : le lancement manuel exigeait ce fichier sur main. Supprimer la branche ensuite.
+#     rendue est le suffixe du nom : captures/<sha complet> ou captures/<branche>. Un sha abrégé
+#     échoue : actions/checkout le prend pour un nom de branche. Décision d'Antoine du 26/09 :
+#     le lancement manuel exigeait ce fichier sur main. Supprimer la branche ensuite.
 #
 # Pour un avant/après : un lancement par ref, puis, sur le poste,
 #   python scripts/compare-captures.py --avant avant/passe1 avant/passe2 --apres apres/passe1 apres/passe2 --diff diff
