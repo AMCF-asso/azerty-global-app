@@ -124,57 +124,6 @@ sealed class SettingsWindow : IDisposable
         // GuideRect et CloseButtonRect retirés — la croix système suffit
     }
 
-    /// <summary>
-    /// Décale verticalement toute la mise en page. Point de passage unique du
-    /// défilement : la mise en page se calcule en coordonnées de contenu, et ce
-    /// décalage s'applique juste avant de rendre la structure, si bien que le tracé
-    /// comme le positionnement des contrôles suivent sans le savoir.
-    /// </summary>
-    private static void ShiftLayout(ref LayoutInfo l, int dy)
-    {
-        if (dy == 0) return;
-        l.HeaderTitleY += dy;
-        l.HeaderDividerY += dy;
-        ShiftRect(ref l.TabStripRect, dy);
-        l.KeyboardRowY += dy;
-        l.SearchRowY += dy;
-        ShiftRect(ref l.LogoRect, dy);
-        ShiftRect(ref l.ShortcutsPanel, dy);
-        ShiftRect(ref l.KeyboardBoxRect, dy);
-        ShiftRect(ref l.SearchBoxRect, dy);
-        ShiftRect(ref l.KeyboardEditRect, dy);
-        ShiftRect(ref l.SearchEditRect, dy);
-        ShiftRect(ref l.ValidationRect, dy);
-        ShiftRect(ref l.ResetRect, dy);
-        ShiftRect(ref l.PreferencesPanel, dy);
-        ShiftRect(ref l.AutoStartRect, dy);
-        ShiftRect(ref l.NotificationsRect, dy);
-        ShiftRect(ref l.ManagedNotificationsRect, dy);
-        ShiftRect(ref l.OnboardingRect, dy);
-        ShiftRect(ref l.ManagedOnboardingRect, dy);
-        ShiftRect(ref l.TrainingRect, dy);
-        ShiftRect(ref l.LanguagePanel, dy);
-        ShiftRect(ref l.LanguageFrRect, dy);
-        ShiftRect(ref l.LanguageEnRect, dy);
-        ShiftRect(ref l.ManagedLanguageRect, dy);
-        ShiftRect(ref l.WindowsPanel, dy);
-        ShiftRect(ref l.ResetVirtualKeyboardWindowRect, dy);
-        ShiftRect(ref l.ResetLessonsWindowRect, dy);
-        ShiftRect(ref l.CompatPanel, dy);
-        ShiftRect(ref l.CompatListRect, dy);
-        ShiftRect(ref l.CompatAddRect, dy);
-        ShiftRect(ref l.CompatRemoveRect, dy);
-        ShiftRect(ref l.CompatAutoRect, dy);
-        ShiftRect(ref l.CompatForceOnRect, dy);
-        ShiftRect(ref l.CompatForceOffRect, dy);
-    }
-
-    private static void ShiftRect(ref Win32.RECT r, int dy)
-    {
-        r.top += dy;
-        r.bottom += dy;
-    }
-
     /// <summary>Les trois onglets de la fenêtre. L'ordre est celui de la bande.</summary>
     private enum SettingsTab { General = 0, Applications = 1, LanguageMaintenance = 2 }
 
@@ -400,32 +349,11 @@ sealed class SettingsWindow : IDisposable
 
     private void ApplyFontsToControls()
     {
-        // ⛔ La bande d'onglets doit figurer ici : RecreateFonts supprime les anciennes
-        // polices, et un contrôle oublié garderait un HFONT détruit après un changement
-        // de DPI (geste 40 de la recette VM : déplacer la fenêtre d'un écran 100 % vers
-        // un écran 150 %).
-        Win32.SendMessageW(_hWndTabStrip, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
-        Win32.SendMessageW(_hWndEditKeyboard, Win32.WM_SETFONT, _hFontEdit, (IntPtr)1);
-        Win32.SendMessageW(_hWndEditSearch, Win32.WM_SETFONT, _hFontEdit, (IntPtr)1);
-        Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndChkNotifications, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndChkOnboarding, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndResetVirtualKeyboardWindow, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndResetLessonsWindow, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndRadioLangFr, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndRadioLangEn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndLinkReset, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndValidation, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
-        Win32.SendMessageW(_hWndManagedNotifications, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
-        Win32.SendMessageW(_hWndManagedOnboarding, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
-        Win32.SendMessageW(_hWndManagedLanguage, Win32.WM_SETFONT, _hFontSmall, (IntPtr)1);
-        Win32.SendMessageW(_hWndCompatList, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
-        Win32.SendMessageW(_hWndCompatAdd, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndCompatRemove, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndRadioCompatAuto, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndRadioCompatForceOn, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndRadioCompatForceOff, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        // RecreateFonts supprime les anciennes polices : chaque contrôle de la table reçoit
+        // la nouvelle, bande d'onglets comprise.
+        foreach (var control in _controls)
+            if (control.Font != null)
+                Win32.SendMessageW(control.Handle, Win32.WM_SETFONT, control.Font(), (IntPtr)1);
     }
 
     private void CreateMainWindow()
@@ -624,6 +552,78 @@ sealed class SettingsWindow : IDisposable
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEOFF, hInstance, IntPtr.Zero);
 
         RefreshCompatList(selectProcess: null);
+        _controls = DescribeControls();
+    }
+
+    /// <summary>
+    /// Un contrôle enfant, déclaré une seule fois (audit du 25/09, F-03) : son onglet, sa
+    /// police, son rectangle, son libellé traduit et s'il est un bouton poussoir. Polices,
+    /// placement, visibilité par onglet, traduction et touche Entrée parcourent cette table.
+    /// Auparavant chaque contrôle figurait dans huit à onze listes parallèles, et deux oublis
+    /// avaient fait des bugs (police de la bande d'onglets, libellés des onglets).
+    /// </summary>
+    /// <param name="Tab">Onglet qui le montre ; null : jamais masqué par onglet.</param>
+    /// <param name="Shown">Condition d'affichage en plus de l'onglet (politique, Défi).</param>
+    private sealed record ControlSlot(
+        IntPtr Handle,
+        SettingsTab? Tab,
+        Func<IntPtr>? Font,
+        Func<LayoutInfo, Win32.RECT>? Bounds,
+        Func<string>? Text = null,
+        Func<bool>? Shown = null,
+        bool PushButton = false);
+
+    private ControlSlot[] _controls = Array.Empty<ControlSlot>();
+
+    private ControlSlot[] DescribeControls()
+    {
+        const SettingsTab General = SettingsTab.General;
+        const SettingsTab Apps = SettingsTab.Applications;
+        const SettingsTab LangMaint = SettingsTab.LanguageMaintenance;
+        return new ControlSlot[]
+        {
+            // ⛔ La bande d'onglets doit rester dans la table : RecreateFonts supprime les
+            // anciennes polices, et un contrôle oublié garderait un HFONT détruit après un
+            // changement de DPI (geste 40 de la recette VM). Ses libellés, eux, passent par
+            // TCM_SETITEMW (SetTabText), pas par le texte de fenêtre.
+            new(_hWndTabStrip, null, () => _hFontText, l => l.TabStripRect),
+            // Étiquettes N8 jamais affichées : un texte, ni police ni place.
+            new(_hWndLabelKeyboard, null, null, null, () => L.Settings_ShortcutLabelKeyboard),
+            new(_hWndLabelSearch, null, null, null, () => L.Settings_ShortcutLabelSearch),
+            new(_hWndLabelCompat, null, null, null, () => L.Settings_SectionCompat),
+
+            new(_hWndEditKeyboard, General, () => _hFontEdit, l => l.KeyboardEditRect),
+            new(_hWndEditSearch, General, () => _hFontEdit, l => l.SearchEditRect),
+            new(_hWndValidation, General, () => _hFontSmall, l => l.ValidationRect),
+            new(_hWndLinkReset, General, () => _hFontButton, l => l.ResetRect,
+                () => L.Settings_LinkResetDefaults, PushButton: true),
+            new(_hWndChkAutoStart, General, () => _hFontBold, l => l.AutoStartRect, () => L.Settings_AutoStart),
+            new(_hWndChkNotifications, General, () => _hFontBold, l => l.NotificationsRect, () => L.Settings_Notifications),
+            new(_hWndManagedNotifications, General, () => _hFontSmall, l => l.ManagedNotificationsRect,
+                () => L.Settings_ManagedByOrganization, () => _managedNotifications),
+            new(_hWndChkOnboarding, General, () => _hFontBold, l => l.OnboardingRect, () => L.Settings_OnboardingWindow),
+            new(_hWndManagedOnboarding, General, () => _hFontSmall, l => l.ManagedOnboardingRect,
+                () => L.Settings_ManagedByOrganization, () => _managedOnboarding),
+            new(_hWndChkTraining, General, () => _hFontBold, l => l.TrainingRect,
+                () => L.Challenge_OptIn, () => DailyChallenge.Enabled),
+
+            new(_hWndCompatList, Apps, () => _hFontText, l => l.CompatListRect),
+            new(_hWndCompatAdd, Apps, () => _hFontButton, l => l.CompatAddRect, () => L.Settings_CompatAdd, PushButton: true),
+            new(_hWndCompatRemove, Apps, () => _hFontButton, l => l.CompatRemoveRect, () => L.Settings_CompatRemove, PushButton: true),
+            new(_hWndRadioCompatAuto, Apps, () => _hFontBold, l => l.CompatAutoRect, () => L.Settings_CompatModeAuto),
+            new(_hWndRadioCompatForceOn, Apps, () => _hFontBold, l => l.CompatForceOnRect, () => L.Settings_CompatModeForceOn),
+            new(_hWndRadioCompatForceOff, Apps, () => _hFontBold, l => l.CompatForceOffRect, () => L.Settings_CompatModeForceOff),
+
+            // Noms de langue : endonymes, jamais retraduits.
+            new(_hWndRadioLangFr, LangMaint, () => _hFontBold, l => l.LanguageFrRect),
+            new(_hWndRadioLangEn, LangMaint, () => _hFontBold, l => l.LanguageEnRect),
+            new(_hWndManagedLanguage, LangMaint, () => _hFontSmall, l => l.ManagedLanguageRect,
+                () => L.Settings_ManagedByOrganization, () => _managedLanguage),
+            new(_hWndResetVirtualKeyboardWindow, LangMaint, () => _hFontButton, l => l.ResetVirtualKeyboardWindowRect,
+                () => L.Settings_ResetVirtualKeyboard, PushButton: true),
+            new(_hWndResetLessonsWindow, LangMaint, () => _hFontButton, l => l.ResetLessonsWindowRect,
+                () => L.Settings_ResetLessonsModule, PushButton: true),
+        };
     }
 
     /// <summary>
@@ -702,7 +702,7 @@ sealed class SettingsWindow : IDisposable
 
     /// <summary>Hauteur de contenu d'un onglet, sans défilement, à l'échelle courante.</summary>
     private int MeasureContentHeight(SettingsTab tab, bool showValidationRow) =>
-        GetLayout(S(BASE_WIN_W), tab, showValidationRow, scrollY: 0).ContentHeight;
+        GetLayout(S(BASE_WIN_W), tab, showValidationRow).ContentHeight;
 
     private void ClampScroll()
     {
@@ -820,101 +820,16 @@ sealed class SettingsWindow : IDisposable
     private void RepositionControls()
     {
         LayoutInfo layout = GetLayout(S(BASE_WIN_W));
-
-        Win32.MoveWindow(_hWndEditKeyboard,
-            layout.KeyboardEditRect.left, layout.KeyboardEditRect.top,
-            layout.KeyboardEditRect.right - layout.KeyboardEditRect.left,
-            layout.KeyboardEditRect.bottom - layout.KeyboardEditRect.top, true);
-        Win32.MoveWindow(_hWndEditSearch,
-            layout.SearchEditRect.left, layout.SearchEditRect.top,
-            layout.SearchEditRect.right - layout.SearchEditRect.left,
-            layout.SearchEditRect.bottom - layout.SearchEditRect.top, true);
-
-        Win32.MoveWindow(_hWndValidation,
-            layout.ValidationRect.left, layout.ValidationRect.top,
-            layout.ValidationRect.right - layout.ValidationRect.left,
-            layout.ValidationRect.bottom - layout.ValidationRect.top, true);
-        Win32.MoveWindow(_hWndLinkReset,
-            layout.ResetRect.left, layout.ResetRect.top,
-            layout.ResetRect.right - layout.ResetRect.left,
-            layout.ResetRect.bottom - layout.ResetRect.top, true);
-
-        Win32.MoveWindow(_hWndChkAutoStart,
-            layout.AutoStartRect.left, layout.AutoStartRect.top,
-            layout.AutoStartRect.right - layout.AutoStartRect.left,
-            layout.AutoStartRect.bottom - layout.AutoStartRect.top, true);
-        Win32.MoveWindow(_hWndChkNotifications,
-            layout.NotificationsRect.left, layout.NotificationsRect.top,
-            layout.NotificationsRect.right - layout.NotificationsRect.left,
-            layout.NotificationsRect.bottom - layout.NotificationsRect.top, true);
-        Win32.MoveWindow(_hWndManagedNotifications,
-            layout.ManagedNotificationsRect.left, layout.ManagedNotificationsRect.top,
-            layout.ManagedNotificationsRect.right - layout.ManagedNotificationsRect.left,
-            layout.ManagedNotificationsRect.bottom - layout.ManagedNotificationsRect.top, true);
-        Win32.MoveWindow(_hWndChkOnboarding,
-            layout.OnboardingRect.left, layout.OnboardingRect.top,
-            layout.OnboardingRect.right - layout.OnboardingRect.left,
-            layout.OnboardingRect.bottom - layout.OnboardingRect.top, true);
-        Win32.MoveWindow(_hWndManagedOnboarding,
-            layout.ManagedOnboardingRect.left, layout.ManagedOnboardingRect.top,
-            layout.ManagedOnboardingRect.right - layout.ManagedOnboardingRect.left,
-            layout.ManagedOnboardingRect.bottom - layout.ManagedOnboardingRect.top, true);
-        Win32.MoveWindow(_hWndChkTraining,
-            layout.TrainingRect.left, layout.TrainingRect.top,
-            layout.TrainingRect.right - layout.TrainingRect.left,
-            layout.TrainingRect.bottom - layout.TrainingRect.top, true);
-        Win32.MoveWindow(_hWndRadioLangFr,
-            layout.LanguageFrRect.left, layout.LanguageFrRect.top,
-            layout.LanguageFrRect.right - layout.LanguageFrRect.left,
-            layout.LanguageFrRect.bottom - layout.LanguageFrRect.top, true);
-        Win32.MoveWindow(_hWndRadioLangEn,
-            layout.LanguageEnRect.left, layout.LanguageEnRect.top,
-            layout.LanguageEnRect.right - layout.LanguageEnRect.left,
-            layout.LanguageEnRect.bottom - layout.LanguageEnRect.top, true);
-        Win32.MoveWindow(_hWndManagedLanguage,
-            layout.ManagedLanguageRect.left, layout.ManagedLanguageRect.top,
-            layout.ManagedLanguageRect.right - layout.ManagedLanguageRect.left,
-            layout.ManagedLanguageRect.bottom - layout.ManagedLanguageRect.top, true);
-        Win32.MoveWindow(_hWndResetVirtualKeyboardWindow,
-            layout.ResetVirtualKeyboardWindowRect.left, layout.ResetVirtualKeyboardWindowRect.top,
-            layout.ResetVirtualKeyboardWindowRect.right - layout.ResetVirtualKeyboardWindowRect.left,
-            layout.ResetVirtualKeyboardWindowRect.bottom - layout.ResetVirtualKeyboardWindowRect.top, true);
-        Win32.MoveWindow(_hWndResetLessonsWindow,
-            layout.ResetLessonsWindowRect.left, layout.ResetLessonsWindowRect.top,
-            layout.ResetLessonsWindowRect.right - layout.ResetLessonsWindowRect.left,
-            layout.ResetLessonsWindowRect.bottom - layout.ResetLessonsWindowRect.top, true);
-        Win32.MoveWindow(_hWndCompatList,
-            layout.CompatListRect.left, layout.CompatListRect.top,
-            layout.CompatListRect.right - layout.CompatListRect.left,
-            layout.CompatListRect.bottom - layout.CompatListRect.top, true);
-        Win32.MoveWindow(_hWndCompatAdd,
-            layout.CompatAddRect.left, layout.CompatAddRect.top,
-            layout.CompatAddRect.right - layout.CompatAddRect.left,
-            layout.CompatAddRect.bottom - layout.CompatAddRect.top, true);
-        Win32.MoveWindow(_hWndCompatRemove,
-            layout.CompatRemoveRect.left, layout.CompatRemoveRect.top,
-            layout.CompatRemoveRect.right - layout.CompatRemoveRect.left,
-            layout.CompatRemoveRect.bottom - layout.CompatRemoveRect.top, true);
-        Win32.MoveWindow(_hWndRadioCompatAuto,
-            layout.CompatAutoRect.left, layout.CompatAutoRect.top,
-            layout.CompatAutoRect.right - layout.CompatAutoRect.left,
-            layout.CompatAutoRect.bottom - layout.CompatAutoRect.top, true);
-        Win32.MoveWindow(_hWndRadioCompatForceOn,
-            layout.CompatForceOnRect.left, layout.CompatForceOnRect.top,
-            layout.CompatForceOnRect.right - layout.CompatForceOnRect.left,
-            layout.CompatForceOnRect.bottom - layout.CompatForceOnRect.top, true);
-        Win32.MoveWindow(_hWndRadioCompatForceOff,
-            layout.CompatForceOffRect.left, layout.CompatForceOffRect.top,
-            layout.CompatForceOffRect.right - layout.CompatForceOffRect.left,
-            layout.CompatForceOffRect.bottom - layout.CompatForceOffRect.top, true);
-
-        Win32.MoveWindow(_hWndTabStrip,
-            layout.TabStripRect.left, layout.TabStripRect.top,
-            layout.TabStripRect.right - layout.TabStripRect.left,
-            layout.TabStripRect.bottom - layout.TabStripRect.top, true);
-
+        foreach (var control in _controls)
+            if (control.Bounds != null)
+                Place(control.Handle, control.Bounds(layout));
         ApplyTabVisibility();
     }
+
+    /// <summary>Place un contrôle. La mise en page est en coordonnées de contenu : c'est ici,
+    /// et au tracé, que le défilement s'applique.</summary>
+    private void Place(IntPtr hWnd, Win32.RECT r) =>
+        Win32.MoveWindow(hWnd, r.left, r.top - _scrollY, r.right - r.left, r.bottom - r.top, true);
 
     /// <summary>
     /// Masque les contrôles qui n'appartiennent pas à l'onglet actif. ⛔ Masquer et
@@ -923,45 +838,16 @@ sealed class SettingsWindow : IDisposable
     /// </summary>
     private void ApplyTabVisibility()
     {
-        bool general = _activeTab == SettingsTab.General;
-        bool apps = _activeTab == SettingsTab.Applications;
-        bool langMaint = _activeTab == SettingsTab.LanguageMaintenance;
-
-        Show(_hWndEditKeyboard, general);
-        Show(_hWndEditSearch, general);
-        Show(_hWndLinkReset, general);
-        Show(_hWndValidation, general);
-        Show(_hWndChkAutoStart, general);
-        Show(_hWndChkNotifications, general);
-        Show(_hWndChkOnboarding, general);
-        Show(_hWndChkTraining, general && DailyChallenge.Enabled);
-        Show(_hWndManagedNotifications, general && _managedNotifications);
-        Show(_hWndManagedOnboarding, general && _managedOnboarding);
-
-        Show(_hWndCompatList, apps);
-        Show(_hWndCompatAdd, apps);
-        Show(_hWndCompatRemove, apps);
-        Show(_hWndRadioCompatAuto, apps);
-        Show(_hWndRadioCompatForceOn, apps);
-        Show(_hWndRadioCompatForceOff, apps);
-
-        Show(_hWndRadioLangFr, langMaint);
-        Show(_hWndRadioLangEn, langMaint);
-        Show(_hWndManagedLanguage, langMaint && _managedLanguage);
-        Show(_hWndResetVirtualKeyboardWindow, langMaint);
-        Show(_hWndResetLessonsWindow, langMaint);
-
-        static void Show(IntPtr hWnd, bool visible)
+        foreach (var control in _controls)
         {
-            if (hWnd != IntPtr.Zero) Win32.ShowWindow(hWnd, visible ? 5 : 0); // SW_SHOW / SW_HIDE
+            if (control.Tab is not { } tab || control.Handle == IntPtr.Zero) continue;
+            bool visible = tab == _activeTab && (control.Shown?.Invoke() ?? true);
+            Win32.ShowWindow(control.Handle, visible ? 5 : 0); // SW_SHOW / SW_HIDE
         }
     }
 
     /// <summary>Les boutons poussoirs de la fenêtre — ceux qu'Entrée doit presser quand ils ont le focus.</summary>
-    private IntPtr[] PushButtons() => new[]
-    {
-        _hWndCompatAdd, _hWndCompatRemove, _hWndResetVirtualKeyboardWindow, _hWndResetLessonsWindow, _hWndLinkReset
-    };
+    private IntPtr[] PushButtons() => _controls.Where(c => c.PushButton).Select(c => c.Handle).ToArray();
 
     /// <summary>Change d'onglet et le redessine. La taille de la fenêtre ne change pas (C4) :
     /// FitWindowToContent ne fait que remesurer le contenu du nouvel onglet et armer ou
@@ -979,14 +865,15 @@ sealed class SettingsWindow : IDisposable
     }
 
     private LayoutInfo GetLayout(int winW) =>
-        GetLayout(winW, _activeTab, !string.IsNullOrEmpty(_validationMessage), _scrollY);
+        GetLayout(winW, _activeTab, !string.IsNullOrEmpty(_validationMessage));
 
     /// <summary>Mise en page d'un onglet donné. Les paramètres explicites permettent de
     /// mesurer un autre onglet que l'onglet affiché (taille fixe, C4). Seuls l'en-tête et
     /// l'onglet demandé sont calculés, chacun par sa fonction : les rectangles des autres
     /// onglets restent vides, leurs contrôles étant masqués par ApplyTabVisibility, jamais
-    /// déplacés hors écran (audit du 25/09, F-04).</summary>
-    private LayoutInfo GetLayout(int winW, SettingsTab tab, bool showValidationRow, int scrollY)
+    /// déplacés hors écran (audit du 25/09, F-04). Coordonnées de contenu : le défilement
+    /// s'applique au placement des contrôles (Place) et au tracé (SetViewportOrgEx).</summary>
+    private LayoutInfo GetLayout(int winW, SettingsTab tab, bool showValidationRow)
     {
         var m = Metrics;
         int margin = S(8);
@@ -1054,8 +941,6 @@ sealed class SettingsWindow : IDisposable
         CloseSection(ref layout.LanguagePanel);
         CloseSection(ref layout.WindowsPanel);
         layout.ContentHeight = panelBottom + margin;
-
-        ShiftLayout(ref layout, -scrollY);
         return layout;
 
         void CloseSection(ref Win32.RECT section)
@@ -1622,24 +1507,9 @@ sealed class SettingsWindow : IDisposable
         SetTabText(0, L.Settings_TabGeneral);
         SetTabText(1, L.Settings_TabApplications);
         SetTabText(2, L.Settings_TabLanguageMaintenance);
-        Win32.SetWindowTextW(_hWndLinkReset, L.Settings_LinkResetDefaults);
-        Win32.SetWindowTextW(_hWndLabelKeyboard, L.Settings_ShortcutLabelKeyboard);
-        Win32.SetWindowTextW(_hWndLabelSearch, L.Settings_ShortcutLabelSearch);
-        Win32.SetWindowTextW(_hWndLabelCompat, L.Settings_SectionCompat);
-        Win32.SetWindowTextW(_hWndChkAutoStart, L.Settings_AutoStart);
-        Win32.SetWindowTextW(_hWndChkNotifications, L.Settings_Notifications);
-        Win32.SetWindowTextW(_hWndChkOnboarding, L.Settings_OnboardingWindow);
-        Win32.SetWindowTextW(_hWndManagedNotifications, L.Settings_ManagedByOrganization);
-        Win32.SetWindowTextW(_hWndManagedOnboarding, L.Settings_ManagedByOrganization);
-        Win32.SetWindowTextW(_hWndManagedLanguage, L.Settings_ManagedByOrganization);
-        Win32.SetWindowTextW(_hWndChkTraining, L.Challenge_OptIn);
-        Win32.SetWindowTextW(_hWndResetVirtualKeyboardWindow, L.Settings_ResetVirtualKeyboard);
-        Win32.SetWindowTextW(_hWndResetLessonsWindow, L.Settings_ResetLessonsModule);
-        Win32.SetWindowTextW(_hWndCompatAdd, L.Settings_CompatAdd);
-        Win32.SetWindowTextW(_hWndCompatRemove, L.Settings_CompatRemove);
-        Win32.SetWindowTextW(_hWndRadioCompatAuto, L.Settings_CompatModeAuto);
-        Win32.SetWindowTextW(_hWndRadioCompatForceOn, L.Settings_CompatModeForceOn);
-        Win32.SetWindowTextW(_hWndRadioCompatForceOff, L.Settings_CompatModeForceOff);
+        foreach (var control in _controls)
+            if (control.Text != null)
+                Win32.SetWindowTextW(control.Handle, control.Text());
         RefreshCompatList(SelectedCompatProcess()); // libellés de mode traduits dans la liste
         RefreshShortcutTexts();
         SetValidationMessage(string.Empty);
@@ -1955,6 +1825,9 @@ sealed class SettingsWindow : IDisposable
 
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
         Win32.SetBkMode(hdc, 1);
+        // Le contenu se dessine en coordonnées de contenu, décalées du défilement. GDI+,
+        // créé après, suit la même origine (mesuré le 26/09).
+        Win32.SetViewportOrgEx(hdc, 0, -_scrollY, IntPtr.Zero);
 
         Win32.GdipCreateFromHDC(hdc, out IntPtr gfx);
         if (gfx != IntPtr.Zero)
@@ -1987,6 +1860,7 @@ sealed class SettingsWindow : IDisposable
         if (gfx != IntPtr.Zero)
             Win32.GdipDeleteGraphics(gfx);
 
+        Win32.SetViewportOrgEx(hdc, 0, 0, IntPtr.Zero);
         Win32.BitBlt(hdcPaint, 0, 0, cw, ch, hdc, 0, 0, Win32.SRCCOPY);
         Win32.SelectObject(hdc, hBmpOld);
         Win32.DeleteObject(hBmp);
