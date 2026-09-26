@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace AZERTYGlobal;
@@ -23,6 +22,7 @@ sealed class PauseDurationDialog : IDisposable
     // Zone client de référence, à 96 DPI.
     private const int BASE_CLIENT_W = 330;
     private const int BASE_CLIENT_H = 154;
+    private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
@@ -42,7 +42,7 @@ sealed class PauseDurationDialog : IDisposable
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
     private int _dpi = 96;
-    private readonly List<(IntPtr Hwnd, int X, int Y, int W, int H)> _layout = new();
+    private readonly ControlLayout _layout = new();
     private Action<string>? _onAppLanguageChanged;
     private bool _done;
     private TimeSpan? _result;
@@ -106,38 +106,24 @@ sealed class PauseDurationDialog : IDisposable
 
     private void CreateWindow(IntPtr owner)
     {
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(ClassName, _wndProcDelegate))
+            return;
+
         var hInstance = Win32.GetModuleHandleW(null);
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            lpszClassName = ClassName
-        };
-        Win32.RegisterClassExW(ref wc);
-
-        int clientW = BASE_CLIENT_W;
-        int clientH = BASE_CLIENT_H;
-        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        var windowRect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
-        Win32.AdjustWindowRectEx(ref windowRect, style, false, 0);
-        int windowW = windowRect.right - windowRect.left;
-        int windowH = windowRect.bottom - windowRect.top;
-
-        var work = GetWorkArea(owner);
-        int x = work.left + Math.Max(0, (work.right - work.left - windowW) / 2);
-        int y = work.top + Math.Max(0, (work.bottom - work.top - windowH) / 2);
+        var work = NativeWindow.WorkArea(owner);
+        var (windowW, windowH) = NativeWindow.OuterSize(BASE_CLIENT_W, BASE_CLIENT_H, Style);
+        var (x, y) = NativeWindow.CenterIn(work, windowW, windowH);
 
         _hWnd = Win32.CreateWindowExW(0, ClassName, L.Pause_WindowTitle,
-            style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
+            Style, x, y, windowW, windowH, owner, IntPtr.Zero, hInstance, IntPtr.Zero);
 
         // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
         // l'accueille. Taille, positions et police en découlent : elles étaient fixes en
         // pixels, et la fenêtre gardait sa taille 100 % à 200 %. Invisible jusqu'à ShowModal,
         // le redimensionnement ne se voit pas.
-        _dpi = Win32.GetDpiForWindowOrDefault(_hWnd);
-        FitWindowToDpi(work);
+        _dpi = NativeWindow.DpiOf(_hWnd);
+        NativeWindow.FitToDpi(_hWnd, BASE_CLIENT_W, BASE_CLIENT_H, _dpi, Style, 0, work);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd);
@@ -171,46 +157,13 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr CreateScaledFont() =>
         Win32.CreateFontW(S(-14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
 
-    /// <summary>D1 : taille de la fenêtre au DPI courant, centrée dans la zone de travail.</summary>
-    private void FitWindowToDpi(Win32.RECT work)
-    {
-        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        var rect = new Win32.RECT { left = 0, top = 0, right = S(BASE_CLIENT_W), bottom = S(BASE_CLIENT_H) };
-        Win32.AdjustWindowRectEx(ref rect, style, false, 0);
-        int windowW = rect.right - rect.left;
-        int windowH = rect.bottom - rect.top;
-        int x = work.left + Math.Max(0, (work.right - work.left - windowW) / 2);
-        int y = work.top + Math.Max(0, (work.bottom - work.top - windowH) / 2);
-        Win32.MoveWindow(_hWnd, x, y, windowW, windowH, false);
-    }
-
     /// <summary>D1 : police et géométrie des contrôles au nouveau DPI (WM_DPICHANGED).</summary>
     private void ApplyDpiToControls()
     {
         IntPtr oldFont = _hFont;
         _hFont = CreateScaledFont();
-        foreach (var (hwnd, x, y, w, h) in _layout)
-        {
-            Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, IntPtr.Zero);
-            Win32.MoveWindow(hwnd, S(x), S(y), S(w), S(h), true);
-        }
+        _layout.Apply(_dpi, _hFont);
         if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
-    }
-
-    private static Win32.RECT GetWorkArea(IntPtr owner)
-    {
-        IntPtr monitor = owner != IntPtr.Zero
-            ? Win32.MonitorFromWindow(owner, Win32.MONITOR_DEFAULTTONEAREST)
-            : IntPtr.Zero;
-
-        if (monitor == IntPtr.Zero && Win32.GetCursorPos(out var cursor))
-            monitor = Win32.MonitorFromPoint(cursor, Win32.MONITOR_DEFAULTTONEAREST);
-
-        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        if (monitor != IntPtr.Zero && Win32.GetMonitorInfo(monitor, ref info))
-            return info.rcWork;
-
-        return new Win32.RECT { left = 0, top = 0, right = 1024, bottom = 768 };
     }
 
     private void CreateControls(IntPtr hInstance)
@@ -273,7 +226,7 @@ sealed class PauseDurationDialog : IDisposable
         var hwnd = Win32.CreateWindowExW(0, "STATIC", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE,
             S(x), S(y), S(w), S(h), _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
-        _layout.Add((hwnd, x, y, w, h));
+        _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         return hwnd;
     }
@@ -284,7 +237,7 @@ sealed class PauseDurationDialog : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP |
             ES_AUTOHSCROLL | ES_CENTER | ES_NUMBER,
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
-        _layout.Add((hwnd, x, y, w, h));
+        _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         return hwnd;
     }
@@ -294,7 +247,7 @@ sealed class PauseDurationDialog : IDisposable
         var hwnd = Win32.CreateWindowExW(0, "BUTTON", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | style,
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
-        _layout.Add((hwnd, x, y, w, h));
+        _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         return hwnd;
     }
@@ -348,17 +301,10 @@ sealed class PauseDurationDialog : IDisposable
                     }
                     break;
                 case Win32.WM_DPICHANGED:
-                {
-                    // D1 : même traitement que LayoutConflictWindow — fenêtre au rectangle
-                    // suggéré par Windows, police et contrôles au nouveau DPI.
-                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
-                    if (newDpi > 0) _dpi = newDpi;
-                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
-                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
-                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    // D1 : fenêtre au rectangle suggéré, police et contrôles au nouveau DPI.
+                    _dpi = NativeWindow.ApplyDpiChange(_hWnd, wParam, lParam);
                     ApplyDpiToControls();
                     return IntPtr.Zero;
-                }
                 case Win32.WM_CLOSE:
                     Close(null);
                     return IntPtr.Zero;
@@ -451,6 +397,6 @@ sealed class PauseDurationDialog : IDisposable
             Win32.DeleteObject(_hFont);
             _hFont = IntPtr.Zero;
         }
-        Win32.UnregisterClassW(ClassName, Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(ClassName);
     }
 }

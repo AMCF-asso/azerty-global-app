@@ -44,7 +44,7 @@ internal sealed class LayerIndicatorWindow : IDisposable
         // D1 (accessibilité 1.3.0) : police au DPI de l'écran de la fenêtre, et non plus
         // 15 px fixes ; la taille suit dans RefreshPosition, WM_DPICHANGED suit le caret
         // d'un écran à l'autre.
-        _dpi = Win32.GetDpiForWindowOrDefault(_hWnd);
+        _dpi = NativeWindow.DpiOf(_hWnd);
         RecreateFont();
     }
 

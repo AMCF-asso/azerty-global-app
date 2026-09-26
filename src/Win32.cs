@@ -305,8 +305,14 @@ static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern uint RegisterWindowMessageW(string lpString);
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    // SetLastError : NativeWindow.RegisterClass lit l'erreur 1410 (classe déjà enregistrée).
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern ushort RegisterClassExW(ref WNDCLASSEXW lpwcx);
+
+    public const int GCLP_HBRBACKGROUND = -10;
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetClassLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -656,16 +662,6 @@ static class Win32
 
     [DllImport("user32.dll")]
     public static extern int GetDpiForWindow(IntPtr hWnd);
-
-    /// <summary>
-    /// D1 (accessibilité 1.3.0) : DPI de l'écran qui porte la fenêtre, 96 quand la mesure
-    /// échoue (HWND nul ou détruit : GetDpiForWindow rend 0).
-    /// </summary>
-    public static int GetDpiForWindowOrDefault(IntPtr hWnd)
-    {
-        int dpi = hWnd != IntPtr.Zero ? GetDpiForWindow(hWnd) : 0;
-        return dpi > 0 ? dpi : 96;
-    }
 
     [DllImport("kernel32.dll")]
     public static extern uint GetCurrentThreadId();

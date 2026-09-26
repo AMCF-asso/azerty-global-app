@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace AZERTYGlobal;
@@ -27,6 +26,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const int IDC_DELAY = 5206;
     private const int IDC_SAVE = 5208;
 
+    private static readonly string ClassName = ProductIdentity.WindowClass("MaintainableLayers");
+    private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
     private IntPtr _hMaster;
@@ -40,7 +42,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
     private int _dpi = 96;
-    private readonly List<(IntPtr Control, int X, int Y, int W, int H, bool Title)> _layout = new();
+    // Polices du _layout : 0 = texte, 1 = titre.
+    private readonly ControlLayout _layout = new();
     private const int BASE_CLIENT_W = 520;
     private const int BASE_CLIENT_H = 408;
     private IntPtr _hBgBrush;
@@ -82,43 +85,29 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
     private void CreateWindow()
     {
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(ClassName, _wndProcDelegate))
+            return;
+
         IntPtr instance = Win32.GetModuleHandleW(null);
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = instance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            // Sans brosse de classe, le fond n'est jamais effacé : au-dessus d'un jeu
-            // plein écran, la fenêtre laissait voir la scène et ses contrôles en double
-            // (constaté au smoke v1.2.0 du 2026-08-24, sous Trackmania).
-            hbrBackground = _hBgBrush = Win32.CreateSolidBrush(CLR_BG),
-            lpszClassName = ProductIdentity.WindowClass("MaintainableLayers")
-        };
-        Win32.RegisterClassExW(ref wc);
+        var work = NativeWindow.WorkArea();
+        var (width, height) = NativeWindow.OuterSize(BASE_CLIENT_W, BASE_CLIENT_H, Style);
+        var (x, y) = NativeWindow.CenterIn(work, width, height);
 
-        const int clientW = BASE_CLIENT_W;
-        const int clientH = BASE_CLIENT_H;
-        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        var rect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
-        Win32.AdjustWindowRectEx(ref rect, style, false, 0);
-
-        var work = GetWorkArea();
-        int width = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        int x = work.left + Math.Max(0, (work.right - work.left - width) / 2);
-        int y = work.top + Math.Max(0, (work.bottom - work.top - height) / 2);
-
-        _hWnd = Win32.CreateWindowExW(0, ProductIdentity.WindowClass("MaintainableLayers"),
+        _hWnd = Win32.CreateWindowExW(0, ClassName,
             $"{ProductIdentity.DisplayName} — {L.Layers_WindowTitleSuffix}",
-            style, x, y, width, height, IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
+            Style, x, y, width, height, IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
+        // Sans fond de classe, le fond n'est jamais effacé : au-dessus d'un jeu plein
+        // écran, la fenêtre laissait voir la scène et ses contrôles en double (constaté
+        // au smoke v1.2.0 du 2026-08-24, sous Trackmania).
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
         Win32.EnableDarkTitleBar(_hWnd);
 
         // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
         // l'accueille. Taille, positions et polices en découlent : elles étaient fixes en
         // pixels, et la fenêtre gardait sa taille 100 % à 200 %.
-        _dpi = Win32.GetDpiForWindowOrDefault(_hWnd);
-        FitWindowToDpi(work);
+        _dpi = NativeWindow.DpiOf(_hWnd);
+        NativeWindow.FitToDpi(_hWnd, BASE_CLIENT_W, BASE_CLIENT_H, _dpi, Style, 0, work);
         CreateFonts();
 
         CreateStatic(instance, L.Layers_Title, 24, 20, 470, 26, _hFontTitle);
@@ -179,21 +168,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     /// <summary>D1 : retient la géométrie de référence du contrôle et l'applique au DPI courant.</summary>
     private void Track(IntPtr control, int x, int y, int w, int h, bool title = false)
     {
-        _layout.Add((control, x, y, w, h, title));
+        _layout.Track(control, x, y, w, h, title ? 1 : 0);
         Win32.MoveWindow(control, S(x), S(y), S(w), S(h), false);
-    }
-
-    /// <summary>D1 : taille de la fenêtre au DPI courant, centrée dans la zone de travail.</summary>
-    private void FitWindowToDpi(Win32.RECT work)
-    {
-        uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        var rect = new Win32.RECT { left = 0, top = 0, right = S(BASE_CLIENT_W), bottom = S(BASE_CLIENT_H) };
-        Win32.AdjustWindowRectEx(ref rect, style, false, 0);
-        int width = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        int x = work.left + Math.Max(0, (work.right - work.left - width) / 2);
-        int y = work.top + Math.Max(0, (work.bottom - work.top - height) / 2);
-        Win32.MoveWindow(_hWnd, x, y, width, height, false);
     }
 
     /// <summary>D1 : polices et contrôles au nouveau DPI (WM_DPICHANGED).</summary>
@@ -202,11 +178,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         IntPtr oldFont = _hFont;
         IntPtr oldTitle = _hFontTitle;
         CreateFonts();
-        foreach (var (control, x, y, w, h, title) in _layout)
-        {
-            SetFont(control, title ? _hFontTitle : _hFont);
-            Win32.MoveWindow(control, S(x), S(y), S(w), S(h), true);
-        }
+        _layout.Apply(_dpi, _hFont, _hFontTitle);
         if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
         if (oldTitle != IntPtr.Zero) Win32.DeleteObject(oldTitle);
     }
@@ -309,17 +281,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     Win32.SetBkMode(wParam, 1);
                     return _hBgBrush;
                 case Win32.WM_DPICHANGED:
-                {
-                    // D1 : même traitement que LayoutConflictWindow — fenêtre au rectangle
-                    // suggéré par Windows, polices et contrôles au nouveau DPI.
-                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
-                    if (newDpi > 0) _dpi = newDpi;
-                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
-                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
-                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    // D1 : fenêtre au rectangle suggéré, polices et contrôles au nouveau DPI.
+                    _dpi = NativeWindow.ApplyDpiChange(_hWnd, wParam, lParam);
                     ApplyDpiToControls();
                     return IntPtr.Zero;
-                }
                 case Win32.WM_CLOSE:
                     Hide();
                     return IntPtr.Zero;
@@ -338,17 +303,6 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private static void SetChecked(IntPtr control, bool value) =>
         Win32.SendMessageW(control, BM_SETCHECK, value ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
 
-    private static Win32.RECT GetWorkArea()
-    {
-        IntPtr monitor = Win32.GetCursorPos(out var cursor)
-            ? Win32.MonitorFromPoint(cursor, Win32.MONITOR_DEFAULTTONEAREST)
-            : IntPtr.Zero;
-        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        return monitor != IntPtr.Zero && Win32.GetMonitorInfo(monitor, ref info)
-            ? info.rcWork
-            : new Win32.RECT { left = 0, top = 0, right = 1024, bottom = 768 };
-    }
-
     public void Dispose()
     {
         if (_hWnd != IntPtr.Zero)
@@ -360,7 +314,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         }
         if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
         if (_hFontTitle != IntPtr.Zero) Win32.DeleteObject(_hFontTitle);
-        Win32.UnregisterClassW(ProductIdentity.WindowClass("MaintainableLayers"), Win32.GetModuleHandleW(null));
-        if (_hBgBrush != IntPtr.Zero) Win32.DeleteObject(_hBgBrush);
+        // Le fond est celui de la classe : Windows le détruit ici.
+        NativeWindow.UnregisterClass(ClassName);
     }
 }
