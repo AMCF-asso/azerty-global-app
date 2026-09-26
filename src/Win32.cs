@@ -450,6 +450,9 @@ static class Win32
     public static extern int SetBkMode(IntPtr hdc, int mode);
 
     [DllImport("gdi32.dll")]
+    public static extern bool SetViewportOrgEx(IntPtr hdc, int x, int y, IntPtr lpPoint);
+
+    [DllImport("gdi32.dll")]
     public static extern uint SetTextColor(IntPtr hdc, uint crColor);
 
     [DllImport("gdi32.dll")]
