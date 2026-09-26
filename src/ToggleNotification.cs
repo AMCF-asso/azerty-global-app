@@ -155,16 +155,11 @@ internal sealed class ToggleNotification : IDisposable
 
     private void OnPaint(IntPtr hWnd)
     {
-        var hdcPaint = Win32.BeginPaint(hWnd, out var ps);
-        Win32.GetClientRect(hWnd, out var clientRect);
+        using var paint = new PaintBuffer(hWnd);
+        var clientRect = paint.Client;
         int cw = clientRect.right;
         int ch = clientRect.bottom;
-
-        var hdcScreen = Win32.GetDC(IntPtr.Zero);
-        var hdc = Win32.CreateCompatibleDC(hdcScreen);
-        var hBmp = Win32.CreateCompatibleBitmap(hdcScreen, cw, ch);
-        var hBmpOld = Win32.SelectObject(hdc, hBmp);
-        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+        var hdc = paint.Hdc;
 
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
         Win32.SetBkMode(hdc, 1);
@@ -174,12 +169,6 @@ internal sealed class ToggleNotification : IDisposable
         string text = _currentActivated ? L.Toggle_Activated : L.Toggle_Deactivated;
         Win32.DrawTextW(hdc, text, -1, ref clientRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-
-        Win32.BitBlt(hdcPaint, 0, 0, cw, ch, hdc, 0, 0, Win32.SRCCOPY);
-        Win32.SelectObject(hdc, hBmpOld);
-        Win32.DeleteObject(hBmp);
-        Win32.DeleteDC(hdc);
-        Win32.EndPaint(hWnd, ref ps);
     }
 
     public void Dispose()
