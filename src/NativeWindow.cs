@@ -236,6 +236,12 @@ static class NativeWindow
 internal sealed class ControlLayout
 {
     private readonly List<(IntPtr Control, int X, int Y, int W, int H, int Font)> _items = new();
+    private readonly IntPtr _redrawOnFont;
+
+    /// <param name="redrawOnFont">WM_SETFONT avec repeint immédiat, avant le déplacement.
+    /// Sur une fenêtre qui n'efface pas son fond, le contrôle repeint à son ancienne place
+    /// y laisse sa trace (mesuré au banc le 26/09) : la Durée de pause ne le demande pas.</param>
+    public ControlLayout(bool redrawOnFont = true) => _redrawOnFont = redrawOnFont ? (IntPtr)1 : IntPtr.Zero;
 
     /// <summary>Retient un contrôle. <paramref name="font"/> est un indice dans les polices
     /// que reçoit <see cref="Apply"/>.</summary>
@@ -258,7 +264,7 @@ internal sealed class ControlLayout
     {
         foreach (var (control, font, x, y, w, h) in Plan(dpi))
         {
-            Win32.SendMessageW(control, Win32.WM_SETFONT, fonts[font], (IntPtr)1);
+            Win32.SendMessageW(control, Win32.WM_SETFONT, fonts[font], _redrawOnFont);
             Win32.MoveWindow(control, x, y, w, h, true);
         }
     }

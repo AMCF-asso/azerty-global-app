@@ -42,7 +42,7 @@ sealed class PauseDurationDialog : IDisposable
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
     private int _dpi = 96;
-    private readonly ControlLayout _layout = new();
+    private readonly ControlLayout _layout = new(redrawOnFont: false);
     private Action<string>? _onAppLanguageChanged;
     private bool _done;
     private TimeSpan? _result;
