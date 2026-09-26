@@ -121,7 +121,7 @@ Version 1.3.0 :
 • Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
 • Les fenêtres se parcourent mieux au clavier (Tab, Entrée, Échap) et le Narrateur lit le nom des champs qui n’en avaient pas.
 • Les fenêtres Paramètres et Leçons s’adaptent à la taille et à la mise à l’échelle de l’écran.
-• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global ; un accent en attente ne réapparaît plus dans une autre application après un changement de fenêtre.
+• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global ; un accent en attente ne réapparaît plus dans une autre application après un changement de fenêtre ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
 
 ### Mots-clés de recherche (max 7, séparés par des points-virgules)
@@ -245,7 +245,7 @@ Version 1.3.0:
 • If the app doesn't start with Windows, a one-time notification offers to turn it on.
 • Windows are easier to use with the keyboard (Tab, Enter, Esc), and Narrator reads the name of fields that had none.
 • The Settings and Lessons windows adapt to your screen size and display scaling.
-• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off; a pending accent no longer shows up in another app after you switch windows.
+• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the standard AZERTY.
 ```
 
 ### Search terms (max 7, semicolon-separated)
