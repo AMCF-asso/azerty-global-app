@@ -49,7 +49,7 @@ internal sealed class KeyboardRenderState
     /// <summary>Exercices 1 et 2 du tutoriel : Verr. Maj. reste surlignée en « direct », sans
     /// pastille, quel que soit le genre des autres touches.</summary>
     public bool KeepCapsLockHighlight { get; set; }
-    /// <summary>Échelle d'interface du tutoriel (1 à 96 DPI) : pastilles et touche morte armée.</summary>
+    /// <summary>Échelle d'interface du tutoriel (1 à 96 DPI), pour ses pastilles.</summary>
     public float UiScale { get; init; } = 1f;
 }
 
@@ -71,7 +71,6 @@ internal static class KeyboardRenderer
     private const uint CLR_DK_CHAR = 0x006666FF;
     private const uint CLR_DK_ACTIVE_TEXT = 0x000080FF;
     private const uint CLR_CAPS_BAR = 0x0000A5FF;
-    private const uint CLR_DK_RESULT = 0x0066CC66;
 
     // Surlignage du tutoriel, contour puis fond : direct vert, étape 1 orange, étape 2 vert.
     private const uint CLR_HL_DIRECT_BG = 0x00284018;
@@ -451,8 +450,6 @@ internal static class KeyboardRenderer
 
         if (key.IsContextual || key.Scancode == 0 || !layout.Keys.TryGetValue(key.Scancode, out var def))
             DrawContextKeyLabel(hdc, rect, key, isoEnter, disabledBackspace, tutorial, fonts.Context);
-        else if (tutorial && state.ActiveDeadKey != null && layout.DeadKeys.TryGetValue(state.ActiveDeadKey, out var dk))
-            DrawTutorialDeadKeyResult(hdc, rect, key, def, dk, state, fonts);
         else
             DrawKeyCharacters(hdc, rect, key, FilterKeyForProfile(def, key.Scancode, profile, state), layout, profile, state,
                 placement.Scale, fonts);
@@ -565,52 +562,6 @@ internal static class KeyboardRenderer
             PaintLetterKey(hdc, kx, ky, kw, kh, keyDef, pad, state, style, fonts.Main, fonts.Small);
         else
             PaintSymbolKey(hdc, kx, ky, kw, kh, keyDef, pad, state, style, fonts.Main, fonts.Small, fonts.Tiny);
-    }
-
-    /// <summary>
-    /// Tutoriel, touche morte armée : ce que donne chaque touche, en vert, au-dessus de son nom.
-    /// Maj ou Verr. Maj. mettent la lettre en majuscule ; AltGr n'y entre pas ; l'espace donne
-    /// l'accent seul. Les Leçons montrent, elles, la sortie des couches tenues.
-    /// </summary>
-    private static void DrawTutorialDeadKeyResult(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key,
-        KeyDefinition keyDef, DeadKeyDefinition dk, KeyboardRenderState state, KeyboardFonts fonts)
-    {
-        int S(int value) => (int)(value * state.UiScale);
-        int kx = rect.left;
-        int ky = rect.top;
-        int kw = rect.right - rect.left;
-        int kh = rect.bottom - rect.top;
-        bool isLetterKey = LetterKeyScancodes.Contains(key.Scancode) && IsLetterChar(keyDef.Base);
-        string? lookupChar;
-        if (isLetterKey && (state.Shift || state.CapsLock))
-            lookupChar = keyDef.Base?.ToUpperInvariant();
-        else if (!isLetterKey && state.Shift)
-            lookupChar = keyDef.Shift;
-        else
-            lookupChar = keyDef.Base;
-
-        string? result = lookupChar != null ? dk.Apply(lookupChar) : null;
-        if (key.Scancode == 0x39) result = dk.GetIsolated();
-
-        int labelH = Math.Max(S(16), kh / 3);
-        int labelTop = Math.Max(ky, ky + kh - labelH - S(2));
-        const uint flags = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP;
-
-        if (!string.IsNullOrEmpty(result))
-        {
-            var oldFont = Win32.SelectObject(hdc, fonts.DeadKey);
-            Win32.SetTextColor(hdc, CLR_DK_RESULT);
-            var charRect = new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = Math.Max(ky + S(12), labelTop - S(1)) };
-            Win32.DrawTextW(hdc, result, result.Length, ref charRect, flags);
-            Win32.SelectObject(hdc, oldFont);
-        }
-
-        var oldLabelFont = Win32.SelectObject(hdc, fonts.Context);
-        Win32.SetTextColor(hdc, CLR_CTX_TEXT);
-        var labelRect = new Win32.RECT { left = kx, top = labelTop, right = kx + kw, bottom = ky + kh - S(1) };
-        string keyCap = L.Keyboard_KeyCap(key.Label);
-        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect, flags);
-        Win32.SelectObject(hdc, oldLabelFont);
     }
 
     private static void DrawActiveDeadKeyCharacter(

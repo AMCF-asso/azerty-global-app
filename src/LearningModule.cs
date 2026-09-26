@@ -198,6 +198,7 @@ sealed class LearningModule : IDisposable
     private IntPtr _hFontCharMain;
     private IntPtr _hFontCharDeadKey;
     private IntPtr _hFontCharSmall;
+    private IntPtr _hFontCharTiny;
     private IntPtr _hFontCtx;
     private IntPtr _hFontTransition;
     private IntPtr _hFontBadge;
@@ -409,6 +410,8 @@ sealed class LearningModule : IDisposable
         _hFontCharMain = Win32.CreateFontW(S(FONT_CHAR_MAIN), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hFontCharDeadKey = Win32.CreateFontW(S(FONT_CHAR_DEAD_KEY), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hFontCharSmall = Win32.CreateFontW(S(FONT_CHAR_SMALL), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
+        // Nom des touches sous le résultat d'une touche morte armée : la taille des Leçons.
+        _hFontCharTiny = Win32.CreateFontW(S(16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontCtx = Win32.CreateFontW(S(FONT_CTX), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontTransition = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontBadge = Win32.CreateFontW(S(9), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
@@ -424,6 +427,7 @@ sealed class LearningModule : IDisposable
         Win32.DeleteObject(_hFontCharMain);
         Win32.DeleteObject(_hFontCharDeadKey);
         Win32.DeleteObject(_hFontCharSmall);
+        Win32.DeleteObject(_hFontCharTiny);
         Win32.DeleteObject(_hFontCtx);
         Win32.DeleteObject(_hFontTransition);
         Win32.DeleteObject(_hFontBadge);
@@ -1723,7 +1727,7 @@ sealed class LearningModule : IDisposable
         var placement = new KeyboardPlacement(geo.OffsetX, kbTop + geo.OffsetY, geo.Scale);
         _keyboardPlacement = placement;
         KeyboardRenderer.DrawKeys(hdc, placement, _layout, KeyboardRenderProfile.Onboarding, BuildKeyboardState(),
-            new KeyboardFonts(_hFontCharMain, _hFontCharDeadKey, _hFontCharSmall, _hFontCharSmall, _hFontCtx, _hFontBadge));
+            new KeyboardFonts(_hFontCharMain, _hFontCharDeadKey, _hFontCharSmall, _hFontCharTiny, _hFontCtx, _hFontBadge));
 
         // Overlay « pause » quand la fenêtre n'a plus le focus clavier (option A).
         // Affiche apres debounce 250ms (TIMER_FOCUS_LOST_CONFIRM) pour eviter d'apparaitre
