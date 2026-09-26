@@ -582,7 +582,7 @@ sealed class OnboardingWindow : IDisposable
         //   - 3+ exos             -> etat C (« Suivant » seul, l'utilisateur a fait l'essentiel)
         int completed = ConfigManager.LearningMaxStepCompleted;
         _learningModuleAttempted = completed >= 1;
-        _learningModuleDone = completed >= 3;
+        _learningModuleDone = completed >= TutorialSteps.DoneThreshold;
         UpdateStepVisibility();
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);

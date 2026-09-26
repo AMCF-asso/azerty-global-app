@@ -294,7 +294,7 @@ sealed class TrayApplication : IDisposable
             // SAUF si l'utilisateur a explicitement désactivé l'option dans les Settings
             // (priorité au choix manuel — cf. Q2 du plan UX 2026-05-02).
             bool shouldShowOnboarding = ConfigManager.ActivationPromptAtStartup || (ConfigManager.ShowOnboardingAtStartup
-                                     && ConfigManager.LearningMaxStepCompleted < 3);
+                                     && ConfigManager.LearningMaxStepCompleted < TutorialSteps.DoneThreshold);
 #endif
             if (shouldShowOnboarding)
             {
