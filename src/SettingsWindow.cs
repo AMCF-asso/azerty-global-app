@@ -1828,17 +1828,12 @@ sealed class SettingsWindow : IDisposable
 
     private void OnPaint(IntPtr hWnd)
     {
-        var hdcPaint = Win32.BeginPaint(hWnd, out var ps);
-        Win32.GetClientRect(hWnd, out var clientRect);
+        using var paint = new PaintBuffer(hWnd);
+        var clientRect = paint.Client;
         int cw = clientRect.right;
         int ch = clientRect.bottom;
         LayoutInfo layout = GetLayout(cw);
-
-        var hdcScreen = Win32.GetDC(IntPtr.Zero);
-        var hdc = Win32.CreateCompatibleDC(hdcScreen);
-        var hBmp = Win32.CreateCompatibleBitmap(hdcScreen, cw, ch);
-        var hBmpOld = Win32.SelectObject(hdc, hBmp);
-        Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
+        var hdc = paint.Hdc;
 
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
         Win32.SetBkMode(hdc, 1);
@@ -1878,11 +1873,6 @@ sealed class SettingsWindow : IDisposable
             Win32.GdipDeleteGraphics(gfx);
 
         Win32.SetViewportOrgEx(hdc, 0, 0, IntPtr.Zero);
-        Win32.BitBlt(hdcPaint, 0, 0, cw, ch, hdc, 0, 0, Win32.SRCCOPY);
-        Win32.SelectObject(hdc, hBmpOld);
-        Win32.DeleteObject(hBmp);
-        Win32.DeleteDC(hdc);
-        Win32.EndPaint(hWnd, ref ps);
     }
 
     private void DrawHeader(IntPtr hdc, IntPtr gfx, LayoutInfo layout, int cw)
