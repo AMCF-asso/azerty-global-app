@@ -9,7 +9,8 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Banc des fenêtres qui portent un clavier : Leçons (trois états de modifieur et les deux cas
 /// d'indice), clavier virtuel, mini-tutoriel de l'accueil, et une nappe du moteur de rendu
-/// seul. Une image par sujet, par langue et par échelle.
+/// seul. Une image par sujet, par langue et par échelle. Les états du tutoriel et les indices
+/// de touche morte armée sont dans <c>KeyboardContextBench.Tutoriel.cs</c>.
 ///
 /// Le mapper repose sur <see cref="MockWin32Api"/> : toute injection y est absorbée, et
 /// <c>SendInput</c> n'est jamais appelé. Le hook clavier est construit, jamais installé :
@@ -26,7 +27,7 @@ namespace AZERTYGlobal.Tests;
 /// dotnet test src\AZERTYGlobal.Tests\AZERTYGlobal.Tests.csproj -c Release --filter FullyQualifiedName~KeyboardContextBench
 /// </code>
 /// </summary>
-public class KeyboardContextBench
+public partial class KeyboardContextBench
 {
     private const string GateVariable = "AZERTY_CONTEXTE";
 
