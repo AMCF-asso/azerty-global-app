@@ -2,7 +2,11 @@ name: Captures des fenêtres
 
 # Banc de capture (CaptureBench, KeyboardContextBench) : rend les fenêtres de l'application en
 # PNG depuis le processus de test, sans lancer l'application, pour un contrôle visuel
-# avant/après. Déclenché à la main seulement : aucun push, aucune pull request ne le lance.
+# avant/après. Deux déclenchements, aucune pull request :
+#   - à la main (workflow_dispatch), une fois ce fichier présent sur la branche par défaut ;
+#   - par le push d'une branche captures/<ref> : le fichier vient du commit poussé, et la ref
+#     rendue est le suffixe du nom (captures/4161a0f rend 4161a0f). Décision d'Antoine du
+#     26/09 : le lancement manuel exigeait ce fichier sur main. Supprimer la branche ensuite.
 #
 # Pour un avant/après : un lancement par ref, puis, sur le poste,
 #   python scripts/compare-captures.py --avant avant/passe1 avant/passe2 --apres apres/passe1 apres/passe2 --diff diff
@@ -12,6 +16,8 @@ name: Captures des fenêtres
 # travail (Leçons, Paramètres) y sont réduites selon l'écran du runner.
 
 on:
+  push:
+    branches: ['captures/**']
   workflow_dispatch:
     inputs:
       ref:
@@ -41,11 +47,25 @@ jobs:
   captures:
     runs-on: windows-latest
     timeout-minutes: 30
+    # Sans workflow_dispatch, les entrées sont vides : valeurs par défaut ci-dessous.
+    env:
+      BANC_DEFAUT: ${{ inputs.banc || 'lot/banc-capture' }}
+      DPI: ${{ inputs.dpi || '96,120,144,168' }}
+      LANGUES: ${{ inputs.langues || 'fr,en' }}
     steps:
+      - name: Ref à rendre
+        id: cible
+        shell: bash
+        env:
+          ENTREE: ${{ inputs.ref }}
+        run: |
+          if [ -n "$ENTREE" ]; then ref="$ENTREE"; else ref="${GITHUB_REF_NAME#captures/}"; fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - name: Checkout de la ref demandée
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ steps.cible.outputs.ref }}
           fetch-depth: 0
 
       - name: Identifier le commit rendu
@@ -69,7 +89,7 @@ jobs:
       - name: Déposer le banc s'il manque
         shell: bash
         env:
-          BANC: ${{ inputs.banc }}
+          BANC: ${{ env.BANC_DEFAUT }}
         run: |
           set -euo pipefail
           source="origin/${BANC}"
@@ -98,8 +118,8 @@ jobs:
           AZERTY_CAPTURE: "1"
           AZERTY_CONTEXTE: "1"
           AZERTY_CAPTURE_DIR: ${{ github.workspace }}/captures/passe1
-          AZERTY_CAPTURE_DPI: ${{ inputs.dpi }}
-          AZERTY_CAPTURE_LANG: ${{ inputs.langues }}
+          AZERTY_CAPTURE_DPI: ${{ env.DPI }}
+          AZERTY_CAPTURE_LANG: ${{ env.LANGUES }}
         run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CaptureBench|FullyQualifiedName~KeyboardContextBench"
 
       - name: Passe 2
@@ -108,8 +128,8 @@ jobs:
           AZERTY_CAPTURE: "1"
           AZERTY_CONTEXTE: "1"
           AZERTY_CAPTURE_DIR: ${{ github.workspace }}/captures/passe2
-          AZERTY_CAPTURE_DPI: ${{ inputs.dpi }}
-          AZERTY_CAPTURE_LANG: ${{ inputs.langues }}
+          AZERTY_CAPTURE_DPI: ${{ env.DPI }}
+          AZERTY_CAPTURE_LANG: ${{ env.LANGUES }}
         run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CaptureBench|FullyQualifiedName~KeyboardContextBench"
 
       # Le code de retour des passes ne suffit pas : on compte les PNG. Deux passes qui ne
@@ -118,7 +138,7 @@ jobs:
         if: always()
         shell: bash
         env:
-          REF: ${{ inputs.ref }}
+          REF: ${{ steps.cible.outputs.ref }}
           SHA: ${{ steps.ident.outputs.sha }}
         run: |
           set -uo pipefail
