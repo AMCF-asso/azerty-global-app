@@ -126,7 +126,7 @@ internal sealed class LessonsWindow : IDisposable
     private bool _challengeShareCopied;
     private bool _challengeSharedThisSession;
     private char? _hintCharacter;
-    private LessonHintMethod? _hintMethod;
+    private MethodData? _hintMethod;
     private bool _hintBackspace;
     private bool _hintButtonActive;
     private uint _pressedScancode;
@@ -2450,28 +2450,10 @@ internal sealed class LessonsWindow : IDisposable
         if (!string.IsNullOrEmpty(_hintMethod.DeadKeyToken))
             state.LessonVisibleCharacters.Add(_hintMethod.DeadKeyToken);
 
-        var step = LessonHintProvider.GetCurrentStep(_hintMethod, _mapper.ActiveDeadKey);
-        AddHintStepHighlight(state, step);
-    }
-
-    private static void AddHintStepHighlight(KeyboardRenderState state, LessonHintKeyStep step)
-    {
-        if (!string.IsNullOrEmpty(step.Key) &&
-            VirtualKeyboard.KeyCodeToScancode.TryGetValue(step.Key, out var scancode))
-            state.HighlightedScancodes.Add(scancode);
-
-        AddLayerHighlights(state, step.Layer);
-    }
-
-    private static void AddLayerHighlights(KeyboardRenderState state, string? layer)
-    {
-        layer ??= "";
-        if (layer.Contains("Shift", StringComparison.OrdinalIgnoreCase))
-            state.HighlightedContextIds.Add(VirtualKeyboard.ContextShiftLeft);
-        if (layer.Contains("AltGr", StringComparison.OrdinalIgnoreCase))
-            state.HighlightedLabels.Add("AltGr");
-        if (layer.Contains("Caps", StringComparison.OrdinalIgnoreCase))
-            state.HighlightedLabels.Add("Verr. Maj.");
+        // Même guidage que le tutoriel, réglé pour les Leçons : la méthode recommandée,
+        // armement puis touche finale (audit du 25/09, L-02).
+        LessonHintProvider.Guide(state, _hintMethod, _hintCharacter?.ToString() ?? "", _mapper.ActiveDeadKey,
+            _mapper.CapsLockActive, GuideOptions.Lessons);
     }
 
     private void ToggleAutoHints()
