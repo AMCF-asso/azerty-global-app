@@ -8,93 +8,121 @@
 
 ## 🇫🇷 Français (langue principale)
 
+> Textes de la variante B (réécriture), retenue par Antoine le 2026-09-26. Chaque bloc entre clôtures se colle tel quel, sans les clôtures.
+
 ### Nom affiché
 
 AZERTY Global - Clavier français amélioré
 
-### Description courte (max 100 caractères)
+### Description courte (1 000 caractères au plus, 270 affichés dans certaines vues)
 
-Clavier français amélioré : majuscules accentuées, point direct, presque aucun réapprentissage.
+> Limites : Microsoft Learn, *Add and edit Store listing info for MSIX app*, page mise à jour le 2026-08-24.
+
+```text
+É, È, Ç et À en un appui, les guillemets « » et le point sans Maj, sur le clavier que vous avez déjà. Les lettres A à Z et les chiffres restent à leur place. Gratuit et libre, sans compte.
+```
 
 ### Description longue
 
-AZERTY Global est l’AZERTY corrigé : les lettres A à Z ainsi que é, è, à et ç restent à leur place ; seul ù est déplacé. La ponctuation est améliorée, les majuscules accentuées sont directes et les symboles de programmation plus accessibles.
+> Sans clic, le Store montre la description courte puis les 8 premières lignes de la description (mesuré sur apps.microsoft.com le 2026-09-26, fenêtre de 1 024 px) : les trois premiers paragraphes ci-dessous y tiennent.
 
-Installez l’application, activez-la dans l’accueil — c’est tout. Aucun droit administrateur requis, et presque aucun réapprentissage.
+```text
+Tapez É, Ç, « » ou œ sans code Alt ni copier-coller, avec l’AZERTY que vous connaissez déjà.
+
+Sur l’AZERTY de Windows, Verr. Maj. puis é donne 2. Avec AZERTY Global, vous obtenez É. Les lettres A à Z et les chiffres restent à leur place : 12 caractères seulement changent de touche, et 99 % de vos frappes sont préservées.
+
+Installez l’application, cliquez sur « Activer et essayer » dans l’accueil, et c’est prêt. Pas besoin de droits administrateur ni de compte. Ctrl+Maj+Verr. Maj. vous rend l’AZERTY d’origine quand vous le voulez.
 
 
-5 AMÉLIORATIONS, 99 % DES FRAPPES PRÉSERVÉES
+ÉCRIRE UN FRANÇAIS CORRECT
+Les majuscules accentuées É, È, Ç, À, Ù s’obtiennent avec le Verr. Maj., qui n’agit plus que sur les lettres. Guillemets « », apostrophe ’, œ et æ, points de suspension …, tirets — et –, espaces insécables normale et fine : tout est au clavier.
 
-1. Verrouillage Majuscule intelligent — n’affecte que les lettres → É, È, Ç, À, Ù en un appui
-2. Point en accès direct — point et point-virgule échangés
+CODER SANS SE TORDRE LES DOIGTS
+{ } [ ] | \ sont sur la rangée de repos, avec AltGr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement.
+
+ÉCRIRE D’AUTRES LANGUES
+La touche à droite du M porte les accents aigu, grave et tilde : l’espagnol, le portugais ou l’italien se tapent sans changer de clavier. Vous avez aussi l’allemand, de nombreuses langues d’Afrique francophone (wolof, bambara, yoruba, haoussa…), les alphabets grec et cyrillique et les signes mathématiques. Pour écrire plusieurs lettres grecques d’affilée, une couche se verrouille d’un double appui, en option.
+
+RETROUVER N’IMPORTE QUEL CARACTÈRE
+Ctrl+Maj+W ouvre la recherche : tapez le nom d’un caractère, Entrée l’insère dans votre texte et la recherche vous montre comment le taper. Ctrl+Maj+Q affiche le clavier virtuel, avec les quatre niveaux de chaque touche.
+
+S’Y METTRE À VOTRE RYTHME
+Un court tutoriel présente les changements dès l’installation. Les Leçons proposent ensuite des exercices progressifs, avec indices et clavier affiché, puis un mode libre. Votre progression reste sur votre appareil.
+
+CE QUI CHANGE, EXACTEMENT
+1. Verr. Maj. : il n’affecte que les lettres, donc É, È, Ç, À, Ù en un appui
+2. Le point s’obtient sans Maj, le point-virgule avec Maj
 3. @ et # sur la touche en haut à gauche, à la place du ²
-4. Symboles de programmation sur la rangée de repos — { } [ ] | \ avec AltGr + D F G H J K
-5. Accents internationaux sur la touche ù — aigu ´, grave ` et tilde ~ pour écrire d’autres langues ; le ù et le % sont déplacés
+4. { } [ ] | \ sur la rangée de repos avec AltGr
+5. Accents aigu ´, grave ` et tilde ~ sur la touche ù ; le ù et le % sont déplacés
 
+VOTRE FRAPPE RESTE CHEZ VOUS
+Rien ne change sur votre clavier avant votre clic sur « Activer ». Aucune frappe n’est journalisée, stockée ni transmise, il n’y a ni télémétrie ni compte, et l’application n’envoie rien sur le réseau d’elle-même. Préférences, statistiques et progression restent sur votre appareil. Dans les champs de mot de passe, les couches et la recherche se mettent en pause. Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous cliquez dessus, et indiquent la version de l’app et de Windows.
 
-TYPOGRAPHIE FRANÇAISE COMPLÈTE
-• Majuscules accentuées É, È, Ç, À, Ù
-• Ligatures œ/Œ et æ/Æ
-• Guillemets français « » et étrangers
-• Tirets cadratins — et demi-cadratins –
-• Points de suspension …
-• Apostrophe typographique ’
-• Espaces insécables (normale et fine) et trait d’union insécable
+JEUX ET BUREAU À DISTANCE
+AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis.
 
+GRATUIT ET LIBRE
+AZERTY Global est publié sous licence EUPL 1.2 et son code source est sur GitHub. L’entrée « Soutenir le projet » ouvre la page de soutien du site dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
+```
 
-POUR LES DÉVELOPPEURS
-Accolades, crochets, barre verticale et barre oblique inverse sur la rangée de repos, sans contorsion. #, ^ et ` (backtick) sont aussi en accès direct.
+### Points forts (12 sur 20 possibles, 200 caractères au plus chacun)
 
+> Un point par champ, sans puce : le Store en ajoute.
 
-LANGUES D’EUROPE ET D’AFRIQUE FRANCOPHONE
-Les caractères utiles à l’espagnol, à l’allemand, au portugais, à l’italien et à de nombreuses autres langues européennes, ainsi qu’à de nombreuses langues d’Afrique francophone : wolof, bambara, yoruba, haoussa et d’autres.
-
-
-SYMBOLES ET ALPHABETS
-Signes mathématiques, symboles divers, alphabets grec et cyrillique. Les couches verrouillables, facultatives, permettent d’écrire plusieurs caractères grecs, cyrilliques ou scientifiques d’affilée.
-
-
-CLAVIER VIRTUEL INTÉGRÉ
-Un clavier visuel interactif (Ctrl+Maj+Q) affiche les 4 niveaux de la disposition, pour retrouver un caractère sans rien mémoriser.
-
-
-RECHERCHE DE CARACTÈRES
-Vous cherchez un symbole ? Tapez son nom (Ctrl+Maj+W) : l’application l’insère directement dans votre texte, ou le copie dans le presse-papiers si l’insertion n’est pas possible, et montre où il se trouve sur le clavier.
-
-
-LEÇONS
-Un court tutoriel présente les principales améliorations. Le module Leçons propose des exercices progressifs et un mode libre. Votre progression reste sur votre appareil.
-
-
-RESPECT DE LA VIE PRIVÉE
-• Aucune télémétrie, aucun compte requis, aucun envoi réseau automatique
-• Les frappes ne sont jamais journalisées, stockées durablement ni transmises
-• Vos préférences, vos statistiques, votre progression dans les leçons, les réglages de compatibilité par application et les journaux techniques restent sur votre appareil
-• La détection des jeux et des logiciels de bureau à distance est locale : aucun nom d’application n’est transmis
-• La recherche de caractères insère le symbole choisi dans votre texte, ou le copie dans votre presse-papiers en secours ; rien n’est transmis
-• Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous les choisissez, et peuvent indiquer la version de l’app et de Windows
-
-
-GRATUIT ET OPEN SOURCE
-Licence EUPL 1.2 — code source disponible sur GitHub.
-
-L’entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
-
-Site web : https://azerty.global
+```text
+É, È, Ç, À et Ù en un appui avec le Verr. Maj.
+```
+```text
+Le point sans Maj : point et point-virgule échangés
+```
+```text
+@ et # en haut à gauche, à la place du ²
+```
+```text
+{ } [ ] | \ sur la rangée de repos avec AltGr
+```
+```text
+Guillemets « », œ, æ, tirets, points de suspension et espaces insécables
+```
+```text
+Accents aigu, grave et tilde pour l’espagnol, le portugais et d’autres langues
+```
+```text
+Lettres A à Z et chiffres à leur place : 12 caractères changent de touche
+```
+```text
+Recherche par nom (Ctrl+Maj+W) qui insère le caractère dans votre texte
+```
+```text
+Clavier virtuel (Ctrl+Maj+Q) pour voir où se trouve chaque caractère
+```
+```text
+Tutoriel et leçons courtes pour prendre la main
+```
+```text
+Aucune télémétrie, aucun compte, aucune frappe enregistrée
+```
+```text
+Gratuit et libre (EUPL 1.2), sans droits administrateur
+```
 
 ### Nouveautés de cette version (notes de version)
 
-> Bloc à coller tel quel. La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
+> Bloc à coller tel quel, 1 500 caractères au plus. Les utilisateurs du Store viennent de la 1.1.0 : ces notes reprennent donc aussi la 1.2.0, jamais publiée, sans le Défi du jour. La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
 
+```text
 Version 1.3.0 :
-• Menu de l’icône plus court : « Apprendre » regroupe Leçons et accueil ; « À propos et aide » regroupe confidentialité, ressources, retours et notation. Aucune fonction n’a été retirée.
-• Couches verrouillables grecque, cyrillique et scientifique : un double appui verrouille l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le sous-menu « Couches ». Fonction facultative.
-• La recherche de caractères insère le caractère directement dans votre texte.
+• Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le menu de l’icône, sous « Couches ».
+• La recherche de caractères (Ctrl+Maj+W) insère le caractère directement dans votre texte.
+• Votre clavier ne change qu’après votre accord : après la mise à jour, l’accueil vous le redemande une fois.
+• Menu de l’icône plus court : « Apprendre » regroupe les Leçons et l’accueil, « À propos et aide » regroupe confidentialité, ressources, retours et notation. Rien n’a été retiré.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
-• Votre clavier n’est modifié qu’après votre accord : après la mise à jour, l’accueil vous le demande.
 • Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
-• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global.
+• Les fenêtres se parcourent mieux au clavier (Tab, Entrée, Échap) et le Narrateur lit le nom des champs qui n’en avaient pas.
 • Les fenêtres Paramètres et Leçons s’adaptent à la taille et à la mise à l’échelle de l’écran.
+• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global ; un accent en attente ne réapparaît plus dans une autre application après un changement de fenêtre.
+```
 
 ### Mots-clés de recherche (max 7, séparés par des points-virgules)
 
@@ -116,87 +144,109 @@ Productivity
 
 AZERTY Global - Improved French Keyboard
 
-### Short description (max 100 characters)
+### Short description (up to 1,000 characters, 270 shown in some views)
 
-Improved French keyboard: accented capitals, direct period, almost no relearning.
+```text
+É, È, Ç and À in one key press, French guillemets « » and the period without Shift, on the keyboard you already have. The letters A to Z and the digits stay in place. Free and open source, no account.
+```
 
 ### Long description
 
-AZERTY Global is AZERTY, fixed: the letters A to Z as well as é, è, à and ç stay in place; only ù moves. Punctuation is improved, accented capitals are direct and programming symbols are easier to reach.
+```text
+Type É, Ç, « » or œ without Alt codes or copy-paste, on the AZERTY keyboard you already know.
 
-Install the app, activate it in the welcome window — that's it. No admin rights required, and almost no relearning.
+On the standard Windows French keyboard, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 12 characters move to another key, and 99% of your keystrokes are preserved.
 
-
-5 IMPROVEMENTS, 99% OF YOUR KEYSTROKES PRESERVED
-
-1. Smart Caps Lock — only affects letters → É, È, Ç, À, Ù in one key press
-2. Direct period access — period and semicolon swapped
-3. @ and # on the top-left key, where ² usually is on French keyboards
-4. Programming symbols on the home row — { } [ ] | \ with AltGr + D F G H J K
-5. International accents on the ù key — acute ´, grave ` and tilde ~ for other languages; ù and % move elsewhere
+Install the app, click “Activate and try” in the welcome window, and you're done. No admin rights and no account needed. Ctrl+Shift+Caps Lock gives you back the original AZERTY whenever you want.
 
 
-COMPLETE FRENCH TYPOGRAPHY
-• Accented capitals É, È, Ç, À, Ù
-• Ligatures œ/Œ and æ/Æ
-• French guillemets « » and foreign quotation marks
-• Em dash — and en dash –
-• Ellipsis …
-• Typographic apostrophe ’
-• Non-breaking spaces (regular and narrow) and non-breaking hyphen
+WRITE CORRECT FRENCH
+Accented capitals É, È, Ç, À, Ù come from Caps Lock, which now only affects letters. Guillemets « », typographic apostrophe ’, œ and æ, ellipsis …, dashes — and –, regular and narrow non-breaking spaces: everything is on the keyboard.
 
+CODE WITHOUT TWISTING YOUR FINGERS
+{ } [ ] | \ are on the home row, with AltGr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access.
 
-FOR DEVELOPERS
-Braces, brackets, pipe and backslash on the home row, without finger gymnastics. #, ^ and backtick also have direct access.
+TYPE OTHER LANGUAGES
+The key to the right of M carries the acute, grave and tilde accents, so Spanish, Portuguese or Italian need no other keyboard. German is covered too, as are many francophone African languages (Wolof, Bambara, Yoruba, Hausa…), the Greek and Cyrillic alphabets and math symbols. To type several Greek letters in a row, an optional layer locks with a double press.
 
+FIND ANY CHARACTER
+Ctrl+Shift+W opens the search: type a character's name, Enter inserts it into your text and the search shows you how to type it. Ctrl+Shift+Q shows the virtual keyboard, with all four levels of each key.
 
-EUROPEAN AND FRANCOPHONE AFRICAN LANGUAGES
-Useful characters for Spanish, German, Portuguese, Italian and many other European languages, and for many francophone African languages, including Wolof, Bambara, Yoruba and Hausa.
+LEARN AT YOUR OWN PACE
+A short tutorial shows the changes right after installation. The Lessons then offer progressive exercises, with hints and an on-screen keyboard, and a free typing mode. Your progress stays on your device.
 
+WHAT CHANGES, EXACTLY
+1. Caps Lock only affects letters, so É, È, Ç, À, Ù in one key press
+2. The period needs no Shift; the semicolon takes Shift
+3. @ and # on the top-left key, where ² usually is
+4. { } [ ] | \ on the home row with AltGr
+5. Acute ´, grave ` and tilde ~ accents on the ù key; ù and % move elsewhere
 
-SYMBOLS AND ALPHABETS
-Mathematical signs, various symbols, Greek and Cyrillic alphabets. Optional lockable layers let you type several Greek, Cyrillic or scientific characters in a row.
+YOUR TYPING STAYS ON YOUR PC
+Nothing changes on your keyboard until you click “Activate”. Keystrokes are never logged, stored or transmitted, there is no telemetry and no account, and the app sends nothing over the network on its own. Preferences, statistics and progress stay on your device. In password fields, layers and search pause. The “Report a bug” and “Give feedback” links open only when you click them, and include the app and Windows version.
 
-
-BUILT-IN VIRTUAL KEYBOARD
-An interactive visual keyboard (Ctrl+Shift+Q) shows all 4 levels of the layout, so you can find a character without memorizing anything.
-
-
-CHARACTER SEARCH
-Looking for a symbol? Type its name (Ctrl+Shift+W): the app inserts it directly into your text, or copies it to the clipboard if insertion isn't possible, and shows where it is on the keyboard.
-
-
-LESSONS
-A short tutorial introduces the main improvements. The Lessons module offers progressive exercises and a free typing mode. Your progress stays on your device.
-
-
-PRIVACY
-• No telemetry, no account required and no automatic network transfer
-• Keystrokes are never logged, persistently stored or transmitted
-• Preferences, statistics, lesson progress, per-application compatibility settings and technical logs stay on your device
-• Game and remote-desktop detection is local: no app name is transmitted
-• Character search inserts the selected symbol into your text, or copies it to your clipboard as a fallback; nothing is sent
-• The “Report a bug” and “Give feedback” links open only when you choose them, and may include the app and Windows version
-
+GAMES AND REMOTE DESKTOP
+AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software when it is in the foreground. Detection runs on your PC; no app name is transmitted.
 
 FREE AND OPEN SOURCE
-Licensed under EUPL 1.2 — source code available on GitHub.
+AZERTY Global is licensed under EUPL 1.2 and its source code is on GitHub. The “Support the project” entry opens the project's support page in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
+```
 
-The “Support the project” entry opens azerty.global/soutien in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
+### Product features (12 of 20, 200 characters max each)
 
-Website: https://azerty.global
+> One feature per field, no bullet: the Store adds its own.
+
+```text
+É, È, Ç, À and Ù in one key press with Caps Lock
+```
+```text
+Period without Shift: period and semicolon swapped
+```
+```text
+@ and # on the top-left key, where ² usually is
+```
+```text
+{ } [ ] | \ on the home row with AltGr
+```
+```text
+French guillemets « », œ, æ, dashes, ellipsis and non-breaking spaces
+```
+```text
+Acute, grave and tilde accents for Spanish, Portuguese and more
+```
+```text
+The letters A to Z and the digits stay in place: 12 characters move to another key
+```
+```text
+Search by name (Ctrl+Shift+W) inserts the character into your text
+```
+```text
+Virtual keyboard (Ctrl+Shift+Q) shows where every character is
+```
+```text
+Short tutorial and lessons to get started
+```
+```text
+No telemetry, no account, no keystroke logging
+```
+```text
+Free and open source (EUPL 1.2), no admin rights needed
+```
 
 ### What's new (release notes)
 
+```text
 Version 1.3.0:
-• Shorter icon menu: “Learn” groups Lessons and the welcome tour; “About and help” groups privacy, resources, feedback and rating. No feature was removed.
-• Lockable Greek, Cyrillic and scientific layers: a double press locks the alphabet in the open app, Esc releases it. Each layer is ticked in the “Layers” submenu. Optional feature.
-• Character search inserts the character directly into your text.
+• Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet in the open app, Esc releases it. Tick each layer in the icon menu, under “Layers”.
+• Character search (Ctrl+Shift+W) inserts the character directly into your text.
+• Your keyboard only changes after you agree: after the update, the welcome window asks you once more.
+• Shorter icon menu: “Learn” groups Lessons and the welcome tour, “About and help” groups privacy, resources, feedback and rating. Nothing was removed.
 • You can rate the app without leaving AZERTY Global.
-• Your keyboard is only changed after you agree: after the update, the welcome window asks you.
 • If the app doesn't start with Windows, a one-time notification offers to turn it on.
-• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off.
+• Windows are easier to use with the keyboard (Tab, Enter, Esc), and Narrator reads the name of fields that had none.
 • The Settings and Lessons windows adapt to your screen size and display scaling.
+• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off; a pending accent no longer shows up in another app after you switch windows.
+```
 
 ### Search terms (max 7, semicolon-separated)
 
@@ -262,11 +312,246 @@ Les fichiers suivants sont dans `msix/Assets/` :
 > Screenshot1 est au format 16:9 standard ; Screenshot2, Screenshot3 et Screenshot4 ont des ratios non standards
 > susceptibles de générer des bandes noires en affichage Store — à éventuellement re-capturer.
 
+### Légendes 1.3.0 (à relire sur les captures finales)
+
+> À relire sur les captures finales : ces légendes décrivent cinq captures 1.3.0 qui ne sont pas encore faites. Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît sur aucune.
+
+Ordre proposé : clavier virtuel, recherche, Leçons, Paramètres, accueil. Le clavier virtuel vient en premier parce que le produit est une disposition, et c’est la seule capture qui la montre en entier dans la vignette. Avec l’icône, les captures sont le seul élément de la fiche qu’on peut tester en A/B dans le Store : le test utile est « clavier virtuel en premier » contre « accueil en premier ».
+
+#### 1. Clavier virtuel
+
+FR
+```text
+Le clavier virtuel (Ctrl+Maj+Q) montre les quatre niveaux de chaque touche : vous voyez où se trouve un caractère sans rien apprendre par cœur.
+```
+EN
+```text
+The virtual keyboard (Ctrl+Shift+Q) shows all four levels of each key, so you can see where a character is without memorizing anything.
+```
+
+#### 2. Recherche de caractères
+
+FR
+```text
+Tapez le nom d’un caractère (Ctrl+Maj+W) : Entrée l’insère dans votre texte, et la recherche vous montre comment le taper.
+```
+EN
+```text
+Type a character's name (Ctrl+Shift+W): Enter inserts it into your text, and the search shows you how to type it.
+```
+
+#### 3. Leçons
+
+FR
+```text
+Des exercices courts, avec indices et clavier affiché, pour prendre en main le Verr. Maj. et les nouveaux accès. Votre progression reste sur votre appareil.
+```
+EN
+```text
+Short exercises with hints and an on-screen keyboard, to get used to Caps Lock and the new shortcuts. Your progress stays on your device.
+```
+
+#### 4. Paramètres
+
+> La légende couvre les trois onglets. Si la capture n’en montre qu’un, ne garder que ce que l’onglet affiché montre, sinon la légende promet plus que l’image.
+
+FR
+```text
+Vous choisissez vos raccourcis, le lancement avec Windows, la langue de l’interface et les applications où AZERTY Global doit rester désactivé.
+```
+EN
+```text
+Choose your shortcuts, launch at Windows startup, the interface language and the apps where AZERTY Global should stay off.
+```
+
+#### 5. Accueil
+
+FR
+```text
+L’accueil présente les cinq changements. Votre clavier ne change qu’après votre clic sur « Activer et essayer ».
+```
+EN
+```text
+The welcome window shows the five changes. Your keyboard only changes after you click “Activate and try”.
+```
+
 ---
 
 ## Archive — ne pas coller
 
 Tout ce qui suit est un historique interne. Rien ne se colle dans Partner Center.
+
+### Textes remplacés le 2026-09-26
+
+Description courte, description longue et notes de version 1.3.0 de la fiche du 2026-09-24, remplacées le 2026-09-26 par la variante B (réécriture). Les champs inchangés (nom, mots-clés, catégories) ne sont pas repris ici. L’en-tête « max 100 caractères » de la description courte était faux : le champ en accepte 1 000.
+
+#### Français
+
+##### Description courte (max 100 caractères)
+
+Clavier français amélioré : majuscules accentuées, point direct, presque aucun réapprentissage.
+
+##### Description longue
+
+AZERTY Global est l’AZERTY corrigé : les lettres A à Z ainsi que é, è, à et ç restent à leur place ; seul ù est déplacé. La ponctuation est améliorée, les majuscules accentuées sont directes et les symboles de programmation plus accessibles.
+
+Installez l’application, activez-la dans l’accueil — c’est tout. Aucun droit administrateur requis, et presque aucun réapprentissage.
+
+
+5 AMÉLIORATIONS, 99 % DES FRAPPES PRÉSERVÉES
+
+1. Verrouillage Majuscule intelligent — n’affecte que les lettres → É, È, Ç, À, Ù en un appui
+2. Point en accès direct — point et point-virgule échangés
+3. @ et # sur la touche en haut à gauche, à la place du ²
+4. Symboles de programmation sur la rangée de repos — { } [ ] | \ avec AltGr + D F G H J K
+5. Accents internationaux sur la touche ù — aigu ´, grave ` et tilde ~ pour écrire d’autres langues ; le ù et le % sont déplacés
+
+
+TYPOGRAPHIE FRANÇAISE COMPLÈTE
+• Majuscules accentuées É, È, Ç, À, Ù
+• Ligatures œ/Œ et æ/Æ
+• Guillemets français « » et étrangers
+• Tirets cadratins — et demi-cadratins –
+• Points de suspension …
+• Apostrophe typographique ’
+• Espaces insécables (normale et fine) et trait d’union insécable
+
+
+POUR LES DÉVELOPPEURS
+Accolades, crochets, barre verticale et barre oblique inverse sur la rangée de repos, sans contorsion. #, ^ et ` (backtick) sont aussi en accès direct.
+
+
+LANGUES D’EUROPE ET D’AFRIQUE FRANCOPHONE
+Les caractères utiles à l’espagnol, à l’allemand, au portugais, à l’italien et à de nombreuses autres langues européennes, ainsi qu’à de nombreuses langues d’Afrique francophone : wolof, bambara, yoruba, haoussa et d’autres.
+
+
+SYMBOLES ET ALPHABETS
+Signes mathématiques, symboles divers, alphabets grec et cyrillique. Les couches verrouillables, facultatives, permettent d’écrire plusieurs caractères grecs, cyrilliques ou scientifiques d’affilée.
+
+
+CLAVIER VIRTUEL INTÉGRÉ
+Un clavier visuel interactif (Ctrl+Maj+Q) affiche les 4 niveaux de la disposition, pour retrouver un caractère sans rien mémoriser.
+
+
+RECHERCHE DE CARACTÈRES
+Vous cherchez un symbole ? Tapez son nom (Ctrl+Maj+W) : l’application l’insère directement dans votre texte, ou le copie dans le presse-papiers si l’insertion n’est pas possible, et montre où il se trouve sur le clavier.
+
+
+LEÇONS
+Un court tutoriel présente les principales améliorations. Le module Leçons propose des exercices progressifs et un mode libre. Votre progression reste sur votre appareil.
+
+
+RESPECT DE LA VIE PRIVÉE
+• Aucune télémétrie, aucun compte requis, aucun envoi réseau automatique
+• Les frappes ne sont jamais journalisées, stockées durablement ni transmises
+• Vos préférences, vos statistiques, votre progression dans les leçons, les réglages de compatibilité par application et les journaux techniques restent sur votre appareil
+• La détection des jeux et des logiciels de bureau à distance est locale : aucun nom d’application n’est transmis
+• La recherche de caractères insère le symbole choisi dans votre texte, ou le copie dans votre presse-papiers en secours ; rien n’est transmis
+• Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous les choisissez, et peuvent indiquer la version de l’app et de Windows
+
+
+GRATUIT ET OPEN SOURCE
+Licence EUPL 1.2 — code source disponible sur GitHub.
+
+L’entrée « Soutenir le projet » ouvre azerty.global/soutien dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
+
+Site web : https://azerty.global
+
+##### Nouveautés de cette version (notes de version)
+
+Version 1.3.0 :
+• Menu de l’icône plus court : « Apprendre » regroupe Leçons et accueil ; « À propos et aide » regroupe confidentialité, ressources, retours et notation. Aucune fonction n’a été retirée.
+• Couches verrouillables grecque, cyrillique et scientifique : un double appui verrouille l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le sous-menu « Couches ». Fonction facultative.
+• La recherche de caractères insère le caractère directement dans votre texte.
+• Vous pouvez noter l’application sans quitter AZERTY Global.
+• Votre clavier n’est modifié qu’après votre accord : après la mise à jour, l’accueil vous le demande.
+• Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
+• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global.
+• Les fenêtres Paramètres et Leçons s’adaptent à la taille et à la mise à l’échelle de l’écran.
+
+#### English
+
+##### Short description (max 100 characters)
+
+Improved French keyboard: accented capitals, direct period, almost no relearning.
+
+##### Long description
+
+AZERTY Global is AZERTY, fixed: the letters A to Z as well as é, è, à and ç stay in place; only ù moves. Punctuation is improved, accented capitals are direct and programming symbols are easier to reach.
+
+Install the app, activate it in the welcome window — that's it. No admin rights required, and almost no relearning.
+
+
+5 IMPROVEMENTS, 99% OF YOUR KEYSTROKES PRESERVED
+
+1. Smart Caps Lock — only affects letters → É, È, Ç, À, Ù in one key press
+2. Direct period access — period and semicolon swapped
+3. @ and # on the top-left key, where ² usually is on French keyboards
+4. Programming symbols on the home row — { } [ ] | \ with AltGr + D F G H J K
+5. International accents on the ù key — acute ´, grave ` and tilde ~ for other languages; ù and % move elsewhere
+
+
+COMPLETE FRENCH TYPOGRAPHY
+• Accented capitals É, È, Ç, À, Ù
+• Ligatures œ/Œ and æ/Æ
+• French guillemets « » and foreign quotation marks
+• Em dash — and en dash –
+• Ellipsis …
+• Typographic apostrophe ’
+• Non-breaking spaces (regular and narrow) and non-breaking hyphen
+
+
+FOR DEVELOPERS
+Braces, brackets, pipe and backslash on the home row, without finger gymnastics. #, ^ and backtick also have direct access.
+
+
+EUROPEAN AND FRANCOPHONE AFRICAN LANGUAGES
+Useful characters for Spanish, German, Portuguese, Italian and many other European languages, and for many francophone African languages, including Wolof, Bambara, Yoruba and Hausa.
+
+
+SYMBOLS AND ALPHABETS
+Mathematical signs, various symbols, Greek and Cyrillic alphabets. Optional lockable layers let you type several Greek, Cyrillic or scientific characters in a row.
+
+
+BUILT-IN VIRTUAL KEYBOARD
+An interactive visual keyboard (Ctrl+Shift+Q) shows all 4 levels of the layout, so you can find a character without memorizing anything.
+
+
+CHARACTER SEARCH
+Looking for a symbol? Type its name (Ctrl+Shift+W): the app inserts it directly into your text, or copies it to the clipboard if insertion isn't possible, and shows where it is on the keyboard.
+
+
+LESSONS
+A short tutorial introduces the main improvements. The Lessons module offers progressive exercises and a free typing mode. Your progress stays on your device.
+
+
+PRIVACY
+• No telemetry, no account required and no automatic network transfer
+• Keystrokes are never logged, persistently stored or transmitted
+• Preferences, statistics, lesson progress, per-application compatibility settings and technical logs stay on your device
+• Game and remote-desktop detection is local: no app name is transmitted
+• Character search inserts the selected symbol into your text, or copies it to your clipboard as a fallback; nothing is sent
+• The “Report a bug” and “Give feedback” links open only when you choose them, and may include the app and Windows version
+
+
+FREE AND OPEN SOURCE
+Licensed under EUPL 1.2 — source code available on GitHub.
+
+The “Support the project” entry opens azerty.global/soutien in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
+
+Website: https://azerty.global
+
+##### What's new (release notes)
+
+Version 1.3.0:
+• Shorter icon menu: “Learn” groups Lessons and the welcome tour; “About and help” groups privacy, resources, feedback and rating. No feature was removed.
+• Lockable Greek, Cyrillic and scientific layers: a double press locks the alphabet in the open app, Esc releases it. Each layer is ticked in the “Layers” submenu. Optional feature.
+• Character search inserts the character directly into your text.
+• You can rate the app without leaving AZERTY Global.
+• Your keyboard is only changed after you agree: after the update, the welcome window asks you.
+• If the app doesn't start with Windows, a one-time notification offers to turn it on.
+• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off.
+• The Settings and Lessons windows adapt to your screen size and display scaling.
 
 ### Anciennes notes de version (FR, 1.2.0 et avant)
 
@@ -424,4 +709,4 @@ Tous les tests `OPTIONAL` ne comptent pas dans le verdict global selon la docume
 
 ---
 
-*Dernière mise à jour : 2026-09-24 (v1.3.0 — textes de l’audit du 24 septembre, non soumise)*
+*Dernière mise à jour : 2026-09-26 (v1.3.0 — fiche réécrite, variante B, non soumise)*
