@@ -23,23 +23,16 @@ internal sealed class LayerIndicatorWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         IntPtr instance = Win32.GetModuleHandleW(null);
-        _hBrush = Win32.CreateSolidBrush(0x00352A20);
-
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = instance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = _hBrush,
-            lpszClassName = ProductIdentity.WindowClass("LayerIndicator")
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(ProductIdentity.WindowClass("LayerIndicator"), _wndProcDelegate))
+            return;
 
         uint exStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
         _hWnd = Win32.CreateWindowExW(exStyle, ProductIdentity.WindowClass("LayerIndicator"), string.Empty,
             Win32.WS_POPUP, 0, 0, 112, 32,
             IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
+        // Fond de la classe : Windows le détruit au désenregistrement.
+        _hBrush = NativeWindow.ApplyClassBackground(_hWnd, 0x00352A20);
 
         // D1 (accessibilité 1.3.0) : police au DPI de l'écran de la fenêtre, et non plus
         // 15 px fixes ; la taille suit dans RefreshPosition, WM_DPICHANGED suit le caret
@@ -173,7 +166,6 @@ internal sealed class LayerIndicatorWindow : IDisposable
             _hWnd = IntPtr.Zero;
         }
         if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
-        if (_hBrush != IntPtr.Zero) Win32.DeleteObject(_hBrush);
-        Win32.UnregisterClassW(ProductIdentity.WindowClass("LayerIndicator"), Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(ProductIdentity.WindowClass("LayerIndicator"));
     }
 }

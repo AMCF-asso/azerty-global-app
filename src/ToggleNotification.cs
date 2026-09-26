@@ -49,17 +49,9 @@ internal sealed class ToggleNotification : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
         string className = ProductIdentity.WindowClass("ToggleNotif");
-
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512),
-            hbrBackground = IntPtr.Zero,
-            lpszClassName = className
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(className, _wndProcDelegate))
+            return;
 
         _hWnd = Win32.CreateWindowExW(
             Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE | Win32.WS_EX_LAYERED,
@@ -206,7 +198,6 @@ internal sealed class ToggleNotification : IDisposable
         {
             Win32.DeleteObject(_hBgBrush);
         }
-        // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW(ProductIdentity.WindowClass("ToggleNotif"), Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(ProductIdentity.WindowClass("ToggleNotif"));
     }
 }

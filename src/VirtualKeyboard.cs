@@ -332,17 +332,9 @@ sealed class VirtualKeyboard : IDisposable
 
         var hInstance = Win32.GetModuleHandleW(null);
         var className = ProductIdentity.WindowClass("VK");
-
-        var wc = new Win32.WNDCLASSEXW
-        {
-            cbSize = (uint)Marshal.SizeOf<Win32.WNDCLASSEXW>(),
-            lpfnWndProc = _wndProcDelegate,
-            hInstance = hInstance,
-            hCursor = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512), // IDC_ARROW
-            lpszClassName = className,
-            style = 0x0020 // CS_OWNDC
-        };
-        Win32.RegisterClassExW(ref wc);
+        // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
+        if (!NativeWindow.RegisterClass(className, _wndProcDelegate, 0x0020 /* CS_OWNDC */))
+            return;
 
         // Calculer la taille de fenêtre pour obtenir la zone client souhaitée
         uint dwStyle = Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU;
@@ -1342,7 +1334,6 @@ sealed class VirtualKeyboard : IDisposable
             _hWnd = IntPtr.Zero;
         }
 
-        // UnregisterClassW pour permettre une 2e instance avec un delegate WndProc frais.
-        Win32.UnregisterClassW(ProductIdentity.WindowClass("VK"), Win32.GetModuleHandleW(null));
+        NativeWindow.UnregisterClass(ProductIdentity.WindowClass("VK"));
     }
 }
