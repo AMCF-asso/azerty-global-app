@@ -138,6 +138,58 @@ public class TutorielClavierTests : IDisposable
         Assert.True(KeyboardRenderer.IsSlotVisible(KeyboardRenderProfile.Onboarding, 0x08, 2, "dk_stroke", aides));
     }
 
+    /// <summary>Largeur de l'encre (pixels autres que le fond de touche) dans le quart bas-droit
+    /// de la touche 7, où l'exercice 6 montre la touche morte barre « ◌/ ».</summary>
+    private int EncreDuBarre(bool superpose)
+    {
+        var etat = new KeyboardRenderState();
+        etat.LessonVisibleCharacters.Add("dk:stroke");
+        var cle = KeyboardRenderer.BuildHitTestRects(Place).First(k => k.Scancode == 0x08).Rect;
+
+        IntPtr ecran = Win32.GetDC(IntPtr.Zero);
+        IntPtr dc = Win32.CreateCompatibleDC(ecran);
+        IntPtr bitmap = Win32.CreateCompatibleBitmap(ecran, 1000, 360);
+        Win32.ReleaseDC(IntPtr.Zero, ecran);
+        IntPtr ancien = Win32.SelectObject(dc, bitmap);
+        IntPtr police = Win32.CreateFontW(25, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
+        IntPtr segoe = Win32.CreateFontW(25, 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
+        try
+        {
+            IntPtr couche = superpose ? segoe : IntPtr.Zero;
+            var fonts = new KeyboardFonts(police, police, police, police, police, police, couche, couche);
+            KeyboardRenderer.DrawKeys(dc, Place, _layout, KeyboardRenderProfile.Onboarding, etat, fonts);
+            int gauche = int.MaxValue, droite = -1;
+            for (int x = (cle.left + cle.right) / 2; x < cle.right - 1; x++)
+                for (int y = (cle.top + cle.bottom) / 2; y < cle.bottom - 1; y++)
+                    if (GetPixel(dc, x, y) != 0x003A3A3A)
+                    {
+                        gauche = Math.Min(gauche, x);
+                        droite = Math.Max(droite, x);
+                    }
+            return droite - gauche + 1;
+        }
+        finally
+        {
+            Win32.SelectObject(dc, ancien);
+            Win32.DeleteObject(police);
+            Win32.DeleteObject(segoe);
+            Win32.DeleteObject(bitmap);
+            Win32.DeleteDC(dc);
+        }
+    }
+
+    [Fact]
+    public void Le_cercle_et_la_barre_se_superposent_dans_le_tutoriel()
+    {
+        // Décision d'Antoine du 26/09 : le ◌ barré d'avant le lot 9, pas « ◌/ » côte à côte.
+        Assert.True(KeyboardRenderer.IsOverlaidDottedCircle("◌/"));
+        Assert.False(KeyboardRenderer.IsOverlaidDottedCircle("◌\u0323")); // accent combinant : collé
+        Assert.False(KeyboardRenderer.IsOverlaidDottedCircle("/"));
+        int superpose = EncreDuBarre(superpose: true);
+        int coteACote = EncreDuBarre(superpose: false);
+        Assert.True(superpose > 0 && superpose < coteACote, $"superposé {superpose} px, côte à côte {coteACote} px");
+    }
+
     [Fact]
     public void Les_infobulles_du_tutoriel_gardent_leurs_textes()
     {

@@ -27,7 +27,7 @@ internal readonly record struct KeyboardPlacement(int OriginX, int OriginY, floa
 /// <summary>Polices du clavier : caractère principal, résultat de touche morte, couches
 /// secondaires, petites mentions, touches de contexte, pastilles du tutoriel.</summary>
 internal readonly record struct KeyboardFonts(IntPtr Main, IntPtr DeadKey, IntPtr Small, IntPtr Tiny, IntPtr Context,
-    IntPtr Badge = default);
+    IntPtr Badge = default, IntPtr OverlayMain = default, IntPtr OverlaySmall = default);
 
 internal sealed class KeyboardRenderState
 {
@@ -345,10 +345,11 @@ internal static class KeyboardRenderer
 
     /// <summary>
     /// Comment dessiner les caractères : repères des espaces insécables, règles du tutoriel
-    /// (touche morte non active en gris, symbole de touche morte lu d'abord dans la
-    /// disposition), disposition.
+    /// (touche morte non active en gris, symbole de touche morte lu d'abord dans la disposition,
+    /// « ◌ » et accent superposés dans leurs polices propres).
     /// </summary>
-    private readonly record struct GlyphStyle(bool ShowInvisibleMarkers, bool Tutorial, Layout Layout);
+    private readonly record struct GlyphStyle(bool ShowInvisibleMarkers, bool Tutorial, Layout Layout,
+        IntPtr OverlayMain = default, IntPtr OverlaySmall = default);
 
     private static KeyHighlight HighlightOf(VirtualKeyboard.VisualKey key, KeyboardRenderState state)
         => state.KeepCapsLockHighlight && key.Label == "Verr. Maj." ? KeyHighlight.Direct : state.HighlightKind;
@@ -544,7 +545,7 @@ internal static class KeyboardRenderer
         int kw = rect.right - rect.left;
         int kh = rect.bottom - rect.top;
         int pad = tutorial ? Math.Max(4, (int)(scale * 0.14f)) : Math.Clamp(kw / 10, 4, 14);
-        var style = new GlyphStyle(state.ShowInvisibleMarkers, tutorial, layout);
+        var style = new GlyphStyle(state.ShowInvisibleMarkers, tutorial, layout, fonts.OverlayMain, fonts.OverlaySmall);
 
         // Sous Ctrl ou Alt, les Leçons taisent les couches (raccourcis) ; le tutoriel les garde.
         if (!tutorial && ((state.Ctrl && !state.AltGr) || (state.Alt && !state.AltGr)))
@@ -812,14 +813,31 @@ internal static class KeyboardRenderer
             (false, false) => CLR_CHAR_DIM
         };
         IntPtr hFont = useMainFont ? hFontMain : hFontSmall;
-        var oldFont = Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, color);
+        IntPtr overlay = useMainFont ? style.OverlayMain : style.OverlaySmall;
         var r = new Win32.RECT { left = left, top = top, right = right, bottom = bottom };
         uint vAlign = alignTop ? 0u : Win32.DT_VCENTER;
         uint flags = vAlign | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP | (alignLeft ? Win32.DT_LEFT : Win32.DT_RIGHT);
-        Win32.DrawTextW(hdc, disp, disp.Length, ref r, flags);
+        Win32.SetTextColor(hdc, color);
+        var oldFont = Win32.SelectObject(hdc, overlay != IntPtr.Zero && IsOverlaidDottedCircle(disp) ? overlay : hFont);
+        // Tutoriel : « ◌ » puis l'accent, dessinés l'un sur l'autre (◌ barré de l'exercice 6).
+        // Ailleurs, ou sans ces polices, le couple s'écrit côte à côte.
+        if (overlay != IntPtr.Zero && IsOverlaidDottedCircle(disp))
+        {
+            var mark = r;
+            Win32.DrawTextW(hdc, "◌", 1, ref r, flags);
+            Win32.DrawTextW(hdc, disp[1..], 1, ref mark, flags);
+        }
+        else
+        {
+            Win32.DrawTextW(hdc, disp, disp.Length, ref r, flags);
+        }
         Win32.SelectObject(hdc, oldFont);
     }
+
+    /// <summary>« ◌ » suivi d'un accent qui a son propre glyphe (/ ˙ ˝ ˘ − ˇ ˛) : le couple
+    /// que le tutoriel superpose. Un accent combinant reste collé au cercle.</summary>
+    internal static bool IsOverlaidDottedCircle(string display)
+        => display.Length == 2 && display[0] == '◌' && !IsCombiningMark(display[1]);
 
     private static KeyDefinition FilterKeyForProfile(
         KeyDefinition key,
