@@ -350,31 +350,14 @@ sealed class OnboardingWindow : IDisposable
         SetWindowIcon();
     }
 
+    /// <summary>Logo en icône 32 px, grande et petite (audit du 25/09, F-15).</summary>
     private void SetWindowIcon()
     {
-        if (_gdipLogo == IntPtr.Zero) return;
-        try
-        {
-            int size = 32;
-            Win32.GdipCreateBitmapFromScan0(size, size, 0, 0x0026200A, IntPtr.Zero, out IntPtr bmp32);
-            Win32.GdipGetImageGraphicsContext(bmp32, out IntPtr g);
-            Win32.GdipSetSmoothingMode(g, 4);
-            Win32.GdipSetInterpolationMode(g, 7);
-            Win32.GdipDrawImageRectI(g, _gdipLogo, 0, 0, size, size);
-            Win32.GdipDeleteGraphics(g);
-            Win32.GdipCreateHBITMAPFromBitmap(bmp32, out IntPtr hBmp, 0x00000000);
-            Win32.GdipDisposeImage(bmp32);
-            var maskBits = new byte[size * size / 8];
-            IntPtr hMask = Win32.CreateBitmap(size, size, 1, 1, maskBits);
-            var iconInfo = new Win32.ICONINFO { fIcon = true, hbmMask = hMask, hbmColor = hBmp };
-            _hIcon = Win32.CreateIconIndirect(ref iconInfo);
-            Win32.DeleteObject(hMask);
-            Win32.DeleteObject(hBmp);
-            const uint WM_SETICON = 0x0080;
-            Win32.SendMessageW(_hWnd, WM_SETICON, (IntPtr)0, _hIcon);
-            Win32.SendMessageW(_hWnd, WM_SETICON, (IntPtr)1, _hIcon);
-        }
-        catch (Exception ex) when (ex is ExternalException or IOException or ArgumentException) { }
+        _hIcon = GdiHelpers.CreateLogoIcon(_gdipLogo, 32);
+        if (_hIcon == IntPtr.Zero) return;
+        const uint WM_SETICON = 0x0080;
+        Win32.SendMessageW(_hWnd, WM_SETICON, (IntPtr)0, _hIcon);
+        Win32.SendMessageW(_hWnd, WM_SETICON, (IntPtr)1, _hIcon);
     }
 
     // ═══════════════════════════════════════════════════════════════

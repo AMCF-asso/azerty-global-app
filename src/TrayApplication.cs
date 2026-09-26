@@ -2670,30 +2670,14 @@ sealed class TrayApplication : IDisposable
         var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
         if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) != 0)
             return IntPtr.Zero;
-        IntPtr logo = IntPtr.Zero, bmp32 = IntPtr.Zero;
+        IntPtr logo = IntPtr.Zero;
         try
         {
             logo = GdiImageLoader.LoadFromEmbeddedResource(typeof(TrayApplication), ProductIdentity.LogoResourceName);
-            if (logo == IntPtr.Zero) return IntPtr.Zero;
-            if (Win32.GdipCreateBitmapFromScan0(size, size, 0, 0x0026200A, IntPtr.Zero, out bmp32) != 0) return IntPtr.Zero;
-            if (Win32.GdipGetImageGraphicsContext(bmp32, out IntPtr g) != 0) return IntPtr.Zero;
-            Win32.GdipSetSmoothingMode(g, 4);
-            Win32.GdipSetInterpolationMode(g, 7);
-            Win32.GdipDrawImageRectI(g, logo, 0, 0, size, size);
-            Win32.GdipDeleteGraphics(g);
-            if (Win32.GdipCreateHBITMAPFromBitmap(bmp32, out IntPtr hBmp, 0x00000000) != 0) return IntPtr.Zero;
-            // Lignes du masque 1 bpp alignées au mot : 6 octets par ligne à 40 px, pas 5.
-            var maskBits = new byte[GdiHelpers.MonochromeMaskByteCount(size, size)];
-            IntPtr hMask = Win32.CreateBitmap(size, size, 1, 1, maskBits);
-            var iconInfo = new Win32.ICONINFO { fIcon = true, hbmMask = hMask, hbmColor = hBmp };
-            IntPtr hIcon = Win32.CreateIconIndirect(ref iconInfo);
-            Win32.DeleteObject(hMask);
-            Win32.DeleteObject(hBmp);
-            return hIcon;
+            return GdiHelpers.CreateLogoIcon(logo, size);
         }
         finally
         {
-            if (bmp32 != IntPtr.Zero) Win32.GdipDisposeImage(bmp32);
             if (logo != IntPtr.Zero) Win32.GdipDisposeImage(logo);
             Win32.GdiplusShutdown(token);
         }
