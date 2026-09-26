@@ -1,6 +1,5 @@
 ﻿// Mini-module d'apprentissage — exercices guidés avec clavier virtuel intégré
 using System.Runtime.InteropServices;
-using System.Text.Json;
 
 namespace AZERTYGlobal;
 
@@ -100,139 +99,20 @@ sealed class LearningModule : IDisposable
     // Suffixe « (Bonus) » a la suite du titre pour les exos optionnels — dore-orange.
     private const uint CLR_BONUS_TEXT = 0x000094E2;          // BGR ≈ #E29400 (orange ambré, lisible sur fond sombre)
 
-    // Clavier virtuel — couleurs alignées sur le testeur web (mode dark) pour cohérence
-    // visuelle. Cf. tester/keyboard.css : --key-bg #3a3a3a, --key-border #555, --text-base
-    // #e0e0e0, --text-dimmed #999, --text-active #66b3ff.
+    // Fond de la zone clavier et cadre des boutons d'en-tête. Les couleurs des touches et du
+    // surlignage sont celles de KeyboardRenderer, profil Onboarding (lot 9, audit du 25/09 L-01).
     private const uint CLR_KB_BG = 0x001A1A1A;               // Fond zone clavier — identique à CLR_BG (unifié)
-    private const uint CLR_KEY = 0x003A3A3A;                 // Fond touche normale
-    private const uint CLR_KEY_BORDER = 0x00555555;          // Bordure touche
-    private const uint CLR_KEY_PRESSED = 0x006A4A2A;         // Touche enfoncée — bleu sombre BGR (#2A4A6A)
-    private const uint CLR_KEY_CTX = 0x002D2D2D;             // Fond touche contextuelle/modif — légèrement plus sombre
-    private const uint CLR_KEY_DISABLED = 0x002A2A2A;        // Fond touche désactivée pendant les exercices (Backspace) — plus terne
-    private const uint CLR_CHAR_BASE = 0x00E0E0E0;           // Caractères couches affichées non-actives — blanc cassé
-    private const uint CLR_CHAR_ACTIVE_BLUE = 0x00FFB366;    // Caractère actif (qui sera tapé selon modificateurs courants) — bleu vif BGR (#66B3FF)
-    private const uint CLR_CHAR_DIM = 0x00999999;            // Caractères inactifs (couches non sélectionnées) — gris moyen
-    private const uint CLR_DK_CHAR = 0x006666FF;             // Touche morte active — rouge clair BGR (#FF6666)
-    private const uint CLR_CTX_TEXT = 0x00E0E0E0;            // Texte touches contextuelles — blanc cassé
-    private const uint CLR_MOD_ACTIVE = 0x009A5A1A;          // Fond modificateur activé — bleu BGR (#1A5A9A) — utilisé en cas (b) Q5
-    private const uint CLR_CAPS_BAR = 0x0000A5FF;            // Barre orange Verr.Maj actif — orange (kept)
-    private const uint CLR_DK_RESULT = 0x0066CC66;           // Résultat touche morte — vert clair BGR (#66CC66)
+    private const uint CLR_KEY_BORDER = 0x00555555;          // Bordure des boutons d'en-tête
 
-    // Highlight
-    private const uint CLR_HL_DIRECT = 0x0064C800;
-    private const uint CLR_HL_DIRECT_BG = 0x00284018;
-    private const uint CLR_HL_STEP1 = 0x0000A5FF;
-    private const uint CLR_HL_STEP1_BG = 0x00283020;
-    private const uint CLR_HL_STEP2 = 0x004CB050;
-    private const uint CLR_HL_STEP2_BG = 0x00203818;
+    // Polices des touches, en pixels à 96 DPI. Le réglage à chaud par learning-tweaks.json,
+    // fichier de développement jamais livré, a disparu avec le rendu propre du tutoriel.
+    private const int FONT_CHAR_MAIN = 28;
+    private const int FONT_CHAR_DEAD_KEY = 24;  // 28 × 0,85, arrondi
+    private const int FONT_CHAR_SMALL = 25;
+    private const int FONT_CTX = 22;
 
-    // ── Classification des touches (alignée sur tester/keyboard.js LETTER_KEYS / ACCENTED_LETTER_KEYS) ──
-    // Lettres ordinaires : caractère principal centré + AltGr discret bottom-right.
-    // Layout AZERTY ISO scancodes :
-    //   Rangée 2 (azerty)  : KeyA-KeyP = 0x10..0x19
-    //   Rangée 3 (qsdfg)   : KeyQ-KeyM = 0x1E..0x27 (Semicolon=KeyM=0x27 sur AZERTY)
-    //   Rangée 4 (wxcv)    : KeyZ-KeyN = 0x2C..0x31
-    private static readonly HashSet<uint> LetterKeyScancodes = new()
-    {
-        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,  // a z e r t y u i o p
-        0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,  // q s d f g h j k l m
-        0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31                            // w x c v b n
-    };
-
-    // Lettres accentuées sur la rangée numérique (Digit2=é, Digit7=è, Digit9=ç, Digit0=à) :
-    // affichage 4 quadrants avec lettre en bottom-left, chiffre en top-left, AltGr/Shift+AltGr à droite.
-    private static readonly HashSet<uint> AccentedNumericScancodes = new()
-    {
-        0x03,  // Digit2 → é/2
-        0x08,  // Digit7 → è/7
-        0x0A,  // Digit9 → ç/9
-        0x0B   // Digit0 → à/0
-    };
-
-    // ═══════════════════════════════════════════════════════════════
-    // Live tweaks (learning-tweaks.json)
-    // ═══════════════════════════════════════════════════════════════
-    /// <summary>
-    /// Override visuel par caractere : taille de fonte specifique et/ou offset XY et/ou
-    /// famille de fonte. Tous les champs sont optionnels (null = pas d'override sur ce champ).
-    /// </summary>
-    private sealed class CharOverride
-    {
-        public int? FontSize { get; set; }    // taille en pt (logique 96 DPI)
-        public int? OffsetX { get; set; }     // decalage horizontal en px (logique 96 DPI)
-        public int? OffsetY { get; set; }     // decalage vertical en px
-        public string? Font { get; set; }     // famille de fonte (null = "Segoe UI" par defaut)
-        // Champs specifiques aux caracteres prefixes par ◌ (touches mortes) ET dont le suffixe
-        // est NON-combinant (˙ ˝ ˘ / − ˇ ˛) : permet de positionner le ◌ independamment du
-        // suffixe. Ignores pour les combinants purs (̣ ̏ ̛ ̉ ̑) qui ne peuvent pas etre rendus
-        // sans caractere de base.
-        public int? CircleFontSize { get; set; }
-        public int? CircleOffsetX { get; set; }
-        public int? CircleOffsetY { get; set; }
-    }
-
-    /// <summary>
-    /// Parametres ajustables sans recompilation. Charges depuis learning-tweaks.json
-    /// dans <see cref="ConfigManager.LogDirectory"/> (LocalAppData en MSIX, a cote de l'exe
-    /// en unpackaged). Re-lus a chaque construction de LearningModule, donc le bouton tray
-    /// "Reinitialiser onboarding" suffit a appliquer les changements.
-    /// </summary>
-    private sealed class LearningTweaks
-    {
-        public int FontSizeMain  { get; set; } = 28;   // _hFontCharMain
-        public int FontSizeSmall { get; set; } = 25;   // _hFontCharSmall
-        public int FontSizeCtx   { get; set; } = 22;   // _hFontCtx (labels Tab/Shift/etc.)
-        public float PadRatio    { get; set; } = 0.14f; // padding interieur des touches (ratio de l'echelle)
-        public Dictionary<string, CharOverride> CharOverrides { get; set; } = new();
-
-        public static string DefaultPath =>
-            System.IO.Path.Combine(ConfigManager.LogDirectory, "learning-tweaks.json");
-
-        public static LearningTweaks Load()
-        {
-            var path = DefaultPath;
-            try
-            {
-                if (!System.IO.File.Exists(path))
-                    return new LearningTweaks();
-                var json = System.IO.File.ReadAllText(path);
-                var tweaks = new LearningTweaks();
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                if (root.TryGetProperty("fontSizeMain", out var fm) && fm.TryGetInt32(out int fmv))   tweaks.FontSizeMain = fmv;
-                if (root.TryGetProperty("fontSizeSmall", out var fs) && fs.TryGetInt32(out int fsv))  tweaks.FontSizeSmall = fsv;
-                if (root.TryGetProperty("fontSizeCtx", out var fc) && fc.TryGetInt32(out int fcv))    tweaks.FontSizeCtx = fcv;
-                if (root.TryGetProperty("padRatio", out var pr) && pr.TryGetSingle(out float prv))    tweaks.PadRatio = prv;
-                if (root.TryGetProperty("charOverrides", out var co) && co.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var entry in co.EnumerateObject())
-                    {
-                        var ovr = new CharOverride();
-                        if (entry.Value.TryGetProperty("fontSize", out var ofs) && ofs.TryGetInt32(out int ofsv)) ovr.FontSize = ofsv;
-                        if (entry.Value.TryGetProperty("offsetX", out var oox) && oox.TryGetInt32(out int ooxv))  ovr.OffsetX = ooxv;
-                        if (entry.Value.TryGetProperty("offsetY", out var ooy) && ooy.TryGetInt32(out int ooyv))  ovr.OffsetY = ooyv;
-                        if (entry.Value.TryGetProperty("font", out var off) && off.ValueKind == JsonValueKind.String)
-                        {
-                            var fname = off.GetString();
-                            if (!string.IsNullOrWhiteSpace(fname)) ovr.Font = fname;
-                        }
-                        if (entry.Value.TryGetProperty("circleFontSize", out var ocfs) && ocfs.TryGetInt32(out int ocfsv)) ovr.CircleFontSize = ocfsv;
-                        if (entry.Value.TryGetProperty("circleOffsetX", out var ocox) && ocox.TryGetInt32(out int ocoxv)) ovr.CircleOffsetX = ocoxv;
-                        if (entry.Value.TryGetProperty("circleOffsetY", out var ocoy) && ocoy.TryGetInt32(out int ocoyv)) ovr.CircleOffsetY = ocoyv;
-                        tweaks.CharOverrides[entry.Name] = ovr;
-                    }
-                }
-                ConfigManager.LogCompatEvent("LearningTweaks",
-                    $"loaded : main={tweaks.FontSizeMain}, small={tweaks.FontSizeSmall}, ctx={tweaks.FontSizeCtx}, pad={tweaks.PadRatio}, overrides={tweaks.CharOverrides.Count}");
-                return tweaks;
-            }
-            catch (Exception ex)
-            {
-                ConfigManager.Log("LearningTweaks.Load", ex);
-                return new LearningTweaks();
-            }
-        }
-    }
+    // Exercice 6 : les aides des mots étrangers, que le clavier simplifié cache ailleurs.
+    private static readonly string[] LanguageExerciseCharacters = { "dk:stroke", "¿", "¡" };
 
     // ═══════════════════════════════════════════════════════════════
     // Champs d'instance
@@ -240,10 +120,6 @@ sealed class LearningModule : IDisposable
     private IntPtr _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly IntPtr _hWndOnboarding;
-    private readonly LearningTweaks _tweaks;
-    // Cache des fontes per-(size, fontFamily) pour les CharOverrides (evite recreation a chaque WM_PAINT).
-    // Cle = "fontName_sizePt" pour pouvoir mixer plusieurs familles.
-    private readonly Dictionary<string, IntPtr> _hFontCharCache = new();
 
     // Références app
     private readonly KeyMapper _mapper;
@@ -253,25 +129,9 @@ sealed class LearningModule : IDisposable
     // Données de highlight et noms des infobulles : index partagé (audit du 25/09, V-04 et L-03).
     private static CharacterIndex Index => CharacterIndex.Shared;
 
-    /// <summary>
-    /// Overrides explicites des noms de caractères pour les tooltips du clavier mini-onboarding,
-    /// quand le nom Unicode officiel est trop technique. Prioritaire sur Index.Names.
-    /// </summary>
-    private static readonly Dictionary<string, (string Fr, string En)> CharNamesOverride = new()
-    {
-        ["’"] = ("APOSTROPHE TYPOGRAPHIQUE", "TYPOGRAPHIC APOSTROPHE"),
-    };
+    // Place du clavier au dernier repeint : le survol y cherche la touche sous la souris.
+    private KeyboardPlacement? _keyboardPlacement;
 
-    /// <summary>Choisit le nom FR ou EN selon la langue courante, avec repli croisé.</summary>
-    private static string PickCharName((string Fr, string En) names) => L.IsEnglish
-        ? (names.En.Length > 0 ? names.En : names.Fr)
-        : (names.Fr.Length > 0 ? names.Fr : names.En);
-
-    // Layout clavier
-    private readonly VirtualKeyboard.VisualKey[] _visualKeys;
-
-    // Hit-testing pour tooltips : reseté à chaque PaintKeyboard. Usage seul-thread (UI).
-    private readonly List<(Win32.RECT Rect, uint Scancode, string? ContextLabel)> _keyHitAreas = new();
     private int _hoveredKeyIndex = -1;
     private IntPtr _hTooltip;
     private bool _trackingMouse;
@@ -386,7 +246,6 @@ sealed class LearningModule : IDisposable
         LearningSessionTracker.Opened(this);
         try
         {
-            _tweaks = LearningTweaks.Load(); // re-lu a chaque ctor → bouton "Reinitialiser onboarding" applique les changements
             _hWndOnboarding = hWndOnboarding;
             ConfigManager.LogCrashTraceDebug("LM.ctor: A1 _hWndOnboarding assigned");
             _mapper = mapper;
@@ -397,8 +256,6 @@ sealed class LearningModule : IDisposable
             ConfigManager.LogCrashTraceDebug("LM.ctor: A4 _layout assigned");
             _wndProcDelegate = WndProc;
             ConfigManager.LogCrashTraceDebug("LM.ctor: A5 _wndProcDelegate created");
-            _visualKeys = VirtualKeyboard.BuildKeyLayout();
-            ConfigManager.LogCrashTraceDebug($"LM.ctor: BuildKeyLayout done ({_visualKeys.Length} keys)");
 
             _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
             _hKbBgBrush = Win32.CreateSolidBrush(CLR_KB_BG);
@@ -545,86 +402,6 @@ sealed class LearningModule : IDisposable
         }
     }
 
-    /// <summary>Texte multi-ligne décrivant les couches d'une touche. Aligné sur deadkeys.js / keyboard.js.</summary>
-    private string BuildTooltipText(uint scancode, string? contextLabel)
-    {
-        if (contextLabel != null)
-        {
-            return contextLabel switch
-            {
-                "Tab" => L.Keyboard_TooltipTab,
-                "⌫" => L.Learning_TooltipBackspaceDisabled,
-                "Verr. Maj." => L.Keyboard_TooltipCapsLock,
-                "Maj ⇧" => L.Keyboard_TooltipShift,
-                "Entrée" => L.Keyboard_TooltipEnter,
-                "Ctrl" => L.Keyboard_TooltipCtrl,
-                "Win" => L.Keyboard_TooltipWin,
-                "Alt" => L.Keyboard_TooltipAlt,
-                "AltGr" => L.Keyboard_TooltipAltGr,
-                "Menu" => L.Keyboard_TooltipMenu,
-                _ => contextLabel
-            };
-        }
-        if (scancode == 0 || !_layout.Keys.TryGetValue(scancode, out var keyDef)) return "";
-
-        // Si une touche morte est active, le tooltip affiche le RESULTAT de la combinaison
-        // pour chaque couche (cf. testeur web). Sinon, comportement standard.
-        DeadKeyDefinition? activeDk = null;
-        var activeDkName = _mapper.ActiveDeadKey;
-        if (activeDkName != null) _layout.DeadKeys.TryGetValue(activeDkName, out activeDk);
-
-        var sb = new System.Text.StringBuilder();
-        AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk);
-        AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk);
-        AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk);
-        AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk);
-        return sb.ToString().TrimEnd('\n');
-    }
-
-    private void AppendTooltipLayer(System.Text.StringBuilder sb, string label, string? value, DeadKeyDefinition? activeDk = null)
-    {
-        if (string.IsNullOrEmpty(value)) return;
-
-        // Touche morte active : montrer le resultat de la combinaison si la touche morte
-        // s'applique au caractere de cette couche. Sinon (pas de combo, ou couche elle-meme
-        // une autre touche morte), on n'affiche rien pour cette couche.
-        if (activeDk != null)
-        {
-            if (value.StartsWith("dk_"))
-                return; // pas de combinaison dk→dk a afficher
-            var combined = activeDk.Apply(value);
-            if (combined != null)
-            {
-                sb.Append(label).Append(" : ").Append(combined);
-                if (Index.Names.TryGetValue(combined, out var combinedName))
-                    sb.Append(" — ").Append(PickCharName(combinedName).ToUpperInvariant());
-                sb.Append('\n');
-            }
-            return;
-        }
-
-        // Comportement standard (pas de touche morte active OU couche elle-meme une touche morte).
-        string disp = GetDisplayChar(value) ?? value;
-        sb.Append(label).Append(" : ").Append(disp);
-        if (value.StartsWith("dk_"))
-        {
-            // Touche morte : toujours afficher « Touche morte {nom} », jamais le nom du symbole isole
-            // (sinon dk_misc_symbols afficherait « FLÈCHE VERS LA DROITE » au lieu de « Symboles divers »).
-            // Source de verite : VirtualKeyboard._deadKeyNamesFr (aligne sur tester/deadkeys.js).
-            // Fallback sur _layout.DeadKeys[].Description du JSON (peut etre en anglais).
-            var dkNamesDict = L.IsEnglish ? L.DeadKeyNamesEn : VirtualKeyboard._deadKeyNamesFr;
-            if (dkNamesDict.TryGetValue(value, out var dkName))
-                sb.Append(L.Learning_DeadKeyConnector).Append(dkName.ToUpperInvariant());
-            else if (_layout.DeadKeys.TryGetValue(value, out var dk))
-                sb.Append(L.Learning_DeadKeyConnector).Append(dk.Description.ToUpperInvariant());
-        }
-        else if (CharNamesOverride.TryGetValue(disp, out var overrideName))
-            sb.Append(" — ").Append(PickCharName(overrideName).ToUpperInvariant());
-        else if (Index.Names.TryGetValue(disp, out var name))
-            sb.Append(" — ").Append(PickCharName(name).ToUpperInvariant());
-        sb.Append('\n');
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // Polices
     // ═══════════════════════════════════════════════════════════════
@@ -635,11 +412,11 @@ sealed class LearningModule : IDisposable
         _hFontTarget = Win32.CreateFontW(-S(20), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontStatus = Win32.CreateFontW(-S(15), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontButton = Win32.CreateFontW(-S(14), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        // Caractères dans les touches — tailles ajustables via learning-tweaks.json (FontSizeMain/Small/Ctx).
-        _hFontCharMain = Win32.CreateFontW(S(_tweaks.FontSizeMain), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
-        _hFontCharDeadKey = Win32.CreateFontW(S(Math.Max(1, (int)Math.Round(_tweaks.FontSizeMain * 0.85))), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
-        _hFontCharSmall = Win32.CreateFontW(S(_tweaks.FontSizeSmall), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
-        _hFontCtx = Win32.CreateFontW(S(_tweaks.FontSizeCtx), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
+        // Caractères dans les touches.
+        _hFontCharMain = Win32.CreateFontW(S(FONT_CHAR_MAIN), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
+        _hFontCharDeadKey = Win32.CreateFontW(S(FONT_CHAR_DEAD_KEY), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
+        _hFontCharSmall = Win32.CreateFontW(S(FONT_CHAR_SMALL), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
+        _hFontCtx = Win32.CreateFontW(S(FONT_CTX), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontTransition = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontBadge = Win32.CreateFontW(S(9), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
     }
@@ -657,25 +434,6 @@ sealed class LearningModule : IDisposable
         Win32.DeleteObject(_hFontCtx);
         Win32.DeleteObject(_hFontTransition);
         Win32.DeleteObject(_hFontBadge);
-        // Cache des fontes per-char (CharOverrides) : libere et vide
-        foreach (var hFont in _hFontCharCache.Values)
-            Win32.DeleteObject(hFont);
-        _hFontCharCache.Clear();
-    }
-
-    /// <summary>
-    /// Retourne (ou cree et cache) une fonte de la taille et famille demandees, weight 600.
-    /// Utilise par DrawCharAt quand un CharOverride.FontSize ou .Font est defini. Liberees
-    /// dans DestroyFonts (et donc aussi a chaque RecreateFonts sur WM_DPICHANGED).
-    /// </summary>
-    private IntPtr GetOrCreateCharFont(int sizePt, string fontFamily)
-    {
-        var key = $"{fontFamily}_{sizePt}";
-        if (_hFontCharCache.TryGetValue(key, out var existing))
-            return existing;
-        var hFont = Win32.CreateFontW(S(sizePt), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, fontFamily);
-        _hFontCharCache[key] = hFont;
-        return hFont;
     }
 
     private void RecreateFonts()
@@ -1113,13 +871,20 @@ sealed class LearningModule : IDisposable
         int my = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
 
         int hitIndex = -1;
-        for (int i = 0; i < _keyHitAreas.Count; i++)
+        KeyboardHitTestResult hit = default;
+        if (_keyboardPlacement is { } placement)
         {
-            var rc = _keyHitAreas[i].Rect;
-            if (mx >= rc.left && mx < rc.right && my >= rc.top && my < rc.bottom)
+            int i = 0;
+            foreach (var key in KeyboardRenderer.BuildHitTestRects(placement, KeyboardRenderProfile.Onboarding))
             {
-                hitIndex = i;
-                break;
+                var rc = key.Rect;
+                if (mx >= rc.left && mx < rc.right && my >= rc.top && my < rc.bottom)
+                {
+                    hitIndex = i;
+                    hit = key;
+                    break;
+                }
+                i++;
             }
         }
 
@@ -1128,8 +893,8 @@ sealed class LearningModule : IDisposable
             _hoveredKeyIndex = hitIndex;
             if (hitIndex >= 0)
             {
-                var hit = _keyHitAreas[hitIndex];
-                string text = BuildTooltipText(hit.Scancode, hit.ContextLabel);
+                string text = KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Onboarding,
+                    BuildKeyboardState(), hit.Scancode, hit.Label);
                 if (string.IsNullOrEmpty(text))
                     SetTooltip("", new Win32.RECT()); // pas de correspondance avec la dk active → pas de tooltip
                 else
@@ -1753,7 +1518,7 @@ sealed class LearningModule : IDisposable
         if (VirtualKeyboard.KeyCodeToScancode.TryGetValue(keyCode, out var scancode))
         {
             _highlightedScancodes.Add(scancode);
-            isLetter = LetterKeyScancodes.Contains(scancode);
+            isLetter = KeyboardRenderer.IsLetterKey(scancode);
         }
 
         bool needsShift = layer == "Shift" || layer == "Shift+AltGr" || layer == "AltGr+Shift";
@@ -1771,15 +1536,6 @@ sealed class LearningModule : IDisposable
         }
         if (needsAltGr)
             _highlightedLabels.Add("AltGr");
-    }
-
-    private bool IsKeyHighlighted(in VirtualKeyboard.VisualKey vk)
-    {
-        if (_highlightedScancodes.Count == 0 && _highlightedLabels.Count == 0 && _highlightedContextIds.Count == 0) return false;
-        if (vk.Scancode != 0 && _highlightedScancodes.Contains(vk.Scancode)) return true;
-        if (vk.IsContextual && vk.ContextId != null && _highlightedContextIds.Contains(vk.ContextId)) return true;
-        if (vk.IsContextual && _highlightedLabels.Contains(vk.Label)) return true;
-        return false;
     }
 
     internal static MethodData? ResolveStep2MethodForActiveDeadKey(
@@ -1800,24 +1556,6 @@ sealed class LearningModule : IDisposable
         return methods.FirstOrDefault(method =>
             string.Equals(method.Type, "deadkey", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(method.DeadKey, activeDeadKey, StringComparison.Ordinal));
-    }
-
-    private (uint border, uint bg) GetHighlightColors(in VirtualKeyboard.VisualKey vk)
-    {
-        if (vk.Label == "Verr. Maj."
-            && _currentStep < Steps.Length
-            && Steps[_currentStep].KeepCapsHighlight)
-        {
-            return (CLR_HL_DIRECT, CLR_HL_DIRECT_BG);
-        }
-
-        return _highlightType switch
-        {
-            "direct" => (CLR_HL_DIRECT, CLR_HL_DIRECT_BG),
-            "step1" => (CLR_HL_STEP1, CLR_HL_STEP1_BG),
-            "step2" => (CLR_HL_STEP2, CLR_HL_STEP2_BG),
-            _ => (CLR_HL_DIRECT, CLR_HL_DIRECT_BG),
-        };
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2037,11 +1775,11 @@ sealed class LearningModule : IDisposable
         if (_layout.DeadKeys.TryGetValue(dkName, out var dk))
         {
             var iso = dk.GetIsolated();
-            if (!string.IsNullOrWhiteSpace(iso) && iso.Length == 1 && !IsCombiningMark(iso[0]))
+            if (!string.IsNullOrWhiteSpace(iso) && iso.Length == 1 && !KeyboardRenderer.IsCombiningMark(iso[0]))
                 return iso;
         }
         string fallback = TrayApplication.GetDeadKeySymbol(dkName);
-        if (!string.IsNullOrEmpty(fallback) && fallback.Length == 1 && !IsCombiningMark(fallback[0]))
+        if (!string.IsNullOrEmpty(fallback) && fallback.Length == 1 && !KeyboardRenderer.IsCombiningMark(fallback[0]))
             return fallback;
         return "";
     }
@@ -2146,176 +1884,51 @@ sealed class LearningModule : IDisposable
         if (kbW <= 0 || kbH <= 0) return;
 
         var geo = VirtualKeyboard.GetKeyboardGeometry(kbW, kbH);
-
-        // On reset les hit areas à chaque paint pour qu'elles reflètent la géométrie courante.
-        _keyHitAreas.Clear();
-
-        foreach (var vk in _visualKeys)
-        {
-            int kx = (int)(geo.OffsetX + vk.X * geo.Scale) + 0; // offset ajusté dans la zone clavier
-            int ky = kbTop + (int)(geo.OffsetY + vk.Y * geo.Scale);
-            int kw = (int)(vk.W * geo.Scale) - 1;
-            int kh = (int)(vk.H * geo.Scale) - 1;
-
-            if (kw <= 0 || kh <= 0) continue;
-
-            // Mémoriser la zone pour le hit-test du tooltip.
-            _keyHitAreas.Add((
-                new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = ky + kh },
-                vk.Scancode,
-                vk.IsContextual ? vk.Label : null));
-
-            // Déterminer couleur de fond
-            bool isPressed = _pressedScancode != 0 && vk.Scancode == _pressedScancode;
-            bool isHighlighted = IsKeyHighlighted(vk);
-            bool isModActive = IsModifierActive(vk);
-
-            // Sémantique highlight pédagogique :
-            //  • Touche à appuyer pour le caractère courant → contour vert + fond normal (KEY/KEY_CTX)
-            //  • Touche modificateur à appuyer ET déjà activée par l'utilisateur → fond vert plein + contour vert épaissi
-            //  • Modificateur activé hors contexte exercice (rare, ex Caps toggled sans être à appuyer) → fond CLR_MOD_ACTIVE
-            //  • Touche Backspace (scancode 0x0E) → fond terne quand elle est inutile ; highlight
-            //    vert si une mauvaise touche morte doit être annulée.
-            bool isDisabledKey = vk.IsContextual && vk.Scancode == 0x0E;
-            uint bgColor, borderColor;
-            int borderWidth = 1;
-            if (isDisabledKey && !isHighlighted)
-            {
-                bgColor = CLR_KEY_DISABLED;
-                borderColor = CLR_KEY_BORDER;
-            }
-            else if (isPressed)
-            {
-                bgColor = CLR_KEY_PRESSED;
-                borderColor = CLR_KEY_BORDER;
-            }
-            else if (isHighlighted && isModActive)
-            {
-                // À appuyer + activé → vert plein
-                var (hlBorder, hlBg) = GetHighlightColors(vk);
-                bgColor = hlBg;
-                borderColor = hlBorder;
-                borderWidth = 2;
-            }
-            else if (isHighlighted)
-            {
-                // À appuyer (pas encore activé) → contour seul
-                bgColor = vk.IsContextual ? CLR_KEY_CTX : CLR_KEY;
-                var (hlBorder, _) = GetHighlightColors(vk);
-                borderColor = hlBorder;
-                borderWidth = 2;
-            }
-            else if (isModActive)
-            {
-                bgColor = CLR_MOD_ACTIVE;
-                borderColor = CLR_KEY_BORDER;
-            }
-            else
-            {
-                bgColor = vk.IsContextual ? CLR_KEY_CTX : CLR_KEY;
-                borderColor = CLR_KEY_BORDER;
-            }
-
-            // Dessiner la touche — cas spécial Entrée ISO (polygone en L inversé) :
-            // partie haute pleine largeur (1.5u), partie basse réduite (1.25u alignée à droite).
-            bool isIsoEnter = vk.Scancode == 0x1C && vk.H > VirtualKeyboard.KEY_H;
-            var hBrush = Win32.CreateSolidBrush(bgColor);
-            var hPen = Win32.CreatePen(0, borderWidth, borderColor);
-            var hOldPen = Win32.SelectObject(hdc, hPen);
-            var hOldBrush = Win32.SelectObject(hdc, hBrush);
-
-            if (isIsoEnter)
-            {
-                // 6 points du L inversé. Référence : VirtualKeyboard.cs PaintContent.
-                float stepY = vk.Y + VirtualKeyboard.KEY_H;
-                float botStartY = vk.Y + VirtualKeyboard.KEY_H + VirtualKeyboard.ROW_GAP;
-                float botX = vk.X + (vk.W - 1.25f);
-                int yBase = kbTop + geo.OffsetY;
-                int px_tl = kx;
-                int py_tl = ky;
-                int px_tr = kx + kw;
-                int py_br = yBase + (int)((botStartY + VirtualKeyboard.KEY_H) * geo.Scale);
-                int px_bl = geo.OffsetX + (int)(botX * geo.Scale);
-                int py_step = yBase + (int)(stepY * geo.Scale);
-                var pts = new Win32.POINT[]
-                {
-                    new() { x = px_tl, y = py_tl },
-                    new() { x = px_tr, y = py_tl },
-                    new() { x = px_tr, y = py_br },
-                    new() { x = px_bl, y = py_br },
-                    new() { x = px_bl, y = py_step },
-                    new() { x = px_tl, y = py_step },
-                };
-                Win32.Polygon(hdc, pts, 6);
-            }
-            else
-            {
-                var keyRect = new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = ky + kh };
-                Win32.FillRect(hdc, ref keyRect, hBrush);
-                // Bordure rectangulaire (Polygon serait équivalent mais plus coûteux)
-                Win32.MoveToEx(hdc, kx, ky, IntPtr.Zero);
-                Win32.LineTo(hdc, kx + kw, ky);
-                Win32.LineTo(hdc, kx + kw, ky + kh);
-                Win32.LineTo(hdc, kx, ky + kh);
-                Win32.LineTo(hdc, kx, ky);
-            }
-
-            Win32.SelectObject(hdc, hOldBrush);
-            Win32.SelectObject(hdc, hOldPen);
-            Win32.DeleteObject(hPen);
-            Win32.DeleteObject(hBrush);
-
-            // Barre CapsLock
-            if (vk.Label == "Verr. Maj." && _mapper.CapsLockActive)
-            {
-                int barH = Math.Max(2, (int)(geo.Scale * 0.08f));
-                var barRect = new Win32.RECT { left = kx, top = ky + kh - barH, right = kx + kw, bottom = ky + kh };
-                var hBarBrush = Win32.CreateSolidBrush(CLR_CAPS_BAR);
-                Win32.FillRect(hdc, ref barRect, hBarBrush);
-                Win32.DeleteObject(hBarBrush);
-            }
-
-            // Contenu de la touche
-            if (vk.IsContextual)
-            {
-                // Label centré, toujours en blanc cassé. Pour Entrée ISO, centrer le texte
-                // dans la colonne droite (la partie commune du L) et non sur la pleine largeur.
-                // Backspace inactive : label gris. Quand elle est highlightée, elle redevient lisible.
-                var hOldFont = Win32.SelectObject(hdc, _hFontCtx);
-                Win32.SetTextColor(hdc, isDisabledKey && !isHighlighted ? 0x00606060u : CLR_CTX_TEXT);
-                int ctxLeft = isIsoEnter
-                    ? geo.OffsetX + (int)((vk.X + (vk.W - 1.25f)) * geo.Scale)
-                    : kx;
-                var labelRect = new Win32.RECT { left = ctxLeft, top = ky, right = kx + kw, bottom = ky + kh };
-                string keyCap = L.Keyboard_KeyCap(vk.Label);
-                Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect,
-                    Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-                Win32.SelectObject(hdc, hOldFont);
-            }
-            else if (vk.Scancode != 0 && _layout.Keys.TryGetValue(vk.Scancode, out var keyDef))
-            {
-                PaintKeyCharacters(hdc, kx, ky, kw, kh, keyDef, vk, geo.Scale);
-            }
-
-            // Badge highlight (1 ou 2)
-            bool keepCapsStatusKey = vk.Label == "Verr. Maj."
-                && _currentStep < Steps.Length
-                && Steps[_currentStep].KeepCapsHighlight;
-            if (isHighlighted && _highlightType == "step1" && !keepCapsStatusKey)
-            {
-                PaintBadge(hdc, kx + kw - S(12), ky + S(1), "1", CLR_HL_STEP1);
-            }
-            else if (isHighlighted && _highlightType == "step2" && !keepCapsStatusKey)
-            {
-                PaintBadge(hdc, kx + kw - S(12), ky + S(1), "2", CLR_HL_STEP2);
-            }
-        }
+        var placement = new KeyboardPlacement(geo.OffsetX, kbTop + geo.OffsetY, geo.Scale);
+        _keyboardPlacement = placement;
+        KeyboardRenderer.DrawKeys(hdc, placement, _layout, KeyboardRenderProfile.Onboarding, BuildKeyboardState(),
+            new KeyboardFonts(_hFontCharMain, _hFontCharDeadKey, _hFontCharSmall, _hFontCharSmall, _hFontCtx, _hFontBadge));
 
         // Overlay « pause » quand la fenêtre n'a plus le focus clavier (option A).
         // Affiche apres debounce 250ms (TIMER_FOCUS_LOST_CONFIRM) pour eviter d'apparaitre
         // sur les blinks WM_KILLFOCUS / WM_SETFOCUS rapides causes par MoveWindow / repaint.
         if (_focusLostConfirmed)
             PaintFocusLostOverlay(hdc, cw, kbTop, kbBottom);
+    }
+
+    /// <summary>
+    /// Ce que le clavier montre : modificateurs tenus (Ctrl et Alt ne s'allument pas sous
+    /// AltGr, qui vaut Ctrl+Alt pour Windows), Verr. Maj., touche morte armée, touche enfoncée,
+    /// surlignage de l'exercice et, à l'exercice 6, les aides des mots étrangers.
+    /// </summary>
+    private KeyboardRenderState BuildKeyboardState()
+    {
+        bool altGr = _mapper.AltGrDown;
+        var state = new KeyboardRenderState
+        {
+            Shift = _mapper.ShiftDown,
+            AltGr = altGr,
+            Ctrl = _mapper.CtrlDown && !altGr,
+            Alt = _mapper.AltDown && !altGr,
+            CapsLock = _mapper.CapsLockActive,
+            ActiveDeadKey = _mapper.ActiveDeadKey,
+            PressedScancode = _pressedScancode,
+            ShowInvisibleMarkers = false,
+            UiScale = _dpiScale,
+            HighlightKind = _highlightType switch
+            {
+                "step1" => KeyHighlight.Step1,
+                "step2" => KeyHighlight.Step2,
+                _ => KeyHighlight.Direct,
+            },
+            KeepCapsLockHighlight = _currentStep < Steps.Length && Steps[_currentStep].KeepCapsHighlight,
+        };
+        state.HighlightedScancodes.UnionWith(_highlightedScancodes);
+        state.HighlightedLabels.UnionWith(_highlightedLabels);
+        state.HighlightedContextIds.UnionWith(_highlightedContextIds);
+        if (_currentStep == Steps.Length - 1)
+            state.LessonVisibleCharacters.UnionWith(LanguageExerciseCharacters);
+        return state;
     }
 
     /// <summary>
@@ -2356,233 +1969,6 @@ sealed class LearningModule : IDisposable
         Win32.DrawTextW(hdc, msg, msg.Length, ref rc,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         Win32.SelectObject(hdc, hOldFont);
-    }
-
-    private void PaintBadge(IntPtr hdc, int x, int y, string text, uint color)
-    {
-        int size = S(14);
-        var hBrush = Win32.CreateSolidBrush(color);
-        var rect = new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size };
-        Win32.FillRect(hdc, ref rect, hBrush);
-        Win32.DeleteObject(hBrush);
-
-        var hOldFont = Win32.SelectObject(hdc, _hFontBadge);
-        Win32.SetTextColor(hdc, 0x00FFFFFF);
-        Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-        Win32.SelectObject(hdc, hOldFont);
-    }
-
-    /// <summary>
-    /// Dessine les caractères d'une touche selon sa famille.
-    /// Reproduit la logique de tester/keyboard.js : updateLetterKeyDisplay (lettres a-z),
-    /// updateAccentedLetterKeyDisplay (é è ç à rangée numérique), updateSymbolKeyDisplay (autres).
-    /// Quand une touche morte est active, affiche le résultat de combinaison (vert) au centre
-    /// de la zone haute et conserve le nom AZERTY de la touche en bas, comme le clavier virtuel.
-    /// </summary>
-    private void PaintKeyCharacters(IntPtr hdc, int kx, int ky, int kw, int kh,
-        KeyDefinition keyDef, in VirtualKeyboard.VisualKey vk, float scale)
-    {
-        // Padding intérieur des touches — marge entre les caractères et les bords gauche/droit.
-        // Ratio ajustable via learning-tweaks.json (PadRatio, defaut 0.14).
-        int pad = Math.Max(4, (int)(scale * _tweaks.PadRatio));
-
-        // ── 1. Touche morte active : afficher le résultat + le nom de touche ──
-        if (_mapper.ActiveDeadKey != null && _layout.DeadKeys.TryGetValue(_mapper.ActiveDeadKey, out var dk))
-        {
-            PaintActiveDeadKeyCharacters(hdc, kx, ky, kw, kh, keyDef, vk, dk);
-            return;
-        }
-
-        // Exercices 1 à 5 : affichage simplifié. Exercice 6 : simplifié + quelques aides langues.
-        bool languageExercise = _currentStep == Steps.Length - 1;
-        keyDef = FilterKeyForOnboarding(keyDef, vk.Scancode, languageExercise);
-
-        // ── 2. Dispatcher selon la famille de touche ──
-        if (AccentedNumericScancodes.Contains(vk.Scancode))
-            PaintAccentedNumericKey(hdc, kx, ky, kw, kh, keyDef, pad);
-        else if (LetterKeyScancodes.Contains(vk.Scancode) && IsLetterChar(keyDef.Base))
-            PaintLetterKey(hdc, kx, ky, kw, kh, keyDef, pad);
-        else
-            PaintSymbolKey(hdc, kx, ky, kw, kh, keyDef, pad);
-    }
-
-    private void PaintActiveDeadKeyCharacters(IntPtr hdc, int kx, int ky, int kw, int kh,
-        KeyDefinition keyDef, in VirtualKeyboard.VisualKey vk, DeadKeyDefinition dk)
-    {
-        // Même logique que VirtualKeyboard.GetDisplayChar(scancode) en mode touche morte :
-        // la combinaison dépend du caractère réellement tapé, avec Smart Caps Lock.
-        bool shift = _mapper.ShiftDown;
-        bool caps = _mapper.CapsLockActive;
-        bool isLetterKey = LetterKeyScancodes.Contains(vk.Scancode) && IsLetterChar(keyDef.Base);
-        string? lookupChar;
-        if (isLetterKey && (shift || caps))
-            lookupChar = keyDef.Base?.ToUpperInvariant();
-        else if (!isLetterKey && shift)
-            lookupChar = keyDef.Shift;
-        else
-            lookupChar = keyDef.Base;
-
-        string? result = lookupChar != null ? dk.Apply(lookupChar) : null;
-        if (vk.Scancode == 0x39) result = dk.GetIsolated();
-
-        int labelH = Math.Max(S(16), kh / 3);
-        int labelTop = Math.Max(ky, ky + kh - labelH - S(2));
-
-        if (!string.IsNullOrEmpty(result))
-        {
-            var hOldFont = Win32.SelectObject(hdc, _hFontCharDeadKey);
-            Win32.SetTextColor(hdc, CLR_DK_RESULT);
-            var charRect = new Win32.RECT
-            {
-                left = kx,
-                top = ky,
-                right = kx + kw,
-                bottom = Math.Max(ky + S(12), labelTop - S(1))
-            };
-            Win32.DrawTextW(hdc, result, result.Length, ref charRect,
-                Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP);
-            Win32.SelectObject(hdc, hOldFont);
-        }
-
-        var hOldLabelFont = Win32.SelectObject(hdc, _hFontCtx);
-        Win32.SetTextColor(hdc, CLR_CHAR_BASE);
-        var labelRect = new Win32.RECT
-        {
-            left = kx,
-            top = labelTop,
-            right = kx + kw,
-            bottom = ky + kh - S(1)
-        };
-        string keyCap = L.Keyboard_KeyCap(vk.Label);
-        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP);
-        Win32.SelectObject(hdc, hOldLabelFont);
-    }
-
-    private static bool IsLetterChar(string? s) => s != null && s.Length == 1 && char.IsLetter(s[0]);
-    private static bool IsDeadKeyRef(string? s) => s != null && s.StartsWith("dk_");
-
-    /// <summary>
-    /// Lettre simple (KeyA-KeyN sauf accentuées) : caractère principal en top-left,
-    /// AltGr en bottom-right (lettre, casse adaptée), Shift+AltGr en top-right uniquement
-    /// si non-lettre et différent d'AltGr. Reproduit updateLetterKeyDisplay() web.
-    /// </summary>
-    private void PaintLetterKey(IntPtr hdc, int kx, int ky, int kw, int kh,
-        KeyDefinition keyDef, int pad)
-    {
-        bool shift = _mapper.ShiftDown;
-        bool altGr = _mapper.AltGrDown;
-        bool caps = _mapper.CapsLockActive;
-
-        // Caractère principal (top-left) selon shift/caps
-        string? mainChar;
-        if (caps && shift) mainChar = keyDef.CapsShift ?? keyDef.Base;
-        else if (caps) mainChar = keyDef.Caps ?? keyDef.Base?.ToUpperInvariant();
-        else if (shift) mainChar = keyDef.Shift ?? keyDef.Base?.ToUpperInvariant();
-        else mainChar = keyDef.Base;
-
-        // AltGr (bottom-right) — adapter casse si lettre
-        string? altGrRaw = keyDef.AltGr;
-        string? altGrCharToShow = altGrRaw;
-        bool altGrIsLetter = IsLetterChar(altGrRaw);
-        if (altGrIsLetter)
-        {
-            if (caps && shift) altGrCharToShow = keyDef.CapsShiftAltGr ?? altGrRaw;
-            else if (caps) altGrCharToShow = keyDef.CapsAltGr ?? keyDef.ShiftAltGr ?? altGrRaw?.ToUpperInvariant();
-            else if (shift) altGrCharToShow = keyDef.ShiftAltGr ?? altGrRaw?.ToUpperInvariant();
-        }
-        bool hasAltGrChar = !string.IsNullOrEmpty(altGrCharToShow) && altGrCharToShow != mainChar;
-
-        // Shift+AltGr (top-right) — uniquement non-lettre et différent d'AltGr
-        string? shiftAltGrChar = keyDef.ShiftAltGr;
-        bool showShiftAltGr = !string.IsNullOrEmpty(shiftAltGrChar)
-            && !IsLetterChar(shiftAltGrChar)
-            && shiftAltGrChar != altGrRaw;
-
-        // États actifs
-        bool topLeftActive = !altGr;
-        bool bottomRightActive = altGr && (!shift || (shift && altGrIsLetter && !showShiftAltGr));
-        bool topRightActive = altGr && shift && showShiftAltGr;
-
-        // Top-left : caractère principal (gros, aligné au top)
-        DrawCharAt(hdc, kx + pad, ky, kx + kw / 2 + pad, ky + kh - pad,
-            mainChar, topLeftActive, IsDeadKeyRef(mainChar), alignLeft: true, useMainFont: true, alignTop: true);
-
-        // Bottom-right : AltGr discret (centré dans la moitié basse)
-        if (hasAltGrChar)
-            DrawCharAt(hdc, kx + kw / 2, ky + kh / 2, kx + kw - pad, ky + kh - pad,
-                altGrCharToShow, bottomRightActive, IsDeadKeyRef(altGrRaw), alignLeft: false, useMainFont: false);
-
-        // Top-right : Shift+AltGr non-lettre (top-aligned)
-        if (showShiftAltGr)
-            DrawCharAt(hdc, kx + kw / 2, ky, kx + kw - pad, ky + kh / 2 + pad,
-                shiftAltGrChar, topRightActive, IsDeadKeyRef(shiftAltGrChar), alignLeft: false, useMainFont: false, alignTop: true);
-    }
-
-    /// <summary>
-    /// Lettre accentuée rangée numérique (Digit2=é, Digit7=è, Digit9=ç, Digit0=à) :
-    /// 4 quadrants spécifiques — chiffre top-left (Shift), lettre bottom-left (Base affectée par Caps),
-    /// AltGr bottom-right, Shift+AltGr top-right. Reproduit updateAccentedLetterKeyDisplay() web.
-    /// </summary>
-    private void PaintAccentedNumericKey(IntPtr hdc, int kx, int ky, int kw, int kh,
-        KeyDefinition keyDef, int pad)
-    {
-        bool shift = _mapper.ShiftDown;
-        bool altGr = _mapper.AltGrDown;
-        bool caps = _mapper.CapsLockActive;
-
-        // Bottom-left : lettre (Caps fait passer à É/È/Ç/À)
-        string? letter = caps ? (keyDef.Caps ?? keyDef.Base?.ToUpperInvariant()) : keyDef.Base;
-        // Top-left : chiffre (Shift)
-        string? digit = keyDef.Shift;
-        string? altGr1 = keyDef.AltGr;
-        string? altGr2 = keyDef.ShiftAltGr;
-
-        // États actifs (Caps n'affecte que la casse, pas la position)
-        bool letterActive = !altGr && !shift;
-        bool digitActive = !altGr && shift;
-        bool altGr1Active = altGr && !shift;
-        bool altGr2Active = altGr && shift;
-
-        // Quadrants bas
-        DrawCharAt(hdc, kx + pad, ky + kh / 2, kx + kw / 2, ky + kh - pad,
-            letter, letterActive, IsDeadKeyRef(keyDef.Base), alignLeft: true, useMainFont: false);
-        DrawCharAt(hdc, kx + kw / 2, ky + kh / 2, kx + kw - pad, ky + kh - pad,
-            altGr1, altGr1Active, IsDeadKeyRef(altGr1), alignLeft: false, useMainFont: false);
-        // Quadrants hauts (top-aligned, rect étendu)
-        DrawCharAt(hdc, kx + pad, ky, kx + kw / 2, ky + kh / 2 + pad,
-            digit, digitActive, IsDeadKeyRef(digit), alignLeft: true, useMainFont: false, alignTop: true);
-        DrawCharAt(hdc, kx + kw / 2, ky, kx + kw - pad, ky + kh / 2 + pad,
-            altGr2, altGr2Active, IsDeadKeyRef(altGr2), alignLeft: false, useMainFont: false, alignTop: true);
-    }
-
-    /// <summary>
-    /// Symbole / chiffre / ponctuation : 4 quadrants standard.
-    /// Top-left = Shift, top-right = Shift+AltGr, bottom-left = Base, bottom-right = AltGr.
-    /// Reproduit updateSymbolKeyDisplay() web.
-    /// </summary>
-    private void PaintSymbolKey(IntPtr hdc, int kx, int ky, int kw, int kh,
-        KeyDefinition keyDef, int pad)
-    {
-        bool shift = _mapper.ShiftDown;
-        bool altGr = _mapper.AltGrDown;
-
-        bool baseActive = !altGr && !shift;
-        bool shiftActive = !altGr && shift;
-        bool altGrActive = altGr && !shift;
-        bool shiftAltGrActive = altGr && shift;
-
-        // Quadrants bas (Base, AltGr) : centrés verticalement dans la moitié basse.
-        DrawCharAt(hdc, kx + pad, ky + kh / 2, kx + kw / 2, ky + kh - pad,
-            keyDef.Base, baseActive, IsDeadKeyRef(keyDef.Base), alignLeft: true, useMainFont: false);
-        DrawCharAt(hdc, kx + kw / 2, ky + kh / 2, kx + kw - pad, ky + kh - pad,
-            keyDef.AltGr, altGrActive, IsDeadKeyRef(keyDef.AltGr), alignLeft: false, useMainFont: false);
-        // Quadrants hauts (Shift, Shift+AltGr) : alignés au top, rect étendu vers le bas pour
-        // permettre des fontes hautes sans clipping.
-        DrawCharAt(hdc, kx + pad, ky, kx + kw / 2, ky + kh / 2 + pad,
-            keyDef.Shift, shiftActive, IsDeadKeyRef(keyDef.Shift), alignLeft: true, useMainFont: false, alignTop: true);
-        DrawCharAt(hdc, kx + kw / 2, ky, kx + kw - pad, ky + kh / 2 + pad,
-            keyDef.ShiftAltGr, shiftAltGrActive, IsDeadKeyRef(keyDef.ShiftAltGr), alignLeft: false, useMainFont: false, alignTop: true);
     }
 
     /// <summary>
@@ -2692,274 +2078,6 @@ sealed class LearningModule : IDisposable
                 break;
         }
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-    }
-
-    /// <summary>
-    /// Dessine un caractère dans une cellule. Couleur : bleu vif si actif, gris dimmed sinon ;
-    /// rouge si touche morte active, gris sinon. Convertit les "dk_*" en symboles via GetDeadKeySymbol.
-    /// Police : _hFontCharMain (gros) si useMainFont, sinon _hFontCharSmall (petit).
-    /// alignTop = true → caractère collé au top de la cellule (pour quadrants hauts) ;
-    /// false → centré verticalement (pour quadrants bas / caractère unique au centre).
-    /// </summary>
-    private void DrawCharAt(IntPtr hdc, int left, int top, int right, int bottom,
-        string? chr, bool isActive, bool isDeadKey, bool alignLeft, bool useMainFont,
-        bool alignTop = false)
-    {
-        var disp = GetDisplayChar(chr);
-        if (string.IsNullOrEmpty(disp)) return;
-
-        _tweaks.CharOverrides.TryGetValue(disp, out var ovr);
-
-        uint color = (isDeadKey, isActive) switch
-        {
-            (true, true)   => CLR_DK_CHAR,           // Touche morte active : rouge clair
-            (true, false)  => CLR_CHAR_DIM,           // Touche morte non active : gris dimmed
-            (false, true)  => CLR_CHAR_ACTIVE_BLUE,   // Caractère actif : bleu vif
-            (false, false) => CLR_CHAR_DIM            // Inactif : gris dimmed
-        };
-
-        // Cas special : ◌ + suffixe non-combinant (˙ ˝ ˘ / − ˇ ˛). On rend le ◌ et le suffixe
-        // en 2 passes separees pour pouvoir les positionner / dimensionner independamment.
-        // Pour les combinants purs (̣ ̏ ̛ ̉ ̑), le suffixe doit rester avec une base pour
-        // etre rendu, donc on tombe sur le path standard plus bas.
-        bool isSplitDottedCircle = disp.Length == 2 && disp[0] == '◌' && !IsCombiningMark(disp[1]);
-        if (isSplitDottedCircle)
-        {
-            string circle = "◌";
-            string suffix = disp[1].ToString();
-            // Pass 1 : ◌
-            int circleSizePt = (ovr?.CircleFontSize) ?? ovr?.FontSize ?? (useMainFont ? _tweaks.FontSizeMain : _tweaks.FontSizeSmall);
-            string circleFontName = ovr?.Font ?? "Segoe UI";
-            int circleOffX = ovr?.CircleOffsetX is int cox ? S(cox) : 0;
-            int circleOffY = ovr?.CircleOffsetY is int coy ? S(coy) : 0;
-            DrawSingleChar(hdc, circle, left, top, right, bottom,
-                circleOffX, circleOffY, circleSizePt, circleFontName, color, alignLeft, alignTop);
-            // Pass 2 : suffixe (˙ ˝ ˘ / − ˇ ˛)
-            int suffixSizePt = ovr?.FontSize ?? (useMainFont ? _tweaks.FontSizeMain : _tweaks.FontSizeSmall);
-            string suffixFontName = ovr?.Font ?? "Segoe UI";
-            int suffixOffX = ovr?.OffsetX is int oox ? S(oox) : 0;
-            int suffixOffY = ovr?.OffsetY is int ooy ? S(ooy) : 0;
-            DrawSingleChar(hdc, suffix, left, top, right, bottom,
-                suffixOffX, suffixOffY, suffixSizePt, suffixFontName, color, alignLeft, alignTop);
-            return;
-        }
-
-        // Path standard : 1 passe avec disp en entier (cas combinants purs ou caractere unique).
-        int sizePt2 = ovr?.FontSize ?? (useMainFont ? _tweaks.FontSizeMain : _tweaks.FontSizeSmall);
-        string fontName2 = ovr?.Font ?? "Segoe UI";
-        int offX = ovr?.OffsetX is int x ? S(x) : 0;
-        int offY = ovr?.OffsetY is int y ? S(y) : 0;
-        // Si pas d'override sur fonte/taille, on utilise les fontes preconstruites pour eviter
-        // de remplir le cache inutilement.
-        IntPtr hFont = (ovr?.FontSize.HasValue == true || ovr?.Font != null)
-            ? GetOrCreateCharFont(sizePt2, fontName2)
-            : (useMainFont ? _hFontCharMain : _hFontCharSmall);
-        DrawSingleCharWithFont(hdc, disp, left, top, right, bottom, offX, offY, hFont, color, alignLeft, alignTop);
-    }
-
-    private void DrawSingleChar(IntPtr hdc, string text, int left, int top, int right, int bottom,
-        int offsetX, int offsetY, int sizePt, string fontName, uint color, bool alignLeft, bool alignTop)
-    {
-        IntPtr hFont = GetOrCreateCharFont(sizePt, fontName);
-        DrawSingleCharWithFont(hdc, text, left, top, right, bottom, offsetX, offsetY, hFont, color, alignLeft, alignTop);
-    }
-
-    private static void DrawSingleCharWithFont(IntPtr hdc, string text, int left, int top, int right, int bottom,
-        int offsetX, int offsetY, IntPtr hFont, uint color, bool alignLeft, bool alignTop)
-    {
-        var hOldFont = Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, color);
-        var r = new Win32.RECT
-        {
-            left = left + offsetX,
-            top = top + offsetY,
-            right = right + offsetX,
-            bottom = bottom + offsetY
-        };
-        uint vAlign = alignTop ? 0u : Win32.DT_VCENTER;
-        uint flags = vAlign | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP
-            | (alignLeft ? Win32.DT_LEFT : Win32.DT_RIGHT);
-        Win32.DrawTextW(hdc, text, text.Length, ref r, flags);
-        Win32.SelectObject(hdc, hOldFont);
-    }
-
-    /// <summary>
-    /// Convertit une référence de couche en caractère affichable. Pour les références de
-    /// touche morte ("dk_*"), retourne le caractère obtenu en pressant espace après la touche
-    /// morte (= entrée " " dans la table dk du layout). Cohérent avec tester/deadkeys.js
-    /// fonction getDeadKeySymbol(). Fallback sur la table hardcodée TrayApplication si la dk
-    /// n'est pas dans le layout pour une raison quelconque.
-    /// </summary>
-    /// <summary>
-    /// Touches mortes dont le symbole isole est peu reconnaissable visuellement comme
-    /// un diacritique : on les prefixe avec ◌ (dotted circle) pour signaler que c'est une dk.
-    /// Pour ^ ¨ ´ ` ~ on ne prefixe pas (familiers en touche morte).
-    /// </summary>
-    private static readonly HashSet<string> DkAlwaysWithDottedCircle = new()
-    {
-        "dk_dot_above",
-        "dk_double_acute",
-        "dk_breve",
-        "dk_stroke",
-        "dk_horizontal_stroke",
-        "dk_caron",
-        "dk_ogonek",
-    };
-
-    /// <summary>
-    /// Touches mortes peu utilisées masquées sur le clavier virtuel des exercices.
-    /// L'exercice 6 réaffiche uniquement quelques aides utiles aux mots étrangers.
-    /// </summary>
-    private static readonly HashSet<string> HiddenDeadKeysInOnboarding = new()
-    {
-        "dk_misc_symbols",
-        "dk_dot_above",
-        "dk_dot_below",
-        "dk_double_acute",
-        "dk_double_grave",
-        "dk_horn",
-        "dk_hook",
-        "dk_breve",
-        "dk_inverted_breve",
-        "dk_stroke",
-        "dk_horizontal_stroke",
-        "dk_macron",
-        "dk_extended_latin",
-        "dk_cedilla",
-        "dk_comma",
-        "dk_phonetic",
-        "dk_ring_above",
-        "dk_scientific",
-        "dk_caron",
-        "dk_ogonek",
-        "dk_cyrillic",
-    };
-
-    private static readonly HashSet<string> LanguageExerciseDeadKeys = new()
-    {
-        "dk_stroke",
-    };
-
-    /// <summary>
-    /// Caractères directs (non-dead-key) masqués sur le clavier virtuel des exercices 1 à 5,
-    /// identifiés par (scancode, layer). Layers : 0=Base, 1=Shift, 2=AltGr, 3=ShiftAltGr,
-    /// 4=Caps, 5=CapsShift, 6=CapsAltGr, 7=CapsShiftAltGr.
-    /// </summary>
-    private static readonly HashSet<(uint scancode, int layer)> HiddenSlotsInOnboarding = new()
-    {
-        (0x56, 2), // B00 AltGr → ≤
-        (0x56, 3), // B00 ShiftAltGr → ≥
-        (0x17, 2), // D08 AltGr → ^
-        (0x26, 2), // C09 AltGr → `
-        (0x32, 2), // B07 AltGr → <
-        (0x32, 3), // B07 ShiftAltGr → ¿
-        (0x33, 2), // B08 AltGr → >
-        (0x34, 2), // B09 AltGr → #
-        (0x35, 2), // B10 AltGr → ¡
-        (0x05, 2), // E04 AltGr → ’
-        (0x05, 3), // E04 ShiftAltGr → ‘ (guillemet apostrophe simple ouvrant)
-        (0x07, 3), // E06 ShiftAltGr → soft hyphen U+00AD
-        (0x0B, 2), // E10 AltGr → @ (l'arobase principal sur E00 reste visible)
-        (0x2C, 3), // B01 ShiftAltGr → “ (guillemet double ouvrant)
-        (0x2D, 3), // B02 ShiftAltGr → ” (guillemet double fermant)
-    };
-
-    private static readonly HashSet<(uint scancode, int layer)> LanguageExerciseVisibleSlots = new()
-    {
-        (0x32, 3), // B07 ShiftAltGr → ¿
-        (0x35, 2), // B10 AltGr → ¡
-    };
-
-    private static string? FilterOnboardingSlot(uint scancode, int layer, string? value, bool languageExercise)
-    {
-        if (string.IsNullOrEmpty(value)) return value;
-        if (value.StartsWith("dk_")
-            && HiddenDeadKeysInOnboarding.Contains(value)
-            && !(languageExercise && LanguageExerciseDeadKeys.Contains(value)))
-            return null;
-        if (HiddenSlotsInOnboarding.Contains((scancode, layer))
-            && !(languageExercise && LanguageExerciseVisibleSlots.Contains((scancode, layer))))
-            return null;
-        return value;
-    }
-
-    private static KeyDefinition FilterKeyForOnboarding(KeyDefinition kd, uint scancode, bool languageExercise)
-    {
-        return new KeyDefinition
-        {
-            Position = kd.Position,
-            Scancode = kd.Scancode,
-            Base = FilterOnboardingSlot(scancode, 0, kd.Base, languageExercise),
-            Shift = FilterOnboardingSlot(scancode, 1, kd.Shift, languageExercise),
-            AltGr = FilterOnboardingSlot(scancode, 2, kd.AltGr, languageExercise),
-            ShiftAltGr = FilterOnboardingSlot(scancode, 3, kd.ShiftAltGr, languageExercise),
-            Caps = FilterOnboardingSlot(scancode, 4, kd.Caps, languageExercise),
-            CapsShift = FilterOnboardingSlot(scancode, 5, kd.CapsShift, languageExercise),
-            CapsAltGr = FilterOnboardingSlot(scancode, 6, kd.CapsAltGr, languageExercise),
-            CapsShiftAltGr = FilterOnboardingSlot(scancode, 7, kd.CapsShiftAltGr, languageExercise),
-        };
-    }
-
-    private string? GetDisplayChar(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return null;
-        string? result;
-        bool isDk = value.StartsWith("dk_");
-        if (isDk)
-        {
-            // Source de vérité : Table[" "] de la touche morte (= caractère isolé).
-            // IsNullOrWhiteSpace : certaines dk ont table[" "] = " " (espace), il faut tomber sur le fallback.
-            result = null;
-            if (_layout != null && _layout.DeadKeys.TryGetValue(value, out var dk))
-            {
-                var isolated = dk.GetIsolated();
-                if (!string.IsNullOrWhiteSpace(isolated)) result = isolated;
-            }
-            // Fallback hardcodé (cohérent avec tester/deadkeys.js DEAD_KEY_SYMBOLS)
-            if (string.IsNullOrWhiteSpace(result))
-                result = TrayApplication.GetDeadKeySymbol(value);
-        }
-        else
-        {
-            result = value;
-        }
-
-        // Caracteres combinants (point souscrit, double accent grave, corne, crochet,
-        // breve inversee, etc.) : sans glyphe propre, ils s'effacent quand affiches isoles.
-        // On les prefixe avec ◌ (DOTTED CIRCLE U+25CC) pour qu'ils soient lisibles.
-        if (!string.IsNullOrEmpty(result) && result.Length == 1 && IsCombiningMark(result[0]))
-            return "◌" + result;
-
-        // Touches mortes specifiques (point en chef, breve, caron, ogonek, etc.) : prefixe ◌
-        // pour signaler qu'il s'agit d'une touche morte, pas d'un caractere ordinaire.
-        if (isDk && !string.IsNullOrEmpty(result) && DkAlwaysWithDottedCircle.Contains(value))
-            return "◌" + result;
-
-        return result;
-    }
-
-    private static bool IsCombiningMark(char c) =>
-        (c >= '\u0300' && c <= '\u036F') ||  // Combining Diacritical Marks
-        (c >= '\u1AB0' && c <= '\u1AFF') ||  // Combining Diacritical Marks Extended
-        (c >= '\u1DC0' && c <= '\u1DFF') ||  // Combining Diacritical Marks Supplement
-        (c >= '\u20D0' && c <= '\u20FF') ||  // Combining Diacritical Marks for Symbols
-        (c >= '\uFE20' && c <= '\uFE2F');    // Combining Half Marks
-
-    private bool IsModifierActive(in VirtualKeyboard.VisualKey vk)
-    {
-        if (!vk.IsContextual) return false;
-        // Quand AltGr est tenu, Windows \u00e9met aussi un phantom LCtrl (convention AltGr=Ctrl+Alt) :
-        // on exclut ce phantom pour ne pas marquer Ctrl/Alt comme actifs visuellement.
-        bool altGr = _mapper.AltGrDown;
-        return vk.Label switch
-        {
-            "Maj \u21e7" => _mapper.ShiftDown,
-            "AltGr" => altGr,
-            "Ctrl" => _mapper.CtrlDown && !altGr,
-            "Alt" => _mapper.AltDown && !altGr,
-            "Verr. Maj." => _mapper.CapsLockActive,
-            _ => false
-        };
     }
 
     // ═══════════════════════════════════════════════════════════════

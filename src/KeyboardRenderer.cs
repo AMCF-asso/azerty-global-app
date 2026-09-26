@@ -3,9 +3,31 @@ namespace AZERTYGlobal;
 internal enum KeyboardRenderProfile
 {
     Full,
+    /// <summary>Tutoriel de l'accueil : ses couleurs de surlignage, ses pastilles, son Retour
+    /// arrière terne et sa place propre (lot 9, audit du 25/09 L-01).</summary>
     Onboarding,
     Lesson
 }
+
+/// <summary>
+/// Genre de surlignage d'une touche guidée : touche à presser (direct), armement d'une touche
+/// morte (étape 1), touche finale après l'armement (étape 2). Le tutoriel les distingue par la
+/// couleur et une pastille « 1 » ou « 2 » ; les Leçons n'en montrent qu'un, en contour vert.
+/// </summary>
+internal enum KeyHighlight
+{
+    Direct,
+    Step1,
+    Step2
+}
+
+/// <summary>Place du clavier : coin haut-gauche et pixels par unité de touche.</summary>
+internal readonly record struct KeyboardPlacement(int OriginX, int OriginY, float Scale);
+
+/// <summary>Polices du clavier : caractère principal, résultat de touche morte, couches
+/// secondaires, petites mentions, touches de contexte, pastilles du tutoriel.</summary>
+internal readonly record struct KeyboardFonts(IntPtr Main, IntPtr DeadKey, IntPtr Small, IntPtr Tiny, IntPtr Context,
+    IntPtr Badge = default);
 
 internal sealed class KeyboardRenderState
 {
@@ -22,6 +44,13 @@ internal sealed class KeyboardRenderState
     public HashSet<string> LessonVisibleCharacters { get; } = new(StringComparer.Ordinal);
     public string? HintCharacter { get; init; }
     public bool ShowInvisibleMarkers { get; init; } = true;
+    /// <summary>Genre des touches surlignées (tutoriel).</summary>
+    public KeyHighlight HighlightKind { get; set; }
+    /// <summary>Exercices 1 et 2 du tutoriel : Verr. Maj. reste surlignée en « direct », sans
+    /// pastille, quel que soit le genre des autres touches.</summary>
+    public bool KeepCapsLockHighlight { get; set; }
+    /// <summary>Échelle d'interface du tutoriel (1 à 96 DPI) : pastilles et touche morte armée.</summary>
+    public float UiScale { get; init; } = 1f;
 }
 
 internal readonly record struct KeyboardHitTestResult(uint Scancode, string Label, Win32.RECT Rect);
@@ -42,6 +71,14 @@ internal static class KeyboardRenderer
     private const uint CLR_DK_CHAR = 0x006666FF;
     private const uint CLR_DK_ACTIVE_TEXT = 0x000080FF;
     private const uint CLR_CAPS_BAR = 0x0000A5FF;
+    private const uint CLR_DK_RESULT = 0x0066CC66;
+
+    // Surlignage du tutoriel, contour puis fond : direct vert, étape 1 orange, étape 2 vert.
+    private const uint CLR_HL_DIRECT_BG = 0x00284018;
+    private const uint CLR_HL_STEP1 = 0x0000A5FF;
+    private const uint CLR_HL_STEP1_BG = 0x00283020;
+    private const uint CLR_HL_STEP2 = 0x004CB050;
+    private const uint CLR_HL_STEP2_BG = 0x00203818;
 
     private static readonly HashSet<uint> LetterKeyScancodes = new()
     {
@@ -129,9 +166,8 @@ internal static class KeyboardRenderer
         if (string.IsNullOrEmpty(value)) return false;
         if (profile == KeyboardRenderProfile.Full) return true;
 
-        if (profile == KeyboardRenderProfile.Onboarding)
-            return IsOnboardingSlotVisible(scancode, layer, value);
-
+        // Tutoriel et Leçons : le clavier simplifié, plus ce que l'exercice révèle (l'exercice 6
+        // du tutoriel montre ◌/, ¿ et ¡ ; une leçon, ses caractères et l'indice).
         if (IsOnboardingSlotVisible(scancode, layer, value)) return true;
         if (StringComparer.Ordinal.Equals(value, hintCharacter)) return true;
         if (lessonVisibleCharacters?.Contains(value) == true) return true;
@@ -154,38 +190,30 @@ internal static class KeyboardRenderer
         IntPtr hFontTiny,
         IntPtr hFontContext)
     {
-        var visualKeys = VisualKeys;
-        float maxRight = visualKeys.Max(k => k.X + k.W);
-        float maxBottom = visualKeys.Max(k => k.Y + k.H);
-        int width = Math.Max(1, bounds.right - bounds.left);
+        var placement = Place(bounds, out int keyboardW, out int keyboardH);
         int height = Math.Max(1, bounds.bottom - bounds.top);
         int statusHeight = state.ActiveDeadKey != null ? Math.Clamp(height / 13, 18, 28) : 0;
-        float scale = Math.Min(width / maxRight, height / maxBottom);
-        int keyboardW = (int)(maxRight * scale);
-        int keyboardH = (int)(maxBottom * scale);
-        int originX = bounds.left + (width - keyboardW) / 2;
-        int originY = bounds.top + (height - keyboardH) / 2;
 
-        Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-        foreach (var key in visualKeys)
-        {
-            var rect = ToRect(key, originX, originY, scale);
-            DrawKey(hdc, rect, key, layout, profile, state, hFontMain, hFontDeadKey, hFontSmall, hFontTiny, hFontContext);
-        }
+        DrawKeys(hdc, placement, layout, profile, state,
+            new KeyboardFonts(hFontMain, hFontDeadKey, hFontSmall, hFontTiny, hFontContext));
 
         if (state.ActiveDeadKey != null)
-            DrawActiveDeadKeyStatus(hdc, new Win32.RECT { left = originX, top = bounds.bottom - statusHeight, right = originX + keyboardW, bottom = bounds.bottom }, state.ActiveDeadKey, hFontTiny);
+            DrawActiveDeadKeyStatus(hdc, new Win32.RECT { left = placement.OriginX, top = bounds.bottom - statusHeight, right = placement.OriginX + keyboardW, bottom = bounds.bottom }, state.ActiveDeadKey, hFontTiny);
 
         return new Win32.RECT
         {
-            left = originX,
-            top = originY,
-            right = originX + keyboardW,
-            bottom = originY + keyboardH
+            left = placement.OriginX,
+            top = placement.OriginY,
+            right = placement.OriginX + keyboardW,
+            bottom = placement.OriginY + keyboardH
         };
     }
 
-    public static IEnumerable<KeyboardHitTestResult> BuildHitTestRects(Win32.RECT bounds)
+    /// <summary>Le clavier centré dans <paramref name="bounds"/>, à la plus grande échelle qui
+    /// tient.</summary>
+    public static KeyboardPlacement Place(Win32.RECT bounds) => Place(bounds, out _, out _);
+
+    private static KeyboardPlacement Place(Win32.RECT bounds, out int keyboardW, out int keyboardH)
     {
         var visualKeys = VisualKeys;
         float maxRight = visualKeys.Max(k => k.X + k.W);
@@ -193,13 +221,32 @@ internal static class KeyboardRenderer
         int width = Math.Max(1, bounds.right - bounds.left);
         int height = Math.Max(1, bounds.bottom - bounds.top);
         float scale = Math.Min(width / maxRight, height / maxBottom);
-        int keyboardW = (int)(maxRight * scale);
-        int keyboardH = (int)(maxBottom * scale);
-        int originX = bounds.left + (width - keyboardW) / 2;
-        int originY = bounds.top + (height - keyboardH) / 2;
+        keyboardW = (int)(maxRight * scale);
+        keyboardH = (int)(maxBottom * scale);
+        return new KeyboardPlacement(bounds.left + (width - keyboardW) / 2, bounds.top + (height - keyboardH) / 2, scale);
+    }
 
-        foreach (var key in visualKeys)
-            yield return new KeyboardHitTestResult(key.Scancode, key.Label, ToRect(key, originX, originY, scale));
+    /// <summary>
+    /// Les touches seules, à une place donnée. Le tutoriel garde la sienne
+    /// (<see cref="VirtualKeyboard.GetKeyboardGeometry"/>) et n'a pas la ligne de touche morte :
+    /// il la dit au-dessus du clavier. Les Leçons passent par <see cref="Draw"/>.
+    /// </summary>
+    public static void DrawKeys(IntPtr hdc, KeyboardPlacement placement, Layout layout, KeyboardRenderProfile profile,
+        KeyboardRenderState state, KeyboardFonts fonts)
+    {
+        Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+        foreach (var key in VisualKeys)
+            DrawKey(hdc, KeyRect(key, placement, profile), key, placement, layout, profile, state, fonts);
+    }
+
+    public static IEnumerable<KeyboardHitTestResult> BuildHitTestRects(Win32.RECT bounds)
+        => BuildHitTestRects(Place(bounds), KeyboardRenderProfile.Full);
+
+    /// <summary>Le cadre de chaque touche, tel que <see cref="DrawKeys"/> la dessine.</summary>
+    public static IEnumerable<KeyboardHitTestResult> BuildHitTestRects(KeyboardPlacement placement, KeyboardRenderProfile profile)
+    {
+        foreach (var key in VisualKeys)
+            yield return new KeyboardHitTestResult(key.Scancode, key.Label, KeyRect(key, placement, profile));
     }
 
     public static string BuildTooltipText(
@@ -209,27 +256,30 @@ internal static class KeyboardRenderer
         uint scancode,
         string contextLabel)
     {
+        bool tutorial = profile == KeyboardRenderProfile.Onboarding;
         if (scancode == 0 || !layout.Keys.TryGetValue(scancode, out var keyDef))
-            return GetContextTooltip(contextLabel);
+            return GetContextTooltip(contextLabel, tutorial);
 
         DeadKeyDefinition? activeDk = null;
         if (state.ActiveDeadKey != null)
             layout.DeadKeys.TryGetValue(state.ActiveDeadKey, out activeDk);
 
+        var style = new GlyphStyle(state.ShowInvisibleMarkers, tutorial, layout);
         var sb = new System.Text.StringBuilder();
-        AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk, state.ShowInvisibleMarkers);
-        AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk, state.ShowInvisibleMarkers);
-        AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk, state.ShowInvisibleMarkers);
-        AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk, state.ShowInvisibleMarkers);
+        AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk, style);
+        AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk, style);
+        AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk, style);
+        AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk, style);
         return sb.ToString().TrimEnd('\n');
     }
 
-    private static string GetContextTooltip(string label)
+    private static string GetContextTooltip(string label, bool tutorial)
     {
         return label switch
         {
             "Tab" => L.Keyboard_TooltipTab,
-            "⌫" => L.Keyboard_TooltipBackspace,
+            // Le tutoriel désactive Retour arrière tant qu'il ne sert pas, et le dit.
+            "⌫" => tutorial ? L.Learning_TooltipBackspaceDisabled : L.Keyboard_TooltipBackspace,
             "Verr. Maj." => L.Keyboard_TooltipCapsLock,
             "Maj ⇧" => L.Keyboard_TooltipShift,
             "Entrée" => L.Keyboard_TooltipEnter,
@@ -242,7 +292,7 @@ internal static class KeyboardRenderer
         };
     }
 
-    private static void AppendTooltipLayer(System.Text.StringBuilder sb, string label, string? value, DeadKeyDefinition? activeDk, bool showInvisibleMarkers)
+    private static void AppendTooltipLayer(System.Text.StringBuilder sb, string label, string? value, DeadKeyDefinition? activeDk, GlyphStyle style)
     {
         if (string.IsNullOrEmpty(value))
             return;
@@ -254,7 +304,7 @@ internal static class KeyboardRenderer
             var combined = activeDk.Apply(value);
             if (combined != null)
             {
-                string combinedDisplay = DisplayInvisible(combined, showInvisibleMarkers);
+                string combinedDisplay = DisplayInvisible(combined, style.ShowInvisibleMarkers);
                 sb.Append(label).Append(" : ").Append(combinedDisplay);
                 AppendCharacterName(sb, combined, combinedDisplay);
                 sb.Append('\n');
@@ -262,10 +312,11 @@ internal static class KeyboardRenderer
             return;
         }
 
-        string display = GetDisplayChar(value, showInvisibleMarkers) ?? value;
+        string display = GetDisplayChar(value, style) ?? value;
         sb.Append(label).Append(" : ").Append(display);
         if (value.StartsWith("dk_", StringComparison.Ordinal))
-            sb.Append(L.Keyboard_DeadKeyConnector).Append(VirtualKeyboard.GetDeadKeyDisplayName(value));
+            sb.Append(style.Tutorial ? L.Learning_DeadKeyConnector : L.Keyboard_DeadKeyConnector)
+                .Append(VirtualKeyboard.GetDeadKeyDisplayName(value));
         else
             AppendCharacterName(sb, value, display);
         sb.Append('\n');
@@ -284,7 +335,7 @@ internal static class KeyboardRenderer
             CharacterIndex.Shared.Names.TryGetValue(display, out name))
         {
             // Nom selon la langue de l'UI ; repli sur l'autre langue si absent
-            // (même logique que VirtualKeyboard / LearningModule).
+            // (même logique que VirtualKeyboard).
             string chosen = L.IsEnglish
                 ? (name.En.Length > 0 ? name.En : name.Fr)
                 : (name.Fr.Length > 0 ? name.Fr : name.En);
@@ -293,19 +344,34 @@ internal static class KeyboardRenderer
         }
     }
 
+    /// <summary>
+    /// Comment dessiner les caractères : repères des espaces insécables, règles du tutoriel
+    /// (touche morte non active en gris, symbole de touche morte lu d'abord dans la
+    /// disposition), disposition.
+    /// </summary>
+    private readonly record struct GlyphStyle(bool ShowInvisibleMarkers, bool Tutorial, Layout Layout);
+
+    private static KeyHighlight HighlightOf(VirtualKeyboard.VisualKey key, KeyboardRenderState state)
+        => state.KeepCapsLockHighlight && key.Label == "Verr. Maj." ? KeyHighlight.Direct : state.HighlightKind;
+
+    private static (uint Border, uint Fill) HighlightColors(KeyHighlight kind) => kind switch
+    {
+        KeyHighlight.Step1 => (CLR_HL_STEP1, CLR_HL_STEP1_BG),
+        KeyHighlight.Step2 => (CLR_HL_STEP2, CLR_HL_STEP2_BG),
+        _ => (CLR_KEY_HIGHLIGHT_BORDER, CLR_HL_DIRECT_BG),
+    };
+
     private static void DrawKey(
         IntPtr hdc,
         Win32.RECT rect,
         VirtualKeyboard.VisualKey key,
+        KeyboardPlacement placement,
         Layout layout,
         KeyboardRenderProfile profile,
         KeyboardRenderState state,
-        IntPtr hFontMain,
-        IntPtr hFontDeadKey,
-        IntPtr hFontSmall,
-        IntPtr hFontTiny,
-        IntPtr hFontContext)
+        KeyboardFonts fonts)
     {
+        bool tutorial = profile == KeyboardRenderProfile.Onboarding;
         bool highlighted = key.Scancode != 0 && state.HighlightedScancodes.Contains(key.Scancode);
         if (!highlighted && key.ContextId != null && state.HighlightedContextIds.Contains(key.ContextId))
             highlighted = true;
@@ -321,23 +387,41 @@ internal static class KeyboardRenderer
             "Verr. Maj." => state.CapsLock,
             _ => false
         };
-        bool disabledBackspace = profile == KeyboardRenderProfile.Onboarding && key.IsContextual && key.Scancode == 0x0E;
+        // Tutoriel : Retour arrière terne tant qu'il ne sert pas ; surligné, il redevient lisible.
+        bool disabledBackspace = tutorial && key.IsContextual && key.Scancode == 0x0E && !highlighted;
         bool isoEnter = key.Scancode == 0x1C && key.H > VirtualKeyboard.KEY_H;
+        KeyHighlight kind = HighlightOf(key, state);
+        var (highlightBorder, highlightFill) = tutorial ? HighlightColors(kind) : (CLR_KEY_HIGHLIGHT_BORDER, CLR_MOD_ACTIVE);
 
         uint fill = key.IsContextual ? CLR_KEY_CONTEXT : CLR_KEY;
         uint border = CLR_KEY_BORDER;
         int borderWidth = 1;
         if (disabledBackspace)
-            fill = CLR_KEY_DISABLED;
-        if (highlighted)
         {
-            border = CLR_KEY_HIGHLIGHT_BORDER;
-            borderWidth = 2;
+            fill = CLR_KEY_DISABLED;
         }
-        if (pressed)
+        else if (pressed)
+        {
             fill = CLR_KEY_PRESSED;
+            // Le tutoriel montre la frappe seule ; les Leçons gardent le contour de l'indice.
+            if (highlighted && !tutorial)
+            {
+                border = highlightBorder;
+                borderWidth = 2;
+            }
+        }
+        else if (highlighted)
+        {
+            border = highlightBorder;
+            borderWidth = 2;
+            // Modificateur à presser et déjà pressé : le tutoriel le remplit de la couleur du genre.
+            if (modifierActive)
+                fill = highlightFill;
+        }
         else if (modifierActive)
+        {
             fill = CLR_MOD_ACTIVE;
+        }
 
         var brush = Win32.CreateSolidBrush(fill);
         var pen = Win32.CreatePen(0, borderWidth, border);
@@ -345,7 +429,7 @@ internal static class KeyboardRenderer
         var oldPen = Win32.SelectObject(hdc, pen);
 
         if (isoEnter)
-            DrawIsoEnter(hdc, rect, key);
+            DrawIsoEnter(hdc, rect, key, placement, tutorial);
         else
             DrawRectKey(hdc, rect, brush);
 
@@ -356,7 +440,9 @@ internal static class KeyboardRenderer
 
         if (key.Label == "Verr. Maj." && state.CapsLock)
         {
-            int barH = Math.Max(2, (rect.bottom - rect.top) / 18);
+            int barH = tutorial
+                ? Math.Max(2, (int)(placement.Scale * 0.08f))
+                : Math.Max(2, (rect.bottom - rect.top) / 18);
             var barRect = new Win32.RECT { left = rect.left, top = rect.bottom - barH, right = rect.right, bottom = rect.bottom };
             var barBrush = Win32.CreateSolidBrush(CLR_CAPS_BAR);
             Win32.FillRect(hdc, ref barRect, barBrush);
@@ -364,13 +450,35 @@ internal static class KeyboardRenderer
         }
 
         if (key.IsContextual || key.Scancode == 0 || !layout.Keys.TryGetValue(key.Scancode, out var def))
-        {
-            DrawContextKeyLabel(hdc, rect, key, isoEnter, disabledBackspace, hFontContext);
-            return;
-        }
+            DrawContextKeyLabel(hdc, rect, key, placement, isoEnter, disabledBackspace, tutorial, fonts.Context);
+        else if (tutorial && state.ActiveDeadKey != null && layout.DeadKeys.TryGetValue(state.ActiveDeadKey, out var dk))
+            DrawTutorialDeadKeyResult(hdc, rect, key, def, dk, state, fonts);
+        else
+            DrawKeyCharacters(hdc, rect, key, FilterKeyForProfile(def, key.Scancode, profile, state), layout, profile, state,
+                placement.Scale, fonts);
 
-        var filtered = FilterKeyForProfile(def, key.Scancode, profile, state);
-        DrawKeyCharacters(hdc, rect, key, filtered, layout, state, hFontMain, hFontDeadKey, hFontSmall, hFontTiny);
+        if (tutorial && highlighted && kind != KeyHighlight.Direct)
+            DrawBadge(hdc, rect, kind, state.UiScale, fonts.Badge);
+    }
+
+    /// <summary>Pastille « 1 » ou « 2 » en haut à droite d'une touche du tutoriel : l'ordre
+    /// d'une séquence de touche morte.</summary>
+    private static void DrawBadge(IntPtr hdc, Win32.RECT key, KeyHighlight kind, float uiScale, IntPtr hFont)
+    {
+        int S(int value) => (int)(value * uiScale);
+        int x = key.right - S(12);
+        int y = key.top + S(1);
+        int size = S(14);
+        var rect = new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size };
+        var brush = Win32.CreateSolidBrush(HighlightColors(kind).Border);
+        Win32.FillRect(hdc, ref rect, brush);
+        Win32.DeleteObject(brush);
+
+        string text = kind == KeyHighlight.Step1 ? "1" : "2";
+        var oldFont = Win32.SelectObject(hdc, hFont);
+        Win32.SetTextColor(hdc, 0x00FFFFFF);
+        Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        Win32.SelectObject(hdc, oldFont);
     }
 
     private static void DrawRectKey(IntPtr hdc, Win32.RECT rect, IntPtr brush)
@@ -383,18 +491,35 @@ internal static class KeyboardRenderer
         Win32.LineTo(hdc, rect.left, rect.top);
     }
 
-    private static void DrawIsoEnter(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key)
+    private static void DrawIsoEnter(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, KeyboardPlacement placement,
+        bool tutorial)
     {
-        int width = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        int stepY = rect.top + (int)(height * (VirtualKeyboard.KEY_H / key.H));
-        int bottomLeft = rect.right - (int)(width * (1.25f / key.W));
+        int stepY, bottom, bottomLeft;
+        if (tutorial)
+        {
+            // Rendu d'origine du tutoriel : la marche et le pied se placent sur la grille des
+            // unités, sans le pixel retiré au cadre.
+            float stepUnits = key.Y + VirtualKeyboard.KEY_H;
+            float bottomStartUnits = key.Y + VirtualKeyboard.KEY_H + VirtualKeyboard.ROW_GAP;
+            float bottomLeftUnits = key.X + (key.W - 1.25f);
+            stepY = placement.OriginY + (int)(stepUnits * placement.Scale);
+            bottom = placement.OriginY + (int)((bottomStartUnits + VirtualKeyboard.KEY_H) * placement.Scale);
+            bottomLeft = placement.OriginX + (int)(bottomLeftUnits * placement.Scale);
+        }
+        else
+        {
+            int width = rect.right - rect.left;
+            int height = rect.bottom - rect.top;
+            stepY = rect.top + (int)(height * (VirtualKeyboard.KEY_H / key.H));
+            bottom = rect.bottom;
+            bottomLeft = rect.right - (int)(width * (1.25f / key.W));
+        }
         var pts = new Win32.POINT[]
         {
             new() { x = rect.left, y = rect.top },
             new() { x = rect.right, y = rect.top },
-            new() { x = rect.right, y = rect.bottom },
-            new() { x = bottomLeft, y = rect.bottom },
+            new() { x = rect.right, y = bottom },
+            new() { x = bottomLeft, y = bottom },
             new() { x = bottomLeft, y = stepY },
             new() { x = rect.left, y = stepY },
         };
@@ -405,18 +530,26 @@ internal static class KeyboardRenderer
         IntPtr hdc,
         Win32.RECT rect,
         VirtualKeyboard.VisualKey key,
+        KeyboardPlacement placement,
         bool isoEnter,
         bool disabled,
+        bool tutorial,
         IntPtr hFont)
     {
         var labelRect = rect;
         if (isoEnter)
-            labelRect.left = rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
+        {
+            labelRect.left = tutorial
+                ? placement.OriginX + (int)((key.X + (key.W - 1.25f)) * placement.Scale)
+                : rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
+        }
 
         Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, disabled ? 0x00606060u : CLR_CTX_TEXT);
-        Win32.DrawTextW(hdc, L.Keyboard_KeyCap(key.Label), -1, ref labelRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        // Le tutoriel ne raccourcit pas ses libellés.
+        uint flags = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX
+            | (tutorial ? 0u : Win32.DT_END_ELLIPSIS);
+        Win32.DrawTextW(hdc, L.Keyboard_KeyCap(key.Label), -1, ref labelRect, flags);
     }
 
     private static void DrawKeyCharacters(
@@ -425,33 +558,81 @@ internal static class KeyboardRenderer
         VirtualKeyboard.VisualKey key,
         KeyDefinition keyDef,
         Layout layout,
+        KeyboardRenderProfile profile,
         KeyboardRenderState state,
-        IntPtr hFontMain,
-        IntPtr hFontDeadKey,
-        IntPtr hFontSmall,
-        IntPtr hFontTiny)
+        float scale,
+        KeyboardFonts fonts)
     {
+        bool tutorial = profile == KeyboardRenderProfile.Onboarding;
         int kx = rect.left;
         int ky = rect.top;
         int kw = rect.right - rect.left;
         int kh = rect.bottom - rect.top;
-        int pad = Math.Clamp(kw / 10, 4, 14);
+        int pad = tutorial ? Math.Max(4, (int)(scale * 0.14f)) : Math.Clamp(kw / 10, 4, 14);
+        var style = new GlyphStyle(state.ShowInvisibleMarkers, tutorial, layout);
 
-        if ((state.Ctrl && !state.AltGr) || (state.Alt && !state.AltGr))
+        // Sous Ctrl ou Alt, les Leçons taisent les couches (raccourcis) ; le tutoriel les garde.
+        if (!tutorial && ((state.Ctrl && !state.AltGr) || (state.Alt && !state.AltGr)))
             return;
 
         if (state.ActiveDeadKey != null)
         {
-            DrawActiveDeadKeyCharacter(hdc, rect, key, keyDef, layout, state, hFontDeadKey, hFontTiny);
+            DrawActiveDeadKeyCharacter(hdc, rect, key, keyDef, layout, state, fonts.DeadKey, fonts.Tiny);
             return;
         }
 
         if (AccentedNumericScancodes.Contains(key.Scancode))
-            PaintAccentedNumericKey(hdc, kx, ky, kw, kh, keyDef, pad, state, hFontMain, hFontSmall);
+            PaintAccentedNumericKey(hdc, kx, ky, kw, kh, keyDef, pad, state, style, fonts.Main, fonts.Small);
         else if (LetterKeyScancodes.Contains(key.Scancode) && IsLetterChar(keyDef.Base))
-            PaintLetterKey(hdc, kx, ky, kw, kh, keyDef, pad, state, hFontMain, hFontSmall);
+            PaintLetterKey(hdc, kx, ky, kw, kh, keyDef, pad, state, style, fonts.Main, fonts.Small);
         else
-            PaintSymbolKey(hdc, kx, ky, kw, kh, keyDef, pad, state, hFontMain, hFontSmall, hFontTiny);
+            PaintSymbolKey(hdc, kx, ky, kw, kh, keyDef, pad, state, style, fonts.Main, fonts.Small, fonts.Tiny);
+    }
+
+    /// <summary>
+    /// Tutoriel, touche morte armée : ce que donne chaque touche, en vert, au-dessus de son nom.
+    /// Maj ou Verr. Maj. mettent la lettre en majuscule ; AltGr n'y entre pas ; l'espace donne
+    /// l'accent seul. Les Leçons montrent, elles, la sortie des couches tenues.
+    /// </summary>
+    private static void DrawTutorialDeadKeyResult(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key,
+        KeyDefinition keyDef, DeadKeyDefinition dk, KeyboardRenderState state, KeyboardFonts fonts)
+    {
+        int S(int value) => (int)(value * state.UiScale);
+        int kx = rect.left;
+        int ky = rect.top;
+        int kw = rect.right - rect.left;
+        int kh = rect.bottom - rect.top;
+        bool isLetterKey = LetterKeyScancodes.Contains(key.Scancode) && IsLetterChar(keyDef.Base);
+        string? lookupChar;
+        if (isLetterKey && (state.Shift || state.CapsLock))
+            lookupChar = keyDef.Base?.ToUpperInvariant();
+        else if (!isLetterKey && state.Shift)
+            lookupChar = keyDef.Shift;
+        else
+            lookupChar = keyDef.Base;
+
+        string? result = lookupChar != null ? dk.Apply(lookupChar) : null;
+        if (key.Scancode == 0x39) result = dk.GetIsolated();
+
+        int labelH = Math.Max(S(16), kh / 3);
+        int labelTop = Math.Max(ky, ky + kh - labelH - S(2));
+        const uint flags = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP;
+
+        if (!string.IsNullOrEmpty(result))
+        {
+            var oldFont = Win32.SelectObject(hdc, fonts.DeadKey);
+            Win32.SetTextColor(hdc, CLR_DK_RESULT);
+            var charRect = new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = Math.Max(ky + S(12), labelTop - S(1)) };
+            Win32.DrawTextW(hdc, result, result.Length, ref charRect, flags);
+            Win32.SelectObject(hdc, oldFont);
+        }
+
+        var oldLabelFont = Win32.SelectObject(hdc, fonts.Context);
+        Win32.SetTextColor(hdc, CLR_CTX_TEXT);
+        var labelRect = new Win32.RECT { left = kx, top = labelTop, right = kx + kw, bottom = ky + kh - S(1) };
+        string keyCap = L.Keyboard_KeyCap(key.Label);
+        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect, flags);
+        Win32.SelectObject(hdc, oldLabelFont);
     }
 
     private static void DrawActiveDeadKeyCharacter(
@@ -542,6 +723,7 @@ internal static class KeyboardRenderer
         KeyDefinition keyDef,
         int pad,
         KeyboardRenderState state,
+        GlyphStyle style,
         IntPtr hFontMain,
         IntPtr hFontSmall)
     {
@@ -572,15 +754,15 @@ internal static class KeyboardRenderer
         bool topRightActive = state.AltGr && state.Shift && showShiftAltGr;
 
         DrawCharAt(hdc, kx + pad, ky, kx + kw / 2 + pad, ky + kh - pad,
-            mainChar, topLeftActive, IsDeadKeyRef(mainChar), alignLeft: true, useMainFont: true, state.ShowInvisibleMarkers, hFontMain, hFontSmall, alignTop: true);
+            mainChar, topLeftActive, IsDeadKeyRef(mainChar), alignLeft: true, useMainFont: true, style, hFontMain, hFontSmall, alignTop: true);
 
         if (hasAltGrChar)
             DrawCharAt(hdc, kx + kw / 2, ky + kh / 2, kx + kw - pad, ky + kh - pad,
-                altGrCharToShow, bottomRightActive, IsDeadKeyRef(altGrRaw), alignLeft: false, useMainFont: false, state.ShowInvisibleMarkers, hFontMain, hFontSmall);
+                altGrCharToShow, bottomRightActive, IsDeadKeyRef(altGrRaw), alignLeft: false, useMainFont: false, style, hFontMain, hFontSmall);
 
         if (showShiftAltGr)
             DrawCharAt(hdc, kx + kw / 2, ky, kx + kw - pad, ky + kh / 2 + pad,
-                shiftAltGrChar, topRightActive, IsDeadKeyRef(shiftAltGrChar), alignLeft: false, useMainFont: false, state.ShowInvisibleMarkers, hFontMain, hFontSmall, alignTop: true);
+                shiftAltGrChar, topRightActive, IsDeadKeyRef(shiftAltGrChar), alignLeft: false, useMainFont: false, style, hFontMain, hFontSmall, alignTop: true);
     }
 
     private static void PaintAccentedNumericKey(
@@ -592,6 +774,7 @@ internal static class KeyboardRenderer
         KeyDefinition keyDef,
         int pad,
         KeyboardRenderState state,
+        GlyphStyle style,
         IntPtr hFontMain,
         IntPtr hFontSmall)
     {
@@ -601,13 +784,13 @@ internal static class KeyboardRenderer
         string? altGr2 = keyDef.ShiftAltGr;
 
         DrawCharAt(hdc, kx + pad, ky + kh / 2, kx + kw / 2, ky + kh - pad,
-            letter, !state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.Base), true, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall);
+            letter, !state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.Base), true, false, style, hFontMain, hFontSmall);
         DrawCharAt(hdc, kx + kw / 2, ky + kh / 2, kx + kw - pad, ky + kh - pad,
-            altGr1, state.AltGr && !state.Shift, IsDeadKeyRef(altGr1), false, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall);
+            altGr1, state.AltGr && !state.Shift, IsDeadKeyRef(altGr1), false, false, style, hFontMain, hFontSmall);
         DrawCharAt(hdc, kx + pad, ky, kx + kw / 2, ky + kh / 2 + pad,
-            digit, !state.AltGr && state.Shift, IsDeadKeyRef(digit), true, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall, alignTop: true);
+            digit, !state.AltGr && state.Shift, IsDeadKeyRef(digit), true, false, style, hFontMain, hFontSmall, alignTop: true);
         DrawCharAt(hdc, kx + kw / 2, ky, kx + kw - pad, ky + kh / 2 + pad,
-            altGr2, state.AltGr && state.Shift, IsDeadKeyRef(altGr2), false, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall, alignTop: true);
+            altGr2, state.AltGr && state.Shift, IsDeadKeyRef(altGr2), false, false, style, hFontMain, hFontSmall, alignTop: true);
     }
 
     private static void PaintSymbolKey(
@@ -619,24 +802,25 @@ internal static class KeyboardRenderer
         KeyDefinition keyDef,
         int pad,
         KeyboardRenderState state,
+        GlyphStyle style,
         IntPtr hFontMain,
         IntPtr hFontSmall,
         IntPtr hFontTiny)
     {
         if (keyDef.Scancode == 0x39)
         {
-            PaintSpaceKey(hdc, kx, ky, kw, kh, keyDef, pad, state, hFontMain, hFontTiny);
+            PaintSpaceKey(hdc, kx, ky, kw, kh, keyDef, pad, state, style, hFontMain, hFontTiny);
             return;
         }
 
         DrawCharAt(hdc, kx + pad, ky + kh / 2, kx + kw / 2, ky + kh - pad,
-            keyDef.Base, !state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.Base), true, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall);
+            keyDef.Base, !state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.Base), true, false, style, hFontMain, hFontSmall);
         DrawCharAt(hdc, kx + kw / 2, ky + kh / 2, kx + kw - pad, ky + kh - pad,
-            keyDef.AltGr, state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.AltGr), false, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall);
+            keyDef.AltGr, state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.AltGr), false, false, style, hFontMain, hFontSmall);
         DrawCharAt(hdc, kx + pad, ky, kx + kw / 2, ky + kh / 2 + pad,
-            keyDef.Shift, !state.AltGr && state.Shift, IsDeadKeyRef(keyDef.Shift), true, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall, alignTop: true);
+            keyDef.Shift, !state.AltGr && state.Shift, IsDeadKeyRef(keyDef.Shift), true, false, style, hFontMain, hFontSmall, alignTop: true);
         DrawCharAt(hdc, kx + kw / 2, ky, kx + kw - pad, ky + kh / 2 + pad,
-            keyDef.ShiftAltGr, state.AltGr && state.Shift, IsDeadKeyRef(keyDef.ShiftAltGr), false, false, state.ShowInvisibleMarkers, hFontMain, hFontSmall, alignTop: true);
+            keyDef.ShiftAltGr, state.AltGr && state.Shift, IsDeadKeyRef(keyDef.ShiftAltGr), false, false, style, hFontMain, hFontSmall, alignTop: true);
     }
 
     private static void PaintSpaceKey(
@@ -648,6 +832,7 @@ internal static class KeyboardRenderer
         KeyDefinition keyDef,
         int pad,
         KeyboardRenderState state,
+        GlyphStyle style,
         IntPtr hFontMain,
         IntPtr hFontTiny)
     {
@@ -660,13 +845,13 @@ internal static class KeyboardRenderer
         if (!string.IsNullOrEmpty(keyDef.ShiftAltGr))
         {
             DrawCharAt(hdc, left, bottom - (lineH * 2) - gap, right, bottom - lineH - gap,
-                keyDef.ShiftAltGr, state.AltGr && state.Shift, IsDeadKeyRef(keyDef.ShiftAltGr), false, false, state.ShowInvisibleMarkers, hFontMain, hFontTiny);
+                keyDef.ShiftAltGr, state.AltGr && state.Shift, IsDeadKeyRef(keyDef.ShiftAltGr), false, false, style, hFontMain, hFontTiny);
         }
 
         if (!string.IsNullOrEmpty(keyDef.AltGr))
         {
             DrawCharAt(hdc, left, bottom - lineH, right, bottom,
-                keyDef.AltGr, state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.AltGr), false, false, state.ShowInvisibleMarkers, hFontMain, hFontTiny);
+                keyDef.AltGr, state.AltGr && !state.Shift, IsDeadKeyRef(keyDef.AltGr), false, false, style, hFontMain, hFontTiny);
         }
     }
 
@@ -681,18 +866,19 @@ internal static class KeyboardRenderer
         bool isDeadKey,
         bool alignLeft,
         bool useMainFont,
-        bool showInvisibleMarkers,
+        GlyphStyle style,
         IntPtr hFontMain,
         IntPtr hFontSmall,
         bool alignTop = false)
     {
-        var disp = GetDisplayChar(chr, showInvisibleMarkers);
+        var disp = GetDisplayChar(chr, style);
         if (string.IsNullOrEmpty(disp)) return;
 
         uint color = (isDeadKey, isActive) switch
         {
             (true, true) => CLR_DK_CHAR,
-            (true, false) => CLR_DK_CHAR,
+            // Le tutoriel éteint une touche morte hors de la couche tenue, comme un caractère.
+            (true, false) => style.Tutorial ? CLR_CHAR_DIM : CLR_DK_CHAR,
             (false, true) => CLR_CHAR_ACTIVE_BLUE,
             (false, false) => CLR_CHAR_DIM
         };
@@ -750,7 +936,7 @@ internal static class KeyboardRenderer
         return true;
     }
 
-    private static string? GetDisplayChar(string? value, bool showInvisibleMarkers)
+    private static string? GetDisplayChar(string? value, GlyphStyle style)
     {
         if (string.IsNullOrEmpty(value)) return null;
 
@@ -758,11 +944,14 @@ internal static class KeyboardRenderer
         bool isDk = value.StartsWith("dk_", StringComparison.Ordinal);
         if (isDk)
         {
-            result = TrayApplication.GetDeadKeySymbol(value);
+            // Le tutoriel lit d'abord l'accent isolé de la disposition (sa table « espace ») ;
+            // les deux sources s'accordent pour toutes les touches mortes qu'il affiche.
+            string? isolated = style.Tutorial && style.Layout.DeadKeys.TryGetValue(value, out var dk) ? dk.GetIsolated() : null;
+            result = !string.IsNullOrWhiteSpace(isolated) ? isolated : TrayApplication.GetDeadKeySymbol(value);
         }
         else
         {
-            result = DisplayInvisible(value, showInvisibleMarkers);
+            result = DisplayInvisible(value, style.ShowInvisibleMarkers);
         }
 
         if (result.Length == 1 && IsCombiningMark(result[0]))
@@ -793,14 +982,35 @@ internal static class KeyboardRenderer
 
     private static bool IsLetterChar(string? s) => s != null && s.Length == 1 && char.IsLetter(s[0]);
 
+    /// <summary>Touche d'une lettre ordinaire (rangées A à N), dont Verr. Maj. fait la
+    /// majuscule.</summary>
+    internal static bool IsLetterKey(uint scancode) => LetterKeyScancodes.Contains(scancode);
+
     private static bool IsDeadKeyRef(string? s) => s != null && s.StartsWith("dk_", StringComparison.Ordinal);
 
-    private static bool IsCombiningMark(char c) =>
+    internal static bool IsCombiningMark(char c) =>
         (c >= '\u0300' && c <= '\u036F') ||
         (c >= '\u1AB0' && c <= '\u1AFF') ||
         (c >= '\u1DC0' && c <= '\u1DFF') ||
         (c >= '\u20D0' && c <= '\u20FF') ||
         (c >= '\uFE20' && c <= '\uFE2F');
+
+    private static Win32.RECT KeyRect(VirtualKeyboard.VisualKey key, KeyboardPlacement placement, KeyboardRenderProfile profile)
+    {
+        if (profile != KeyboardRenderProfile.Onboarding)
+            return ToRect(key, placement.OriginX, placement.OriginY, placement.Scale);
+
+        // Rendu d'origine du tutoriel : chaque touche arrondit sa propre largeur, moins un pixel.
+        int left = placement.OriginX + (int)(key.X * placement.Scale);
+        int top = placement.OriginY + (int)(key.Y * placement.Scale);
+        return new Win32.RECT
+        {
+            left = left,
+            top = top,
+            right = left + (int)(key.W * placement.Scale) - 1,
+            bottom = top + (int)(key.H * placement.Scale) - 1
+        };
+    }
 
     private static Win32.RECT ToRect(VirtualKeyboard.VisualKey key, int originX, int originY, float scale)
     {
