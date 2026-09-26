@@ -2202,7 +2202,7 @@ internal sealed class LessonsWindow : IDisposable
         }
         if (vk == 0x09)
         {
-            bool backwards = (Win32.GetKeyState(0x10) & unchecked((short)0x8000)) != 0;
+            bool backwards = (TypingEngine.Windows.Win32.GetKeyState(0x10) & unchecked((short)0x8000)) != 0;
             MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }

@@ -8,13 +8,6 @@ namespace AZERTYGlobal;
 /// </summary>
 internal sealed class MaintainableLayersWindow : IDisposable
 {
-    private const uint BS_AUTOCHECKBOX = 0x0003;
-    private const uint BS_DEFPUSHBUTTON = 0x0001;
-    private const uint BM_GETCHECK = 0x00F0;
-    private const uint BM_SETCHECK = 0x00F1;
-    private const uint BST_CHECKED = 1;
-    private const uint ES_NUMBER = 0x2000;
-    private const uint ES_CENTER = 0x0001;
     // Même fond que SettingsWindow et UsageStatsWindow.
     private const uint CLR_BG = LightTheme.Background;
 
@@ -124,14 +117,14 @@ internal sealed class MaintainableLayersWindow : IDisposable
         _hVisual = CreateCheckbox(instance, IDC_VISUAL, L.Layers_VisualCheckbox, 24, 282, 360, 26);
         CreateStatic(instance, L.Layers_DelayLabel, 24, 322, 185, 26, _hFont);
         _hDelay = Win32.CreateWindowExW(0, "EDIT", "500",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | ES_NUMBER | ES_CENTER,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | Win32.ES_NUMBER | Win32.ES_CENTER,
             210, 317, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
         SetFont(_hDelay, _hFont);
         Track(_hDelay, 210, 317, 70, 28);
         CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
 
         IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Layers_SaveButton,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | BS_DEFPUSHBUTTON,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_DEFPUSHBUTTON,
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
         Track(save, 350, 357, 140, 34);
@@ -140,7 +133,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)
     {
         IntPtr control = Win32.CreateWindowExW(0, "BUTTON", text,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | BS_AUTOCHECKBOX,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_AUTOCHECKBOX,
             x, y, w, h, _hWnd, (IntPtr)id, instance, IntPtr.Zero);
         SetFont(control, _hFont);
         Track(control, x, y, w, h);
@@ -298,10 +291,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
     }
 
     private static bool IsChecked(IntPtr control) =>
-        Win32.SendMessageW(control, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+        Win32.SendMessageW(control, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
 
     private static void SetChecked(IntPtr control, bool value) =>
-        Win32.SendMessageW(control, BM_SETCHECK, value ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(control, Win32.BM_SETCHECK, value ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
 
     public void Dispose()
     {

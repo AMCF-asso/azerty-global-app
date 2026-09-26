@@ -4,16 +4,7 @@ namespace AZERTYGlobal;
 
 sealed class SettingsWindow : IDisposable
 {
-    private const uint BS_AUTOCHECKBOX = 0x0003;
-    private const uint BS_AUTORADIOBUTTON = 0x0009;
     private const uint WS_GROUP = 0x00020000;
-    private const uint BM_GETCHECK = 0x00F0;
-    private const uint BM_SETCHECK = 0x00F1;
-    private const uint BM_CLICK = 0x00F5;
-    private const uint BST_CHECKED = 0x0001;
-    private const uint ES_AUTOHSCROLL = 0x0080;
-    private const uint ES_CENTER = 0x0001;
-    private const uint ES_UPPERCASE = 0x0008;
     private const uint EM_SETREADONLY = 0x00CF;
 
     private const int VK_TAB = 0x09;
@@ -401,7 +392,7 @@ sealed class SettingsWindow : IDisposable
         _hWndLabelKeyboard = CreateHiddenLabel(hInstance, L.Settings_ShortcutLabelKeyboard);
         _hWndEditKeyboard = Win32.CreateWindowExW(0, "EDIT",
             ConfigManager.GetShortcutDisplayName(_keyboardVk),
-            Win32.WS_CHILD | Win32.WS_VISIBLE | ES_AUTOHSCROLL | ES_CENTER | ES_UPPERCASE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.ES_AUTOHSCROLL | Win32.ES_CENTER | Win32.ES_UPPERCASE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_EDIT_KEYBOARD, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndEditKeyboard, EM_SETREADONLY, (IntPtr)1, IntPtr.Zero);
@@ -410,7 +401,7 @@ sealed class SettingsWindow : IDisposable
         _hWndLabelSearch = CreateHiddenLabel(hInstance, L.Settings_ShortcutLabelSearch);
         _hWndEditSearch = Win32.CreateWindowExW(0, "EDIT",
             ConfigManager.GetShortcutDisplayName(_searchVk),
-            Win32.WS_CHILD | Win32.WS_VISIBLE | ES_AUTOHSCROLL | ES_CENTER | ES_UPPERCASE | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.ES_AUTOHSCROLL | Win32.ES_CENTER | Win32.ES_UPPERCASE | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_EDIT_SEARCH, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndEditSearch, EM_SETREADONLY, (IntPtr)1, IntPtr.Zero);
@@ -427,34 +418,34 @@ sealed class SettingsWindow : IDisposable
             _hWnd, (IntPtr)IDC_LINK_RESET, hInstance, IntPtr.Zero);
 
         _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Settings_AutoStart,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
         RefreshAutoStartCheckbox();
 
         _hWndChkNotifications = Win32.CreateWindowExW(0, "BUTTON", L.Settings_Notifications,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_NOTIFICATIONS, hInstance, IntPtr.Zero);
         if (ConfigManager.NotificationsEnabled)
-            Win32.SendMessageW(_hWndChkNotifications, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+            Win32.SendMessageW(_hWndChkNotifications, Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
 
         _hWndChkOnboarding = Win32.CreateWindowExW(0, "BUTTON", L.Settings_OnboardingWindow,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_ONBOARDING, hInstance, IntPtr.Zero);
         if (ConfigManager.ShowOnboardingAtStartup)
-            Win32.SendMessageW(_hWndChkOnboarding, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+            Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
 
         // Opt-in Défi du jour (v1.2.0) — décoché par défaut, appliqué immédiatement au
         // clic (pas à la fermeture) : l'entrée du menu tray et le module des leçons
         // dépendent de cet état.
         _hWndChkTraining = Win32.CreateWindowExW(0, "BUTTON", L.Challenge_OptIn,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
         if (ConfigManager.TrainingEnabled)
-            Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK, (IntPtr)BST_CHECKED, IntPtr.Zero);
+            Win32.SendMessageW(_hWndChkTraining, Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
 
         // Réglages sous politique d'entreprise (lot C) : le contrôle reste en place, grisé,
         // et porte sous lui la ligne qui dit pourquoi. Le retirer se lirait comme une
@@ -469,12 +460,12 @@ sealed class SettingsWindow : IDisposable
         // Noms de langue = endonymes, jamais traduits (un sélecteur de langue affiche
         // chaque langue dans elle-même : "Français" et "English" quelle que soit la langue active).
         _hWndRadioLangFr = Win32.CreateWindowExW(0, "BUTTON", "Français",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_LANG_FR, hInstance, IntPtr.Zero);
 
         _hWndRadioLangEn = Win32.CreateWindowExW(0, "BUTTON", "English",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_LANG_EN, hInstance, IntPtr.Zero);
         _hWndManagedLanguage = CreateManagedNotice(hInstance, _managedLanguage);
@@ -517,17 +508,17 @@ sealed class SettingsWindow : IDisposable
         // WS_GROUP obligatoire sur le premier radio : termine le groupe Langue,
         // sinon cocher un mode décocherait Français/English.
         _hWndRadioCompatAuto = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeAuto,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | WS_GROUP | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_AUTO, hInstance, IntPtr.Zero);
 
         _hWndRadioCompatForceOn = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeForceOn,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEON, hInstance, IntPtr.Zero);
 
         _hWndRadioCompatForceOff = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatModeForceOff,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEOFF, hInstance, IntPtr.Zero);
 
@@ -1040,15 +1031,15 @@ sealed class SettingsWindow : IDisposable
         // dernière ouverture : resynchroniser la section Apps suspendues.
         RefreshCompatList(SelectedCompatProcess());
         // L'opt-in Défi du jour a pu changer via l'onboarding.
-        Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK,
-            ConfigManager.TrainingEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkNotifications, BM_SETCHECK,
-            ConfigManager.NotificationsEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkTraining, Win32.BM_SETCHECK,
+            ConfigManager.TrainingEnabled ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkNotifications, Win32.BM_SETCHECK,
+            ConfigManager.NotificationsEnabled ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         // Re-synchroniser la checkbox onboarding a chaque ouverture : l'utilisateur a pu
         // modifier l'etat via la case « Ne plus afficher » du wizard depuis la derniere
         // fermeture des Settings.
-        Win32.SendMessageW(_hWndChkOnboarding, BM_SETCHECK,
-            ConfigManager.ShowOnboardingAtStartup ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_SETCHECK,
+            ConfigManager.ShowOnboardingAtStartup ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         RefreshLanguageRadios();
         SetValidationMessage(string.Empty);
         _keyboardValid = true;
@@ -1078,7 +1069,7 @@ sealed class SettingsWindow : IDisposable
 
     public void Close()
     {
-        bool autoStart = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+        bool autoStart = Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
         bool autoStartWasRegistered = AutoStart.IsRegistered;
         bool autoStartSaved = AutoStart.Set(autoStart);
         RefreshAutoStartCheckbox();
@@ -1096,13 +1087,13 @@ sealed class SettingsWindow : IDisposable
         // effet le jour où la politique est retirée.
         if (!_managedNotifications)
         {
-            bool notifications = Win32.SendMessageW(_hWndChkNotifications, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            bool notifications = Win32.SendMessageW(_hWndChkNotifications, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
             ConfigManager.SetNotifications(notifications);
         }
 
         if (!_managedOnboarding)
         {
-            bool showOnboarding = Win32.SendMessageW(_hWndChkOnboarding, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            bool showOnboarding = Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
             ConfigManager.SetShowOnboardingAtStartup(showOnboarding);
         }
 
@@ -1208,7 +1199,7 @@ sealed class SettingsWindow : IDisposable
                     case DialogNavigation.IDOK:
                     {
                         IntPtr target = DialogNavigation.ButtonToPressOnEnter(id, Win32.GetFocus(), PushButtons());
-                        if (target != IntPtr.Zero) Win32.SendMessageW(target, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                        if (target != IntPtr.Zero) Win32.SendMessageW(target, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
                         break;
                     }
                     case DialogNavigation.IDCANCEL:
@@ -1259,7 +1250,7 @@ sealed class SettingsWindow : IDisposable
                     case IDC_CHK_TRAINING:
                         if (code == 0)
                         {
-                            bool enabled = Win32.SendMessageW(_hWndChkTraining, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+                            bool enabled = Win32.SendMessageW(_hWndChkTraining, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
                             ConfigManager.SetTrainingEnabled(enabled);
                         }
                         break;
@@ -1484,15 +1475,15 @@ sealed class SettingsWindow : IDisposable
 
     private void RefreshAutoStartCheckbox()
     {
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK,
-            AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_SETCHECK,
+            AutoStart.IsRegistered ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
     private void RefreshLanguageRadios()
     {
         bool isEnglish = ConfigManager.AppLanguage == "en";
-        Win32.SendMessageW(_hWndRadioLangFr, BM_SETCHECK, isEnglish ? IntPtr.Zero : (IntPtr)BST_CHECKED, IntPtr.Zero);
-        Win32.SendMessageW(_hWndRadioLangEn, BM_SETCHECK, isEnglish ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioLangFr, Win32.BM_SETCHECK, isEnglish ? IntPtr.Zero : (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioLangEn, Win32.BM_SETCHECK, isEnglish ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
     /// <summary>
@@ -1600,12 +1591,12 @@ sealed class SettingsWindow : IDisposable
         Win32.EnableWindow(_hWndRadioCompatForceOn, hasSelection);
         Win32.EnableWindow(_hWndRadioCompatForceOff, hasSelection);
 
-        Win32.SendMessageW(_hWndRadioCompatAuto, BM_SETCHECK,
-            hasSelection && mode == null ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndRadioCompatForceOn, BM_SETCHECK,
-            mode == "forceOn" ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndRadioCompatForceOff, BM_SETCHECK,
-            mode == "forceOff" ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioCompatAuto, Win32.BM_SETCHECK,
+            hasSelection && mode == null ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioCompatForceOn, Win32.BM_SETCHECK,
+            mode == "forceOn" ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndRadioCompatForceOff, Win32.BM_SETCHECK,
+            mode == "forceOff" ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
     /// <summary>

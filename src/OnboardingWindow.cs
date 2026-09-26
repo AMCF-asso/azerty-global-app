@@ -13,11 +13,6 @@ namespace AZERTYGlobal;
 sealed class OnboardingWindow : IDisposable
 {
     // ── Window constants ─────────────────────────────────────────────
-    private const uint BS_AUTOCHECKBOX = 0x0003;
-    private const uint BM_GETCHECK = 0x00F0;
-    private const uint BM_SETCHECK = 0x00F1;
-    private const uint BST_CHECKED = 0x0001;
-    private const uint SS_NOTIFY = 0x0100;
 
     // ── Control IDs ──────────────────────────────────────────────────
     private const int IDC_CHK_DONT_SHOW = 2001;
@@ -406,38 +401,38 @@ sealed class OnboardingWindow : IDisposable
         // Positions initiales temporaires — repositionnés dans RepositionControls
         int y = 0;
         _hWndLinkLessons = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkLessons,
-            Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(240), linkH,
+            Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(240), linkH,
             _hWnd, (IntPtr)IDC_LINK_LESSONS, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkLessons, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         _links.Attach(_hWndLinkLessons, 6);
 
         _hWndLinkGuide = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkGuide,
-            Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(200), linkH,
+            Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(200), linkH,
             _hWnd, (IntPtr)IDC_LINK_GUIDE, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         _links.Attach(_hWndLinkGuide, 1);
 
         _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Tray_MenuGiveFeedback,
-            Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(280), linkH,
+            Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(280), linkH,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         _links.Attach(_hWndLinkFeedback, 3);
 
         _hWndLinkDiscord = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkDiscord,
-            Win32.WS_CHILD | SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(380), linkH,
+            Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(380), linkH,
             _hWnd, (IntPtr)IDC_LINK_DISCORD, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         _links.Attach(_hWndLinkDiscord, 5);
 
         _hWndChkAutoStart = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkAutoStart,
-            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
         RefreshAutoStartCheckbox();
 
         _hWndChkDontShow = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkDontShow,
-            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(280), S(26),
             _hWnd, (IntPtr)IDC_CHK_DONT_SHOW, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -446,7 +441,7 @@ sealed class OnboardingWindow : IDisposable
         // ConfigManager.TrainingEnabled à chaque affichage de l'étape 3 (cf. UpdateStepVisibility),
         // au cas où l'utilisateur l'aurait déjà activée depuis les Paramètres.
         _hWndChkTraining = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkTraining,
-            Win32.WS_CHILD | BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -495,8 +490,8 @@ sealed class OnboardingWindow : IDisposable
             // Resynchronisation à chaque affichage de l'étape 3 : l'utilisateur a pu
             // activer/désactiver l'opt-in depuis les Paramètres pendant que l'onboarding
             // est ouvert (même principe que RefreshAutoStartCheckbox pour l'autostart).
-            Win32.SendMessageW(_hWndChkTraining, BM_SETCHECK,
-                ConfigManager.TrainingEnabled ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+            Win32.SendMessageW(_hWndChkTraining, Win32.BM_SETCHECK,
+                ConfigManager.TrainingEnabled ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         }
 
         Win32.ShowWindow(_hWndBtnPrev, _currentStep > 0 ? 1 : 0);
@@ -578,8 +573,8 @@ sealed class OnboardingWindow : IDisposable
         // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
         // declenchait un opt-out permanent, meme si l'utilisateur n'avait jamais atteint l'etape 3.
         _autoStartShownChecked = AutoStart.DefaultOnboardingCheck();
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK, _autoStartShownChecked ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkDontShow, BM_SETCHECK, IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_SETCHECK, _autoStartShownChecked ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkDontShow, Win32.BM_SETCHECK, IntPtr.Zero, IntPtr.Zero);
         // Sync bidirectionnel des flags avec la progression persistee. Seuils alignes avec
         // la condition d'auto-show ([TrayApplication.cs] : LearningMaxStepCompleted < 3) :
         //   - 0 exo               -> etat A (« Essayer maintenant » seul)
@@ -662,12 +657,12 @@ sealed class OnboardingWindow : IDisposable
             // Échap, seule une case cochée par l'utilisateur est un choix. Avant, un
             // simple Échap à l'étape 3 réécrivait « afficher au démarrage » et défaisait
             // en silence un refus posé dans les Paramètres ou hérité de la v1.1.
-            bool dontShow = Win32.SendMessageW(_hWndChkDontShow, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+            bool dontShow = Win32.SendMessageW(_hWndChkDontShow, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
             if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, dontShow, shownChecked: false))
                 ConfigManager.SetShowOnboardingAtStartup(!dontShow);
 
-            var autoStartState = Win32.SendMessageW(_hWndChkAutoStart, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
-            bool autoStart = autoStartState == (IntPtr)BST_CHECKED;
+            var autoStartState = Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero);
+            bool autoStart = autoStartState == (IntPtr)Win32.BST_CHECKED;
             if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, autoStart, _autoStartShownChecked))
             {
                 bool autoStartWasRegistered = AutoStart.IsRegistered;
@@ -782,7 +777,7 @@ sealed class OnboardingWindow : IDisposable
                         // que IDC_CHK_TRAINING dans SettingsWindow.cs.
                         if (code == 0)
                         {
-                            bool trainingEnabled = Win32.SendMessageW(_hWndChkTraining, BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)BST_CHECKED;
+                            bool trainingEnabled = Win32.SendMessageW(_hWndChkTraining, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
                             ConfigManager.SetTrainingEnabled(trainingEnabled);
                         }
                         break;
@@ -893,8 +888,8 @@ sealed class OnboardingWindow : IDisposable
 
     private void RefreshAutoStartCheckbox()
     {
-        Win32.SendMessageW(_hWndChkAutoStart, BM_SETCHECK,
-            AutoStart.IsRegistered ? (IntPtr)BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_SETCHECK,
+            AutoStart.IsRegistered ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
     /// <summary>

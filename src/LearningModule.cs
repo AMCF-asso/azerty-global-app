@@ -69,7 +69,6 @@ sealed class LearningModule : IDisposable
     // Boutons affiches a la fin de chaque exercice (page de choix Reessayer / Suivant)
     private const int IDC_BTN_RETRY = 4004;
     private const int IDC_BTN_CONTINUE = 4005;
-    private const uint BM_CLICK = 0x00F5;
 
     // ── Timer IDs ───────────────────────────────────────────────────
     private const uint TIMER_KEYPRESS = 8001;
@@ -1501,7 +1500,7 @@ sealed class LearningModule : IDisposable
         var stops = new List<IntPtr> { _hWnd };
         if (Win32.IsWindowVisible(_hWndBtnQuit)) stops.Add(_hWndBtnQuit);
         if (Win32.IsWindowVisible(_hWndBtnSkip)) stops.Add(_hWndBtnSkip);
-        bool backwards = (Win32.GetKeyState(0x10) & 0x8000) != 0; // VK_SHIFT
+        bool backwards = (TypingEngine.Windows.Win32.GetKeyState(0x10) & 0x8000) != 0; // VK_SHIFT
         int next = DialogNavigation.NextFocusStop(stops.IndexOf(from), stops.Count, backwards);
         if (next >= 0) Win32.SetFocus(stops[next]);
     }
@@ -1553,7 +1552,7 @@ sealed class LearningModule : IDisposable
                 CycleHeaderFocus(hWnd);
                 return true;
             case HeaderKeyAction.Click:
-                Win32.SendMessageW(hWnd, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+                Win32.SendMessageW(hWnd, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
                 return true;
             case HeaderKeyAction.Close:
                 Close();

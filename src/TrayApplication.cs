@@ -1108,7 +1108,7 @@ sealed class TrayApplication : IDisposable
         bool ourProcessHasFocus = false;
         if (fg != IntPtr.Zero)
         {
-            Win32.GetWindowThreadProcessIdOut(fg, out uint fgPid);
+            TypingEngine.Windows.Win32.GetWindowThreadProcessIdOut(fg, out uint fgPid);
             ourProcessHasFocus = fgPid == (uint)Environment.ProcessId;
         }
         if (!ourProcessHasFocus)
@@ -1141,13 +1141,13 @@ sealed class TrayApplication : IDisposable
 
         foreach (var (scancode, expected) in tests)
         {
-            uint vk = Win32.MapVirtualKeyExW(scancode, 1, hkl); // MAPVK_VSC_TO_VK
+            uint vk = TypingEngine.Windows.Win32.MapVirtualKeyExW(scancode, 1, hkl); // MAPVK_VSC_TO_VK
             if (vk == 0) return false;
 
             buf.Clear();
-            int result = Win32.ToUnicodeEx(vk, scancode, keyState, buf, buf.Capacity, 0, hkl);
+            int result = TypingEngine.Windows.Win32.ToUnicodeEx(vk, scancode, keyState, buf, buf.Capacity, 0, hkl);
             if (result < 0) // touche morte inattendue → consommer
-                Win32.ToUnicodeEx(vk, scancode, keyState, buf, buf.Capacity, 0, hkl);
+                TypingEngine.Windows.Win32.ToUnicodeEx(vk, scancode, keyState, buf, buf.Capacity, 0, hkl);
             if (result != 1 || buf[0] != expected)
                 return false;
         }
@@ -1161,7 +1161,7 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void CheckSystemLayout()
     {
-        IntPtr hkl = Win32.GetKeyboardLayout(0);
+        IntPtr hkl = TypingEngine.Windows.Win32.GetKeyboardLayout(0);
         if (!IsLayoutAZERTYGlobal(hkl)) return;
         ShowLayoutConflictPopup(isAtStartup: true);
     }
@@ -1182,7 +1182,7 @@ sealed class TrayApplication : IDisposable
     {
         IntPtr hwndFg = Win32.GetForegroundWindow();
         uint threadId = Win32.GetWindowThreadProcessId(hwndFg, IntPtr.Zero);
-        IntPtr hkl = Win32.GetKeyboardLayout(threadId);
+        IntPtr hkl = TypingEngine.Windows.Win32.GetKeyboardLayout(threadId);
 
         if (!IsLayoutAZERTYGlobal(hkl)) return;
         ShowLayoutConflictPopup(isAtStartup: false);

@@ -11,7 +11,6 @@ namespace AZERTYGlobal;
 sealed class AboutWindow : IDisposable
 {
     // ── Window constants ────────────────────────────────────────────
-    private const uint SS_NOTIFY = 0x0100;
 
     // ── Control IDs ─────────────────────────────────────────────────
     private const int IDC_LINK_SITE = 4101;
@@ -172,26 +171,26 @@ sealed class AboutWindow : IDisposable
         var hInstance = Win32.GetModuleHandleW(null);
 
         _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", L.About_LinkSite,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkSite, 1);
 
         _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkGithub, 2);
 
         _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkLicense, 3);
 
         // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure)
         _hWndLinkAmcf = Win32.CreateWindowExW(0, "STATIC", L.About_LinkAmcf,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOTIFY | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_AMCF, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkAmcf, 4);

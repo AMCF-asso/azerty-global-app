@@ -10,7 +10,6 @@ namespace AZERTYGlobal;
 /// </summary>
 sealed class CharacterSearch : IDisposable
 {
-    private const uint ES_AUTOHSCROLL = 0x0080;
 
     private const uint EN_CHANGE = 0x0300;
 
@@ -589,7 +588,7 @@ sealed class CharacterSearch : IDisposable
 
         // Créer le champ de recherche (Edit control)
         _hEdit = Win32.CreateWindowExW(0, "EDIT", "",
-            Win32.WS_CHILD | Win32.WS_VISIBLE | ES_AUTOHSCROLL,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.ES_AUTOHSCROLL,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_SEARCH, hInstance, IntPtr.Zero);
 
