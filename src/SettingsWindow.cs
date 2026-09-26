@@ -594,7 +594,8 @@ sealed class SettingsWindow : IDisposable
 
             new(_hWndEditKeyboard, General, () => _hFontEdit, l => l.KeyboardEditRect),
             new(_hWndEditSearch, General, () => _hFontEdit, l => l.SearchEditRect),
-            new(_hWndValidation, General, () => _hFontSmall, l => l.ValidationRect),
+            // La ligne de validation sert les trois onglets : jamais masquée par onglet.
+            new(_hWndValidation, null, () => _hFontSmall, l => l.ValidationRect),
             new(_hWndLinkReset, General, () => _hFontButton, l => l.ResetRect,
                 () => L.Settings_LinkResetDefaults, PushButton: true),
             new(_hWndChkAutoStart, General, () => _hFontBold, l => l.AutoStartRect, () => L.Settings_AutoStart),
@@ -651,8 +652,8 @@ sealed class SettingsWindow : IDisposable
 
         // Mesures sans défilement : la hauteur du contenu ne dépend pas de la position.
         int referenceHeight = MeasureContentHeight(SettingsTab.General, showValidationRow: true);
-        int applicationsHeight = MeasureContentHeight(SettingsTab.Applications, showValidationRow: false);
-        int languageHeight = MeasureContentHeight(SettingsTab.LanguageMaintenance, showValidationRow: false);
+        int applicationsHeight = MeasureContentHeight(SettingsTab.Applications, showValidationRow: true);
+        int languageHeight = MeasureContentHeight(SettingsTab.LanguageMaintenance, showValidationRow: true);
         _contentHeight = MeasureContentHeight(_activeTab, !string.IsNullOrEmpty(_validationMessage));
 
         Win32.GetWindowRect(_hWnd, out var currentRect);
@@ -856,6 +857,10 @@ sealed class SettingsWindow : IDisposable
     {
         if (_activeTab == tab) return;
         _activeTab = tab;
+        // Un message répond à un geste de l'onglet quitté : il ne le suit pas.
+        _validationMessage = string.Empty;
+        _showCaptureHint = false;
+        Win32.SetWindowTextW(_hWndValidation, string.Empty);
         // Le défilement d'un onglet n'a pas de sens dans le suivant : il est plus
         // court, et un décalage hérité laisserait la fenêtre ouverte sur du vide.
         _scrollY = 0;
@@ -950,6 +955,16 @@ sealed class SettingsWindow : IDisposable
 
         Win32.RECT Section(int top) => Rect(margin, top, contentWidth, 0);
 
+        // Ligne du message de validation, sous le contrôle du geste qui l'a produit. Chaque
+        // onglet a la sienne : les messages des onglets Applications et Langue s'écrivaient
+        // dans une ligne que seul « Général » montrait (suite de l'audit du 25/09).
+        int ValidationRow(int top)
+        {
+            int rowTop = showValidationRow ? top + S(5) : top;
+            layout.ValidationRect = Rect(labelX, rowTop, innerWidth, showValidationRow ? Math.Max(S(15), m.Small) : 0);
+            return layout.ValidationRect.bottom;
+        }
+
         // ── Onglet « Général » : Raccourcis puis Préférences ────────────
         int LayoutGeneral()
         {
@@ -965,10 +980,7 @@ sealed class SettingsWindow : IDisposable
             int resetWidth = Math.Max(S(150), m.ResetText + S(24));
             layout.ResetRect = Rect(labelX, resetY, resetWidth, Math.Max(S(28), m.Link + S(10)));
 
-            int validationTop = showValidationRow ? layout.ResetRect.bottom + S(5) : layout.ResetRect.bottom;
-            layout.ValidationRect = Rect(labelX, validationTop, innerWidth, showValidationRow ? Math.Max(S(15), m.Small) : 0);
-
-            int prefsTitleTop = layout.ValidationRect.bottom + S(10);
+            int prefsTitleTop = ValidationRow(layout.ResetRect.bottom) + S(10);
             layout.PreferencesPanel = Section(prefsTitleTop);
             layout.AutoStartRect = Rect(labelX, prefsTitleTop + sectionTitleH, innerWidth, rowH);
             layout.NotificationsRect = Rect(labelX, layout.AutoStartRect.bottom + rowGap, innerWidth, rowH);
@@ -1004,7 +1016,7 @@ sealed class SettingsWindow : IDisposable
             layout.CompatAutoRect = Rect(labelX, layout.CompatAddRect.bottom + S(8), innerWidth, rowH);
             layout.CompatForceOnRect = Rect(labelX, layout.CompatAutoRect.bottom + S(4), innerWidth, rowH);
             layout.CompatForceOffRect = Rect(labelX, layout.CompatForceOnRect.bottom + S(4), innerWidth, rowH);
-            return layout.CompatForceOffRect.bottom;
+            return ValidationRow(layout.CompatForceOffRect.bottom);
         }
 
         // ── Onglet « Langue et maintenance » ────────────────────────────
@@ -1023,7 +1035,7 @@ sealed class SettingsWindow : IDisposable
             layout.ResetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + sectionTitleH, innerWidth, buttonHeight);
             layout.ResetLessonsWindowRect = Rect(labelX,
                 layout.ResetVirtualKeyboardWindowRect.bottom + S(7), innerWidth, buttonHeight);
-            return layout.ResetLessonsWindowRect.bottom;
+            return ValidationRow(layout.ResetLessonsWindowRect.bottom);
         }
     }
 
