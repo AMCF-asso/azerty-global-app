@@ -104,7 +104,7 @@ static class TrainingReminders
             LastSpecialCharDate: UsageStats.LastSpecialCharDate,
             CurrentStreak: UsageStats.CurrentStreak,
             HelperOpens: UsageStats.SearchOpenCount + UsageStats.VirtualKeyboardOpenCount,
-            ReviewPromptLastShown: ConfigManager.ReviewPromptLastShown,
+            ReviewPromptLastShown: ReviewState.Load().LastShown,
             ChallengeAvailable: DailyChallenge.Enabled);
     }
 

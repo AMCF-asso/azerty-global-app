@@ -44,8 +44,9 @@ readonly record struct ReviewSharePromptSignals(
 
 static class ReviewSharePrompt
 {
-    /// <summary>Plafond d'essais sur la vie de l'installation, tous canaux confondus.</summary>
-    public const int MaxPrompts = 2;
+    /// <summary>Plafond d'essais sur la vie de l'installation, tous canaux confondus : celui
+    /// de la notification (<see cref="ReviewPromptGate.MaxAttempts"/>).</summary>
+    public const int MaxPrompts = ReviewPromptGate.MaxAttempts;
 
     /// <summary>Jours d'usage distincts avant qu'un partage puisse solliciter. Même valeur
     /// et même raison que <see cref="AutoStartNudge.MinActiveDays"/> — à 2, l'utilisateur
@@ -67,14 +68,10 @@ static class ReviewSharePrompt
         // notification, qui a la sienne — les deux chemins restent indépendants.
         if (!s.ExternalLinks) return false;
         // L'utilisateur a répondu à une sollicitation : on ne le relance plus, quel que
-        // soit ce qu'il a fait ensuite sur le Store.
-        if (s.PromptClicked) return false;
-        if (s.PromptCount >= MaxPrompts) return false;
+        // soit ce qu'il a fait ensuite sur le Store. Plafond commun à la notification.
+        if (!ReviewPromptGate.AttemptsLeft(s.PromptCount, s.PromptClicked)) return false;
         // On ne demande pas un avis à quelqu'un qui vient de rencontrer un problème.
-        if (s.LastErrorUtc.HasValue &&
-            s.UtcNow - s.LastErrorUtc.Value <
-                TimeSpan.FromHours(TrayApplication.ReviewPromptErrorCooldownHours))
-            return false;
+        if (ReviewPromptGate.InErrorCooldown(s.LastErrorUtc, s.UtcNow)) return false;
         // R1 : date persistée, pas un champ d'instance. Survit au redémarrage.
         if (s.PromptLastShown == s.Today) return false;
         // R3 : sans première frappe remappée, l'application n'a jamais servi.
@@ -83,16 +80,21 @@ static class ReviewSharePrompt
         return true;
     }
 
-    /// <summary>Photographie les signaux depuis ConfigManager et UsageStats.</summary>
-    public static ReviewSharePromptSignals Snapshot() => new(
-        Channel: AppChannel.Current,
-        ExternalLinks: PolicyManager.ExternalLinksEnabledNow,
-        PromptClicked: ConfigManager.ReviewPromptClicked,
-        PromptCount: ConfigManager.ReviewPromptCount,
-        PromptLastShown: ConfigManager.ReviewPromptLastShown,
-        LastErrorUtc: ConfigManager.LastErrorUtc,
-        UtcNow: DateTime.UtcNow,
-        Today: DateOnly.FromDateTime(DateTime.Now),
-        FirstRemapDate: UsageStats.FirstRemapDate,
-        ActiveDaysCount: UsageStats.ActiveDaysCount);
+    /// <summary>Photographie les signaux depuis ConfigManager (état persistant de
+    /// <see cref="ReviewState"/>) et UsageStats.</summary>
+    public static ReviewSharePromptSignals Snapshot()
+    {
+        var state = ReviewState.Load();
+        return new(
+            Channel: AppChannel.Current,
+            ExternalLinks: PolicyManager.ExternalLinksEnabledNow,
+            PromptClicked: state.Answered,
+            PromptCount: state.Attempts,
+            PromptLastShown: state.LastShown,
+            LastErrorUtc: ConfigManager.LastErrorUtc,
+            UtcNow: DateTime.UtcNow,
+            Today: DateOnly.FromDateTime(DateTime.Now),
+            FirstRemapDate: UsageStats.FirstRemapDate,
+            ActiveDaysCount: UsageStats.ActiveDaysCount);
+    }
 }
