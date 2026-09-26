@@ -236,17 +236,17 @@ internal static class KeyboardRenderer
     {
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         foreach (var key in VisualKeys)
-            DrawKey(hdc, KeyRect(key, placement, profile), key, placement, layout, profile, state, fonts);
+            DrawKey(hdc, ToRect(key, placement), key, placement, layout, profile, state, fonts);
     }
 
     public static IEnumerable<KeyboardHitTestResult> BuildHitTestRects(Win32.RECT bounds)
-        => BuildHitTestRects(Place(bounds), KeyboardRenderProfile.Full);
+        => BuildHitTestRects(Place(bounds));
 
     /// <summary>Le cadre de chaque touche, tel que <see cref="DrawKeys"/> la dessine.</summary>
-    public static IEnumerable<KeyboardHitTestResult> BuildHitTestRects(KeyboardPlacement placement, KeyboardRenderProfile profile)
+    public static IEnumerable<KeyboardHitTestResult> BuildHitTestRects(KeyboardPlacement placement)
     {
         foreach (var key in VisualKeys)
-            yield return new KeyboardHitTestResult(key.Scancode, key.Label, KeyRect(key, placement, profile));
+            yield return new KeyboardHitTestResult(key.Scancode, key.Label, ToRect(key, placement));
     }
 
     public static string BuildTooltipText(
@@ -429,7 +429,7 @@ internal static class KeyboardRenderer
         var oldPen = Win32.SelectObject(hdc, pen);
 
         if (isoEnter)
-            DrawIsoEnter(hdc, rect, key, placement, tutorial);
+            DrawIsoEnter(hdc, rect, key);
         else
             DrawRectKey(hdc, rect, brush);
 
@@ -450,7 +450,7 @@ internal static class KeyboardRenderer
         }
 
         if (key.IsContextual || key.Scancode == 0 || !layout.Keys.TryGetValue(key.Scancode, out var def))
-            DrawContextKeyLabel(hdc, rect, key, placement, isoEnter, disabledBackspace, tutorial, fonts.Context);
+            DrawContextKeyLabel(hdc, rect, key, isoEnter, disabledBackspace, tutorial, fonts.Context);
         else if (tutorial && state.ActiveDeadKey != null && layout.DeadKeys.TryGetValue(state.ActiveDeadKey, out var dk))
             DrawTutorialDeadKeyResult(hdc, rect, key, def, dk, state, fonts);
         else
@@ -491,35 +491,18 @@ internal static class KeyboardRenderer
         Win32.LineTo(hdc, rect.left, rect.top);
     }
 
-    private static void DrawIsoEnter(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, KeyboardPlacement placement,
-        bool tutorial)
+    private static void DrawIsoEnter(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key)
     {
-        int stepY, bottom, bottomLeft;
-        if (tutorial)
-        {
-            // Rendu d'origine du tutoriel : la marche et le pied se placent sur la grille des
-            // unités, sans le pixel retiré au cadre.
-            float stepUnits = key.Y + VirtualKeyboard.KEY_H;
-            float bottomStartUnits = key.Y + VirtualKeyboard.KEY_H + VirtualKeyboard.ROW_GAP;
-            float bottomLeftUnits = key.X + (key.W - 1.25f);
-            stepY = placement.OriginY + (int)(stepUnits * placement.Scale);
-            bottom = placement.OriginY + (int)((bottomStartUnits + VirtualKeyboard.KEY_H) * placement.Scale);
-            bottomLeft = placement.OriginX + (int)(bottomLeftUnits * placement.Scale);
-        }
-        else
-        {
-            int width = rect.right - rect.left;
-            int height = rect.bottom - rect.top;
-            stepY = rect.top + (int)(height * (VirtualKeyboard.KEY_H / key.H));
-            bottom = rect.bottom;
-            bottomLeft = rect.right - (int)(width * (1.25f / key.W));
-        }
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+        int stepY = rect.top + (int)(height * (VirtualKeyboard.KEY_H / key.H));
+        int bottomLeft = rect.right - (int)(width * (1.25f / key.W));
         var pts = new Win32.POINT[]
         {
             new() { x = rect.left, y = rect.top },
             new() { x = rect.right, y = rect.top },
-            new() { x = rect.right, y = bottom },
-            new() { x = bottomLeft, y = bottom },
+            new() { x = rect.right, y = rect.bottom },
+            new() { x = bottomLeft, y = rect.bottom },
             new() { x = bottomLeft, y = stepY },
             new() { x = rect.left, y = stepY },
         };
@@ -530,7 +513,6 @@ internal static class KeyboardRenderer
         IntPtr hdc,
         Win32.RECT rect,
         VirtualKeyboard.VisualKey key,
-        KeyboardPlacement placement,
         bool isoEnter,
         bool disabled,
         bool tutorial,
@@ -538,11 +520,7 @@ internal static class KeyboardRenderer
     {
         var labelRect = rect;
         if (isoEnter)
-        {
-            labelRect.left = tutorial
-                ? placement.OriginX + (int)((key.X + (key.W - 1.25f)) * placement.Scale)
-                : rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
-        }
+            labelRect.left = rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
 
         Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, disabled ? 0x00606060u : CLR_CTX_TEXT);
@@ -995,22 +973,10 @@ internal static class KeyboardRenderer
         (c >= '\u20D0' && c <= '\u20FF') ||
         (c >= '\uFE20' && c <= '\uFE2F');
 
-    private static Win32.RECT KeyRect(VirtualKeyboard.VisualKey key, KeyboardPlacement placement, KeyboardRenderProfile profile)
-    {
-        if (profile != KeyboardRenderProfile.Onboarding)
-            return ToRect(key, placement.OriginX, placement.OriginY, placement.Scale);
-
-        // Rendu d'origine du tutoriel : chaque touche arrondit sa propre largeur, moins un pixel.
-        int left = placement.OriginX + (int)(key.X * placement.Scale);
-        int top = placement.OriginY + (int)(key.Y * placement.Scale);
-        return new Win32.RECT
-        {
-            left = left,
-            top = top,
-            right = left + (int)(key.W * placement.Scale) - 1,
-            bottom = top + (int)(key.H * placement.Scale) - 1
-        };
-    }
+    /// <summary>Cadre d'une touche : les bords tombent sur la grille des unités, moins un
+    /// pixel à droite et en bas (l'espace entre deux touches).</summary>
+    private static Win32.RECT ToRect(VirtualKeyboard.VisualKey key, KeyboardPlacement placement)
+        => ToRect(key, placement.OriginX, placement.OriginY, placement.Scale);
 
     private static Win32.RECT ToRect(VirtualKeyboard.VisualKey key, int originX, int originY, float scale)
     {

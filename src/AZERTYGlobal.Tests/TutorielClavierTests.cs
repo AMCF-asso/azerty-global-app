@@ -41,7 +41,7 @@ public class TutorielClavierTests : IDisposable
     private uint Peindre(KeyboardRenderProfile profil, KeyboardRenderState etat,
         Func<Func<string, uint?, Win32.RECT>, (int X, int Y)> lire)
     {
-        var cadres = KeyboardRenderer.BuildHitTestRects(Place, profil).ToList();
+        var cadres = KeyboardRenderer.BuildHitTestRects(Place).ToList();
         Win32.RECT Cadre(string libelle, uint? scancode) => cadres
             .First(k => scancode is uint sc ? k.Scancode == sc : k.Label == libelle).Rect;
         var (x, y) = lire(Cadre);
