@@ -94,7 +94,10 @@ jobs:
         run: |
           set -euo pipefail
           source="origin/${BANC}"
-          if ! git rev-parse --verify --quiet "${source}^{commit}" > /dev/null; then
+          # La branche du banc n'est lue que s'il manque quelque chose : elle peut ne pas
+          # exister sur le dépôt distant, et la ref en porte déjà un depuis 0a1dbc7.
+          if { [ ! -f src/AZERTYGlobal.Tests/CaptureSupport.cs ] || [ ! -f scripts/compare-captures.py ]; } \
+             && ! git rev-parse --verify --quiet "${source}^{commit}" > /dev/null; then
             git fetch --no-tags origin "+refs/heads/${BANC}:refs/remotes/origin/${BANC}"
           fi
           banc=(src/AZERTYGlobal.Tests/CaptureSupport.cs src/AZERTYGlobal.Tests/CaptureBench.cs src/AZERTYGlobal.Tests/KeyboardContextBench.cs)
