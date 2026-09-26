@@ -285,9 +285,9 @@ sealed class TrayApplication : IDisposable
             UpdateTooltip();
             CheckSystemLayout(); // peut declencher LayoutConflictWindow et set _layoutPopupOpen
 
-            // Démarrer l'horloge « premier lancement » dès maintenant (y compris quand
-            // l'onboarding s'affiche) : la sollicitation d'avis à J+7 compte depuis le
-            // vrai premier lancement, pas depuis la fin de l'onboarding.
+            // Date du premier lancement (clé firstRunTimestamp), écrite une fois. La
+            // sollicitation d'avis ne la lit plus depuis la v1.2.0 (usage réel, pas
+            // calendrier) : elle reste écrite pour les configs existantes et le diagnostic.
             ConfigManager.EnsureFirstRunTimestamp();
 
             // Premier lancement : onboarding. Lancements suivants : notification balloon.
@@ -1044,18 +1044,6 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// Réinstalle le keyboard hook (nouveau SetWindowsHookEx) SANS changer l'identité de
-    /// l'objet KeyboardHook : les abonnements RawKeyDown de l'onboarding, des leçons et
-    /// du clavier virtuel restent valides (correctif audit 2026-07 M1). L'état
-    /// PassThroughAll/Enabled est porté par l'objet et n'a pas besoin d'être réappliqué.
-    /// </summary>
-    /// <param name="nudgeForeground">
-    /// true (timers de démarrage, TaskbarCreated) : activer la fenêtre pour que le thread
-    /// soit associé au système d'input — sans cet appel, le hook LL fraîchement posé peut ne
-    /// pas recevoir d'événements au boot. false (watchdog, reprise de veille, session) :
-    /// ne jamais toucher au foreground en cours de session.
-    /// </param>
-    /// <summary>
     /// AG130-10 — une frappe vue sans rappel du hook vaut hook décroché.
     ///
     /// La sonde ne parle que quand le hook est censé travailler : en pause, suspendu
@@ -1092,6 +1080,18 @@ sealed class TrayApplication : IDisposable
         ReinstallHook(nudgeForeground: false);
     }
 
+    /// <summary>
+    /// Réinstalle le keyboard hook (nouveau SetWindowsHookEx) SANS changer l'identité de
+    /// l'objet KeyboardHook : les abonnements RawKeyDown de l'onboarding, des leçons et
+    /// du clavier virtuel restent valides (correctif audit 2026-07 M1). L'état
+    /// PassThroughAll/Enabled est porté par l'objet et n'a pas besoin d'être réappliqué.
+    /// </summary>
+    /// <param name="nudgeForeground">
+    /// true (timers de démarrage, TaskbarCreated) : activer la fenêtre pour que le thread
+    /// soit associé au système d'input — sans cet appel, le hook LL fraîchement posé peut ne
+    /// pas recevoir d'événements au boot. false (watchdog, reprise de veille, session) :
+    /// ne jamais toucher au foreground en cours de session.
+    /// </param>
     private void ReinstallHook(bool nudgeForeground = true)
     {
         if (_hook == null || !_activationConsent) return;
@@ -1193,14 +1193,15 @@ sealed class TrayApplication : IDisposable
         ShowLayoutConflictPopup(isAtStartup: false);
     }
 
+    private bool _layoutPopupOpen;
+    private LayoutConflictWindow? _layoutConflictWindow;
+
     /// <summary>
     /// Affiche la fenetre custom de conflit avec le layout systeme. Garde-fou pour
     /// eviter l'empilement de popups si l'utilisateur fait Ctrl+Shift plusieurs fois.
     /// La fenetre est topmost (WS_EX_TOPMOST) et propose un choix eclaire :
     /// quitter l'app (cas mot de passe Windows) ou la garder (cas confort post-login).
     /// </summary>
-    private bool _layoutPopupOpen;
-    private LayoutConflictWindow? _layoutConflictWindow;
     private void ShowLayoutConflictPopup(bool isAtStartup)
     {
         if (_layoutPopupOpen) return; // popup deja affichee — pas de spam
@@ -1529,7 +1530,7 @@ sealed class TrayApplication : IDisposable
 
     /// <summary>
     /// Émet la balloon « Défi du jour » si la décision de cadence l'autorise (opt-in,
-    /// fenêtre horaire, un rappel par jour, priorité avis J+7, signaux locaux).
+    /// fenêtre horaire, un rappel par jour, priorité à l'avis du jour, signaux locaux).
     /// Appelé toutes les 5 min par TIMER_STATS_FLUSH — la décision est pure et bon marché.
     /// </summary>
     private void MaybeShowTrainingReminder()
@@ -2080,8 +2081,9 @@ sealed class TrayApplication : IDisposable
         Win32.DestroyWindow(_hWnd);
     }
 
-    /// <summary>Nettoyage unique du hook, de l'icône tray et des handles GDI.</summary>
     private bool _cleaned;
+
+    /// <summary>Nettoyage unique du hook, de l'icône tray et des handles GDI.</summary>
     private void Cleanup()
     {
         if (_cleaned) return;
@@ -2882,13 +2884,13 @@ sealed class TrayApplication : IDisposable
         }
     }
 
+    private string? _compatibilityMenuProcessName;
+    private string? _compatibilityMenuFullPath;
+
     /// <summary>
     /// Applique un override utilisateur (Auto/forceOn/forceOff) sur le process foreground actuel.
     /// Refuse forceOn sur process anti-cheat (sécurité utilisateur) avec bulle explicative.
     /// </summary>
-    private string? _compatibilityMenuProcessName;
-    private string? _compatibilityMenuFullPath;
-
     private void ApplyCompatibilityOverride(string? mode)
     {
         var proc = _compatibilityMenuProcessName;
