@@ -264,10 +264,9 @@ sealed class SettingsWindow : IDisposable
         _onAppLanguageChanged = _ => OnLanguageChanged();
         ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
 
-        int realDpi = Win32.GetDpiForWindow(_hWnd);
-        if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+        if (NativeWindow.CorrectedScale(Win32.GetDpiForWindow(_hWnd), _dpiScale) is float windowScale)
         {
-            _dpiScale = realDpi / 96f;
+            _dpiScale = windowScale;
             // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
             try
             {
@@ -365,28 +364,15 @@ sealed class SettingsWindow : IDisposable
         if (!NativeWindow.RegisterClass(className, _wndProcDelegate))
             return;
 
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
         // WS_VSCROLL est présent dès la création pour que la barre existe quand le
         // contenu dépasse la zone de travail ; FitWindowToContent la masque aussitôt
         // lorsque tout tient, ce qui est le cas courant (Écart 4).
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | WS_VSCROLL;
-        var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
-        Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, 0);
-        int windowW = adjustRect.right - adjustRect.left;
-        int windowH = adjustRect.bottom - adjustRect.top;
-
-        Win32.GetCursorPos(out var cursorPt);
-        var hMonitor = Win32.MonitorFromPoint(cursorPt, 0x00000001);
-        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        Win32.GetMonitorInfo(hMonitor, ref monInfo);
-        int screenX = monInfo.rcWork.left;
-        int screenY = monInfo.rcWork.top;
-        int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
-        int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        var (windowW, windowH) = NativeWindow.OuterSize(S(BASE_WIN_W), S(BASE_WIN_H), dwStyle);
+        var (x, y) = NativeWindow.CenterIn(NativeWindow.WorkArea(), windowW, windowH);
 
         _hWnd = Win32.CreateWindowExW(0, className, L.Settings_WindowTitle,
-            dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
+            dwStyle, x, y, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
 
@@ -1184,13 +1170,9 @@ sealed class SettingsWindow : IDisposable
 
             case Win32.WM_DPICHANGED:
             {
-                int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
-                if (newDpi > 0)
-                    _dpiScale = newDpi / 96f;
+                _dpiScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
                 RecreateFonts();
-                var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
-                Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
-                    suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                NativeWindow.MoveToSuggestedRect(_hWnd, lParam);
                 // La taille suggérée par Windows applique le nouveau facteur à l'ancienne
                 // hauteur : elle peut dépasser la zone de travail du nouvel écran. On
                 // remesure derrière, sinon l'Écart 4 revient dès qu'on déplace la fenêtre

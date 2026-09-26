@@ -262,12 +262,53 @@ public class NativeWindowTests
     [Fact]
     public void TailleExtérieure_AjouteLeCadre()
     {
-        const uint WS_POPUP = 0x80000000;
         Assert.Equal((330, 154), NativeWindow.OuterSize(330, 154, WS_POPUP));
 
         var (w, h) = NativeWindow.OuterSize(330, 154, Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU);
         Assert.True(w > 330);
         Assert.True(h > 154);
+    }
+
+    [Fact]
+    public void Redimensionnement_GardeLeCentre()
+    {
+        WithMessageWindow(100, 100, 200, 100, hwnd =>
+        {
+            NativeWindow.ResizeAroundCenter(hwnd, 100, 50, WS_POPUP);
+            Assert.Equal((150, 125, 250, 175), Bounds(hwnd));
+        });
+    }
+
+    [Fact]
+    public void RectangleSuggéréParWmDpiChanged_EstAppliqué()
+    {
+        WithMessageWindow(0, 0, 50, 50, hwnd =>
+        {
+            var suggéré = new Win32.RECT { left = 10, top = 20, right = 510, bottom = 250 };
+            IntPtr lParam = Marshal.AllocHGlobal(Marshal.SizeOf<Win32.RECT>());
+            try
+            {
+                Marshal.StructureToPtr(suggéré, lParam, false);
+                Assert.Equal(144, NativeWindow.ApplyDpiChange(hwnd, (IntPtr)((144 << 16) | 144), lParam));
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(lParam);
+            }
+            Assert.Equal((10, 20, 510, 250), Bounds(hwnd));
+        });
+    }
+
+    [Fact]
+    public void D1_LaFenêtrePrendSaTailleAuDpiEtSeCentre()
+    {
+        WithMessageWindow(0, 0, 330, 154, hwnd =>
+        {
+            var work = new Win32.RECT { left = 0, top = 0, right = 1920, bottom = 1040 };
+            NativeWindow.FitToDpi(hwnd, 330, 154, 144, WS_POPUP, 0, work);
+            // 330 × 154 à 150 % : 495 × 231, centré dans 1920 × 1040.
+            Assert.Equal((712, 404, 1207, 635), Bounds(hwnd));
+        });
     }
 
     // ═══ Mise en page D1 ═══
@@ -322,6 +363,35 @@ public class NativeWindowTests
             Win32.UnregisterClassW(className, module);
             GC.KeepAlive(étrangère);
         }
+    }
+
+    private const uint WS_POPUP = 0x80000000;
+
+    /// <summary>Une fenêtre message-only sans cadre, jamais affichée, le temps du corps.</summary>
+    private static void WithMessageWindow(int x, int y, int w, int h, Action<IntPtr> body)
+    {
+        string name = UniqueClassName();
+        Win32.WNDPROC procédure = (hh, m, wp, lp) => Win32.DefWindowProcW(hh, m, wp, lp);
+        Assert.True(NativeWindow.RegisterClass(name, procédure));
+        IntPtr hwnd = Win32.CreateWindowExW(0, name, string.Empty, WS_POPUP, x, y, w, h,
+            HWND_MESSAGE, IntPtr.Zero, Win32.GetModuleHandleW(null), IntPtr.Zero);
+        try
+        {
+            Assert.NotEqual(IntPtr.Zero, hwnd);
+            body(hwnd);
+        }
+        finally
+        {
+            Win32.DestroyWindow(hwnd);
+            NativeWindow.UnregisterClass(name);
+            GC.KeepAlive(procédure);
+        }
+    }
+
+    private static (int, int, int, int) Bounds(IntPtr hwnd)
+    {
+        Assert.True(Win32.GetWindowRect(hwnd, out var r));
+        return (r.left, r.top, r.right, r.bottom);
     }
 
     private static IntPtr Handle(object fenêtre) =>

@@ -78,10 +78,9 @@ sealed class LayoutConflictWindow : IDisposable
         CreateControls();
         ApplyFontsToControls();
 
-        int realDpi = Win32.GetDpiForWindow(_hWnd);
-        if (realDpi > 0 && Math.Abs(realDpi / 96f - _dpiScale) > 0.01f)
+        if (NativeWindow.CorrectedScale(Win32.GetDpiForWindow(_hWnd), _dpiScale) is float windowScale)
         {
-            _dpiScale = realDpi / 96f;
+            _dpiScale = windowScale;
             // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
             try
             {
@@ -130,27 +129,14 @@ sealed class LayoutConflictWindow : IDisposable
         if (!NativeWindow.RegisterClass(WND_CLASS_NAME, _wndProcDelegate))
             return;
 
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         uint dwExStyle = Win32.WS_EX_TOPMOST;
-        var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
-        Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, dwExStyle);
-        int windowW = adjustRect.right - adjustRect.left;
-        int windowH = adjustRect.bottom - adjustRect.top;
-
-        Win32.GetCursorPos(out var cursorPt);
-        var hMonitor = Win32.MonitorFromPoint(cursorPt, 0x00000001);
-        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        Win32.GetMonitorInfo(hMonitor, ref monInfo);
-        int screenX = monInfo.rcWork.left;
-        int screenY = monInfo.rcWork.top;
-        int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
-        int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        var (windowW, windowH) = NativeWindow.OuterSize(S(BASE_WIN_W), S(BASE_WIN_H), dwStyle, dwExStyle);
+        var (x, y) = NativeWindow.CenterIn(NativeWindow.WorkArea(), windowW, windowH);
 
         _hWnd = Win32.CreateWindowExW(dwExStyle, WND_CLASS_NAME,
             L.LayoutConflict_WindowTitle,
-            dwStyle, screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2, windowW, windowH,
+            dwStyle, x, y, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
@@ -175,21 +161,9 @@ sealed class LayoutConflictWindow : IDisposable
         RepositionControls();
     }
 
-    private void ResizeWindow()
-    {
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        uint dwExStyle = Win32.WS_EX_TOPMOST;
-        var adjustRect = new Win32.RECT { left = 0, top = 0, right = winW, bottom = winH };
-        Win32.AdjustWindowRectEx(ref adjustRect, dwStyle, false, dwExStyle);
-        int windowW = adjustRect.right - adjustRect.left;
-        int windowH = adjustRect.bottom - adjustRect.top;
-        Win32.GetWindowRect(_hWnd, out var currentRect);
-        int cx = (currentRect.left + currentRect.right) / 2;
-        int cy = (currentRect.top + currentRect.bottom) / 2;
-        Win32.MoveWindow(_hWnd, cx - windowW / 2, cy - windowH / 2, windowW, windowH, true);
-    }
+    private void ResizeWindow() =>
+        NativeWindow.ResizeAroundCenter(_hWnd, S(BASE_WIN_W), S(BASE_WIN_H),
+            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST);
 
     private void RepositionControls()
     {
@@ -233,13 +207,9 @@ sealed class LayoutConflictWindow : IDisposable
 
                 case Win32.WM_DPICHANGED:
                 {
-                    int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
-                    if (newDpi > 0)
-                        _dpiScale = newDpi / 96f;
+                    _dpiScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
                     RecreateFonts();
-                    var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
-                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
-                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    NativeWindow.MoveToSuggestedRect(_hWnd, lParam);
                     RepositionControls();
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
