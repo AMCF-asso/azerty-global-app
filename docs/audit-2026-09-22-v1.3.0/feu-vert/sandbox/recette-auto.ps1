@@ -686,12 +686,13 @@ try {
     $a1 = AnswerBox $VK_N 7
     $h1 = Hash $cfgPath
     [void](FrontSure $st); Start-Sleep -Milliseconds 300
-    $f2 = ([W]::Focus($st) -eq $reset)
-    if ($f2) { [W]::Key($VK_SPACE) }
+    $back2 = ([W]::Focus($st) -eq $reset)
+    $f2 = if ($back2) { $reset } else { TabTo $st { param($h) $h -eq $reset } 30 }
+    if ($f2 -ne [IntPtr]::Zero) { [W]::Key($VK_SPACE) }
     $a2 = AnswerBox $VK_N 7
     $h2 = Hash $cfgPath
-    $ok = ($f -ne [IntPtr]::Zero) -and $f2 -and $a1 -eq 'fermee au clavier' -and $a2 -eq 'fermee au clavier' -and $h0 -eq $h1 -and $h1 -eq $h2 -and $wFr.ok
-    Verdict 'R45' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("trois onglets au clavier (R47)=$($wFr.ok) ; Tab jusqu'a Valeurs par defaut=$($f -ne [IntPtr]::Zero) ; Entree : confirmation $a1 ; focus revenu sur le bouton=$f2, Espace : confirmation $a2 ; config.json inchange=$($h0 -eq $h1 -and $h1 -eq $h2). Focus visible sur chaque bouton : a l'oeil.")
+    $ok = ($f -ne [IntPtr]::Zero) -and ($f2 -ne [IntPtr]::Zero) -and $a1 -eq 'fermee au clavier' -and $a2 -eq 'fermee au clavier' -and $h0 -eq $h1 -and $h1 -eq $h2 -and $wFr.ok
+    Verdict 'R45' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("trois onglets au clavier (R47)=$($wFr.ok) ; Tab jusqu'a Valeurs par defaut=$($f -ne [IntPtr]::Zero) ; Entree : confirmation $a1 ; focus revenu seul sur le bouton=$back2, Espace : confirmation $a2 ; config.json inchange=$($h0 -eq $h1 -and $h1 -eq $h2). Focus visible sur chaque bouton : a l'oeil.")
 
     # R49 : touche reservee (T) dans le champ du clavier virtuel, puis Langue > Reinitialiser
     # clavier virtuel ; chaque changement d'onglet efface le message.
@@ -735,6 +736,7 @@ try {
     [W]::Key($VK_RETURN)
     $box1 = AnswerBox $VK_RETURN 1
     $closed1 = WaitGone $ly 4
+    [void](WaitFor { if ([bool](CfgValue 'maintainableLayersEnabled') -eq $c1) { $true } } 8)
     $saved1 = [bool](CfgValue 'maintainableLayersEnabled')
     Command 1040
     [void](WaitFor { if ([W]::IsWindowVisible($ly)) { $ly } } 6)
@@ -745,6 +747,7 @@ try {
     [W]::Key($VK_ESCAPE)
     $box2 = AnswerBox $VK_RETURN 1
     $closed2 = WaitGone $ly 4
+    [void](WaitFor { if ([bool](CfgValue 'maintainableLayersEnabled') -eq $c2) { $true } } 8)
     $saved2 = [bool](CfgValue 'maintainableLayersEnabled')
     $inner = @(5202, 5203, 5204, 5205, 5206 | Where-Object { $path -notcontains $_ }).Count -eq 0
     $cycleOk = ($path.Count -ge 2) -and ($path[-1] -eq 5201) -and ($path -contains 5208) -and (-not $c1 -or $inner)
