@@ -8,20 +8,23 @@ internal static partial class L
 
     // ── PauseDurationDialog ──────────────────────────────────────────
     public static string Pause_WindowTitle => T($"Mettre {Product} en pause", $"Pause {Product}");
-    public static string Pause_Label => T("Durée de pause temporaire", "Temporary pause duration");
+    public static string Pause_Label => T("Durée", "Duration");
+    // Noms accessibles des deux champs : l'unité affichée suit le champ, et le Narrateur
+    // nomme un champ par l'étiquette qui le précède.
     public static string Pause_Hours => T("Heures", "Hours");
     public static string Pause_Minutes => T("Minutes", "Minutes");
-    // N10 (accessibilité 1.3.0) : noms accessibles des boutons ▲▼, que lit le Narrateur ;
-    // le glyphe affiché, lui, ne dit ni quel champ ni quel sens.
-    public static string Pause_HoursUp => T("Augmenter les heures", "Increase hours");
-    public static string Pause_HoursDown => T("Diminuer les heures", "Decrease hours");
-    public static string Pause_MinutesUp => T("Augmenter les minutes", "Increase minutes");
-    public static string Pause_MinutesDown => T("Diminuer les minutes", "Decrease minutes");
+    public static string Pause_UnitHours => T("h", "hr");
+    public static string Pause_UnitMinutes => T("min", "min");
+    // Moment de la reprise, repris par la fenêtre et par le menu : « à 16 h 12 » ou
+    // « demain à 8 h ».
+    public static string Pause_TodayAt(string clock) => T($"à {clock}", $"at {clock}");
+    public static string Pause_TomorrowAt(string clock) => T($"demain à {clock}", $"tomorrow at {clock}");
+    public static string Pause_Resumes(string when) => T($"Reprise {when}", $"Resumes {when}");
     public static string Pause_BtnConfirm => T("Mettre en pause", "Pause");
     public static string Pause_BtnCancel => T("Annuler", "Cancel");
     public static string Pause_InvalidDuration => T(
-        "Choisissez une durée entre 1 minute et 23 h 59.",
-        "Choose a duration between 1 minute and 23 hours 59 minutes.");
+        "Choisissez entre 1 min et 23 h 59.",
+        "Choose between 1 min and 23 hr 59 min.");
 
     // ── LayoutConflictWindow ─────────────────────────────────────────
     public static string LayoutConflict_WindowTitle => T(

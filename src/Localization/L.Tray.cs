@@ -25,6 +25,9 @@ internal static partial class L
     public static string Tray_ActiveAgainTitle => T("De nouveau actif", "Active again");
     public static string Tray_PausedForDurationTitle(string durationText) =>
         T($"En pause pour {durationText}", $"Paused for {durationText}");
+    public static string Tray_PausedUntilMorningTitle(bool tomorrow, string clock) => tomorrow
+        ? T($"En pause jusqu’à demain {clock}", $"Paused until tomorrow {clock}")
+        : T($"En pause jusqu’à {clock}", $"Paused until {clock}");
     public static string Tray_PauseEndedTitle => T("Pause terminée", "Pause ended");
     public static string Tray_PauseStoppedTitle => T("Pause arrêtée", "Pause stopped");
     public static string Tray_PrecautionTitle => T("En pause par précaution", "Paused as a precaution");
@@ -141,8 +144,19 @@ internal static partial class L
     // ── Menu tray ────────────────────────────────────────────────────
     public static string Tray_MenuDisable => T("Désactiver\tCtrl+Maj+Verr. Maj.", "Turn off\tCtrl+Shift+Caps Lock");
     public static string Tray_MenuEnable => T("Activer\tCtrl+Maj+Verr. Maj.", "Turn on\tCtrl+Shift+Caps Lock");
-    public static string Tray_MenuResumeNow => T("Reprendre maintenant", "Resume now");
-    public static string Tray_MenuPauseEllipsis => T("Mettre en pause…", "Pause…");
+    // Pause (décisions d'Antoine du 2026-09-28) : un sous-menu de durées, et pendant la
+    // pause l'heure de la reprise automatique à côté de « Reprendre maintenant ».
+    public static string Tray_MenuResumeNow(string when) =>
+        T($"Reprendre maintenant (reprise auto {when})", $"Resume now (auto-resume {when})");
+    public static string Tray_MenuPause => T("Mettre en pause", "Pause");
+    public static string Tray_MenuPause15 => T("15 minutes", "15 minutes");
+    public static string Tray_MenuPause30 => T("30 minutes", "30 minutes");
+    public static string Tray_MenuPause60 => T("1 heure", "1 hour");
+    public static string Tray_MenuPause120 => T("2 heures", "2 hours");
+    public static string Tray_MenuPauseUntilMorning(bool tomorrow, string clock) => tomorrow
+        ? T($"Jusqu’à demain {clock}", $"Until tomorrow {clock}")
+        : T($"Jusqu’à {clock}", $"Until {clock}");
+    public static string Tray_MenuPauseCustom => T("Personnaliser…", "Custom…");
     public static string Tray_MenuHideVirtualKeyboard(string key) => T($"Masquer le clavier virtuel\tCtrl+Maj+{key}", $"Hide virtual keyboard\tCtrl+Shift+{key}");
     public static string Tray_MenuVirtualKeyboard(string key) => T($"Clavier virtuel\tCtrl+Maj+{key}", $"Virtual keyboard\tCtrl+Shift+{key}");
     public static string Tray_MenuSearchCharacter(string key) => T($"Rechercher un caractère\tCtrl+Maj+{key}", $"Find a character\tCtrl+Shift+{key}");

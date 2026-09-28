@@ -137,6 +137,13 @@ public class CaptureBench
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, "duree-de-pause", windowDpi);
 
+            // Durée nulle : ligne de reprise en rouge, bouton grisé. EN_CHANGE met la ligne à
+            // jour ; les messages postés passent avant la prise.
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditMinutes"), "0");
+            BancCapture.MarkActive(hwnd);
+            target.Shoot(hwnd, "duree-de-pause-invalide", windowDpi);
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditMinutes"), "5");
+
             // Le même état sur une surface noircie : ce qu'une fenêtre n'efface pas n'a
             // pas de couleur garantie. Sous DWM il sort en noir (vu par Antoine le 26/09 sur
             // cette fenêtre), le runner le rend blanc. Voir BancCapture.BlackenClient.

@@ -39,7 +39,14 @@ sealed class TrayApplication : IDisposable
     private const int IDM_GUIDE_CHANGES = 1024;
     private const int IDM_GUIDE_PDF = 1025;
     private const int IDM_CARDS = 1026;
+    // « Reprendre maintenant » pendant une pause, « Personnaliser… » sinon.
     private const int IDM_PAUSE = 1027;
+    // Sous-menu Pause (décision du 2026-09-28) : durées toutes faites.
+    private const int IDM_PAUSE_15 = 1044;
+    private const int IDM_PAUSE_30 = 1045;
+    private const int IDM_PAUSE_60 = 1046;
+    private const int IDM_PAUSE_120 = 1047;
+    private const int IDM_PAUSE_MORNING = 1048;
     private const int IDM_PRIVACY = 1028;
     internal const int IDM_DISCORD = 1029;
     private const int IDM_RELEASE_NOTES = 1030;
@@ -753,6 +760,11 @@ sealed class TrayApplication : IDisposable
                             else
                                 ShowPauseDialogAndStart();
                             break;
+                        case IDM_PAUSE_15: StartPresetPause(15); break;
+                        case IDM_PAUSE_30: StartPresetPause(30); break;
+                        case IDM_PAUSE_60: StartPresetPause(60); break;
+                        case IDM_PAUSE_120: StartPresetPause(120); break;
+                        case IDM_PAUSE_MORNING: StartPauseUntilMorning(); break;
                         case IDM_KEYBOARD:
                             if (ShouldProcessHook || _virtualKeyboard?.IsVisible == true)
                             {
@@ -1617,9 +1629,27 @@ sealed class TrayApplication : IDisposable
         // ── État ────────────────────────────────────────────────────
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE,
             _enabled ? L.Tray_MenuDisable : L.Tray_MenuEnable);
-        uint pauseFlags = _enabled || IsPaused ? MF_STRING : MF_STRING | MF_GRAYED;
-        Win32.AppendMenuW(hMenu, pauseFlags, IDM_PAUSE,
-            IsPaused ? L.Tray_MenuResumeNow : L.Tray_MenuPauseEllipsis);
+        if (IsPaused)
+        {
+            Win32.AppendMenuW(hMenu, MF_STRING, IDM_PAUSE,
+                L.Tray_MenuResumeNow(PauseSchedule.DescribeResume(DateTime.Now, _pauseUntilUtc!.Value.LocalDateTime)));
+        }
+        else
+        {
+            DateTime now = DateTime.Now;
+            DateTime morning = PauseSchedule.NextMorning(now);
+            var hPauseMenu = Win32.CreatePopupMenu();
+            Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_15, L.Tray_MenuPause15);
+            Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_30, L.Tray_MenuPause30);
+            Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_60, L.Tray_MenuPause60);
+            Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_120, L.Tray_MenuPause120);
+            Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_MORNING,
+                L.Tray_MenuPauseUntilMorning(morning.Date > now.Date, PauseSchedule.FormatClock(morning)));
+            Win32.AppendMenuW(hPauseMenu, MF_SEPARATOR, 0, null);
+            Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE, L.Tray_MenuPauseCustom);
+            Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP | (_enabled ? 0u : MF_GRAYED),
+                (nuint)hPauseMenu, L.Tray_MenuPause);
+        }
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
 
         // ── Outils ──────────────────────────────────────────────────
@@ -1873,16 +1903,41 @@ sealed class TrayApplication : IDisposable
             StartPause(duration.Value);
     }
 
+    private void StartPresetPause(int minutes)
+    {
+        if (_enabled)
+            StartPause(TimeSpan.FromMinutes(minutes));
+    }
+
     private void StartPause(TimeSpan duration)
     {
         int totalMinutes = Math.Clamp((int)Math.Round(duration.TotalMinutes), 1, 1439);
-        _pauseUntilUtc = DateTimeOffset.UtcNow.AddMinutes(totalMinutes);
+        StartPauseUntil(DateTimeOffset.UtcNow.AddMinutes(totalMinutes),
+            L.Tray_PausedForDurationTitle(FormatDuration(totalMinutes)));
+    }
+
+    /// <summary>« Jusqu'à demain » : jusqu'au prochain 8 h, qui peut tomber à 24 h près.
+    /// L'échéance est une heure et non une durée, d'où ce chemin hors du plafond de 23 h 59
+    /// de <see cref="StartPause"/>.</summary>
+    private void StartPauseUntilMorning()
+    {
+        if (!_enabled)
+            return;
+        DateTime now = DateTime.Now;
+        DateTime morning = PauseSchedule.NextMorning(now);
+        StartPauseUntil(new DateTimeOffset(morning).ToUniversalTime(),
+            L.Tray_PausedUntilMorningTitle(morning.Date > now.Date, PauseSchedule.FormatClock(morning)));
+    }
+
+    private void StartPauseUntil(DateTimeOffset untilUtc, string balloonTitle)
+    {
+        _pauseUntilUtc = untilUtc;
         _mapper?.ClearPassedThroughKeys();
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_PAUSE, 1000, IntPtr.Zero);
         ApplyHookState();
         UpdateIcon();
         UpdateTooltip();
-        ShowBalloon(L.Tray_PausedForDurationTitle(FormatDuration(totalMinutes)), L.Tray_PausedForDuration);
+        ShowBalloon(balloonTitle, L.Tray_PausedForDuration);
     }
 
     private void StopPause(bool expired)
