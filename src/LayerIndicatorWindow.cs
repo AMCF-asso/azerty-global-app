@@ -32,7 +32,7 @@ internal sealed class LayerIndicatorWindow : IDisposable
             Win32.WS_POPUP, 0, 0, 112, 32,
             IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
         // Fond de la classe : Windows le détruit au désenregistrement.
-        _hBrush = NativeWindow.ApplyClassBackground(_hWnd, 0x00352A20);
+        _hBrush = NativeWindow.ApplyClassBackground(_hWnd, DarkTheme.BackgroundIndicator);
 
         // D1 (accessibilité 1.3.0) : police au DPI de l'écran de la fenêtre, et non plus
         // 15 px fixes ; la taille suit dans RefreshPosition, WM_DPICHANGED suit le caret
@@ -132,7 +132,7 @@ internal sealed class LayerIndicatorWindow : IDisposable
             Win32.FillRect(hdc, ref rect, _hBrush);
             IntPtr oldFont = Win32.SelectObject(hdc, _hFont);
             Win32.SetBkMode(hdc, 1);
-            uint color = _mode == MaintainableLayerMode.Locked ? 0x0060D8FFu : 0x00FFFFFFu;
+            uint color = _mode == MaintainableLayerMode.Locked ? DarkTheme.IndicatorLocked : DarkTheme.TextStrong;
             Win32.SetTextColor(hdc, color);
             Win32.DrawTextW(hdc, _label, -1, ref rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             Win32.SelectObject(hdc, oldFont);

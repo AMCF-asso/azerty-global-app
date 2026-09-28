@@ -30,19 +30,19 @@ internal sealed class LessonsWindow : IDisposable
     private const int PENDING_PHYSICAL_TEXT_TIMEOUT_MS = 1000;
     private const int FREE_PREVIEW_MAX_CHARS = 220;
 
-    private const uint CLR_BG = 0x00201C18;
-    private const uint CLR_PANEL = 0x00282018;
-    private const uint CLR_PANEL_2 = 0x00302820;
-    private const uint CLR_BORDER = 0x00484038;
-    private const uint CLR_TEXT = 0x00F0EDE8;
-    private const uint CLR_MUTED = 0x00A8A098;
-    private const uint CLR_ACCENT = 0x000078D4;
-    private const uint CLR_OK = 0x004CB050;
-    private const uint CLR_BAD = 0x003232DC;
-    private const uint CLR_CURRENT = 0x00D4A060;
-    private const uint CLR_BUTTON = 0x00484038;
-    private const uint CLR_BUTTON_HOT = 0x00585048;
-    private const uint CLR_LESSON_ACCENT = 0x00D47800;
+    private const uint CLR_BG = DarkTheme.Background;
+    private const uint CLR_PANEL = DarkTheme.Surface;
+    private const uint CLR_PANEL_2 = DarkTheme.SurfaceRaised;
+    private const uint CLR_BORDER = DarkTheme.Border;
+    private const uint CLR_TEXT = DarkTheme.Text;
+    private const uint CLR_MUTED = DarkTheme.TextSecondary;
+    private const uint CLR_ACCENT = DarkTheme.AccentLessons;
+    private const uint CLR_OK = DarkTheme.SuccessLessons;
+    private const uint CLR_BAD = DarkTheme.ErrorLessons;
+    private const uint CLR_CURRENT = DarkTheme.AccentCurrent;
+    private const uint CLR_BUTTON = DarkTheme.Control;
+    private const uint CLR_BUTTON_HOT = DarkTheme.ControlHover;
+    private const uint CLR_LESSON_ACCENT = DarkTheme.Accent;
 
     private const uint MB_YESNO = 0x00000004;
     private const uint MB_ICONWARNING = 0x00000030;

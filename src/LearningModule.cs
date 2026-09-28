@@ -75,27 +75,27 @@ sealed class LearningModule : IDisposable
     // Fond unifié sombre (cohérent avec le testeur web). Toutes les zones (titre, instruction,
     // target, status, footer, clavier) partagent le même fond. Couleurs de texte adaptées
     // au contraste sur fond sombre (~#1A1A1A → texte clair #E0E0E0 = ratio 14:1).
-    private const uint CLR_BG = 0x001A1A1A;                  // Fond fenêtre — sombre quasi-noir
-    private const uint CLR_HEADER_TITLE = 0x00E0E0E0;        // Titre — blanc cassé
-    private const uint CLR_INSTRUCTION = 0x00CCCCCC;         // Instruction — gris clair sur fond sombre
-    private const uint CLR_TARGET_PENDING = 0x00808080;      // Caractères cible non encore tapés — gris moyen
-    private const uint CLR_TARGET_CURRENT = 0x00FFFFFF;      // Caractère courant — blanc pur
-    private const uint CLR_TARGET_CORRECT = 0x005EC522;      // Caractère validé — vert
-    private const uint CLR_TARGET_ERROR = 0x004444EF;        // Erreur de frappe — rouge
-    private const uint CLR_STATUS = 0x00AAAAAA;              // Barre de statut — gris clair
-    private const uint CLR_PROGRESS_DONE = 0x00D47800;       // Dots progression terminés — orange brand
-    private const uint CLR_PROGRESS_TODO = 0x00606060;       // Dots progression à faire — gris foncé (sur fond sombre)
-    private const uint CLR_PROGRESS_CURRENT = 0x005EC522;    // Dot exercice en cours — vert (BGR, = #22C55E)
-    private const uint CLR_TRANSITION = 0x005EC522;          // Animation transition entre exercices — vert
-    private const uint CLR_BTN_QUIT_TEXT = 0x00AAAAAA;       // Bouton « Quitter les exercices » — gris clair
+    private const uint CLR_BG = DarkTheme.BackgroundTutorial;                  // Fond fenêtre — sombre quasi-noir
+    private const uint CLR_HEADER_TITLE = DarkTheme.TextTutorialTitle;        // Titre — blanc cassé
+    private const uint CLR_INSTRUCTION = DarkTheme.TextSecondaryTutorial;         // Instruction — gris clair sur fond sombre
+    private const uint CLR_TARGET_PENDING = DarkTheme.TextTertiary;      // Caractères cible non encore tapés — gris moyen
+    private const uint CLR_TARGET_CURRENT = DarkTheme.TextStrong;      // Caractère courant — blanc pur
+    private const uint CLR_TARGET_CORRECT = DarkTheme.Success;      // Caractère validé — vert
+    private const uint CLR_TARGET_ERROR = DarkTheme.Error;        // Erreur de frappe — rouge
+    private const uint CLR_STATUS = DarkTheme.TextStatus;              // Barre de statut — gris clair
+    private const uint CLR_PROGRESS_DONE = DarkTheme.Accent;       // Dots progression terminés — orange brand
+    private const uint CLR_PROGRESS_TODO = DarkTheme.ProgressTodo;       // Dots progression à faire — gris foncé (sur fond sombre)
+    private const uint CLR_PROGRESS_CURRENT = DarkTheme.Success;    // Dot exercice en cours — vert (BGR, = #22C55E)
+    private const uint CLR_TRANSITION = DarkTheme.Success;          // Animation transition entre exercices — vert
+    private const uint CLR_BTN_QUIT_TEXT = DarkTheme.TextStatus;       // Bouton « Quitter les exercices » — gris clair
 
     // Suffixe « (Bonus) » a la suite du titre pour les exos optionnels — dore-orange.
-    private const uint CLR_BONUS_TEXT = 0x000094E2;          // BGR ≈ #E29400 (orange ambré, lisible sur fond sombre)
+    private const uint CLR_BONUS_TEXT = DarkTheme.Warning;          // BGR ≈ #E29400 (orange ambré, lisible sur fond sombre)
 
     // Fond de la zone clavier et cadre des boutons d'en-tête. Les couleurs des touches et du
     // surlignage sont celles de KeyboardRenderer, profil Onboarding (lot 9, audit du 25/09 L-01).
-    private const uint CLR_KB_BG = 0x001A1A1A;               // Fond zone clavier — identique à CLR_BG (unifié)
-    private const uint CLR_KEY_BORDER = 0x00555555;          // Bordure des boutons d'en-tête
+    private const uint CLR_KB_BG = DarkTheme.BackgroundTutorial;               // Fond zone clavier — identique à CLR_BG (unifié)
+    private const uint CLR_KEY_BORDER = DarkTheme.ControlTutorialBorder;          // Bordure des boutons d'en-tête
 
     // Polices des touches, en pixels à 96 DPI. Le réglage à chaud par learning-tweaks.json,
     // fichier de développement jamais livré, a disparu avec le rendu propre du tutoriel.
@@ -1786,7 +1786,7 @@ sealed class LearningModule : IDisposable
         var hBmp = Win32.CreateCompatibleBitmap(hdc, 1, 1);
         var hOldBmp = Win32.SelectObject(hdcMem, hBmp);
         var oneRect = new Win32.RECT { left = 0, top = 0, right = 1, bottom = 1 };
-        var hBlackBrush = Win32.CreateSolidBrush(0x00000000u);
+        var hBlackBrush = Win32.CreateSolidBrush(DarkTheme.Scrim);
         Win32.FillRect(hdcMem, ref oneRect, hBlackBrush);
         Win32.DeleteObject(hBlackBrush);
 
@@ -1805,7 +1805,7 @@ sealed class LearningModule : IDisposable
 
         // Texte « Cliquez pour reprendre » centré
         var hOldFont = Win32.SelectObject(hdc, _hFontTitle);
-        Win32.SetTextColor(hdc, 0x00FFFFFFu);
+        Win32.SetTextColor(hdc, DarkTheme.TextStrong);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         var rc = new Win32.RECT { left = 0, top = top, right = cw, bottom = bottom };
         string msg = L.Learning_ClickToResume;
@@ -1857,12 +1857,12 @@ sealed class LearningModule : IDisposable
     private void DrawHoverButton(in Win32.DRAWITEMSTRUCT dis, bool hovered, string label)
     {
         var rc = dis.rcItem;
-        uint bgColor = hovered ? 0x003838C0u : 0x002A2A2Au;       // BGR : rouge sombre / gris
+        uint bgColor = hovered ? DarkTheme.ControlTutorialHover : DarkTheme.ControlTutorial;
         var hBrush = Win32.CreateSolidBrush(bgColor);
         Win32.FillRect(dis.hDC, ref rc, hBrush);
         Win32.DeleteObject(hBrush);
 
-        uint borderColor = hovered ? 0x005050E0u : CLR_KEY_BORDER;
+        uint borderColor = hovered ? DarkTheme.ControlTutorialHoverBorder : CLR_KEY_BORDER;
         var hPen = Win32.CreatePen(0, 1, borderColor);
         var hOldPen = Win32.SelectObject(dis.hDC, hPen);
         var hOldBrush = Win32.SelectObject(dis.hDC, Win32.GetStockObject(Win32.NULL_BRUSH));
@@ -1873,7 +1873,7 @@ sealed class LearningModule : IDisposable
 
         Win32.SelectObject(dis.hDC, _hFontButton);
         Win32.SetBkMode(dis.hDC, Win32.TRANSPARENT);
-        Win32.SetTextColor(dis.hDC, hovered ? 0x00FFFFFFu : CLR_BTN_QUIT_TEXT);
+        Win32.SetTextColor(dis.hDC, hovered ? DarkTheme.TextStrong : CLR_BTN_QUIT_TEXT);
         Win32.DrawTextW(dis.hDC, label, label.Length, ref rc,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
 

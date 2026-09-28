@@ -23,19 +23,19 @@ sealed class CharacterSearch : IDisposable
     private const int IDC_TIMER_COPYFEEDBACK = 3002;
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────
-    private const uint CLR_BG = 0x00282828;           // Fond sombre
-    private const uint CLR_SEARCH_BG = 0x00323232;    // Fond champ recherche
-    private const uint CLR_SEPARATOR = 0x00404040;    // Séparateur
-    private const uint CLR_CHAR = 0x00FF9040;          // Caractère (bleu vif)
-    private const uint CLR_NAME = 0x00DDDDDD;          // Nom (gris clair)
-    private const uint CLR_METHOD_ALTGR = 0x00E8A848;  // AltGr (jaune doré)
-    private const uint CLR_METHOD_MAJ = 0x006EAAF0;    // Maj (bleu ciel)
-    private const uint CLR_METHOD_SEP = 0x00808080;    // + et "puis" (gris)
-    private const uint CLR_METHOD_KEY = 0x00FFFFFF;    // Noms de touches (blanc)
-    private const uint CLR_FOOTER = 0x00AAAAAA;        // Footer (gris clair)
-    private const uint CLR_SELECTED = 0x00483828;      // Fond sélectionné (brun chaud)
-    private const uint CLR_COPIED = 0x0060D060;        // Vert "Copié !"
-    private const uint CLR_HINT = 0x00777777;          // Texte d'aide (gris moyen)
+    private const uint CLR_BG = DarkTheme.BackgroundSearch;           // Fond sombre
+    private const uint CLR_SEARCH_BG = DarkTheme.SurfaceSearchField;    // Fond champ recherche
+    private const uint CLR_SEPARATOR = DarkTheme.BorderSearch;    // Séparateur
+    private const uint CLR_CHAR = DarkTheme.AccentSearch;          // Caractère (bleu vif)
+    private const uint CLR_NAME = DarkTheme.TextSearch;          // Nom (gris clair)
+    private const uint CLR_METHOD_ALTGR = DarkTheme.MethodAltGr;  // AltGr (jaune doré)
+    private const uint CLR_METHOD_MAJ = DarkTheme.MethodShift;    // Maj (bleu ciel)
+    private const uint CLR_METHOD_SEP = DarkTheme.TextTertiary;    // + et "puis" (gris)
+    private const uint CLR_METHOD_KEY = DarkTheme.TextStrong;    // Noms de touches (blanc)
+    private const uint CLR_FOOTER = DarkTheme.TextStatus;        // Footer (gris clair)
+    private const uint CLR_SELECTED = DarkTheme.Selected;      // Fond sélectionné (brun chaud)
+    private const uint CLR_COPIED = DarkTheme.SuccessSearch;        // Vert "Copié !"
+    private const uint CLR_HINT = DarkTheme.TextHint;          // Texte d'aide (gris moyen)
 
     // ── Dimensions (base 96 DPI) ─────────────────────────────────
     private const int BASE_WIN_W = 520;
@@ -947,7 +947,7 @@ sealed class CharacterSearch : IDisposable
             {
                 var hdc = Win32.GetDC(hWnd);
                 Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-                Win32.SetTextColor(hdc, 0x00999999); // gris clair
+                Win32.SetTextColor(hdc, DarkTheme.TextPlaceholder);
                 Win32.SelectObject(hdc, _hFontPlaceholder);
                 Win32.GetClientRect(hWnd, out var editRect);
                 editRect.left += Scale(4);
