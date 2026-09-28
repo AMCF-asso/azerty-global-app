@@ -305,14 +305,20 @@ try {
     if (-not $cfg) { throw ('config.json introuvable dans ' + ($dataDirs -join ' ; ')) }
     $logFile = Join-Path (Split-Path -Parent $cfg) 'error.log'
     $before = if (Test-Path $logFile) { @(Select-String -Path $logFile -Pattern 'JsonException').Count } else { 0 }
+    $cfgDir = Split-Path -Parent $cfg
+    $asideBefore = @(Get-ChildItem -Path $cfgDir -Filter 'config.json.illisible-*' -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
     Set-Content -Path $cfg -Value '[1]' -NoNewline -Encoding ASCII
     $p = Launch
     Start-Sleep -Seconds 5
     $alive = [bool](App)
     $after = if (Test-Path $logFile) { @(Select-String -Path $logFile -Pattern 'JsonException').Count } else { 0 }
-    $content = Get-Content $cfg -Raw
-    $ok = $p -and $alive -and ($after -gt $before) -and ($content -eq '[1]')
-    Verdict 'A11' $(if ($ok) { 'OK' } else { 'ECHEC' }) ("config $cfg ; demarrage=$([bool]$p), vivante 5 s apres=$alive ; JsonException dans error.log : $before -> $after ; fichier inchange=$($content -eq '[1]')")
+    # Depuis le lot 4 (1.3.0), un config.json corrompu est renomme a cote en
+    # config.json.illisible-<aaaaMMjj-HHmmss> (src/FileQuarantine.cs), jamais laisse en place.
+    $aside = @(Get-ChildItem -Path $cfgDir -Filter 'config.json.illisible-*' -File -ErrorAction SilentlyContinue | Where-Object { $asideBefore -notcontains $_.FullName })
+    $asideOk = ($aside.Count -eq 1) -and ((Get-Content $aside[0].FullName -Raw) -eq '[1]')
+    $current = if (Test-Path $cfg) { Get-Content $cfg -Raw } else { $null }
+    $ok = $p -and $alive -and ($after -gt $before) -and $asideOk -and ($current -ne '[1]')
+    Verdict 'A11' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("config $cfg ; demarrage=$([bool]$p), vivante 5 s apres=$alive ; JsonException dans error.log : $before -> $after ; copie mise de cote=" + $(if ($aside.Count -eq 1) { $aside[0].Name } else { "$($aside.Count) fichier(s)" }) + " avec [1]=$asideOk ; config.json n'est plus [1]=$($current -ne '[1]'). Accueil, app inactive jusqu'a l'accord et bulle unique : R75, a la main.")
     if (Test-Path $logFile) { Copy-Item $logFile (Join-Path $out 'error.log') -Force }
     CloseOthers
 } catch { Verdict 'A11' 'ECHEC' $_.Exception.Message }
