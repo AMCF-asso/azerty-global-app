@@ -113,6 +113,62 @@ static class NativeWindow
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // Cadre : barre de titre et icône
+    // ═══════════════════════════════════════════════════════════════
+
+    private const uint WM_SETICON = 0x0080;
+    private static readonly Dictionary<int, IntPtr> LogoIcons = new();
+
+    /// <summary>
+    /// Lot visuel 1.3.0 : barre de titre de la palette de la fenêtre (claire ou sombre) et
+    /// logo en icône, petite et grande, à la taille de l'écran de la fenêtre. Les fenêtres
+    /// sans icône montraient celle, générique, de Windows.
+    /// </summary>
+    internal static void ApplyFrame(IntPtr hwnd, bool dark)
+    {
+        if (hwnd == IntPtr.Zero)
+            return;
+        Win32.SetTitleBarTheme(hwnd, dark);
+        int dpi = DpiOf(hwnd);
+        IntPtr small = LogoIcon(WindowSizing.ScaleForDpi(16, dpi));
+        IntPtr big = LogoIcon(WindowSizing.ScaleForDpi(32, dpi));
+        if (small != IntPtr.Zero)
+            Win32.SendMessageW(hwnd, WM_SETICON, IntPtr.Zero, small);
+        if (big != IntPtr.Zero)
+            Win32.SendMessageW(hwnd, WM_SETICON, (IntPtr)1, big);
+    }
+
+    /// <summary>
+    /// Le logo en icône carrée de <paramref name="size"/> px, rendue une fois par taille et
+    /// gardée pour la vie du processus : les fenêtres la partagent, aucune ne la détruit.
+    /// IntPtr.Zero quand GDI+ ou la ressource manque ; la fenêtre garde alors l'icône de Windows.
+    /// </summary>
+    private static IntPtr LogoIcon(int size)
+    {
+        lock (LogoIcons)
+        {
+            if (LogoIcons.TryGetValue(size, out IntPtr cached))
+                return cached;
+
+            IntPtr icon = IntPtr.Zero;
+            var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
+            if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) == 0)
+            {
+                IntPtr logo = GdiImageLoader.LoadFromEmbeddedResource(typeof(NativeWindow), ProductIdentity.LogoResourceName);
+                if (logo != IntPtr.Zero)
+                {
+                    icon = GdiHelpers.CreateLogoIcon(logo, size);
+                    Win32.GdipDisposeImage(logo);
+                }
+                Win32.GdiplusShutdown(token);
+            }
+            if (icon != IntPtr.Zero)
+                LogoIcons[size] = icon;
+            return icon;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // DPI
     // ═══════════════════════════════════════════════════════════════
 

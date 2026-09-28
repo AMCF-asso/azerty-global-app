@@ -59,18 +59,18 @@ internal static class KeyboardRenderer
 {
     private const uint CLR_KEY = DarkTheme.Key;
     private const uint CLR_KEY_CONTEXT = DarkTheme.KeyContext;
-    private const uint CLR_KEY_BORDER = DarkTheme.KeyBorder;
+    private const uint CLR_KEY_BORDER = DarkTheme.Border;
     private const uint CLR_KEY_PRESSED = DarkTheme.KeyPressed;
     private const uint CLR_KEY_DISABLED = DarkTheme.KeyDisabled;
-    private const uint CLR_MOD_ACTIVE = DarkTheme.KeyModifierActive;
+    private const uint CLR_MOD_ACTIVE = DarkTheme.KeyPressed;
     private const uint CLR_KEY_HIGHLIGHT_BORDER = DarkTheme.HighlightDirect;
-    private const uint CLR_CTX_TEXT = DarkTheme.KeyContextText;
-    private const uint CLR_KEY_LABEL = DarkTheme.KeyCaption;
-    private const uint CLR_CHAR_ACTIVE_BLUE = DarkTheme.KeyGlyphActive;
-    private const uint CLR_CHAR_DIM = DarkTheme.KeyGlyphDim;
-    private const uint CLR_DK_CHAR = DarkTheme.KeyDeadKey;
-    private const uint CLR_DK_ACTIVE_TEXT = DarkTheme.KeyDeadKeyStatus;
-    private const uint CLR_CAPS_BAR = DarkTheme.KeyCapsBar;
+    private const uint CLR_CTX_TEXT = DarkTheme.TextSecondary;
+    private const uint CLR_KEY_LABEL = DarkTheme.TextSecondary;
+    private const uint CLR_CHAR_ACTIVE_BLUE = DarkTheme.Accent;
+    private const uint CLR_CHAR_DIM = DarkTheme.TextTertiary;
+    private const uint CLR_DK_CHAR = DarkTheme.DeadKey;
+    private const uint CLR_DK_ACTIVE_TEXT = DarkTheme.Warning;
+    private const uint CLR_CAPS_BAR = DarkTheme.Warning;
 
     // Surlignage du tutoriel, contour puis fond : direct vert, étape 1 orange, étape 2 vert.
     private const uint CLR_HL_DIRECT_BG = DarkTheme.HighlightDirectFill;
@@ -474,7 +474,7 @@ internal static class KeyboardRenderer
 
         string text = kind == KeyHighlight.Step1 ? "1" : "2";
         var oldFont = Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, DarkTheme.KeyBadgeText);
+        Win32.SetTextColor(hdc, DarkTheme.OnAccent);
         Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         Win32.SelectObject(hdc, oldFont);
     }
@@ -521,7 +521,7 @@ internal static class KeyboardRenderer
             labelRect.left = rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
 
         Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, disabled ? DarkTheme.KeyDisabledText : CLR_CTX_TEXT);
+        Win32.SetTextColor(hdc, disabled ? DarkTheme.TextDisabled : CLR_CTX_TEXT);
         // Le tutoriel ne raccourcit pas ses libellés.
         uint flags = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX
             | (tutorial ? 0u : Win32.DT_END_ELLIPSIS);

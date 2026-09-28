@@ -75,27 +75,27 @@ sealed class LearningModule : IDisposable
     // Fond unifié sombre (cohérent avec le testeur web). Toutes les zones (titre, instruction,
     // target, status, footer, clavier) partagent le même fond. Couleurs de texte adaptées
     // au contraste sur fond sombre (~#1A1A1A → texte clair #E0E0E0 = ratio 14:1).
-    private const uint CLR_BG = DarkTheme.BackgroundTutorial;                  // Fond fenêtre — sombre quasi-noir
-    private const uint CLR_HEADER_TITLE = DarkTheme.TextTutorialTitle;        // Titre — blanc cassé
-    private const uint CLR_INSTRUCTION = DarkTheme.TextSecondaryTutorial;         // Instruction — gris clair sur fond sombre
+    private const uint CLR_BG = DarkTheme.Background;                  // Fond fenêtre — sombre quasi-noir
+    private const uint CLR_HEADER_TITLE = DarkTheme.Text;        // Titre — blanc cassé
+    private const uint CLR_INSTRUCTION = DarkTheme.TextSecondary;         // Instruction — gris clair sur fond sombre
     private const uint CLR_TARGET_PENDING = DarkTheme.TextTertiary;      // Caractères cible non encore tapés — gris moyen
-    private const uint CLR_TARGET_CURRENT = DarkTheme.TextStrong;      // Caractère courant — blanc pur
+    private const uint CLR_TARGET_CURRENT = DarkTheme.Text;      // Caractère courant — blanc pur
     private const uint CLR_TARGET_CORRECT = DarkTheme.Success;      // Caractère validé — vert
     private const uint CLR_TARGET_ERROR = DarkTheme.Error;        // Erreur de frappe — rouge
-    private const uint CLR_STATUS = DarkTheme.TextStatus;              // Barre de statut — gris clair
+    private const uint CLR_STATUS = DarkTheme.TextSecondary;              // Barre de statut — gris clair
     private const uint CLR_PROGRESS_DONE = DarkTheme.Accent;       // Dots progression terminés — orange brand
-    private const uint CLR_PROGRESS_TODO = DarkTheme.ProgressTodo;       // Dots progression à faire — gris foncé (sur fond sombre)
+    private const uint CLR_PROGRESS_TODO = DarkTheme.TextDisabled;       // Dots progression à faire — gris foncé (sur fond sombre)
     private const uint CLR_PROGRESS_CURRENT = DarkTheme.Success;    // Dot exercice en cours — vert (BGR, = #22C55E)
     private const uint CLR_TRANSITION = DarkTheme.Success;          // Animation transition entre exercices — vert
-    private const uint CLR_BTN_QUIT_TEXT = DarkTheme.TextStatus;       // Bouton « Quitter les exercices » — gris clair
+    private const uint CLR_BTN_QUIT_TEXT = DarkTheme.Text;       // Bouton « Quitter les exercices » — gris clair
 
     // Suffixe « (Bonus) » a la suite du titre pour les exos optionnels — dore-orange.
     private const uint CLR_BONUS_TEXT = DarkTheme.Warning;          // BGR ≈ #E29400 (orange ambré, lisible sur fond sombre)
 
     // Fond de la zone clavier et cadre des boutons d'en-tête. Les couleurs des touches et du
     // surlignage sont celles de KeyboardRenderer, profil Onboarding (lot 9, audit du 25/09 L-01).
-    private const uint CLR_KB_BG = DarkTheme.BackgroundTutorial;               // Fond zone clavier — identique à CLR_BG (unifié)
-    private const uint CLR_KEY_BORDER = DarkTheme.ControlTutorialBorder;          // Bordure des boutons d'en-tête
+    private const uint CLR_KB_BG = DarkTheme.Background;               // Fond zone clavier — identique à CLR_BG (unifié)
+    private const uint CLR_KEY_BORDER = DarkTheme.ControlBorder;          // Bordure des boutons d'en-tête
 
     // Polices des touches, en pixels à 96 DPI. Le réglage à chaud par learning-tweaks.json,
     // fichier de développement jamais livré, a disparu avec le rendu propre du tutoriel.
@@ -404,11 +404,11 @@ sealed class LearningModule : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(22), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontInstruction = Win32.CreateFontW(-S(16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontInstruction = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontTarget = Win32.CreateFontW(-S(20), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontStatus = Win32.CreateFontW(-S(15), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(14), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontStatus = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         // Caractères dans les touches.
         _hFontCharMain = Win32.CreateFontW(S(FONT_CHAR_MAIN), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
         _hFontCharDeadKey = Win32.CreateFontW(S(FONT_CHAR_DEAD_KEY), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
@@ -418,7 +418,7 @@ sealed class LearningModule : IDisposable
         _hFontOverlayMain = Win32.CreateFontW(S(FONT_CHAR_MAIN), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontOverlaySmall = Win32.CreateFontW(S(FONT_CHAR_SMALL), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontCtx = Win32.CreateFontW(S(FONT_CTX), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
-        _hFontTransition = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTransition = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontBadge = Win32.CreateFontW(S(9), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
     }
 
@@ -502,7 +502,7 @@ sealed class LearningModule : IDisposable
             screenX + (screenW - windowW) / 2, screenY + (screenH - windowH) / 2,
             windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: true);
     }
 
     /// <summary>
@@ -564,20 +564,20 @@ sealed class LearningModule : IDisposable
         Win32.SetWindowSubclass(_hWndBtnSkip, _skipSubclassProc, (UIntPtr)2, IntPtr.Zero);
 
         _hWndBtnFinish = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnFinish,
-            Win32.WS_CHILD | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             0, 0, S(140), S(30),
             _hWnd, (IntPtr)IDC_BTN_FINISH, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnFinish, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
         // Page de choix fin d'exercice : Reessayer + Suivant (cote a cote, centres sous le titre)
         _hWndBtnRetry = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnRetry,
-            Win32.WS_CHILD | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             0, 0, S(200), S(36),
             _hWnd, (IntPtr)IDC_BTN_RETRY, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnRetry, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
         _hWndBtnContinue = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnNext,
-            Win32.WS_CHILD | Win32.WS_TABSTOP,
+            Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
             0, 0, S(180), S(36),
             _hWnd, (IntPtr)IDC_BTN_CONTINUE, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnContinue, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
@@ -956,6 +956,22 @@ sealed class LearningModule : IDisposable
                     if (dis.CtlID == IDC_BTN_SKIP)
                     {
                         DrawHoverButton(in dis, _skipHovered, L.Learning_BtnSkip);
+                        return (IntPtr)1;
+                    }
+                    // Fin d'exercice et page finale : le bouton qui fait avancer est l'accent.
+                    if (dis.CtlID == IDC_BTN_FINISH)
+                    {
+                        DrawHoverButton(in dis, false, L.Learning_BtnFinish, primary: true);
+                        return (IntPtr)1;
+                    }
+                    if (dis.CtlID == IDC_BTN_RETRY)
+                    {
+                        DrawHoverButton(in dis, false, L.Learning_BtnRetry);
+                        return (IntPtr)1;
+                    }
+                    if (dis.CtlID == IDC_BTN_CONTINUE)
+                    {
+                        DrawHoverButton(in dis, false, L.Learning_BtnNext, primary: true);
                         return (IntPtr)1;
                     }
                     break;
@@ -1805,7 +1821,7 @@ sealed class LearningModule : IDisposable
 
         // Texte « Cliquez pour reprendre » centré
         var hOldFont = Win32.SelectObject(hdc, _hFontTitle);
-        Win32.SetTextColor(hdc, DarkTheme.TextStrong);
+        Win32.SetTextColor(hdc, DarkTheme.Text);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         var rc = new Win32.RECT { left = 0, top = top, right = cw, bottom = bottom };
         string msg = L.Learning_ClickToResume;
@@ -1849,33 +1865,17 @@ sealed class LearningModule : IDisposable
     }
 
     /// <summary>
-    /// Dessine un bouton owner-draw avec effet hover « rouge clair ». Utilisé pour
-    /// les boutons « Quitter les exercices » et « Passer cet exercice ».
-    /// Hover : fond rouge sombre, bordure rouge clair, texte blanc.
-    /// Normal : fond gris foncé, texte gris CLR_BTN_QUIT_TEXT, bordure CLR_KEY_BORDER.
+    /// Bouton owner-draw du tutoriel, au dessin des boutons sombres de Windows 11
+    /// (<see cref="GdiHelpers.DrawDarkButton"/>) : « Quitter les exercices » et « Passer cet
+    /// exercice » survolés éclaircissent leur fond ; « Terminer » et « Exercice suivant »
+    /// portent l'accent. Aucun n'est blanc sur le fond sombre (lot visuel 1.3.0).
     /// </summary>
-    private void DrawHoverButton(in Win32.DRAWITEMSTRUCT dis, bool hovered, string label)
+    private void DrawHoverButton(in Win32.DRAWITEMSTRUCT dis, bool hovered, string label, bool primary = false)
     {
+        const uint ODS_SELECTED = 0x0001;
+        bool pressed = (dis.itemState & ODS_SELECTED) != 0;
         var rc = dis.rcItem;
-        uint bgColor = hovered ? DarkTheme.ControlTutorialHover : DarkTheme.ControlTutorial;
-        var hBrush = Win32.CreateSolidBrush(bgColor);
-        Win32.FillRect(dis.hDC, ref rc, hBrush);
-        Win32.DeleteObject(hBrush);
-
-        uint borderColor = hovered ? DarkTheme.ControlTutorialHoverBorder : CLR_KEY_BORDER;
-        var hPen = Win32.CreatePen(0, 1, borderColor);
-        var hOldPen = Win32.SelectObject(dis.hDC, hPen);
-        var hOldBrush = Win32.SelectObject(dis.hDC, Win32.GetStockObject(Win32.NULL_BRUSH));
-        Win32.RoundRect(dis.hDC, rc.left, rc.top, rc.right - 1, rc.bottom - 1, 6, 6);
-        Win32.SelectObject(dis.hDC, hOldPen);
-        Win32.SelectObject(dis.hDC, hOldBrush);
-        Win32.DeleteObject(hPen);
-
-        Win32.SelectObject(dis.hDC, _hFontButton);
-        Win32.SetBkMode(dis.hDC, Win32.TRANSPARENT);
-        Win32.SetTextColor(dis.hDC, hovered ? DarkTheme.TextStrong : CLR_BTN_QUIT_TEXT);
-        Win32.DrawTextW(dis.hDC, label, label.Length, ref rc,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        GdiHelpers.DrawDarkButton(dis.hDC, rc, label, _hFontButton, primary, hovered, pressed, S(4), CLR_BG);
 
         // K3 (accessibilité 1.3.0) : un bouton owner-draw ne dessine que ce qu'on lui dit, et
         // le focus clavier ne se voyait pas. Rectangle système, en retrait du cadre arrondi.

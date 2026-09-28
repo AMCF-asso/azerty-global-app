@@ -116,6 +116,42 @@ static class GdiHelpers
     }
 
     /// <summary>
+    /// Lot visuel 1.3.0 — bouton sombre de Windows 11, pour les fenêtres sombres : rayon 4,
+    /// contour 1 px, texte clair ; le bouton principal prend l'accent, texte OnAccent. Jamais
+    /// blanc sur fond sombre. <paramref name="backdrop"/> repeint d'abord le rectangle (un
+    /// bouton owner-draw ne reçoit pas le fond de son parent) ; null le laisse tel quel.
+    /// </summary>
+    internal static void DrawDarkButton(IntPtr hdc, Win32.RECT rect, string text, IntPtr font, bool primary,
+        bool hot, bool pressed, int radius, uint? backdrop = null)
+    {
+        if (backdrop is uint fillBehind)
+            FillSolidRect(hdc, rect, fillBehind);
+
+        uint fill = primary
+            ? (hot || pressed ? DarkTheme.AccentHover : DarkTheme.Accent)
+            : pressed ? DarkTheme.ControlPressed : hot ? DarkTheme.ControlHover : DarkTheme.ControlFill;
+        uint border = primary ? fill : DarkTheme.ControlBorder;
+        var brush = Win32.CreateSolidBrush(fill);
+        var pen = Win32.CreatePen(0, 1, border);
+        var oldBrush = Win32.SelectObject(hdc, brush);
+        var oldPen = Win32.SelectObject(hdc, pen);
+        int diameter = Math.Max(2, radius * 2);
+        Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, diameter, diameter);
+        Win32.SelectObject(hdc, oldPen);
+        Win32.SelectObject(hdc, oldBrush);
+        Win32.DeleteObject(pen);
+        Win32.DeleteObject(brush);
+
+        var oldFont = Win32.SelectObject(hdc, font);
+        Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+        Win32.SetTextColor(hdc, primary ? DarkTheme.OnAccent : DarkTheme.Text);
+        var textRect = rect;
+        Win32.DrawTextW(hdc, text, -1, ref textRect,
+            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        Win32.SelectObject(hdc, oldFont);
+    }
+
+    /// <summary>
     /// Dessine un panneau avec bordure 1px et accent coloré à gauche.
     /// <paramref name="accentWidth"/> est la largeur de l'accent en pixels (typiquement S(4)).
     /// Si <paramref name="accentColor"/> vaut 0, l'accent n'est pas dessiné.

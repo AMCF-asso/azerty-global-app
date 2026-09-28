@@ -219,6 +219,7 @@ public partial class KeyboardContextBench
                 throw new InvalidOperationException("la Recherche n'a pas créé de fenêtre");
             Win32.ShowWindow(hwnd, 4); // SW_SHOWNOACTIVATE
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
+            BancCapture.Call(search, "ResizeToFitResults");
             target.Shoot(hwnd, "recherche-vide", windowDpi);
 
             Win32.SetWindowTextW(BancCapture.Field<IntPtr>(search, "_hEdit"), L.IsEnglish ? "acute" : "aigu");
@@ -237,8 +238,8 @@ public partial class KeyboardContextBench
     private const int PlankMargin = 28;
     private const int PlankCaption = 30;
     private const int PlankKeyboardWidth = 1100;
-    private const uint PlankBackground = 0x00201C18; // fond de la fenêtre Leçons
-    private const uint PlankCaptionColor = 0x00C8C8C8;
+    private const uint PlankBackground = DarkTheme.Background; // fond de la fenêtre Leçons
+    private const uint PlankCaptionColor = DarkTheme.TextSecondary;
 
     private static readonly (string Caption, Func<KeyboardRenderState> State)[] PlankBands =
     {
