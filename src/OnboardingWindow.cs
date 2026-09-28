@@ -47,21 +47,20 @@ sealed class OnboardingWindow : IDisposable
 
     // ── Colors (COLORREF = 0x00BBGGRR) ───────────────────────────────
     private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TITLE = LightTheme.Text;
     private const uint CLR_TEXT = LightTheme.Text;
     private const uint CLR_LINK = LightTheme.Accent;
-    // Audit du 25/09, F-14 : écart à trancher par Antoine, les autres fenêtres survolent
-    // leurs liens en LightTheme.Highlight (0x000078D4).
-    private const uint CLR_LINK_HOVER = LightTheme.LinkHoverOnboarding;
+    // Lot visuel 1.3.0 : le survol des liens est celui des autres fenêtres (l'écart F-14 est clos).
+    private const uint CLR_LINK_HOVER = LightTheme.AccentHover;
     private const uint CLR_STEP_TITLE = LightTheme.Accent;
     private const uint CLR_PROGRESS_ACTIVE = LightTheme.Accent;
-    private const uint CLR_PROGRESS_INACTIVE = LightTheme.ProgressTrack;
-    private const uint CLR_PANEL_BG = LightTheme.Panel;
-    private const uint CLR_PANEL_BORDER = LightTheme.PanelBorder;
+    private const uint CLR_PROGRESS_INACTIVE = LightTheme.ControlBorder;
+    private const uint CLR_PANEL_BG = LightTheme.Card;
+    private const uint CLR_PANEL_BORDER = LightTheme.Border;
     private const uint CLR_BADGE_BG = LightTheme.Accent;
     private const uint CLR_BADGE_TEXT = LightTheme.OnAccent;
-    private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Highlight;
-    private const uint CLR_REASSURE = LightTheme.Muted;
+    private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Accent;
+    private const uint CLR_REASSURE = LightTheme.TextSecondary;
 
     // ── Colors ARGB pour GDI+ (0xAARRGGBB) ──────────────────────────
 
@@ -239,19 +238,18 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(28), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSubtitle = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(17), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(17), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSmall = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontVersion = Win32.CreateFontW(-S(21), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        // Scaling proportionnel calibre sur 17 a 175% (taille validee visuellement).
-        // 17 / 1.75 = 9.71 logique → 10 a 100%, 12 a 125%, 15 a 150%, 17 a 175%, 19 a 200%.
-        _hFontReassure = Win32.CreateFontW(-(int)Math.Round(17.0 * _dpiScale / 1.75), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(17), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontStepSummary = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontPageTitle = Win32.CreateFontW(-S(26), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLinkStrong = Win32.CreateFontW(-S(16), 0, 0, 0, 700, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = TypeRamp.Create(TypeRamp.Title, TypeRamp.Semibold, _dpiScale);
+        _hFontSubtitle = TypeRamp.Create(TypeRamp.Body, TypeRamp.Semibold, _dpiScale);
+        _hFontText = TypeRamp.Create(TypeRamp.Body, TypeRamp.Regular, _dpiScale);
+        _hFontBold = TypeRamp.Create(TypeRamp.Body, TypeRamp.Semibold, _dpiScale);
+        _hFontSmall = TypeRamp.Create(TypeRamp.Caption, TypeRamp.Regular, _dpiScale, italic: true);
+        _hFontVersion = TypeRamp.Create(TypeRamp.Caption, TypeRamp.Regular, _dpiScale);
+        // Légende de la rampe (lot visuel 1.3.0) ; la mention revient à la ligne au besoin.
+        _hFontReassure = TypeRamp.Create(TypeRamp.Caption, TypeRamp.Regular, _dpiScale, italic: true);
+        _hFontButton = TypeRamp.Create(TypeRamp.Body, TypeRamp.Regular, _dpiScale);
+        _hFontStepSummary = TypeRamp.Create(TypeRamp.Body, TypeRamp.Semibold, _dpiScale);
+        _hFontPageTitle = TypeRamp.Create(TypeRamp.Title, TypeRamp.Semibold, _dpiScale);
+        _hFontLinkStrong = TypeRamp.Create(TypeRamp.Body, TypeRamp.Regular, _dpiScale, underline: true);
     }
 
     private void DestroyFonts()
@@ -341,20 +339,9 @@ sealed class OnboardingWindow : IDisposable
             dwStyle, x, y, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
 
         CreateControls();
-        SetWindowIcon();
-    }
-
-    /// <summary>Logo en icône 32 px, grande et petite (audit du 25/09, F-15).</summary>
-    private void SetWindowIcon()
-    {
-        _hIcon = GdiHelpers.CreateLogoIcon(_gdipLogo, 32);
-        if (_hIcon == IntPtr.Zero) return;
-        const uint WM_SETICON = 0x0080;
-        Win32.SendMessageW(_hWnd, WM_SETICON, (IntPtr)0, _hIcon);
-        Win32.SendMessageW(_hWnd, WM_SETICON, (IntPtr)1, _hIcon);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -801,7 +788,7 @@ sealed class OnboardingWindow : IDisposable
                     return _hPanelBrush;
                 }
                 Win32.SetBkMode(hdcStatic, 1);
-                Win32.SetTextColor(hdcStatic, LightTheme.Faint);
+                Win32.SetTextColor(hdcStatic, LightTheme.TextSecondary);
                 return _hBgBrush;
             }
 
@@ -1215,7 +1202,7 @@ sealed class OnboardingWindow : IDisposable
         SyncFlagButton();
 
         Win32.SelectObject(hdc, _hFontVersion);
-        Win32.SetTextColor(hdc, LightTheme.Faint);
+        Win32.SetTextColor(hdc, LightTheme.TextSecondary);
         string versionText = "v" + Program.Version;
         var versionRect = new Win32.RECT
         {
@@ -1256,7 +1243,7 @@ sealed class OnboardingWindow : IDisposable
         int headerBottom = Math.Max(logoY + logoSize, Math.Max(subtitleRect.bottom, versionRect.bottom)) + S(2);
         y = headerBottom;
 
-        var sepBrush = Win32.CreateSolidBrush(LightTheme.SeparatorOnboarding);
+        var sepBrush = Win32.CreateSolidBrush(LightTheme.Border);
         var sepRect = new Win32.RECT { left = margin, top = y + S(12), right = cw - margin, bottom = y + S(13) };
         Win32.FillRect(hdc, ref sepRect, sepBrush);
         Win32.DeleteObject(sepBrush);
@@ -1404,9 +1391,15 @@ sealed class OnboardingWindow : IDisposable
         Win32.SelectObject(hdc, _hFontReassure);
         Win32.SetTextColor(hdc, CLR_REASSURE);
         string reassure = L.Onboarding_PrivacyReassurance;
-        var reassureRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(18) };
+        var reassureRect = new Win32.RECT
+        {
+            left = margin,
+            top = y,
+            right = cw - margin,
+            bottom = y + MeasureTextHeight(hdc, _hFontReassure, reassure, cw - margin * 2)
+        };
         Win32.DrawTextW(hdc, reassure, -1, ref reassureRect,
-            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
     }
 
     private void DrawFeature(IntPtr hdc, int margin, int cw, ref int y, string number, string title, string description)
@@ -1669,7 +1662,7 @@ sealed class OnboardingWindow : IDisposable
                 right = linksX + linksWidth,
                 bottom = linkStartY + row * linkRowH - S(5)
             };
-            GdiHelpers.FillSolidRect(hdc, rowSep, LightTheme.RowSeparator);
+            GdiHelpers.FillSolidRect(hdc, rowSep, LightTheme.Border);
         }
 
         // Texte descriptif sous la case « Défi du jour » (3e case du panneau Préférences) —

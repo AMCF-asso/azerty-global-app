@@ -588,14 +588,15 @@ static class Win32
     public const uint DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
     /// <summary>
-    /// Active la barre de titre sombre sur Windows 11 (no-op sur Win10 1809-, fail-safe).
-    /// À appeler juste après CreateWindowExW pour chaque fenêtre custom.
+    /// Barre de titre claire ou sombre sur Windows 11 (sans effet sur Windows 10 1809 et avant,
+    /// qui rendent un HRESULT d'erreur sans lever). Lot visuel 1.3.0 : la barre suit la palette
+    /// de la fenêtre, claire sur les fenêtres à contrôles, sombre sur les autres. Passer par
+    /// <see cref="NativeWindow.ApplyFrame"/>, qui pose aussi l'icône.
     /// </summary>
-    public static void EnableDarkTitleBar(IntPtr hwnd)
+    public static void SetTitleBarTheme(IntPtr hwnd, bool dark)
     {
         if (hwnd == IntPtr.Zero) return;
-        int useDarkMode = 1;
-        // Rend un HRESULT d'erreur, sans lever, quand l'attribut n'est pas géré (Windows 10 1809).
+        int useDarkMode = dark ? 1 : 0;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
     }
 

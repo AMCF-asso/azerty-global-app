@@ -1,49 +1,39 @@
-// Palette claire des fenêtres à contrôles — audit du 25/09, lot 8 (F-14).
+// Palette claire des fenêtres à contrôles — audit du 25/09, lot 8 (F-14) ; lot visuel 1.3.0.
 namespace AZERTYGlobal;
 
 /// <summary>
-/// Les couleurs que À propos, Statistiques, Conflit, Accueil, Paramètres, Couches et Durée de
-/// pause déclaraient chacune (COLORREF, 0x00BBGGRR). Les fenêtres gardent leurs noms locaux,
-/// qui renvoient ici : une valeur ne se déclare plus qu'une fois.
+/// Les couleurs d'À propos, Statistiques, Conflit, Accueil, Paramètres, Couches et Durée de
+/// pause (COLORREF, 0x00BBGGRR) : un jeton par rôle. Les fenêtres gardent leurs noms locaux,
+/// qui renvoient ici : une valeur ne se déclare qu'une fois.
 ///
-/// Lot visuel 1.3.0, première étape : les couleurs que les fenêtres claires déclaraient
-/// encore en littéraux sont ici aussi, valeurs inchangées. Plusieurs jetons portent encore
-/// un même rôle (trois filets, deux survols de lien) ; ils se fondent à l'étape suivante.
+/// Valeurs de la base commune, celles de la variante A « Windows 11 » (lot visuel 1.3.0,
+/// décisions d'Antoine du 28/09). Les
+/// variantes ne changent que ces valeurs ; le rôle de chaque jeton ne bouge pas.
 /// </summary>
 static class LightTheme
 {
     /// <summary>Fond des fenêtres.</summary>
-    internal const uint Background = 0x00DDDDDD;
-    /// <summary>Fond des cartes (Paramètres, Accueil).</summary>
-    internal const uint Panel = 0x00EEEEEE;
-    internal const uint PanelBorder = 0x00D1D1D1;
-    internal const uint Title = 0x00201C18;
-    internal const uint Text = 0x00333333;
-    /// <summary>Texte discret : sous-titres, mentions.</summary>
-    internal const uint Muted = 0x00666666;
-    /// <summary>Plus discret encore : numéro de version, rappel de confidentialité.</summary>
-    internal const uint Faint = 0x00888888;
-    /// <summary>Liens et accents.</summary>
-    internal const uint Accent = 0x00D47800;
-    /// <summary>Lien survolé ou focalisé, mise en avant.</summary>
-    internal const uint Highlight = 0x000078D4;
-    internal const uint Separator = 0x00D7D7D7;
-    /// <summary>Filet de l'accueil.</summary>
-    internal const uint SeparatorOnboarding = 0x00D0D0D0;
-    /// <summary>Filet entre deux lignes d'une carte de l'accueil.</summary>
-    internal const uint RowSeparator = 0x00E3E3E3;
-    /// <summary>Lien survolé de l'accueil.</summary>
-    internal const uint LinkHoverOnboarding = 0x00FF9830;
-    /// <summary>Texte posé sur l'accent (pastilles de l'accueil).</summary>
-    internal const uint OnAccent = 0x00FFFFFF;
-    /// <summary>Étapes à venir de la barre de progression de l'accueil.</summary>
-    internal const uint ProgressTrack = 0x00C8C8C8;
+    internal const uint Background = 0x00F3F3F3; // #F3F3F3
+    /// <summary>Fond des cartes et panneaux (Paramètres, Accueil).</summary>
+    internal const uint Card = 0x00FBFBFB; // #FBFBFB
+    /// <summary>Contour des cartes, filets et séparateurs.</summary>
+    internal const uint Border = 0x00E5E5E5; // #E5E5E5
+    /// <summary>Contour d'un contrôle (champ, piste de progression) : 3:1 sur les fonds.</summary>
+    internal const uint ControlBorder = 0x008A8A8A; // #8A8A8A
     /// <summary>Fond d'un champ (touches de raccourci des Paramètres).</summary>
-    internal const uint Field = 0x00FAFAFA;
-    internal const uint FieldBorder = 0x00CBCBCB;
-    internal const uint FieldBorderError = 0x00A8A8FF;
+    internal const uint Field = 0x00FFFFFF; // #FFFFFF
+    /// <summary>Titres et corps de texte.</summary>
+    internal const uint Text = 0x001B1B1B; // #1B1B1B
+    /// <summary>Texte discret : version, mentions, notes.</summary>
+    internal const uint TextSecondary = 0x005D5D5D; // #5D5D5D
+    /// <summary>Liens, titres de section, mises en avant, barre de progression, focus.</summary>
+    internal const uint Accent = 0x00B85F00; // #005FB8
+    /// <summary>Lien survolé ou focalisé.</summary>
+    internal const uint AccentHover = 0x00923E00; // #003E92
+    /// <summary>Texte posé sur l'accent.</summary>
+    internal const uint OnAccent = 0x00FFFFFF; // #FFFFFF
     /// <summary>Message de réussite.</summary>
-    internal const uint Success = 0x00228B22;
+    internal const uint Success = 0x000F7B0F; // #0F7B0F
     /// <summary>Message d'erreur, saisie refusée.</summary>
-    internal const uint Error = 0x000000CC;
+    internal const uint Error = 0x001C2BC4; // #C42B1C
 }

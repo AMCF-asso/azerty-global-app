@@ -36,11 +36,11 @@ internal sealed class LessonsWindow : IDisposable
     private const uint CLR_BORDER = DarkTheme.Border;
     private const uint CLR_TEXT = DarkTheme.Text;
     private const uint CLR_MUTED = DarkTheme.TextSecondary;
-    private const uint CLR_ACCENT = DarkTheme.AccentLessons;
-    private const uint CLR_OK = DarkTheme.SuccessLessons;
-    private const uint CLR_BAD = DarkTheme.ErrorLessons;
-    private const uint CLR_CURRENT = DarkTheme.AccentCurrent;
-    private const uint CLR_BUTTON = DarkTheme.Control;
+    private const uint CLR_ACCENT = DarkTheme.Accent;
+    private const uint CLR_OK = DarkTheme.Success;
+    private const uint CLR_BAD = DarkTheme.Error;
+    private const uint CLR_CURRENT = DarkTheme.Accent;
+    private const uint CLR_BUTTON = DarkTheme.ControlFill;
     private const uint CLR_BUTTON_HOT = DarkTheme.ControlHover;
     private const uint CLR_LESSON_ACCENT = DarkTheme.Accent;
 
@@ -322,15 +322,15 @@ internal sealed class LessonsWindow : IDisposable
     private void CreateScaledFonts()
     {
         _lessonCharWidths.Clear(); // L-06 : mesurées avec les polices et l'échelle d'avant
-        _hFontTitle = Win32.CreateFontW(-S(22), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSubtitle = Win32.CreateFontW(-S(14), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(13), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSmall = Win32.CreateFontW(-S(12), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSidebarModule = Win32.CreateFontW(-S(15), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSidebarLesson = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontSubtitle = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontSmall = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontSidebarModule = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontSidebarLesson = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontMono = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Consolas");
         _hFontLessonLine = Win32.CreateFontW(-S(17), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Consolas");
-        _hFontButton = Win32.CreateFontW(-S(12), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontIcon = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
         _hFontEmoji = Win32.CreateFontW(-S(17), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Emoji");
         _hFontKeyboard = Win32.CreateFontW(S(28), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
@@ -415,7 +415,7 @@ internal sealed class LessonsWindow : IDisposable
         CaptureBaseWindowMetrics();
         RestoreSavedBoundsIfVisible();
         UpdateRenderScaleFromCurrentClient(force: true);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: true);
     }
 
     private bool RestoreSavedBoundsIfVisible()
@@ -1152,7 +1152,7 @@ internal sealed class LessonsWindow : IDisposable
         var knob = enabled
             ? new Win32.RECT { left = pill.right - S(20), top = pill.top + S(2), right = pill.right - S(2), bottom = pill.bottom - S(2) }
             : new Win32.RECT { left = pill.left + S(2), top = pill.top + S(2), right = pill.left + S(20), bottom = pill.bottom - S(2) };
-        DrawRoundedBox(hdc, knob, CLR_TEXT, CLR_TEXT, S(9));
+        DrawRoundedBox(hdc, knob, enabled ? DarkTheme.OnAccent : CLR_TEXT, enabled ? DarkTheme.OnAccent : CLR_TEXT, S(9));
         AddClick(row, toggle);
     }
 
@@ -1906,19 +1906,14 @@ internal sealed class LessonsWindow : IDisposable
 
     private void DrawButton(IntPtr hdc, Win32.RECT rect, string text, bool active, Action action)
     {
-        uint fill = active ? CLR_ACCENT : CLR_BUTTON_HOT;
-        uint border = active ? CLR_ACCENT : CLR_BORDER;
-        DrawRoundedBox(hdc, rect, fill, border, S(6));
-        DrawText(hdc, _hFontButton, text, rect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
+        // Bouton sombre de Windows 11 ; l'onglet ou le panneau actif porte l'accent.
+        GdiHelpers.DrawDarkButton(hdc, rect, text, _hFontButton, active, hot: false, pressed: false, S(4));
         AddClick(rect, action);
     }
 
     private void DrawIconButton(IntPtr hdc, Win32.RECT rect, string icon, string tooltip, bool active, Action action, Action? doubleClickAction = null)
     {
-        uint fill = active ? CLR_ACCENT : CLR_BUTTON_HOT;
-        uint border = active ? CLR_ACCENT : CLR_BORDER;
-        DrawRoundedBox(hdc, rect, fill, border, S(6));
-        DrawText(hdc, icon == "💡" ? _hFontEmoji : _hFontIcon, icon, rect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
+        GdiHelpers.DrawDarkButton(hdc, rect, icon, icon == "💡" ? _hFontEmoji : _hFontIcon, active, hot: false, pressed: false, S(4));
         AddClick(rect, action);
         if (doubleClickAction != null)
             AddDoubleClick(rect, doubleClickAction);

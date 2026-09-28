@@ -2,134 +2,99 @@
 namespace AZERTYGlobal;
 
 /// <summary>
-/// Les couleurs des fenêtres sombres : Leçons, tutoriel, clavier virtuel, Recherche,
-/// indicateur de couche et notification de bascule (COLORREF, 0x00BBGGRR). Les fenêtres
-/// gardent leurs noms locaux, qui renvoient ici.
+/// Une seule palette pour les fenêtres sombres : Leçons, tutoriel, clavier virtuel,
+/// Recherche, indicateur de couche et notification de bascule (COLORREF, 0x00BBGGRR). Les
+/// fenêtres gardent leurs noms locaux, qui renvoient ici.
 ///
-/// Première étape du lot : chaque valeur est celle d'avant, au pixel près. Plusieurs jetons
-/// portent encore un même rôle (un fond par fenêtre, par exemple) ; ils se fondent à
-/// l'étape suivante.
+/// Valeurs de la base commune, celles de la variante A « Windows 11 » (lot visuel 1.3.0,
+/// décisions d'Antoine du 28/09). Les
+/// variantes ne changent que ces valeurs. Les couleurs du clavier gardent la teinte d'avant,
+/// éclaircie au besoin pour tenir 4,5:1 sur la touche ; texte et accent tiennent 4,5:1 sur
+/// chaque fond où ils s'écrivent.
 /// </summary>
 static class DarkTheme
 {
-    // ── Fonds ────────────────────────────────────────────────────
-    /// <summary>Fond des Leçons et du clavier virtuel.</summary>
-    internal const uint Background = 0x00201C18;
-    /// <summary>Fond du tutoriel et de sa zone clavier.</summary>
-    internal const uint BackgroundTutorial = 0x001A1A1A;
-    /// <summary>Fond de la Recherche.</summary>
-    internal const uint BackgroundSearch = 0x00282828;
-    /// <summary>Fond de la notification de bascule.</summary>
-    internal const uint BackgroundToast = 0x00302D2A;
-    /// <summary>Fond de l'indicateur de couche.</summary>
-    internal const uint BackgroundIndicator = 0x00352A20;
+    // ── Fonds ───────────────────────────────────────────────────────
+    /// <summary>Fond des fenêtres sombres.</summary>
+    internal const uint Background = 0x00202020; // #202020
+    /// <summary>Panneaux, cartes, touches de contexte.</summary>
+    internal const uint Surface = 0x002B2B2B; // #2B2B2B
+    /// <summary>Panneau surélevé : ligne choisie, zone de saisie, infobulle.</summary>
+    internal const uint SurfaceRaised = 0x00313131; // #313131
+    /// <summary>Ligne choisie d'une liste (Recherche).</summary>
+    internal const uint Selected = 0x004D432D; // #2D434D
     /// <summary>Voile posé sur le tutoriel en pause.</summary>
-    internal const uint Scrim = 0x00000000;
+    internal const uint Scrim = 0x00000000; // #000000
 
-    // ── Surfaces ─────────────────────────────────────────────────
-    /// <summary>Panneaux des Leçons.</summary>
-    internal const uint Surface = 0x00282018;
-    /// <summary>Panneau surélevé des Leçons : ligne choisie, zones de saisie.</summary>
-    internal const uint SurfaceRaised = 0x00302820;
-    /// <summary>Champ de la Recherche.</summary>
-    internal const uint SurfaceSearchField = 0x00323232;
-    /// <summary>Résultat choisi de la Recherche.</summary>
-    internal const uint Selected = 0x00483828;
+    // ── Bordures ────────────────────────────────────────────────────
+    /// <summary>Contours et séparateurs.</summary>
+    internal const uint Border = 0x00454545; // #454545
 
-    // ── Bordures ─────────────────────────────────────────────────
-    internal const uint Border = 0x00484038;
-    internal const uint BorderSearch = 0x00404040;
+    // ── Boutons ─────────────────────────────────────────────────────
+    /// <summary>Bouton au repos.</summary>
+    internal const uint ControlFill = 0x00313131; // #313131
+    /// <summary>Bouton survolé.</summary>
+    internal const uint ControlHover = 0x00373737; // #373737
+    /// <summary>Bouton enfoncé.</summary>
+    internal const uint ControlPressed = 0x002B2B2B; // #2B2B2B
+    /// <summary>Contour d'un bouton.</summary>
+    internal const uint ControlBorder = 0x00454545; // #454545
 
-    // ── Boutons ──────────────────────────────────────────────────
-    internal const uint Control = 0x00484038;
-    internal const uint ControlHover = 0x00585048;
-    /// <summary>Boutons « Quitter » et « Passer » du tutoriel.</summary>
-    internal const uint ControlTutorial = 0x002A2A2A;
-    internal const uint ControlTutorialBorder = 0x00555555;
-    internal const uint ControlTutorialHover = 0x003838C0;
-    internal const uint ControlTutorialHoverBorder = 0x005050E0;
+    // ── Textes ──────────────────────────────────────────────────────
+    /// <summary>Texte principal.</summary>
+    internal const uint Text = 0x00FFFFFF; // #FFFFFF
+    /// <summary>Texte secondaire : consignes, statut, mentions.</summary>
+    internal const uint TextSecondary = 0x00C5C5C5; // #C5C5C5
+    /// <summary>Texte tertiaire : cible à venir, couche non tenue, séparateurs.</summary>
+    internal const uint TextTertiary = 0x00ACACAC; // #ACACAC
+    /// <summary>Texte d'un élément désactivé.</summary>
+    internal const uint TextDisabled = 0x00707070; // #707070
 
-    // ── Textes ───────────────────────────────────────────────────
-    internal const uint Text = 0x00F0EDE8;
-    internal const uint TextStrong = 0x00FFFFFF;
-    internal const uint TextSearch = 0x00DDDDDD;
-    internal const uint TextTutorialTitle = 0x00E0E0E0;
-    internal const uint TextSecondary = 0x00A8A098;
-    internal const uint TextSecondaryTutorial = 0x00CCCCCC;
-    internal const uint TextStatus = 0x00AAAAAA;
-    internal const uint TextTertiary = 0x00808080;
-    internal const uint TextHint = 0x00777777;
-    internal const uint TextPlaceholder = 0x00999999;
-    internal const uint TextToastInactive = 0x009A9A9A;
-    /// <summary>Points d'exercices à faire du tutoriel.</summary>
-    internal const uint ProgressTodo = 0x00606060;
+    // ── Accent et états ─────────────────────────────────────────────
+    /// <summary>Accent : onglet actif, bouton principal, repères, couche tenue.</summary>
+    internal const uint Accent = 0x00FFCD60; // #60CDFF
+    /// <summary>Bouton principal survolé.</summary>
+    internal const uint AccentHover = 0x00E9BC5A; // #5ABCE9
+    /// <summary>Texte d'accent sur fond sombre.</summary>
+    internal const uint AccentText = 0x00FFEB99; // #99EBFF
+    /// <summary>Texte posé sur l'accent et sur les pastilles.</summary>
+    internal const uint OnAccent = 0x00000000; // #000000
+    /// <summary>Réussite : frappe juste, bascule activée.</summary>
+    internal const uint Success = 0x005FCB6C; // #6CCB5F
+    /// <summary>Erreur : frappe fausse.</summary>
+    internal const uint Error = 0x00A499FF; // #FF99A4
+    /// <summary>Mise en garde : touche morte active, Verr. Maj., bonus, couche verrouillée.</summary>
+    internal const uint Warning = 0x0000A5FF; // #FFA500
 
-    // ── Accent et états ──────────────────────────────────────────
-    internal const uint Accent = 0x00D47800;
-    /// <summary>Onglet actif et repère de module des Leçons.</summary>
-    internal const uint AccentLessons = 0x000078D4;
-    /// <summary>Caractère courant des Leçons.</summary>
-    internal const uint AccentCurrent = 0x00D4A060;
-    /// <summary>Caractère trouvé de la Recherche.</summary>
-    internal const uint AccentSearch = 0x00FF9040;
-    internal const uint Success = 0x005EC522;
-    internal const uint SuccessLessons = 0x004CB050;
-    internal const uint SuccessSearch = 0x0060D060;
-    internal const uint Error = 0x004444EF;
-    internal const uint ErrorLessons = 0x003232DC;
-    /// <summary>Mention bonus du tutoriel.</summary>
-    internal const uint Warning = 0x000094E2;
-    /// <summary>Indicateur de couche verrouillée.</summary>
-    internal const uint IndicatorLocked = 0x0060D8FF;
+    // ── Clavier ─────────────────────────────────────────────────────
+    /// <summary>Touche.</summary>
+    internal const uint Key = 0x00373737; // #373737
+    /// <summary>Touche de contexte (Tab, Maj, Ctrl…).</summary>
+    internal const uint KeyContext = 0x002B2B2B; // #2B2B2B
+    /// <summary>Touche enfoncée, modificateur tenu.</summary>
+    internal const uint KeyPressed = 0x006F6142; // #42616F
+    /// <summary>Touche désactivée (Retour arrière du tutoriel).</summary>
+    internal const uint KeyDisabled = 0x00262626; // #262626
+    /// <summary>Touche morte : son caractère, et son contour à armer (clavier virtuel).</summary>
+    internal const uint DeadKey = 0x00878BFF; // #FF8B87
+    /// <summary>Fond d'une touche morte surlignée.</summary>
+    internal const uint DeadKeyFill = 0x00494963; // #634949
+    /// <summary>Mention « Maj » d'une méthode de frappe.</summary>
+    internal const uint Shift = 0x006EAAF0; // #F0AA6E
+    /// <summary>Mention « AltGr » d'une méthode de frappe.</summary>
+    internal const uint AltGr = 0x00F4B454; // #54B4F4
 
-    // ── Clavier des Leçons et du tutoriel (KeyboardRenderer) ─────
-    internal const uint Key = 0x003A3A3A;
-    internal const uint KeyContext = 0x002D2D2D;
-    internal const uint KeyBorder = 0x00555555;
-    internal const uint KeyPressed = 0x006A4A2A;
-    internal const uint KeyDisabled = 0x002A2A2A;
-    internal const uint KeyDisabledText = 0x00606060;
-    internal const uint KeyModifierActive = 0x009A5A1A;
-    internal const uint KeyContextText = 0x00E0E0E0;
-    /// <summary>Nom de la touche sous le résultat d'une touche morte armée.</summary>
-    internal const uint KeyCaption = 0x0080D0F0;
-    /// <summary>Caractère de la couche tenue.</summary>
-    internal const uint KeyGlyphActive = 0x00FFB366;
-    /// <summary>Caractère d'une couche non tenue.</summary>
-    internal const uint KeyGlyphDim = 0x00999999;
-    internal const uint KeyDeadKey = 0x006666FF;
-    /// <summary>Ligne « touche morte active » sous le clavier des Leçons.</summary>
-    internal const uint KeyDeadKeyStatus = 0x000080FF;
-    internal const uint KeyCapsBar = 0x0000A5FF;
-    internal const uint KeyBadgeText = 0x00FFFFFF;
-
-    // ── Clavier virtuel ──────────────────────────────────────────
-    internal const uint VirtualKey = 0x00484038;
-    internal const uint VirtualKeyContext = 0x00383028;
-    internal const uint VirtualKeyBorder = 0x00302820;
-    internal const uint VirtualKeyPressed = 0x00D4A060;
-    internal const uint VirtualKeyPressedText = 0x00201C18;
-    internal const uint VirtualKeyGlyph = 0x00F0EDE8;
-    internal const uint VirtualKeyDeadKey = 0x000080FF;
-    internal const uint VirtualKeyContextText = 0x00B0A898;
-
-    // ── Surlignage d'une méthode de frappe ───────────────────────
+    // ── Surlignage d'une méthode de frappe ──────────────────────────
     /// <summary>Touche à presser directement.</summary>
-    internal const uint HighlightDirect = 0x0064C800;
-    internal const uint HighlightDirectFill = 0x00284018;
+    internal const uint HighlightDirect = 0x0064C800; // #00C864
+    /// <summary>Fond d'un modificateur tenu surligné « direct ».</summary>
+    internal const uint HighlightDirectFill = 0x0041572B; // #2B5741
     /// <summary>Armement d'une touche morte, étape 1 d'une séquence.</summary>
-    internal const uint HighlightStep1 = 0x0000A5FF;
-    internal const uint HighlightStep1Fill = 0x00283020;
+    internal const uint HighlightStep1 = 0x0000A5FF; // #FFA500
+    /// <summary>Fond d'un modificateur tenu à l'étape 1.</summary>
+    internal const uint HighlightStep1Fill = 0x002B4F63; // #634F2B
     /// <summary>Touche finale d'une séquence, étape 2.</summary>
-    internal const uint HighlightStep2 = 0x004CB050;
-    internal const uint HighlightStep2Fill = 0x00203818;
-    /// <summary>Touche morte à activer (clavier virtuel).</summary>
-    internal const uint HighlightDeadKey = 0x003232DC;
-    internal const uint HighlightDeadKeyFill = 0x00282040;
-
-    // ── Méthodes de la Recherche ─────────────────────────────────
-    /// <summary>Mention « Maj ».</summary>
-    internal const uint MethodShift = 0x006EAAF0;
-    /// <summary>Mention « AltGr ».</summary>
-    internal const uint MethodAltGr = 0x00E8A848;
+    internal const uint HighlightStep2 = 0x005CC161; // #61C15C
+    /// <summary>Fond d'un modificateur tenu à l'étape 2.</summary>
+    internal const uint HighlightStep2Fill = 0x003F5540; // #40553F
 }

@@ -139,7 +139,7 @@ sealed class PauseDurationDialog : IDisposable
 
         _hFont = CreateScaledFont();
         CreateControls(hInstance);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
 
         // La pop-up est modale mais l'icône tray reste accessible : un changement de
         // langue via le menu tray pendant qu'elle est ouverte doit la retraduire sur
@@ -165,7 +165,7 @@ sealed class PauseDurationDialog : IDisposable
     private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
 
     private IntPtr CreateScaledFont() =>
-        Win32.CreateFontW(S(-14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
 
     /// <summary>D1 : police et géométrie des contrôles au nouveau DPI (WM_DPICHANGED).</summary>
     private void ApplyDpiToControls()
