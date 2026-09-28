@@ -78,10 +78,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Setup .NET 8 SDK
+      - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       # Une ref antérieure au banc ne l'a pas : il est déposé depuis la tête de la branche du
       # banc. Il ne touche pas src/ hors du projet de test, donc le produit rendu reste celui de

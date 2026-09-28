@@ -46,7 +46,7 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 
 ## Compilation
 
-Le projet utilise .NET 8.0 avec compilation AOT native :
+Le projet utilise .NET 10 avec compilation AOT native :
 
 ```bash
 dotnet publish -c Release -r win-x64
@@ -57,7 +57,7 @@ pwsh ./scripts/Verify-Release.ps1
 
 > **Note :** si le linker AOT ne trouve pas `vswhere.exe`, ajoutez temporairement `C:\Program Files (x86)\Microsoft Visual Studio\Installer` au `PATH`.
 
-Le binaire compilé se trouve dans `src/bin/Release/net8.0-windows10.0.17763.0/win-x64/publish/`.
+Le binaire compilé se trouve dans `src/bin/Release/net10.0-windows10.0.17763.0/win-x64/publish/`.
 
 ### Tests
 

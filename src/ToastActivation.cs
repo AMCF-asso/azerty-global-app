@@ -94,7 +94,7 @@ internal static partial class ToastActivation
             try
             {
                 Guid iid = riid;
-                int hr = Marshal.QueryInterface(unknown, ref iid, out ppvObject);
+                int hr = Marshal.QueryInterface(unknown, in iid, out ppvObject);
                 return hr != 0 ? E_NOINTERFACE : 0;
             }
             finally
