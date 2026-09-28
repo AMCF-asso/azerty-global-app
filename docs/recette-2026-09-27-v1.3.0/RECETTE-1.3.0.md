@@ -1,31 +1,33 @@
 # Recette 1.3.0 — fiche unique
 
-- **Candidat** : commit `2752799` (`2752799d6c62de9739a9d674cfa9958e795e3e55`), branche `release/1.2.0-notation-store`, CI [36271106009](https://github.com/AMCF-asso/azerty-global-app/actions/runs/36271106009) verte (Pack MSIX, Verify Release, SHA256 artefacts, attestation). `34f35af`, au-dessus, n’ajoute que le Changelog (`[skip ci]`).
-- **Bundle** : `AZERTYGlobal-1.3.0.0.msixbundle` — **SHA-256 : D6D8A420794D0C9C17BAFD01B90FF361D9818F5DBAF24D054C4028D3728974C6** (mesurée le 26/09 sur le fichier téléchargé, identique au journal CI) (troisième ligne `Get-FileHash` du journal CI). Une recompilation change l’empreinte et annule la recette.
-- **Durée estimée** : 3 h 45 environ (bundle 10 min, automatique 15 min, gestes 2 h 30, WACK 20 min, Verify 5 min, Partner Center 25 min). Optionnels : 1 h 30 de plus.
+- **Candidat** : le candidat final — commit `________` et run CI `________`, à reporter au moment du build final ; branche `release/1.2.0-notation-store`, CI verte (Pack MSIX, Verify Release, SHA256 artefacts, attestation). Les scripts ont été rodés le 28/09 sur `913067a` (run 36437681572), qui n’est pas le candidat final.
+- **Bundle** : `AZERTYGlobal-1.3.0.0.msixbundle` du candidat final — **SHA-256 : `________________________________________________________________`**, à reporter au moment du build final (troisième ligne `Get-FileHash` de l’étape « SHA256 artefacts » du run, que `verifier-candidat.ps1` relit). Une recompilation change l’empreinte et annule la recette.
+- **Durée estimée** (estimation : les gestes n’ont jamais été chronométrés) : 2 h 30 environ d’attention, contre 3 h 45 annoncées avant l’automatisation du 28/09 (bundle et Verify 5 min, lecture de la recette automatique 5 min, gestes 1 h 20, revue des images du banc 10 min, WACK 25 min, Partner Center 25 min). La recette automatique tourne en plus 6 à 8 min sans surveillance (mesuré le 28/09 sur `913067a`, du lancement du Sandbox à `done.txt`). Optionnels : 1 h 30 de plus.
 - **Matériel** : le poste, devant la machine ; Parsec exclu (la ligne E7 du kit n’est pas jouée). Windows Sandbox activé, SDK 10.0.26100 (`signtool`), App Certification Kit, `gh` connecté à un compte qui lit `AMCF-asso/azerty-global-app`. Deux écrans d’échelles différentes (100 % et 150 %) si possible, pour la section 3.18 : le Sandbox n’a qu’un écran. Une VM remplace le Sandbox seulement si le certificat de test y est approuvé, comme sur le poste (`installer-poste.ps1` l’exige).
 - **Avant tout** : quitter AZERTY Global sur l’hôte. Les consoles de VM ne sont pas reconnues comme accès distant (report 1.3.1).
 - **Noter** : ✅, ❌ + observation, ⏭️ + raison. Sources : *kit* = `feu-vert/recette.md` (A, B, E) ; *24/09* et *25/09* = lignes de recette des rapports d’audit ; *L1* à *L9* = lots ; *26/09* = correctifs des Paramètres ; *règle* = règle 1.3.0 ; *PC* = Partner Center.
+- **Lignes automatisées** (« lire le verdict ») : reporter le niveau lu, OK, OK (partiel), A VOIR ou ECHEC ; l’observation dit ce qu’un OK (partiel) laisse à l’œil, au banc ou à un test. Sur A VOIR ou ECHEC, rejouer le geste d’origine, décrit par la version `8a7b7cb` de cette fiche (`git show 8a7b7cb:docs/recette-2026-09-27-v1.3.0/RECETTE-1.3.0.md`). Lignes « couverte par … » : rien à jouer, le test cité tourne dans la CI du candidat.
 
 Chemins, dans un PowerShell ouvert à la racine du dépôt `D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store` :
 
 ```powershell
 $kit = "docs\audit-2026-09-22-v1.3.0\feu-vert"
-$b   = "msix\ci-36271106009\AZERTYGlobal-1.3.0.0.msixbundle"
+$run = "<run CI du candidat final>"
+$b   = "msix\ci-$run\AZERTYGlobal-1.3.0.0.msixbundle"
 ```
 
 ## 1. Installation et vérification du bundle
 
-- [ ] **R01** — `gh run download 36271106009 -R AMCF-asso/azerty-global-app -n msixbundle -D msix\ci-36271106009` → un seul fichier, `AZERTYGlobal-1.3.0.0.msixbundle`. (README feu-vert, étape 1 ; ci.yml)
-- [ ] **R02** — `(Get-FileHash $b -Algorithm SHA256).Hash` → égale à l’empreinte de l’en-tête et à la 3ᵉ ligne `Get-FileHash` de l’étape « SHA256 artefacts » du run. (rapport 25/09, « Candidat »)
-- [ ] **R03** — `gh attestation verify $b -R AMCF-asso/azerty-global-app` → vérification réussie, dépôt source à `2752799d…`. (README feu-vert, étape 1)
+- [ ] **R01** — `powershell -ExecutionPolicy Bypass -File "$kit\sandbox\verifier-candidat.ps1" -Run $run -Sha <empreinte de l’en-tête> -Commit <commit de l’en-tête>` → lire le verdict R01 dans `$kit\evidence\recette-<12>\hote\resultats.json` : artefact `msixbundle` téléchargé dans `msix\ci-$run\`, un seul fichier, `AZERTYGlobal-1.3.0.0.msixbundle`. Le script prend le compte `gh` actif ; `-GhUser <compte>` utilise le jeton d’un autre compte pour lui seul, sans changer le compte actif. (README feu-vert, étape 1 ; ci.yml)
+- [ ] **R02** — lire le verdict R02 dans `hote\resultats.json` → OK : empreinte du fichier égale à `-Sha` (l’en-tête) et à la 3ᵉ ligne `Get-FileHash` de l’étape « SHA256 artefacts » du run ; OK (partiel) si `-Sha` manquait. (rapport 25/09, « Candidat »)
+- [ ] **R03** — lire le verdict R03 dans `hote\resultats.json` → OK : `gh attestation verify` réussi, commit source de l’attestation égal au commit du run et à `-Commit`. (README feu-vert, étape 1)
 
 ## 2. Recette automatique (Sandbox)
 
-- [ ] **R04** — `powershell -ExecutionPolicy Bypass -File "$kit\sandbox\lancer-recette.ps1" -Bundle $b -Auto` → le Sandbox installe, joue, désinstalle ; `done.txt` paraît dans `$kit\evidence\recette-<12>\auto\`. Fermer ensuite le Sandbox. (lancer-recette.ps1)
-- [ ] **R05** — `$kit\evidence\recette-<12>\installation.txt` → SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, `shadow stack ON ; CFG ON`. (kit A1)
-- [ ] **R06** — `auto\resultats.json` → A1, A2, A3, A10 (12 lignes FR et EN), A12 et B12 à OK, A5 à « OK (partiel) ». La frappe remappée n’y est pas jugée. (kit A2, A3, A5, A10, A12, B12)
-- [ ] **R07** — A11 dans `resultats.json` → **OK (partiel) attendu** : depuis le 28/09, le script vérifie la copie `config.json.illisible-…` qui contient `[1]`, et un `config.json` qui n’est plus `[1]` (lot 4). L’accueil, l’app inactive jusqu’à l’accord et la bulle unique se jugent à la main en R75. (recette-auto.ps1, section A11 ; L4)
+- [ ] **R04** — `powershell -ExecutionPolicy Bypass -File "$kit\sandbox\lancer-recette.ps1" -Bundle $b -Auto` → le Sandbox installe, joue, désinstalle et s’éteint seul ; la console attend `done.txt` dans `$kit\evidence\recette-<12>\auto\`, puis affiche le verdict global. `-Garder` laisse le Sandbox ouvert ; un dossier `auto\` d’un passage précédent est renommé, jamais effacé. (lancer-recette.ps1)
+- **R05** — couverte par A1 de `recette-auto.ps1` : empreinte, `…_1.3.0.0_x64__w9kghr08zmhbg` et `shadow stack ON ; CFG ON` lus dans `installation.txt`. (kit A1)
+- [ ] **R06** — lire le verdict global dans `auto\resume-auto.txt` → OK : `lire-resultats.ps1` y compare chaque ligne de `resultats.json` (A1 à A12, B12 et les lignes Rxx « lire le verdict ») à son niveau attendu. Une ligne sous son attendu donne A VOIR ; un ECHEC ou une ligne absente donne ECHEC. La frappe remappée n’y est pas jugée. B12 peut rendre A VOIR quand la Recherche ne s’ouvre pas (instable, vu au passage du 29/09) : la juger alors à la main en R33 et R69. (kit A2, A3, A5, A10, A12, B12)
+- [ ] **R07** — lire le verdict A11 dans `resultats.json` → OK (partiel) : copie `config.json.illisible-…` qui contient `[1]`, `config.json` qui n’est plus `[1]` ; accueil, app inactive jusqu’à l’accord et relance active sont jugés en R75. (recette-auto.ps1, section A11 ; L4)
 
 ## 3. Gestes manuels
 
@@ -38,6 +40,19 @@ function Cle($k, $v) { $o = Get-Content "$d\config.json" -Raw | ConvertFrom-Json
 function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"firstRemapDate":"{0}","lastActiveDate":"{0}","activeDaysCount":{1},"totalActiveMinutes":10,"accentedUppercaseCount":20}}' -f $j, $jours)) }
 ```
 
+### 3.0 Revue des images du banc (sur l’hôte, 10 min)
+
+Artefact `captures-<12>` du workflow « Captures des fenêtres » sur le commit du candidat final : pousser la branche `captures/<sha complet>`, puis la supprimer une fois l’artefact récupéré. Depuis le 28/09, le banc rend par défaut 96, 120, 144, 168 et 192 DPI (100 à 200 %), en FR et en EN ; nom des images : `<sujet>-<fr|en>-<échelle>.png`. Le banc rend sans rien affirmer : ces lignes se jugent à l’œil. Il simule le DPI par `WM_DPICHANGED` sur un runner à 96 DPI, d’où le contrôle réel de R64b.
+
+- [ ] **R12** — `tuto-ex2-etape1`, `tuto-ex6-etape1`, `tuto-ex6-etape2` → surlignage direct ; étape 1 en orange avec la pastille « 1 », étape 2 en vert avec la pastille « 2 ». Logique : `TutorielClavierTests.L_etape_1_se_dit_en_orange_avec_sa_pastille`. (L9)
+- [ ] **R13** — `tuto-ex1-verrmaj`, `tuto-ex2-espace` → Verr. Maj. pleine. Logique : `GuidageTests.Les_exercices_1_et_2_gardent_Verr_Maj_surlignee`. (L9)
+- [ ] **R14** — `tuto-ex6-etape2`, `tuto-ex4-altgr-tenue` → les touches montrent le résultat avec les touches tenues, AltGr compris ; leur nom passe en jaune. (L9)
+- [ ] **R15** — `tuto-ex6-retour` → Retour arrière surligné ; « ◌ » barré visible, cercle et barre superposés. (L9)
+- [ ] **R64** — À 125, 150, 175 et 200 % : `parametres-*` (trois onglets), `lecons-*`, `duree-de-pause*`, `couches`, `accueil-etape*`, `a-propos`, `statistiques` → textes et contrôles à l’échelle, rien de coupé ni de superposé ; à 150 %, largeurs justes. (kit B1, B13 ; L1 ; L3 ; L6)
+- [ ] **R65** — `lecons-*` à 150 et 175 % → le clavier dessiné ne recouvre ni la ligne cible ni la saisie ; commandes du bas visibles. Logique : `LessonsWindowScaleTests.Plafonnée_LÉchelleDescendSous1_EtLeClavierNeCouvrePlusLaSaisie`, `WindowSizingTests.LeCasMesuré_175Pourcent_RentreDansLÉcran`. (24/09 l. 5 ; kit B13)
+- [ ] **R66** — `duree-de-pause`, `duree-de-pause-invalide`, `duree-de-pause-fond` à 175 % → mêmes attendus que R57 : fond clair, flèches à droite des champs, ligne rouge. (L8.1)
+- [ ] **Compléments des verdicts partiels** — `accueil-etape3` : deux cases, sans vide (R20) ; `parametres-general` : pas de trou (R40) ; `parametres-*-message` : refus en rouge, confirmation en vert (R49) ; `duree-de-pause-invalide` : ligne rouge (R57).
+
 ### 3.1 Accueil, avant l’accord
 
 - [ ] **R08** — Icône avant l’accord → grise, infobulle « Désactivé ». (kit E4)
@@ -47,24 +62,20 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 
 ### 3.2 Tutoriel
 
-- [ ] **R12** — Les 6 exercices → surlignage direct ; étape 1 en orange avec la pastille « 1 », étape 2 en vert avec la pastille « 2 ». (L9)
-- [ ] **R13** — Exercices 1 et 2 → Verr. Maj. pleine. (L9)
-- [ ] **R14** — Armer une touche morte → les touches montrent le résultat avec les touches tenues, AltGr compris ; leur nom passe en jaune. (L9)
-- [ ] **R15** — Exercice 6 : ã, puis armer l’accent aigu → Retour arrière surligné ; « ◌ » barré visible, cercle et barre superposés. (L9)
-- [ ] **R16** — Survol → infobulle de Retour arrière (désactivé) et « — TOUCHE MORTE ». (L9)
+- **R16** — couverte par `TutorielClavierTests.Les_infobulles_du_tutoriel_gardent_leurs_textes` et `LessonKeyboardTooltipTests`. (L9)
 - [ ] **R17** — Tab puis Espace → le tutoriel reste ouvert. Au 5ᵉ ou 6ᵉ exercice (« Passer » affiché) : Tab, Tab, Entrée → l’exercice passe, la frappe reprend sans clic ; au suivant, Tab puis Maj+Tab → cadre sur « Quitter » puis « Passer », aucune faute comptée. (kit B8 ; 24/09 l. 6)
 - [ ] **R18** — Roulement rapide sur deux touches → validées dans l’ordre ; fin : « Bravo ! », écran final et badges. (L1 ; L2)
 - [ ] **R19** — Tab puis Entrée sur « Quitter les exercices » → le tutoriel se ferme. (24/09 l. 6)
 
 ### 3.3 Accueil, étape 3 et démarrage automatique
 
-- [ ] **R20** — Étape 3 → case « Lancer au démarrage de Windows » cochée ; deux cases seulement, sans vide. (kit E1 ; 24/09 l. 10)
+- [ ] **R20** — lire le verdict R20 dans `resultats.json` → OK (partiel) : premier accueil rejoué, case cochée à l’affichage, deux cases visibles à l’étape 3 ; « sans vide » sur l’image `accueil-etape3` (3.0). (kit E1 ; 24/09 l. 10)
 - [ ] **R21** — Liens de l’étape 3 : survol → main et couleur ; Tab → cadre pointillé autour du texte, sans trace une fois le focus parti ; Entrée ouvre le lien. (kit B10 ; L8.3)
-- [ ] **R22** — Tab jusqu’au lien « Guide », Échap → l’accueil se ferme ; case laissée cochée sans y toucher, donc démarrage non activé. (25/09 l. 14)
-- [ ] **R23** — Apprendre ▸ Revoir l’accueil, étape 3, case laissée cochée : fermer par la croix, puis par Échap, puis par Alt+F4 → le démarrage reste désactivé dans Paramètres Windows › Applications › Démarrage. (24/09 l. 2)
-- [ ] **R24** — Rouvrir, étape 3, « C’est parti ! » → démarrage activé dans Windows. (24/09 l. 2 ; kit E1)
-- [ ] **R25** — Rouvrir, décocher, valider, relancer l’app → démarrage désactivé, aucune relance qui propose de l’activer. (kit E2)
-- [ ] **R26** — Désactiver l’app dans Paramètres Windows › Démarrage, rouvrir l’accueil, étape 3 → case décochée. (kit E3)
+- [ ] **R22** — lire le verdict R22 dans `resultats.json` → OK : Tab jusqu’au lien « Guide », Échap, case laissée cochée → démarrage non activé, état lu par `StartupTask` dans le paquet. (25/09 l. 14)
+- [ ] **R23** — lire le verdict R23 dans `resultats.json` → OK : croix, Échap (R22) et Alt+F4, case laissée cochée → le démarrage reste désactivé. (24/09 l. 2)
+- [ ] **R24** — lire le verdict R24 dans `resultats.json` → OK : « C’est parti ! » → démarrage activé. (24/09 l. 2 ; kit E1)
+- [ ] **R25** — lire le verdict R25 dans `resultats.json` → OK : rouvert, décoché, validé → désactivé ; `autoStartNudgeDone` posé, donc aucune relance ; état relu après relance. (kit E2)
+- [ ] **R26** — lire le verdict R26 dans `resultats.json` → OK : refus « désactivé par l’utilisateur » posé par la valeur `State` = 1 de la clé `SystemAppData` du paquet, que `StartupTask` lit `DisabledByUser` → premier accueil avec la case décochée. Sur A VOIR (la tâche ne lit pas ce refus) : désactiver l’app dans Paramètres Windows › Applications › Démarrage, rouvrir l’accueil, étape 3 → case décochée. (kit E3)
 - [ ] **R27** — 3 exercices faits, rouvrir l’accueil → « Essayer maintenant » n’est plus proposé ; tutoriel et accueil fermés, 15 s → aucune demande d’avis. (L9.5 ; 24/09 l. 13)
 
 ### 3.4 Frappe (Win+R, Edge)
@@ -79,36 +90,36 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 
 - [ ] **R33** — Ctrl+Maj+W, première requête de la session (l’index se charge alors), puis « é », « É », « flèche dr », « U+20AC », « espace insecable », une touche morte → bons résultats ; Entrée insère le bon symbole dans la fenêtre d’origine. (kit A8 ; L3 ; L5)
 - [ ] **R34** — Clic droit sur l’icône › Rechercher un caractère › Entrée → caractère copié avec notification, rien dans la barre des tâches. (24/09 l. 4)
-- [ ] **R35** — « cyrillique » → pied « 20 sur 98 résultats — Entrée pour insérer » ; une requête à moins de 20 résultats → « N résultats ». (25/09 l. 16)
-- [ ] **R36** — « cyrillique », à 100 %, avec la Loupe : clic sur la dernière rangée de pixels de la 2ᵉ ligne → caractère de la 2ᵉ ligne ; clic sur un séparateur → rien. (25/09 l. 15)
+- **R35** — couverte par `SearchResultListTests.LePiedDitCombienDeCorrespondancesDepassentLePlafond` et `SousLePlafondLePiedGardeSesTextes`. (25/09 l. 16)
+- **R36** — couverte par `SearchResultListTests.LeClicTombeSurLaLigneDessinee` et `UnSeparateurOuLeVideNeSelectionneRien`. (25/09 l. 15)
 
 ### 3.6 Menu de l’icône et Défi invisible
 
-- [ ] **R37** — Menu : Couches ▸, Apprendre ▸, À propos et aide ▸ s’ouvrent à la souris ; Apprendre ▸ ne contient que Leçons et Revoir l’accueil ; aucune entrée ne parle du Défi. (kit A10 ; 24/09 l. 8 ; règle)
+- [ ] **R37** — lire le verdict R37 dans `resultats.json` → OK (partiel) : Apprendre ▸ ne contient que Leçons et Revoir l’accueil, aucune entrée Défi ni Challenge, en FR et en EN ; ouverture des sous-menus à la souris non jugée (coup d’œil pendant R38). (kit A10 ; 24/09 l. 8 ; règle)
 - [ ] **R38** — Désactiver (Ctrl+Maj+Verr. Maj.), réactiver, mettre en pause → l’infobulle de l’icône suit chaque état. (L3)
-- [ ] **R39** — App quittée : `Cle trainingEnabled $true; Cle challengeAnnounceDone $null`, relancer → aucune bulle « Nouveau : le Défi du jour », pas de module Défi dans les Leçons, pas de section Défi dans Mes statistiques. (24/09 l. 9, 11 ; règle)
-- [ ] **R40** — Paramètres › Général → pas de case « Rappels d’entraînement », pas de trou. (24/09 l. 10 ; règle)
+- [ ] **R39** — lire le verdict R39 dans `resultats.json` → OK (partiel) : opt-in coché, annonce effacée, relance → annonce non marquée, Mes statistiques sans section Défi ; module Défi des Leçons : `DefiDuJourMasqueTests.Le_module_Defi_n_entre_pas_dans_les_Lecons_meme_avec_l_opt_in`. (24/09 l. 9, 11 ; règle)
+- [ ] **R40** — lire le verdict R40 dans `resultats.json` → OK (partiel) : case « Rappels d’entraînement » masquée, en FR et en EN (relevés MSAA) ; pas de trou : image `parametres-general` (3.0). (24/09 l. 10 ; règle)
 
 ### 3.7 Avis, essai 1 (config préparée, sans toucher l’horloge)
 
 Si un toast d’avis est déjà apparu pendant la frappe réelle, c’est l’essai 1 légitime : le noter pour R44, puis, app quittée, `Cle reviewPromptCount 0; Cle reviewPromptLastShown $null; Cle reviewPromptClicked $false`.
 
-- [ ] **R41** — App quittée, `Usage 1` (20 caractères enrichis, 10 min actives ; `config.json` de ce premier lancement gardé), relancer → aucun avis au démarrage. (L7 ; ReviewPromptGate.cs)
-- [ ] **R42** — Apprendre ▸ Leçons : taper plus de 20 caractères enrichis, fermer, noter l’heure → aucune demande après 15 s. (24/09 l. 12 ; L7)
-- [ ] **R43** — Pendant les 10 min qui suivent, jouer 3.8 en tapant (sans valider de réinitialisation) → aucune demande d’avis. (24/09 l. 12 ; L7)
-- [ ] **R44** — Plus de 10 min après, majuscule accentuée dans Edge, puis 15 s sans frappe → toast d’avis (essai 1) ; clic → page d’avis du Store (Sandbox sans Store : noter ce qui s’ouvre) ; `reviewPromptCount` passe à 1. (L7 ; 24/09 l. 12)
+- [ ] **R41** — lire le verdict R41 dans `resultats.json` → OK : `Usage 1`, relance → aucun avis au démarrage. (L7 ; ReviewPromptGate.cs)
+- **R42** — couverte par `AvisApresSeanceTests.Refusee_pendant_une_seance` et `Les_frappes_d_exercice_seules_ne_declenchent_pas`. (24/09 l. 12 ; L7)
+- **R43** — couverte par `AvisApresSeanceTests.Refusee_dans_les_dix_minutes_apres_la_fin` : plus d’attente de 10 min. (24/09 l. 12 ; L7)
+- [ ] **R44** — App quittée, `Usage 1`, relancer ; plus de 10 min après la dernière fermeture du tutoriel ou des Leçons, majuscule accentuée dans Edge, puis 15 s sans frappe → toast d’avis (essai 1) ; clic → page d’avis du Store (Sandbox sans Store : noter ce qui s’ouvre) ; `reviewPromptCount` passe à 1. (L7 ; 24/09 l. 12)
 
-### 3.8 Paramètres (pendant l’attente de R43)
+### 3.8 Paramètres
 
-- [ ] **R45** — Trois onglets au clavier, « Réinitialiser » par Entrée puis Espace, annuler ; Entrée sur chaque bouton poussoir → focus visible, confirmation, rien ne change à l’annulation. (kit A9 ; L6)
+- [ ] **R45** — lire le verdict R45 dans `resultats.json` → OK (partiel) : trois onglets au clavier, « Valeurs par défaut » par Entrée puis par Espace, réponse Non → `config.json` inchangé. Reste à l’œil (1 min) : focus visible sur chaque bouton poussoir, Tab puis Entrée, et retour du focus sur le bouton après l’annulation (il ne revenait pas seul au passage du 29/09). (kit A9 ; L6)
 - [ ] **R46** — « Réinitialiser les raccourcis » : survol, puis clic et annulation → survol visible, geste pris en compte. (L1)
-- [ ] **R47** — Passer d’un onglet à l’autre, en FR puis en EN → la fenêtre ne change ni de taille ni de place, libellés des onglets traduits. (kit E6 ; L6)
+- [ ] **R47** — lire le verdict R47 dans `resultats.json` → OK : onglets 0, 1, 2, 1, 0 aux flèches, rectangle de la fenêtre inchangé, libellés traduits, en FR puis en EN. (kit E6 ; L6)
 - [ ] **R48** — Applications : « Ajouter… » `C:\Windows\System32\mstsc.exe` → message visible ; « Forcer compatibilité » → refus **en rouge**, « Compatibilité jeu refusée : application protégée ou de connexion à distance », sur deux lignes en FR à 100 %, la seconde finissant par « distance » ; retirer l’app → message visible. (26/09 ; L6)
-- [ ] **R49** — Raccourci réservé (Ctrl+Maj+T) → « Touche réservée (conflit applications) » en rouge ; puis Langue › « Réinitialiser clavier virtuel » → confirmation **en vert** ; changer d’onglet efface le message. (26/09 ; L6)
+- [ ] **R49** — lire le verdict R49 dans `resultats.json` → OK (partiel) : « Touche réservée (conflit applications) » sur T, « Fenêtre clavier virtuel réinitialisée ✓ » dans Langue, message effacé à chaque changement d’onglet ; rouge et vert : `SettingsValidationColorTests` et images `parametres-*-message` (3.0). (26/09 ; L6)
 
 ### 3.9 Leçons
 
-- [ ] **R50** — Au clavier seul, Tab jusqu’aux boutons-icônes → même infobulle qu’au survol ; un mouvement de souris rend l’infobulle de survol ; Leçons sans le focus → aucune frappe captée. (kit B9 ; L3)
+- **R50** — couverte par `Accessibilite130Tests.K4_BoutonIcône_RetrouveSonInfobulle` et `LessonsFocusCaptureTests.FenetreVisibleSansLeFocus_RienNEntreEnFile`. (kit B9 ; L3)
 - [ ] **R51** — Fin de ligne et premier caractère de la suivante d’un trait, en strict puis en souple → rien de perdu, pas de pause ; indice immédiat. (L2)
 - [ ] **R52** — Indices et infobulles de noms (caractères, touches mortes) ; lettre à touche morte → indice : armement puis touche finale ; avec une autre touche morte armée → l’indice revient à l’armement. (L1 ; L5 ; L9.4)
 - [ ] **R53** — Leçons, Mes statistiques, puis remise à zéro → progression et compteurs cohérents. (kit B5)
@@ -116,33 +127,31 @@ Si un toast d’avis est déjà apparu pendant la frappe réelle, c’est l’es
 ### 3.10 Mes statistiques et À propos
 
 - [ ] **R54** — Mes statistiques en FR puis EN → dates et milliers au format de la langue. (L3)
-- [ ] **R55** — À propos et Mes statistiques : survol d’un lien → main et couleur ; Tab jusqu’au lien, Entrée ouvre, Échap ferme ; cadre de focus dans À propos. (L8.3 ; kit B10)
+- **R55** — couverte par `LinkBehaviorTests` (survol, Entrée, `Échap_FermeLaFenêtre`) et `Accessibilite130Tests.K5_*`. (L8.3 ; kit B10)
 - [ ] **R56** — À propos et Accueil → icône 32 px inchangée, dans la barre de titre et dans Alt+Tab. (L8.5)
 
 ### 3.11 Pause, Couches, Conflit
 
-- [ ] **R57** — Menu ▸ Mettre en pause ▸ « Personnaliser… », à 100 % → fond clair, pas noir ; flèches Windows à droite de chaque champ ; flèches du clavier et molette changent la valeur (minutes de 5 en 5) ; « Reprise à … » suit la saisie ; 0 h 0 → ligne rouge et bouton grisé, Entrée sans effet ; Tab parcourt les deux champs et les boutons ; Échap ferme. (refonte du 28/09 ; L8.1 ; L4)
-- [ ] **R57b** — Menu ▸ Mettre en pause : 15 minutes, 30 minutes, 1 heure, 2 heures, « Jusqu’à demain 8 h » (avant 8 h : « Jusqu’à 8 h »), Personnaliser… ; un choix → bulle « En pause pour … » ; le menu montre alors « Reprendre maintenant (reprise auto à …) » ; application désactivée → sous-menu grisé. (refonte du 28/09)
-- [ ] **R58** — Couches ▸ Configurer… : Tab, Maj+Tab, Espace sur une case, Entrée ; rouvrir, Échap → focus initial sur la case principale, circulation entre cases, champ et « Enregistrer » ; Entrée et Échap ferment en enregistrant. (kit B6)
-- [ ] **R59** — Conflit (disposition système AZERTY Global active au lancement, sinon ⏭️) : Tab jusqu’à « Garder l’application », Entrée ; rouvrir, Échap ; rouvrir, Entrée sans Tab → Entrée presse le bouton focalisé, Échap garde l’app, Entrée sans focus ne fait rien. (kit B7)
+- [ ] **R57** — lire le verdict R57 dans `resultats.json` → OK (partiel) : fond clair, deux flèches Windows collées aux champs, Haut, Bas et molette de 5 en 5, « Reprise … » qui suit la saisie, Tab sur les deux champs et les boutons, 0 h 0 → bouton grisé et Entrée sans effet, Échap ferme ; ligne rouge : image `duree-de-pause-invalide` (3.0). (refonte du 28/09 ; L8.1 ; L4)
+- [ ] **R57b** — lire le verdict R57b dans `resultats.json` → OK (partiel) : six entrées (« Jusqu’à demain 8 h », ou « Jusqu’à 8 h » avant 8 h), « Reprendre maintenant (reprise auto …) » pendant une pause, sous-menu grisé quand l’application est désactivée. Reste à l’œil, pendant R38 : la bulle « En pause pour … ». (refonte du 28/09)
+- [ ] **R58** — lire le verdict R58 dans `resultats.json` → OK : focus initial sur la case principale, Espace, Tab et Maj+Tab jusqu’à « Enregistrer », Entrée puis Échap ferment en enregistrant. ECHEC au passage du 29/09 (enregistrement non relu dans `config.json`, écrit par lots) ; script retouché ensuite, non rejoué : sur ECHEC, geste d’origine. (kit B6)
+- **R59** — couverte par `DialogNavigationKeyboardTrapTests.Entree_PresseLeBoutonFocalise`, `Entree_SurUnAutreControle_NePresseRien` et `Echap_ArriveCommeIdCancel` ; de toute façon ⏭️ dans le Sandbox, sans disposition système. (kit B7)
 
 ### 3.12 Toutes les fenêtres
 
-- [ ] **R60** — Ouvrir, fermer, puis rouvrir deux fois : À propos, Mes statistiques, Paramètres, Accueil, Conflit, Couches, Pause → aucune fenêtre vide ou figée ; `Select-String -Path "$d\error.log" -Pattern "NativeWindow.RegisterClass"` → rien. (L8.4)
+- [ ] **R60** — lire le verdict R60 dans `resultats.json` → OK (partiel) : À propos, Mes statistiques, Paramètres, Accueil, Couches et Pause ouverts trois fois, rendus et répondants, `error.log` sans `RegisterClass` ; Conflit non ouvrable dans le Sandbox (voir R59). (L8.4)
 - [ ] **R61** — Barre de titre sombre des fenêtres → inchangée. (L1)
 
 ### 3.13 Anglais
 
-- [ ] **R62** — App en anglais : clavier des Leçons, des exercices et clavier virtuel → « Enter », « Caps Lock », « Shift ⇧ », « Space » ; bascule FR ↔ EN fenêtre ouverte → redessin immédiat, rien ne déborde. (kit E5)
-- [ ] **R63** — Recherche en anglais d’un caractère tapé avec Maj ou après une touche morte → « Shift » et « then » ont les couleurs de « Maj » et « puis » en français. Revenir en FR. (25/09 l. 17)
+- [ ] **R62** — App en anglais : clavier des Leçons, des exercices et clavier virtuel → « Enter », « Caps Lock », « Shift ⇧ », « Space » ; bascule FR ↔ EN fenêtre ouverte → redessin immédiat, rien ne déborde. Revenir en FR. (kit E5)
+- **R63** — couverte par `SearchResultListTests.LesMotsDeLaMethodeSeColorentDansLaLangueCourante`. (25/09 l. 17)
 
-### 3.14 Échelle d’affichage (Paramètres Windows › Écran, dans le Sandbox)
+### 3.14 Échelle d’affichage réelle (Paramètres Windows › Écran, dans le Sandbox)
 
-- [ ] **R64** — À 125, 150, 175 puis 200 % : Paramètres (trois onglets), Leçons, Pause, Couches, indicateur de couche (couche active dans Edge), Accueil, À propos, puis changement d’échelle fenêtre ouverte → textes et contrôles à l’échelle, rien de coupé ni de superposé ; à 150 %, infobulles et largeurs justes. (kit B1, B13 ; L1 ; L3 ; L6)
-- [ ] **R65** — Sandbox plein écran sur 1920×1080, Leçons à 150 % puis 175 % → le clavier dessiné ne recouvre ni la ligne cible ni la saisie ; Leçons entièrement dans l’écran, commandes du bas atteignables. (24/09 l. 5 ; kit B13)
-- [ ] **R66** — Pause à 175 % → mêmes attendus que R57. (L8.1)
+- [ ] **R64b** — À 150 % seulement, les autres échelles étant jugées sur les images (R64, 3.0) : Paramètres (trois onglets), Leçons, indicateur de couche (couche active dans Edge) et Recherche, puis passage de 100 à 150 % fenêtre ouverte → textes et contrôles à l’échelle, rien de coupé ni de superposé ; infobulles et largeurs justes. (kit B1, B13 ; L1 ; L3 ; L6)
 - [ ] **R67** — Paramètres à 175 %, fenêtre du Sandbox réduite vers 1366×768 → logo, titres et contrôles défilent ensemble ; Tab fait défiler vers les contrôles masqués. (L6 ; kit E6)
-- [ ] **R68** — À 200 % en 1366×768, fenêtre plus grande que la zone de travail (Leçons ou Accueil) → elle s’ouvre depuis son coin, barre de titre visible. Revenir à 100 %. (L8.6)
+- **R68** — couverte par `NativeWindowTests.Centrage_FenêtrePlusGrandeQueLaZone_PartDeSonCoin` et `WindowSizingTests.D3_200Pourcent_TientDansLÉcran`. (L8.6)
 
 ### 3.15 Narrateur
 
@@ -150,16 +159,16 @@ Si un toast d’avis est déjà apparu pendant la frappe réelle, c’est l’es
 
 ### 3.16 Avis, config 1.2 existante et essai 2
 
-- [ ] **R70** — App quittée, config 1.2 simulée : `Cle activationConsent $null; Cle currentVersionFirstRunDate $null; Cle reviewPromptCount 1; Cle reviewPromptLastShown $j3; Cle reviewPromptClicked $false; Cle cleRecette 42`, un raccourci changé, `Usage 12` ; relancer → accord demandé une fois, réglages conservés. (kit B4 ; L7)
-- [ ] **R71** — Après l’accord, relire `config.json` → `reviewPromptCount` 1, la date et `cleRecette` conservés ; aucun avis au démarrage, à la fermeture de l’accueil, ni après frappe et 15 s (3 jours, moins de 7). (L7)
-- [ ] **R72** — App quittée : `Cle activationConsent $null; Cle reviewPromptLastShown $j8`, relancer, fermer l’accueil → toast de l’essai 2. (L7)
-- [ ] **R73** — App quittée : `Cle activationConsent $null; Cle reviewPromptCount 0; Cle reviewPromptLastShown $null; Cle reviewPromptClicked $false`, relancer, fermer l’accueil → aucun avis : l’essai 1 ne part jamais du démarrage. (L7)
+- [ ] **R70** — lire le verdict R70 dans `resultats.json` → OK : config 1.2 simulée (accord effacé, `reviewPromptCount` 1, date à J-3, `cleRecette` 42, raccourci F9, `Usage 12`) → accueil ouvert au lancement, accord à l’étape 3 ; relance : accord et réglages gardés. (kit B4 ; L7)
+- [ ] **R71** — lire le verdict R71 dans `resultats.json` → OK (partiel) : après l’accord et 20 s, `reviewPromptCount` 1, date et `cleRecette` conservés, aucun avis ; branche « après frappe » : `Essai2_six_jours_apres_le_premier_refuse`. (L7)
+- [ ] **R72** — lire le verdict R72 dans `resultats.json` → OK (partiel) : date à J-8, accueil fermé par l’accord → `reviewPromptCount` 2 et date du jour, sans erreur d’avis dans `error.log` ; affichage du toast non observé (coup d’œil facultatif). (L7)
+- [ ] **R73** — lire le verdict R73 dans `resultats.json` → OK : compteur 0, seuils de l’essai 1 atteints, accueil fermé par l’accord → aucun avis après 20 s : l’essai 1 ne part jamais du démarrage. (L7)
 
 ### 3.17 Fichiers illisibles et sortie du Sandbox
 
-- [ ] **R74** — App quittée, `[IO.File]::WriteAllText("$d\lessons-progress.json", '{ invalid')`, relancer, ouvrir les Leçons → bulle « Progression remise à zéro » une seule fois, copie `.illisible-…` gardée. (L4)
-- [ ] **R75** — A11 : app quittée, `[IO.File]::WriteAllText("$d\config.json", '[1]')`, relancer → l’app démarre, `error.log` porte `JsonException`, `config.json.illisible-…` contient `[1]`, l’accueil s’ouvre, app inactive jusqu’à l’accord, bulle « Réglages remis à zéro » une fois ; après l’accord et une relance, app active sans bulle. (L4 ; kit A11)
-- [ ] **R76** — Désinstaller par Paramètres › Applications → processus arrêté, clavier système utilisable. Copier ce qui doit rester dans `C:\resultats\`, puis fermer le Sandbox. (kit A12)
+- [ ] **R74** — lire le verdict R74 dans `resultats.json` → OK (partiel) : `{ invalid`, relance, Leçons ouvertes → une copie `lessons-progress.json.illisible-…` intacte, app vivante ; bulle unique : `QuarantaineTests.ProgressionCorrompue_MessageDemandéUneSeuleFois`. (L4)
+- [ ] **R75** — lire le verdict R75 dans `resultats.json` → OK (partiel) : après A11, accueil ouvert, app inactive (menu « Activer »), accord au clavier, relance active (menu « Désactiver ») ; bulle unique : `QuarantaineTests.ConfigCorrompu_MessageDemandéUneSeuleFois`. ECHEC aux deux passages des 28 et 29/09 (premier plan refusé à l’accueil après le relevé du menu, voir `journal.txt`) : jouer le geste d’origine tant que ce verdict n’est pas OK. (L4 ; kit A11)
+- **R76** — couverte par A12 (désinstallation, processus arrêté). Fin du Sandbox manuel : copier ce qui doit rester dans `C:\resultats\`, puis le fermer. (kit A12)
 
 ### 3.18 Deux écrans, sur le poste
 
@@ -177,7 +186,7 @@ Si la 1.1.0 du Store est installée sur le poste, l’installation est une vraie
 
 ## 5. Verify-Release
 
-- [ ] **R83** — `gh run view 36271106009 -R AMCF-asso/azerty-global-app --log | Select-String "publish = bundle|package 1\.3\.0\.0"` → `SHA256 x64` et `SHA256 arm64` à `publish = bundle`, puis « Release vérifiée: version 1.3.0 / package 1.3.0.0 ». Ne pas lancer `scripts\Verify-Release.ps1` en local : il compare le publish local au bundle de `msix\` et échouerait sur le bundle CI. (Verify-Release.ps1 ; ci.yml:85)
+- [ ] **R83** — lire le verdict R83 dans `hote\resultats.json` (joué par `verifier-candidat.ps1` en R01) → OK : `SHA256 x64` et `SHA256 arm64` à `publish = bundle`, « Release vérifiée: version 1.3.0 / package 1.3.0.0 », run conclu en succès. Ne pas lancer `scripts\Verify-Release.ps1` en local : il compare le publish local au bundle de `msix\` et échouerait sur le bundle CI. (Verify-Release.ps1 ; ci.yml:85)
 
 ## 6. App Installer sur machine propre (seulement si demandé)
 
@@ -200,7 +209,7 @@ Si la 1.1.0 du Store est installée sur le poste, l’installation est une vraie
 - [ ] **R94** — `usage-stats.json`, puis `config.json`, ouverts en exclusif (`$f = [IO.File]::Open("<chemin>", 'Open', 'Read', 'None')`), taper, quitter, `$f.Close()`, relancer → chiffres et fichier inchangés, aucune copie `.illisible-…`. (25/09 l. 18 ; L4 b)
 - [ ] **R95** — VM ou poste : changer un réglage puis se déconnecter aussitôt, se reconnecter → réglage gardé. (L4 c)
 - [ ] **R96** — Couches dans Word ou Excel, Chrome, Edge, Firefox et VS Code : les cinq gestes de la liste « Couches maintenables ». (Cahier § 7)
-- [ ] **R97** — Recette jouée après 17 h, Défi masqué (R39) → aucun rappel d’entraînement. (24/09 l. 9)
+- **R97** — couverte par `DefiDuJourMasqueTests.Le_rappel_d_entrainement_ne_part_pas_quand_le_Defi_est_masque` et `Le_rappel_lit_l_interrupteur_meme_opt_in_coche`. (24/09 l. 9)
 - [ ] **R98** — Contraste élevé → état noté ; dette connue, non bloquante. (kit B3)
 
 ## Si ça échoue
@@ -208,5 +217,6 @@ Si la 1.1.0 du Store est installée sur le poste, l’installation est une vraie
 - **Dans la case** : ❌, le geste exact, la langue, l’échelle et l’écran. Les lignes issues de la partie A du kit, R01 à R03 et R81 bloquent la soumission ; les autres ❌ se trient avant de soumettre.
 - **Capture** : Win+Maj+S, enregistrée sous `C:\resultats\manuel\R<nn>.png` dans le Sandbox (c’est `$kit\evidence\recette-<12>\` sur l’hôte) ; sur le poste, directement dans `$kit\evidence\recette-<12>\manuel\`.
 - **Fichiers** : copier `$d\error.log`, `config.json` et le fichier en cause (`usage-stats.json`, `lessons-progress.json`, `*.illisible-*`) dans le même dossier, préfixés `R<nn>-`, **avant** de fermer le Sandbox, qui efface tout.
+- **Ligne automatisée** : copier `auto\journal.txt`, `resultats.json` et `resume-auto.txt` (ou `hote\journal.txt`) dans la note, avec l’observation de la ligne.
 - **Empreinte** : la reporter en tête de la note, lue dans `installation.txt` ou `resume.txt`. Si elle diffère de l’en-tête, toute la recette est à refaire.
 - **Fiche cochée** : la copier dans `$kit\evidence\recette-<12>\RECETTE-1.3.0.md`.
