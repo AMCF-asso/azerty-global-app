@@ -25,7 +25,7 @@ $b   = "msix\ci-36271106009\AZERTYGlobal-1.3.0.0.msixbundle"
 - [ ] **R04** — `powershell -ExecutionPolicy Bypass -File "$kit\sandbox\lancer-recette.ps1" -Bundle $b -Auto` → le Sandbox installe, joue, désinstalle ; `done.txt` paraît dans `$kit\evidence\recette-<12>\auto\`. Fermer ensuite le Sandbox. (lancer-recette.ps1)
 - [ ] **R05** — `$kit\evidence\recette-<12>\installation.txt` → SHA-256 du candidat, `…_1.3.0.0_x64__w9kghr08zmhbg`, app lancée, `shadow stack ON ; CFG ON`. (kit A1)
 - [ ] **R06** — `auto\resultats.json` → A1, A2, A3, A10 (12 lignes FR et EN), A12 et B12 à OK, A5 à « OK (partiel) ». La frappe remappée n’y est pas jugée. (kit A2, A3, A5, A10, A12, B12)
-- [ ] **R07** — A11 dans `resultats.json` → **ECHEC attendu** : le script exige un `config.json` resté `[1]`, alors que le lot 4 le met de côté en `.illisible-…`. A11 se juge à la main (R75). (recette-auto.ps1:314 ; L4)
+- [ ] **R07** — A11 dans `resultats.json` → **OK (partiel) attendu** : depuis le 28/09, le script vérifie la copie `config.json.illisible-…` qui contient `[1]`, et un `config.json` qui n’est plus `[1]` (lot 4). L’accueil, l’app inactive jusqu’à l’accord et la bulle unique se jugent à la main en R75. (recette-auto.ps1, section A11 ; L4)
 
 ## 3. Gestes manuels
 
