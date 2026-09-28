@@ -365,7 +365,7 @@ sealed class PauseDurationDialog : IDisposable
     }
 
     // Même rouge que les refus des Paramètres.
-    internal static uint ResumeLineColor(bool valid) => valid ? LightTheme.Text : 0x000000CC;
+    internal static uint ResumeLineColor(bool valid) => valid ? LightTheme.Text : LightTheme.Error;
 
     // Heure de la ligne de reprise. Le banc de captures la fige : l'heure réelle rendait
     // la fenêtre différente d'une passe à l'autre (16 captures instables, run 36427331772).

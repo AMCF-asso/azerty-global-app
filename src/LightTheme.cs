@@ -6,10 +6,9 @@ namespace AZERTYGlobal;
 /// pause déclaraient chacune (COLORREF, 0x00BBGGRR). Les fenêtres gardent leurs noms locaux,
 /// qui renvoient ici : une valeur ne se déclare plus qu'une fois.
 ///
-/// Ne sont pas ici les couleurs propres à une fenêtre, ni les écarts relevés par l'audit, qui
-/// changeraient un pixel et attendent la décision d'Antoine : survol des liens de l'accueil
-/// (0x00FF9830 au lieu de <see cref="Highlight"/>) et ses filets en littéraux (0x00D0D0D0 au
-/// lieu de <see cref="Separator"/>).
+/// Lot visuel 1.3.0, première étape : les couleurs que les fenêtres claires déclaraient
+/// encore en littéraux sont ici aussi, valeurs inchangées. Plusieurs jetons portent encore
+/// un même rôle (trois filets, deux survols de lien) ; ils se fondent à l'étape suivante.
 /// </summary>
 static class LightTheme
 {
@@ -29,4 +28,22 @@ static class LightTheme
     /// <summary>Lien survolé ou focalisé, mise en avant.</summary>
     internal const uint Highlight = 0x000078D4;
     internal const uint Separator = 0x00D7D7D7;
+    /// <summary>Filet de l'accueil.</summary>
+    internal const uint SeparatorOnboarding = 0x00D0D0D0;
+    /// <summary>Filet entre deux lignes d'une carte de l'accueil.</summary>
+    internal const uint RowSeparator = 0x00E3E3E3;
+    /// <summary>Lien survolé de l'accueil.</summary>
+    internal const uint LinkHoverOnboarding = 0x00FF9830;
+    /// <summary>Texte posé sur l'accent (pastilles de l'accueil).</summary>
+    internal const uint OnAccent = 0x00FFFFFF;
+    /// <summary>Étapes à venir de la barre de progression de l'accueil.</summary>
+    internal const uint ProgressTrack = 0x00C8C8C8;
+    /// <summary>Fond d'un champ (touches de raccourci des Paramètres).</summary>
+    internal const uint Field = 0x00FAFAFA;
+    internal const uint FieldBorder = 0x00CBCBCB;
+    internal const uint FieldBorderError = 0x00A8A8FF;
+    /// <summary>Message de réussite.</summary>
+    internal const uint Success = 0x00228B22;
+    /// <summary>Message d'erreur, saisie refusée.</summary>
+    internal const uint Error = 0x000000CC;
 }

@@ -58,11 +58,11 @@ sealed class SettingsWindow : IDisposable
     private const uint CLR_PANEL_BORDER = LightTheme.PanelBorder;
     private const uint CLR_LINK = LightTheme.Accent;
     private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Highlight;
-    private const uint CLR_VALID = 0x00228B22;
-    private const uint CLR_INVALID = 0x000000CC;
-    private const uint CLR_KEY_BG = 0x00FAFAFA;
-    private const uint CLR_KEY_BORDER = 0x00CBCBCB;
-    private const uint CLR_KEY_BORDER_INVALID = 0x00A8A8FF;
+    private const uint CLR_VALID = LightTheme.Success;
+    private const uint CLR_INVALID = LightTheme.Error;
+    private const uint CLR_KEY_BG = LightTheme.Field;
+    private const uint CLR_KEY_BORDER = LightTheme.FieldBorder;
+    private const uint CLR_KEY_BORDER_INVALID = LightTheme.FieldBorderError;
     private const uint CLR_SEPARATOR = LightTheme.Separator;
 
     private struct LayoutInfo

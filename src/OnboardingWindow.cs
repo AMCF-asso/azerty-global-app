@@ -52,14 +52,14 @@ sealed class OnboardingWindow : IDisposable
     private const uint CLR_LINK = LightTheme.Accent;
     // Audit du 25/09, F-14 : écart à trancher par Antoine, les autres fenêtres survolent
     // leurs liens en LightTheme.Highlight (0x000078D4).
-    private const uint CLR_LINK_HOVER = 0x00FF9830;
+    private const uint CLR_LINK_HOVER = LightTheme.LinkHoverOnboarding;
     private const uint CLR_STEP_TITLE = LightTheme.Accent;
     private const uint CLR_PROGRESS_ACTIVE = LightTheme.Accent;
-    private const uint CLR_PROGRESS_INACTIVE = 0x00C8C8C8;
+    private const uint CLR_PROGRESS_INACTIVE = LightTheme.ProgressTrack;
     private const uint CLR_PANEL_BG = LightTheme.Panel;
     private const uint CLR_PANEL_BORDER = LightTheme.PanelBorder;
     private const uint CLR_BADGE_BG = LightTheme.Accent;
-    private const uint CLR_BADGE_TEXT = 0x00FFFFFF;
+    private const uint CLR_BADGE_TEXT = LightTheme.OnAccent;
     private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Highlight;
     private const uint CLR_REASSURE = LightTheme.Muted;
 
@@ -801,7 +801,7 @@ sealed class OnboardingWindow : IDisposable
                     return _hPanelBrush;
                 }
                 Win32.SetBkMode(hdcStatic, 1);
-                Win32.SetTextColor(hdcStatic, 0x00888888);
+                Win32.SetTextColor(hdcStatic, LightTheme.Faint);
                 return _hBgBrush;
             }
 
@@ -1215,7 +1215,7 @@ sealed class OnboardingWindow : IDisposable
         SyncFlagButton();
 
         Win32.SelectObject(hdc, _hFontVersion);
-        Win32.SetTextColor(hdc, 0x00888888);
+        Win32.SetTextColor(hdc, LightTheme.Faint);
         string versionText = "v" + Program.Version;
         var versionRect = new Win32.RECT
         {
@@ -1256,7 +1256,7 @@ sealed class OnboardingWindow : IDisposable
         int headerBottom = Math.Max(logoY + logoSize, Math.Max(subtitleRect.bottom, versionRect.bottom)) + S(2);
         y = headerBottom;
 
-        var sepBrush = Win32.CreateSolidBrush(0x00D0D0D0);
+        var sepBrush = Win32.CreateSolidBrush(LightTheme.SeparatorOnboarding);
         var sepRect = new Win32.RECT { left = margin, top = y + S(12), right = cw - margin, bottom = y + S(13) };
         Win32.FillRect(hdc, ref sepRect, sepBrush);
         Win32.DeleteObject(sepBrush);
@@ -1669,7 +1669,7 @@ sealed class OnboardingWindow : IDisposable
                 right = linksX + linksWidth,
                 bottom = linkStartY + row * linkRowH - S(5)
             };
-            GdiHelpers.FillSolidRect(hdc, rowSep, 0x00E3E3E3);
+            GdiHelpers.FillSolidRect(hdc, rowSep, LightTheme.RowSeparator);
         }
 
         // Texte descriptif sous la case « Défi du jour » (3e case du panneau Préférences) —
