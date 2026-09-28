@@ -1287,17 +1287,33 @@ sealed class SettingsWindow : IDisposable
                     return _hPanelBrush;
                 }
 
-                // Lignes de politique, et cases ou radios grisées : Windows adresse
-                // WM_CTLCOLORSTATIC — et non WM_CTLCOLORBTN — à un bouton désactivé. Sans
-                // cette branche, ces contrôles reprendraient le fond système au milieu du
-                // panneau.
+                // Les champs Q/W sont en lecture seule : Windows leur adresse WM_CTLCOLORSTATIC,
+                // jamais WM_CTLCOLOREDIT. C'est donc ici que le rouge d'un refus s'applique.
+                if (hCtrl == _hWndEditKeyboard || hCtrl == _hWndEditSearch)
+                {
+                    bool valid = hCtrl == _hWndEditKeyboard ? _keyboardValid : _searchValid;
+                    Win32.SetTextColor(hdcStatic, valid ? CLR_TEXT : CLR_INVALID);
+                    Win32.SetBkColor(hdcStatic, CLR_KEY_BG);
+                    return _hKeyBrush;
+                }
+
+                // Lignes de politique, cases et radios : Windows leur adresse WM_CTLCOLORSTATIC,
+                // actives ou non. Le fond du panneau pour toutes ; le gris pour le seul texte
+                // d'un contrôle désactivé (les styles visuels dessinent eux-mêmes ce cas).
                 if (hCtrl == _hWndManagedNotifications || hCtrl == _hWndManagedOnboarding ||
-                    hCtrl == _hWndManagedLanguage ||
-                    hCtrl == _hWndChkNotifications || hCtrl == _hWndChkOnboarding ||
-                    hCtrl == _hWndRadioLangFr || hCtrl == _hWndRadioLangEn)
+                    hCtrl == _hWndManagedLanguage)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
                     Win32.SetTextColor(hdcStatic, CLR_MUTED);
+                    return _hPanelBrush;
+                }
+                if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkNotifications || hCtrl == _hWndChkOnboarding ||
+                    hCtrl == _hWndChkTraining ||
+                    hCtrl == _hWndRadioLangFr || hCtrl == _hWndRadioLangEn ||
+                    hCtrl == _hWndRadioCompatAuto || hCtrl == _hWndRadioCompatForceOn || hCtrl == _hWndRadioCompatForceOff)
+                {
+                    Win32.SetBkMode(hdcStatic, 1);
+                    Win32.SetTextColor(hdcStatic, Win32.IsWindowEnabled(hCtrl) ? CLR_TEXT : CLR_MUTED);
                     return _hPanelBrush;
                 }
                 break;
@@ -1901,6 +1917,7 @@ sealed class SettingsWindow : IDisposable
         Win32.DrawTextW(hdc, title, -1, ref titleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
+        Win32.SelectObject(hdc, _hFontVersion);
         Win32.SetTextColor(hdc, CLR_VERSION);
         var versionRect = new Win32.RECT
         {
