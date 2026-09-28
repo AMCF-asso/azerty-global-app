@@ -141,6 +141,7 @@ static class Win32
     public const uint WM_PAINT = 0x000F;
     public const uint WM_CLOSE = 0x0010;
     public const uint WM_ERASEBKGND = 0x0014;
+    public const uint WM_PRINTCLIENT = 0x0318;
     public const uint WM_SETFONT = 0x0030;
     public const uint WM_KEYDOWN = 0x0100;
     public const uint WM_KEYUP = 0x0101;
@@ -156,6 +157,7 @@ static class Win32
     // flèches gauche/droite sans code de notre part.
     public const string WC_TABCONTROL = "SysTabControl32";
     public const uint TCM_FIRST = 0x1300;
+    public const uint TCM_GETITEMRECT = TCM_FIRST + 10;
     public const uint TCM_GETCURSEL = TCM_FIRST + 11;
     public const uint TCM_SETCURSEL = TCM_FIRST + 12;
     public const uint TCM_INSERTITEMW = TCM_FIRST + 62;
