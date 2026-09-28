@@ -367,6 +367,10 @@ sealed class PauseDurationDialog : IDisposable
     // Même rouge que les refus des Paramètres.
     internal static uint ResumeLineColor(bool valid) => valid ? LightTheme.Text : 0x000000CC;
 
+    // Heure de la ligne de reprise. Le banc de captures la fige : l'heure réelle rendait
+    // la fenêtre différente d'une passe à l'autre (16 captures instables, run 36427331772).
+    internal static Func<DateTime> Clock = () => DateTime.Now;
+
     private TimeSpan? CurrentDuration() => ParseDuration(ReadInt(_hEditHours), ReadInt(_hEditMinutes));
 
     private void UpdateResumeLine()
@@ -375,7 +379,7 @@ sealed class PauseDurationDialog : IDisposable
             return; // les champs se remplissent avant que la ligne et le bouton existent
         TimeSpan? duration = CurrentDuration();
         _durationValid = duration.HasValue;
-        DateTime now = DateTime.Now;
+        DateTime now = Clock();
         Win32.SetWindowTextW(_hResume, duration is { } d
             ? L.Pause_Resumes(PauseSchedule.DescribeResume(now, now + d))
             : L.Pause_InvalidDuration);

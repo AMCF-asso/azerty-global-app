@@ -124,6 +124,9 @@ public class CaptureBench
     private static void CapturePause(BancCapture.Target target)
     {
         var dialog = new PauseDurationDialog();
+        var horloge = PauseDurationDialog.Clock;
+        // Heure figée : la ligne « Reprise à … » la montre.
+        PauseDurationDialog.Clock = () => new DateTime(2026, 9, 28, 14, 30, 0);
         try
         {
             BancCapture.Call(dialog, "CreateWindow", IntPtr.Zero);
@@ -153,6 +156,7 @@ public class CaptureBench
         finally
         {
             BancCapture.Teardown(dialog);
+            PauseDurationDialog.Clock = horloge;
         }
     }
 
