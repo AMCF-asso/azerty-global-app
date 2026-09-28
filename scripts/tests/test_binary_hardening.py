@@ -85,7 +85,7 @@ class DerogationTests(unittest.TestCase):
     """Arbitrage du 2026-09-22 : une dérogation n'existe que si sa condition est prouvée."""
 
     SPECTRE = ("The following modules were compiled with a toolset that supports /Qspectre but the switch was not enabled on the command-line:\r\n"
-               "bootstrapper.GuardCF.obj,cxx,19.44.35228.0 (bootstrapper.GuardCF.obj)\r\n"
+               "bootstrapper.obj,cxx,19.44.35228.0 (bootstrapper.obj)\r\n"
                "LIBCMT.lib,c,19.44.35228.0 (a.obj,b.obj)\r\n")
 
     def warning(self, rule, arguments=None):

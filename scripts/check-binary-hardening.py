@@ -55,20 +55,23 @@ def inline_result_messages(report):
 # Une alerte n'est acceptée que si sa règle figure ici, si son niveau est `warning` et
 # si sa condition est vérifiée sur le binaire analysé ; sinon elle reste bloquante.
 # BA2025 (CET) n'y figure pas : /CETCOMPAT est posé sur x64 dans le csproj.
-# À réexaminer à la migration vers .NET 10 (fin de support de .NET 8 : 2026-11-10).
+# Réexaminé au passage à .NET 10 (2026-09-28) : le runtime ne livre plus de variantes
+# .GuardCF séparées ; BA2008 (CFG) et BA2025 (CET, x64) restent verts sur le binaire.
 MICROSOFT_NATIVE_LIBRARIES = frozenset({
-    "bootstrapper.GuardCF.obj",
-    "Runtime.ServerGC.GuardCF.lib",
-    "Runtime.VxsortEnabled.GuardCF.lib",
-    "System.Globalization.Native.Aot.GuardCF.lib",
-    "eventpipe-disabled.GuardCF.lib",
+    "bootstrapper.obj",
+    "Runtime.WorkstationGC.lib",
+    "Runtime.VxsortDisabled.lib",
+    "System.Globalization.Native.Aot.lib",
+    "eventpipe-disabled.lib",
+    "standalonegc-disabled.lib",
+    "aotminipal.lib",
     "LIBCMT.lib",
     "libvcruntime.lib",
 })
 DEROGATIONS = {
     "BA2024": "Spectre : les seuls objets sans /Qspectre sont ceux, précompilés, du runtime NativeAOT et du CRT Microsoft ; le dépôt ne compile aucun C/C++.",
     "BA2026": "SDL : chaque objet C/C++ compté par l'éditeur de liens appartient au runtime NativeAOT ou au CRT Microsoft ; le dépôt ne compile aucun C/C++.",
-    "BA2027": "SourceLink : le PDB natif produit par ILC 8 n'en porte pas ; dette de diagnostic, pas une mitigation d'exploitation.",
+    "BA2027": "SourceLink : le PDB natif produit par ILC n'en porte pas ; dette de diagnostic, pas une mitigation d'exploitation.",
     "BA6006": "LTCG : recommandation d'optimisation ; les bibliothèques précompilées du runtime ne sont pas en /GL.",
 }
 SPECTRE_LINE = re.compile(r"^([^,]+),(c|cxx),[0-9.]+ \((.+)\)$")
