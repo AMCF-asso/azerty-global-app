@@ -12,7 +12,7 @@ name: Captures des fenêtres
 # Pour un avant/après : un lancement par ref, puis, sur le poste,
 #   python scripts/compare-captures.py --avant avant/passe1 avant/passe2 --apres apres/passe1 apres/passe2 --diff diff
 #
-# Le runner est à 96 DPI : 125, 150 et 175 % sont simulés par un WM_DPICHANGED synthétique
+# Le runner est à 96 DPI : 125, 150, 175 et 200 % sont simulés par un WM_DPICHANGED synthétique
 # (voir src/AZERTYGlobal.Tests/CaptureSupport.cs), et les fenêtres qui se bornent à la zone de
 # travail (Leçons, Paramètres) y sont réduites selon l'écran du runner.
 
@@ -33,7 +33,7 @@ on:
       dpi:
         description: "DPI à rendre, séparés par des virgules"
         required: false
-        default: "96,120,144,168"
+        default: "96,120,144,168,192"
         type: string
       langues:
         description: "Langues à rendre (fr, en)"
@@ -51,7 +51,7 @@ jobs:
     # Sans workflow_dispatch, les entrées sont vides : valeurs par défaut ci-dessous.
     env:
       BANC_DEFAUT: ${{ inputs.banc || 'lot/banc-capture' }}
-      DPI: ${{ inputs.dpi || '96,120,144,168' }}
+      DPI: ${{ inputs.dpi || '96,120,144,168,192' }}
       LANGUES: ${{ inputs.langues || 'fr,en' }}
     steps:
       - name: Ref à rendre
