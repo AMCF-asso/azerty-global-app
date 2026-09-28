@@ -133,6 +133,10 @@ internal static class BancCapture
     /// La sensibilité DPI : le produit se déclare Per-Monitor V2 (manifeste et Program.Main),
     /// alors que testhost.exe ne déclare rien. Sans ce réglage, Windows virtualiserait les
     /// fenêtres à 96 DPI et WM_DPICHANGED n'aurait aucun sens.
+    ///
+    /// Les contrôles communs : le produit déclare comctl32 version 6 dans son manifeste, que
+    /// testhost.exe n'a pas. Le banc active un contexte tiré de ce même manifeste, sinon les
+    /// images montreraient les contrôles classiques de la version 5.82.
     /// </summary>
     internal sealed class Isolation : IDisposable
     {
@@ -150,6 +154,8 @@ internal static class BancCapture
         private readonly IDisposable _channel;
         private readonly IntPtr _previousDpiContext;
         private readonly IntPtr _gdipToken;
+        private readonly IntPtr _activationContext;
+        private readonly IntPtr _activationCookie;
         private bool _disposed;
 
         public Isolation()
@@ -172,6 +178,17 @@ internal static class BancCapture
             _channel = AppChannel.OverrideForTests(DistributionChannel.Store);
             _previousLanguage = L.Language;
             _previousDpiContext = Native.SetThreadDpiAwarenessContext(PerMonitorAwareV2);
+
+            var actCtx = new Native.ACTCTXW
+            {
+                cbSize = (uint)Marshal.SizeOf<Native.ACTCTXW>(),
+                lpSource = Path.Combine(AppContext.BaseDirectory, "app.manifest"),
+            };
+            _activationContext = Native.CreateActCtxW(ref actCtx);
+            if (_activationContext == new IntPtr(-1))
+                throw new InvalidOperationException($"CreateActCtxW : erreur {Marshal.GetLastWin32Error()}");
+            if (!Native.ActivateActCtx(_activationContext, out _activationCookie))
+                throw new InvalidOperationException($"ActivateActCtx : erreur {Marshal.GetLastWin32Error()}");
 
             var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
             Win32.GdiplusStartup(out _gdipToken, ref input, IntPtr.Zero);
@@ -225,6 +242,8 @@ internal static class BancCapture
             if (_gdipToken != IntPtr.Zero)
                 Win32.GdiplusShutdown(_gdipToken);
             Native.SetThreadDpiAwarenessContext(_previousDpiContext);
+            Native.DeactivateActCtx(0, _activationCookie);
+            Native.ReleaseActCtx(_activationContext);
             L.Language = _previousLanguage;
             _channel.Dispose();
             _policy.Dispose();
@@ -725,5 +744,33 @@ internal static class BancCapture
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         internal static extern int GetModuleFileNameW(IntPtr module, StringBuilder fileName, int size);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        internal struct ACTCTXW
+        {
+            public uint cbSize;
+            public uint dwFlags;
+            public string lpSource;
+            public ushort wProcessorArchitecture;
+            public ushort wLangId;
+            public string? lpAssemblyDirectory;
+            public string? lpResourceName;
+            public string? lpApplicationName;
+            public IntPtr hModule;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        internal static extern IntPtr CreateActCtxW(ref ACTCTXW actCtx);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool ActivateActCtx(IntPtr actCtx, out IntPtr cookie);
+
+        [DllImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool DeactivateActCtx(uint flags, IntPtr cookie);
+
+        [DllImport("kernel32.dll")]
+        internal static extern void ReleaseActCtx(IntPtr actCtx);
     }
 }
