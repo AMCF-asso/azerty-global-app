@@ -121,7 +121,8 @@ Si un toast d’avis est déjà apparu pendant la frappe réelle, c’est l’es
 
 ### 3.11 Pause, Couches, Conflit
 
-- [ ] **R57** — Menu ▸ « Mettre en pause… » (durée personnalisée), à 100 % → fond clair, pas noir ; étiquettes sans rectangle gris, champs blancs ; Tab parcourt ▲▼, champs et boutons ; Échap ferme. (L8.1 ; L4)
+- [ ] **R57** — Menu ▸ Mettre en pause ▸ « Personnaliser… », à 100 % → fond clair, pas noir ; flèches Windows à droite de chaque champ ; flèches du clavier et molette changent la valeur (minutes de 5 en 5) ; « Reprise à … » suit la saisie ; 0 h 0 → ligne rouge et bouton grisé, Entrée sans effet ; Tab parcourt les deux champs et les boutons ; Échap ferme. (refonte du 28/09 ; L8.1 ; L4)
+- [ ] **R57b** — Menu ▸ Mettre en pause : 15 minutes, 30 minutes, 1 heure, 2 heures, « Jusqu’à demain 8 h » (avant 8 h : « Jusqu’à 8 h »), Personnaliser… ; un choix → bulle « En pause pour … » ; le menu montre alors « Reprendre maintenant (reprise auto à …) » ; application désactivée → sous-menu grisé. (refonte du 28/09)
 - [ ] **R58** — Couches ▸ Configurer… : Tab, Maj+Tab, Espace sur une case, Entrée ; rouvrir, Échap → focus initial sur la case principale, circulation entre cases, champ et « Enregistrer » ; Entrée et Échap ferment en enregistrant. (kit B6)
 - [ ] **R59** — Conflit (disposition système AZERTY Global active au lancement, sinon ⏭️) : Tab jusqu’à « Garder l’application », Entrée ; rouvrir, Échap ; rouvrir, Entrée sans Tab → Entrée presse le bouton focalisé, Échap garde l’app, Entrée sans focus ne fait rien. (kit B7)
 

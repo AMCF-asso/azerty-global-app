@@ -167,6 +167,23 @@ static class Win32
     public const uint TCIF_TEXT = 0x0001;
     public const uint ICC_TAB_CLASSES = 0x00000008;
 
+    // ── Contrôle Up-down (comctl32) : les flèches Windows collées à un champ ──
+    public const string UPDOWN_CLASS = "msctls_updown32";
+    public const uint ICC_UPDOWN_CLASS = 0x00000010;
+    public const uint UDS_SETBUDDYINT = 0x0002;
+    public const uint UDS_ALIGNRIGHT = 0x0004;
+    public const uint UDS_ARROWKEYS = 0x0020;
+    public const uint UDS_NOTHOUSANDS = 0x0080;
+    public const uint UDS_HOTTRACK = 0x0100;
+    public const uint UDM_SETBUDDY = 0x0469;   // WM_USER + 105
+    public const uint UDM_SETACCEL = 0x046B;   // WM_USER + 107
+    public const uint UDM_SETRANGE32 = 0x046F; // WM_USER + 111
+    public const uint UDM_SETPOS32 = 0x0471;   // WM_USER + 113
+    public const uint EN_CHANGE = 0x0300;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct UDACCEL { public uint nSec; public uint nInc; }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     public struct TCITEMW
     {
@@ -476,6 +493,15 @@ static class Win32
 
     [DllImport("gdi32.dll")]
     public static extern bool SetViewportOrgEx(IntPtr hdc, int x, int y, IntPtr lpPoint);
+
+    [DllImport("gdi32.dll")]
+    public static extern bool GetViewportOrgEx(IntPtr hdc, out POINT lpPoint);
+
+    [DllImport("gdi32.dll")]
+    public static extern int SaveDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    public static extern bool RestoreDC(IntPtr hdc, int nSavedDC);
 
     [DllImport("gdi32.dll")]
     public static extern uint SetTextColor(IntPtr hdc, uint crColor);

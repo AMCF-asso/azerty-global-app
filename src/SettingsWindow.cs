@@ -1136,14 +1136,18 @@ sealed class SettingsWindow : IDisposable
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
 
-            // Les onglets thémés demandent le fond de leur parent (DrawThemeParentBackground)
-            // pour la zone à droite du dernier onglet. Sans réponse, ils y laissent le gris
-            // système #F0F0F0 au lieu du fond de la fenêtre. La bande n'est posée que sur ce
-            // fond uni : le remplir suffit.
+            // Les contrôles thémés demandent le fond de leur parent (DrawThemeParentBackground) :
+            // les onglets pour la zone à droite du dernier, où ils laissaient sinon le gris
+            // système #F0F0F0. La réponse est la fenêtre elle-même, peinte dans leur DC déjà
+            // décalé : les cases, posées sur un panneau, y trouvent le panneau et non le fond
+            // de la fenêtre (un simple remplissage les cernait de bandes grises, vu sur les
+            // captures du 2026-09-28). SaveDC : nos polices ne restent pas dans leur DC.
             case Win32.WM_PRINTCLIENT:
             {
                 Win32.GetClientRect(hWnd, out var client);
-                Win32.FillRect(wParam, ref client, _hBgBrush);
+                int saved = Win32.SaveDC(wParam);
+                PaintClient(wParam, client);
+                Win32.RestoreDC(wParam, saved);
                 return IntPtr.Zero;
             }
 
@@ -1866,17 +1870,22 @@ sealed class SettingsWindow : IDisposable
     private void OnPaint(IntPtr hWnd)
     {
         using var paint = new PaintBuffer(hWnd);
-        var clientRect = paint.Client;
+        PaintClient(paint.Hdc, paint.Client);
+    }
+
+    /// <summary>Toute la zone cliente dans <paramref name="hdc"/>, à partir de l'origine qu'il
+    /// porte déjà : (0, 0) pour WM_PAINT, celle d'un contrôle enfant pour WM_PRINTCLIENT.</summary>
+    private void PaintClient(IntPtr hdc, Win32.RECT clientRect)
+    {
         int cw = clientRect.right;
-        int ch = clientRect.bottom;
         LayoutInfo layout = GetLayout(cw);
-        var hdc = paint.Hdc;
+        Win32.GetViewportOrgEx(hdc, out var origin);
 
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
         Win32.SetBkMode(hdc, 1);
         // Le contenu se dessine en coordonnées de contenu, décalées du défilement. GDI+,
         // créé après, suit la même origine (mesuré le 26/09).
-        Win32.SetViewportOrgEx(hdc, 0, -_scrollY, IntPtr.Zero);
+        Win32.SetViewportOrgEx(hdc, origin.x, origin.y - _scrollY, IntPtr.Zero);
 
         Win32.GdipCreateFromHDC(hdc, out IntPtr gfx);
         if (gfx != IntPtr.Zero)
@@ -1909,7 +1918,7 @@ sealed class SettingsWindow : IDisposable
         if (gfx != IntPtr.Zero)
             Win32.GdipDeleteGraphics(gfx);
 
-        Win32.SetViewportOrgEx(hdc, 0, 0, IntPtr.Zero);
+        Win32.SetViewportOrgEx(hdc, origin.x, origin.y, IntPtr.Zero);
     }
 
     private void DrawHeader(IntPtr hdc, IntPtr gfx, LayoutInfo layout, int cw)
