@@ -214,7 +214,7 @@ def main():
         tool = scratch / "tools/net9.0/win-x64/BinSkim.exe"
         errors = []
         for arch in ("x64", "arm64"):
-            binary = ROOT / f"src/bin/Release/net8.0-windows10.0.17763.0/win-{arch}/publish/AZERTY Global.exe"
+            binary = ROOT / f"src/bin/Release/net10.0-windows10.0.17763.0/win-{arch}/publish/AZERTY Global.exe"
             if not binary.is_file() or not binary.with_suffix(".pdb").is_file():
                 raise ValueError(f"Publication {arch} ou son PDB absent")
             report = args.output / f"binskim-{arch}.sarif"

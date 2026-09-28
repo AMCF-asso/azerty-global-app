@@ -95,7 +95,7 @@ if (Test-Path -LiteralPath $stableBundlePath) {
 
 # Vérifier que les exécutables publiés existent
 foreach ($arch in $architectures) {
-    $publishExe = Join-Path $srcDir "bin\Release\net8.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
+    $publishExe = Join-Path $srcDir "bin\Release\net10.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
     if (-not (Test-Path $publishExe)) {
         # Le prefixe de PATH n'est pas decoratif : sans vswhere.exe l'edition de liens
         # native AOT echoue sur un MSB3073 qui designe link.exe, pas la cause reelle.
@@ -116,7 +116,7 @@ $msixFiles = @()
 # Créer un .msix par architecture
 foreach ($arch in $architectures) {
     $stagingDir = Join-Path $projectRoot ".msix-staging-$arch"
-    $publishExe = Join-Path $srcDir "bin\Release\net8.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
+    $publishExe = Join-Path $srcDir "bin\Release\net10.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
     $msixPath = Join-Path $projectRoot ("AZERTYGlobal-{0}-{1}.msix" -f $storeVersion, $arch)
 
     Write-Host "--- Construction $arch ---"

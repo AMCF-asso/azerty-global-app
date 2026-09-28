@@ -59,10 +59,10 @@ jobs:
       - name: Témoins du schéma et de son accord avec le parseur
         run: python -m unittest discover -s scripts/tests -v
 
-      - name: Setup .NET 8 SDK
+      - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore + publish x64
         run: dotnet publish src/AZERTYGlobal.csproj -c Release -r win-x64
@@ -92,8 +92,8 @@ jobs:
 
       - name: SHA256 artefacts
         run: |
-          Get-FileHash -Algorithm SHA256 "src/bin/Release/net8.0-windows10.0.17763.0/win-x64/publish/AZERTY Global.exe"
-          Get-FileHash -Algorithm SHA256 "src/bin/Release/net8.0-windows10.0.17763.0/win-arm64/publish/AZERTY Global.exe"
+          Get-FileHash -Algorithm SHA256 "src/bin/Release/net10.0-windows10.0.17763.0/win-x64/publish/AZERTY Global.exe"
+          Get-FileHash -Algorithm SHA256 "src/bin/Release/net10.0-windows10.0.17763.0/win-arm64/publish/AZERTY Global.exe"
           Get-ChildItem ./msix -Filter "AZERTYGlobal-*.msixbundle" | ForEach-Object { Get-FileHash -Algorithm SHA256 $_.FullName }
 
       - name: Upload msixbundle artefact

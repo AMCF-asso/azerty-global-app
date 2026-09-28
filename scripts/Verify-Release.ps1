@@ -158,7 +158,7 @@ Assert-MatchIfExists $contextProjectPath ("\*\*Application Microsoft Store(?: / 
 # --- Vérification des fichiers publiés ---
 
 foreach ($arch in $architectures) {
-    $publishExe = Join-Path $srcDir "bin\Release\net8.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
+    $publishExe = Join-Path $srcDir "bin\Release\net10.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
     if (-not (Test-Path $publishExe)) {
         throw "Fichier requis introuvable: $publishExe"
     }
@@ -192,7 +192,7 @@ if ($stableBundleHash -ne $versionedBundleHash) {
 # --- Vérification des hashes (publish → bundle) ---
 
 foreach ($arch in $architectures) {
-    $publishExe = Join-Path $srcDir "bin\Release\net8.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
+    $publishExe = Join-Path $srcDir "bin\Release\net10.0-windows10.0.17763.0\win-$arch\publish\AZERTY Global.exe"
     $publishHash = (Get-FileHash $publishExe -Algorithm SHA256).Hash
 
     # Le bundle contient des .msix nommés AZERTYGlobal-{version}-{arch}.msix
