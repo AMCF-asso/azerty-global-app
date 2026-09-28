@@ -6,7 +6,7 @@ namespace AZERTYGlobal;
 /// Recherche, indicateur de couche et notification de bascule (COLORREF, 0x00BBGGRR). Les
 /// fenêtres gardent leurs noms locaux, qui renvoient ici.
 ///
-/// Valeurs de la base commune, celles de la variante A « Windows 11 » (lot visuel 1.3.0,
+/// Valeurs de la variante B « Ardoise » (lot visuel 1.3.0,
 /// décisions d'Antoine du 28/09). Les
 /// variantes ne changent que ces valeurs. Les couleurs du clavier gardent la teinte d'avant,
 /// éclaircie au besoin pour tenir 4,5:1 sur la touche ; texte et accent tiennent 4,5:1 sur
@@ -16,45 +16,45 @@ static class DarkTheme
 {
     // ── Fonds ───────────────────────────────────────────────────────
     /// <summary>Fond des fenêtres sombres.</summary>
-    internal const uint Background = 0x00202020; // #202020
+    internal const uint Background = 0x00201C18; // #181C20
     /// <summary>Panneaux, cartes, touches de contexte.</summary>
-    internal const uint Surface = 0x002B2B2B; // #2B2B2B
+    internal const uint Surface = 0x00302820; // #202830
     /// <summary>Panneau surélevé : ligne choisie, zone de saisie, infobulle.</summary>
-    internal const uint SurfaceRaised = 0x00313131; // #313131
+    internal const uint SurfaceRaised = 0x003C342C; // #2C343C
     /// <summary>Ligne choisie d'une liste (Recherche).</summary>
-    internal const uint Selected = 0x004D432D; // #2D434D
+    internal const uint Selected = 0x004D3F26; // #263F4D
     /// <summary>Voile posé sur le tutoriel en pause.</summary>
     internal const uint Scrim = 0x00000000; // #000000
 
     // ── Bordures ────────────────────────────────────────────────────
     /// <summary>Contours et séparateurs.</summary>
-    internal const uint Border = 0x00454545; // #454545
+    internal const uint Border = 0x00585048; // #485058
 
     // ── Boutons ─────────────────────────────────────────────────────
     /// <summary>Bouton au repos.</summary>
-    internal const uint ControlFill = 0x00313131; // #313131
+    internal const uint ControlFill = 0x003C342C; // #2C343C
     /// <summary>Bouton survolé.</summary>
-    internal const uint ControlHover = 0x00373737; // #373737
+    internal const uint ControlHover = 0x00484038; // #384048
     /// <summary>Bouton enfoncé.</summary>
-    internal const uint ControlPressed = 0x002B2B2B; // #2B2B2B
+    internal const uint ControlPressed = 0x00302820; // #202830
     /// <summary>Contour d'un bouton.</summary>
-    internal const uint ControlBorder = 0x00454545; // #454545
+    internal const uint ControlBorder = 0x00585048; // #485058
 
     // ── Textes ──────────────────────────────────────────────────────
     /// <summary>Texte principal.</summary>
-    internal const uint Text = 0x00FFFFFF; // #FFFFFF
+    internal const uint Text = 0x00F2F0ED; // #EDF0F2
     /// <summary>Texte secondaire : consignes, statut, mentions.</summary>
-    internal const uint TextSecondary = 0x00C5C5C5; // #C5C5C5
+    internal const uint TextSecondary = 0x00B4ACA4; // #A4ACB4
     /// <summary>Texte tertiaire : cible à venir, couche non tenue, séparateurs.</summary>
-    internal const uint TextTertiary = 0x00ACACAC; // #ACACAC
+    internal const uint TextTertiary = 0x00B3ACA5; // #A5ACB3
     /// <summary>Texte d'un élément désactivé.</summary>
-    internal const uint TextDisabled = 0x00707070; // #707070
+    internal const uint TextDisabled = 0x006C6865; // #65686C
 
     // ── Accent et états ─────────────────────────────────────────────
     /// <summary>Accent : onglet actif, bouton principal, repères, couche tenue.</summary>
     internal const uint Accent = 0x00FFCD60; // #60CDFF
     /// <summary>Bouton principal survolé.</summary>
-    internal const uint AccentHover = 0x00E9BC5A; // #5ABCE9
+    internal const uint AccentHover = 0x00E9BB59; // #59BBE9
     /// <summary>Texte d'accent sur fond sombre.</summary>
     internal const uint AccentText = 0x00FFEB99; // #99EBFF
     /// <summary>Texte posé sur l'accent et sur les pastilles.</summary>
@@ -68,33 +68,33 @@ static class DarkTheme
 
     // ── Clavier ─────────────────────────────────────────────────────
     /// <summary>Touche.</summary>
-    internal const uint Key = 0x00373737; // #373737
+    internal const uint Key = 0x00484038; // #384048
     /// <summary>Touche de contexte (Tab, Maj, Ctrl…).</summary>
-    internal const uint KeyContext = 0x002B2B2B; // #2B2B2B
+    internal const uint KeyContext = 0x00302820; // #202830
     /// <summary>Touche enfoncée, modificateur tenu.</summary>
-    internal const uint KeyPressed = 0x004F442D; // #2D444F
+    internal const uint KeyPressed = 0x00514328; // #284351
     /// <summary>Touche désactivée (Retour arrière du tutoriel).</summary>
-    internal const uint KeyDisabled = 0x00262626; // #262626
+    internal const uint KeyDisabled = 0x0028221C; // #1C2228
     /// <summary>Touche morte : son caractère, et son contour à armer (clavier virtuel).</summary>
-    internal const uint DeadKey = 0x00878BFF; // #FF8B87
+    internal const uint DeadKey = 0x008488FF; // #FF8884
     /// <summary>Fond d'une touche morte surlignée.</summary>
-    internal const uint DeadKeyFill = 0x00494963; // #634949
+    internal const uint DeadKeyFill = 0x00555064; // #645055
     /// <summary>Mention « Maj » d'une méthode de frappe.</summary>
     internal const uint Shift = 0x006EAAF0; // #F0AA6E
     /// <summary>Mention « AltGr » d'une méthode de frappe.</summary>
-    internal const uint AltGr = 0x00F4B454; // #54B4F4
+    internal const uint AltGr = 0x00F4B354; // #54B3F4
 
     // ── Surlignage d'une méthode de frappe ──────────────────────────
     /// <summary>Touche à presser directement.</summary>
     internal const uint HighlightDirect = 0x0064C800; // #00C864
     /// <summary>Fond d'un modificateur tenu surligné « direct ».</summary>
-    internal const uint HighlightDirectFill = 0x0041572B; // #2B5741
+    internal const uint HighlightDirectFill = 0x004E5E2C; // #2C5E4E
     /// <summary>Armement d'une touche morte, étape 1 d'une séquence.</summary>
     internal const uint HighlightStep1 = 0x0000A5FF; // #FFA500
     /// <summary>Fond d'un modificateur tenu à l'étape 1.</summary>
-    internal const uint HighlightStep1Fill = 0x002B4F63; // #634F2B
+    internal const uint HighlightStep1Fill = 0x00385664; // #645638
     /// <summary>Touche finale d'une séquence, étape 2.</summary>
-    internal const uint HighlightStep2 = 0x005CC161; // #61C15C
+    internal const uint HighlightStep2 = 0x005ABF5F; // #5FBF5A
     /// <summary>Fond d'un modificateur tenu à l'étape 2.</summary>
-    internal const uint HighlightStep2Fill = 0x003F5540; // #40553F
+    internal const uint HighlightStep2Fill = 0x004C5C41; // #415C4C
 }
