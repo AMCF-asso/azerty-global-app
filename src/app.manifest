@@ -29,4 +29,16 @@
       <!-- Windows 11 (mêmes GUIDs supportedOS, Windows 10/11 partagent l'identifiant) -->
     </application>
   </compatibility>
+
+  <!--
+    Contrôles communs version 6 : boutons, cases, onglets et champs prennent le style
+    visuel de Windows au lieu du rendu classique de comctl32 5.82 (audit visuel du
+    2026-09-28, décision d'Antoine).
+  -->
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"
+                        processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
+    </dependentAssembly>
+  </dependency>
 </assembly>

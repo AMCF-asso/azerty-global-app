@@ -22,6 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Le banc de capture active ce manifeste : testhost.exe n'en déclare aucun. -->
+    <None Include="..\app.manifest" Link="app.manifest" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AZERTYGlobal.csproj" />
     <ProjectReference Include="..\TypingEngine.Windows\TypingEngine.Windows.csproj" />
   </ItemGroup>
