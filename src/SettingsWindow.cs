@@ -308,7 +308,7 @@ sealed class SettingsWindow : IDisposable
     {
         _metrics = null;
         _hFontTitle = Win32.CreateFontW(-S(18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontVersion = Win32.CreateFontW(-S(9), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontVersion = Win32.CreateFontW(-S(13), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontPanelTitle = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontText = Win32.CreateFontW(-S(11), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
         _hFontBold = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
@@ -757,6 +757,25 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndTabStrip, Win32.TCM_SETCURSEL, (IntPtr)(int)_activeTab, IntPtr.Zero);
     }
 
+    /// <summary>Hauteur de la bande : celle des onglets, plus les deux traits du cadre de
+    /// page. Avec les contrôles communs 6.0, tout ce qui dépasse s'affiche comme une page
+    /// blanche vide sous les onglets (7 px à 150 % avec l'ancienne hauteur fixe S(24),
+    /// mesuré sur les captures du 2026-09-28). La hauteur d'un onglet suit la police : on
+    /// la demande au contrôle plutôt que de la deviner.</summary>
+    private int TabStripHeight()
+    {
+        if (_hWndTabStrip == IntPtr.Zero) return S(24);
+
+        IntPtr pRect = Marshal.AllocHGlobal(Marshal.SizeOf<Win32.RECT>());
+        try
+        {
+            if (Win32.SendMessageW(_hWndTabStrip, Win32.TCM_GETITEMRECT, IntPtr.Zero, pRect) == IntPtr.Zero)
+                return S(24);
+            return Marshal.PtrToStructure<Win32.RECT>(pRect).bottom + 2;
+        }
+        finally { Marshal.FreeHGlobal(pRect); }
+    }
+
     private void InsertTab(int index, string text)
         => SendTabText(Win32.TCM_INSERTITEMW, index, text);
 
@@ -890,7 +909,7 @@ sealed class SettingsWindow : IDisposable
         var layout = new LayoutInfo
         {
             Margin = margin,
-            TabStripRect = Rect(margin, headerBottom + S(4), contentWidth, S(24)),
+            TabStripRect = Rect(margin, headerBottom + S(4), contentWidth, TabStripHeight()),
             HeaderTitleX = margin + logoSize + S(6),
             HeaderTitleY = headerTop + Math.Max(0, (headerLineHeight - m.Title) / 2),
             HeaderDividerY = headerBottom,
@@ -1116,6 +1135,17 @@ sealed class SettingsWindow : IDisposable
 
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
+
+            // Les onglets thémés demandent le fond de leur parent (DrawThemeParentBackground)
+            // pour la zone à droite du dernier onglet. Sans réponse, ils y laissent le gris
+            // système #F0F0F0 au lieu du fond de la fenêtre. La bande n'est posée que sur ce
+            // fond uni : le remplir suffit.
+            case Win32.WM_PRINTCLIENT:
+            {
+                Win32.GetClientRect(hWnd, out var client);
+                Win32.FillRect(wParam, ref client, _hBgBrush);
+                return IntPtr.Zero;
+            }
 
             case Win32.WM_VSCROLL:
             {
