@@ -514,6 +514,9 @@ static class Win32
         uint italic, uint underline, uint strike, uint charset, uint outPrec,
         uint clipPrec, uint quality, uint pitchFamily, string faceName);
 
+    [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetTextFaceW(IntPtr hdc, int count, char[] faceName);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int DrawTextW(IntPtr hdc, string text, int count, ref RECT rc, uint format);
 

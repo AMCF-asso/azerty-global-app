@@ -320,6 +320,34 @@ internal sealed class LessonsWindow : IDisposable
         CreateScaledFonts();
     }
 
+    internal const string LessonLineFace = "Segoe UI Variable Text";
+    internal const string LessonLineFallbackFace = TypeRamp.Family;
+
+    /// <summary>
+    /// Police de la ligne à taper (choix d'Antoine du 29/09, sur maquette) : Segoe UI Variable
+    /// demi-gras, en espacement naturel. Windows 10 ne l'a pas : GDI y substituerait une autre
+    /// police sans le dire, d'où la lecture du nom obtenu et le repli sur Segoe UI demi-gras.
+    /// </summary>
+    internal static IntPtr CreateLessonLineFont(int height)
+    {
+        IntPtr font = Win32.CreateFontW(height, 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, LessonLineFace);
+        if (FontFace(font) == LessonLineFace)
+            return font;
+        Win32.DeleteObject(font);
+        return Win32.CreateFontW(height, 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, LessonLineFallbackFace);
+    }
+
+    internal static string FontFace(IntPtr font)
+    {
+        IntPtr hdc = Win32.CreateCompatibleDC(IntPtr.Zero);
+        IntPtr previous = Win32.SelectObject(hdc, font);
+        var name = new char[64];
+        int length = Win32.GetTextFaceW(hdc, name.Length, name);
+        Win32.SelectObject(hdc, previous);
+        Win32.DeleteDC(hdc);
+        return length > 1 ? new string(name, 0, length - 1) : "";
+    }
+
     private void CreateScaledFonts()
     {
         _lessonCharWidths.Clear(); // L-06 : mesurées avec les polices et l'échelle d'avant
@@ -330,7 +358,7 @@ internal sealed class LessonsWindow : IDisposable
         _hFontSidebarModule = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontSidebarLesson = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontMono = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Consolas");
-        _hFontLessonLine = Win32.CreateFontW(-S(17), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Consolas");
+        _hFontLessonLine = CreateLessonLineFont(-S(17));
         _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontIcon = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
         _hFontEmoji = Win32.CreateFontW(-S(17), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Emoji");
@@ -1270,7 +1298,8 @@ internal sealed class LessonsWindow : IDisposable
         if (_lessonCharWidths.TryGetValue((ch, markers), out int width))
             return width;
         string display = markers ? KeyboardRenderer.DisplayInvisible(ch.ToString()) : ch.ToString();
-        width = Math.Max(S(12), GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, display) + S(4));
+        // Espacement naturel (29/09) : la case a la largeur du glyphe, sans marge ajoutée.
+        width = Math.Max(1, GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, display));
         _lessonCharWidths[(ch, markers)] = width;
         return width;
     }
