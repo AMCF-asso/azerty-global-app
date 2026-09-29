@@ -22,7 +22,8 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Chaque requête peut attendre jusqu'à 4 x 120 s plus les pauses de backoff.
+    timeout-minutes: 45
     env:
       STORE_ID: 9N4BTS43SSSZ
       STORE_ANALYTICS_START_DATE: ${{ inputs.start_date || '2015-01-01' }}
@@ -44,8 +45,22 @@ jobs:
       - name: Tester
         run: python -m unittest discover -s store-analytics/tests -v
 
+      # Le client réessaie seul sur 408, 429, 5xx et erreurs réseau (backoff 5-10-20 s,
+      # Retry-After respecté). Sortie 2 : un jeu manque encore ; les autres sont écrits,
+      # donc on archive d'abord et on passe au rouge à la dernière étape. Toute autre
+      # sortie non nulle (jeton refusé, configuration absente) arrête le job ici.
       - name: Collecter toutes les statistiques Store
-        run: python -m azerty_store_analytics.collector
+        id: collecte
+        shell: bash
+        run: |
+          set +e
+          python -m azerty_store_analytics.collector
+          code=$?
+          set -e
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then
+            exit "$code"
+          fi
 
       - name: Se connecter à Azure par OIDC
         uses: azure/login@v2
@@ -90,3 +105,20 @@ jobs:
             --auth-mode login \
             --overwrite true \
             --only-show-errors
+
+      # Seul cas rouge de la collecte elle-même : des données manquent après les
+      # nouvelles tentatives. Le manifeste archivé porte `complete: false`.
+      - name: Signaler les jeux de données manquants
+        if: steps.collecte.outputs.code == '2'
+        shell: bash
+        run: |
+          python - "$STORE_ANALYTICS_OUTPUT/manifest.json" <<'PY'
+          import json, sys
+          manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+          failures = manifest["failures"]
+          for f in failures:
+              print(f"::error title=Jeu Store manquant : {f['dataset']}::{f['error']}")
+          print(f"{len(failures)} jeu(x) manquant(s) dans le run {manifest['runId']}, "
+                f"archivé avec complete=false ; les autres jeux sont archivés.")
+          PY
+          exit 1
