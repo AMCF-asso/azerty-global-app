@@ -2,12 +2,18 @@ name: Captures des fenêtres
 
 # Banc de capture (CaptureBench, KeyboardContextBench) : rend les fenêtres de l'application en
 # PNG depuis le processus de test, sans lancer l'application, pour un contrôle visuel
-# avant/après. Deux déclenchements, aucune pull request :
-#   - à la main (workflow_dispatch), une fois ce fichier présent sur la branche par défaut ;
-#   - par le push d'une branche captures/<ref> : le fichier vient du commit poussé, et la ref
-#     rendue est le suffixe du nom : captures/<sha complet> ou captures/<branche>. Un sha abrégé
-#     échoue : actions/checkout le prend pour un nom de branche. Décision d'Antoine du 26/09 :
-#     le lancement manuel exigeait ce fichier sur main. Supprimer la branche ensuite.
+# avant/après. Lancement à la main seulement (décision d'Antoine du 29/09 : les workflows
+# expérimentaux ne partent plus au push d'une branche). Le push d'une branche captures/<sha>
+# ne déclenche plus rien ; il sert seulement à rendre un commit local visible du runner.
+#
+#   git push origin <sha>:refs/heads/captures/<sha>      # si le commit n'est pas sur le dépôt
+#   gh workflow run captures.yml -R AMCF-asso/azerty-global-app -f ref=<sha|branche|tag>
+#   gh run watch -R AMCF-asso/azerty-global-app          # puis : gh run download <id>
+#   git push origin --delete captures/<sha>              # une fois l'artefact récupéré
+#
+# `ref` accepte un sha complet ou abrégé, une branche ou un tag : il est résolu après un
+# checkout complet, pas passé à actions/checkout (qui prend un sha abrégé pour une branche).
+# Le workflow exécuté est toujours celui de main ; le produit rendu est celui de la ref.
 #
 # Pour un avant/après : un lancement par ref, puis, sur le poste,
 #   python scripts/compare-captures.py --avant avant/passe1 avant/passe2 --apres apres/passe1 apres/passe2 --diff diff
@@ -17,18 +23,16 @@ name: Captures des fenêtres
 # travail (Leçons, Paramètres) y sont réduites selon l'écran du runner.
 
 on:
-  push:
-    branches: ['captures/**']
   workflow_dispatch:
     inputs:
       ref:
-        description: "Commit, branche ou tag à rendre"
+        description: "Commit (sha complet ou abrégé), branche ou tag à rendre"
         required: true
         type: string
       banc:
-        description: "Branche d'où déposer le banc quand la ref ne l'a pas"
+        description: "Branche d'où déposer le banc quand la ref ne l'a pas (antérieure à 0a1dbc7)"
         required: false
-        default: "lot/banc-capture"
+        default: "main"
         type: string
       dpi:
         description: "DPI à rendre, séparés par des virgules"
@@ -48,31 +52,36 @@ jobs:
   captures:
     runs-on: windows-latest
     timeout-minutes: 30
-    # Sans workflow_dispatch, les entrées sont vides : valeurs par défaut ci-dessous.
     env:
-      BANC_DEFAUT: ${{ inputs.banc || 'lot/banc-capture' }}
-      DPI: ${{ inputs.dpi || '96,120,144,168,192' }}
-      LANGUES: ${{ inputs.langues || 'fr,en' }}
+      DPI: ${{ inputs.dpi }}
+      LANGUES: ${{ inputs.langues }}
     steps:
-      - name: Ref à rendre
+      # Checkout complet de la branche du workflow : toutes les branches distantes et tous
+      # les tags sont alors connus, et la ref demandée se résout localement.
+      - name: Checkout complet
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Résoudre et extraire la ref demandée
         id: cible
         shell: bash
         env:
-          ENTREE: ${{ inputs.ref }}
+          REF: ${{ inputs.ref }}
         run: |
-          if [ -n "$ENTREE" ]; then ref="$ENTREE"; else ref="${GITHUB_REF_NAME#captures/}"; fi
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout de la ref demandée
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.cible.outputs.ref }}
-          fetch-depth: 0
-
-      - name: Identifier le commit rendu
-        id: ident
-        shell: bash
-        run: echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          sha=""
+          for candidat in "$REF" "origin/$REF" "refs/tags/$REF"; do
+            if sha=$(git rev-parse --verify --quiet "${candidat}^{commit}"); then break; fi
+            sha=""
+          done
+          if [ -z "$sha" ]; then
+            echo "::error title=Ref introuvable::« $REF » n'est ni un commit, ni une branche, ni un tag du dépôt. Pour un commit local : git push origin <sha>:refs/heads/captures/<sha>, puis relancer avec ref=<sha>."
+            exit 1
+          fi
+          git checkout --quiet --detach "$sha"
+          echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Ref « $REF » rendue au commit $sha"
 
       - uses: actions/setup-python@v5
         with:
@@ -83,28 +92,29 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Une ref antérieure au banc ne l'a pas : il est déposé depuis la tête de la branche du
-      # banc. Il ne touche pas src/ hors du projet de test, donc le produit rendu reste celui de
-      # la ref. Les trois fichiers C# forment un tout : CaptureSupport.cs manquant, les trois
-      # sont déposés, ce qui remplace aussi un ancien banc de main, incompatible.
+      # Une ref antérieure au banc (0a1dbc7) ne l'a pas : il est déposé depuis la branche du
+      # banc, main par défaut, toujours présente après le checkout complet. Il ne touche pas
+      # src/ hors du projet de test, donc le produit rendu reste celui de la ref. Les trois
+      # fichiers C# forment un tout : CaptureSupport.cs manquant, les trois sont déposés.
+      # L'ancien défaut, lot/banc-capture, n'existe plus sur le dépôt (runs 36204703444,
+      # 36204703553, 36204876595, 36204876972 : « couldn't find remote ref »).
       - name: Déposer le banc s'il manque
         shell: bash
         env:
-          BANC: ${{ env.BANC_DEFAUT }}
+          BANC: ${{ inputs.banc }}
         run: |
           set -euo pipefail
           source="origin/${BANC}"
-          # La branche du banc n'est lue que s'il manque quelque chose : elle peut ne pas
-          # exister sur le dépôt distant, et la ref en porte déjà un depuis 0a1dbc7.
-          if { [ ! -f src/AZERTYGlobal.Tests/CaptureSupport.cs ] || [ ! -f scripts/compare-captures.py ]; } \
-             && ! git rev-parse --verify --quiet "${source}^{commit}" > /dev/null; then
-            git fetch --no-tags origin "+refs/heads/${BANC}:refs/remotes/origin/${BANC}"
-          fi
-          banc=(src/AZERTYGlobal.Tests/CaptureSupport.cs src/AZERTYGlobal.Tests/CaptureBench.cs src/AZERTYGlobal.Tests/KeyboardContextBench.cs)
-          if [ -f src/AZERTYGlobal.Tests/CaptureSupport.cs ]; then
+          if [ -f src/AZERTYGlobal.Tests/CaptureSupport.cs ] && [ -f scripts/compare-captures.py ]; then
             echo "Banc présent dans la ref."
-          else
-            for f in "${banc[@]}"; do
+            exit 0
+          fi
+          if ! git rev-parse --verify --quiet "${source}^{commit}" > /dev/null; then
+            echo "::error title=Banc introuvable::la ref n'a pas de banc et la branche « ${BANC} » n'existe pas sur le dépôt."
+            exit 1
+          fi
+          if [ ! -f src/AZERTYGlobal.Tests/CaptureSupport.cs ]; then
+            for f in src/AZERTYGlobal.Tests/CaptureSupport.cs src/AZERTYGlobal.Tests/CaptureBench.cs src/AZERTYGlobal.Tests/KeyboardContextBench.cs; do
               git show "${source}:${f}" > "$f"
               echo "Déposé depuis ${source} : $f"
             done
@@ -115,6 +125,7 @@ jobs:
           fi
 
       - name: Compiler le projet de test
+        id: compilation
         run: dotnet build src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release
 
       - name: Passe 1
@@ -126,8 +137,10 @@ jobs:
           AZERTY_CAPTURE_LANG: ${{ env.LANGUES }}
         run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CaptureBench|FullyQualifiedName~KeyboardContextBench"
 
+      # La passe 2 tourne même si la passe 1 échoue (pour le diagnostic), mais jamais sans
+      # compilation réussie : sinon elle n'ajoute que « test source file not found ».
       - name: Passe 2
-        if: always()
+        if: ${{ !cancelled() && steps.compilation.outcome == 'success' }}
         env:
           AZERTY_CAPTURE: "1"
           AZERTY_CONTEXTE: "1"
@@ -136,14 +149,19 @@ jobs:
           AZERTY_CAPTURE_LANG: ${{ env.LANGUES }}
         run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CaptureBench|FullyQualifiedName~KeyboardContextBench"
 
-      # Le code de retour des passes ne suffit pas : on compte les PNG. Deux passes qui ne
-      # rendent pas le même nombre d'images, ou aucune, font échouer le run.
+      # Le code de retour des passes ne suffit pas : on compte les PNG. Rouge si une passe
+      # n'a rien rendu, si les deux n'ont pas le même nombre d'images, si une image n'existe
+      # que dans une passe ou si un PNG est illisible. Le banc n'est pas déterministe (curseur,
+      # focus, minuterie) : des images instables sont attendues et signalées en avertissement.
+      # ⚠️ Le shell bash d'Actions tourne en `-e` malgré `set -uo` : le code du comparateur
+      # est capté explicitement, sinon une seule image instable arrêtait l'étape sans message
+      # (runs 36427331772 et 36578206254).
       - name: Compter les PNG et mesurer la stabilité
-        if: always()
+        if: ${{ !cancelled() && steps.compilation.outcome == 'success' }}
         shell: bash
         env:
-          REF: ${{ steps.cible.outputs.ref }}
-          SHA: ${{ steps.ident.outputs.sha }}
+          REF: ${{ inputs.ref }}
+          SHA: ${{ steps.cible.outputs.sha }}
         run: |
           set -uo pipefail
           n1=$(find captures/passe1 -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)
@@ -154,22 +172,33 @@ jobs:
             echo "- passe 1 : ${n1} PNG"
             echo "- passe 2 : ${n2} PNG"
           } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$n1" -gt 0 ] && [ "$n2" -gt 0 ]; then
-            python scripts/compare-captures.py --avant captures/passe1 captures/passe2 --diff captures/diff-stabilite > captures/stabilite.txt
-            echo "Code du comparateur : $?"
-            cat captures/stabilite.txt
-            { echo ""; echo '```'; cat captures/stabilite.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          fi
           if [ "$n1" -eq 0 ] || [ "$n1" -ne "$n2" ]; then
             echo "::error::passe 1 : ${n1} PNG, passe 2 : ${n2} PNG"
             exit 1
           fi
+          code=0
+          python scripts/compare-captures.py --avant captures/passe1 captures/passe2 --diff captures/diff-stabilite > captures/stabilite.txt || code=$?
+          cat captures/stabilite.txt
+          { echo ""; echo '```'; cat captures/stabilite.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -ge 2 ]; then
+            echo "::error::comparateur en erreur (code ${code}) : PNG illisible ou usage invalide"
+            exit 1
+          fi
+          manquantes=$(sed -n 's/^Manquantes : \([0-9]*\)$/\1/p' captures/stabilite.txt)
+          instables=$(sed -n 's/^Instables : \([0-9]*\)$/\1/p' captures/stabilite.txt)
+          if [ "${manquantes:-0}" -gt 0 ]; then
+            echo "::error::${manquantes} image(s) présente(s) dans une seule passe"
+            exit 1
+          fi
+          if [ "${instables:-0}" -gt 0 ]; then
+            echo "::warning::${instables} image(s) instable(s) entre les deux passes (bruit du banc), voir captures/diff-stabilite"
+          fi
 
       - name: Publier les captures
-        if: always()
+        if: ${{ !cancelled() && steps.cible.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: captures-${{ steps.ident.outputs.sha }}
+          name: captures-${{ steps.cible.outputs.sha }}
           path: captures/
           if-no-files-found: warn
           retention-days: 30

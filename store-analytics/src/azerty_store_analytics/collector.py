@@ -14,6 +14,11 @@ from .summary import build_totals
 from .summary import emit as emit_totals
 
 
+# Sortie 2 : au moins un jeu manque encore après les nouvelles tentatives du client ;
+# le manifeste et les jeux collectés sont écrits. Toute autre erreur lève (sortie 1).
+INCOMPLETE = 2
+
+
 def required_env(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -38,7 +43,7 @@ def write_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
-def main() -> None:
+def main() -> int:
     store_id = os.environ.get("STORE_ID", "9N4BTS43SSSZ").strip()
     start = parse_iso_date(
         os.environ.get("STORE_ANALYTICS_START_DATE", "2015-01-01"),
@@ -118,15 +123,22 @@ def main() -> None:
                 f"ÉCHEC {failure['dataset']}: {failure['error']}",
                 file=sys.stderr,
             )
-        raise RuntimeError(
-            f"{len(failures)} jeu(x) de données n'ont pas pu être collectés"
+        # Code distinct de l'échec fatal (1) : les jeux collectés sont écrits et
+        # doivent être archivés, puis le workflow signale ceux qui manquent.
+        print(
+            f"Collecte incomplète: {len(failures)} jeu(x) manquant(s) sur "
+            f"{len(DATASETS)} après nouvelles tentatives "
+            f"({', '.join(f['dataset'] for f in failures)}), run {run_id}",
+            file=sys.stderr,
         )
+        return INCOMPLETE
 
     print(
         f"Collecte complète: {len(datasets)} jeux de données, run {run_id}",
         file=sys.stderr,
     )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
