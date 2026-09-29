@@ -40,6 +40,7 @@ internal sealed class LessonsWindow : IDisposable
     private const uint CLR_OK = DarkTheme.Success;
     private const uint CLR_BAD = DarkTheme.Error;
     private const uint CLR_CURRENT = DarkTheme.Accent;
+    private const uint CLR_PENDING = DarkTheme.TextTertiary;
     private const uint CLR_BUTTON = DarkTheme.ControlFill;
     private const uint CLR_BUTTON_HOT = DarkTheme.ControlHover;
     private const uint CLR_LESSON_ACCENT = DarkTheme.Accent;
@@ -1226,17 +1227,16 @@ internal sealed class LessonsWindow : IDisposable
         DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) });
         y += S(24);
 
-        var targetBox = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(52) };
-        GdiHelpers.DrawPanel(hdc, targetBox, CLR_PANEL_2, CLR_BORDER, 0, 0);
-        int lineScroll = CalculateLessonLineScrollOffset(hdc, targetBox);
-        DrawTargetCharacters(hdc, targetBox, _session.GetCurrentLineSnapshot(), lineScroll);
-        y += S(56);
+        // Surface unique (lot Leçons 1.3.0, QCM du 28/09) : le modèle se colore à mesure de
+        // la frappe, à la place de l'ancienne paire modèle / zone de saisie.
+        var surface = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(64) };
+        GdiHelpers.DrawPanel(hdc, surface, CLR_PANEL_2, CLR_BORDER, 0, 0);
+        int lineScroll = CalculateLessonLineScrollOffset(hdc, surface);
+        DrawLessonSurface(hdc, surface, lineScroll);
+        if (_hasFocus && _focusedActionIndex < 0)
+            DrawFocusOutline(hdc, surface);
 
-        var typedBox = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(48) };
-        GdiHelpers.DrawPanel(hdc, typedBox, CLR_PANEL, CLR_BORDER, 0, 0);
-        DrawTypedCharacters(hdc, typedBox, _session.GetTypedLineSnapshot(), lineScroll);
-
-        y += S(52);
+        y += S(68);
     }
 
     private int CalculateLessonLineScrollOffset(IntPtr hdc, Win32.RECT box)
@@ -1275,40 +1275,79 @@ internal sealed class LessonsWindow : IDisposable
         return width;
     }
 
-    private void DrawTargetCharacters(IntPtr hdc, Win32.RECT box, IReadOnlyList<LessonCharacterSnapshot> characters, int scrollOffset)
-    {
-        int x = box.left + S(10) - scrollOffset;
-        int baselineY = box.top + S(8);
+    /// <summary>
+    /// Variante de la surface rendue, le temps du choix sur planches (29/09) : 1 reprend le
+    /// tutoriel (caractère attendu en rouge à la place de la faute), 2 écrit la faute tapée en
+    /// rouge et rappelle dessous le caractère attendu, souligné. Seul le banc la change ; elle
+    /// disparaît une fois la variante choisie.
+    /// </summary>
+    internal static int SurfaceVariant = 1;
 
-        foreach (var item in characters)
+    private void DrawLessonSurface(IntPtr hdc, Win32.RECT box, int scrollOffset)
+    {
+        var expected = _session.GetCurrentLineSnapshot();
+        var typed = _session.GetTypedLineSnapshot();
+        int x = box.left + S(10) - scrollOffset;
+        int top = box.top + S(6);
+        int cursor = _session.CursorPosition;
+        int caretX = int.MinValue;
+
+        for (int i = 0; i < expected.Count; i++)
         {
-            if (!DrawCharacterCell(hdc, box, item.Expected, item.State, ref x, baselineY, neutralCorrect: false))
+            if (i == cursor)
+                caretX = x;
+            var cell = expected[i];
+            char shown = cell.Expected;
+            char? below = null;
+            uint color = cell.State switch
+            {
+                LessonCharacterState.Pending => CLR_PENDING,
+                LessonCharacterState.Wrong => CLR_BAD,
+                _ => CLR_TEXT
+            };
+            uint? underline = cell.State switch
+            {
+                LessonCharacterState.Current => CLR_CURRENT,
+                LessonCharacterState.Wrong => CLR_BAD,
+                _ => null
+            };
+            if (cell.State == LessonCharacterState.Wrong && SurfaceVariant == 2)
+            {
+                // La faute tapée prend la place ; l'attendu passe dessous.
+                char? actual = TypedCharacterAt(typed, i);
+                if (actual.HasValue)
+                {
+                    shown = actual.Value;
+                    below = cell.Expected;
+                }
+            }
+            if (!DrawSurfaceCell(hdc, box, shown, MeasureLessonCharacterWidth(hdc, cell.Expected), ref x, top, color, underline, below))
                 break;
+        }
+
+        // Mode souple : ce qui dépasse la fin du modèle reste écrit, en faute.
+        for (int i = expected.Count; i < typed.Count; i++)
+        {
+            if (!DrawSurfaceCell(hdc, box, typed[i].Actual, MeasureLessonCharacterWidth(hdc, typed[i].Actual), ref x, top, CLR_BAD, CLR_BAD, null))
+                break;
+        }
+        if (cursor >= expected.Count && caretX == int.MinValue)
+            caretX = x;
+
+        bool active = !_session.IsLineComplete && !_session.IsExerciseComplete;
+        if (active && _hasFocus && caretX >= box.left + S(8) && caretX <= box.right - S(8))
+        {
+            // Emplacement du caret : peint pour les planches, remplacé par le caret système.
+            var caret = new Win32.RECT { left = caretX - S(1), top = top + S(5), right = caretX - S(1) + Math.Max(1, S(2)), bottom = top + S(33) };
+            GdiHelpers.FillSolidRect(hdc, caret, CLR_TEXT);
         }
     }
 
-    private void DrawTypedCharacters(IntPtr hdc, Win32.RECT box, IReadOnlyList<LessonTypedCharacterSnapshot> characters, int scrollOffset)
+    private static char? TypedCharacterAt(IReadOnlyList<LessonTypedCharacterSnapshot> typed, int index) =>
+        index < typed.Count ? typed[index].Actual : null;
+
+    private bool DrawSurfaceCell(IntPtr hdc, Win32.RECT box, char ch, int width, ref int x, int top, uint color, uint? underline, char? below)
     {
-        int x = box.left + S(10) - scrollOffset;
-        int baselineY = box.top + S(7);
-
-        foreach (var item in characters)
-        {
-            if (!DrawCharacterCell(hdc, box, item.Actual, item.State, ref x, baselineY, neutralCorrect: true))
-                break;
-        }
-
-        if (!_session.IsLineComplete && !_session.IsExerciseComplete && x <= box.right - S(12))
-        {
-            var caret = new Win32.RECT { left = x + S(2), top = baselineY + S(4), right = x + S(5), bottom = baselineY + S(34) };
-            GdiHelpers.FillSolidRect(hdc, caret, CLR_CURRENT);
-        }
-    }
-
-    private bool DrawCharacterCell(IntPtr hdc, Win32.RECT box, char ch, LessonCharacterState state, ref int x, int y, bool neutralCorrect)
-    {
-        string display = FormatVisibleCharacter(ch.ToString());
-        int width = MeasureLessonCharacterWidth(hdc, ch);
         int innerLeft = box.left + S(8);
         int innerRight = box.right - S(8);
         if (x + width < innerLeft)
@@ -1322,27 +1361,25 @@ internal sealed class LessonsWindow : IDisposable
         var charRect = new Win32.RECT
         {
             left = Math.Max(x, innerLeft),
-            top = y,
+            top = top,
             right = Math.Min(x + width, innerRight),
-            bottom = y + S(36)
+            bottom = top + S(36)
         };
         if (charRect.right <= charRect.left)
             return false;
 
-        bool underline = !neutralCorrect && state == LessonCharacterState.Current;
-
-        uint textColor = state switch
+        DrawText(hdc, _hFontLessonLine, FormatVisibleCharacter(ch.ToString()), charRect, color, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        if (underline.HasValue)
         {
-            LessonCharacterState.Correct => neutralCorrect ? CLR_TEXT : CLR_OK,
-            LessonCharacterState.Wrong => neutralCorrect ? CLR_TEXT : CLR_BAD,
-            LessonCharacterState.Current => neutralCorrect ? CLR_CURRENT : CLR_TEXT,
-            _ => CLR_TEXT
-        };
-        DrawText(hdc, _hFontLessonLine, display, charRect, textColor, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-        if (underline)
+            int underlineY = Math.Min(charRect.bottom - S(3), top + S(34));
+            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = charRect.left + S(2), top = underlineY, right = charRect.right - S(2), bottom = underlineY + S(2) }, underline.Value);
+        }
+        if (below.HasValue)
         {
-            int underlineY = Math.Min(charRect.bottom - S(3), y + S(34));
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = charRect.left + S(2), top = underlineY, right = charRect.right - S(2), bottom = underlineY + S(2) }, CLR_CURRENT);
+            var belowRect = new Win32.RECT { left = charRect.left - S(4), top = top + S(37), right = charRect.right + S(4), bottom = top + S(52) };
+            DrawText(hdc, _hFontSmall, FormatVisibleCharacter(below.Value.ToString()), belowRect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+            int belowUnderline = top + S(52);
+            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = charRect.left + S(4), top = belowUnderline, right = charRect.right - S(4), bottom = belowUnderline + Math.Max(1, S(1)) }, CLR_TEXT);
         }
         x += width;
         return true;
@@ -1998,7 +2035,11 @@ internal sealed class LessonsWindow : IDisposable
         if (_focusedActionIndex >= _clickActions.Count)
             _focusedActionIndex = _clickActions.Count - 1;
 
-        var rect = _clickActions[_focusedActionIndex].Rect;
+        DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect);
+    }
+
+    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect)
+    {
         rect.left -= S(2);
         rect.top -= S(2);
         rect.right += S(2);
