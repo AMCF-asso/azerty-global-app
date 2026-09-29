@@ -273,6 +273,23 @@ static class NativeWindow
         Win32.MoveWindow(hwnd, x, y, width, height, false);
     }
 
+    /// <summary>Ramène dans la zone de travail de son écran une fenêtre qui en dépasse, sans la
+    /// redimensionner. Plus grande que la zone, elle se cale sur son coin haut-gauche, comme
+    /// <see cref="CenterIn"/>, pour garder sa barre de titre à l'écran.</summary>
+    internal static void KeepInWorkArea(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || !Win32.GetWindowRect(hwnd, out var current))
+            return;
+
+        var work = WorkArea(hwnd);
+        int width = current.right - current.left;
+        int height = current.bottom - current.top;
+        int x = Math.Max(work.left, Math.Min(current.left, work.right - width));
+        int y = Math.Max(work.top, Math.Min(current.top, work.bottom - height));
+        if (x != current.left || y != current.top)
+            Win32.MoveWindow(hwnd, x, y, width, height, true);
+    }
+
     /// <summary>Nouvelle zone cliente, même centre : la fenêtre grandit ou rétrécit sur place.</summary>
     internal static void ResizeAroundCenter(IntPtr hwnd, int clientW, int clientH, uint style, uint exStyle = 0)
     {
