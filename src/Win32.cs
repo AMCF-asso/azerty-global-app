@@ -250,6 +250,11 @@ static class Win32
     public const uint BS_DEFPUSHBUTTON = 0x0001;
     public const uint BS_AUTOCHECKBOX = 0x0003;
     public const uint BS_AUTORADIOBUTTON = 0x0009;
+    // Liens de commande (Common-Controls 6.0) : un titre et une note sous lui.
+    public const uint BS_COMMANDLINK = 0x000E;
+    public const uint BS_DEFCOMMANDLINK = 0x000F;
+    public const uint BCM_GETIDEALSIZE = 0x1601;
+    public const uint BCM_SETNOTE = 0x1609;
     public const uint BM_GETCHECK = 0x00F0;
     public const uint BM_SETCHECK = 0x00F1;
     public const uint BM_CLICK = 0x00F5;
