@@ -1,0 +1,2 @@
+# Les hooks sont lus par sh : fins de ligne LF même avec core.autocrlf=true.
+.githooks/* text eol=lf

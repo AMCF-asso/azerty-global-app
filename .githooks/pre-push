@@ -1,0 +1,62 @@
+#!/bin/sh
+# Garde avant push : les étapes bloquantes de la CI exécutables sous Windows
+# (scripts/verify.ps1, que ci.yml appelle étape par étape), puis actionlint.
+#
+# Activation, une fois par clone :   git config core.hooksPath .githooks
+# Contournement ponctuel, assumé :   git push --no-verify
+#
+# ⚠️ La vérification porte sur l'arbre de travail, pas sur les commits poussés :
+# un avertissement le signale quand ils diffèrent.
+
+racine=$(git rev-parse --show-toplevel) || exit 1
+cd "$racine" || exit 1
+
+zero=0000000000000000000000000000000000000000
+tete=$(git rev-parse HEAD)
+a_verifier=0
+autre=""
+while read -r _ref_locale sha_local _ref_distante _sha_distant; do
+    [ -z "$sha_local" ] && continue
+    case "$sha_local" in
+        "$zero") continue ;;   # suppression de branche distante : rien à construire
+    esac
+    a_verifier=1
+    [ "$sha_local" != "$tete" ] && autre="$sha_local"
+done
+
+if [ "$a_verifier" -eq 0 ]; then
+    echo "pre-push : suppression seule, vérification sautée."
+    exit 0
+fi
+if [ -n "$autre" ]; then
+    echo "pre-push : ⚠️ $autre poussé n'est pas HEAD ($tete) ; la vérification porte sur HEAD."
+fi
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+    echo "pre-push : ⚠️ modifications non commitées : elles entrent dans la vérification."
+fi
+
+if command -v pwsh >/dev/null 2>&1; then
+    ps=pwsh
+elif command -v powershell.exe >/dev/null 2>&1; then
+    ps=powershell.exe
+else
+    echo "pre-push : ni pwsh ni powershell.exe, vérification impossible." >&2
+    exit 1
+fi
+
+echo "pre-push : scripts/verify.ps1 ($ps)"
+"$ps" -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1 || {
+    echo "pre-push : vérification en échec, push annulé." >&2
+    exit 1
+}
+
+if command -v actionlint >/dev/null 2>&1; then
+    echo "pre-push : actionlint"
+    actionlint -shellcheck= -pyflakes= || {
+        echo "pre-push : workflows invalides, push annulé." >&2
+        exit 1
+    }
+else
+    echo "pre-push : ⚠️ actionlint absent du PATH, workflows non vérifiés (winget install rhysd.actionlint)."
+fi
+exit 0

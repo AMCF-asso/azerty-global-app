@@ -168,6 +168,10 @@ def validate_report(report, context=None):
     runs = report.get("runs", [])
     if not runs:
         raise ValueError("SARIF sans analyse")
+    # Code scanning refuse plusieurs runs dans une même catégorie (runs 35725613971 et
+    # suivants, sur ci/verif le 22/09) : un fichier, une analyse, une catégorie d'upload.
+    if len(runs) != 1:
+        raise ValueError(f"SARIF à {len(runs)} analyses : une seule par fichier et par catégorie")
     accepted = []
     for run in runs:
         invocations = run.get("invocations", [])
