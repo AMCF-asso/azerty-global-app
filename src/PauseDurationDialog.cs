@@ -211,6 +211,17 @@ sealed class PauseDurationDialog : IDisposable
     {
         AccessibleName.TrySet(_hEditHours, L.Pause_Hours);
         AccessibleName.TrySet(_hEditMinutes, L.Pause_Minutes);
+        // Chaque Up-down s'annonçait « spinner » sans nom, et ses boutons « Plus » et
+        // « Moins » : ni le champ ni le sens.
+        AnnotateSpin(_hSpinHours, L.Pause_Hours, L.Pause_HoursUp, L.Pause_HoursDown);
+        AnnotateSpin(_hSpinMinutes, L.Pause_Minutes, L.Pause_MinutesUp, L.Pause_MinutesDown);
+    }
+
+    private static void AnnotateSpin(IntPtr spin, string field, string up, string down)
+    {
+        AccessibleName.TrySet(spin, field);
+        AccessibleName.TrySet(spin, up, AccessibleName.UpDownIncrease);
+        AccessibleName.TrySet(spin, down, AccessibleName.UpDownDecrease);
     }
 
     private IntPtr CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h)
