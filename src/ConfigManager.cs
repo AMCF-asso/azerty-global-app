@@ -32,6 +32,7 @@ static class ConfigManager
             _compatibilityCache = null;
             _loadFailed = false;
             _dirty = false;
+            _failedWrites = 0;
             _quarantineNoticePending = false;
             // Écritures différées coupées : un test écrit par Flush(), au moment qu'il
             // choisit, jamais pendant le test suivant ni dans un dossier déjà supprimé.
@@ -1159,6 +1160,23 @@ static class ConfigManager
     /// <summary>Hook de test : appelé pendant l'écriture disque, hors de <c>_lock</c>.</summary>
     internal static Action? DiskWritePhaseForTests;
 
+    /// <summary>Délais des nouveaux essais après une écriture ratée : 1 s, 5 s, 30 s, puis
+    /// toutes les 5 min tant que le cache reste à écrire. Un fichier tenu par un lecteur
+    /// (antivirus, indexation, script) fait échouer File.Replace ; sans nouvel essai, le
+    /// réglage attendait le suivant ou la sortie de l'application (R58, 29/09).</summary>
+    internal static readonly int[] RetryDelaysMilliseconds = { 1_000, 5_000, 30_000, 300_000 };
+
+    /// <summary>Écritures ratées d'affilée, sous <c>_lock</c> ; 0 hors d'un échec.</summary>
+    private static int _failedWrites;
+
+    /// <summary>Hook de test : reçoit chaque délai armé, à la place de la minuterie. Le
+    /// test déclenche lui-même l'écriture par <see cref="Flush"/>.</summary>
+    internal static Action<int>? SaveSchedulerForTests;
+
+    /// <summary>Délai du nouvel essai après <paramref name="failures"/> échecs d'affilée.</summary>
+    internal static int RetryDelayAfter(int failures) =>
+        RetryDelaysMilliseconds[Math.Clamp(failures, 1, RetryDelaysMilliseconds.Length) - 1];
+
     /// <summary>Pose une valeur dans le cache, sous <c>_lock</c>. Une valeur identique ne
     /// marque rien : refermer une fenêtre sans rien changer n'écrit plus le fichier (F-18).</summary>
     private static void SetValueLocked(string key, JsonElement value)
@@ -1175,10 +1193,25 @@ static class ConfigManager
     private static void MarkDirty()
     {
         _dirty = true;
+        _failedWrites = 0; // un nouveau réglage relance le cycle normal
+        if (SaveDelayMilliseconds < 0) return;
+        ArmSaveLocked(SaveDelayMilliseconds);
+    }
+
+    /// <summary>Arme l'écriture différée dans <paramref name="delayMilliseconds"/>. Sous
+    /// <c>_lock</c> : aucune I/O. Écritures différées coupées (<c>SaveDelayMilliseconds</c>
+    /// négatif) : rien, sauf la minuterie des tests.</summary>
+    private static void ArmSaveLocked(int delayMilliseconds)
+    {
+        if (SaveSchedulerForTests is { } planifier)
+        {
+            planifier(delayMilliseconds);
+            return;
+        }
         if (SaveDelayMilliseconds < 0) return;
         _saveTimer ??= new System.Threading.Timer(static _ => FlushInBackgroundCore(), null,
             Timeout.Infinite, Timeout.Infinite);
-        _saveTimer.Change(SaveDelayMilliseconds, Timeout.Infinite);
+        _saveTimer.Change(delayMilliseconds, Timeout.Infinite);
     }
 
     /// <summary>Écrit ce qui attend sur le pool de threads, sans attendre (changement de
@@ -1210,6 +1243,7 @@ static class ConfigManager
             string path;
             byte[] content;
             bool loadFailed;
+            string? failureContext;
             lock (_lock)
             {
                 if (!_dirty || _cache == null) return;
@@ -1217,14 +1251,28 @@ static class ConfigManager
                 path = _configPath;
                 loadFailed = _loadFailed;
                 _dirty = false;
+                // Une ligne d'error.log par palier : l'échec qui ouvre un palier se
+                // journalise, les essais suivants du dernier palier (5 min) non.
+                failureContext = _failedWrites < RetryDelaysMilliseconds.Length
+                    ? $"ConfigManager.Save (nouvel essai dans {RetryDelayAfter(_failedWrites + 1) / 1000} s)"
+                    : null;
             }
 
-            if (!WriteFile(path, content, loadFailed))
+            bool written = WriteFile(path, content, loadFailed, failureContext);
+            lock (_lock)
             {
-                lock (_lock)
+                // Même fichier seulement : un test a pu rediriger la config entre-temps.
+                if (path != _configPath) return;
+                if (written)
                 {
-                    // Même fichier seulement : un test a pu rediriger la config entre-temps.
-                    if (path == _configPath) _dirty = true;
+                    _failedWrites = 0;
+                }
+                else
+                {
+                    // Le cache reste à écrire, et l'écriture se réessaie seule.
+                    _dirty = true;
+                    _failedWrites++;
+                    ArmSaveLocked(RetryDelayAfter(_failedWrites));
                 }
             }
         }
@@ -1268,8 +1316,9 @@ static class ConfigManager
     }
 
     /// <summary>Écriture atomique et durable de l'instantané : fichier temporaire par PID,
-    /// Flush(true), puis remplacement. Rend false sur un échec à réessayer.</summary>
-    private static bool WriteFile(string path, byte[] content, bool loadFailed)
+    /// Flush(true), puis remplacement. Rend false sur un échec à réessayer, journalisé sous
+    /// <paramref name="failureContext"/> quand il n'est pas nul.</summary>
+    private static bool WriteFile(string path, byte[] content, bool loadFailed, string? failureContext)
     {
         string tempPath = BuildTempPath(path, Environment.ProcessId);
         try
@@ -1301,7 +1350,7 @@ static class ConfigManager
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Pas critique — on continue sans sauvegarder
-            Log("ConfigManager.Save", ex);
+            if (failureContext != null) Log(failureContext, ex);
             try
             {
                 if (File.Exists(tempPath))

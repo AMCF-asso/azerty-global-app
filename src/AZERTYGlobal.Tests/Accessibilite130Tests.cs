@@ -155,9 +155,9 @@ public class Accessibilite130Tests
         }
     }
 
-    // N10 (noms des boutons ▲▼ de la Pause) : sans objet depuis la refonte du 2026-09-28.
-    // Les flèches sont des contrôles Up-down Windows, que le Narrateur annonce lui-même ;
-    // voir PauseTests.
+    // N10 (noms des boutons ▲▼ de la Pause) : les boutons ont disparu à la refonte du
+    // 2026-09-28. Les flèches Up-down qui les remplacent portent leurs noms à elles depuis
+    // le 2026-09-29 : voir PauseTests.Personnaliser_ChaqueFlècheDitSonChampEtSonSens.
 
     // ── D1 : taille de l'indicateur de couche ──────────────────────────
 

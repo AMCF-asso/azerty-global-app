@@ -32,6 +32,11 @@ static class AccessibleName
     private const uint OBJID_CLIENT = 0xFFFFFFFC;
     private const uint CHILDID_SELF = 0;
 
+    // Enfants du proxy MSAA d'un Up-down vertical (msctls_updown32) : 1 = flèche du haut,
+    // 2 = flèche du bas. Windows les nomme « Plus » et « Moins » (« More », « Less »).
+    public const uint UpDownIncrease = 1;
+    public const uint UpDownDecrease = 2;
+
     // IAccPropServices (hérite IUnknown : 0 = QueryInterface, 1 = AddRef, 2 = Release) :
     // 3 = SetPropValue, 4 = SetPropServer, 5 = ClearProps, 6 = SetHwndProp, 7 = SetHwndPropStr.
     private const int VT_Release = 2;
@@ -52,7 +57,16 @@ static class AccessibleName
     /// Pose le nom accessible de <paramref name="hwnd"/>. Rend faux, sans lever ni journaliser,
     /// si COM ou oleacc refusent : le contrôle garde alors son texte pour nom, l'état d'avant.
     /// </summary>
-    public static bool TrySet(IntPtr hwnd, string name)
+    public static bool TrySet(IntPtr hwnd, string name) => TrySet(hwnd, name, CHILDID_SELF);
+
+    /// <summary>
+    /// Même chose pour un élément enfant, que le proxy MSAA du contrôle expose sans HWND à
+    /// lui. Un Up-down expose un « spinner » sans nom et deux boutons enfants que Windows
+    /// nomme « Plus » et « Moins », sans dire quel champ ils changent. Mesuré le 2026-09-29
+    /// sur Windows 11 26200 par une sonde hors dépôt : get_accName(1 et 2) et le Name UI
+    /// Automation des deux boutons, vue brute comme vue des contrôles, rendent le nom posé.
+    /// </summary>
+    public static bool TrySet(IntPtr hwnd, string name, uint childId)
     {
         if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(name)) return false;
         IntPtr services = IntPtr.Zero;
@@ -65,7 +79,7 @@ static class AccessibleName
                 return false;
             var setHwndPropStr = Marshal.GetDelegateForFunctionPointer<SetHwndPropStrDelegate>(
                 VTableSlot(services, VT_SetHwndPropStr));
-            return setHwndPropStr(services, hwnd, OBJID_CLIENT, CHILDID_SELF, PropIdAccName, name) == 0;
+            return setHwndPropStr(services, hwnd, OBJID_CLIENT, childId, PropIdAccName, name) == 0;
         }
         catch (Exception ex) when (ex is ExternalException or MarshalDirectiveException
             or EntryPointNotFoundException or DllNotFoundException)

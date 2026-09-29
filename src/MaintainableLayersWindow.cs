@@ -190,6 +190,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
         UpdateEnabledState();
     }
 
+    /// <summary>Boîte modale de Windows. Les témoins la remplacent : aucun test n'ouvre de
+    /// vraie boîte sur le poste.</summary>
+    internal static Func<IntPtr, string, string, uint, int> ShowMessageBox = Win32.MessageBoxW;
+
     private void SaveToConfig()
     {
         bool wasEnabled = ConfigManager.MaintainableLayersEnabled;
@@ -209,7 +213,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
         if (enabled && !wasEnabled)
         {
-            Win32.MessageBoxW(_hWnd, L.Layers_ActivatedBody, ProductIdentity.DisplayName, 0x40);
+            ShowMessageBox(_hWnd, L.Layers_ActivatedBody, ProductIdentity.DisplayName, 0x40);
         }
     }
 
