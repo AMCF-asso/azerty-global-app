@@ -42,7 +42,7 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 
 ### 3.0 Revue des images du banc (sur l’hôte, 10 min)
 
-Artefact `captures-<12>` du workflow « Captures des fenêtres » sur le commit du candidat final : pousser la branche `captures/<sha complet>`, puis la supprimer une fois l’artefact récupéré. Depuis le 28/09, le banc rend par défaut 96, 120, 144, 168 et 192 DPI (100 à 200 %), en FR et en EN ; nom des images : `<sujet>-<fr|en>-<échelle>.png`. Le banc rend sans rien affirmer : ces lignes se jugent à l’œil. Il simule le DPI par `WM_DPICHANGED` sur un runner à 96 DPI, d’où le contrôle réel de R64b.
+Artefact `captures-<12>` du workflow « Captures des fenêtres » sur le commit du candidat final : le lancer à la main par `gh workflow run captures.yml -R AMCF-asso/azerty-global-app -f ref=<sha>` (sha complet ou abrégé, branche ou tag). Un commit absent du dépôt se pousse d’abord sur `captures/<sha>`, qui ne déclenche plus rien, et cette branche se supprime une fois l’artefact récupéré. Depuis le 28/09, le banc rend par défaut 96, 120, 144, 168 et 192 DPI (100 à 200 %), en FR et en EN ; nom des images : `<sujet>-<fr|en>-<échelle>.png`. Le banc rend sans rien affirmer : ces lignes se jugent à l’œil. Il simule le DPI par `WM_DPICHANGED` sur un runner à 96 DPI, d’où le contrôle réel de R64b.
 
 - [ ] **R12** — `tuto-ex2-etape1`, `tuto-ex6-etape1`, `tuto-ex6-etape2` → surlignage direct ; étape 1 en orange avec la pastille « 1 », étape 2 en vert avec la pastille « 2 ». Logique : `TutorielClavierTests.L_etape_1_se_dit_en_orange_avec_sa_pastille`. (L9)
 - [ ] **R13** — `tuto-ex1-verrmaj`, `tuto-ex2-espace` → Verr. Maj. pleine. Logique : `GuidageTests.Les_exercices_1_et_2_gardent_Verr_Maj_surlignee`. (L9)
