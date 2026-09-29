@@ -69,6 +69,12 @@ dotnet test src/TypingEngine.Windows.Tests
 dotnet test src/TypingEngine.Core.Tests
 ```
 
+`scripts/verify.ps1` rejoue en une commande les étapes bloquantes de la CI exécutables sous Windows (contrôles Python, publish x64 et ARM64, trois suites de tests) ; la CI appelle ce même script étape par étape. Le hook `.githooks/pre-push` le lance avant chaque push, puis `actionlint` s’il est installé. Activation, une fois par clone :
+
+```bash
+git config core.hooksPath .githooks
+```
+
 La suite comprend des tests applicatifs, Windows et portables. Les effectifs et résultats du candidat courant sont consignés dans [`docs/audit-2026-09-22-v1.3.0/corrections/README.md`](docs/audit-2026-09-22-v1.3.0/corrections/README.md). L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
