@@ -20,6 +20,12 @@ class BinaryHardeningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.validate_report({})
 
+    def test_plusieurs_analyses_dans_un_fichier_refusees(self):
+        report = self.report()
+        report["runs"].append(report["runs"][0])
+        with self.assertRaisesRegex(ValueError, "une seule par fichier"):
+            module.validate_report(report)
+
     def test_analyse_incomplete_refusee_meme_avec_controles_reussis(self):
         with self.assertRaises(ValueError):
             module.validate_report(self.report(successful=False))
