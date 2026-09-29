@@ -1242,10 +1242,15 @@ sealed class SettingsWindow : IDisposable
                     case IDC_LINK_RESET:
                         if (code == 0)
                         {
-                            int confirmResult = Win32.MessageBoxW(_hWnd,
+                            int confirmResult = ShowMessageBox(_hWnd,
                                 L.Settings_ConfirmResetShortcuts,
                                 L.Settings_WindowTitle,
                                 0x4 | 0x20); // MB_YESNO | MB_ICONQUESTION
+                            // R45 : cette fenêtre n'est pas une boîte de dialogue. À la
+                            // fermeture de la confirmation, Windows la réactive et
+                            // DefWindowProc met le focus sur la fenêtre elle-même : rien
+                            // n'était plus annoncé. Le rendre au bouton, Oui comme Non.
+                            Win32.SetFocus(_hWndLinkReset);
                             if (confirmResult != 6) break; // IDYES = 6
                             _keyboardVk = 0x51;
                             _searchVk = 0x57;
@@ -1722,6 +1727,10 @@ sealed class SettingsWindow : IDisposable
             Marshal.FreeHGlobal(buffer);
         }
     }
+
+    /// <summary>Boîte modale de Windows. Les témoins la remplacent : aucun test n'ouvre de
+    /// vraie boîte sur le poste.</summary>
+    internal static Func<IntPtr, string, string, uint, int> ShowMessageBox = Win32.MessageBoxW;
 
     private void ShowAutoStartError()
     {
