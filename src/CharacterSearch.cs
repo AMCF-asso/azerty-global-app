@@ -608,7 +608,9 @@ sealed class CharacterSearch : IDisposable
     {
         _hFontChar = Win32.CreateFontW(-Scale(24), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
         _hFontName = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontMethod = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        // Hors rampe, décision d'Antoine sur les planches du lot visuel : la méthode de frappe
+        // est l'information que l'on vient chercher, elle garde ses 18 px semi-gras d'avant.
+        _hFontMethod = Win32.CreateFontW(-Scale(18), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontFooter = Win32.CreateFontW(-Scale(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontPlaceholder = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 1, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontEdit = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
