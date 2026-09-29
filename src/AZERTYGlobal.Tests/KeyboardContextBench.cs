@@ -92,6 +92,9 @@ public partial class KeyboardContextBench
                             module, lesson, withHint: true, shift: false, altGr: false)));
                     }
 
+                    // Leçons : la surface de frappe unique, deux variantes (lot Leçons).
+                    AddLessonSurfaceStates(attempts, target, layout, mapper, hook);
+
                     foreach (var (name, run) in attempts)
                     {
                         try
