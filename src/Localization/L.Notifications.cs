@@ -13,6 +13,12 @@ internal static partial class L
     // nomme un champ par l'étiquette qui le précède.
     public static string Pause_Hours => T("Heures", "Hours");
     public static string Pause_Minutes => T("Minutes", "Minutes");
+    // Noms accessibles des flèches Up-down : Windows les nomme « Plus » et « Moins »,
+    // sans dire quel champ elles changent.
+    public static string Pause_HoursUp => T("Augmenter les heures", "Increase hours");
+    public static string Pause_HoursDown => T("Diminuer les heures", "Decrease hours");
+    public static string Pause_MinutesUp => T("Augmenter les minutes", "Increase minutes");
+    public static string Pause_MinutesDown => T("Diminuer les minutes", "Decrease minutes");
     public static string Pause_UnitHours => T("h", "hr");
     public static string Pause_UnitMinutes => T("min", "min");
     // Moment de la reprise, repris par la fenêtre et par le menu : « à 16 h 12 » ou
