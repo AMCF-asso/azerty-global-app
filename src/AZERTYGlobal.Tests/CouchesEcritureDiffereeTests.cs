@@ -116,6 +116,8 @@ public class CouchesEcritureDiffereeTests : IDisposable
         Assert.True(réglésÀ >= 0);
         Assert.True(écritÀ >= 0, "l'activation n'a pas atteint config.json tant que la boîte était ouverte");
         Assert.InRange(écritÀ - réglésÀ, 350, 3_000); // pas avant le délai de regroupement
+        // Le compteur est incrémenté juste après File.Replace : le fichier peut se voir avant lui.
+        Assert.True(Attendre(() => Écritures() >= avant + 1, 2_000), "le compteur d'écritures n'a pas suivi");
         Assert.Equal(avant + 1, Écritures()); // une seule écriture pour les sept réglages
     }
 
@@ -146,6 +148,8 @@ public class CouchesEcritureDiffereeTests : IDisposable
         Assert.True(ConfigManager.MaintainableLayersEnabled);
         // … et que le fichier suit seul, sans autre geste ni fermeture de l'application.
         Assert.True(Attendre(ActivéSurLeDisque, 6_000), "l'activation n'a jamais atteint config.json");
+        // Le compteur est incrémenté juste après File.Replace : le fichier peut se voir avant lui.
+        Assert.True(Attendre(() => Écritures() >= avant + 1, 2_000), "le compteur d'écritures n'a pas suivi");
         Assert.Equal(avant + 1, Écritures());
     }
 }
