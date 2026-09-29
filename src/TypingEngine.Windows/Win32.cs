@@ -75,11 +75,14 @@ public static class Win32
     [DllImport("user32.dll")]
     public static extern uint MapVirtualKeyExW(uint uCode, uint uMapType, IntPtr dwhkl);
 
-    [DllImport("user32.dll")]
+    // Tampon UTF-16 : sans CharSet.Unicode, le StringBuilder est marshalé en ANSI et relu
+    // dans la page de code du système (« É » ne revient juste qu'en 1252 ; faux en 1251,
+    // 1253, UTF-8 bêta ou en DBCS). ToUnicodeExW n'existe pas : pas de suffixe cherché.
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
         [Out] StringBuilder pwszBuff, int cchBuff, uint wFlags);
 
-    [DllImport("user32.dll")]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     public static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
         [Out] StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
 
