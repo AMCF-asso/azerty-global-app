@@ -12,8 +12,8 @@ namespace AZERTYGlobal.Tests;
 public class SettingsValidationColorTests
 {
     // Couleurs COLORREF de SettingsWindow (CLR_VALID, CLR_INVALID).
-    private const uint Vert = 0x00228B22;
-    private const uint Rouge = 0x000000CC;
+    private const uint Vert = LightTheme.Success;
+    private const uint Rouge = LightTheme.Error;
 
     [Fact]
     public void Un_refus_s_affiche_en_rouge_et_le_message_suivant_en_vert()

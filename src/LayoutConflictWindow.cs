@@ -29,10 +29,10 @@ sealed class LayoutConflictWindow : IDisposable
 
     // Couleurs alignees sur AboutWindow / SettingsWindow
     private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TITLE = LightTheme.Text;
     private const uint CLR_TEXT = LightTheme.Text;
-    private const uint CLR_HIGHLIGHT = LightTheme.Highlight;
-    private const uint CLR_SUBTLE = LightTheme.Muted;
+    private const uint CLR_HIGHLIGHT = LightTheme.Accent;
+    private const uint CLR_SUBTLE = LightTheme.TextSecondary;
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnQuit;
@@ -93,10 +93,10 @@ sealed class LayoutConflictWindow : IDisposable
 
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(14), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(14), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontBold = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void DestroyFonts()
@@ -140,7 +140,7 @@ sealed class LayoutConflictWindow : IDisposable
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
     private void CreateControls()

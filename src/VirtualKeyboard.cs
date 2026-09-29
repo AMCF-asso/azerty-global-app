@@ -12,26 +12,26 @@ sealed class VirtualKeyboard : IDisposable
     // ── Window messages (spécifiques VirtualKeyboard) ─────────────
 
     // ── Colors (COLORREF = 0x00BBGGRR) ───────────────────────────
-    private const uint CLR_BG = 0x00201C18;         // Fond fenêtre (gris très foncé)
-    private const uint CLR_KEY = 0x00484038;         // Touche normale (gris foncé chaud)
-    private const uint CLR_KEY_BORDER = 0x00302820;  // Bordure touche
-    private const uint CLR_KEY_PRESSED = 0x00D4A060;  // Touche enfoncée (bleu clair)
-    private const uint CLR_KEY_CTX = 0x00383028;     // Touche contextuelle (plus foncé)
-    private const uint CLR_LABEL = 0x0080D0F0;        // Label petit en bas (jaune)
-    private const uint CLR_CHAR = 0x00F0EDE8;         // Caractère principal (blanc cassé)
-    private const uint CLR_DK_CHAR = 0x000080FF;      // Caractère touche morte (orange)
-    private const uint CLR_CAPS_BAR = 0x0000A5FF;     // Orange pour Caps Lock
-    private const uint CLR_CTX_TEXT = 0x00B0A898;      // Texte touches contextuelles
+    private const uint CLR_BG = DarkTheme.Background;         // Fond fenêtre (gris très foncé)
+    private const uint CLR_KEY = DarkTheme.Key;
+    private const uint CLR_KEY_BORDER = DarkTheme.Border;
+    private const uint CLR_KEY_PRESSED = DarkTheme.Accent;          // Touche enfoncée : l'accent, texte OnAccent
+    private const uint CLR_KEY_CTX = DarkTheme.KeyContext;
+    private const uint CLR_LABEL = DarkTheme.TextSecondary;         // Nom de la touche sous le résultat
+    private const uint CLR_CHAR = DarkTheme.Text;
+    private const uint CLR_DK_CHAR = DarkTheme.DeadKey;
+    private const uint CLR_CAPS_BAR = DarkTheme.Warning;            // Verr. Maj. actif
+    private const uint CLR_CTX_TEXT = DarkTheme.TextSecondary;
 
     // ── Highlight search (COLORREF = 0x00BBGGRR) ────────────────
-    private const uint CLR_HL_DIRECT = 0x0064C800;      // Vert (méthode directe)
-    private const uint CLR_HL_DIRECT_BG = 0x00284018;   // Fond vert discret
-    private const uint CLR_HL_DK = 0x003232DC;           // Rouge (activation touche morte)
-    private const uint CLR_HL_DK_BG = 0x00282040;        // Fond rouge discret
-    private const uint CLR_HL_STEP1 = 0x0000A5FF;        // Orange (étape 1)
-    private const uint CLR_HL_STEP1_BG = 0x00283020;     // Fond orange discret
-    private const uint CLR_HL_STEP2 = 0x004CB050;        // Vert (étape 2)
-    private const uint CLR_HL_STEP2_BG = 0x00203818;     // Fond vert discret
+    private const uint CLR_HL_DIRECT = DarkTheme.HighlightDirect;      // Vert (méthode directe)
+    private const uint CLR_HL_DIRECT_BG = DarkTheme.HighlightDirectFill;   // Fond vert discret
+    private const uint CLR_HL_DK = DarkTheme.DeadKey;                  // Activation d'une touche morte
+    private const uint CLR_HL_DK_BG = DarkTheme.DeadKeyFill;
+    private const uint CLR_HL_STEP1 = DarkTheme.HighlightStep1;        // Orange (étape 1)
+    private const uint CLR_HL_STEP1_BG = DarkTheme.HighlightStep1Fill;     // Fond orange discret
+    private const uint CLR_HL_STEP2 = DarkTheme.HighlightStep2;        // Vert (étape 2)
+    private const uint CLR_HL_STEP2_BG = DarkTheme.HighlightStep2Fill;     // Fond vert discret
 
     // ── Mapping Web API key code → scancode ─────────────────────
     internal static readonly Dictionary<string, uint> KeyCodeToScancode = new()
@@ -355,6 +355,7 @@ sealed class VirtualKeyboard : IDisposable
             dwStyle,
             posX, posY, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
+        NativeWindow.ApplyFrame(_hWnd, dark: true);
 
         CreateTooltip();
         ConfigManager.WindowBoundsCleared += OnWindowBoundsCleared;
@@ -754,7 +755,7 @@ sealed class VirtualKeyboard : IDisposable
         Win32.DeleteObject(brush);
 
         Win32.SelectObject(hdc, _hBadgeFont != IntPtr.Zero ? _hBadgeFont : _hCtxFont);
-        Win32.SetTextColor(hdc, 0x00FFFFFF);
+        Win32.SetTextColor(hdc, DarkTheme.OnAccent);
         Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
@@ -1093,7 +1094,8 @@ sealed class VirtualKeyboard : IDisposable
             {
                 // Touche contextuelle : label centré
                 // Texte blanc sur fond coloré (CapsLock, pressé, ou highlight), sinon couleur normale
-                uint ctxTextColor = (vk.Label == "Verr. Maj." && _capsLockActive) || isPressed || isHighlighted ? CLR_CHAR : CLR_CTX_TEXT;
+                uint ctxTextColor = isPressed ? DarkTheme.OnAccent
+                    : (vk.Label == "Verr. Maj." && _capsLockActive) || isHighlighted ? CLR_CHAR : CLR_CTX_TEXT;
                 // Pour Entrée ISO, centrer le label dans la colonne droite (partie commune du L)
                 int ctxLeft = isIsoEnter ? offsetX + (int)((vk.X + (vk.W - 1.25f)) * scale) : kx;
                 var ctxRect = new Win32.RECT { left = ctxLeft, top = ky, right = kx + kw, bottom = ky + kh };
@@ -1129,7 +1131,7 @@ sealed class VirtualKeyboard : IDisposable
                     var charRect = new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = ky + kh - bottomOffset };
                     Win32.SelectObject(hdc, showLabel && _hActiveDeadKeyCharFont != IntPtr.Zero ? _hActiveDeadKeyCharFont : hCharFont);
                     // Texte sombre sur fond clair quand la touche est pressée
-                    uint charColor = isPressed ? 0x00201C18 : (isDkOutput ? CLR_DK_CHAR : CLR_CHAR);
+                    uint charColor = isPressed ? DarkTheme.OnAccent : (isDkOutput ? CLR_DK_CHAR : CLR_CHAR);
                     Win32.SetTextColor(hdc, charColor);
                     displayChar = DisplayGlyph.ForStandaloneMark(displayChar);
                     Win32.DrawTextW(hdc, displayChar, displayChar.Length, ref charRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP);

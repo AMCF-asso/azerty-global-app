@@ -23,19 +23,19 @@ sealed class CharacterSearch : IDisposable
     private const int IDC_TIMER_COPYFEEDBACK = 3002;
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────
-    private const uint CLR_BG = 0x00282828;           // Fond sombre
-    private const uint CLR_SEARCH_BG = 0x00323232;    // Fond champ recherche
-    private const uint CLR_SEPARATOR = 0x00404040;    // Séparateur
-    private const uint CLR_CHAR = 0x00FF9040;          // Caractère (bleu vif)
-    private const uint CLR_NAME = 0x00DDDDDD;          // Nom (gris clair)
-    private const uint CLR_METHOD_ALTGR = 0x00E8A848;  // AltGr (jaune doré)
-    private const uint CLR_METHOD_MAJ = 0x006EAAF0;    // Maj (bleu ciel)
-    private const uint CLR_METHOD_SEP = 0x00808080;    // + et "puis" (gris)
-    private const uint CLR_METHOD_KEY = 0x00FFFFFF;    // Noms de touches (blanc)
-    private const uint CLR_FOOTER = 0x00AAAAAA;        // Footer (gris clair)
-    private const uint CLR_SELECTED = 0x00483828;      // Fond sélectionné (brun chaud)
-    private const uint CLR_COPIED = 0x0060D060;        // Vert "Copié !"
-    private const uint CLR_HINT = 0x00777777;          // Texte d'aide (gris moyen)
+    private const uint CLR_BG = DarkTheme.Background;           // Fond sombre
+    private const uint CLR_SEARCH_BG = DarkTheme.Surface;    // Fond champ recherche
+    private const uint CLR_SEPARATOR = DarkTheme.Border;    // Séparateur
+    private const uint CLR_CHAR = DarkTheme.AccentText;          // Caractère (bleu vif)
+    private const uint CLR_NAME = DarkTheme.Text;          // Nom (gris clair)
+    private const uint CLR_METHOD_ALTGR = DarkTheme.AltGr;  // AltGr (jaune doré)
+    private const uint CLR_METHOD_MAJ = DarkTheme.Shift;    // Maj (bleu ciel)
+    private const uint CLR_METHOD_SEP = DarkTheme.TextTertiary;    // + et "puis" (gris)
+    private const uint CLR_METHOD_KEY = DarkTheme.Text;    // Noms de touches (blanc)
+    private const uint CLR_FOOTER = DarkTheme.TextSecondary;        // Footer (gris clair)
+    private const uint CLR_SELECTED = DarkTheme.Selected;      // Fond sélectionné (brun chaud)
+    private const uint CLR_COPIED = DarkTheme.Success;        // Vert "Copié !"
+    private const uint CLR_HINT = DarkTheme.TextTertiary;          // Texte d'aide (gris moyen)
 
     // ── Dimensions (base 96 DPI) ─────────────────────────────────
     private const int BASE_WIN_W = 520;
@@ -564,7 +564,7 @@ sealed class CharacterSearch : IDisposable
             x, y, BASE_WIN_W, BASE_WIN_H_MIN,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: true);
 
         // Récupérer le DPI
         _dpiScale = Win32.GetDpiForWindow(_hWnd) / 96.0f;
@@ -607,11 +607,13 @@ sealed class CharacterSearch : IDisposable
     private void CreateFonts()
     {
         _hFontChar = Win32.CreateFontW(-Scale(24), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
-        _hFontName = Win32.CreateFontW(-Scale(15), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontMethod = Win32.CreateFontW(-Scale(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontFooter = Win32.CreateFontW(-Scale(16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontPlaceholder = Win32.CreateFontW(-Scale(16), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontEdit = Win32.CreateFontW(-Scale(18), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontName = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        // Hors rampe, décision d'Antoine sur les planches du lot visuel : la méthode de frappe
+        // est l'information que l'on vient chercher, elle garde ses 18 px semi-gras d'avant.
+        _hFontMethod = Win32.CreateFontW(-Scale(18), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontFooter = Win32.CreateFontW(-Scale(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontPlaceholder = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 1, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontEdit = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void DestroyFonts()
@@ -947,7 +949,7 @@ sealed class CharacterSearch : IDisposable
             {
                 var hdc = Win32.GetDC(hWnd);
                 Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-                Win32.SetTextColor(hdc, 0x00999999); // gris clair
+                Win32.SetTextColor(hdc, DarkTheme.TextTertiary);
                 Win32.SelectObject(hdc, _hFontPlaceholder);
                 Win32.GetClientRect(hWnd, out var editRect);
                 editRect.left += Scale(4);

@@ -13,9 +13,9 @@ internal sealed class ToggleNotification : IDisposable
     private const int BASE_W = 240;
     private const int BASE_H = 56;
 
-    private const uint CLR_BG = 0x00302D2A;          // Fond sombre BGR ≈ #2A2D30
-    private const uint CLR_ACTIVATED = 0x005EC522;   // Vert BGR ≈ #22C55E
-    private const uint CLR_DEACTIVATED = 0x009A9A9A; // Gris BGR
+    private const uint CLR_BG = DarkTheme.Surface;
+    private const uint CLR_ACTIVATED = DarkTheme.Success;
+    private const uint CLR_DEACTIVATED = DarkTheme.TextSecondary;
 
     private IntPtr _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -42,7 +42,7 @@ internal sealed class ToggleNotification : IDisposable
 
     private void CreateFonts()
     {
-        _hFontText = Win32.CreateFontW(-S(15), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void CreateMainWindow()
