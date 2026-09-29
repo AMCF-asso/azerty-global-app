@@ -32,13 +32,13 @@ sealed class UsageStatsWindow : IDisposable
 
     // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
     private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TITLE = LightTheme.Text;
     private const uint CLR_TEXT = LightTheme.Text;
-    private const uint CLR_MUTED = LightTheme.Faint;
+    private const uint CLR_MUTED = LightTheme.TextSecondary;
     private const uint CLR_ACCENT = LightTheme.Accent;
-    private const uint CLR_SEPARATOR = LightTheme.Separator;
+    private const uint CLR_SEPARATOR = LightTheme.Border;
     private const uint CLR_LINK = LightTheme.Accent;
-    private const uint CLR_LINK_HOVER = LightTheme.Highlight;
+    private const uint CLR_LINK_HOVER = LightTheme.AccentHover;
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnCopy;
@@ -102,12 +102,12 @@ sealed class UsageStatsWindow : IDisposable
 
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(20), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontMuted = Win32.CreateFontW(-S(12), 0, 0, 0, 400, 1, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(14), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLink = Win32.CreateFontW(-S(13), 0, 0, 0, 600, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontMuted = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 1, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontBold = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontLink = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 1, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void DestroyFonts()
@@ -154,7 +154,7 @@ sealed class UsageStatsWindow : IDisposable
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
     private void CreateControls()

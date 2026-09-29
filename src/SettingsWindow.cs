@@ -9,7 +9,7 @@ sealed class SettingsWindow : IDisposable
 
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
-    private const uint CLR_KEY_BORDER_FOCUS = LightTheme.Highlight;
+    private const uint CLR_KEY_BORDER_FOCUS = LightTheme.Accent;
     private static string ShortcutCaptureHint => L.Settings_ShortcutCaptureHint;
 
     private const int IDC_TAB_STRIP = 3120;
@@ -46,24 +46,25 @@ sealed class SettingsWindow : IDisposable
     // 240 → 300 le 2026-07-16 (smoke test) : « Virtual keyboard » était tronqué en EN
     // et la fenêtre était disproportionnée (deux fois plus haute que large).
     // 470 → 680 le 2026-07-30 : section « Apps suspendues » + opt-in Défi du jour (v1.2.0).
-    private const int BASE_WIN_W = 300;
+    // 300 → 340 le 2026-09-28 (lot visuel 1.3.0) : le corps passe de 11 à 14 px.
+    private const int BASE_WIN_W = 340;
     private const int BASE_WIN_H = 680;
 
     private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Title;
+    private const uint CLR_TITLE = LightTheme.Text;
     private const uint CLR_TEXT = LightTheme.Text;
-    private const uint CLR_MUTED = LightTheme.Muted;
-    private const uint CLR_VERSION = LightTheme.Faint;
-    private const uint CLR_PANEL_BG = LightTheme.Panel;
-    private const uint CLR_PANEL_BORDER = LightTheme.PanelBorder;
+    private const uint CLR_MUTED = LightTheme.TextSecondary;
+    private const uint CLR_VERSION = LightTheme.TextSecondary;
+    private const uint CLR_PANEL_BG = LightTheme.Card;
+    private const uint CLR_PANEL_BORDER = LightTheme.Border;
     private const uint CLR_LINK = LightTheme.Accent;
-    private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Highlight;
-    private const uint CLR_VALID = 0x00228B22;
-    private const uint CLR_INVALID = 0x000000CC;
-    private const uint CLR_KEY_BG = 0x00FAFAFA;
-    private const uint CLR_KEY_BORDER = 0x00CBCBCB;
-    private const uint CLR_KEY_BORDER_INVALID = 0x00A8A8FF;
-    private const uint CLR_SEPARATOR = LightTheme.Separator;
+    private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Accent;
+    private const uint CLR_VALID = LightTheme.Success;
+    private const uint CLR_INVALID = LightTheme.Error;
+    private const uint CLR_KEY_BG = LightTheme.Field;
+    private const uint CLR_KEY_BORDER = LightTheme.ControlBorder;
+    private const uint CLR_KEY_BORDER_INVALID = LightTheme.Error;
+    private const uint CLR_SEPARATOR = LightTheme.Border;
 
     private struct LayoutInfo
     {
@@ -307,15 +308,15 @@ sealed class SettingsWindow : IDisposable
     private void CreateFonts()
     {
         _metrics = null;
-        _hFontTitle = Win32.CreateFontW(-S(18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontVersion = Win32.CreateFontW(-S(13), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontPanelTitle = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontText = Win32.CreateFontW(-S(11), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontBold = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontEdit = Win32.CreateFontW(-S(13), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontLinkStrong = Win32.CreateFontW(-S(11), 0, 0, 0, 700, 0, 1, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontSmall = Win32.CreateFontW(-S(9), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-        _hFontButton = Win32.CreateFontW(-S(11), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontVersion = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontPanelTitle = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontBold = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontEdit = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontLinkStrong = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 1, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontSmall = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void DestroyFonts()
@@ -369,7 +370,7 @@ sealed class SettingsWindow : IDisposable
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd, EnsureFocusVisible);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
     /// <summary>
@@ -1951,7 +1952,7 @@ sealed class SettingsWindow : IDisposable
             left = layout.HeaderTitleX,
             top = layout.HeaderTitleY,
             right = titleRight,
-            bottom = layout.HeaderTitleY + S(20)
+            bottom = layout.HeaderTitleY + Math.Max(S(20), titleHeight)
         };
         Win32.DrawTextW(hdc, title, -1, ref titleRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
@@ -2030,7 +2031,7 @@ sealed class SettingsWindow : IDisposable
     {
         Win32.SelectObject(hdc, _hFontPanelTitle);
         Win32.SetTextColor(hdc, CLR_LINK);
-        var rect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + S(20) };
+        var rect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + Math.Max(S(20), Metrics.PanelTitle) };
         Win32.DrawTextW(hdc, title, -1, ref rect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
 
@@ -2045,9 +2046,9 @@ sealed class SettingsWindow : IDisposable
     {
         return new[]
         {
-            ("Ctrl", CLR_INLINE_HIGHLIGHT, _hFontBold),
+            ("Ctrl", CLR_INLINE_HIGHLIGHT, _hFontEdit),
             (" + ", CLR_TEXT, _hFontText),
-            (L.Settings_ShortcutModifier2, CLR_INLINE_HIGHLIGHT, _hFontBold),
+            (L.Settings_ShortcutModifier2, CLR_INLINE_HIGHLIGHT, _hFontEdit),
             (" + ", CLR_TEXT, _hFontText)
         };
     }

@@ -94,7 +94,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         // écran, la fenêtre laissait voir la scène et ses contrôles en double (constaté
         // au smoke v1.2.0 du 2026-08-24, sous Trackmania).
         _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
-        Win32.EnableDarkTitleBar(_hWnd);
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
 
         // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
         // l'accueille. Taille, positions et polices en découlent : elles étaient fixes en
@@ -103,7 +103,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         NativeWindow.FitToDpi(_hWnd, BASE_CLIENT_W, BASE_CLIENT_H, _dpi, Style, 0, work);
         CreateFonts();
 
-        CreateStatic(instance, L.Layers_Title, 24, 20, 470, 26, _hFontTitle);
+        CreateStatic(instance, L.Layers_Title, 24, 18, 480, 30, _hFontTitle);
         // Le second groupe de phrases wrappe sur deux lignes dans 470 px :
         // réserver trois lignes pleines pour ne rien tronquer.
         CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 66, _hFont);
@@ -153,9 +153,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
     private void CreateFonts()
     {
-        _hFont = Win32.CreateFontW(S(-16), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFont = Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         // -18 : le titre complet tient sur une seule ligne dans 470 px.
-        _hFontTitle = Win32.CreateFontW(S(-18), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
+        _hFontTitle = Win32.CreateFontW(S(-TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     /// <summary>D1 : retient la géométrie de référence du contrôle et l'applique au DPI courant.</summary>

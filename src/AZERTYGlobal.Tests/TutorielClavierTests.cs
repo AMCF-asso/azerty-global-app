@@ -15,14 +15,14 @@ namespace AZERTYGlobal.Tests;
 public class TutorielClavierTests : IDisposable
 {
     // Couleurs COLORREF de KeyboardRenderer.
-    private const uint Bordure = 0x00555555;
-    private const uint FondContexte = 0x002D2D2D;
-    private const uint FondTerne = 0x002A2A2A;
-    private const uint ModificateurActif = 0x009A5A1A;
-    private const uint DirectContour = 0x0064C800;
-    private const uint DirectFond = 0x00284018;
-    private const uint Etape1Contour = 0x0000A5FF;
-    private const uint Etape2Contour = 0x004CB050;
+    private const uint Bordure = DarkTheme.Border;
+    private const uint FondContexte = DarkTheme.KeyContext;
+    private const uint FondTerne = DarkTheme.KeyDisabled;
+    private const uint ModificateurActif = DarkTheme.KeyPressed;
+    private const uint DirectContour = DarkTheme.HighlightDirect;
+    private const uint DirectFond = DarkTheme.HighlightDirectFill;
+    private const uint Etape1Contour = DarkTheme.HighlightStep1;
+    private const uint Etape2Contour = DarkTheme.HighlightStep2;
 
     private const uint SC_Q = 0x10; // touche A de l'AZERTY
     private const uint SC_RETOUR = 0x0E;
@@ -161,7 +161,7 @@ public class TutorielClavierTests : IDisposable
             int gauche = int.MaxValue, droite = -1;
             for (int x = (cle.left + cle.right) / 2; x < cle.right - 1; x++)
                 for (int y = (cle.top + cle.bottom) / 2; y < cle.bottom - 1; y++)
-                    if (GetPixel(dc, x, y) != 0x003A3A3A)
+                    if (GetPixel(dc, x, y) != DarkTheme.Key)
                     {
                         gauche = Math.Min(gauche, x);
                         droite = Math.Max(droite, x);

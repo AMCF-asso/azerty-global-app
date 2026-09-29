@@ -57,27 +57,27 @@ internal readonly record struct KeyboardHitTestResult(uint Scancode, string Labe
 
 internal static class KeyboardRenderer
 {
-    private const uint CLR_KEY = 0x003A3A3A;
-    private const uint CLR_KEY_CONTEXT = 0x002D2D2D;
-    private const uint CLR_KEY_BORDER = 0x00555555;
-    private const uint CLR_KEY_PRESSED = 0x006A4A2A;
-    private const uint CLR_KEY_DISABLED = 0x002A2A2A;
-    private const uint CLR_MOD_ACTIVE = 0x009A5A1A;
-    private const uint CLR_KEY_HIGHLIGHT_BORDER = 0x0064C800;
-    private const uint CLR_CTX_TEXT = 0x00E0E0E0;
-    private const uint CLR_KEY_LABEL = 0x0080D0F0;
-    private const uint CLR_CHAR_ACTIVE_BLUE = 0x00FFB366;
-    private const uint CLR_CHAR_DIM = 0x00999999;
-    private const uint CLR_DK_CHAR = 0x006666FF;
-    private const uint CLR_DK_ACTIVE_TEXT = 0x000080FF;
-    private const uint CLR_CAPS_BAR = 0x0000A5FF;
+    private const uint CLR_KEY = DarkTheme.Key;
+    private const uint CLR_KEY_CONTEXT = DarkTheme.KeyContext;
+    private const uint CLR_KEY_BORDER = DarkTheme.Border;
+    private const uint CLR_KEY_PRESSED = DarkTheme.KeyPressed;
+    private const uint CLR_KEY_DISABLED = DarkTheme.KeyDisabled;
+    private const uint CLR_MOD_ACTIVE = DarkTheme.KeyPressed;
+    private const uint CLR_KEY_HIGHLIGHT_BORDER = DarkTheme.HighlightDirect;
+    private const uint CLR_CTX_TEXT = DarkTheme.TextSecondary;
+    private const uint CLR_KEY_LABEL = DarkTheme.TextSecondary;
+    private const uint CLR_CHAR_ACTIVE_BLUE = DarkTheme.Accent;
+    private const uint CLR_CHAR_DIM = DarkTheme.TextTertiary;
+    private const uint CLR_DK_CHAR = DarkTheme.DeadKey;
+    private const uint CLR_DK_ACTIVE_TEXT = DarkTheme.Warning;
+    private const uint CLR_CAPS_BAR = DarkTheme.Warning;
 
     // Surlignage du tutoriel, contour puis fond : direct vert, étape 1 orange, étape 2 vert.
-    private const uint CLR_HL_DIRECT_BG = 0x00284018;
-    private const uint CLR_HL_STEP1 = 0x0000A5FF;
-    private const uint CLR_HL_STEP1_BG = 0x00283020;
-    private const uint CLR_HL_STEP2 = 0x004CB050;
-    private const uint CLR_HL_STEP2_BG = 0x00203818;
+    private const uint CLR_HL_DIRECT_BG = DarkTheme.HighlightDirectFill;
+    private const uint CLR_HL_STEP1 = DarkTheme.HighlightStep1;
+    private const uint CLR_HL_STEP1_BG = DarkTheme.HighlightStep1Fill;
+    private const uint CLR_HL_STEP2 = DarkTheme.HighlightStep2;
+    private const uint CLR_HL_STEP2_BG = DarkTheme.HighlightStep2Fill;
 
     private static readonly HashSet<uint> LetterKeyScancodes = new()
     {
@@ -474,7 +474,7 @@ internal static class KeyboardRenderer
 
         string text = kind == KeyHighlight.Step1 ? "1" : "2";
         var oldFont = Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, 0x00FFFFFF);
+        Win32.SetTextColor(hdc, DarkTheme.OnAccent);
         Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         Win32.SelectObject(hdc, oldFont);
     }
@@ -521,7 +521,7 @@ internal static class KeyboardRenderer
             labelRect.left = rect.right - (int)((rect.right - rect.left) * (1.25f / key.W));
 
         Win32.SelectObject(hdc, hFont);
-        Win32.SetTextColor(hdc, disabled ? 0x00606060u : CLR_CTX_TEXT);
+        Win32.SetTextColor(hdc, disabled ? DarkTheme.TextDisabled : CLR_CTX_TEXT);
         // Le tutoriel ne raccourcit pas ses libellés.
         uint flags = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX
             | (tutorial ? 0u : Win32.DT_END_ELLIPSIS);

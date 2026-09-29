@@ -9,7 +9,8 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Banc des fenêtres qui portent un clavier : Leçons (trois états de modifieur et les deux cas
 /// d'indice), clavier virtuel, mini-tutoriel de l'accueil, et une nappe du moteur de rendu
-/// seul. Une image par sujet, par langue et par échelle. Les états du tutoriel et les indices
+/// seul ; plus la Recherche, l'autre fenêtre sombre (lot visuel 1.3.0). Une image par sujet,
+/// par langue et par échelle. Les états du tutoriel et les indices
 /// de touche morte armée sont dans <c>KeyboardContextBench.Tutoriel.cs</c>.
 ///
 /// Le mapper repose sur <see cref="MockWin32Api"/> : toute injection y est absorbée, et
@@ -72,6 +73,7 @@ public partial class KeyboardContextBench
                         ("clavier-virtuel", () => CaptureVirtualKeyboard(target, layout)),
                         ("tutoriel", () => CaptureLearningModule(target, layout, mapper, hook)),
                         ("clavier-nappe", () => RenderPlank(target, layout)),
+                        ("recherche", () => CaptureSearch(target)),
                     };
 
                     // Leçons : les trois états de modifieur, sans indice.
@@ -201,6 +203,34 @@ public partial class KeyboardContextBench
         }
     }
 
+    /// <summary>
+    /// Recherche de caractère, vide puis sur une requête. <c>Show()</c> n'est pas appelé : il
+    /// prendrait le premier plan, et la fenêtre se masque dès qu'elle le perd. La requête passe
+    /// par le champ, comme une frappe (EN_CHANGE), puis la fenêtre s'affiche sans activation :
+    /// pas de curseur clignotant, et aucune insertion ne peut partir.
+    /// </summary>
+    private static void CaptureSearch(BancCapture.Target target)
+    {
+        var search = new CharacterSearch(new TextInsertionService(_ => default, _ => false, () => false));
+        try
+        {
+            IntPtr hwnd = BancCapture.Handle(search);
+            if (hwnd == IntPtr.Zero)
+                throw new InvalidOperationException("la Recherche n'a pas créé de fenêtre");
+            Win32.ShowWindow(hwnd, 4); // SW_SHOWNOACTIVATE
+            int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
+            BancCapture.Call(search, "ResizeToFitResults");
+            target.Shoot(hwnd, "recherche-vide", windowDpi);
+
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(search, "_hEdit"), L.IsEnglish ? "acute" : "aigu");
+            target.Shoot(hwnd, "recherche", windowDpi);
+        }
+        finally
+        {
+            BancCapture.Teardown(search);
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // Nappe du moteur de rendu
     // ═══════════════════════════════════════════════════════════════
@@ -208,8 +238,8 @@ public partial class KeyboardContextBench
     private const int PlankMargin = 28;
     private const int PlankCaption = 30;
     private const int PlankKeyboardWidth = 1100;
-    private const uint PlankBackground = 0x00201C18; // fond de la fenêtre Leçons
-    private const uint PlankCaptionColor = 0x00C8C8C8;
+    private const uint PlankBackground = DarkTheme.Background; // fond de la fenêtre Leçons
+    private const uint PlankCaptionColor = DarkTheme.TextSecondary;
 
     private static readonly (string Caption, Func<KeyboardRenderState> State)[] PlankBands =
     {
