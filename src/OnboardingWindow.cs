@@ -283,9 +283,9 @@ sealed class OnboardingWindow : IDisposable
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SetWindowTextW(_hWndLinkDiscord, L.Onboarding_LinkDiscord);
-        Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
-        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -415,14 +415,14 @@ sealed class OnboardingWindow : IDisposable
             Win32.WS_CHILD | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_AUTOSTART, hInstance, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkAutoStart, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
         RefreshAutoStartCheckbox();
 
         _hWndChkDontShow = Win32.CreateWindowExW(0, "BUTTON", L.Onboarding_ChkDontShow,
             Win32.WS_CHILD | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(280), S(26),
             _hWnd, (IntPtr)IDC_CHK_DONT_SHOW, hInstance, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
 
         // Opt-in Défi du jour (v1.2.0) — décochée par défaut ; resynchronisée sur
         // ConfigManager.TrainingEnabled à chaque affichage de l'étape 3 (cf. UpdateStepVisibility),
@@ -431,7 +431,7 @@ sealed class OnboardingWindow : IDisposable
             Win32.WS_CHILD | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
             margin, y, S(320), S(26),
             _hWnd, (IntPtr)IDC_CHK_TRAINING, hInstance, IntPtr.Zero);
-        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkTraining, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
 
         // K6 (accessibilité 1.3.0) : le drapeau de langue n'était qu'une zone GDI du header,
         // hors d'atteinte au clavier. Ce bouton se pose dessus (SyncFlagButton), se tabule,

@@ -2046,9 +2046,9 @@ sealed class SettingsWindow : IDisposable
     {
         return new[]
         {
-            ("Ctrl", CLR_INLINE_HIGHLIGHT, _hFontBold),
+            ("Ctrl", CLR_INLINE_HIGHLIGHT, _hFontEdit),
             (" + ", CLR_TEXT, _hFontText),
-            (L.Settings_ShortcutModifier2, CLR_INLINE_HIGHLIGHT, _hFontBold),
+            (L.Settings_ShortcutModifier2, CLR_INLINE_HIGHLIGHT, _hFontEdit),
             (" + ", CLR_TEXT, _hFontText)
         };
     }

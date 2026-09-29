@@ -72,7 +72,7 @@ static class DarkTheme
     /// <summary>Touche de contexte (Tab, Maj, Ctrl…).</summary>
     internal const uint KeyContext = 0x002B2B2B; // #2B2B2B
     /// <summary>Touche enfoncée, modificateur tenu.</summary>
-    internal const uint KeyPressed = 0x006F6142; // #42616F
+    internal const uint KeyPressed = 0x004F442D; // #2D444F
     /// <summary>Touche désactivée (Retour arrière du tutoriel).</summary>
     internal const uint KeyDisabled = 0x00262626; // #262626
     /// <summary>Touche morte : son caractère, et son contour à armer (clavier virtuel).</summary>
