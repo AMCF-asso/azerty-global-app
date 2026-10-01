@@ -125,7 +125,7 @@ Si un toast d’avis est déjà apparu pendant la frappe réelle, c’est l’es
 - [ ] **R53** — Leçons, Mes statistiques, puis remise à zéro → progression et compteurs cohérents. (kit B5)
 - [ ] **R53a** — Initiation, exercice 4 → la ligne se colore à mesure, aucune barre de curseur, la lettre à taper soulignée (apostrophe comprise) ; une faute en strict puis en souple → la faute en rouge, l’attendu dessous. Tab : ligne → boutons → ligne ; une lettre ou un clic rend le cadre à la ligne. (lot surface ; images `lecons-surface-*`)
 - [ ] **R53b** — Loupe de Windows (Windows + +), réglée pour suivre le curseur de texte : en tapant dans les Leçons, puis en mode Libre → la loupe suit la lettre à taper. (lot surface : caret caché, TextPattern2)
-- [ ] **R53c** — Narrateur (Ctrl + Windows + Entrée), Leçons ouvertes → il annonce le champ « Texte à taper » et lit la ligne à la demande ; en mode Libre → « Mode libre ». Pas de blocage ni de lenteur de frappe pendant qu’il tourne. (lot surface : UIA)
+- [ ] **R53c** — Narrateur (Ctrl + Windows + Entrée), Leçons ouvertes → il annonce le champ « Texte à taper » et la consigne, et lit la ligne à la demande ; en mode Libre → « Mode libre ». Tab → chaque bouton annoncé par son nom (« Précédent », « Indice »…), les modules et leçons avec « sélectionné » sur celui affiché ; Espace ou Entrée de Narrateur sur « Paramètres » les ouvre, et un interrupteur y est lu coché ou non. Pas de blocage ni de lenteur de frappe pendant qu’il tourne. (lot surface : UIA)
 
 ### 3.10 Mes statistiques et À propos
 
