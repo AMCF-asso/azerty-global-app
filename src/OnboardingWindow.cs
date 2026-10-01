@@ -200,7 +200,8 @@ sealed class OnboardingWindow : IDisposable
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
-        _dpiScale = dpi / 96f;
+        float screenScale = dpi / 96f;
+        _dpiScale = FittedScale(screenScale);
 
         // GDI+
         var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
@@ -218,19 +219,40 @@ sealed class OnboardingWindow : IDisposable
         _onAppLanguageChanged = _ => OnLanguageChanged();
         ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
 
-        // Corriger le DPI avec le vrai DPI du moniteur où la fenêtre est apparue
-        if (NativeWindow.CorrectedScale(Win32.GetDpiForWindow(_hWnd), _dpiScale) is float windowScale)
+        // Corriger le DPI avec le vrai DPI du moniteur où la fenêtre est apparue, puis le
+        // plafond de sa zone de travail.
+        float windowScale = NativeWindow.CorrectedScale(Win32.GetDpiForWindow(_hWnd), screenScale) ?? screenScale;
+        float fitted = FittedScale(windowScale);
+        if (Math.Abs(fitted - _dpiScale) > 0.001f)
         {
-            _dpiScale = windowScale;
+            _dpiScale = fitted;
             // Mise en page seule : GetDpiForWindow ne lève pas (audit du 25/09, X-04).
             try
             {
                 RecreateFonts();
                 RepositionControls();
                 ResizeWindow();
+                NativeWindow.KeepInWorkArea(_hWnd);
             }
             catch { }
         }
+    }
+
+    /// <summary>
+    /// Plafond de l'Accueil (1.3.0) : l'échelle de l'écran, réduite pour que la fenêtre tienne
+    /// dans la zone de travail de son écran (celui du curseur tant qu'elle n'existe pas). La
+    /// hauteur est fixe : sans lui, les boutons du bas sortaient de l'écran en 1366 × 768 à
+    /// 125 % et en 1920 × 1080 à 175 %.
+    /// </summary>
+    private float FittedScale(float screenScale)
+    {
+        int clientW = (int)(BASE_WIN_W * screenScale * ONBOARDING_UI_SCALE);
+        int clientH = (int)(BASE_WIN_H * screenScale * ONBOARDING_UI_SCALE);
+        var (outerW, outerH) = NativeWindow.OuterSize(clientW, clientH,
+            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST);
+        var work = NativeWindow.WorkArea(_hWnd);
+        return WindowSizing.FitScale(screenScale, clientW, clientH, outerW - clientW, outerH - clientH,
+            work.right - work.left, work.bottom - work.top);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -697,9 +719,16 @@ sealed class OnboardingWindow : IDisposable
 
             case Win32.WM_DPICHANGED:
             {
-                _dpiScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
-                RecreateFonts();
+                float screenScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
                 NativeWindow.MoveToSuggestedRect(_hWnd, lParam);
+                // Après le déplacement : le plafond se prend sur la zone de travail du nouvel écran.
+                _dpiScale = FittedScale(screenScale);
+                RecreateFonts();
+                if (_dpiScale < screenScale)
+                {
+                    ResizeWindow();
+                    NativeWindow.KeepInWorkArea(_hWnd);
+                }
                 RepositionControls();
                 UpdateStepVisibility(); // repositionne btnNext + btnTry selon l'etat (3 etats sur etape 1)
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);

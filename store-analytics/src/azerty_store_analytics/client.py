@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import http.client
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
@@ -15,36 +17,61 @@ from .config import Dataset
 TOKEN_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/token"
 API_BASE = "https://manage.devcenter.microsoft.com/v1.0/my/analytics/"
 
+# Quota (429), délai côté serveur (408) et pannes passagères (5xx) : on réessaie.
+# Toute autre réponse HTTP est une erreur de requête, et la répéter n'y change rien.
+RETRYABLE_HTTP = frozenset({408, 429, 500, 502, 503, 504})
+# Le 2026-09-29 (run 36561088024), `health_detail` a mis plus de 60 s à répondre :
+# `response.read()` a levé TimeoutError, qui n'est pas une URLError, et le jeu a été
+# perdu sans nouvelle tentative. D'où un délai plus large et des erreurs réseau
+# rattrapées quelle que soit leur classe.
+DEFAULT_TIMEOUT = 120
+DEFAULT_RETRIES = 4
+BACKOFF_BASE = 5
+BACKOFF_MAX = 60
+RETRY_AFTER_MAX = 300
+NETWORK_ERRORS = (URLError, TimeoutError, ConnectionError, http.client.HTTPException)
+
 
 class StoreAnalyticsError(RuntimeError):
     pass
 
 
+def backoff_delay(attempt: int, retry_after: str | None = None) -> float:
+    """Attente avant la tentative `attempt + 2` : Retry-After s'il est lisible, sinon exponentielle."""
+    if retry_after and retry_after.strip().isdigit():
+        return float(min(int(retry_after.strip()), RETRY_AFTER_MAX))
+    return float(min(BACKOFF_BASE * 2**attempt, BACKOFF_MAX))
+
+
 def _http_json(
     request: Request,
     *,
-    timeout: int = 60,
-    retries: int = 3,
+    timeout: int = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> dict[str, Any]:
     for attempt in range(retries):
+        last = attempt == retries - 1
         try:
             with urlopen(request, timeout=timeout) as response:
                 return json.loads(response.read().decode("utf-8-sig"))
         except HTTPError as error:
             body = error.read().decode("utf-8", errors="replace")
-            if error.code not in {429, 500, 502, 503, 504} or attempt == retries - 1:
+            if error.code not in RETRYABLE_HTTP or last:
                 raise StoreAnalyticsError(
-                    f"HTTP {error.code} pour {request.full_url}: {body[:1000]}"
+                    f"HTTP {error.code} pour {request.full_url} "
+                    f"(tentative {attempt + 1}/{retries}): {body[:1000]}"
                 ) from error
-            retry_after = error.headers.get("Retry-After")
-            delay = int(retry_after) if retry_after and retry_after.isdigit() else 2**attempt
-            time.sleep(delay)
-        except URLError as error:
-            if attempt == retries - 1:
+            delay = backoff_delay(attempt, error.headers.get("Retry-After"))
+        except NETWORK_ERRORS as error:
+            if last:
+                reason = getattr(error, "reason", None) or error
                 raise StoreAnalyticsError(
-                    f"Erreur réseau pour {request.full_url}: {error.reason}"
+                    f"Erreur réseau pour {request.full_url} "
+                    f"après {retries} tentatives: {reason}"
                 ) from error
-            time.sleep(2**attempt)
+            delay = backoff_delay(attempt)
+        sleep(delay)
     raise AssertionError("boucle de retry impossible")
 
 
