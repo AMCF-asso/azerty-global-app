@@ -1496,10 +1496,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
         if (below.HasValue)
         {
             var belowRect = new Win32.RECT { left = charRect.left - S(4), top = top + S(37), right = charRect.right + S(4), bottom = top + S(52) };
+            // Sans trait dessous (Antoine, planche du 01/10) : le soulignement rouge de la faute suffit.
             DrawText(hdc, _hFontSmall, FormatVisibleCharacter(below.Value.ToString()), belowRect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-            int belowUnderline = top + S(52);
-            var (left, right) = UnderlineSpan(charRect.left, charRect.right, S(4), S(6));
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = belowUnderline, right = right, bottom = belowUnderline + Math.Max(1, S(1)) }, CLR_TEXT);
         }
         x += width;
         return true;
