@@ -529,6 +529,8 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool DrawFocusRect(IntPtr hDC, ref RECT lprc);
 
+    public const uint WM_GETOBJECT = 0x003D;
+
     // Caret système : un par fil, créé caché ; seul ShowCaret l'afficherait.
     [DllImport("user32.dll")]
     public static extern bool CreateCaret(IntPtr hWnd, IntPtr hBitmap, int nWidth, int nHeight);

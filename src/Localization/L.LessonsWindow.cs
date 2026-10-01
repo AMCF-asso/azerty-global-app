@@ -48,6 +48,9 @@ internal static partial class L
     public static string LessonsWin_IconHint => T("Indice", "Hint");
     public static string LessonsWin_HintBackspace => T("Retour arrière → corriger", "Backspace → correct");
 
+    // Nom de la surface de frappe pour l'UI Automation (loupe, Narrateur, NVDA).
+    public static string LessonsWin_AutomationLineName => T("Texte à taper", "Text to type");
+
     // ── Mode libre ───────────────────────────────────────────────────
     public static string LessonsWin_FreeTitle => T("Mode libre", "Free mode");
     public static string LessonsWin_FreeDescription => T(
