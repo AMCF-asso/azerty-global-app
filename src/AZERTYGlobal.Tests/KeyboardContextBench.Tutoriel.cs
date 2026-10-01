@@ -159,7 +159,7 @@ public partial class KeyboardContextBench
             Win32.ShowWindow(hwnd, 1);
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             BancCapture.SetField(window, "_visible", true);
-            BancCapture.Call(window, "ShowHintCore", true);
+            ShowHintFrozen(window);
 
             object method = BancCapture.Field<object>(window, "_hintMethod")
                 ?? throw new InvalidOperationException("aucun indice");
