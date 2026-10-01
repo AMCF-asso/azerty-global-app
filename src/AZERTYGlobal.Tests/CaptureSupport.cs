@@ -460,6 +460,10 @@ internal static class BancCapture
         if (hwnd == IntPtr.Zero)
             throw new InvalidOperationException($"{Path.GetFileName(file)} : handle nul");
 
+        // Le curseur du runner ouvrait parfois l'infobulle de la touche qu'il survolait (Leçons
+        // du lot surface, 125 %, 01/10). En (0, 0), il est hors de la fenêtre ou sur sa barre de
+        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE.
+        Native.SetCursorPos(0, 0);
         Pump(20);
         bool onScreen = KeepOnMonitor(hwnd);
 
@@ -686,6 +690,9 @@ internal static class BancCapture
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool PeekMessageW(out Win32.MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+
+        [DllImport("user32.dll")]
+        internal static extern bool SetCursorPos(int x, int y);
 
         [DllImport("user32.dll")]
         internal static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);

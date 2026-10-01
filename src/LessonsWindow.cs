@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace AZERTYGlobal;
 
-internal sealed class LessonsWindow : IDisposable
+internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
 {
     private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("Lessons");
     private const int BASE_WIN_W = 1120;
@@ -85,6 +85,12 @@ internal sealed class LessonsWindow : IDisposable
     // dessin en fixe la place ; null quand rien n'est à taper.
     private Win32.RECT? _systemCaretRect;
     private (int Width, int Height)? _systemCaretSize;
+    // UI Automation (étape 3 du lot) : fournisseurs créés au premier WM_GETOBJECT ; la vue de
+    // la surface est relevée à chaque repeint, et ses changements signalés juste après.
+    private const uint WM_APP_AUTOMATION = 0x8000 + 0x41;
+    private LessonsAutomation? _automation;
+    private LessonSurfaceView? _surfaceView;
+    private bool _automationEventPending;
     private float _dpiScale = 1f;
     private float _windowScale = 1f;
     private int _baseClientW;
@@ -971,6 +977,15 @@ internal sealed class LessonsWindow : IDisposable
                 case Win32.WM_CLOSE:
                     Hide();
                     return IntPtr.Zero;
+                case Win32.WM_GETOBJECT:
+                    if (unchecked((int)(long)lParam) != LessonsAutomation.UiaRootObjectId)
+                        break; // MSAA et les autres objets : traitement par défaut
+                    _automation ??= new LessonsAutomation(this);
+                    return _automation.OnGetObject(wParam, lParam);
+                case WM_APP_AUTOMATION:
+                    _automationEventPending = false;
+                    _automation?.RaiseChanges();
+                    return IntPtr.Zero;
             }
         }
         catch (Exception ex)
@@ -1020,6 +1035,10 @@ internal sealed class LessonsWindow : IDisposable
                 Win32.DeleteDC(memDc);
             Win32.EndPaint(_hWnd, ref ps);
         }
+        // Après EndPaint : il rappelle ShowCaret pour le caret que BeginPaint a caché, et
+        // rendrait visible un caret créé entre les deux (vu au banc le 01/10).
+        PlaceSystemCaret();
+        RequestAutomationEvents();
     }
 
     private void DrawWindowContents(IntPtr hdc, Win32.RECT rc)
@@ -1031,6 +1050,7 @@ internal sealed class LessonsWindow : IDisposable
         _hoverAreas.Clear();
         _keyboardHover = null;
         _systemCaretRect = null;
+        _surfaceView = null;
 
         DrawHeader(hdc, rc);
         var body = new Win32.RECT { left = S(16), top = S(74), right = rc.right - S(16), bottom = rc.bottom - S(16) };
@@ -1051,7 +1071,28 @@ internal sealed class LessonsWindow : IDisposable
             DrawFocusedTooltip(hdc, rc);
         else
             DrawHoverTooltip(hdc, rc);
-        PlaceSystemCaret();
+    }
+
+    // Hors du repeint : un client UIA du même processus pourrait sinon y rentrer.
+    private void RequestAutomationEvents()
+    {
+        if (_automation == null || _automationEventPending)
+            return;
+        _automationEventPending = true;
+        Win32.PostMessageW(_hWnd, WM_APP_AUTOMATION, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    LessonSurfaceView? ILessonSurfaceHost.SurfaceView => _surfaceView;
+
+    bool ILessonSurfaceHost.WindowHasFocus => _hasFocus;
+
+    bool ILessonSurfaceHost.SurfaceHasFocus => _hasFocus && _focusedActionIndex < 0;
+
+    void ILessonSurfaceHost.FocusSurface()
+    {
+        _focusedActionIndex = -1;
+        Win32.SetFocus(_hWnd);
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
     private void PlaceSystemCaret()
@@ -1387,6 +1428,17 @@ internal sealed class LessonsWindow : IDisposable
         int caretX = SurfaceCaretX(widths, _session.CursorPosition, origin);
         if (active && caretX >= box.left + S(8) && caretX <= box.right - S(8))
             _systemCaretRect = new Win32.RECT { left = caretX, top = top, right = caretX + Math.Max(1, S(2)), bottom = top + S(36) };
+
+        // Pour l'UI Automation : la ligne attendue et la case de chacun de ses caractères.
+        var text = new char[expected.Count];
+        var cells = new Win32.RECT[expected.Count];
+        for (int i = 0, left = origin; i < expected.Count; left += widths[i], i++)
+        {
+            text[i] = expected[i].Expected;
+            cells[i] = new Win32.RECT { left = left, top = top, right = left + widths[i], bottom = top + S(36) };
+        }
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_AutomationLineName, new string(text),
+            Math.Clamp(_session.CursorPosition, 0, text.Length), box, cells, _systemCaretRect);
     }
 
     /// <summary>Abscisse du curseur de la ligne : l'origine plus la largeur des cases qui le
@@ -1676,6 +1728,9 @@ internal sealed class LessonsWindow : IDisposable
         DrawFreePreviewText(hdc, preview);
         if (_hasFocus && _focusedActionIndex < 0)
             DrawFocusOutline(hdc, preview);
+        // Géométrie des caractères non relevée ici : l'aperçu entier en tient lieu.
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, _freePreview,
+            Math.Clamp(_freeCursorIndex, 0, _freePreview.Length), preview, Array.Empty<Win32.RECT>(), _systemCaretRect);
 
         if (ConfigManager.LessonKeyboardVisible)
             DrawKeyboard(hdc, new Win32.RECT { left = rect.left + pad, top = rect.bottom - S(315), right = rect.right - pad, bottom = rect.bottom - S(16) }, KeyboardRenderProfile.Lesson);
@@ -2938,6 +2993,8 @@ internal sealed class LessonsWindow : IDisposable
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         _mapper.StateChanged -= OnMapperStateChanged;
         _hook.RawKeyDown -= OnRawKeyDown;
+        _automation?.Dispose(); // tant que le HWND existe
+        _automation = null;
         if (_hWnd != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hWnd);

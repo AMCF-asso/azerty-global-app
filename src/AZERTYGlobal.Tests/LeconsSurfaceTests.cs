@@ -282,26 +282,15 @@ public class LeconsSurfaceTests
         return window;
     }
 
-    /// <summary>Repeint hors écran, comme OnPaint : rien ne s'affiche pendant les tests.</summary>
+    /// <summary>
+    /// Repeint par un vrai WM_PAINT, fenêtre cachée : BeginPaint et EndPaint cachent puis
+    /// remontrent le caret, et c'est ce passage qui l'avait rendu visible (banc du 01/10).
+    /// </summary>
     private static void Paint(LessonsWindow window)
     {
         IntPtr hwnd = BancCapture.Handle(window);
-        Win32.GetClientRect(hwnd, out var rc);
-        IntPtr screen = Win32.GetDC(hwnd);
-        IntPtr dc = Win32.CreateCompatibleDC(screen);
-        IntPtr bitmap = Win32.CreateCompatibleBitmap(screen, Math.Max(1, rc.right), Math.Max(1, rc.bottom));
-        IntPtr previous = Win32.SelectObject(dc, bitmap);
-        try
-        {
-            BancCapture.Call(window, "DrawWindowContents", dc, rc);
-        }
-        finally
-        {
-            Win32.SelectObject(dc, previous);
-            Win32.DeleteObject(bitmap);
-            Win32.DeleteDC(dc);
-            Win32.ReleaseDC(hwnd, screen);
-        }
+        Win32.InvalidateRect(hwnd, IntPtr.Zero, false);
+        Win32.SendMessageW(hwnd, Win32.WM_PAINT, IntPtr.Zero, IntPtr.Zero);
     }
 
     private static Engine.GUITHREADINFO CaretInfo()
