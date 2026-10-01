@@ -4,6 +4,12 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, sauf le Défi du jour, masqué en 1.3.0 (voir « Correctifs de l’audit du 24 septembre »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Leçons : une seule surface de frappe (audit visuel du 28 septembre, décisions d’Antoine des 28 et 29 septembre)**
+
+- **La ligne à taper se colore à mesure de la frappe.** Le modèle et la zone de saisie ne font plus qu’une ligne, en Segoe UI Variable demi-gras (Segoe UI sur Windows 10), en espacement naturel. Une faute s’écrit en rouge, soulignée, avec le caractère attendu rappelé dessous. Aucune barre de curseur : la lettre à taper est soulignée, sur 6 px au moins pour i, l ou l’apostrophe. Le mode Libre prend la même police (Consolas retirée).
+- **Clavier.** Tab parcourt la ligne, puis les boutons, puis revient à la ligne ; une lettre, un retour arrière ou un clic y ramènent le focus, et un cadre accent montre quand elle l’a. Dans les Paramètres et le récapitulatif, Tab ne parcourt que les boutons, comme avant.
+- **Loupe, Narrateur, NVDA.** La fenêtre expose la ligne à l’UI Automation : un champ « Texte à taper » (« Mode libre » en mode Libre) avec son texte, son curseur et la place de chaque caractère (TextPattern et TextPattern2), et des événements à chaque frappe. Un caret système caché suit aussi la lettre à taper. Les boutons dessinés n’ont pas encore d’élément UIA propre. Témoins : `LeconsSurfaceTests`, `LeconsAutomationTests` (dont un client UIA réel), 33 mutations, 33 rouges.
+
 **Correctifs de l’audit du 25 septembre (suite)**
 
 Les lots de simplicité de l’audit du 25 septembre (rapport `docs/audit-2026-09-25-v1.3.0-simplicite/rapport.md`), tous faits dans la 1.3.0 sur décision d’Antoine des 25 et 26 septembre, et deux correctifs des Paramètres décidés le 26.
