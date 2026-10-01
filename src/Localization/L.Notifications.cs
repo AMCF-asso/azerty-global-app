@@ -48,19 +48,11 @@ internal static partial class L
         $"Une disposition système {Product} vient d’être activée sur cet ordinateur.",
         $"An {Product} system layout has just been enabled on this computer.");
     public static string LayoutConflict_Question => T("Quel est votre besoin ?", "What do you need?");
-    public static string LayoutConflict_Option1Heading => T(
-        $"▸ Taper avec {Product} avant l’ouverture de session",
-        $"▸ Type with {Product} before sign-in");
-    public static string LayoutConflict_Option1Subline => T(
-        "(mot de passe Windows, écran de verrouillage, UAC, BitLocker)",
-        "(Windows password, lock screen, UAC, BitLocker)");
-    public static string LayoutConflict_Option1Body => T(
-        "→ Gardez la disposition système et quittez cette application — elle ferait double emploi et ne fonctionne pas avant l’ouverture de session.",
-        "→ Keep the system layout and quit this application — it would be redundant, and it doesn't run before sign-in.");
-    public static string LayoutConflict_Option2Heading => T(
-        "▸ Profiter du clavier virtuel et de la recherche de caractère",
-        "▸ Enjoy the virtual keyboard and character search");
-    public static string LayoutConflict_Option2Body => T(
-        $"→ Utilisez plutôt cette application. Enlevez {Product} de la liste des dispositions chargées dans les options de langue (Paramètres Windows → Heure et langue → Langue et région → Options de la langue concernée). N’oubliez pas alors de cocher « Lancer au démarrage de Windows » dans cette application pour qu’elle soit toujours active après l’ouverture de session.",
-        $"→ Use this application instead. Remove {Product} from the list of loaded layouts in the language options (Windows Settings → Time & language → Language & region → Options for the relevant language). Then remember to check \"Launch at Windows startup\" in this application so it stays active after sign-in.");
+    // Notes des deux liens de commande, sous leur titre (BtnKeep, BtnQuit).
+    public static string LayoutConflict_KeepNote => T(
+        $"Pour le clavier virtuel et la recherche de caractère. Retirez ensuite {Product} des dispositions chargées : Paramètres Windows → Heure et langue → Langue et région → Options de la langue concernée. Cochez aussi « Lancer au démarrage de Windows » dans l’application.",
+        $"For the virtual keyboard and character search. Then remove {Product} from the loaded layouts: Windows Settings → Time & language → Language & region → Options for the relevant language. Also check \"Launch at Windows startup\" in the app.");
+    public static string LayoutConflict_QuitNote => T(
+        $"Pour taper avec {Product} avant l’ouverture de session (mot de passe Windows, écran de verrouillage, UAC, BitLocker). La disposition système suffit : l’application ferait double emploi.",
+        $"To type with {Product} before sign-in (Windows password, lock screen, UAC, BitLocker). The system layout is enough: the app would be redundant.");
 }

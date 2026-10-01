@@ -108,7 +108,13 @@ l'historique disponible. Les API à rétention limitée ajustent automatiquement
 leur date de début.
 
 Le workflow planifié s'exécute ensuite chaque jour à `05:15 UTC`, soit le matin
-en heure de Paris. Il échoue explicitement si un seul jeu de données manque.
+en heure de Paris. Chaque requête est réessayée sur un quota (429), un délai
+serveur (408), une panne 5xx ou une erreur réseau, délai de lecture compris :
+quatre tentatives de 120 s au plus, pauses de 5, 10 puis 20 s, `Retry-After`
+respecté jusqu'à 300 s. Si un jeu manque encore, le collecteur sort en 2, les
+autres jeux sont archivés quand même, puis la dernière étape passe le run au
+rouge en nommant chaque jeu manquant (manifeste `complete: false`). Une autre
+erreur (jeton refusé, configuration absente) arrête le run à la collecte.
 Il ne publie aucun artefact : l'archive détaillée ne quitte pas le conteneur
 Azure privé (commit 1013d2b du 2026-09-05).
 

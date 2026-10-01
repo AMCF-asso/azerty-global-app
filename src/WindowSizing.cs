@@ -94,4 +94,32 @@ static class WindowSizing
         int availH = Math.Max(1, (int)(workH * fraction) - Math.Max(0, nonClientH));
         return ClampToWorkArea(w, h, availW, availH, 1f);
     }
+
+    /// <summary>Plus petite échelle que <see cref="FitScale"/> puisse rendre : en deçà, le
+    /// texte ne se lit plus, et mieux vaut une fenêtre qui déborde.</summary>
+    public const float MinFitScale = 0.5f;
+
+    /// <summary>
+    /// Plafond de l'Accueil (1.3.0) — échelle de mise en page d'une fenêtre de taille fixe :
+    /// celle de l'écran, réduite juste assez pour que la fenêtre, cadre compris, tienne dans
+    /// toute la zone de travail. Jamais agrandie. Sans elle, l'Accueil perdait ses boutons en
+    /// 1366 × 768 à 125 % (754 px pour 708) et en 1920 × 1080 à 175 %.
+    /// </summary>
+    /// <param name="clientW">Zone client voulue à l'échelle <paramref name="screenScale"/>.</param>
+    /// <param name="nonClientW">Cadre et barre de titre, au DPI réel de l'écran.</param>
+    public static float FitScale(float screenScale, int clientW, int clientH,
+        int nonClientW, int nonClientH, int workW, int workH)
+    {
+        // Mesure échouée (écran introuvable, taille nulle) : l'échelle de l'écran telle quelle.
+        if (screenScale <= 0 || clientW <= 0 || clientH <= 0 || workW <= 0 || workH <= 0)
+            return screenScale;
+
+        int availW = workW - Math.Max(0, nonClientW);
+        int availH = workH - Math.Max(0, nonClientH);
+        if (clientW <= availW && clientH <= availH)
+            return screenScale;
+
+        float ratio = Math.Min(availW / (float)clientW, availH / (float)clientH);
+        return Math.Max(MinFitScale, screenScale * ratio);
+    }
 }

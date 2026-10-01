@@ -32,6 +32,29 @@ jobs:
       - name: Les JSON embarqués sont identiques à leur original canonique
         run: python scripts/check-layout-provenance.py
 
+  # Même contrôle que le hook .githooks/pre-push, mêmes options : shellcheck et pyflakes
+  # désactivés des deux côtés, pour qu'un poste sans eux rende le même verdict.
+  # Version et empreinte épinglées (asset de la release v1.7.12 de rhysd/actionlint).
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer actionlint épinglé
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "$archive" actionlint
+
+      - name: Les workflows sont valides
+        run: ./actionlint -color -shellcheck= -pyflakes=
+
   build:
     runs-on: windows-latest
     steps:
@@ -41,11 +64,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Les étapes « ./scripts/verify.ps1 -Etape … » sont celles que le hook
+      # .githooks/pre-push rejoue en entier sur le poste : une seule définition, deux
+      # exécutions. Ajouter une étape bloquante exécutable sous Windows dans verify.ps1,
+      # pas ici directement.
+
       # Sort en 1 dès qu'un nom, une URL ou un identifiant produit réapparaît en dur
       # hors de src/ProductIdentity.cs. Placé avant le build : le contrôle coûte une
       # seconde, la publication cinq minutes.
       - name: Aucun littéral d'identité hors ProductIdentity
-        run: python scripts/list-identity-literals.py
+        run: ./scripts/verify.ps1 -Etape identite
 
       # Ces trois étapes bloquent le build, contrairement au job provenance : elles ne
       # dépendent que du dépôt, et empaqueter une disposition malformée livrerait une
@@ -54,10 +82,13 @@ jobs:
         run: python -m pip install "jsonschema>=4,<5"
 
       - name: La disposition est conforme à son schéma
-        run: python scripts/validate-layout.py
+        run: ./scripts/verify.ps1 -Etape schema
 
       - name: Témoins du schéma et de son accord avec le parseur
-        run: python -m unittest discover -s scripts/tests -v
+        run: ./scripts/verify.ps1 -Etape temoins
+
+      - name: Tests du collecteur Store
+        run: ./scripts/verify.ps1 -Etape store-analytics
 
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
@@ -65,19 +96,19 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore + publish x64
-        run: dotnet publish src/AZERTYGlobal.csproj -c Release -r win-x64
+        run: ./scripts/verify.ps1 -Etape publish-x64
 
       - name: Publish ARM64
-        run: dotnet publish src/AZERTYGlobal.csproj -c Release -r win-arm64
+        run: ./scripts/verify.ps1 -Etape publish-arm64
 
       - name: Test Core
-        run: dotnet test src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj -c Release
+        run: ./scripts/verify.ps1 -Etape tests-core
 
       - name: Test Windows engine
-        run: dotnet test src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj -c Release
+        run: ./scripts/verify.ps1 -Etape tests-windows
 
       - name: Test application
-        run: dotnet test src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj -c Release
+        run: ./scripts/verify.ps1 -Etape tests-app
 
       - name: Pack MSIX
         run: pwsh ./scripts/Pack-MSIX.ps1
