@@ -529,6 +529,16 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool DrawFocusRect(IntPtr hDC, ref RECT lprc);
 
+    // Caret système : un par fil, créé caché ; seul ShowCaret l'afficherait.
+    [DllImport("user32.dll")]
+    public static extern bool CreateCaret(IntPtr hWnd, IntPtr hBitmap, int nWidth, int nHeight);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetCaretPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    public static extern bool DestroyCaret();
+
     [DllImport("user32.dll")]
     public static extern int FillRect(IntPtr hDC, ref RECT rc, IntPtr hbr);
 

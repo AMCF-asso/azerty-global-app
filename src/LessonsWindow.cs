@@ -80,6 +80,11 @@ internal sealed class LessonsWindow : IDisposable
     // alimentée que si les Leçons ont le focus clavier, comme le tutoriel (_hasFocus de
     // LearningModule). Tenu par WM_SETFOCUS et WM_KILLFOCUS.
     private bool _hasFocus;
+    // Caret système masqué (décision d'Antoine du 29/09) : créé et placé devant la lettre à
+    // taper, jamais affiché, pour que la loupe et les lecteurs d'écran suivent la frappe. Le
+    // dessin en fixe la place ; null quand rien n'est à taper.
+    private Win32.RECT? _systemCaretRect;
+    private (int Width, int Height)? _systemCaretSize;
     private float _dpiScale = 1f;
     private float _windowScale = 1f;
     private int _baseClientW;
@@ -97,7 +102,6 @@ internal sealed class LessonsWindow : IDisposable
     private IntPtr _hFontSmall;
     private IntPtr _hFontSidebarModule;
     private IntPtr _hFontSidebarLesson;
-    private IntPtr _hFontMono;
     private IntPtr _hFontButton;
     private IntPtr _hFontIcon;
     private IntPtr _hFontEmoji;
@@ -357,7 +361,6 @@ internal sealed class LessonsWindow : IDisposable
         _hFontSmall = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontSidebarModule = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontSidebarLesson = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontMono = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Consolas");
         _hFontLessonLine = CreateLessonLineFont(-S(17));
         _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontIcon = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
@@ -388,7 +391,6 @@ internal sealed class LessonsWindow : IDisposable
         DeleteObject(ref _hFontSmall);
         DeleteObject(ref _hFontSidebarModule);
         DeleteObject(ref _hFontSidebarLesson);
-        DeleteObject(ref _hFontMono);
         DeleteObject(ref _hFontLessonLine);
         DeleteObject(ref _hFontButton);
         DeleteObject(ref _hFontIcon);
@@ -916,6 +918,7 @@ internal sealed class LessonsWindow : IDisposable
                     return IntPtr.Zero;
                 case Win32.WM_KILLFOCUS:
                     _hasFocus = false;
+                    DestroySystemCaret(); // avant que la fenêtre suivante crée le sien
                     break; // traitement par défaut, comme avant
                 case Win32.WM_LBUTTONUP:
                     OnClick(lParam);
@@ -1027,6 +1030,7 @@ internal sealed class LessonsWindow : IDisposable
         _doubleClickActions.Clear();
         _hoverAreas.Clear();
         _keyboardHover = null;
+        _systemCaretRect = null;
 
         DrawHeader(hdc, rc);
         var body = new Win32.RECT { left = S(16), top = S(74), right = rc.right - S(16), bottom = rc.bottom - S(16) };
@@ -1047,6 +1051,32 @@ internal sealed class LessonsWindow : IDisposable
             DrawFocusedTooltip(hdc, rc);
         else
             DrawHoverTooltip(hdc, rc);
+        PlaceSystemCaret();
+    }
+
+    private void PlaceSystemCaret()
+    {
+        if (!_hasFocus || _systemCaretRect is not { } caret)
+        {
+            DestroySystemCaret();
+            return;
+        }
+        var size = (caret.right - caret.left, caret.bottom - caret.top);
+        if (_systemCaretSize != size)
+        {
+            // Pas de ShowCaret : créé caché, il le reste.
+            Win32.CreateCaret(_hWnd, IntPtr.Zero, size.Item1, size.Item2);
+            _systemCaretSize = size;
+        }
+        Win32.SetCaretPos(caret.left, caret.top);
+    }
+
+    private void DestroySystemCaret()
+    {
+        if (_systemCaretSize == null)
+            return;
+        Win32.DestroyCaret();
+        _systemCaretSize = null;
     }
 
     private void DrawHeader(IntPtr hdc, Win32.RECT rc)
@@ -1304,27 +1334,20 @@ internal sealed class LessonsWindow : IDisposable
         return width;
     }
 
-    /// <summary>
-    /// Variante de la surface rendue, le temps du choix sur planches (29/09) : 1 reprend le
-    /// tutoriel (caractère attendu en rouge à la place de la faute), 2 écrit la faute tapée en
-    /// rouge et rappelle dessous le caractère attendu, souligné. Seul le banc la change ; elle
-    /// disparaît une fois la variante choisie.
-    /// </summary>
-    internal static int SurfaceVariant = 1;
-
     private void DrawLessonSurface(IntPtr hdc, Win32.RECT box, int scrollOffset)
     {
         var expected = _session.GetCurrentLineSnapshot();
         var typed = _session.GetTypedLineSnapshot();
-        int x = box.left + S(10) - scrollOffset;
+        int origin = box.left + S(10) - scrollOffset;
+        int x = origin;
         int top = box.top + S(6);
-        int cursor = _session.CursorPosition;
-        int caretX = int.MinValue;
+        // Une case par caractère attendu, puis, en mode souple, une par caractère tapé au-delà.
+        var widths = new int[Math.Max(expected.Count, typed.Count)];
+        for (int i = 0; i < widths.Length; i++)
+            widths[i] = MeasureLessonCharacterWidth(hdc, i < expected.Count ? expected[i].Expected : typed[i].Actual);
 
         for (int i = 0; i < expected.Count; i++)
         {
-            if (i == cursor)
-                caretX = x;
             var cell = expected[i];
             char shown = cell.Expected;
             char? below = null;
@@ -1340,36 +1363,50 @@ internal sealed class LessonsWindow : IDisposable
                 LessonCharacterState.Wrong => CLR_BAD,
                 _ => null
             };
-            if (cell.State == LessonCharacterState.Wrong && SurfaceVariant == 2)
+            // V2, retenue sur planches le 29/09 : la faute tapée prend la place, en rouge, et
+            // l'attendu passe dessous.
+            if (cell.State == LessonCharacterState.Wrong && TypedCharacterAt(typed, i) is char actual)
             {
-                // La faute tapée prend la place ; l'attendu passe dessous.
-                char? actual = TypedCharacterAt(typed, i);
-                if (actual.HasValue)
-                {
-                    shown = actual.Value;
-                    below = cell.Expected;
-                }
+                shown = actual;
+                below = cell.Expected;
             }
-            if (!DrawSurfaceCell(hdc, box, shown, MeasureLessonCharacterWidth(hdc, cell.Expected), ref x, top, color, underline, below))
+            if (!DrawSurfaceCell(hdc, box, shown, widths[i], ref x, top, color, underline, below))
                 break;
         }
 
         // Mode souple : ce qui dépasse la fin du modèle reste écrit, en faute.
         for (int i = expected.Count; i < typed.Count; i++)
         {
-            if (!DrawSurfaceCell(hdc, box, typed[i].Actual, MeasureLessonCharacterWidth(hdc, typed[i].Actual), ref x, top, CLR_BAD, CLR_BAD, null))
+            if (!DrawSurfaceCell(hdc, box, typed[i].Actual, widths[i], ref x, top, CLR_BAD, CLR_BAD, null))
                 break;
         }
-        if (cursor >= expected.Count && caretX == int.MinValue)
-            caretX = x;
 
+        // Aucune barre peinte (29/09) : le soulignement de la lettre à taper suffit. Le caret
+        // système, lui, est placé devant elle sans être affiché (PlaceSystemCaret).
         bool active = !_session.IsLineComplete && !_session.IsExerciseComplete;
-        if (active && _hasFocus && caretX >= box.left + S(8) && caretX <= box.right - S(8))
-        {
-            // Emplacement du caret : peint pour les planches, remplacé par le caret système.
-            var caret = new Win32.RECT { left = caretX - S(1), top = top + S(5), right = caretX - S(1) + Math.Max(1, S(2)), bottom = top + S(33) };
-            GdiHelpers.FillSolidRect(hdc, caret, CLR_TEXT);
-        }
+        int caretX = SurfaceCaretX(widths, _session.CursorPosition, origin);
+        if (active && caretX >= box.left + S(8) && caretX <= box.right - S(8))
+            _systemCaretRect = new Win32.RECT { left = caretX, top = top, right = caretX + Math.Max(1, S(2)), bottom = top + S(36) };
+    }
+
+    /// <summary>Abscisse du curseur de la ligne : l'origine plus la largeur des cases qui le
+    /// précèdent.</summary>
+    internal static int SurfaceCaretX(IReadOnlyList<int> widths, int cursor, int origin)
+    {
+        int x = origin;
+        int end = Math.Clamp(cursor, 0, widths.Count);
+        for (int i = 0; i < end; i++)
+            x += widths[i];
+        return x;
+    }
+
+    /// <summary>Trait de soulignement d'une case : la case moins les retraits, jamais moins de
+    /// <paramref name="minWidth"/>, centré sur elle, pour que i, l et ' restent repérables.</summary>
+    internal static (int Left, int Right) UnderlineSpan(int left, int right, int inset, int minWidth)
+    {
+        int width = Math.Max(right - left - 2 * inset, minWidth);
+        int start = (left + right - width) / 2;
+        return (start, start + width);
     }
 
     private static char? TypedCharacterAt(IReadOnlyList<LessonTypedCharacterSnapshot> typed, int index) =>
@@ -1401,14 +1438,16 @@ internal sealed class LessonsWindow : IDisposable
         if (underline.HasValue)
         {
             int underlineY = Math.Min(charRect.bottom - S(3), top + S(34));
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = charRect.left + S(2), top = underlineY, right = charRect.right - S(2), bottom = underlineY + S(2) }, underline.Value);
+            var (left, right) = UnderlineSpan(charRect.left, charRect.right, S(2), S(6));
+            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = underlineY, right = right, bottom = underlineY + S(2) }, underline.Value);
         }
         if (below.HasValue)
         {
             var belowRect = new Win32.RECT { left = charRect.left - S(4), top = top + S(37), right = charRect.right + S(4), bottom = top + S(52) };
             DrawText(hdc, _hFontSmall, FormatVisibleCharacter(below.Value.ToString()), belowRect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
             int belowUnderline = top + S(52);
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = charRect.left + S(4), top = belowUnderline, right = charRect.right - S(4), bottom = belowUnderline + Math.Max(1, S(1)) }, CLR_TEXT);
+            var (left, right) = UnderlineSpan(charRect.left, charRect.right, S(4), S(6));
+            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = belowUnderline, right = right, bottom = belowUnderline + Math.Max(1, S(1)) }, CLR_TEXT);
         }
         x += width;
         return true;
@@ -1635,6 +1674,8 @@ internal sealed class LessonsWindow : IDisposable
         _freePreviewRect = preview;
         GdiHelpers.DrawPanel(hdc, preview, CLR_PANEL_2, CLR_BORDER, 0, 0);
         DrawFreePreviewText(hdc, preview);
+        if (_hasFocus && _focusedActionIndex < 0)
+            DrawFocusOutline(hdc, preview);
 
         if (ConfigManager.LessonKeyboardVisible)
             DrawKeyboard(hdc, new Win32.RECT { left = rect.left + pad, top = rect.bottom - S(315), right = rect.right - pad, bottom = rect.bottom - S(16) }, KeyboardRenderProfile.Lesson);
@@ -1650,7 +1691,7 @@ internal sealed class LessonsWindow : IDisposable
 
         if (_freePreview.Length == 0)
         {
-            DrawText(hdc, _hFontMono, "...", new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
+            DrawText(hdc, _hFontLessonLine, "...", new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
                 CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         }
         else
@@ -1662,7 +1703,7 @@ internal sealed class LessonsWindow : IDisposable
 
                 var line = lines[i];
                 string text = _freePreview.Substring(line.Start, line.Length);
-                DrawText(hdc, _hFontMono, text, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
+                DrawText(hdc, _hFontLessonLine, text, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
                     CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
                 y += lineH;
             }
@@ -1678,11 +1719,12 @@ internal sealed class LessonsWindow : IDisposable
         var line = lines[lineIndex];
         int offset = Math.Clamp(_freeCursorIndex - line.Start, 0, line.Length);
         string prefix = offset == 0 ? "" : _freePreview.Substring(line.Start, offset);
-        int x = FreeTextLeft(preview) + GdiHelpers.MeasureSingleLineWidth(hdc, _hFontMono, prefix);
+        int x = FreeTextLeft(preview) + GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, prefix);
         int top = FreeTextTop(preview) + (lineIndex - firstVisibleLine) * FreeLineHeight() + S(4);
         int width = Math.Max(1, S(1));
         var caret = new Win32.RECT { left = x, top = top, right = x + width, bottom = top + S(18) };
         GdiHelpers.FillSolidRect(hdc, caret, CLR_CURRENT);
+        _systemCaretRect = caret;
     }
 
     private List<FreeVisualLine> BuildFreeVisualLines(IntPtr hdc, Win32.RECT preview)
@@ -1809,7 +1851,7 @@ internal sealed class LessonsWindow : IDisposable
             var currentLine = lines[currentLineIndex];
             int offset = Math.Clamp(_freeCursorIndex - currentLine.Start, 0, currentLine.Length);
             string prefix = offset == 0 ? "" : _freePreview.Substring(currentLine.Start, offset);
-            int x = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontMono, prefix);
+            int x = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, prefix);
             _freeCursorIndex = FindFreeIndexAtX(hdc, lines[targetLineIndex], x);
             EnsureFreeCursorInRange();
         }
@@ -1823,7 +1865,7 @@ internal sealed class LessonsWindow : IDisposable
     }
 
     private int MeasureFreeCharWidth(IntPtr hdc, char ch)
-        => GdiHelpers.MeasureSingleLineWidth(hdc, _hFontMono, ch.ToString());
+        => GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, ch.ToString());
 
     private int FreeTextLeft(Win32.RECT preview) => preview.left + S(12);
     private int FreeTextTop(Win32.RECT preview) => preview.top + S(12);
@@ -2122,6 +2164,7 @@ internal sealed class LessonsWindow : IDisposable
     {
         int x = unchecked((short)((long)lParam & 0xFFFF));
         int y = unchecked((short)(((long)lParam >> 16) & 0xFFFF));
+        ReturnFocusToSurface();
         foreach (var (rect, action) in _clickActions)
         {
             if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
@@ -2226,20 +2269,42 @@ internal sealed class LessonsWindow : IDisposable
 
     private void MoveKeyboardFocus(int direction)
     {
-        if (_clickActions.Count == 0)
-        {
-            _focusedActionIndex = -1;
-            return;
-        }
-
-        if (_focusedActionIndex < 0 || _focusedActionIndex >= _clickActions.Count)
-            _focusedActionIndex = direction < 0 ? _clickActions.Count - 1 : 0;
-        else
-            _focusedActionIndex = (_focusedActionIndex + direction + _clickActions.Count) % _clickActions.Count;
+        _focusedActionIndex = NextFocusIndex(_focusedActionIndex, _clickActions.Count, direction, HasTypingSurface);
 
         // K4 : la navigation au clavier retire l'infobulle de survol pour laisser voir celle
         // de la cible focalisée ; le prochain mouvement de souris la rétablit.
         _hoverTooltip = null;
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+    }
+
+    /// <summary>La page affiche-t-elle une surface où l'on tape (ligne d'exercice, aperçu du
+    /// mode Libre) ? Elle prend alors place dans le cycle de Tab, à l'index -1.</summary>
+    private bool HasTypingSurface =>
+        !_settingsOpen && (_mode == WindowMode.Free || !_showSummary);
+
+    /// <summary>
+    /// Cible suivante de Tab (Maj+Tab : <paramref name="direction"/> = -1) parmi
+    /// <paramref name="count"/> boutons. Avec une surface de frappe, -1 la désigne et Tab
+    /// parcourt surface → boutons → surface (29/09) ; sans elle, les boutons seuls.
+    /// </summary>
+    internal static int NextFocusIndex(int current, int count, int direction, bool hasSurface)
+    {
+        int first = hasSurface ? -1 : 0;
+        int slots = count - first;
+        if (slots <= 0)
+            return -1;
+        if (current < first || current >= count)
+            return direction < 0 ? count - 1 : first;
+        return (current - first + direction + slots) % slots + first;
+    }
+
+    /// <summary>Une frappe ou un clic rend le focus à la surface (29/09) : le cadre accent y
+    /// revient, et ce qui est tapé s'y écrit.</summary>
+    private void ReturnFocusToSurface()
+    {
+        if (_focusedActionIndex < 0 || !HasTypingSurface)
+            return;
+        _focusedActionIndex = -1;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
@@ -2278,10 +2343,14 @@ internal sealed class LessonsWindow : IDisposable
         }
         if (_settingsOpen) return;
         if (_mode == WindowMode.Free && HandleFreeModeKeyDown(vk))
+        {
+            ReturnFocusToSurface();
             return;
+        }
 
         if (_mode == WindowMode.Lessons && vk == 0x08)
         {
+            ReturnFocusToSurface();
             var result = _session.Backspace();
             if (result.Accepted)
             {
@@ -2297,7 +2366,8 @@ internal sealed class LessonsWindow : IDisposable
     {
         if (_settingsOpen) return;
         c = ResolveTypedCharacter(c);
-        if (char.IsControl(c)) return;
+        if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
+        ReturnFocusToSurface();
         if (_mode == WindowMode.Free)
         {
             InsertFreeCharacter(c);
