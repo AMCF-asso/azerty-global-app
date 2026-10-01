@@ -148,7 +148,7 @@ public partial class KeyboardContextBench
             // WM_SIZE, et la suivante naîtrait à la taille de la précédente.
             BancCapture.SetField(window, "_visible", true);
             if (withHint)
-                BancCapture.Call(window, "ShowHintCore", true);
+                ShowHintFrozen(window);
             Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, slug, windowDpi);
@@ -159,6 +159,19 @@ public partial class KeyboardContextBench
             if (altGr) mapper.TrackModifiers(VK_RMENU, 0x38, LLKHF_EXTENDED, isKeyDown: false);
             BancCapture.Teardown(window);
         }
+    }
+
+    /// <summary>
+    /// Indice demandé : le bouton reste allumé 1 s (HINT_FLASH_MS), et la capture tombait avant
+    /// ou après selon le runner (lecons-indice-etape2, 01/10). Son minuteur est coupé : le
+    /// bouton reste allumé, comme juste après le clic.
+    /// </summary>
+    private static void ShowHintFrozen(LessonsWindow window)
+    {
+        BancCapture.Call(window, "ShowHintCore", true);
+        var field = typeof(LessonsWindow).GetField("TIMER_HINT_FLASH_CLEAR",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        Win32.KillTimer(window.Handle, (UIntPtr)(uint)field.GetValue(null)!);
     }
 
     /// <summary>
