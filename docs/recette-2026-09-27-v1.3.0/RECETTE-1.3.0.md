@@ -123,6 +123,9 @@ Si un toast d’avis est déjà apparu pendant la frappe réelle, c’est l’es
 - [ ] **R51** — Fin de ligne et premier caractère de la suivante d’un trait, en strict puis en souple → rien de perdu, pas de pause ; indice immédiat. (L2)
 - [ ] **R52** — Indices et infobulles de noms (caractères, touches mortes) ; lettre à touche morte → indice : armement puis touche finale ; avec une autre touche morte armée → l’indice revient à l’armement. (L1 ; L5 ; L9.4)
 - [ ] **R53** — Leçons, Mes statistiques, puis remise à zéro → progression et compteurs cohérents. (kit B5)
+- [ ] **R53a** — Initiation, exercice 4 → la ligne se colore à mesure, aucune barre de curseur, la lettre à taper soulignée (apostrophe comprise) ; une faute en strict puis en souple → la faute en rouge, l’attendu dessous. Tab : ligne → boutons → ligne ; une lettre ou un clic rend le cadre à la ligne. (lot surface ; images `lecons-surface-*`)
+- [ ] **R53b** — Loupe de Windows (Windows + +), réglée pour suivre le curseur de texte : en tapant dans les Leçons, puis en mode Libre → la loupe suit la lettre à taper. (lot surface : caret caché, TextPattern2)
+- [ ] **R53c** — Narrateur (Ctrl + Windows + Entrée), Leçons ouvertes → il annonce le champ « Texte à taper » et lit la ligne à la demande ; en mode Libre → « Mode libre ». Pas de blocage ni de lenteur de frappe pendant qu’il tourne. (lot surface : UIA)
 
 ### 3.10 Mes statistiques et À propos
 
