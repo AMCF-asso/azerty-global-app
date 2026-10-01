@@ -203,6 +203,33 @@ public class LeconsSurfaceTests
         }
     }
 
+    [Fact]
+    public void LeCaretPrendLaTailleDuModeLibre()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = OpenStrictExercise();
+        try
+        {
+            BancCapture.SetField(window, "_hasFocus", true);
+            Paint(window);
+            var lesson = CaretInfo().rcCaret;
+
+            var modeType = typeof(LessonsWindow).GetNestedType("WindowMode", System.Reflection.BindingFlags.NonPublic)!;
+            BancCapture.Call(window, "SwitchMode", Enum.Parse(modeType, "Free"));
+            Paint(window);
+            var free = CaretInfo().rcCaret;
+            var expected = BancCapture.Field<Win32.RECT?>(window, "_systemCaretRect")!.Value;
+
+            Assert.NotEqual(lesson.bottom - lesson.top, free.bottom - free.top);
+            Assert.Equal(expected.right - expected.left, free.right - free.left);
+            Assert.Equal(expected.bottom - expected.top, free.bottom - free.top);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
     /// <summary>
     /// Ce que la loupe et les lecteurs d'écran écoutent hors UI Automation : le déplacement du
     /// caret (EVENT_OBJECT_LOCATIONCHANGE, OBJID_CARET). Mesure : le caret masqué l'émet-il ?
