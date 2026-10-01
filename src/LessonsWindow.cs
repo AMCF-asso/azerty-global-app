@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace AZERTYGlobal;
 
-internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
+internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 {
     private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("Lessons");
     private const int BASE_WIN_W = 1120;
@@ -88,9 +88,13 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
     // UI Automation (étape 3 du lot) : fournisseurs créés au premier WM_GETOBJECT ; la vue de
     // la surface est relevée à chaque repeint, et ses changements signalés juste après.
     private const uint WM_APP_AUTOMATION = 0x8000 + 0x41;
+    private const uint WM_APP_AUTOMATION_INVOKE = 0x8000 + 0x42;
     private LessonsAutomation? _automation;
     private LessonSurfaceView? _surfaceView;
     private bool _automationEventPending;
+    // Une entrée par zone cliquable, dans l'ordre de _clickActions (AddClick tient les deux).
+    private readonly List<LessonControlView> _controlViews = new();
+    private (int Index, string Name)? _pendingInvoke;
     private float _dpiScale = 1f;
     private float _windowScale = 1f;
     private int _baseClientW;
@@ -986,6 +990,9 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
                     _automationEventPending = false;
                     _automation?.RaiseChanges();
                     return IntPtr.Zero;
+                case WM_APP_AUTOMATION_INVOKE:
+                    RunPendingInvoke();
+                    return IntPtr.Zero;
             }
         }
         catch (Exception ex)
@@ -1038,6 +1045,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
         // Après EndPaint : il rappelle ShowCaret pour le caret que BeginPaint a caché, et
         // rendrait visible un caret créé entre les deux (vu au banc le 01/10).
         PlaceSystemCaret();
+        _automation?.OnPainted();
         RequestAutomationEvents();
     }
 
@@ -1046,6 +1054,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
         GdiHelpers.FillSolidRect(hdc, rc, CLR_BG);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         _clickActions.Clear();
+        _controlViews.Clear();
         _doubleClickActions.Clear();
         _hoverAreas.Clear();
         _keyboardHover = null;
@@ -1082,17 +1091,42 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
         Win32.PostMessageW(_hWnd, WM_APP_AUTOMATION, IntPtr.Zero, IntPtr.Zero);
     }
 
-    LessonSurfaceView? ILessonSurfaceHost.SurfaceView => _surfaceView;
+    LessonSurfaceView? ILessonsAutomationHost.SurfaceView => _surfaceView;
 
-    bool ILessonSurfaceHost.WindowHasFocus => _hasFocus;
+    bool ILessonsAutomationHost.WindowHasFocus => _hasFocus;
 
-    bool ILessonSurfaceHost.SurfaceHasFocus => _hasFocus && _focusedActionIndex < 0;
+    bool ILessonsAutomationHost.SurfaceHasFocus => _hasFocus && _focusedActionIndex < 0;
 
-    void ILessonSurfaceHost.FocusSurface()
+    IReadOnlyList<LessonControlView> ILessonsAutomationHost.Controls => _controlViews;
+
+    int ILessonsAutomationHost.FocusedControl => _focusedActionIndex;
+
+    void ILessonsAutomationHost.FocusSurface() => FocusFromAutomation(-1);
+
+    void ILessonsAutomationHost.FocusControl(int index) => FocusFromAutomation(index);
+
+    private void FocusFromAutomation(int index)
     {
-        _focusedActionIndex = -1;
+        _focusedActionIndex = index;
         Win32.SetFocus(_hWnd);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+    }
+
+    void ILessonsAutomationHost.InvokeControl(int index, string name)
+    {
+        _pendingInvoke = (index, name);
+        Win32.PostMessageW(_hWnd, WM_APP_AUTOMATION_INVOKE, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    /// <summary>Activation demandée par UIA, comme un clic sur le contrôle, s'il est toujours là.</summary>
+    private void RunPendingInvoke()
+    {
+        if (_pendingInvoke is not { } pending)
+            return;
+        _pendingInvoke = null;
+        var (index, name) = pending;
+        if (index < _clickActions.Count && _controlViews[index].Name == name)
+            _clickActions[index].Action();
     }
 
     private void PlaceSystemCaret()
@@ -1156,7 +1190,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
             bool selectedModule = i == _moduleIndex;
             DrawSidebarModuleItem(hdc, item, $"{module.Title}  {completed}/{total}", selectedModule);
             int captured = i;
-            AddClick(item, () => SelectModule(captured));
+            AddClick(item, () => SelectModule(captured), $"{module.Title} {completed}/{total}", LessonControlKind.ListItem,
+                selected: selectedModule);
             y += S(40);
 
             if (!selectedModule)
@@ -1172,7 +1207,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
                 int lessonCompleted = lesson.Exercises.Count(_progress.IsCompleted);
                 DrawSidebarLessonItem(hdc, lessonItem, $"{lesson.Title}  {lessonCompleted}/{lesson.Exercises.Count}", j == _lessonIndex);
                 int capturedLesson = j;
-                AddClick(lessonItem, () => SelectLesson(capturedLesson));
+                AddClick(lessonItem, () => SelectLesson(capturedLesson), $"{lesson.Title} {lessonCompleted}/{lesson.Exercises.Count}",
+                    LessonControlKind.ListItem, selected: j == _lessonIndex);
                 y += S(34);
             }
 
@@ -1253,7 +1289,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
             ? new Win32.RECT { left = pill.right - S(20), top = pill.top + S(2), right = pill.right - S(2), bottom = pill.bottom - S(2) }
             : new Win32.RECT { left = pill.left + S(2), top = pill.top + S(2), right = pill.left + S(20), bottom = pill.bottom - S(2) };
         DrawRoundedBox(hdc, knob, enabled ? DarkTheme.OnAccent : CLR_TEXT, enabled ? DarkTheme.OnAccent : CLR_TEXT, S(9));
-        AddClick(row, toggle);
+        AddClick(row, toggle, label, LessonControlKind.CheckBox, toggled: enabled);
     }
 
     private void DrawLessonContent(IntPtr hdc, Win32.RECT rect)
@@ -1437,7 +1473,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
             text[i] = expected[i].Expected;
             cells[i] = new Win32.RECT { left = left, top = top, right = left + widths[i], bottom = top + S(36) };
         }
-        _surfaceView = new LessonSurfaceView(L.LessonsWin_AutomationLineName, new string(text),
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_AutomationLineName,
+            $"{CurrentLesson.Title}. {FormatLessonInstruction(CurrentExercise.Instruction)}", new string(text),
             Math.Clamp(_session.CursorPosition, 0, text.Length), box, cells, _systemCaretRect);
     }
 
@@ -1727,7 +1764,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
         if (_hasFocus && _focusedActionIndex < 0)
             DrawFocusOutline(hdc, preview);
         // Géométrie des caractères non relevée ici : l'aperçu entier en tient lieu.
-        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, _freePreview,
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, L.LessonsWin_FreeDescription, _freePreview,
             Math.Clamp(_freeCursorIndex, 0, _freePreview.Length), preview, Array.Empty<Win32.RECT>(), _systemCaretRect);
 
         if (ConfigManager.LessonKeyboardVisible)
@@ -2069,13 +2106,13 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
     {
         // Bouton sombre de Windows 11 ; l'onglet ou le panneau actif porte l'accent.
         GdiHelpers.DrawDarkButton(hdc, rect, text, _hFontButton, active, hot: false, pressed: false, S(4));
-        AddClick(rect, action);
+        AddClick(rect, action, text);
     }
 
     private void DrawIconButton(IntPtr hdc, Win32.RECT rect, string icon, string tooltip, bool active, Action action, Action? doubleClickAction = null)
     {
         GdiHelpers.DrawDarkButton(hdc, rect, icon, icon == "💡" ? _hFontEmoji : _hFontIcon, active, hot: false, pressed: false, S(4));
-        AddClick(rect, action);
+        AddClick(rect, action, tooltip); // l'icône ne dit rien ; l'infobulle nomme le bouton
         if (doubleClickAction != null)
             AddDoubleClick(rect, doubleClickAction);
         AddHover(rect, tooltip, preferAbove: true, compact: true);
@@ -2198,9 +2235,12 @@ internal sealed class LessonsWindow : IDisposable, ILessonSurfaceHost
         Win32.DrawTextW(hdc, text, -1, ref rect, flags | Win32.DT_NOPREFIX);
     }
 
-    private void AddClick(Win32.RECT rect, Action action)
+    /// <summary>Zone cliquable, et l'élément UIA qui la représente.</summary>
+    private void AddClick(Win32.RECT rect, Action action, string name, LessonControlKind kind = LessonControlKind.Button,
+        bool? toggled = null, bool selected = false)
     {
         _clickActions.Add((rect, action));
+        _controlViews.Add(new LessonControlView(name, kind, rect, toggled, selected));
     }
 
     private void AddDoubleClick(Win32.RECT rect, Action action)

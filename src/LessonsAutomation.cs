@@ -17,18 +17,34 @@ namespace AZERTYGlobal;
 /// <summary>Ce que montre la surface de frappe au dernier repeint, en coordonnées client.</summary>
 /// <param name="Cells">Case de chaque caractère de <paramref name="Text"/>, défilement compris ;
 /// vide quand la géométrie n'est pas relevée (mode Libre) : la surface entière en tient lieu.</param>
-internal sealed record LessonSurfaceView(string Name, string Text, int Caret, Win32.RECT Box,
+/// <param name="HelpText">Titre et consigne de l'exercice, que Narrateur lit après le nom.</param>
+internal sealed record LessonSurfaceView(string Name, string HelpText, string Text, int Caret, Win32.RECT Box,
     Win32.RECT[] Cells, Win32.RECT? CaretRect);
 
+internal enum LessonControlKind { Button, ListItem, CheckBox }
+
+/// <summary>Une zone cliquable du dernier repeint, dans l'ordre de Tab.</summary>
+/// <param name="Toggled">État d'un interrupteur (CheckBox) ; null pour les autres.</param>
+/// <param name="Selected">Module ou leçon affiché, dans la barre latérale.</param>
+internal sealed record LessonControlView(string Name, LessonControlKind Kind, Win32.RECT Rect, bool? Toggled = null,
+    bool Selected = false);
+
 /// <summary>Ce que la fenêtre des Leçons donne à lire à l'UI Automation.</summary>
-internal interface ILessonSurfaceHost
+internal interface ILessonsAutomationHost
 {
     IntPtr Handle { get; }
     /// <summary>Null quand rien ne se tape (récapitulatif, Paramètres).</summary>
     LessonSurfaceView? SurfaceView { get; }
+    IReadOnlyList<LessonControlView> Controls { get; }
     bool WindowHasFocus { get; }
     bool SurfaceHasFocus { get; }
+    /// <summary>Index du contrôle qui a le focus clavier, -1 pour la surface ou aucun.</summary>
+    int FocusedControl { get; }
     void FocusSurface();
+    void FocusControl(int index);
+    /// <summary>Active le contrôle plus tard, hors de l'appel UIA (une action peut ouvrir une
+    /// boîte de dialogue) ; rien si le repeint a changé le contrôle de cet index.</summary>
+    void InvokeControl(int index, string name);
 }
 
 internal enum ProviderOptions
@@ -44,6 +60,8 @@ internal enum TextUnit { Character = 0, Format = 1, Word = 2, Line = 3, Paragrap
 internal enum TextPatternRangeEndpoint { Start = 0, End = 1 }
 
 internal enum SupportedTextSelection { None = 0, Single = 1, Multiple = 2 }
+
+internal enum ToggleState { Off = 0, On = 1, Indeterminate = 2 }
 
 [StructLayout(LayoutKind.Sequential)]
 internal struct UiaRect
@@ -135,6 +153,21 @@ internal partial interface ITextProvider2 : ITextProvider
 }
 
 [GeneratedComInterface]
+[Guid("54fcb24b-e18e-47a2-b4d3-eccbe77599a2")]
+internal partial interface IInvokeProvider
+{
+    void Invoke();
+}
+
+[GeneratedComInterface]
+[Guid("56d00bd0-c4f4-433c-a836-1a52a57e0892")]
+internal partial interface IToggleProvider
+{
+    void Toggle();
+    ToggleState GetToggleState();
+}
+
+[GeneratedComInterface]
 [Guid("5347ad7b-c355-46f8-aff5-909033582f63")]
 internal partial interface ITextRangeProvider
 {
@@ -178,13 +211,22 @@ internal sealed partial class LessonsAutomation : IDisposable
     internal const int AutomationIdPropertyId = 30011;
     internal const int IsPasswordPropertyId = 30019;
     internal const int IsOffscreenPropertyId = 30022;
+    internal const int InvokePatternId = 10000;
+    internal const int TogglePatternId = 10015;
+    internal const int HelpTextPropertyId = 30013;
+    internal const int ItemStatusPropertyId = 30026;
+    internal const int ButtonControlTypeId = 50000;
+    internal const int CheckBoxControlTypeId = 50002;
     internal const int EditControlTypeId = 50004;
+    internal const int ListItemControlTypeId = 50007;
     internal const int AutomationFocusChangedEventId = 20005;
     internal const int TextSelectionChangedEventId = 20014;
     internal const int TextChangedEventId = 20015;
     internal const string SurfaceAutomationId = "LessonSurface";
     private const int UiaAppendRuntimeId = 3;
+    private const int StructureChangeChildrenInvalidated = 2;
     private const int UIA_E_ELEMENTNOTAVAILABLE = unchecked((int)0x80040201);
+    private const int NoFocus = -2; // ni la surface (-1) ni un contrôle (0 et plus)
 
     internal static readonly Guid IidUnknown = new("00000000-0000-0000-C000-000000000046");
     internal static readonly Guid IidSimple = new("d6dd68d1-86fd-4332-8666-9abedea2d24c");
@@ -201,21 +243,88 @@ internal sealed partial class LessonsAutomation : IDisposable
 
     private readonly RootProvider _root;
     private readonly SurfaceProvider _surface;
+    // Les contrôles se refont à chaque repeint : leurs fournisseurs valent pour une génération,
+    // celle d'une même liste de noms. Une autre liste (autre page, autre leçon) en ouvre une
+    // nouvelle ; les anciens rendent UIA_E_ELEMENTNOTAVAILABLE.
+    private readonly Dictionary<int, ControlProvider> _controls = new();
+    private LessonControlView[] _lastControls = Array.Empty<LessonControlView>();
+    private bool _structureChanged;
     private string? _lastText;
     private int _lastCaret = -1;
-    private bool _lastSurfaceFocus;
+    private int _lastFocus = NoFocus;
+    private int _lastFocusGeneration;
     private bool _disposed;
 
-    public LessonsAutomation(ILessonSurfaceHost host)
+    public LessonsAutomation(ILessonsAutomationHost host)
     {
         Host = host;
         _root = new RootProvider(this);
         _surface = new SurfaceProvider(this);
     }
 
-    internal ILessonSurfaceHost Host { get; }
+    internal ILessonsAutomationHost Host { get; }
     internal SurfaceProvider Surface => _surface;
     internal RootProvider Root => _root;
+    internal int Generation { get; private set; }
+
+    /// <summary>Juste après le repeint : ouvre une génération si la liste des contrôles a changé.</summary>
+    public void OnPainted()
+    {
+        var controls = Host.Controls;
+        bool same = controls.Count == _lastControls.Length;
+        for (int i = 0; same && i < controls.Count; i++)
+            same = controls[i].Kind == _lastControls[i].Kind && controls[i].Name == _lastControls[i].Name;
+        if (same)
+            return;
+        Generation++;
+        _controls.Clear();
+        _lastControls = controls.ToArray();
+        _structureChanged = true;
+    }
+
+    internal ControlProvider Control(int index)
+    {
+        if (!_controls.TryGetValue(index, out var control))
+            _controls[index] = control = new ControlProvider(this, index, Generation);
+        return control;
+    }
+
+    // Enfants de la racine, dans l'ordre de Tab : la surface quand elle est affichée, puis les
+    // contrôles. Chaque pointeur rendu est compté pour l'appelant ; 0 au-delà des bouts.
+    internal nint SurfacePointer() => Host.SurfaceView != null ? Pointer(_surface, IidFragment) : 0;
+
+    internal nint ControlPointer(int index) =>
+        index >= 0 && index < Host.Controls.Count ? Pointer(Control(index), IidFragment) : 0;
+
+    internal nint FirstChild() => Host.SurfaceView != null ? SurfacePointer() : ControlPointer(0);
+
+    internal nint LastChild() => Host.Controls.Count > 0 ? ControlPointer(Host.Controls.Count - 1) : SurfacePointer();
+
+    internal nint PreviousOfControl(int index) => index > 0 ? ControlPointer(index - 1) : SurfacePointer();
+
+    /// <summary>Le contrôle sous un point de l'écran, ou -1.</summary>
+    internal int ControlAt(Win32.POINT point)
+    {
+        var controls = Host.Controls;
+        for (int i = 0; i < controls.Count; i++)
+        {
+            var r = controls[i].Rect;
+            if (point.x >= r.left && point.x < r.right && point.y >= r.top && point.y < r.bottom)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Ce qui a le focus pour UIA : la surface (-1), un contrôle, ou rien (NoFocus).</summary>
+    private int FocusTarget()
+    {
+        if (!Host.WindowHasFocus)
+            return NoFocus;
+        if (Host.SurfaceView != null && Host.SurfaceHasFocus)
+            return -1;
+        int focused = Host.FocusedControl;
+        return focused >= 0 && focused < Host.Controls.Count ? focused : NoFocus;
+    }
 
     /// <summary>Réponse à WM_GETOBJECT pour UiaRootObjectId.</summary>
     public IntPtr OnGetObject(IntPtr wParam, IntPtr lParam)
@@ -233,19 +342,22 @@ internal sealed partial class LessonsAutomation : IDisposable
     {
         if (_disposed) return;
         var view = Host.SurfaceView;
-        bool surfaceFocus = view != null && Host.SurfaceHasFocus;
-        bool focusChanged = surfaceFocus != _lastSurfaceFocus;
+        int focus = FocusTarget();
+        bool focusChanged = focus != _lastFocus || (focus >= 0 && Generation != _lastFocusGeneration);
         bool textChanged = view?.Text != _lastText;
         bool caretChanged = (view?.Caret ?? -1) != _lastCaret;
-        _lastSurfaceFocus = surfaceFocus;
+        bool structureChanged = _structureChanged;
+        _lastFocus = focus;
+        _lastFocusGeneration = Generation;
         _lastText = view?.Text;
         _lastCaret = view?.Caret ?? -1;
+        _structureChanged = false;
 
         if (!UiaClientsAreListening()) return;
-        if (focusChanged && surfaceFocus)
-            Raise(_surface, AutomationFocusChangedEventId);
-        else if (focusChanged && Host.WindowHasFocus)
-            Raise(_root, AutomationFocusChangedEventId); // Tab vers un bouton, qui n'a pas d'élément propre
+        if (structureChanged)
+            RaiseStructureChanged();
+        if (focusChanged && focus != NoFocus)
+            Raise(focus == -1 ? _surface : Control(focus), AutomationFocusChangedEventId);
         if (view == null) return;
         if (textChanged)
             Raise(_surface, TextChangedEventId);
@@ -257,6 +369,13 @@ internal sealed partial class LessonsAutomation : IDisposable
     {
         nint simple = Pointer(provider, IidSimple);
         try { UiaRaiseAutomationEvent(simple, eventId); }
+        finally { Marshal.Release(simple); }
+    }
+
+    private void RaiseStructureChanged()
+    {
+        nint simple = Pointer(_root, IidSimple);
+        try { UiaRaiseStructureChangedEvent(simple, StructureChangeChildrenInvalidated, null, 0); }
         finally { Marshal.Release(simple); }
     }
 
@@ -319,7 +438,7 @@ internal sealed partial class LessonsAutomation : IDisposable
         IntPtr hwnd = Host.Handle;
         if (hwnd != IntPtr.Zero)
             UiaReturnRawElementProvider(hwnd, IntPtr.Zero, IntPtr.Zero, 0); // libère ce qu'UIA garde du HWND
-        foreach (object provider in new object[] { _root, _surface })
+        foreach (object provider in new object[] { _root, _surface }.Concat(_controls.Values))
         {
             nint simple = Pointer(provider, IidSimple);
             try { UiaDisconnectProvider(simple); }
@@ -335,6 +454,9 @@ internal sealed partial class LessonsAutomation : IDisposable
 
     [DllImport("UIAutomationCore.dll")]
     private static extern int UiaRaiseAutomationEvent(nint provider, int eventId);
+
+    [DllImport("UIAutomationCore.dll")]
+    private static extern int UiaRaiseStructureChangedEvent(nint provider, int structureChangeType, int[]? runtimeId, int runtimeIdLength);
 
     [DllImport("UIAutomationCore.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -364,10 +486,12 @@ internal sealed partial class LessonsAutomation : IDisposable
             return host;
         }
 
-        public nint Navigate(NavigateDirection direction) =>
-            direction is NavigateDirection.FirstChild or NavigateDirection.LastChild && owner.Host.SurfaceView != null
-                ? Pointer(owner.Surface, IidFragment)
-                : 0;
+        public nint Navigate(NavigateDirection direction) => direction switch
+        {
+            NavigateDirection.FirstChild => owner.FirstChild(),
+            NavigateDirection.LastChild => owner.LastChild(),
+            _ => 0, // parent et frères : ceux du HWND
+        };
 
         public nint GetRuntimeId() => 0; // celui du HWND
 
@@ -382,15 +506,107 @@ internal sealed partial class LessonsAutomation : IDisposable
         public nint ElementProviderFromPoint(double x, double y)
         {
             owner.ThrowIfGone();
+            var point = owner.ToClient(x, y);
+            int control = owner.ControlAt(point);
+            if (control >= 0)
+                return owner.ControlPointer(control);
             if (owner.Host.SurfaceView is not { } view)
                 return 0;
-            var point = owner.ToClient(x, y);
             bool inside = point.x >= view.Box.left && point.x < view.Box.right && point.y >= view.Box.top && point.y < view.Box.bottom;
             return inside ? Pointer(owner.Surface, IidFragment) : 0;
         }
 
-        public nint GetFocus() =>
-            owner.Host.SurfaceView != null && owner.Host.SurfaceHasFocus ? Pointer(owner.Surface, IidFragment) : 0;
+        public nint GetFocus()
+        {
+            if (owner.Host.SurfaceView != null && owner.Host.SurfaceHasFocus)
+                return Pointer(owner.Surface, IidFragment);
+            return owner.ControlPointer(owner.Host.FocusedControl); // 0 si aucun
+        }
+    }
+
+    /// <summary>
+    /// Une zone cliquable : bouton, entrée de la barre latérale (ListItem) ou interrupteur
+    /// (CheckBox). Activer passe par la file de la fenêtre, comme un clic.
+    /// </summary>
+    [GeneratedComClass]
+    internal sealed partial class ControlProvider(LessonsAutomation owner, int index, int generation)
+        : IRawElementProviderSimple, IRawElementProviderFragment, IInvokeProvider, IToggleProvider
+    {
+        internal int Index => index;
+
+        private LessonControlView View
+        {
+            get
+            {
+                owner.ThrowIfGone();
+                var controls = owner.Host.Controls;
+                if (generation != owner.Generation || index >= controls.Count)
+                    throw new COMException(null, UIA_E_ELEMENTNOTAVAILABLE);
+                return controls[index];
+            }
+        }
+
+        public ProviderOptions GetProviderOptions() => Options;
+
+        public nint GetPatternProvider(int patternId)
+        {
+            bool toggle = View.Kind == LessonControlKind.CheckBox;
+            return patternId == (toggle ? TogglePatternId : InvokePatternId) ? Pointer(this, IidUnknown) : 0;
+        }
+
+        public Variant GetPropertyValue(int propertyId)
+        {
+            var view = View;
+            return propertyId switch
+            {
+                ControlTypePropertyId => Variant.Int(view.Kind switch
+                {
+                    LessonControlKind.CheckBox => CheckBoxControlTypeId,
+                    LessonControlKind.ListItem => ListItemControlTypeId,
+                    _ => ButtonControlTypeId,
+                }),
+                NamePropertyId => Variant.String(view.Name),
+                IsKeyboardFocusablePropertyId => Variant.Bool(true),
+                HasKeyboardFocusPropertyId => Variant.Bool(owner.Host.WindowHasFocus && owner.Host.FocusedControl == index),
+                IsEnabledPropertyId => Variant.Bool(true),
+                ItemStatusPropertyId when view.Selected => Variant.String(L.LessonsWin_AutomationSelected),
+                _ => default,
+            };
+        }
+
+        public nint GetHostRawElementProvider() => 0;
+
+        public nint Navigate(NavigateDirection direction)
+        {
+            _ = View;
+            return direction switch
+            {
+                NavigateDirection.Parent => Pointer(owner.Root, IidFragment),
+                NavigateDirection.NextSibling => owner.ControlPointer(index + 1),
+                NavigateDirection.PreviousSibling => owner.PreviousOfControl(index),
+                _ => 0,
+            };
+        }
+
+        public nint GetRuntimeId() => SafeArray.Ints(UiaAppendRuntimeId, 2, generation, index);
+
+        public UiaRect GetBoundingRectangle() => owner.ToScreen(View.Rect);
+
+        public nint GetEmbeddedFragmentRoots() => 0;
+
+        public void SetFocus()
+        {
+            _ = View;
+            owner.Host.FocusControl(index);
+        }
+
+        public nint GetFragmentRoot() => Pointer(owner.Root, IidFragmentRoot);
+
+        public void Invoke() => owner.Host.InvokeControl(index, View.Name);
+
+        public void Toggle() => owner.Host.InvokeControl(index, View.Name);
+
+        public ToggleState GetToggleState() => View.Toggled == true ? ToggleState.On : ToggleState.Off;
     }
 
     /// <summary>La surface où l'on tape : un Edit qui porte TextPattern et TextPattern2.</summary>
@@ -402,7 +618,7 @@ internal sealed partial class LessonsAutomation : IDisposable
 
         /// <summary>Texte et place des caractères, ou une ligne vide quand la surface a disparu.</summary>
         internal LessonSurfaceView View =>
-            owner.Host.SurfaceView ?? new LessonSurfaceView("", "", 0, default, Array.Empty<Win32.RECT>(), null);
+            owner.Host.SurfaceView ?? new LessonSurfaceView("", "", "", 0, default, Array.Empty<Win32.RECT>(), null);
 
         public ProviderOptions GetProviderOptions() => Options;
 
@@ -416,6 +632,7 @@ internal sealed partial class LessonsAutomation : IDisposable
             {
                 ControlTypePropertyId => Variant.Int(EditControlTypeId),
                 NamePropertyId => Variant.String(View.Name),
+                HelpTextPropertyId => Variant.String(View.HelpText),
                 AutomationIdPropertyId => Variant.String(SurfaceAutomationId),
                 IsKeyboardFocusablePropertyId => Variant.Bool(true),
                 HasKeyboardFocusPropertyId => Variant.Bool(owner.Host.SurfaceView != null && owner.Host.SurfaceHasFocus),
@@ -428,8 +645,12 @@ internal sealed partial class LessonsAutomation : IDisposable
 
         public nint GetHostRawElementProvider() => 0;
 
-        public nint Navigate(NavigateDirection direction) =>
-            direction == NavigateDirection.Parent ? Pointer(owner.Root, IidFragment) : 0;
+        public nint Navigate(NavigateDirection direction) => direction switch
+        {
+            NavigateDirection.Parent => Pointer(owner.Root, IidFragment),
+            NavigateDirection.NextSibling => owner.ControlPointer(0),
+            _ => 0,
+        };
 
         public nint GetRuntimeId() => RuntimeId();
 

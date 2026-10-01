@@ -18,15 +18,30 @@ public class LeconsAutomationTests
     private const string Line = "Ma sœur a bon cœur.";
 
     /// <summary>Hôte de test : une ligne fixe, des cases de 10 px à partir de x = 100.</summary>
-    private sealed class FakeHost : ILessonSurfaceHost
+    private sealed class FakeHost : ILessonsAutomationHost
     {
         public IntPtr Handle { get; set; } = GetDesktopWindow(); // ClientToScreen y est l'identité
         public LessonSurfaceView? SurfaceView { get; set; }
+        public List<LessonControlView> ControlList { get; set; } = new();
+        public IReadOnlyList<LessonControlView> Controls => ControlList;
         public bool WindowHasFocus { get; set; } = true;
         public bool SurfaceHasFocus { get; set; } = true;
+        public int FocusedControl { get; set; } = -1;
         public int FocusRequests;
+        public readonly List<int> FocusedControls = new();
+        public readonly List<(int, string)> Invoked = new();
         public void FocusSurface() => FocusRequests++;
+        public void FocusControl(int index) => FocusedControls.Add(index);
+        public void InvokeControl(int index, string name) => Invoked.Add((index, name));
     }
+
+    /// <summary>Trois contrôles : un bouton, une entrée de barre latérale sélectionnée, un interrupteur.</summary>
+    private static List<LessonControlView> SampleControls() => new()
+    {
+        new("Paramètres", LessonControlKind.Button, new Win32.RECT { left = 500, top = 10, right = 580, bottom = 40 }),
+        new("Initiation 0/6", LessonControlKind.ListItem, new Win32.RECT { left = 10, top = 60, right = 80, bottom = 90 }, Selected: true),
+        new("Indices automatiques", LessonControlKind.CheckBox, new Win32.RECT { left = 10, top = 100, right = 80, bottom = 130 }, Toggled: true),
+    };
 
     private static LessonSurfaceView View(string text, int caret, int boxLeft = 90, int boxRight = 400)
     {
@@ -34,8 +49,8 @@ public class LeconsAutomationTests
         for (int i = 0; i < text.Length; i++)
             cells[i] = new Win32.RECT { left = 100 + 10 * i, top = 20, right = 110 + 10 * i, bottom = 56 };
         var caretRect = new Win32.RECT { left = 100 + 10 * caret, top = 20, right = 102 + 10 * caret, bottom = 56 };
-        return new LessonSurfaceView("Texte à taper", text, caret, new Win32.RECT { left = boxLeft, top = 14, right = boxRight, bottom = 78 },
-            cells, caretRect);
+        return new LessonSurfaceView("Texte à taper", "Premiers pas. Tapez cette phrase.", text, caret,
+            new Win32.RECT { left = boxLeft, top = 14, right = boxRight, bottom = 78 }, cells, caretRect);
     }
 
     private static (LessonsAutomation Automation, FakeHost Host) Create(string text = Line, int caret = 3)
@@ -253,22 +268,185 @@ public class LeconsAutomationTests
         Assert.Equal(0, automation.Root.GetFocus());
     }
 
+    // ── Les contrôles : boutons, barre latérale, interrupteurs ──────────────────────
+
+    private static T Take<T>(nint pointer) where T : class
+    {
+        try { return LessonsAutomation.Unwrap<T>(pointer) ?? throw new InvalidOperationException("pointeur étranger ou nul"); }
+        finally { if (pointer != 0) Marshal.Release(pointer); }
+    }
+
+    private static string Bstr(Variant value)
+    {
+        try { return Marshal.PtrToStringBSTR(value.Value); }
+        finally { Marshal.FreeBSTR(value.Value); }
+    }
+
+    private static LessonsAutomation WithControls(FakeHost host)
+    {
+        var automation = new LessonsAutomation(host);
+        automation.OnPainted();
+        return automation;
+    }
+
+    [Fact]
+    public void LesEnfantsSuiventLOrdreDeTab_LaSurfacePuisLesControles()
+    {
+        var automation = WithControls(new FakeHost { SurfaceView = View(Line, 3), ControlList = SampleControls() });
+        Assert.Same(automation.Surface, Take<LessonsAutomation.SurfaceProvider>(automation.Root.Navigate(NavigateDirection.FirstChild)));
+        var first = Take<LessonsAutomation.ControlProvider>(automation.Surface.Navigate(NavigateDirection.NextSibling));
+        Assert.Equal(0, first.Index);
+        Assert.Equal(1, Take<LessonsAutomation.ControlProvider>(first.Navigate(NavigateDirection.NextSibling)).Index);
+        Assert.Same(automation.Surface, Take<LessonsAutomation.SurfaceProvider>(first.Navigate(NavigateDirection.PreviousSibling)));
+        var last = Take<LessonsAutomation.ControlProvider>(automation.Root.Navigate(NavigateDirection.LastChild));
+        Assert.Equal(2, last.Index);
+        Assert.Equal(0, last.Navigate(NavigateDirection.NextSibling));
+        Assert.Same(automation.Root, Take<LessonsAutomation.RootProvider>(last.Navigate(NavigateDirection.Parent)));
+    }
+
+    [Fact]
+    public void SansSurfaceLePremierEnfantEstLePremierControle()
+    {
+        var automation = WithControls(new FakeHost { SurfaceView = null, ControlList = SampleControls() });
+        var first = Take<LessonsAutomation.ControlProvider>(automation.Root.Navigate(NavigateDirection.FirstChild));
+        Assert.Equal(0, first.Index);
+        Assert.Equal(0, first.Navigate(NavigateDirection.PreviousSibling));
+    }
+
+    [Fact]
+    public void ChaqueControleDitSonTypeSonNomEtSonMotif()
+    {
+        var automation = WithControls(new FakeHost { ControlList = SampleControls() });
+        var button = automation.Control(0);
+        var item = automation.Control(1);
+        var toggle = automation.Control(2);
+
+        Assert.Equal(LessonsAutomation.ButtonControlTypeId, (int)button.GetPropertyValue(LessonsAutomation.ControlTypePropertyId).Value);
+        Assert.Equal("Paramètres", Bstr(button.GetPropertyValue(LessonsAutomation.NamePropertyId)));
+        Assert.Equal(0, button.GetPropertyValue(LessonsAutomation.ItemStatusPropertyId).Vt); // VT_EMPTY
+        Assert.Equal(LessonsAutomation.ListItemControlTypeId, (int)item.GetPropertyValue(LessonsAutomation.ControlTypePropertyId).Value);
+        Assert.Equal(L.LessonsWin_AutomationSelected, Bstr(item.GetPropertyValue(LessonsAutomation.ItemStatusPropertyId)));
+        Assert.Equal(LessonsAutomation.CheckBoxControlTypeId, (int)toggle.GetPropertyValue(LessonsAutomation.ControlTypePropertyId).Value);
+        Assert.Equal(ToggleState.On, toggle.GetToggleState());
+
+        nint invoke = button.GetPatternProvider(LessonsAutomation.InvokePatternId);
+        Assert.NotEqual(0, invoke);
+        Marshal.Release(invoke);
+        Assert.Equal(0, button.GetPatternProvider(LessonsAutomation.TogglePatternId));
+        nint toggled = toggle.GetPatternProvider(LessonsAutomation.TogglePatternId);
+        Assert.NotEqual(0, toggled);
+        Marshal.Release(toggled);
+        Assert.Equal(0, toggle.GetPatternProvider(LessonsAutomation.InvokePatternId));
+    }
+
+    [Fact]
+    public void ActiverEtFocaliserPassentParLaFenetre()
+    {
+        var host = new FakeHost { ControlList = SampleControls() };
+        var automation = WithControls(host);
+        automation.Control(0).Invoke();
+        automation.Control(2).Toggle();
+        automation.Control(1).SetFocus();
+        Assert.Equal(new[] { (0, "Paramètres"), (2, "Indices automatiques") }, host.Invoked);
+        Assert.Equal(new[] { 1 }, host.FocusedControls);
+    }
+
+    [Fact]
+    public void UneAutreListeDeControlesPerimeLesAnciensElements()
+    {
+        var host = new FakeHost { ControlList = SampleControls() };
+        var automation = WithControls(host);
+        var before = automation.Control(0);
+
+        // Même liste, autre place (redimensionnement) : l'élément reste valable.
+        host.ControlList[0] = host.ControlList[0] with { Rect = new Win32.RECT { left = 600, top = 10, right = 680, bottom = 40 } };
+        automation.OnPainted();
+        Assert.Equal("Paramètres", Bstr(before.GetPropertyValue(LessonsAutomation.NamePropertyId)));
+
+        // Autre liste (autre page) : il ne désigne plus rien.
+        host.ControlList[0] = host.ControlList[0] with { Name = "Leçons" };
+        automation.OnPainted();
+        var error = Assert.Throws<COMException>(() => before.GetPropertyValue(LessonsAutomation.NamePropertyId));
+        Assert.Equal(unchecked((int)0x80040201), error.HResult); // UIA_E_ELEMENTNOTAVAILABLE
+        Assert.NotSame(before, automation.Control(0));
+    }
+
+    [Fact]
+    public void LePointEtLeFocusDesignentLeControle()
+    {
+        var host = new FakeHost { SurfaceView = View(Line, 3), ControlList = SampleControls(), SurfaceHasFocus = false, FocusedControl = 2 };
+        var automation = WithControls(host);
+        Assert.Equal(0, Take<LessonsAutomation.ControlProvider>(automation.Root.ElementProviderFromPoint(510, 20)).Index);
+        Assert.Same(automation.Surface, Take<LessonsAutomation.SurfaceProvider>(automation.Root.ElementProviderFromPoint(150, 30)));
+        Assert.Equal(2, Take<LessonsAutomation.ControlProvider>(automation.Root.GetFocus()).Index);
+        Assert.Equal(-1, (short)automation.Control(2).GetPropertyValue(LessonsAutomation.HasKeyboardFocusPropertyId).Value);
+        Assert.Equal(0, (short)automation.Control(0).GetPropertyValue(LessonsAutomation.HasKeyboardFocusPropertyId).Value);
+    }
+
+    [Fact]
+    public void LesIdentifiantsDExecutionSontDistincts()
+    {
+        var automation = WithControls(new FakeHost { SurfaceView = View(Line, 3), ControlList = SampleControls() });
+        var ids = new[]
+        {
+            SafeArrays.Ints(automation.Surface.GetRuntimeId()),
+            SafeArrays.Ints(automation.Control(0).GetRuntimeId()),
+            SafeArrays.Ints(automation.Control(1).GetRuntimeId()),
+        };
+        Assert.Equal(3, ids.Select(id => string.Join(",", id)).Distinct().Count());
+    }
+
+    [Fact]
+    public void LaSurfaceDonneLaConsigneEnAide()
+    {
+        var (automation, _) = Create();
+        Assert.Equal("Premiers pas. Tapez cette phrase.", Bstr(automation.Surface.GetPropertyValue(LessonsAutomation.HelpTextPropertyId)));
+    }
+
+    [Fact]
+    public void LaFenetreActiveLeControleDemande_SiLeRepeintNeLaPasChange()
+    {
+        bool? afterWrongName = null, afterRightName = null;
+        OnUiThread((window, hwnd) =>
+        {
+            var controls = BancCapture.Field<List<LessonControlView>>(window, "_controlViews");
+            int settings = controls.FindIndex(c => c.Name == L.LessonsWin_SettingsTab);
+            Assert.True(settings >= 0, "bouton Paramètres introuvable");
+            ILessonsAutomationHost host = window;
+
+            host.InvokeControl(settings, "Leçons");
+            BancCapture.Call(window, "RunPendingInvoke");
+            afterWrongName = BancCapture.Field<bool>(window, "_settingsOpen");
+
+            host.InvokeControl(settings, L.LessonsWin_SettingsTab);
+            BancCapture.Call(window, "RunPendingInvoke");
+            afterRightName = BancCapture.Field<bool>(window, "_settingsOpen");
+        });
+        Assert.False(afterWrongName);
+        Assert.True(afterRightName);
+    }
+
     // ── De bout en bout : un vrai client UI Automation ───────────────────────────────
 
     private static readonly Guid ClsidCUIAutomation = new("ff48dba4-60ef-4201-aa87-54103eef594e");
     private static readonly Guid IidIUIAutomation = new("30cbe57d-d9d0-452a-ab13-7ac5ac4825ee");
     private static readonly Guid IidTextPattern2 = new("506a921a-fcc9-409f-b23b-37eb74106872");
+    private static readonly Guid IidInvokePattern = new("fb377fbe-8ea6-46d5-9c73-6499642d3059");
 
     /// <summary>Hôte qui relaie la fenêtre et note le fil de chaque appel du fournisseur.</summary>
-    private sealed class RecordingHost(ILessonSurfaceHost inner) : ILessonSurfaceHost
+    private sealed class RecordingHost(ILessonsAutomationHost inner) : ILessonsAutomationHost
     {
         public readonly HashSet<int> Threads = new();
         private T Note<T>(T value) { lock (Threads) Threads.Add(Environment.CurrentManagedThreadId); return value; }
         public IntPtr Handle => Note(inner.Handle);
         public LessonSurfaceView? SurfaceView => Note(inner.SurfaceView);
+        public IReadOnlyList<LessonControlView> Controls => Note(inner.Controls);
         public bool WindowHasFocus => Note(inner.WindowHasFocus);
         public bool SurfaceHasFocus => Note(inner.SurfaceHasFocus);
+        public int FocusedControl => Note(inner.FocusedControl);
         public void FocusSurface() { Note(0); inner.FocusSurface(); }
+        public void FocusControl(int index) { Note(0); inner.FocusControl(index); }
+        public void InvokeControl(int index, string name) { Note(0); inner.InvokeControl(index, name); }
     }
 
     private sealed record ClientReading(int ControlType, string Name, string Text, double[] CaretBounds, string? Error);
@@ -489,23 +667,82 @@ public class LeconsAutomationTests
 
     /// <summary>L'Edit parmi les enfants de la fenêtre, en vue brute : la barre de titre (proxy
     /// du HWND) vient d'abord.</summary>
-    private static IntPtr FindSurface(IntPtr uia, IntPtr hwnd, List<IntPtr> releases)
+    private static IntPtr FindSurface(IntPtr uia, IntPtr hwnd, List<IntPtr> releases) =>
+        FindChild(uia, hwnd, releases, (type, _) => type == LessonsAutomation.EditControlTypeId);
+
+    /// <summary>Le premier enfant de la fenêtre, en vue brute, qui répond à <paramref name="match"/>
+    /// (type de contrôle, nom).</summary>
+    private static IntPtr FindChild(IntPtr uia, IntPtr hwnd, List<IntPtr> releases, Func<int, string, bool> match)
     {
         Check(Slot<GetPtrArg>(uia, 6)(uia, hwnd, out IntPtr window)); // ElementFromHandle
         Keep(releases, window);
         Check(Slot<GetPtr>(uia, 16)(uia, out IntPtr walker)); // get_RawViewWalker
         Keep(releases, walker);
         Check(Slot<GetPtrArg>(walker, 4)(walker, window, out IntPtr child)); // GetFirstChildElement
-        var seen = new List<int>();
+        var seen = new List<string>();
         while (Keep(releases, child) != IntPtr.Zero)
         {
             Check(Slot<GetInt>(child, 21)(child, out int controlType)); // get_CurrentControlType
-            if (controlType == LessonsAutomation.EditControlTypeId)
+            Check(Slot<GetPtr>(child, 23)(child, out IntPtr nameBstr)); // get_CurrentName
+            string name = TakeBstr(nameBstr);
+            if (match(controlType, name))
                 return child;
-            seen.Add(controlType);
+            seen.Add($"{controlType} « {name} »");
             Check(Slot<GetPtrArg>(walker, 6)(walker, child, out child)); // GetNextSiblingElement
         }
-        throw new InvalidOperationException("pas d'Edit parmi les enfants : " + string.Join(", ", seen));
+        throw new InvalidOperationException("aucun enfant ne convient : " + string.Join(", ", seen));
+    }
+
+    /// <summary>
+    /// Narrateur ou un outil de test activent un bouton par le motif Invoke : « Paramètres »
+    /// doit s'ouvrir comme au clic, l'activation passant par la file de la fenêtre.
+    /// </summary>
+    [Fact]
+    public void UnClientUiaOuvreLesParametresParLeMotifInvoke()
+    {
+        string? error = null;
+        bool opened = false;
+        string settings = "";
+
+        OnUiThread((window, hwnd) =>
+        {
+            settings = L.LessonsWin_SettingsTab;
+            var automation = new LessonsAutomation(window);
+            BancCapture.SetField(window, "_automation", automation);
+            automation.OnPainted(); // relève les contrôles du repeint déjà fait
+            var client = StartClient(() => error = InvokeByName(hwnd, settings));
+            PumpUntil(() => !client.IsAlive, "client UIA");
+            PumpUntil(() => BancCapture.Field<bool>(window, "_settingsOpen") || error != null, "ouverture des Paramètres");
+            opened = BancCapture.Field<bool>(window, "_settingsOpen");
+        });
+
+        Assert.True(error == null, error);
+        Assert.True(opened);
+    }
+
+    private static string? InvokeByName(IntPtr hwnd, string name)
+    {
+        var releases = new List<IntPtr>();
+        try
+        {
+            IntPtr uia = CreateClient(releases);
+            IntPtr button = FindChild(uia, hwnd, releases,
+                (type, n) => type == LessonsAutomation.ButtonControlTypeId && n == name);
+            Guid iid = IidInvokePattern;
+            Check(Slot<GetPatternAs>(button, 14)(button, LessonsAutomation.InvokePatternId, ref iid, out IntPtr invoke));
+            if (Keep(releases, invoke) == IntPtr.Zero)
+                return "motif Invoke absent";
+            Check(Slot<NoArgs>(invoke, 3)(invoke)); // IUIAutomationInvokePattern::Invoke
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.ToString();
+        }
+        finally
+        {
+            ReleaseAll(releases);
+        }
     }
 
     private static IntPtr Keep(List<IntPtr> releases, IntPtr pointer)
@@ -604,6 +841,22 @@ public class LeconsAutomationTests
             try
             {
                 var values = new double[Length(array)];
+                Marshal.ThrowExceptionForHR(SafeArrayAccessData(array, out IntPtr data));
+                try { Marshal.Copy(data, values, 0, values.Length); }
+                finally { SafeArrayUnaccessData(array); }
+                return values;
+            }
+            finally
+            {
+                SafeArrayDestroy(array);
+            }
+        }
+
+        public static int[] Ints(nint array)
+        {
+            try
+            {
+                var values = new int[Length(array)];
                 Marshal.ThrowExceptionForHR(SafeArrayAccessData(array, out IntPtr data));
                 try { Marshal.Copy(data, values, 0, values.Length); }
                 finally { SafeArrayUnaccessData(array); }

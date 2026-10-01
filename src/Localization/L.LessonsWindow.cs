@@ -50,6 +50,8 @@ internal static partial class L
 
     // Nom de la surface de frappe pour l'UI Automation (loupe, Narrateur, NVDA).
     public static string LessonsWin_AutomationLineName => T("Texte à taper", "Text to type");
+    // État lu par Narrateur sur le module ou la leçon affichés dans la barre latérale.
+    public static string LessonsWin_AutomationSelected => T("sélectionné", "selected");
 
     // ── Mode libre ───────────────────────────────────────────────────
     public static string LessonsWin_FreeTitle => T("Mode libre", "Free mode");
