@@ -4,6 +4,14 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, sauf le Défi du jour, masqué en 1.3.0 (voir « Correctifs de l’audit du 24 septembre »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Disposition 2026.1 (décision d’Antoine du 4 octobre)**
+
+- L’application embarque la 2026.1 au lieu de la 2026 : 1 100 caractères au lieu de 1 005, 30 touches mortes au lieu de 29. Rien ne change de place : la 2026.1 ne fait qu’ajouter.
+- Nouvelle touche morte « Cyrillique étendu » sur AltGr + Maj + * : ө, ү, ғ, ң… pour le kazakh, le mongol, le tatar, le bachkir et le tadjik. Elle ne se verrouille pas, comme sur le site.
+- Ajouts dans des touches mortes existantes : ʾ ʿ, saltillo ꞌ Ꞌ, cinq espaces (fine, ultrafine, demi-cadratin, cadratin, chiffre) et l’espace sans chasse dans la ponctuation ; ɂ Ɂ et ĸ dans le latin étendu ; ʣ et ʦ dans l’alphabet phonétique.
+- La recherche de caractères connaît les ajouts (index du site régénéré).
+- Le clavier virtuel, les Leçons et les bulles nomment ces espaces (« esp. fine », « thin sp. »…). Le clavier virtuel nomme aussi les espaces insécables, qu’il laissait en blanc.
+
 **Textes de l’interface (inventaire du 29 septembre, décisions d’Antoine du 4 octobre)**
 
 - **Mêmes mots que le site.** Les cinq changements de l’accueil prennent les titres du site, en français et en anglais (« Symboles de programmation sur la rangée de repos », « Accents internationaux sur la touche ù »…), sous « 5 changements, 99 % des frappes préservées ». L’application se présente partout comme un « AZERTY amélioré », « gratuit et libre ».

@@ -204,6 +204,12 @@
           "layer": "Base"
         },
         {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Space",
+          "layer": "Base"
+        },
+        {
           "type": "direct",
           "key": "Space",
           "layer": "Shift"
@@ -221,6 +227,12 @@
           "layer": "Shift"
         },
         {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Space",
+          "layer": "Shift"
+        },
+        {
           "type": "direct",
           "key": "Space",
           "layer": "Caps"
@@ -234,6 +246,12 @@
         {
           "type": "deadkey",
           "deadkey": "dk_cyrillic",
+          "key": "Space",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
           "key": "Space",
           "layer": "Caps"
         },
@@ -251,6 +269,12 @@
         {
           "type": "deadkey",
           "deadkey": "dk_cyrillic",
+          "key": "Space",
+          "layer": "Caps+Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
           "key": "Space",
           "layer": "Caps+Shift"
         }
@@ -25304,8 +25328,2019 @@
           "layer": "Caps+AltGr"
         }
       ]
+    },
+    "ĸ": {
+      "codePoint": "U+0138",
+      "unicodeName": "U+0138",
+      "unicodeNameFr": "U+0138",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyK",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyK",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyK",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyK",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ɂ": {
+      "codePoint": "U+0241",
+      "unicodeName": "U+0241",
+      "unicodeNameFr": "U+0241",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyA",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyA",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ɂ": {
+      "codePoint": "U+0242",
+      "unicodeName": "U+0242",
+      "unicodeNameFr": "U+0242",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyA",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_extended_latin",
+          "key": "KeyA",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ʣ": {
+      "codePoint": "U+02A3",
+      "unicodeName": "U+02A3",
+      "unicodeNameFr": "U+02A3",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_phonetic",
+          "key": "KeyD",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_phonetic",
+          "key": "KeyD",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ʦ": {
+      "codePoint": "U+02A6",
+      "unicodeName": "U+02A6",
+      "unicodeNameFr": "U+02A6",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_phonetic",
+          "key": "KeyT",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_phonetic",
+          "key": "KeyT",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ʾ": {
+      "codePoint": "U+02BE",
+      "unicodeName": "U+02BE",
+      "unicodeNameFr": "U+02BE",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit4",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit4",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ʿ": {
+      "codePoint": "U+02BF",
+      "unicodeName": "U+02BF",
+      "unicodeNameFr": "U+02BF",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit5",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit5",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ѡ": {
+      "codePoint": "U+0460",
+      "unicodeName": "U+0460",
+      "unicodeNameFr": "U+0460",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit0",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit0",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ѡ": {
+      "codePoint": "U+0461",
+      "unicodeName": "U+0461",
+      "unicodeNameFr": "U+0461",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit0",
+          "layer": "Base",
+          "recommended": true
+        }
+      ]
+    },
+    "Ѣ": {
+      "codePoint": "U+0462",
+      "unicodeName": "U+0462",
+      "unicodeNameFr": "U+0462",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyB",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyB",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ѣ": {
+      "codePoint": "U+0463",
+      "unicodeName": "U+0463",
+      "unicodeNameFr": "U+0463",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyB",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyB",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ѫ": {
+      "codePoint": "U+046A",
+      "unicodeName": "U+046A",
+      "unicodeNameFr": "U+046A",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit6",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit6",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ѫ": {
+      "codePoint": "U+046B",
+      "unicodeName": "U+046B",
+      "unicodeNameFr": "U+046B",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit6",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit6",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ѳ": {
+      "codePoint": "U+0472",
+      "unicodeName": "U+0472",
+      "unicodeNameFr": "U+0472",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyF",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyF",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ѳ": {
+      "codePoint": "U+0473",
+      "unicodeName": "U+0473",
+      "unicodeNameFr": "U+0473",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyF",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyF",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ѵ": {
+      "codePoint": "U+0474",
+      "unicodeName": "U+0474",
+      "unicodeNameFr": "U+0474",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyV",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyV",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ѵ": {
+      "codePoint": "U+0475",
+      "unicodeName": "U+0475",
+      "unicodeNameFr": "U+0475",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyV",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyV",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ѷ": {
+      "codePoint": "U+0476",
+      "unicodeName": "U+0476",
+      "unicodeNameFr": "U+0476",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "IntlBackslash",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Comma",
+          "layer": "AltGr"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "IntlBackslash",
+          "layer": "Caps+Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Comma",
+          "layer": "Caps+AltGr"
+        }
+      ]
+    },
+    "ѷ": {
+      "codePoint": "U+0477",
+      "unicodeName": "U+0477",
+      "unicodeNameFr": "U+0477",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "IntlBackslash",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyM",
+          "layer": "AltGr"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "IntlBackslash",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyM",
+          "layer": "Caps+AltGr"
+        }
+      ]
+    },
+    "Ғ": {
+      "codePoint": "U+0492",
+      "unicodeName": "U+0492",
+      "unicodeNameFr": "U+0492",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyG",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyG",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ғ": {
+      "codePoint": "U+0493",
+      "unicodeName": "U+0493",
+      "unicodeNameFr": "U+0493",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyG",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyG",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҕ": {
+      "codePoint": "U+0494",
+      "unicodeName": "U+0494",
+      "unicodeNameFr": "U+0494",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit8",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit8",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ҕ": {
+      "codePoint": "U+0495",
+      "unicodeName": "U+0495",
+      "unicodeNameFr": "U+0495",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit8",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit8",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Җ": {
+      "codePoint": "U+0496",
+      "unicodeName": "U+0496",
+      "unicodeNameFr": "U+0496",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyW",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyW",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "җ": {
+      "codePoint": "U+0497",
+      "unicodeName": "U+0497",
+      "unicodeNameFr": "U+0497",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyW",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyW",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҙ": {
+      "codePoint": "U+0498",
+      "unicodeName": "U+0498",
+      "unicodeNameFr": "U+0498",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyD",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyD",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҙ": {
+      "codePoint": "U+0499",
+      "unicodeName": "U+0499",
+      "unicodeNameFr": "U+0499",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyD",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyD",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Қ": {
+      "codePoint": "U+049A",
+      "unicodeName": "U+049A",
+      "unicodeNameFr": "U+049A",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyK",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyK",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "қ": {
+      "codePoint": "U+049B",
+      "unicodeName": "U+049B",
+      "unicodeNameFr": "U+049B",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyK",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyK",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҝ": {
+      "codePoint": "U+049C",
+      "unicodeName": "U+049C",
+      "unicodeNameFr": "U+049C",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit9",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit9",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ҝ": {
+      "codePoint": "U+049D",
+      "unicodeName": "U+049D",
+      "unicodeNameFr": "U+049D",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit9",
+          "layer": "Base",
+          "recommended": true
+        }
+      ]
+    },
+    "Ҟ": {
+      "codePoint": "U+049E",
+      "unicodeName": "U+049E",
+      "unicodeNameFr": "U+049E",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyL",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyL",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҟ": {
+      "codePoint": "U+049F",
+      "unicodeName": "U+049F",
+      "unicodeNameFr": "U+049F",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyL",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyL",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҡ": {
+      "codePoint": "U+04A0",
+      "unicodeName": "U+04A0",
+      "unicodeNameFr": "U+04A0",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyA",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyA",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҡ": {
+      "codePoint": "U+04A1",
+      "unicodeName": "U+04A1",
+      "unicodeNameFr": "U+04A1",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyA",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyA",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ң": {
+      "codePoint": "U+04A2",
+      "unicodeName": "U+04A2",
+      "unicodeNameFr": "U+04A2",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyN",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyN",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ң": {
+      "codePoint": "U+04A3",
+      "unicodeName": "U+04A3",
+      "unicodeNameFr": "U+04A3",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyN",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyN",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҥ": {
+      "codePoint": "U+04A4",
+      "unicodeName": "U+04A4",
+      "unicodeNameFr": "U+04A4",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Semicolon",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Semicolon",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҥ": {
+      "codePoint": "U+04A5",
+      "unicodeName": "U+04A5",
+      "unicodeNameFr": "U+04A5",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Semicolon",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Semicolon",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҧ": {
+      "codePoint": "U+04A6",
+      "unicodeName": "U+04A6",
+      "unicodeNameFr": "U+04A6",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "BracketRight",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "BracketRight",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ҧ": {
+      "codePoint": "U+04A7",
+      "unicodeName": "U+04A7",
+      "unicodeNameFr": "U+04A7",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "BracketRight",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "BracketRight",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ҩ": {
+      "codePoint": "U+04A8",
+      "unicodeName": "U+04A8",
+      "unicodeNameFr": "U+04A8",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyZ",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyZ",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҩ": {
+      "codePoint": "U+04A9",
+      "unicodeName": "U+04A9",
+      "unicodeNameFr": "U+04A9",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyZ",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyZ",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҫ": {
+      "codePoint": "U+04AA",
+      "unicodeName": "U+04AA",
+      "unicodeNameFr": "U+04AA",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyS",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyS",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҫ": {
+      "codePoint": "U+04AB",
+      "unicodeName": "U+04AB",
+      "unicodeNameFr": "U+04AB",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyS",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyS",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҭ": {
+      "codePoint": "U+04AC",
+      "unicodeName": "U+04AC",
+      "unicodeNameFr": "U+04AC",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit5",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit5",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ҭ": {
+      "codePoint": "U+04AD",
+      "unicodeName": "U+04AD",
+      "unicodeNameFr": "U+04AD",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit5",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit5",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ү": {
+      "codePoint": "U+04AE",
+      "unicodeName": "U+04AE",
+      "unicodeNameFr": "U+04AE",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyU",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyU",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ү": {
+      "codePoint": "U+04AF",
+      "unicodeName": "U+04AF",
+      "unicodeNameFr": "U+04AF",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyU",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyU",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ұ": {
+      "codePoint": "U+04B0",
+      "unicodeName": "U+04B0",
+      "unicodeNameFr": "U+04B0",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyY",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyY",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ұ": {
+      "codePoint": "U+04B1",
+      "unicodeName": "U+04B1",
+      "unicodeNameFr": "U+04B1",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyY",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyY",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҳ": {
+      "codePoint": "U+04B2",
+      "unicodeName": "U+04B2",
+      "unicodeNameFr": "U+04B2",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyX",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyX",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҳ": {
+      "codePoint": "U+04B3",
+      "unicodeName": "U+04B3",
+      "unicodeNameFr": "U+04B3",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyX",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyX",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҵ": {
+      "codePoint": "U+04B4",
+      "unicodeName": "U+04B4",
+      "unicodeNameFr": "U+04B4",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyT",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyT",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҵ": {
+      "codePoint": "U+04B5",
+      "unicodeName": "U+04B5",
+      "unicodeNameFr": "U+04B5",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyT",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyT",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҷ": {
+      "codePoint": "U+04B6",
+      "unicodeName": "U+04B6",
+      "unicodeNameFr": "U+04B6",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyJ",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyJ",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҷ": {
+      "codePoint": "U+04B7",
+      "unicodeName": "U+04B7",
+      "unicodeNameFr": "U+04B7",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyJ",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyJ",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҹ": {
+      "codePoint": "U+04B8",
+      "unicodeName": "U+04B8",
+      "unicodeNameFr": "U+04B8",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyC",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyC",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ҹ": {
+      "codePoint": "U+04B9",
+      "unicodeName": "U+04B9",
+      "unicodeNameFr": "U+04B9",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyC",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyC",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Һ": {
+      "codePoint": "U+04BA",
+      "unicodeName": "U+04BA",
+      "unicodeNameFr": "U+04BA",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyH",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyH",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "һ": {
+      "codePoint": "U+04BB",
+      "unicodeName": "U+04BB",
+      "unicodeNameFr": "U+04BB",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyH",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyH",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ҽ": {
+      "codePoint": "U+04BC",
+      "unicodeName": "U+04BC",
+      "unicodeNameFr": "U+04BC",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit2",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit2",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ҽ": {
+      "codePoint": "U+04BD",
+      "unicodeName": "U+04BD",
+      "unicodeNameFr": "U+04BD",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit2",
+          "layer": "Base",
+          "recommended": true
+        }
+      ]
+    },
+    "Ҿ": {
+      "codePoint": "U+04BE",
+      "unicodeName": "U+04BE",
+      "unicodeNameFr": "U+04BE",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit7",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit7",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ҿ": {
+      "codePoint": "U+04BF",
+      "unicodeName": "U+04BF",
+      "unicodeNameFr": "U+04BF",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit7",
+          "layer": "Base",
+          "recommended": true
+        }
+      ]
+    },
+    "Ӏ": {
+      "codePoint": "U+04C0",
+      "unicodeName": "U+04C0",
+      "unicodeNameFr": "U+04C0",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyI",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyI",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ӊ": {
+      "codePoint": "U+04C9",
+      "unicodeName": "U+04C9",
+      "unicodeNameFr": "U+04C9",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyM",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyM",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ӊ": {
+      "codePoint": "U+04CA",
+      "unicodeName": "U+04CA",
+      "unicodeNameFr": "U+04CA",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyM",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit9",
+          "layer": "Shift+AltGr"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyM",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit9",
+          "layer": "Caps+Shift+AltGr"
+        }
+      ]
+    },
+    "ӏ": {
+      "codePoint": "U+04CF",
+      "unicodeName": "U+04CF",
+      "unicodeNameFr": "U+04CF",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyI",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyI",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ӕ": {
+      "codePoint": "U+04D4",
+      "unicodeName": "U+04D4",
+      "unicodeNameFr": "U+04D4",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyE",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyE",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ӕ": {
+      "codePoint": "U+04D5",
+      "unicodeName": "U+04D5",
+      "unicodeNameFr": "U+04D5",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyE",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyE",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ә": {
+      "codePoint": "U+04D8",
+      "unicodeName": "U+04D8",
+      "unicodeNameFr": "U+04D8",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyQ",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyQ",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ә": {
+      "codePoint": "U+04D9",
+      "unicodeName": "U+04D9",
+      "unicodeNameFr": "U+04D9",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyQ",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyQ",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ӡ": {
+      "codePoint": "U+04E0",
+      "unicodeName": "U+04E0",
+      "unicodeNameFr": "U+04E0",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit3",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit3",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ӡ": {
+      "codePoint": "U+04E1",
+      "unicodeName": "U+04E1",
+      "unicodeNameFr": "U+04E1",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit3",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit3",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ө": {
+      "codePoint": "U+04E8",
+      "unicodeName": "U+04E8",
+      "unicodeNameFr": "U+04E8",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyO",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyO",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ө": {
+      "codePoint": "U+04E9",
+      "unicodeName": "U+04E9",
+      "unicodeNameFr": "U+04E9",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyO",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyO",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ӷ": {
+      "codePoint": "U+04F6",
+      "unicodeName": "U+04F6",
+      "unicodeNameFr": "U+04F6",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyR",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyR",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ӷ": {
+      "codePoint": "U+04F7",
+      "unicodeName": "U+04F7",
+      "unicodeNameFr": "U+04F7",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyR",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyR",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ԕ": {
+      "codePoint": "U+0514",
+      "unicodeName": "U+0514",
+      "unicodeNameFr": "U+0514",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit1",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit1",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ԕ": {
+      "codePoint": "U+0515",
+      "unicodeName": "U+0515",
+      "unicodeNameFr": "U+0515",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit1",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit1",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ԗ": {
+      "codePoint": "U+0516",
+      "unicodeName": "U+0516",
+      "unicodeNameFr": "U+0516",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit4",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit4",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ԗ": {
+      "codePoint": "U+0517",
+      "unicodeName": "U+0517",
+      "unicodeNameFr": "U+0517",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit4",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Digit4",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ԙ": {
+      "codePoint": "U+0518",
+      "unicodeName": "U+0518",
+      "unicodeNameFr": "U+0518",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Equal",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Equal",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "ԙ": {
+      "codePoint": "U+0519",
+      "unicodeName": "U+0519",
+      "unicodeNameFr": "U+0519",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Equal",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Equal",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "Ԥ": {
+      "codePoint": "U+0524",
+      "unicodeName": "U+0524",
+      "unicodeNameFr": "U+0524",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyP",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyP",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ԥ": {
+      "codePoint": "U+0525",
+      "unicodeName": "U+0525",
+      "unicodeNameFr": "U+0525",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyP",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "KeyP",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    " ": {
+      "codePoint": "U+2002",
+      "unicodeName": "U+2002",
+      "unicodeNameFr": "U+2002",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyD",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyD",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyD",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyD",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    " ": {
+      "codePoint": "U+2003",
+      "unicodeName": "U+2003",
+      "unicodeNameFr": "U+2003",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Semicolon",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Semicolon",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Semicolon",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Semicolon",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    " ": {
+      "codePoint": "U+2007",
+      "unicodeName": "U+2007",
+      "unicodeNameFr": "U+2007",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit0",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit0",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "Digit0",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    " ": {
+      "codePoint": "U+2009",
+      "unicodeName": "U+2009",
+      "unicodeNameFr": "U+2009",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyF",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyF",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyF",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyF",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    " ": {
+      "codePoint": "U+200A",
+      "unicodeName": "U+200A",
+      "unicodeNameFr": "U+200A",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyU",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyU",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyU",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyU",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "​": {
+      "codePoint": "U+200B",
+      "unicodeName": "U+200B",
+      "unicodeNameFr": "U+200B",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyW",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyW",
+          "layer": "Shift"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyW",
+          "layer": "Caps"
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyW",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "Ꞌ": {
+      "codePoint": "U+A78B",
+      "unicodeName": "U+A78B",
+      "unicodeNameFr": "U+A78B",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyS",
+          "layer": "Shift",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyS",
+          "layer": "Caps"
+        }
+      ]
+    },
+    "ꞌ": {
+      "codePoint": "U+A78C",
+      "unicodeName": "U+A78C",
+      "unicodeNameFr": "U+A78C",
+      "methods": [
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyS",
+          "layer": "Base",
+          "recommended": true
+        },
+        {
+          "type": "deadkey",
+          "deadkey": "dk_punctuation",
+          "key": "KeyS",
+          "layer": "Caps+Shift"
+        }
+      ]
+    },
+    "dk:cyrillic_ext": {
+      "codePoint": "DEAD_KEY",
+      "unicodeName": "CYRILLIC EXT (dead key)",
+      "unicodeNameFr": "CYRILLIQUE ÉTENDU (TOUCHE MORTE)",
+      "displayChar": "ө",
+      "methods": [
+        {
+          "type": "deadkey_activation",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Backslash",
+          "layer": "Shift+AltGr",
+          "recommended": true
+        },
+        {
+          "type": "deadkey_activation",
+          "deadkey": "dk_cyrillic_ext",
+          "key": "Backslash",
+          "layer": "Caps+Shift+AltGr"
+        }
+      ]
     }
   },
-  "generated": "2026-07-15T14:27:50.254Z",
-  "totalCharacters": 1034
+  "generated": "2026-09-25T09:49:58.598Z",
+  "totalCharacters": 1130
 }

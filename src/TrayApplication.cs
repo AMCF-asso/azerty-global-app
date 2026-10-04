@@ -2397,6 +2397,7 @@ sealed class TrayApplication : IDisposable
             "dk_ring_above"       => "˚",
             "dk_greek"            => "µ",   // U+00B5 MICRO SIGN (cohérent layout AZ Global)
             "dk_cyrillic"         => "я",   // minuscule (cohérent web)
+            "dk_cyrillic_ext"     => "ө",   // minuscule (cohérent web, tester/deadkeys.js)
             "dk_misc_symbols"     => "→",
             "dk_scientific"       => "±",
             "dk_currencies"       => "¤",

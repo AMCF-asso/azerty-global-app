@@ -113,6 +113,7 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 
 ```text
 Version 1.3.0 :
+• Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
 • Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le menu de l’icône, sous « Couches ».
 • La recherche de caractères (Ctrl+Maj+W) insère le caractère directement dans votre texte.
 • Votre clavier ne change qu’après votre accord : après la mise à jour, l’accueil vous le redemande une fois.
@@ -237,6 +238,7 @@ Free and open source (EUPL 1.2), no admin rights needed
 
 ```text
 Version 1.3.0:
+• Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
 • Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet in the open app, Esc releases it. Tick each layer in the icon menu, under “Layers”.
 • Character search (Ctrl+Shift+W) inserts the character directly into your text.
 • Your keyboard only changes after you agree: after the update, the welcome window asks you once more.
