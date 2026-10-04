@@ -1,6 +1,6 @@
 {
   "layout_name": "AZERTY Global",
-  "version": "2026",
+  "version": "2026.1",
   "release_date": "2026-06-01",
   "author": "Antoine OLIVIER",
   "website": "https://azerty.global",
@@ -18,10 +18,10 @@
   "statistics": {
     "physical_keys": 49,
     "direct_characters": 131,
-    "dead_keys_count": 29,
-    "dead_key_combinations": 1016,
-    "total_unique_characters": 1005,
-    "supported_languages": "200+ languages, including all European languages using Latin, Greek or Cyrillic scripts"
+    "dead_keys_count": 30,
+    "dead_key_combinations": 1119,
+    "total_unique_characters": 1100,
+    "supported_languages": "300+ languages (324 fully typable, measured against CLDR), in Latin, Greek and Cyrillic scripts, modern orthographies"
   },
   "keyboard_type": {
     "primary": "ISO 105-key",
@@ -129,7 +129,7 @@
         {"position": "C09", "scancode": "SC026", "vk": "VK_KEY_L", "base": "l", "shift": "L", "caps": "L", "caps_shift": "l", "alt_gr": "`", "shift_alt_gr": null, "finger": "right_ring"},
         {"position": "C10", "scancode": "SC027", "vk": "VK_KEY_M", "base": "m", "shift": "M", "caps": "M", "caps_shift": "m", "alt_gr": null, "shift_alt_gr": null, "finger": "right_pinky"},
         {"position": "C11", "scancode": "SC028", "vk": "VK_OEM_3", "base": "dk_acute", "shift": "dk_grave", "alt_gr": "dk_tilde", "shift_alt_gr": null, "finger": "right_pinky"},
-        {"position": "C12", "scancode": "SC02B", "vk": "VK_OEM_5", "base": "*", "shift": "dk_greek", "alt_gr": "dk_cyrillic", "shift_alt_gr": null, "finger": "right_pinky"}
+        {"position": "C12", "scancode": "SC02B", "vk": "VK_OEM_5", "base": "*", "shift": "dk_greek", "alt_gr": "dk_cyrillic", "shift_alt_gr": "dk_cyrillic_ext", "finger": "right_pinky"}
       ]
     },
     {
@@ -385,7 +385,8 @@
         "\"": "ə", "3": "Ə", "'": "\u02BC", "?": "\u0294",
         "^": "\u032D", "\u00A8": "\u0324", "\u007E": "\u0330", "\u02C7": "\u032C", "\u02D8": "\u032E",
         "\u02DA": "\u0325",
-        "\u0020": "\u0020"
+        "\u0020": "\u0020",
+        "q": "ɂ", "Q": "Ɂ", "k": "ĸ", "K": "ĸ"
       }
     },
     "dk_cedilla": {
@@ -418,7 +419,8 @@
         "Y": "\u028F", "z": "\u026E", "?": "\u02E4", "\u00BF": "\u0295", "4": "\u0280", ":": "\u02D0", ";": "\u02D1",
         "'": "\u02C8", ",": "\u02CC", "-": "\u02B0", "è": "\u02B2", "&": "\u02B7", "ç": "\u02E1",
         "(": "\u02E0", "=": "\u031A", "_": "\u207F", "|": "\u0329", "\u02D8": "\u032F",
-        "\u0020": "\u0281"  
+        "\u0020": "\u0281"  ,
+        "D": "ʣ", "T": "ʦ"
       }
     },
     "dk_ring_above": {
@@ -473,6 +475,26 @@
         "´": "ћ", "`": "Ћ", "µ": "Ђ",
         "^": "џ", "¨": "Џ",
         " ": " "
+      }
+    },
+    "dk_cyrillic_ext": {
+      "description": "Extended Cyrillic letters (Kazakh, Mongolian, Tatar, Bashkir, Tajik…)",
+      "example": "o → ө",
+      "table": {
+        "u": "ү", "U": "Ү", "o": "ө", "O": "Ө", "g": "ғ", "G": "Ғ",
+        "h": "һ", "H": "Һ", "a": "ә", "A": "Ә", "n": "ң", "N": "Ң",
+        "k": "қ", "K": "Қ", "x": "ҳ", "X": "Ҳ", "i": "ӏ", "I": "Ӏ",
+        "q": "ҡ", "Q": "Ҡ", "s": "ҫ", "S": "Ҫ", "j": "ҷ", "J": "Ҷ",
+        "_": "ҕ", "8": "Ҕ", "z": "җ", "Z": "Җ", "d": "ҙ", "D": "Ҙ",
+        "ç": "ҝ", "9": "Ҝ", "l": "ҟ", "L": "Ҟ", "m": "ҥ", "M": "Ҥ",
+        "w": "ҩ", "W": "Ҩ", "(": "ҭ", "5": "Ҭ", "y": "ұ", "Y": "Ұ",
+        "t": "ҵ", "T": "Ҵ", "c": "ҹ", "C": "Ҹ", "é": "ҽ", "2": "Ҽ",
+        "è": "ҿ", "7": "Ҿ", "e": "ӕ", "E": "Ӕ", "\"": "ӡ", "3": "Ӡ",
+        "r": "ӷ", "R": "Ӷ", "p": "ԥ", "P": "Ԥ", "b": "ѣ", "B": "Ѣ",
+        "f": "ѳ", "F": "Ѳ", "à": "ѡ", "0": "Ѡ", "v": "ѵ", "V": "Ѵ",
+        "<": "ѷ", ">": "Ѷ", "-": "ѫ", "6": "Ѫ", "&": "ԕ", "1": "Ԕ",
+        "'": "ԗ", "4": "Ԗ", "=": "ԙ", "+": "Ԙ", "$": "ҧ", "£": "Ҧ",
+        ",": "ӊ", "?": "Ӊ", " ": "\u0020"
       }
     },
     "dk_misc_symbols": {
@@ -537,7 +559,8 @@
         "-": "\u2010", "_": "\u2423", "*": "\u2042", ".": "\u2026", "|": "\u2016", ")": "\u203F",
         "6": "\u00AD", "^": "\u2038", ":": "\u2022", "/": "\u2023", "q": "\u00B6", "Q": "\u00B6",
         "r": "\u203B", "R": "\u203B", "t": "\u2020", "T": "\u2021",
-        "\u0020": "\u00A7"
+        "\u0020": "\u00A7",
+        "s": "ꞌ", "S": "Ꞌ", "4": "ʾ", "5": "ʿ", "u": "\u200A", "U": "\u200A", "f": "\u2009", "F": "\u2009", "d": "\u2002", "D": "\u2002", "m": "\u2003", "M": "\u2003", "à": "\u2007", "0": "\u2007", "z": "\u200B", "Z": "\u200B"
       }
     }
   }

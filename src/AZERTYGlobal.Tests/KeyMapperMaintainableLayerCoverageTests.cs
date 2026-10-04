@@ -306,7 +306,8 @@ public class KeyMapperMaintainableLayerCoverageTests : IDisposable
         }
     }
 
-    // ── Les 26 autres touches mortes restent inchangées ─────────────
+    // ── Les 27 autres touches mortes restent inchangées ─────────────
+    // (27 depuis la 2026.1 : dk_cyrillic_ext, non verrouillable, décision d'Antoine du 2026-10-04)
 
     [Fact]
     public void OtherDeadKeys_KeepClassicBehavior()
@@ -318,7 +319,8 @@ public class KeyMapperMaintainableLayerCoverageTests : IDisposable
             var others = layout.DeadKeys.Keys
                 .Where(dk => !AllLayers.Contains(dk))
                 .ToList();
-            Assert.Equal(26, others.Count);
+            Assert.Equal(27, others.Count);
+            Assert.Contains("dk_cyrillic_ext", others);
 
             foreach (var dkName in others)
             {
@@ -357,6 +359,44 @@ public class KeyMapperMaintainableLayerCoverageTests : IDisposable
                 Assert.False(mapper.ProcessKey(0x08, SC_BACKSPACE, 0, true));
                 Assert.Null(mapper.ActiveDeadKey);
             }
+        }
+    }
+
+    // ── 2026.1 : cyrillique étendu sur AltGr + Maj + *, jamais verrouillé ──
+
+    [Fact]
+    public void CyrillicExt_AltGrShiftTrigger_ThenO_EmitsOBarred_EvenOnDoublePress()
+    {
+        const uint SC_O = 0x18;
+        var (mapper, mock, monitor) = CreateMapper();
+        using (monitor)
+        {
+            mock.AsyncKeyStateScript[(int)VK_LSHIFT] = KeyDown;
+            mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, true);
+            mock.AsyncKeyStateScript[(int)VK_RMENU] = KeyDown;
+            mapper.TrackModifiers(VK_RMENU, SC_RALT, 0, true);
+
+            // Double appui : la couche cyrillique se verrouillerait, pas le cyrillique étendu.
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.True(mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true));
+                mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, false);
+                Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);
+            }
+            Assert.False(mapper.ProcessKey(0x08, SC_BACKSPACE, 0, true));
+            Assert.True(mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true));
+            mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, false);
+            Assert.Equal("dk_cyrillic_ext", mapper.ActiveDeadKey);
+
+            mock.AsyncKeyStateScript[(int)VK_LSHIFT] = 0;
+            mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, false);
+            mock.AsyncKeyStateScript[(int)VK_RMENU] = 0;
+            mapper.TrackModifiers(VK_RMENU, SC_RALT, 0, false);
+
+            mock.SendInputCalls.Clear();
+            Assert.True(mapper.ProcessKey(0x4F, SC_O, 0, true));
+            AssertUnicode(mock, 'ө');
+            Assert.Null(mapper.ActiveDeadKey);
         }
     }
 

@@ -39,6 +39,13 @@ internal static partial class L
     // ── Marqueurs de caractères invisibles ────────────────────────────
     public static string Keyboard_NarrowNbsp => T("esp. ins. fine", "narrow NBSP");
     public static string Keyboard_Nbsp => T("esp. ins.", "NBSP");
+    // Espaces de la touche morte Ponctuation, ajoutées par la 2026.1 (décision d'Antoine du 2026-10-04).
+    public static string Keyboard_ThinSpace => T("esp. fine", "thin sp.");
+    public static string Keyboard_HairSpace => T("esp. ultrafine", "hair sp.");
+    public static string Keyboard_EnSpace => T("esp. ½ cadr.", "en sp.");
+    public static string Keyboard_EmSpace => T("esp. cadr.", "em sp.");
+    public static string Keyboard_FigureSpace => T("esp. chiffre", "figure sp.");
+    public static string Keyboard_ZeroWidthSpace => T("esp. nulle", "ZWSP");
 
     // ── Noms des touches mortes (anglais — le dictionnaire français reste VirtualKeyboard._deadKeyNamesFr) ──
     public static readonly Dictionary<string, string> DeadKeyNamesEn = new()
@@ -68,6 +75,7 @@ internal static partial class L
         ["dk_ring_above"] = "Ring above",
         ["dk_greek"] = "Greek alphabet",
         ["dk_cyrillic"] = "Cyrillic alphabet",
+        ["dk_cyrillic_ext"] = "Extended Cyrillic",
         ["dk_misc_symbols"] = "Miscellaneous symbols",
         ["dk_scientific"] = "Scientific symbols",
         ["dk_currencies"] = "Currency symbols",

@@ -114,6 +114,7 @@ internal static class KeyboardRenderer
         "dk_caron",
         "dk_ogonek",
         "dk_cyrillic",
+        "dk_cyrillic_ext",
     };
 
     private static readonly HashSet<string> DkAlwaysWithDottedCircle = new(StringComparer.Ordinal)
@@ -923,6 +924,12 @@ internal static class KeyboardRenderer
         {
             "\u202F" => L.Keyboard_NarrowNbsp,
             "\u00A0" => L.Keyboard_Nbsp,
+            "\u2009" => L.Keyboard_ThinSpace,
+            "\u200A" => L.Keyboard_HairSpace,
+            "\u2002" => L.Keyboard_EnSpace,
+            "\u2003" => L.Keyboard_EmSpace,
+            "\u2007" => L.Keyboard_FigureSpace,
+            "\u200B" => L.Keyboard_ZeroWidthSpace,
             _ => value
         };
     }

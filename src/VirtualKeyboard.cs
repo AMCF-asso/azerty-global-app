@@ -120,6 +120,7 @@ sealed class VirtualKeyboard : IDisposable
         ["dk_ring_above"] = "Rond en chef",
         ["dk_greek"] = "Alphabet grec",
         ["dk_cyrillic"] = "Alphabet cyrillique",
+        ["dk_cyrillic_ext"] = "Cyrillique étendu",
         ["dk_misc_symbols"] = "Symboles divers",
         ["dk_scientific"] = "Symboles scientifiques",
         ["dk_currencies"] = "Symboles monétaires",
@@ -1125,7 +1126,21 @@ sealed class VirtualKeyboard : IDisposable
                 // Labels AZERTY affichés quand une touche morte est active
                 bool showLabel = _activeDeadKey != null;
 
-                if (displayChar != null && displayChar.Length > 0)
+                // Espace sans dessin (insécables, espaces de la 2026.1) : son nom court, en petit,
+                // comme dans les Leçons. Sans lui, la touche paraissait vide.
+                string? invisibleName = displayChar != null && !isDkOutput
+                    ? KeyboardRenderer.DisplayInvisible(displayChar)
+                    : null;
+                if (invisibleName != null && invisibleName != displayChar)
+                {
+                    int bottomOffset = showLabel ? labelFontSize + 2 : 0;
+                    var nameRect = new Win32.RECT { left = kx + 2, top = ky, right = kx + kw - 2, bottom = ky + kh - bottomOffset };
+                    Win32.SelectObject(hdc, hLabelFont);
+                    Win32.SetTextColor(hdc, isPressed ? DarkTheme.OnAccent : CLR_CHAR);
+                    Win32.DrawTextW(hdc, invisibleName, invisibleName.Length, ref nameRect,
+                        Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+                }
+                else if (displayChar != null && displayChar.Length > 0)
                 {
                     int bottomOffset = showLabel ? labelFontSize + 2 : 0;
                     var charRect = new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = ky + kh - bottomOffset };
