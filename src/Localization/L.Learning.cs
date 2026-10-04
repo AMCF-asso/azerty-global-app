@@ -29,7 +29,7 @@ internal static partial class L
         "Type these foreign words — use the dead keys shown on the keyboard");
 
     // ── Fenêtre et boutons ─────────────────────────────────────────────
-    public static string Learning_WindowTitle => T($"{Product} — Exercices", $"{Product} — Exercises");
+    public static string Learning_WindowTitle => T($"{Product} — Premiers pas", $"{Product} — First steps");
     public static string Learning_BtnQuit => T("Quitter les exercices", "Quit exercises");
     public static string Learning_BtnSkip => T("Passer cet exercice", "Skip this exercise");
     public static string Learning_BtnFinish => T("Terminer", "Finish");
@@ -39,17 +39,17 @@ internal static partial class L
 
     // ── Tooltip touche Retour arrière (spécifique aux exercices) ────────
     public static string Learning_TooltipBackspaceDisabled => T(
-        "Désactivé pendant les exercices — continuez de taper,\nl’erreur se corrige toute seule",
-        "Disabled during exercises — keep typing,\nthe mistake corrects itself");
+        "Désactivé pendant les exercices — tapez le bon caractère\npour continuer",
+        "Disabled during exercises — type the correct character\nto continue");
 
-    public static string Learning_DeadKeyConnector => T(" — TOUCHE MORTE ", " — DEAD KEY ");
+    public static string Learning_DeadKeyConnector => T(" — touche morte ", " — dead key ");
 
     // ── Header et statut ────────────────────────────────────────────────
     public static string Learning_ExerciseHeader(int current, int total, string title) => T(
         $"Exercice {current}/{total} — {title}",
         $"Exercise {current}/{total} — {title}");
     public static string Learning_BonusSuffix => T(" (Bonus)", " (Bonus)");
-    public static string Learning_CapsLockLabel => T("Verrouillage Majuscule : ", "Caps Lock: ");
+    public static string Learning_CapsLockLabel => T("Verrouillage majuscule : ", "Caps Lock: ");
     public static string Learning_CapsLockOn => T("ACTIVÉ", "ON");
     public static string Learning_CapsLockOff => T("désactivé", "off");
     public static string Learning_ActiveDeadKey(string name, string symbol) => T(

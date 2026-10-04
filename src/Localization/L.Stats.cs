@@ -38,7 +38,7 @@ internal static partial class L
     public static string Stats_CopiedFeedback => T("Copié dans le presse-papiers !", "Copied to clipboard!");
     public static string Stats_PrivacyReassurance => T(
         "Ces statistiques sont calculées et stockées uniquement sur votre appareil. Rien n’est transmis.",
-        "These statistics are calculated and stored only on your device. Nothing is ever transmitted.");
+        "These statistics are calculated and stored only on your device. Nothing is transmitted.");
 
     // ── Collecte éteinte (canal sobre, décision D5 du 2026-08-19) ────
     public static string Stats_CollectionOffHeadline => T(
@@ -87,6 +87,6 @@ internal static partial class L
         total > 1 ? "special characters typed" : "special character typed");
 
     public static string Stats_ShareFull(string baseText, long total, string charWord, string detailText) => T(
-        $"{baseText}, {total} {charWord} directement grâce au clavier amélioré{detailText}.",
-        $"{baseText}, {total} {charWord} directly thanks to the improved layout{detailText}.");
+        $"{baseText}, {total} {charWord} directement grâce à cet AZERTY amélioré{detailText}.",
+        $"{baseText}, {total} {charWord} directly thanks to this improved AZERTY{detailText}.");
 }

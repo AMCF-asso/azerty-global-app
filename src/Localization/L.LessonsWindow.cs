@@ -11,16 +11,16 @@ internal static partial class L
     // ── Panneau Paramètres ──────────────────────────────────────────
     public static string LessonsWin_SectionDisplay => T("Affichage", "Display");
     public static string LessonsWin_SectionActions => T("Actions", "Actions");
-    public static string LessonsWin_ToggleAutoHints => T("Auto-indices", "Auto hints");
+    public static string LessonsWin_ToggleAutoHints => T("Indices automatiques", "Automatic hints");
     public static string LessonsWin_ToggleSummary => T("Résumé après exercice", "Summary after exercise");
-    public static string LessonsWin_ToggleFreeStats => T("Stats du mode libre", "Free mode stats");
+    public static string LessonsWin_ToggleFreeStats => T("Statistiques du mode libre", "Free mode stats");
     public static string LessonsWin_ToggleKeyboard => T("Clavier visuel", "Visual keyboard");
     public static string LessonsWin_ToggleInvisibleMarkers => T("Marqueurs invisibles", "Invisible markers");
     public static string LessonsWin_ToggleOn => T("Activé", "On");
     public static string LessonsWin_ToggleOff => T("Désactivé", "Off");
-    public static string LessonsWin_BtnResetFreeStats => T("Effacer les stats libres", "Reset free stats");
+    public static string LessonsWin_BtnResetFreeStats => T("Effacer les stats du mode libre", "Clear free mode stats");
     public static string LessonsWin_BtnResetProgress => T("Réinitialiser la progression", "Reset progress");
-    public static string LessonsWin_BtnResetStats => T("Effacer les stats", "Reset stats");
+    public static string LessonsWin_BtnResetStats => T("Effacer les statistiques", "Clear stats");
 
     // ── Exercice en cours ────────────────────────────────────────────
     public static string LessonsWin_ExerciseLabel(int current, int total) => T($"Exercice {current}/{total}", $"Exercise {current}/{total}");
@@ -31,8 +31,8 @@ internal static partial class L
     public static string LessonsWin_MetricAccuracy => T("Précision", "Accuracy");
     public static string LessonsWin_MetricErrors => T("Erreurs", "Errors");
     public static string LessonsWin_MetricBest => T("Record", "Best");
-    /// <summary>Vitesse affichée au récapitulatif (« 42 mots/min » / "42 WPM"). Destinée à
-    /// LessonsWindow.FormatWpm, qui écrit encore « WPM » en dur dans les deux langues.</summary>
+    /// <summary>Vitesse affichée au récapitulatif (« 42 mots/min » / "42 WPM"),
+    /// formatée par LessonsWindow.FormatWpm.</summary>
     public static string LessonsWin_SpeedValue(int wpm) => T($"{wpm} mots/min", $"{wpm} WPM");
     public static string LessonsWin_DetailNoHardChar(int seconds) => T(
         $"Temps : {seconds} s    Aucun caractère difficile sur cette tentative.",
@@ -67,8 +67,8 @@ internal static partial class L
 
     // ── Réinitialisation de la progression ──────────────────────────────
     public static string LessonsWin_ResetProgressConfirm => T(
-        "Réinitialiser toute la progression des leçons ?\n\nLes préférences, comme les auto-indices, seront conservées.",
-        "Reset all lesson progress?\n\nPreferences, such as auto hints, will be kept.");
+        "Réinitialiser toute la progression des leçons ?\n\nLes préférences, comme les indices automatiques, seront conservées.",
+        "Reset all lesson progress?\n\nPreferences, such as automatic hints, will be kept.");
 
     // ── Statut de frappe et indices ──────────────────────────────────
     public static string LessonsWin_StatusStrict => T(

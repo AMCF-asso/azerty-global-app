@@ -31,7 +31,9 @@ sealed class OnboardingWindow : IDisposable
     private const int BASE_WIN_W = 560;
     // +90 (v1.2.0) pour la 3e case « Défi du jour » + son texte descriptif sur 2 lignes,
     // ajoutés au panneau Préférences de l'étape 3 (cf. GetStep3Layout).
-    private const int BASE_WIN_H = 763;
+    // +27 (1.3.0) : le titre de la carte 4, « Symboles de programmation sur la rangée de
+    // repos », passe sur deux lignes à l'étape 1 (cf. CardTitleHeight).
+    private const int BASE_WIN_H = 790;
     // Drapeau de bascule de langue dans le header (proportions 3:2 du site, +50 % : 45×30)
     private const int BASE_FLAG_W = 45;
     private const int BASE_FLAG_H = 30;
@@ -1360,6 +1362,17 @@ sealed class OnboardingWindow : IDisposable
         uint format = Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX)
         => GdiHelpers.MeasureTextHeight(hdc, hFont, text, width, format);
 
+    /// <summary>
+    /// Hauteur du titre d'une carte : une ligne (<c>S(24)</c>), plus les lignes en trop quand
+    /// le titre passe à la ligne. Les titres du site (1.3.0) dépassent la carte 4 en français.
+    /// </summary>
+    private int CardTitleHeight(IntPtr hdc, string title, int width)
+    {
+        int extra = MeasureTextHeight(hdc, _hFontBold, title, width)
+            - MeasureTextHeight(hdc, _hFontBold, "A", width);
+        return S(24) + Math.Max(0, extra);
+    }
+
     private int MeasureSingleLineWidth(IntPtr hdc, IntPtr hFont, string text)
         => GdiHelpers.MeasureSingleLineWidth(hdc, hFont, text);
 
@@ -1547,7 +1560,7 @@ sealed class OnboardingWindow : IDisposable
         int contentWidth = cw - margin * 2;
         int textX = margin + cardPaddingX + badgeW + badgeGap;
         int textWidth = contentWidth - cardPaddingX * 2 - badgeW - badgeGap;
-        int titleHeight = S(24);
+        int titleHeight = CardTitleHeight(hdc, title, textWidth);
         int descHeight = GdiHelpers.MeasureColoredRunsHeight(hdc, textWidth, S(22), descriptionRuns);
         int cardHeight = Math.Max(S(minCardHeight), cardPaddingY * 2 + titleHeight + descHeight + S(4));
 
@@ -1564,7 +1577,7 @@ sealed class OnboardingWindow : IDisposable
             right = textX + textWidth,
             bottom = cardTop + cardPaddingY + titleHeight
         };
-        Win32.DrawTextW(hdc, title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
 
         GdiHelpers.DrawColoredRuns(hdc, textX, cardTop + cardPaddingY + titleHeight, textWidth, S(22), descriptionRuns);
 
@@ -1586,7 +1599,7 @@ sealed class OnboardingWindow : IDisposable
         int contentWidth = cw - margin * 2;
         int textX = margin + cardPaddingX + badgeW + badgeGap;
         int textWidth = contentWidth - cardPaddingX * 2 - badgeW - badgeGap;
-        int titleHeight = S(24);
+        int titleHeight = CardTitleHeight(hdc, title, textWidth);
         int descHeight = MeasureTextHeight(hdc, _hFontText, description, textWidth);
         int cardHeight = Math.Max(S(minCardHeight), cardPaddingY * 2 + titleHeight + descHeight + S(4));
 
@@ -1603,7 +1616,7 @@ sealed class OnboardingWindow : IDisposable
             right = textX + textWidth,
             bottom = cardTop + cardPaddingY + titleHeight
         };
-        Win32.DrawTextW(hdc, title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
 
         Win32.SelectObject(hdc, _hFontText);
         Win32.SetTextColor(hdc, CLR_TEXT);

@@ -202,13 +202,13 @@ public class TutorielClavierTests : IDisposable
 
         // Touche C11 : accent aigu en Base, grave en Maj.
         string tutoriel = KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Onboarding, etat, 0x28, "");
-        Assert.Contains("Base : ´ — TOUCHE MORTE ACCENT AIGU", tutoriel);
+        Assert.Contains("Base : ´ — touche morte ACCENT AIGU", tutoriel);
         string lecons = KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Lesson, etat, 0x28, "");
         Assert.Contains("Base : ´ — touche morte ACCENT AIGU", lecons);
 
         // Touche E03, AltGr : le point souscrit. Le tutoriel montre l'accent seul de la
         // disposition, les Leçons le symbole du tray.
-        Assert.Contains("AltGr : ◌\u0323 — TOUCHE MORTE POINT SOUSCRIT",
+        Assert.Contains("AltGr : ◌\u0323 — touche morte POINT SOUSCRIT",
             KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Onboarding, etat, 0x04, ""));
         Assert.Contains("AltGr : . — touche morte POINT SOUSCRIT",
             KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Lesson, etat, 0x04, ""));

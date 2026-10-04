@@ -217,11 +217,11 @@ static class GdiHelpers
                 continue;
 
             var buffer = new System.Text.StringBuilder();
-            bool currentIsSpace = char.IsWhiteSpace(run.Text[0]);
+            bool currentIsSpace = IsBreakingSpace(run.Text[0]);
 
             foreach (char ch in run.Text)
             {
-                bool isSpace = char.IsWhiteSpace(ch);
+                bool isSpace = IsBreakingSpace(ch);
                 if (buffer.Length > 0 && isSpace != currentIsSpace)
                 {
                     tokens.Add((buffer.ToString(), run.Color, run.Font, currentIsSpace));
@@ -238,6 +238,14 @@ static class GdiHelpers
 
         return tokens;
     }
+
+    /// <summary>
+    /// Espace où le word-wrap peut couper. Les insécables (U+00A0, fine U+202F, U+2007) en
+    /// sont exclues, alors que <see cref="char.IsWhiteSpace(char)"/> les compte : la carte 5
+    /// de l'accueil laissait « mortes. » seul sur sa ligne.
+    /// </summary>
+    internal static bool IsBreakingSpace(char ch) =>
+        char.IsWhiteSpace(ch) && ch != '\u00A0' && ch != '\u202F' && ch != '\u2007';
 
     /// <summary>
     /// Mesure la hauteur nécessaire pour afficher des runs colorés avec word-wrap.
