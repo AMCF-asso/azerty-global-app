@@ -1,7 +1,7 @@
 # Recette 1.3.0 — fiche unique
 
-- **Candidat** : le candidat final — commit `86c5efb` et run CI `37209657043` (CI du 04/10, sur `main` = `release/1.2.0-notation-store`) ; branche `release/1.2.0-notation-store`, CI verte (Pack MSIX, Verify Release, SHA256 artefacts, attestation). Les scripts ont été rodés le 28/09 sur `913067a` (run 36437681572), qui n’est pas le candidat final.
-- **Bundle** : `AZERTYGlobal-1.3.0.0.msixbundle` du candidat final — **SHA-256 : `826877B2016F570F88656B23FB2CD673BD4F335A0970A87275A8B97B3204696D`** (troisième ligne `Get-FileHash` de l’étape « SHA256 artefacts » du run, que `verifier-candidat.ps1` relit). Une recompilation change l’empreinte et annule la recette.
+- **Candidat** : le candidat final — commit `113ad17` (disposition 2026.1, décision d’Antoine du 04/10) et run CI `37214734377` (CI du 04/10, sur `main` = `release/1.2.0-notation-store`) ; branche `release/1.2.0-notation-store`, job build vert (Pack MSIX, Verify Release, SHA256 artefacts, attestation). Le job « provenance », non bloquant, échoue tant que `main` du site reste en 2026. Il remplace `86c5efb` (run `37209657043`), qui embarquait la 2026. Les scripts ont été rodés le 28/09 sur `913067a` (run 36437681572), qui n’est pas le candidat final.
+- **Bundle** : `AZERTYGlobal-1.3.0.0.msixbundle` du candidat final — **SHA-256 : `FBD052CC1226D8024C4156EA1EE68A4F285136488D93D2C3F4827A4EC873EA3F`** (troisième ligne `Get-FileHash` de l’étape « SHA256 artefacts » du run, que `verifier-candidat.ps1` relit). Une recompilation change l’empreinte et annule la recette.
 - **Durée estimée** (estimation : les gestes n’ont jamais été chronométrés) : 2 h 30 environ d’attention, contre 3 h 45 annoncées avant l’automatisation du 28/09 (bundle et Verify 5 min, lecture de la recette automatique 5 min, gestes 1 h 20, revue des images du banc 10 min, WACK 25 min, Partner Center 25 min). La recette automatique tourne en plus 6 à 8 min sans surveillance (mesuré le 28/09 sur `913067a`, du lancement du Sandbox à `done.txt`). Optionnels : 1 h 30 de plus.
 - **Matériel** : le poste, devant la machine ; Parsec exclu (la ligne E7 du kit n’est pas jouée). Windows Sandbox activé, SDK 10.0.26100 (`signtool`), App Certification Kit, `gh` connecté à un compte qui lit `AMCF-asso/azerty-global-app`. Deux écrans d’échelles différentes (100 % et 150 %) si possible, pour la section 3.18 : le Sandbox n’a qu’un écran. Une VM remplace le Sandbox seulement si le certificat de test y est approuvé, comme sur le poste (`installer-poste.ps1` l’exige).
 - **Avant tout** : quitter AZERTY Global sur l’hôte. Les consoles de VM ne sont pas reconnues comme accès distant (report 1.3.1).
@@ -12,7 +12,7 @@ Chemins, dans un PowerShell ouvert à la racine du dépôt `D:\My files\Keyboard
 
 ```powershell
 $kit = "docs\audit-2026-09-22-v1.3.0\feu-vert"
-$run = "37209657043"
+$run = "37214734377"
 $b   = "msix\ci-$run\AZERTYGlobal-1.3.0.0.msixbundle"
 ```
 
