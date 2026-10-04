@@ -76,6 +76,8 @@ public class CaptureBench
                                  ("couches", CaptureLayers),
                              })
                     {
+                        if (!BancCapture.Wanted(name))
+                            continue;
                         try
                         {
                             run(target);

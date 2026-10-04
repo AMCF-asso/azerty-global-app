@@ -97,6 +97,8 @@ public partial class KeyboardContextBench
 
                     foreach (var (name, run) in attempts)
                     {
+                        if (!BancCapture.Wanted(name))
+                            continue;
                         try
                         {
                             run();

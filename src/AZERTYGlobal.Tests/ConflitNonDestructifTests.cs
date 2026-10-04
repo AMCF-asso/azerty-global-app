@@ -46,6 +46,7 @@ public class ConflitNonDestructifTests
     public void ÀLOuverture_EntréeGardeLApplication()
     {
         bool quitté = false, gardé = false;
+        using var invisibles = new FenetresInvisibles();
         using var fenêtre = new LayoutConflictWindow(false, () => quitté = true, () => gardé = true);
         IntPtr hwnd = BancCapture.Handle(fenêtre);
         IntPtr garder = BancCapture.Field<IntPtr>(fenêtre, "_hWndBtnKeep");

@@ -30,6 +30,11 @@ namespace AZERTYGlobal.Tests;
 /// <item><c>AZERTY_CAPTURE_DPI</c> : DPI à rendre, séparés par des virgules. Défaut :
 /// 96,120,144,168, soit 100, 125, 150 et 175 %.</item>
 /// <item><c>AZERTY_CAPTURE_LANG</c> : langues à rendre. Défaut : fr,en.</item>
+/// <item><c>AZERTY_CAPTURE_ONLY</c> : sujets à rendre, séparés par des virgules ; un sujet est
+/// retenu quand son nom commence par l'un d'eux (« lecons » prend tous les états des Leçons).
+/// Défaut : tous.</item>
+/// <item><c>AZERTY_FENETRES_VISIBLES=1</c> : montre les fenêtres, que <see cref="Isolation"/>
+/// rend sinon invisibles (<see cref="FenetresInvisibles"/>).</item>
 /// </list>
 ///
 /// Le DPI est simulé par un WM_DPICHANGED synthétique : changer l'échelle de Windows
@@ -47,6 +52,7 @@ internal static class BancCapture
     internal const string DirVariable = "AZERTY_CAPTURE_DIR";
     internal const string DpiVariable = "AZERTY_CAPTURE_DPI";
     internal const string LangVariable = "AZERTY_CAPTURE_LANG";
+    internal const string OnlyVariable = "AZERTY_CAPTURE_ONLY";
 
     private static readonly int[] DefaultDpis = { 96, 120, 144, 168 };
     private static readonly string[] DefaultLanguages = { "fr", "en" };
@@ -113,6 +119,19 @@ internal static class BancCapture
         }
     }
 
+    /// <summary>
+    /// Vrai quand le sujet est à rendre : aucun filtre, ou un préfixe d'<c>AZERTY_CAPTURE_ONLY</c>
+    /// qui commence son nom. Un banc ne rend ainsi que les fenêtres utiles à la vérification.
+    /// </summary>
+    internal static bool Wanted(string subject)
+    {
+        string? raw = Environment.GetEnvironmentVariable(OnlyVariable);
+        if (string.IsNullOrWhiteSpace(raw))
+            return true;
+        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(prefix => subject.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>Pourcentage d'échelle affiché dans les noms de fichiers : 96 → 100, 144 → 150.</summary>
     internal static int Percent(int dpi) => (int)Math.Round(dpi * 100 / 96.0, MidpointRounding.AwayFromZero);
 
@@ -145,6 +164,7 @@ internal static class BancCapture
         private const string StatsPathField = "_statsPath";
         private static readonly IntPtr PerMonitorAwareV2 = new(-4);
 
+        private readonly FenetresInvisibles _invisibles;
         private readonly string _tempDir;
         private readonly object? _previousConfigPath;
         private readonly object? _previousLogDirectory;
@@ -160,6 +180,7 @@ internal static class BancCapture
 
         public Isolation()
         {
+            _invisibles = new FenetresInvisibles();
             _tempDir = Path.Combine(Path.GetTempPath(), "AZGCapture_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_tempDir);
 
@@ -247,6 +268,7 @@ internal static class BancCapture
             L.Language = _previousLanguage;
             _channel.Dispose();
             _policy.Dispose();
+            _invisibles.Dispose();
 
             if (_previousStatsPath is string statsPath)
                 UsageStats.OverrideStatsPathForTests(statsPath);
@@ -462,8 +484,10 @@ internal static class BancCapture
 
         // Le curseur du runner ouvrait parfois l'infobulle de la touche qu'il survolait (Leçons
         // du lot surface, 125 %, 01/10). En (0, 0), il est hors de la fenêtre ou sur sa barre de
-        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE.
-        Native.SetCursorPos(0, 0);
+        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE. Une
+        // fenêtre invisible laisse passer la souris : le curseur de l'utilisateur reste où il est.
+        if (!FenetresInvisibles.Active)
+            Native.SetCursorPos(0, 0);
         Pump(20);
         bool onScreen = KeepOnMonitor(hwnd);
 
