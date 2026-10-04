@@ -4,6 +4,15 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, sauf le Défi du jour, masqué en 1.3.0 (voir « Correctifs de l’audit du 24 septembre »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Textes de l’interface (inventaire du 29 septembre, décisions d’Antoine du 4 octobre)**
+
+- **Mêmes mots que le site.** Les cinq changements de l’accueil prennent les titres du site, en français et en anglais (« Symboles de programmation sur la rangée de repos », « Accents internationaux sur la touche ù »…), sous « 5 changements, 99 % des frappes préservées ». L’application se présente partout comme un « AZERTY amélioré », « gratuit et libre ».
+- **Notation des raccourcis.** Espacée dans les phrases (« Ctrl + Maj + Verr. Maj. »), collée seulement dans la colonne des raccourcis des menus.
+- **Typographie.** Espaces insécables (U+00A0) devant les signes doubles et dans « 99 % », « 1 min », « 23 h 59 ».
+- **Reste de l’inventaire.** Menu, bulles, Paramètres, clavier virtuel, recherche, démarrage, statistiques, Leçons et tutoriel reformulés ; boutons des Paramètres qui disent ce qu’ils réinitialisent ; message d’erreur fatale qui dit que l’application se ferme et où le détail est enregistré ; titre des Couches « Taper plusieurs caractères d’une autre couche ».
+- **Mise en page.** Le titre d’une carte de l’accueil passe à la ligne au lieu d’être coupé, et l’accueil gagne 27 px de haut. Les boutons d’effacement des statistiques des Leçons prennent la largeur de leur texte. Les textes colorés de l’accueil et des Paramètres ne coupent plus une ligne sur une espace insécable : « mortes. » restait seul. Témoin `ColoredRunsWrapTests`.
+- **Outillage.** Les tests et les bancs de capture n’affichent plus leurs fenêtres à l’écran (rendu identique au pixel), et `AZERTY_CAPTURE_ONLY` limite un banc aux fenêtres demandées.
+
 **Leçons : une seule surface de frappe (audit visuel du 28 septembre, décisions d’Antoine des 28 et 29 septembre)**
 
 - **La ligne à taper se colore à mesure de la frappe.** Le modèle et la zone de saisie ne font plus qu’une ligne, en Segoe UI Variable demi-gras (Segoe UI sur Windows 10), en espacement naturel. Une faute s’écrit en rouge, soulignée, avec le caractère attendu rappelé dessous. Aucune barre de curseur : la lettre à taper est soulignée, sur 6 px au moins pour i, l ou l’apostrophe. Le mode Libre prend la même police (Consolas retirée).
