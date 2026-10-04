@@ -8,8 +8,9 @@ namespace AZERTYGlobal.Tests;
 /// Tant qu'il vit, rend invisibles les fenêtres de premier niveau que crée le fil courant :
 /// opacité 1/255 et clics qui les traversent. DWM les compose toujours : elles se peignent,
 /// et le DC comme PrintWindow les lisent comme avant. Les tests et les bancs n'affichent donc
-/// plus leurs fenêtres devant l'utilisateur (demande du 04/10). La souris ne les survole
-/// jamais : aucune infobulle ouverte par le curseur réel.
+/// plus leurs fenêtres devant l'utilisateur (demande du 04/10). Les clics les traversent, mais
+/// une fenêtre qui lit GetCursorPos (les Leçons) voit toujours le curseur : le banc l'écarte
+/// avant chaque prise (<c>BancCapture.Capture</c>).
 ///
 /// Crochet CBT local au fil : aucune DLL, rien hors du processus de test, et aucun
 /// changement dans <c>src/</c>. La fenêtre que le produit rend lui-même translucide (la
@@ -33,14 +34,9 @@ internal sealed class FenetresInvisibles : IDisposable
     private const uint LWA_ALPHA = 0x2;
     private static readonly IntPtr HWND_MESSAGE = new(-3);
 
-    [ThreadStatic] private static int t_depth;
-
     private readonly HookProc? _proc; // gardé vivant : Windows garde un pointeur vers le délégué
     private readonly IntPtr _hook;
     private bool _disposed;
-
-    /// <summary>Vrai quand le fil courant crée ses fenêtres invisibles.</summary>
-    internal static bool Active => t_depth > 0;
 
     public FenetresInvisibles()
     {
@@ -52,7 +48,6 @@ internal sealed class FenetresInvisibles : IDisposable
         _hook = SetWindowsHookExW(WH_CBT, _proc, IntPtr.Zero, GetCurrentThreadId());
         if (_hook == IntPtr.Zero)
             throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowsHookExW(WH_CBT)");
-        t_depth++;
     }
 
     private IntPtr OnCbt(int code, IntPtr wParam, IntPtr lParam)
@@ -86,7 +81,6 @@ internal sealed class FenetresInvisibles : IDisposable
             return;
         _disposed = true;
         UnhookWindowsHookEx(_hook);
-        t_depth--;
     }
 
     private delegate IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam);
