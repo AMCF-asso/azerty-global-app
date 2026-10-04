@@ -5,7 +5,7 @@ internal static partial class L
     // ── Erreurs de démarrage ─────────────────────────────────────────
     public static string Tray_WindowCreationError => T(
         $"Impossible de créer la fenêtre interne d’{Product}. L’application va se fermer.",
-        $"{Product} couldn't create its internal window. The application will close.");
+        $"{Product} couldn't create its internal window. The app will close.");
     public static string Tray_StartupError => T(
         $"{Product} n’a pas pu démarrer correctement.\n\n" +
         "Le détail technique a été enregistré dans error.log. " +
@@ -40,14 +40,14 @@ internal static partial class L
     public static string Tray_ForceRefusedTitle =>
         T("Compatibilité forcée refusée", "Can't force compatibility");
     public static string Tray_ActiveBalloonBody => T(
-        $"Ctrl+Maj+Verr. Maj. pour activer ou désactiver {Product}.",
-        $"Ctrl+Shift+Caps Lock turns {Product} on and off.");
+        $"Ctrl + Maj + Verr. Maj. pour activer ou désactiver {Product}.",
+        $"Ctrl + Shift + Caps Lock turns {Product} on and off.");
     public static string Tray_PausedBalloonBody => T(
-        $"Ctrl+Maj+Verr. Maj. ou le menu de l’icône pour reprendre {Product}.",
-        $"Ctrl+Shift+Caps Lock or the icon menu resumes {Product}.");
+        $"Ctrl + Maj + Verr. Maj. ou le menu de l’icône pour reprendre {Product}.",
+        $"Ctrl + Shift + Caps Lock or the icon menu resumes {Product}.");
     public static string Tray_DisabledBalloonBody => T(
-        $"Ctrl+Maj+Verr. Maj. pour réactiver {Product}.",
-        $"Ctrl+Shift+Caps Lock turns {Product} back on.");
+        $"Ctrl + Maj + Verr. Maj. pour réactiver {Product}.",
+        $"Ctrl + Shift + Caps Lock turns {Product} back on.");
     public static string Tray_ActiveAgain => T(
         $"L’application qui suspendait {Product} n’est plus au premier plan.",
         $"The app that suspended {Product} is no longer in the foreground.");
@@ -76,8 +76,8 @@ internal static partial class L
         $"{Product} s’est suspendu : l’application au premier plan est inconnue.",
         $"{Product} suspended itself: the foreground app is unknown.");
     public static string Tray_DisabledForAntiCheat => T(
-        $"Le système anti-triche du jeu interdit l’injection de frappes. {Product} se désactive.",
-        $"The game's anti-cheat doesn't allow keystroke injection. {Product} turns itself off.");
+        $"Le système anti-triche du jeu interdit les frappes simulées. {Product} se désactive.",
+        $"The game's anti-cheat doesn't allow simulated keystrokes. {Product} turns itself off.");
     public static string Tray_DisabledForRemoteAccess => T(
         $"{Product} se suspend pour ne pas s’appliquer deux fois, ici et à distance.",
         $"{Product} suspends itself so it doesn't apply twice, here and remotely.");
@@ -125,15 +125,15 @@ internal static partial class L
     // packagé vise toujours le Store, la page feedback ne sert plus qu'aux installations
     // hors Store, qui n'ont pas de fiche à noter.
     public static string Tray_ReviewPromptBodyStore(int attempt) => attempt >= 2
-        ? T("Gratuit, open source, porté par une association. Un avis sur le Store est le plus simple pour le soutenir.\nCette notification ouvre la fenêtre de notation.",
+        ? T("Gratuit, libre, porté par une association. Un avis sur le Store est le plus simple pour le soutenir.\nCette notification ouvre la fenêtre de notation.",
             "Free, open source, run by a nonprofit. A review on the Store is the simplest way to support it.\nThis notification opens the rating window.")
-        : T("Le projet est gratuit et open source. Un avis sur le Store est le plus simple pour le soutenir.\nCette notification ouvre la fenêtre de notation.",
+        : T("Le projet est gratuit et libre. Un avis sur le Store est le plus simple pour le soutenir.\nCette notification ouvre la fenêtre de notation.",
             "The project is free and open source. A review on the Store is the simplest way to support it.\nThis notification opens the rating window.");
 
     public static string Tray_ReviewPromptBodyFeedback(int attempt) => attempt >= 2
-        ? T("Gratuit, open source, porté par une association. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
+        ? T("Gratuit, libre, porté par une association. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
             "Free, open source, run by a nonprofit. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.")
-        : T("Le projet est gratuit et open source. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
+        : T("Le projet est gratuit et libre. Votre avis est le plus simple pour le soutenir.\nCette notification ouvre la page d’avis.",
             "The project is free and open source. Your feedback is the simplest way to support it.\nThis notification opens the feedback page.");
 
     // Boutons des toasts (audit du 2026-08-23). Ils remplacent la ligne « Cette
@@ -158,7 +158,7 @@ internal static partial class L
         : T($"Jusqu’à {clock}", $"Until {clock}");
     public static string Tray_MenuPauseCustom => T("Personnaliser…", "Custom…");
     public static string Tray_MenuHideVirtualKeyboard(string key) => T($"Masquer le clavier virtuel\tCtrl+Maj+{key}", $"Hide virtual keyboard\tCtrl+Shift+{key}");
-    public static string Tray_MenuVirtualKeyboard(string key) => T($"Clavier virtuel\tCtrl+Maj+{key}", $"Virtual keyboard\tCtrl+Shift+{key}");
+    public static string Tray_MenuVirtualKeyboard(string key) => T($"Afficher le clavier virtuel\tCtrl+Maj+{key}", $"Show virtual keyboard\tCtrl+Shift+{key}");
     public static string Tray_MenuSearchCharacter(string key) => T($"Rechercher un caractère\tCtrl+Maj+{key}", $"Find a character\tCtrl+Shift+{key}");
     public static string Tray_MenuLessons => T("Leçons", "Lessons");
     public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Replay the welcome tour");
@@ -174,7 +174,7 @@ internal static partial class L
 
     /// <summary>Dernière entrée du sous-menu Couches : ouvre la fenêtre complète.</summary>
     public static string Tray_MenuLayersConfigure => T("Configurer…", "Configure…");
-    public static string Tray_MenuPrivacySecurity => T("Confidentialité && sécurité", "Privacy && security");
+    public static string Tray_MenuPrivacySecurity => T("Confidentialité et sécurité", "Privacy && security");
     public static string Tray_MenuPrintableGuide => T("Guide utilisateur imprimable", "Printable user guide");
     public static string Tray_MenuFiveChanges => T("Les 5 changements", "The 5 changes");
     public static string Tray_MenuKeyboardCards => T("Cartes du clavier", "Keyboard cards");
@@ -197,8 +197,8 @@ internal static partial class L
         $"Lancer {Product} au démarrage ?",
         $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
-        "L’application ne démarre pas encore avec Windows.\nCliquez pour l’activer.",
-        "The app doesn't start with Windows yet.\nClick to turn it on.");
+        "L’application ne démarre pas encore avec Windows.\nCliquez pour activer le lancement au démarrage.",
+        "The app doesn't start with Windows yet.\nClick to turn on launch at startup.");
     public static string Tray_AutoStartEnabledTitle => T(
         "Lancement au démarrage activé",
         "Launch at startup enabled");
@@ -207,32 +207,32 @@ internal static partial class L
         $"{Product} will start with Windows. You can change this in Settings.");
     // Fichier illisible mis de côté (audit du 25/09) : une seule bulle, au démarrage pour
     // les réglages, à l'ouverture des Leçons pour la progression.
-    public static string Tray_SettingsResetTitle => T("Réglages remis à zéro", "Settings reset");
+    public static string Tray_SettingsResetTitle => T("Paramètres réinitialisés", "Settings reset");
     public static string Tray_SettingsResetBody => T(
-        $"Le fichier des réglages d’{Product} était illisible. Une copie en est gardée. Refaites vos choix dans l’accueil.",
+        $"Le fichier des paramètres d’{Product} était illisible. Une copie en est gardée. Refaites vos choix dans l’accueil.",
         $"{Product}'s settings file couldn't be read. A copy of it is kept. Make your choices again in the welcome tour.");
-    public static string Tray_ProgressResetTitle => T("Progression remise à zéro", "Lesson progress reset");
+    public static string Tray_ProgressResetTitle => T("Progression des leçons réinitialisée", "Lesson progress reset");
     public static string Tray_ProgressResetBody => T(
         $"Le fichier de progression d’{Product} était illisible. Une copie en est gardée, les leçons repartent du début.",
         $"{Product}'s lesson progress file couldn't be read. A copy of it is kept, and lessons start over.");
-    public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active application: {procName}");
+    public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active app: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
-    public static string Tray_MenuCompatForceOn => T("Forcer compatibilité jeu", "Force game compatibility");
-    public static string Tray_MenuCompatForceOff => T("Forcer désactivation", "Force disable");
+    public static string Tray_MenuCompatForceOn => T("Forcer la compatibilité jeu", "Force game compatibility");
+    public static string Tray_MenuCompatForceOff => T("Forcer la désactivation", "Force off");
     public static string Tray_MenuCompatInfo => T("Comprendre la compatibilité…", "About app compatibility…");
     public static string Tray_MenuAppCompat => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoTitle => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoBody => T(
         $"{Product} adapte automatiquement son fonctionnement à l’application active.\n\n" +
-        "Auto\nUtilise le mode normal, un mode spécial pour certains jeux, ou suspend l’application lorsque c’est nécessaire.\n\n" +
-        "Forcer compatibilité jeu\nUtilise des combinaisons de touches natives dans l’application sélectionnée. Ce mode aide les jeux qui ignorent l’injection Unicode.\n\n" +
-        $"Forcer désactivation\nSuspend {Product} uniquement dans l’application sélectionnée.\n\n" +
+        "Auto\nUtilise le mode normal, un mode spécial pour certains jeux, ou se suspend lorsque c’est nécessaire.\n\n" +
+        "Forcer la compatibilité jeu\nTape les caractères avec les combinaisons de touches de Windows dans l’application sélectionnée, pour les jeux qui ignorent les caractères insérés directement.\n\n" +
+        $"Forcer la désactivation\nSuspend {Product} uniquement dans l’application sélectionnée.\n\n" +
         $"Connexions à distance\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer ou RustDesk est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant.\n\n" +
         "La détection reste entièrement locale. Aucun nom d’application n’est transmis.",
         $"{Product} automatically adapts its behavior to the active app.\n\n" +
-        "Auto\nUses normal mode, a special mode for some games, or suspends the app when necessary.\n\n" +
-        "Force game compatibility\nUses native key combinations in the selected app. This mode helps games that ignore Unicode input injection.\n\n" +
-        $"Force disable\nSuspends {Product} only in the selected app.\n\n" +
+        "Auto\nUses normal mode, a special mode for some games, or suspends itself when necessary.\n\n" +
+        "Force game compatibility\nTypes characters with Windows key combinations in the selected app, for games that ignore directly inserted characters.\n\n" +
+        $"Force off\nSuspends {Product} only in the selected app.\n\n" +
         $"Remote connections\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, or RustDesk is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer.\n\n" +
         "Detection stays entirely local. No app names are transmitted.");
     public static string Tray_MenuAbout => T("À propos", "About");

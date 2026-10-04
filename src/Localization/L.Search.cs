@@ -5,7 +5,7 @@ internal static partial class L
     public static string Search_WindowTitle => T("Rechercher un caractère", "Find a character");
     public static string Search_Placeholder => T("Rechercher un caractère…", "Find a character…");
     public static string Search_NoResults => T("Aucun résultat", "No results");
-    public static string Search_Tip => T("Entrée insérer · Échap fermer", "Enter to insert · Esc to close");
+    public static string Search_Tip => T("Entrée pour insérer · Échap pour fermer", "Enter to insert · Esc to close");
     public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"\"{ch}\" copied!");
     public static string Search_ResultCountSingular => T("1 résultat — Entrée pour insérer", "1 result — Enter to insert");
     public static string Search_ResultCountPlural(int count) => T($"{count} résultats — Entrée pour insérer", $"{count} results — Enter to insert");

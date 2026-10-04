@@ -29,8 +29,8 @@ internal static partial class L
     public static string Pause_BtnConfirm => T("Mettre en pause", "Pause");
     public static string Pause_BtnCancel => T("Annuler", "Cancel");
     public static string Pause_InvalidDuration => T(
-        "Choisissez entre 1 min et 23 h 59.",
-        "Choose between 1 min and 23 hr 59 min.");
+        "Choisissez entre 1 min et 23 h 59.",
+        "Choose between 1 min and 23 hr 59 min.");
 
     // ── LayoutConflictWindow ─────────────────────────────────────────
     public static string LayoutConflict_WindowTitle => T(

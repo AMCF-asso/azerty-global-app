@@ -1267,7 +1267,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 
         DrawText(hdc, _hFontSubtitle, L.LessonsWin_SectionActions, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
         y += S(32);
-        var resetFree = new Win32.RECT { left = rect.left + pad, top = y, right = rect.left + pad + S(160), bottom = y + S(36) };
+        int resetFreeW = ButtonWidth(hdc, L.LessonsWin_BtnResetFreeStats, 160);
+        var resetFree = new Win32.RECT { left = rect.left + pad, top = y, right = rect.left + pad + resetFreeW, bottom = y + S(36) };
         var resetProgress = new Win32.RECT { left = resetFree.right + S(12), top = y, right = resetFree.right + S(196), bottom = y + S(36) };
         DrawButton(hdc, resetFree, L.LessonsWin_BtnResetFreeStats, false, ResetFreeStats);
         DrawButton(hdc, resetProgress, L.LessonsWin_BtnResetProgress, false, ResetProgress);
@@ -1751,7 +1752,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         if (ConfigManager.LessonFreeStatsVisible)
         {
             string stats = BuildFreeStatsText();
-            var resetStats = new Win32.RECT { left = rect.right - pad - S(116), top = y, right = rect.right - pad, bottom = y + S(32) };
+            var resetStats = new Win32.RECT { left = rect.right - pad - ButtonWidth(hdc, L.LessonsWin_BtnResetStats, 116), top = y, right = rect.right - pad, bottom = y + S(32) };
             DrawText(hdc, _hFontSubtitle, stats, new Win32.RECT { left = rect.left + pad, top = y, right = resetStats.left - S(12), bottom = y + S(32) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
             DrawButton(hdc, resetStats, L.LessonsWin_BtnResetStats, false, ResetFreeStats);
             y += S(46);
@@ -2101,6 +2102,13 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         _freeCursorIndex = 0;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
+
+    /// <summary>
+    /// Largeur d'un bouton à libellé : sa largeur de base, élargie quand le libellé ne tient pas
+    /// (en 1.3.0, « Effacer les stats du mode libre » et « Effacer les statistiques »).
+    /// </summary>
+    private int ButtonWidth(IntPtr hdc, string text, int baseWidth)
+        => Math.Max(S(baseWidth), GdiHelpers.MeasureSingleLineWidth(hdc, _hFontButton, text) + S(24));
 
     private void DrawButton(IntPtr hdc, Win32.RECT rect, string text, bool active, Action action)
     {

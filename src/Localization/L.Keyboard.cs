@@ -7,8 +7,8 @@ internal static partial class L
     // Sortie : description longue affichée au survol — celle-ci est traduite.
     public static string Keyboard_TooltipTab => T("Tabulation", "Tab");
     public static string Keyboard_TooltipBackspace => T("Retour arrière", "Backspace");
-    public static string Keyboard_TooltipCapsLock => T("Verrouillage Majuscule (Caps Lock)", "Caps Lock");
-    public static string Keyboard_TooltipShift => T("Majuscule (Shift)", "Shift");
+    public static string Keyboard_TooltipCapsLock => T("Verrouillage majuscule (Verr. Maj.)", "Caps Lock");
+    public static string Keyboard_TooltipShift => T("Majuscule (Maj)", "Shift");
     public static string Keyboard_TooltipEnter => T("Entrée", "Enter");
     public static string Keyboard_TooltipCtrl => T("Contrôle (Ctrl)", "Control (Ctrl)");
     public static string Keyboard_TooltipWin => T("Touche Windows", "Windows key");

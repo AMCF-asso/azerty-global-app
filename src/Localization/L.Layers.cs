@@ -4,18 +4,18 @@ internal static partial class L
 {
     // ── Fenêtre des couches maintenables ─────────────────────────────
     public static string Layers_WindowTitleSuffix => T("Couches verrouillables", "Lockable layers");
-    public static string Layers_Title => T("Écrire plusieurs caractères dans un autre alphabet", "Type several characters in another alphabet");
+    public static string Layers_Title => T("Taper plusieurs caractères d’une autre couche", "Type several characters from another layer");
     public static string Layers_Explainer => T(
         "Appui simple : la prochaine frappe.\r\n" +
-        "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",
+        "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",
         "Single press: the next keystroke.\r\n" +
-        "Double press: lock inside the active application.   Esc: unlock.");
+        "Double press: lock inside the active app.   Esc: unlock.");
     public static string Layers_MasterCheckbox => T("Activer les couches verrouillables", "Enable lockable layers");
     public static string Layers_AvailableLabel => T("Couches disponibles", "Available layers");
     public static string Layers_GreekCheckbox => T("Grec — Maj + *", "Greek — Shift + *");
     public static string Layers_CyrillicCheckbox => T("Cyrillique — AltGr + *", "Cyrillic — AltGr + *");
     public static string Layers_ScientificCheckbox => T("Scientifique — AltGr + =", "Scientific — AltGr + =");
-    public static string Layers_VisualCheckbox => T("Afficher un indicateur près du curseur", "Show an indicator near the caret");
+    public static string Layers_VisualCheckbox => T("Afficher un indicateur près du curseur", "Show an indicator near the text cursor");
     public static string Layers_DelayLabel => T("Délai du double appui :", "Double-press delay:");
     public static string Layers_DelayUnit => T("ms (150 à 1000)", "ms (150 to 1000)");
     public static string Layers_SaveButton => T("Enregistrer", "Save");
@@ -23,7 +23,7 @@ internal static partial class L
         "Couches activées.\n\nAppui simple : une frappe.\n" +
         "Double appui : verrouillage dans l’application.\nÉchap : déverrouiller.",
         "Layers enabled.\n\nSingle press: one keystroke.\n" +
-        "Double press: lock inside the application.\nEsc: unlock.");
+        "Double press: lock inside the app.\nEsc: unlock.");
 
     // ── Libellés des couches (indicateur, infobulle du tray) ─────────
     public static string Layers_LabelGreek => T("Grec", "Greek");
@@ -45,6 +45,6 @@ internal static partial class L
         $"Check the inserted text before trying again with {ProductIdentity.DisplayName}.");
     public static string Layers_InsertFallbackTitle => T("Caractère copié", "Character copied");
     public static string Layers_InsertFallbackBody(string ch) => T(
-        $"L’insertion directe de {ProductIdentity.DisplayName} n’était pas disponible — collez « {ch} » avec Ctrl+V.",
-        $"{ProductIdentity.DisplayName}'s direct insertion was unavailable — paste \"{ch}\" with Ctrl+V.");
+        $"L’insertion directe de {ProductIdentity.DisplayName} n’était pas disponible — collez « {ch} » avec Ctrl + V.",
+        $"{ProductIdentity.DisplayName}'s direct insertion was unavailable — paste \"{ch}\" with Ctrl + V.");
 }

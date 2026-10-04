@@ -9,8 +9,8 @@ internal static partial class L
     public static string About_LinkAmcf => "Association pour la Modernisation du Clavier Français";
     public static string About_Close => T("Fermer", "Close");
     public static string About_Description => T(
-        "Disposition clavier améliorée pour les francophones.",
-        "Improved keyboard layout for French speakers.");
+        "Un AZERTY amélioré, gratuit et libre.",
+        "An improved AZERTY, free and open source.");
     public static string About_AmcfPrefix => T("Édité par l’", "Published by the ");
     public static string About_AmcfSuffix => " (AMCF)";
 }
