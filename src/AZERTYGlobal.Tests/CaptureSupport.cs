@@ -269,6 +269,7 @@ internal static class BancCapture
             _channel.Dispose();
             _policy.Dispose();
             _invisibles.Dispose();
+            RestoreCursor();
 
             if (_previousStatsPath is string statsPath)
                 UsageStats.OverrideStatsPathForTests(statsPath);
@@ -477,6 +478,23 @@ internal static class BancCapture
     /// L'image est recadrée sur le cadre visible (DWMWA_EXTENDED_FRAME_BOUNDS) : GetWindowRect
     /// compte les bordures invisibles de redimensionnement, qui sortiraient en noir.
     /// </summary>
+    /// <summary>Position du curseur avant la première prise du fil, rendue par <see cref="RestoreCursor"/>.</summary>
+    [ThreadStatic] private static Win32.POINT? t_cursorBeforeBench;
+
+    private static void ParkCursor()
+    {
+        if (t_cursorBeforeBench == null && Win32.GetCursorPos(out var cursor))
+            t_cursorBeforeBench = cursor;
+        Native.SetCursorPos(0, 0);
+    }
+
+    private static void RestoreCursor()
+    {
+        if (t_cursorBeforeBench is { } cursor)
+            Native.SetCursorPos(cursor.x, cursor.y);
+        t_cursorBeforeBench = null;
+    }
+
     internal static (int Width, int Height, string Source) Capture(IntPtr hwnd, string file)
     {
         if (hwnd == IntPtr.Zero)
@@ -484,10 +502,11 @@ internal static class BancCapture
 
         // Le curseur du runner ouvrait parfois l'infobulle de la touche qu'il survolait (Leçons
         // du lot surface, 125 %, 01/10). En (0, 0), il est hors de la fenêtre ou sur sa barre de
-        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE. Une
-        // fenêtre invisible laisse passer la souris : le curseur de l'utilisateur reste où il est.
-        if (!FenetresInvisibles.Active)
-            Native.SetCursorPos(0, 0);
+        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE. Fenêtre
+        // invisible comprise : les Leçons lisent GetCursorPos, pas les messages de souris que la
+        // fenêtre laisse passer (infobulles revenues à 100 et 125 % sur la CI du 04/10).
+        // Isolation remet le curseur où il était.
+        ParkCursor();
         Pump(20);
         bool onScreen = KeepOnMonitor(hwnd);
 
