@@ -74,6 +74,15 @@ internal static partial class L
         string.IsNullOrEmpty(symbol) ? $"Touche morte : {name}" : $"Touche morte : {name} {symbol}",
         string.IsNullOrEmpty(symbol) ? $"Dead key: {name}" : $"Dead key: {name} {symbol}");
 
+    // ── Faute de frappe (audit UX 1.3.0, #6) ─────────────────────────────
+    public static string Learning_TypingError(string typed, string expected) => T(
+        $"Faute : {typed} au lieu de {expected}. Retour arrière pour corriger.",
+        $"Mistake: {typed} instead of {expected}. Press Backspace to fix.");
+    public static string Learning_QuotedChar(char c) => T($"« {c} »", $"“{c}”");
+    public static string Learning_SpaceName => T("espace", "space");
+    public static string Learning_NbspName => T("espace insécable", "non-breaking space");
+    public static string Learning_NarrowNbspName => T("espace fine insécable", "narrow non-breaking space");
+
     // ── Écrans de fin d'exercice ──────────────────────────────────────
     public static string Learning_BravoShort => T("✓ Bravo !", "✓ Well done!");
     public static string Learning_FinalTitle => T("Bravo !", "Well done!");

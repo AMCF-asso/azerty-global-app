@@ -93,6 +93,20 @@ static class AccessibleName
         }
     }
 
+    private const uint EVENT_OBJECT_NAMECHANGE = 0x800C;
+
+    /// <summary>
+    /// Pose le nom puis lève EVENT_OBJECT_NAMECHANGE : un lecteur d'écran relit le nom de
+    /// l'élément focalisé quand il change. Sert d'annonce là où rien d'autre n'est lu (faute
+    /// de frappe du tutoriel, peinte en GDI).
+    /// </summary>
+    public static bool TrySetAndNotify(IntPtr hwnd, string name)
+    {
+        if (!TrySet(hwnd, name)) return false;
+        NotifyWinEvent(EVENT_OBJECT_NAMECHANGE, hwnd, unchecked((int)OBJID_CLIENT), (int)CHILDID_SELF);
+        return true;
+    }
+
     // oleacc.h : PROPID_ACC_ROLE, PROPID_ACC_STATE ; rôle et états MSAA.
     private static readonly Guid PropIdAccRole = new("CB905FF2-7BD1-4C05-B3C8-E6C241364D70");
     private static readonly Guid PropIdAccState = new("A8D4D5B0-0A21-42D0-A5C0-514E984F457B");
