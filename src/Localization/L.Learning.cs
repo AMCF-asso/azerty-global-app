@@ -2,7 +2,7 @@ namespace AZERTYGlobal;
 
 internal static partial class L
 {
-    // ── Les 6 étapes du mini-tutoriel (LearningModule._steps) ─────────
+    // ── Les 8 exercices du mini-tutoriel (TutorialSteps.All) ──────────
     // Cible (Target = texte à taper) volontairement laissée en français quelle que soit
     // la langue de l'UI — c'est l'objet même de l'apprentissage (cf. plan i18n § périmètre).
     public static string Learning_Step0Title => T("Votre premier É", "Your first É");
@@ -27,6 +27,23 @@ internal static partial class L
     public static string Learning_Step5Instruction => T(
         "Tapez ces mots étrangers — utilisez les touches mortes indiquées sur le clavier",
         "Type these foreign words — use the dead keys shown on the keyboard");
+    public static string Learning_Step6Title => T("Messages", "Messages");
+    public static string Learning_Step6Instruction => T(
+        "À et Ç avec Verr. Maj., puis éteignez-le — l’espace fine avant ! : AltGr + Espace",
+        "À and Ç with Caps Lock, then turn it off — the thin space before !: AltGr + Space");
+    public static string Learning_Step7Title => T("Les lettres des langues d’Afrique", "Letters of African languages");
+    public static string Learning_Step7Instruction => T(
+        "ɛ, ɔ, ŋ et ɲ : AltGr + 6, puis E, O, N ou J. ɓ : ù, puis B. ɗ : AltGr + 1, puis D.",
+        "ɛ, ɔ, ŋ and ɲ: AltGr + 6, then E, O, N or J. ɓ: ù, then B. ɗ: AltGr + 1, then D.");
+
+    // ── Écran de choix des usages (1re page du tutoriel) ───────────────
+    public static string Learning_UsagesQuestion => T("Vous écrivez surtout…", "You mostly write…");
+    public static string Learning_UsagesHelp => T("Plusieurs réponses possibles.", "Several answers possible.");
+    public static string Learning_UsageDocuments => T("Des mails et des documents", "Emails and documents");
+    public static string Learning_UsageMessages => T("Des messages et des réseaux sociaux", "Messages and social media");
+    public static string Learning_UsageCode => T("Du code", "Code");
+    public static string Learning_UsageLanguages => T("D’autres langues que le français", "Languages other than French");
+    public static string Learning_UsageAfrica => T("Une langue d’Afrique : bambara, peul, wolof…", "An African language: Bambara, Fula, Wolof…");
 
     // ── Fenêtre et boutons ─────────────────────────────────────────────
     public static string Learning_WindowTitle => T($"{Product} — Premiers pas", $"{Product} — First steps");
@@ -35,6 +52,7 @@ internal static partial class L
     public static string Learning_BtnFinish => T("Terminer", "Finish");
     public static string Learning_BtnRetry => T("Recommencer l’exercice", "Retry the exercise");
     public static string Learning_BtnNext => T("Exercice suivant", "Next exercise");
+    public static string Learning_BtnContinue => T("Continuer", "Continue");
     public static string Learning_BtnFinishAll => T("Terminer les exercices", "Finish exercises");
 
     // ── Tooltip touche Retour arrière (spécifique aux exercices) ────────

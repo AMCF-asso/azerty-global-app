@@ -116,6 +116,31 @@ public class GuidageTests
         Assert.DoesNotContain("Verr. Maj.", Guider(virgule, ",", null, false, Tutoriel).HighlightedLabels);
     }
 
+    [Theory]
+    // Gestes de la consigne de l'exercice Afrique (table 2026.1).
+    [InlineData("ɛ", "dk_extended_latin", "Digit6", true, "KeyE")]
+    [InlineData("ɔ", "dk_extended_latin", "Digit6", true, "KeyO")]
+    [InlineData("ŋ", "dk_extended_latin", "Digit6", true, "KeyN")]
+    [InlineData("ɲ", "dk_extended_latin", "Digit6", true, "KeyJ")]
+    [InlineData("ɓ", "dk_acute", "Quote", false, "KeyB")]
+    [InlineData("ɗ", "dk_hook", "Digit1", true, "KeyD")]
+    public void Les_lettres_d_Afrique_suivent_la_consigne(string lettre, string toucheMorte,
+        string armement, bool altGr, string finale)
+    {
+        var methode = Recommandee(lettre);
+        Assert.Equal(toucheMorte, methode.DeadKey);
+        Assert.Equal(armement, methode.DkActivationKey);
+
+        var etape1 = Guider(methode, lettre, null, false, Tutoriel);
+        Assert.Equal(KeyHighlight.Step1, etape1.HighlightKind);
+        Assert.Equal(new[] { Touche(armement) }, etape1.HighlightedScancodes);
+        Assert.Equal(altGr, etape1.HighlightedLabels.Contains("AltGr"));
+
+        var etape2 = Guider(methode, lettre, toucheMorte, false, Tutoriel);
+        Assert.Equal(KeyHighlight.Step2, etape2.HighlightKind);
+        Assert.Equal(new[] { Touche(finale) }, etape2.HighlightedScancodes);
+    }
+
     [Fact]
     public void Une_couche_se_lit_en_modificateurs()
     {

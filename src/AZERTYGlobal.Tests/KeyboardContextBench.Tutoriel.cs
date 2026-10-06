@@ -30,36 +30,40 @@ public partial class KeyboardContextBench
 
     private static readonly TutorialState[] TutorialStates =
     {
+        // 1re page : le choix des usages, une case cochée.
+        new("tuto-usages", (m, api, mapper) => CheckUsage(m, 1)),
         // Exercice 1 : Verr. Maj. activée, pleine en vert, et la touche É en contour.
-        new("tuto-ex1-verrmaj", (m, api, mapper) => { CapsLockOn(api, mapper); }),
+        new("tuto-ex1-verrmaj", (m, api, mapper) => { Route(m); CapsLockOn(api, mapper); }),
         // Exercice 2 : Verr. Maj. gardée ; l'espace est dans la couche Caps.
-        new("tuto-ex2-espace", (m, api, mapper) => { GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA"); }),
+        new("tuto-ex2-espace", (m, api, mapper) => { Route(m); GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA"); }),
         // Exercice 2 : l'espace fine avant « ! », AltGr + Espace ; Verr. Maj. reste « direct ».
         // Les majuscules accentuées y sont directes : l'étape 1 et sa pastille sont en ex. 6.
-        new("tuto-ex2-fine", (m, api, mapper) => { GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN"); }),
+        new("tuto-ex2-fine", (m, api, mapper) => { Route(m); GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN"); }),
         // Exercice 3 : premier caractère, et la même page avec Maj tenue.
-        new("tuto-ex3", (m, api, mapper) => GoTo(m, 2)),
-        new("tuto-ex3-maj-tenue", (m, api, mapper) => { GoTo(m, 2); Hold(api, mapper, VK_LSHIFT, 0x2A, 0); }),
+        new("tuto-ex3", (m, api, mapper) => { Route(m); GoTo(m, 2); }),
+        new("tuto-ex3-maj-tenue", (m, api, mapper) => { Route(m); GoTo(m, 2); Hold(api, mapper, VK_LSHIFT, 0x2A, 0); }),
         // Exercice 3 : une faute, le caractère courant en rouge.
-        new("tuto-ex3-erreur", (m, api, mapper) => { GoTo(m, 2); Type(m, "x"); }),
+        new("tuto-ex3-erreur", (m, api, mapper) => { Route(m); GoTo(m, 2); Type(m, "x"); }),
         // Exercice 3 : la touche surlignée enfoncée.
-        new("tuto-ex3-enfoncee", (m, api, mapper) => { GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Eu); }),
-        // Exercice 4 : « demande AltGr, puis AltGr tenue (pleine en vert) ; U demande Maj.
-        new("tuto-ex4-maj", (m, api, mapper) => { GoTo(m, 3); Type(m, "« "); }),
-        new("tuto-ex4-altgr", (m, api, mapper) => GoTo(m, 3)),
-        new("tuto-ex4-altgr-tenue", (m, api, mapper) => { GoTo(m, 3); Hold(api, mapper, VK_RMENU, 0x38, LLKHF_EXTENDED); }),
-        // Exercice 5, facultatif : titre « (Bonus) », bouton « Passer », accolade par AltGr.
-        new("tuto-ex5", (m, api, mapper) => { GoTo(m, 4); Type(m, "if (a || b) "); }),
-        // Exercice 6 : í par touche morte, étape 1.
-        new("tuto-ex6-etape1", (m, api, mapper) => { GoTo(m, 5); Type(m, "Mar"); }),
+        new("tuto-ex3-enfoncee", (m, api, mapper) => { Route(m); GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Eu); }),
+        // Exercice 4 (Documents) : « demande AltGr, puis AltGr tenue (pleine en vert) ; U demande Maj.
+        new("tuto-ex4-maj", (m, api, mapper) => { Route(m, TutorialSteps.UsageDocuments); GoTo(m, 3); Type(m, "« "); }),
+        new("tuto-ex4-altgr", (m, api, mapper) => { Route(m, TutorialSteps.UsageDocuments); GoTo(m, 3); }),
+        new("tuto-ex4-altgr-tenue", (m, api, mapper) => { Route(m, TutorialSteps.UsageDocuments); GoTo(m, 3); Hold(api, mapper, VK_RMENU, 0x38, LLKHF_EXTENDED); }),
+        // Exercice 5 (Code), en bonus derrière Afrique : titre « (Bonus) », bouton « Passer », accolade par AltGr.
+        new("tuto-ex5", (m, api, mapper) => { Route(m, TutorialSteps.UsageAfrica, TutorialSteps.UsageCode); GoTo(m, 4); Type(m, "if (a || b) "); }),
+        // Exercice 6 (Langues) : í par touche morte, étape 1.
+        new("tuto-ex6-etape1", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "Mar"); }),
         // Exercice 6 : í, la bonne touche morte armée : étape 2 et clavier des résultats.
-        new("tuto-ex6-etape2", (m, api, mapper) => { GoTo(m, 5); Type(m, "Mar"); ActivateDeadKey(api, mapper, "dk_acute"); }),
+        new("tuto-ex6-etape2", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "Mar"); ActivateDeadKey(api, mapper, "dk_acute"); }),
         // Exercice 6 : ò attendu, une autre touche morte armée : Retour arrière demandé.
-        new("tuto-ex6-retour", (m, api, mapper) => { GoTo(m, 5); Type(m, "María et Niccol"); ActivateDeadKey(api, mapper, "dk_acute"); }),
+        new("tuto-ex6-retour", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "María et Niccol"); ActivateDeadKey(api, mapper, "dk_acute"); }),
+        // Exercice 8 (Afrique) : ɛ par AltGr + 6, étape 1.
+        new("tuto-afrique-etape1", (m, api, mapper) => { Route(m, TutorialSteps.UsageAfrica); GoTo(m, 3); }),
         // Page de choix après le premier succès, page finale, voile de perte du focus.
-        new("tuto-choix", (m, api, mapper) => Type(m, "É")),
-        new("tuto-final", (m, api, mapper) => ShowFinalPage(m)),
-        new("tuto-pause", (m, api, mapper) => BancCapture.SetField(m, "_focusLostConfirmed", true)),
+        new("tuto-choix", (m, api, mapper) => { Route(m); Type(m, "É"); }),
+        new("tuto-final", (m, api, mapper) => { Route(m); ShowFinalPage(m); }),
+        new("tuto-pause", (m, api, mapper) => { Route(m); BancCapture.SetField(m, "_focusLostConfirmed", true); }),
     };
 
     [Fact]
@@ -182,7 +186,19 @@ public partial class KeyboardContextBench
         }
     }
 
-    /// <summary>Exercice <paramref name="step"/> (0 à 5), curseur au début, comme après
+    /// <summary>« Continuer » sur l'écran des usages avec ces <paramref name="usages"/> (aucun :
+    /// le parcours Documents), sans reprendre le premier plan.</summary>
+    private static void Route(LearningModule module, params string[] usages) => module.StartRoute(usages);
+
+    /// <summary>Coche la case <paramref name="index"/> de l'écran des usages.</summary>
+    private static void CheckUsage(LearningModule module, int index)
+    {
+        var cases = BancCapture.Field<IntPtr[]>(module, "_hWndUsages")
+            ?? throw new MissingFieldException(nameof(LearningModule), "_hWndUsages");
+        Win32.SendMessageW(cases[index], Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
+    }
+
+    /// <summary>Position <paramref name="step"/> du parcours, curseur au début, comme après
     /// « Exercice suivant », sans reprendre le premier plan.</summary>
     private static void GoTo(LearningModule module, int step)
     {
@@ -194,7 +210,9 @@ public partial class KeyboardContextBench
 
     private static void ShowFinalPage(LearningModule module)
     {
-        BancCapture.SetField(module, "_currentStep", 6);
+        var route = BancCapture.Field<Array>(module, "_route")
+            ?? throw new MissingFieldException(nameof(LearningModule), "_route");
+        BancCapture.SetField(module, "_currentStep", route.Length);
         var page = typeof(LearningModule).GetField("_page", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
             ?? throw new MissingFieldException(nameof(LearningModule), "_page");
         page.SetValue(module, Enum.Parse(page.FieldType, "Final"));
