@@ -288,7 +288,7 @@ sealed class LearningModule : IDisposable
         ArgumentNullException.ThrowIfNull(mapper);
         ArgumentNullException.ThrowIfNull(hook);
         ArgumentNullException.ThrowIfNull(layout);
-        // Frappe non comptabilisée tant que ce module vit. Les 6 exercices produisent
+        // Frappe non comptabilisée tant que ce module vit. Les 6 exercices d'alors produisaient
         // à eux seuls 21 caractères enrichis, pour un seuil de sollicitation d'avis de 20
         // (UsageStats.EnrichedCharsReviewThreshold) : sans cette exclusion, terminer
         // l'onboarding déclenchait la demande de notation, constaté en VM le 2026-09-21.

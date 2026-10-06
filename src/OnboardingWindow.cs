@@ -83,7 +83,7 @@ sealed class OnboardingWindow : IDisposable
     // par défaut est un choix, alors même que l'état réel ne change pas.
     private bool _autoStartShownChecked;
     // Vrai des qu'on lance le LM une premiere fois. Distincte de _learningModuleDone (qui
-    // n'est mis a true qu'a la complete reussite des 6 exercices). Etat B (essaye non complete)
+    // n'est mis a true qu'a la complete reussite des exercices du parcours). Etat B (essaye non complete)
     // sert a afficher « Suivant » a cote de « Essayer maintenant » sur l'etape 1.
     private bool _learningModuleAttempted;
     private bool _inputPaused;
@@ -1087,7 +1087,7 @@ sealed class OnboardingWindow : IDisposable
         ConfigManager.LogCrashTraceDebug("LaunchLearningModule: ctor returned, attaching OnClosed");
         _learningModule.OnClosed = (completed) =>
         {
-            // Ne marquer comme "done" que si l'utilisateur a vraiment terminé les 6 exercices
+            // Ne marquer comme "done" que si l'utilisateur a vraiment terminé son parcours
             // (page « Bravo ! » + bouton « Terminer »). Une fermeture précoce (croix X, bouton
             // « Quitter les exercices », Esc) laisse le bouton à « Essayer maintenant ».
             if (completed) _learningModuleDone = true;
