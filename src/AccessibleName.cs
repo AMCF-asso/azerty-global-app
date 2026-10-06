@@ -93,6 +93,74 @@ static class AccessibleName
         }
     }
 
+    // oleacc.h : PROPID_ACC_ROLE, PROPID_ACC_STATE ; rôle et états MSAA.
+    private static readonly Guid PropIdAccRole = new("CB905FF2-7BD1-4C05-B3C8-E6C241364D70");
+    private static readonly Guid PropIdAccState = new("A8D4D5B0-0A21-42D0-A5C0-514E984F457B");
+    private const int VT_SetHwndProp = 6;
+    private const int ROLE_SYSTEM_CHECKBUTTON = 0x2C;
+    private const int STATE_SYSTEM_CHECKED = 0x10;
+    private const int STATE_SYSTEM_FOCUSED = 0x4;
+    private const int STATE_SYSTEM_FOCUSABLE = 0x100000;
+    private const uint EVENT_OBJECT_STATECHANGE = 0x800A;
+    private const ushort VT_I4 = 3;
+
+    /// <summary>VARIANT de 24 octets (l'application ne vise que win-x64 et win-arm64).</summary>
+    [StructLayout(LayoutKind.Explicit, Size = 24)]
+    private struct Variant
+    {
+        [FieldOffset(0)] public ushort Vt;
+        [FieldOffset(8)] public int IntVal;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int SetHwndPropDelegate(IntPtr self, IntPtr hwnd, uint idObject, uint idChild,
+        Guid idProp, Variant var);
+
+    [DllImport("user32.dll")]
+    private static extern void NotifyWinEvent(uint winEvent, IntPtr hwnd, int idObject, int idChild);
+
+    /// <summary>
+    /// Présente un bouton owner-draw comme une case à cocher : rôle « case à cocher » et état
+    /// coché ou non, que MSAA et UI Automation (motif Toggle) lisent. Une annotation est
+    /// statique : l'appelant la repose à chaque bascule et à chaque gain ou perte du focus,
+    /// sinon l'état focalisé resterait figé. <paramref name="announce"/> lève
+    /// EVENT_OBJECT_STATECHANGE pour que le lecteur d'écran dise le nouvel état. Rend faux,
+    /// sans lever, si COM ou oleacc refusent : le bouton reste alors un simple bouton.
+    /// </summary>
+    public static bool TrySetCheckState(IntPtr hwnd, bool isChecked, bool focused, bool announce)
+    {
+        if (hwnd == IntPtr.Zero) return false;
+        IntPtr services = IntPtr.Zero;
+        try
+        {
+            Guid clsid = ClsidAccPropServices;
+            Guid iid = IidIAccPropServices;
+            if (CoCreateInstance(ref clsid, IntPtr.Zero, CLSCTX_INPROC_SERVER, ref iid, out services) != 0
+                || services == IntPtr.Zero)
+                return false;
+            var setHwndProp = Marshal.GetDelegateForFunctionPointer<SetHwndPropDelegate>(
+                VTableSlot(services, VT_SetHwndProp));
+            int state = STATE_SYSTEM_FOCUSABLE | (isChecked ? STATE_SYSTEM_CHECKED : 0) | (focused ? STATE_SYSTEM_FOCUSED : 0);
+            bool ok = setHwndProp(services, hwnd, OBJID_CLIENT, CHILDID_SELF, PropIdAccRole,
+                    new Variant { Vt = VT_I4, IntVal = ROLE_SYSTEM_CHECKBUTTON }) == 0
+                && setHwndProp(services, hwnd, OBJID_CLIENT, CHILDID_SELF, PropIdAccState,
+                    new Variant { Vt = VT_I4, IntVal = state }) == 0;
+            if (ok && announce)
+                NotifyWinEvent(EVENT_OBJECT_STATECHANGE, hwnd, unchecked((int)OBJID_CLIENT), (int)CHILDID_SELF);
+            return ok;
+        }
+        catch (Exception ex) when (ex is ExternalException or MarshalDirectiveException
+            or EntryPointNotFoundException or DllNotFoundException)
+        {
+            return false;
+        }
+        finally
+        {
+            if (services != IntPtr.Zero)
+                Marshal.GetDelegateForFunctionPointer<ReleaseDelegate>(VTableSlot(services, VT_Release))(services);
+        }
+    }
+
     private static IntPtr VTableSlot(IntPtr instance, int slot) =>
         Marshal.ReadIntPtr(Marshal.ReadIntPtr(instance), slot * IntPtr.Size);
 }
