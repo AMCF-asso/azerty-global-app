@@ -12,7 +12,8 @@ namespace AZERTYGlobal.Tests;
 /// une fenêtre qui lit GetCursorPos (les Leçons) voit toujours le curseur : le banc l'écarte
 /// avant chaque prise (<c>BancCapture.Capture</c>).
 ///
-/// Crochet CBT local au fil : aucune DLL, rien hors du processus de test, et aucun
+/// Crochet WH_CALLWNDPROCRET local au fil, posé sans attendre le balayage de
+/// <see cref="MasqueFenetresProcessus"/> : aucune DLL, rien hors du processus de test, et aucun
 /// changement dans <c>src/</c>. La fenêtre que le produit rend lui-même translucide (la
 /// notification de bascule) garde son réglage : son SetLayeredWindowAttributes passe après.
 ///
@@ -22,17 +23,8 @@ internal sealed class FenetresInvisibles : IDisposable
 {
     internal const string VisibleVariable = "AZERTY_FENETRES_VISIBLES";
 
-    /// <summary>Opacité : 1 sur 255, imperceptible. À 0, DWM pourrait ne plus rendre la fenêtre.</summary>
-    private const byte Alpha = 1;
-
-    private const int WH_CBT = 5;
-    private const int HCBT_CREATEWND = 3;
-    private const int GWL_EXSTYLE = -20;
-    private const long WS_CHILD = 0x40000000;
-    private const long WS_EX_TRANSPARENT = 0x00000020;
-    private const long WS_EX_LAYERED = 0x00080000;
-    private const uint LWA_ALPHA = 0x2;
-    private static readonly IntPtr HWND_MESSAGE = new(-3);
+    private const int WH_CALLWNDPROCRET = 12;
+    private const uint WM_CREATE = 0x0001;
 
     private readonly HookProc? _proc; // gardé vivant : Windows garde un pointeur vers le délégué
     private readonly IntPtr _hook;
@@ -44,35 +36,26 @@ internal sealed class FenetresInvisibles : IDisposable
         if (visible == "1" || string.Equals(visible, "true", StringComparison.OrdinalIgnoreCase))
             return;
 
-        _proc = OnCbt;
-        _hook = SetWindowsHookExW(WH_CBT, _proc, IntPtr.Zero, GetCurrentThreadId());
+        _proc = OnCallWndProcRet;
+        _hook = SetWindowsHookExW(WH_CALLWNDPROCRET, _proc, IntPtr.Zero, GetCurrentThreadId());
         if (_hook == IntPtr.Zero)
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowsHookExW(WH_CBT)");
-    }
-
-    private IntPtr OnCbt(int code, IntPtr wParam, IntPtr lParam)
-    {
-        if (code == HCBT_CREATEWND)
-            Hide(wParam, lParam);
-        return CallNextHookEx(_hook, code, wParam, lParam);
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowsHookExW(WH_CALLWNDPROCRET)");
     }
 
     /// <summary>
-    /// À HCBT_CREATEWND, la fenêtre existe mais n'a reçu aucun message : le style étendu est
-    /// posé sur elle et dans son CREATESTRUCT, pour que WM_NCCREATE et WM_CREATE le voient.
+    /// Au retour de WM_CREATE, avant que CreateWindowEx ne montre la fenêtre. L'ancien crochet
+    /// CBT posait le style à HCBT_CREATEWND, où il était écrasé : les fenêtres restaient opaques
+    /// (mesuré le 07/10).
     /// </summary>
-    private static void Hide(IntPtr hwnd, IntPtr cbtCreate)
+    private IntPtr OnCallWndProcRet(int code, IntPtr wParam, IntPtr lParam)
     {
-        IntPtr lpcs = Marshal.ReadIntPtr(cbtCreate);
-        var cs = Marshal.PtrToStructure<CREATESTRUCTW>(lpcs);
-        if ((cs.style & WS_CHILD) != 0 || cs.hwndParent == HWND_MESSAGE)
-            return;
-
-        cs.dwExStyle |= (uint)(WS_EX_LAYERED | WS_EX_TRANSPARENT);
-        Marshal.StructureToPtr(cs, lpcs, false);
-        long exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE).ToInt64();
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new IntPtr(exStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT));
-        SetLayeredWindowAttributes(hwnd, 0, Alpha, LWA_ALPHA);
+        if (code >= 0)
+        {
+            var ret = Marshal.PtrToStructure<CWPRETSTRUCT>(lParam);
+            if (ret.message == WM_CREATE)
+                MasqueFenetresProcessus.Mask(ret.hwnd);
+        }
+        return CallNextHookEx(_hook, code, wParam, lParam);
     }
 
     public void Dispose()
@@ -85,21 +68,14 @@ internal sealed class FenetresInvisibles : IDisposable
 
     private delegate IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam);
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct CREATESTRUCTW
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CWPRETSTRUCT
     {
-        public IntPtr lpCreateParams;
-        public IntPtr hInstance;
-        public IntPtr hMenu;
-        public IntPtr hwndParent;
-        public int cy;
-        public int cx;
-        public int y;
-        public int x;
-        public int style;
-        public IntPtr lpszName;
-        public IntPtr lpszClass;
-        public uint dwExStyle;
+        public IntPtr lResult;
+        public IntPtr lParam;
+        public IntPtr wParam;
+        public uint message;
+        public IntPtr hwnd;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -114,14 +90,4 @@ internal sealed class FenetresInvisibles : IDisposable
 
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetWindowLongPtrW(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr SetWindowLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
 }

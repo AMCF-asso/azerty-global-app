@@ -27,12 +27,13 @@ namespace AZERTYGlobal.Tests;
 /// clavier. Sans elles, chaque [Fact] sort tout de suite et compte comme réussi.</item>
 /// <item><c>AZERTY_CAPTURE_DIR</c> : dossier de sortie commun. À défaut, la valeur de la porte
 /// si ce n'est pas « 1 » (usage hérité du banc de main).</item>
-/// <item><c>AZERTY_CAPTURE_DPI</c> : DPI à rendre, séparés par des virgules. Défaut :
-/// 96,120,144,168, soit 100, 125, 150 et 175 %.</item>
-/// <item><c>AZERTY_CAPTURE_LANG</c> : langues à rendre. Défaut : fr,en.</item>
+/// <item><c>AZERTY_CAPTURE_DPI</c> : DPI à rendre, séparés par des virgules. Défaut en CI :
+/// 96,120,144,168, soit 100, 125, 150 et 175 % ; sur un poste : 96.</item>
+/// <item><c>AZERTY_CAPTURE_LANG</c> : langues à rendre. Défaut en CI : fr,en ; sur un poste : fr.</item>
 /// <item><c>AZERTY_CAPTURE_ONLY</c> : sujets à rendre, séparés par des virgules ; un sujet est
 /// retenu quand son nom commence par l'un d'eux (« lecons » prend tous les états des Leçons).
-/// Défaut : tous.</item>
+/// Obligatoire hors CI : sans lui, le banc échoue au lieu de tout rendre.</item>
+/// <item><c>AZERTY_CAPTURE_ALL=1</c> : banc entier sur un poste, seulement sur demande explicite.</item>
 /// <item><c>AZERTY_FENETRES_VISIBLES=1</c> : montre les fenêtres, que <see cref="Isolation"/>
 /// rend sinon invisibles (<see cref="FenetresInvisibles"/>).</item>
 /// </list>
@@ -53,9 +54,15 @@ internal static class BancCapture
     internal const string DpiVariable = "AZERTY_CAPTURE_DPI";
     internal const string LangVariable = "AZERTY_CAPTURE_LANG";
     internal const string OnlyVariable = "AZERTY_CAPTURE_ONLY";
+    internal const string AllVariable = "AZERTY_CAPTURE_ALL";
 
-    private static readonly int[] DefaultDpis = { 96, 120, 144, 168 };
-    private static readonly string[] DefaultLanguages = { "fr", "en" };
+    /// <summary>GitHub Actions pose GITHUB_ACTIONS=true : la CI garde le banc complet.</summary>
+    internal static bool OnCi =>
+        string.Equals(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"), "true", StringComparison.OrdinalIgnoreCase);
+
+    // Sur un poste : une image par sujet (fr, 100 %), choix d'Antoine du 07/10.
+    private static int[] DefaultDpis => OnCi ? new[] { 96, 120, 144, 168 } : new[] { 96 };
+    private static string[] DefaultLanguages => OnCi ? new[] { "fr", "en" } : new[] { "fr" };
 
     /// <summary>
     /// Dossier de sortie, ou null quand la porte est fermée. Une porte ouverte sans dossier est
@@ -68,6 +75,15 @@ internal static class BancCapture
         if (string.IsNullOrWhiteSpace(gate))
             return null;
 
+        // Règle d'Antoine (07/10) : sur un poste, un banc ne rend que les sujets touchés. Un
+        // banc entier fait défiler des centaines de fenêtres pendant des minutes.
+        if (RefuseFullBench(OnCi, Environment.GetEnvironmentVariable(OnlyVariable), Environment.GetEnvironmentVariable(AllVariable)))
+        {
+            throw new InvalidOperationException(
+                $"Banc entier refusé hors CI : donner les sujets touchés dans {OnlyVariable} " +
+                $"(préfixes séparés par des virgules), ou {AllVariable}=1 sur demande explicite.");
+        }
+
         string? dir = Environment.GetEnvironmentVariable(DirVariable);
         if (!string.IsNullOrWhiteSpace(dir))
             return dir;
@@ -78,6 +94,10 @@ internal static class BancCapture
         throw new InvalidOperationException(
             $"{gateVariable} est ouverte mais {DirVariable} ne donne aucun dossier de sortie.");
     }
+
+    /// <summary>Vrai quand un banc s'apprête à tout rendre sur un poste sans qu'on l'ait demandé.</summary>
+    internal static bool RefuseFullBench(bool onCi, string? only, string? all) =>
+        !onCi && string.IsNullOrWhiteSpace(only) && all != "1";
 
     /// <summary>Les DPI demandés, dans l'ordre donné, sans doublon.</summary>
     internal static int[] Dpis
