@@ -190,13 +190,15 @@ internal static class LessonCatalogLoader
     {
         var exercises = new List<LessonExercise>
         {
-            // Les six exercices du tutoriel (TutorialSteps), avec les consignes des Leçons.
+            // Les huit exercices du tutoriel (TutorialSteps), avec les consignes des Leçons.
             InitiationExercise(0, L.Lessons_Init0, TutorialSteps.All[0].Target),
             InitiationExercise(1, L.Lessons_Init1, TutorialSteps.All[1].Target),
             InitiationExercise(2, L.Lessons_Init2, TutorialSteps.All[2].Target),
             InitiationExercise(3, L.Lessons_Init3, TutorialSteps.All[3].Target),
             InitiationExercise(4, L.Lessons_Init4, TutorialSteps.All[4].Target),
-            InitiationExercise(5, L.Lessons_Init5, TutorialSteps.All[5].Target)
+            InitiationExercise(5, L.Lessons_Init5, TutorialSteps.All[5].Target),
+            InitiationExercise(6, L.Lessons_Init6, TutorialSteps.All[6].Target),
+            InitiationExercise(7, L.Lessons_Init7, TutorialSteps.All[7].Target)
         };
 
         var lesson = new LessonLesson(

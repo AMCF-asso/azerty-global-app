@@ -31,7 +31,23 @@ internal sealed class LessonProgressStore
     public string? LastModuleId { get; private set; }
     public string? LastLessonId { get; private set; }
     public int LastExerciseIndex { get; private set; }
-    public int OnboardingSyncedMaxStep { get; private set; }
+    // Rangs de l'Initiation déjà importés du tutoriel. Le fichier garde le compteur
+    // « onboardingSyncedMaxStep » (la suite depuis 0, lue par les versions précédentes) et,
+    // depuis le parcours par usage, la liste complète « onboardingSyncedExercises ».
+    private readonly SortedSet<int> _onboardingSynced = new();
+
+    /// <summary>Longueur de la suite des rangs importés depuis 0.</summary>
+    public int OnboardingSyncedMaxStep
+    {
+        get
+        {
+            int rank = 0;
+            while (_onboardingSynced.Contains(rank)) rank++;
+            return rank;
+        }
+    }
+
+    public IReadOnlySet<int> OnboardingSyncedExercises => _onboardingSynced;
     public IReadOnlyDictionary<string, LessonExerciseProgress> Exercises => _exercises;
 
     public LessonExerciseProgress? GetValidProgress(LessonExercise exercise)
@@ -104,21 +120,29 @@ internal sealed class LessonProgressStore
         progress.SuccessfulAttempts = Math.Max(1, progress.SuccessfulAttempts);
     }
 
-    public void SyncOnboardingProgress(LessonCatalog catalog, int completedSteps)
+    /// <summary>Import d'un compteur seul : les <paramref name="completedSteps"/> premiers
+    /// exercices de l'Initiation (sens des configs d'avant le parcours par usage).</summary>
+    public void SyncOnboardingProgress(LessonCatalog catalog, int completedSteps) =>
+        SyncOnboardingProgress(catalog, Enumerable.Range(0, Math.Max(0, completedSteps)).ToHashSet());
+
+    /// <summary>
+    /// Importe les réussites du tutoriel dans l'Initiation, par rang fixe
+    /// (<see cref="ConfigManager.LearningCompletedExercises"/>) : le parcours du tutoriel varie
+    /// avec les usages, l'exercice de rang i de l'Initiation reste le même. Un rang déjà
+    /// importé ne l'est plus, même après une remise à zéro des Leçons.
+    /// </summary>
+    public void SyncOnboardingProgress(LessonCatalog catalog, IReadOnlySet<int> completedExercises)
     {
-        if (completedSteps <= OnboardingSyncedMaxStep) return;
+        if (completedExercises.All(_onboardingSynced.Contains)) return;
         var snapshot = CaptureSnapshot();
-        int imported = 0;
         foreach (var exercise in catalog.Exercises)
         {
             if (!StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.InitiationModuleId))
                 continue;
-            if (imported >= completedSteps) break;
-            if (imported >= OnboardingSyncedMaxStep)
+            if (completedExercises.Contains(exercise.ExerciseIndex) && !_onboardingSynced.Contains(exercise.ExerciseIndex))
                 MarkCompletedNeutralNoSave(exercise);
-            imported++;
         }
-        OnboardingSyncedMaxStep = Math.Max(OnboardingSyncedMaxStep, completedSteps);
+        _onboardingSynced.UnionWith(completedExercises);
         CommitOrRollback(snapshot, "LessonProgressStore.SyncOnboardingProgress");
     }
 
@@ -129,7 +153,11 @@ internal sealed class LessonProgressStore
         LastModuleId = null;
         LastLessonId = null;
         LastExerciseIndex = 0;
-        OnboardingSyncedMaxStep = onboardingSyncedMaxStep ?? ConfigManager.LearningMaxStepCompleted;
+        _onboardingSynced.Clear();
+        if (onboardingSyncedMaxStep is int maxStep)
+            _onboardingSynced.UnionWith(Enumerable.Range(0, Math.Max(0, maxStep)));
+        else
+            _onboardingSynced.UnionWith(ConfigManager.LearningCompletedExercises);
         CommitOrRollback(snapshot, "LessonProgressStore.ResetAll");
     }
 
@@ -161,7 +189,7 @@ internal sealed class LessonProgressStore
             LastModuleId,
             LastLessonId,
             LastExerciseIndex,
-            OnboardingSyncedMaxStep,
+            _onboardingSynced.ToArray(),
             exercises);
     }
 
@@ -170,7 +198,8 @@ internal sealed class LessonProgressStore
         LastModuleId = snapshot.LastModuleId;
         LastLessonId = snapshot.LastLessonId;
         LastExerciseIndex = snapshot.LastExerciseIndex;
-        OnboardingSyncedMaxStep = snapshot.OnboardingSyncedMaxStep;
+        _onboardingSynced.Clear();
+        _onboardingSynced.UnionWith(snapshot.OnboardingSynced);
         _exercises.Clear();
         foreach (var (key, progress) in snapshot.Exercises)
             _exercises[key] = progress.Clone();
@@ -211,7 +240,16 @@ internal sealed class LessonProgressStore
             LastModuleId = ReadString(root, "lastModuleId");
             LastLessonId = ReadString(root, "lastLessonId");
             LastExerciseIndex = ReadInt(root, "lastExerciseIndex");
-            OnboardingSyncedMaxStep = ReadInt(root, "onboardingSyncedMaxStep");
+            _onboardingSynced.Clear();
+            _onboardingSynced.UnionWith(Enumerable.Range(0, Math.Max(0, ReadInt(root, "onboardingSyncedMaxStep"))));
+            if (root.TryGetProperty("onboardingSyncedExercises", out var syncedEl) && syncedEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in syncedEl.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int index) && index >= 0)
+                        _onboardingSynced.Add(index);
+                }
+            }
 
             if (!root.TryGetProperty("exercises", out var exercisesEl) || exercisesEl.ValueKind != JsonValueKind.Object)
                 return;
@@ -252,7 +290,7 @@ internal sealed class LessonProgressStore
             LastModuleId = null;
             LastLessonId = null;
             LastExerciseIndex = 0;
-            OnboardingSyncedMaxStep = 0;
+            _onboardingSynced.Clear();
 
             if (FileQuarantine.IsReadFailure(ex))
             {
@@ -309,6 +347,10 @@ internal sealed class LessonProgressStore
                 WriteNullableString(writer, "lastLessonId", LastLessonId);
                 writer.WriteNumber("lastExerciseIndex", LastExerciseIndex);
                 writer.WriteNumber("onboardingSyncedMaxStep", OnboardingSyncedMaxStep);
+                writer.WriteStartArray("onboardingSyncedExercises");
+                foreach (int index in _onboardingSynced)
+                    writer.WriteNumberValue(index);
+                writer.WriteEndArray();
                 writer.WriteStartObject("exercises");
                 foreach (var (key, progress) in _exercises.OrderBy(pair => pair.Key, StringComparer.Ordinal))
                 {
@@ -446,5 +488,5 @@ internal sealed record ProgressStoreSnapshot(
     string? LastModuleId,
     string? LastLessonId,
     int LastExerciseIndex,
-    int OnboardingSyncedMaxStep,
+    IReadOnlyList<int> OnboardingSynced,
     IReadOnlyDictionary<string, LessonExerciseProgress> Exercises);

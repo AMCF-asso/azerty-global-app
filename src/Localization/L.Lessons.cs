@@ -11,8 +11,8 @@ internal static partial class L
         "Replay the guided walkthrough from the welcome screen.");
     public static string Lessons_InitiationLessonTitle => T("Premiers pas", "First steps");
     public static string Lessons_InitiationLessonDesc => T(
-        $"Les 6 exercices courts de l’initiation {Product}.",
-        $"The 6 short exercises from the {Product} walkthrough.");
+        $"Les 8 exercices courts de l’initiation {Product}.",
+        $"The 8 short exercises from the {Product} walkthrough.");
 
     public static string Lessons_Init0 => T("Tapez É pour découvrir les majuscules accentuées.", "Type É to discover accented capitals.");
     public static string Lessons_Init1 => T(
@@ -22,4 +22,6 @@ internal static partial class L
     public static string Lessons_Init3 => T("Tapez cette phrase de typographie française.", "Type this French typography sentence.");
     public static string Lessons_Init4 => T("Tapez cette ligne de code.", "Type this line of code.");
     public static string Lessons_Init5 => T("Tapez ces mots étrangers.", "Type these foreign words.");
+    public static string Lessons_Init6 => T("Tapez ce message.", "Type this message.");
+    public static string Lessons_Init7 => T("Tapez ces lettres des langues d’Afrique.", "Type these letters of African languages.");
 }

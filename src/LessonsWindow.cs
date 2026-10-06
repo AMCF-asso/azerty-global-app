@@ -168,7 +168,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         _hook = hook;
         _catalog = LoadCatalogWithChallenge();
         _progress = new LessonProgressStore();
-        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningMaxStepCompleted);
+        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         _hints = new LessonHintProvider();
         _wndProcDelegate = WndProc;
         _session = new LessonTypingSession(_catalog.Exercises[0]);
@@ -222,7 +222,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     {
         if (CatalogLanguage == L.Language) return;
         _catalog = LoadCatalogWithChallenge();
-        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningMaxStepCompleted);
+        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         CatalogLanguage = L.Language;
         // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
@@ -309,7 +309,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
             CenterOnActiveMonitor();
         UpdateRenderScaleFromCurrentClient(force: true);
         RefreshChallengeModuleIfStale();
-        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningMaxStepCompleted);
+        _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         _mapper.RequestCapsLockOff();
         _mapper.SyncState();
         _visible = true;

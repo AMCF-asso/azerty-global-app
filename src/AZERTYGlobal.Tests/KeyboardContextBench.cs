@@ -202,7 +202,8 @@ public partial class KeyboardContextBench
     /// Mini-tutoriel de l'accueil, sans propriétaire. <c>Show()</c> n'est pas appelé : il
     /// arracherait le premier plan au poste (AttachThreadInput, relances par minuterie), et
     /// une perte de focus affiche « Cliquez pour reprendre » au hasard du poste. La fenêtre est
-    /// affichée sans activation, dans l'état « focus présent » où elle naît.
+    /// affichée sans activation, dans l'état « focus présent » où elle naît : sa 1re page, le
+    /// choix des usages, aucune case cochée.
     /// </summary>
     private static void CaptureLearningModule(BancCapture.Target target, Layout layout, KeyMapper mapper, KeyboardHook hook)
     {
