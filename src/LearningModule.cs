@@ -101,16 +101,13 @@ sealed class LearningModule : IDisposable
     // n'y sert à rien et la question, l'aide et les cinq cases n'auraient pas tenu au-dessus.
     private const int BASE_USAGES_COL_W = 560;
     private const int BASE_USAGES_TOP = 28;
-    private const int BASE_USAGES_FIRST_CHECK = 112;
-    private const int BASE_USAGE_CHECK_H = 32;
-    private const int BASE_USAGE_CHECK_GAP = 6;
+    private const int BASE_USAGES_FIRST_CHECK = 104;
+    // Chaque usage est un grand bouton-bascule owner-draw, libellé dedans (une case thémée
+    // ignore SetTextColor et restait petite et noire sur le fond sombre).
+    private const int BASE_USAGE_CHECK_H = 44;
+    private const int BASE_USAGE_CHECK_GAP = 8;
     private const int BASE_USAGES_RULE_GAP = 26;  // filet au milieu de cet écart, avant Afrique
-    private const int BASE_USAGES_BUTTON_GAP = 30;
-    // Une case thémée ignore SetTextColor : son texte resterait noir sur le fond sombre. La
-    // case native est donc réduite à son carré (son texte reste son nom accessible) et la
-    // fenêtre peint le libellé à côté, le rend cliquable et y montre le focus.
-    private const int BASE_USAGE_BOX_W = 15;
-    private const int BASE_USAGE_LABEL_X = 24;
+    private const int BASE_USAGES_BUTTON_GAP = 24;
 
     // ── Timer IDs ───────────────────────────────────────────────────
     private const uint TIMER_KEYPRESS = 8001;
@@ -234,6 +231,8 @@ sealed class LearningModule : IDisposable
     private IntPtr _hWndBtnUsagesContinue;
     private Win32.SUBCLASSPROC? _usagesSubclassProc;
     private IntPtr _usageLastFocused; // rendu par TakeFocus au retour sur la fenêtre
+    private readonly bool[] _usageSelected = new bool[UsageIds.Length];
+    private int _usageHovered = -1;
 
     // Abonnement à la bascule de langue en cours de tutoriel (retraduction live).
     private readonly Action<string>? _onAppLanguageChanged;
@@ -644,18 +643,17 @@ sealed class LearningModule : IDisposable
             _hWnd, (IntPtr)IDC_BTN_CONTINUE, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnContinue, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
-        // Écran des usages. Aucune case cochée par défaut, sauf le dernier choix enregistré.
+        // Écran des usages. Aucun usage choisi par défaut, sauf le dernier choix enregistré.
         _usagesSubclassProc = UsagesSubclassProc;
         var saved = new HashSet<string>(ConfigManager.LearningUsages, StringComparer.Ordinal);
         for (int i = 0; i < UsageIds.Length; i++)
         {
+            _usageSelected[i] = saved.Contains(UsageIds[i]);
             _hWndUsages[i] = Win32.CreateWindowExW(0, "BUTTON", UsageLabel(i),
-                Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_AUTOCHECKBOX,
-                0, 0, S(BASE_USAGE_BOX_W), S(BASE_USAGE_CHECK_H),
+                Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
+                0, 0, S(BASE_USAGES_COL_W), S(BASE_USAGE_CHECK_H),
                 _hWnd, (IntPtr)(IDC_CHK_USAGE_FIRST + i), hInstance, IntPtr.Zero);
             Win32.SendMessageW(_hWndUsages[i], Win32.WM_SETFONT, _hFontInstruction, (IntPtr)1);
-            if (saved.Contains(UsageIds[i]))
-                Win32.SendMessageW(_hWndUsages[i], Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
             Win32.SetWindowSubclass(_hWndUsages[i], _usagesSubclassProc, (UIntPtr)(10 + i), IntPtr.Zero);
         }
 
@@ -687,15 +685,6 @@ sealed class LearningModule : IDisposable
 
     /// <summary>Gauche de la colonne centrée de l'écran des usages.</summary>
     private int UsagesColumnLeft(int clientWidth) => Math.Max(S(BASE_MARGIN), (clientWidth - S(BASE_USAGES_COL_W)) / 2);
-
-    /// <summary>Zone du libellé de la case <paramref name="i"/>, peint par la fenêtre.</summary>
-    private Win32.RECT UsageLabelRect(int i, int clientWidth)
-    {
-        int colX = UsagesColumnLeft(clientWidth);
-        int colW = Math.Min(S(BASE_USAGES_COL_W), clientWidth - 2 * S(BASE_MARGIN));
-        int top = UsageCheckTop(i);
-        return new Win32.RECT { left = colX + S(BASE_USAGE_LABEL_X), top = top, right = colX + colW, bottom = top + S(BASE_USAGE_CHECK_H) };
-    }
 
     private void RepositionControls()
     {
@@ -754,8 +743,9 @@ sealed class LearningModule : IDisposable
 
         // Écran des usages : cases en colonne centrée, « Continuer » sous la dernière.
         int colX = UsagesColumnLeft(cw);
+        int colW = Math.Min(S(BASE_USAGES_COL_W), cw - 2 * margin);
         for (int i = 0; i < _hWndUsages.Length; i++)
-            Win32.MoveWindow(_hWndUsages[i], colX, UsageCheckTop(i), S(BASE_USAGE_BOX_W), S(BASE_USAGE_CHECK_H), true);
+            Win32.MoveWindow(_hWndUsages[i], colX, UsageCheckTop(i), colW, S(BASE_USAGE_CHECK_H), true);
         int usagesBtnW = S(180);
         int usagesBtnY = UsageCheckTop(_hWndUsages.Length - 1) + S(BASE_USAGE_CHECK_H + BASE_USAGES_BUTTON_GAP);
         Win32.MoveWindow(_hWndBtnUsagesContinue, colX, usagesBtnY, usagesBtnW, S(36), true);
@@ -1121,36 +1111,13 @@ sealed class LearningModule : IDisposable
                         DrawHoverButton(in dis, false, L.Learning_BtnContinue, primary: true);
                         return (IntPtr)1;
                     }
-                    break;
-                }
-
-                // Cases de l'écran des usages : texte clair sur le fond sombre (les styles
-                // visuels dessinent la case elle-même).
-                case Win32.WM_CTLCOLORSTATIC:
-                case Win32.WM_CTLCOLORBTN:
-                    if (Array.IndexOf(_hWndUsages, lParam) >= 0)
+                    int usage = (int)dis.CtlID - IDC_CHK_USAGE_FIRST;
+                    if (usage >= 0 && usage < UsageIds.Length)
                     {
-                        Win32.SetBkMode(wParam, Win32.TRANSPARENT);
-                        Win32.SetTextColor(wParam, CLR_HEADER_TITLE);
-                        return _hBgBrush;
+                        DrawUsageToggle(in dis, usage);
+                        return (IntPtr)1;
                     }
                     break;
-
-                case Win32.WM_LBUTTONDOWN when _page == TutorialPage.Usages:
-                {
-                    // Un clic sur un libellé vaut un clic sur sa case : coche et focus.
-                    int x = (short)(lParam.ToInt64() & 0xFFFF), y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
-                    Win32.GetClientRect(hWnd, out var client);
-                    for (int i = 0; i < _hWndUsages.Length; i++)
-                    {
-                        var r = UsageLabelRect(i, client.right);
-                        if (x >= r.left && x < r.right && y >= r.top && y < r.bottom)
-                        {
-                            Win32.SendMessageW(_hWndUsages[i], Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
-                            break;
-                        }
-                    }
-                    return IntPtr.Zero;
                 }
 
                 case 0x0102: // WM_CHAR
@@ -1245,6 +1212,9 @@ sealed class LearningModule : IDisposable
                         case IDC_BTN_RETRY: RetryCurrentStep(); break;
                         case IDC_BTN_CONTINUE: ContinueAfterChoice(); break;
                         case IDC_BTN_USAGES_CONTINUE: ConfirmUsages(); break;
+                        case int id when id >= IDC_CHK_USAGE_FIRST && id < IDC_CHK_USAGE_FIRST + UsageIds.Length:
+                            ToggleUsage(id - IDC_CHK_USAGE_FIRST); // clic ou Espace
+                            break;
                     }
                     return IntPtr.Zero;
 
@@ -1565,13 +1535,89 @@ sealed class LearningModule : IDisposable
     {
         if (_page != TutorialPage.Usages) return;
         var usages = new List<string>();
-        for (int i = 0; i < _hWndUsages.Length; i++)
+        for (int i = 0; i < UsageIds.Length; i++)
         {
-            if (Win32.SendMessageW(_hWndUsages[i], Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED)
+            if (_usageSelected[i])
                 usages.Add(UsageIds[i]);
         }
         StartRoute(usages);
         TakeFocus();
+    }
+
+    /// <summary>Bascule l'usage <paramref name="i"/> (clic ou Espace sur son bouton).</summary>
+    private void ToggleUsage(int i)
+    {
+        _usageSelected[i] = !_usageSelected[i];
+        Win32.InvalidateRect(_hWndUsages[i], IntPtr.Zero, false);
+    }
+
+    /// <summary>
+    /// Bouton-bascule d'un usage : libellé à gauche, pastille à droite. Choisi : fond
+    /// <see cref="DarkTheme.Selected"/>, cadre et pastille à l'accent, coche dedans ; sinon le
+    /// bouton sombre ordinaire et une pastille vide. Focus clavier : rectangle système.
+    /// </summary>
+    private void DrawUsageToggle(in Win32.DRAWITEMSTRUCT dis, int i)
+    {
+        const uint ODS_SELECTED = 0x0001;
+        bool on = _usageSelected[i];
+        bool hot = _usageHovered == i;
+        bool pressed = (dis.itemState & ODS_SELECTED) != 0;
+        var rc = dis.rcItem;
+        IntPtr hdc = dis.hDC;
+        GdiHelpers.FillSolidRect(hdc, rc, CLR_BG);
+
+        uint fill = on ? DarkTheme.Selected
+            : pressed ? DarkTheme.ControlPressed : hot ? DarkTheme.ControlHover : DarkTheme.ControlFill;
+        uint border = on ? DarkTheme.Accent : hot ? DarkTheme.TextSecondary : DarkTheme.ControlBorder;
+        int stroke = on ? Math.Max(2, S(2)) : 1;
+        int radius = S(6) * 2;
+        var brush = Win32.CreateSolidBrush(fill);
+        var pen = Win32.CreatePen(0, stroke, border);
+        var oldBrush = Win32.SelectObject(hdc, brush);
+        var oldPen = Win32.SelectObject(hdc, pen);
+        int half = stroke / 2;
+        Win32.RoundRect(hdc, rc.left + half, rc.top + half, rc.right - half, rc.bottom - half, radius, radius);
+
+        // Pastille à droite : cercle vide, ou plein à l'accent avec la coche.
+        int dot = S(20);
+        int dotX = rc.right - S(16) - dot;
+        int dotY = rc.top + (rc.bottom - rc.top - dot) / 2;
+        var dotBrush = Win32.CreateSolidBrush(on ? DarkTheme.Accent : fill);
+        var dotPen = Win32.CreatePen(0, Math.Max(1, S(1)) + (on ? 0 : 1), on ? DarkTheme.Accent : DarkTheme.TextSecondary);
+        Win32.SelectObject(hdc, dotBrush);
+        Win32.SelectObject(hdc, dotPen);
+        Win32.Ellipse(hdc, dotX, dotY, dotX + dot, dotY + dot);
+        Win32.SelectObject(hdc, oldPen);
+        Win32.SelectObject(hdc, oldBrush);
+        Win32.DeleteObject(dotPen);
+        Win32.DeleteObject(dotBrush);
+        Win32.DeleteObject(pen);
+        Win32.DeleteObject(brush);
+        if (on)
+        {
+            var checkPen = Win32.CreatePen(0, Math.Max(2, S(2)), DarkTheme.OnAccent);
+            var prevPen = Win32.SelectObject(hdc, checkPen);
+            Win32.MoveToEx(hdc, dotX + dot * 27 / 100, dotY + dot * 52 / 100, IntPtr.Zero);
+            Win32.LineTo(hdc, dotX + dot * 43 / 100, dotY + dot * 68 / 100);
+            Win32.LineTo(hdc, dotX + dot * 74 / 100, dotY + dot * 35 / 100);
+            Win32.SelectObject(hdc, prevPen);
+            Win32.DeleteObject(checkPen);
+        }
+
+        var oldFont = Win32.SelectObject(hdc, _hFontInstruction);
+        Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+        Win32.SetTextColor(hdc, DarkTheme.Text);
+        var textRect = new Win32.RECT { left = rc.left + S(16), top = rc.top, right = dotX - S(12), bottom = rc.bottom };
+        Win32.DrawTextW(hdc, UsageLabel(i), -1, ref textRect,
+            Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        Win32.SelectObject(hdc, oldFont);
+
+        if ((dis.itemState & Win32.ODS_FOCUS) != 0)
+        {
+            int inset = S(4);
+            var focus = new Win32.RECT { left = rc.left + inset, top = rc.top + inset, right = rc.right - inset, bottom = rc.bottom - inset };
+            Win32.DrawFocusRect(hdc, ref focus);
+        }
     }
 
     /// <summary>
@@ -1611,10 +1657,31 @@ sealed class LearningModule : IDisposable
         {
             case Win32.WM_SETFOCUS:
                 _usageLastFocused = hWnd;
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false); // focus du libellé peint
                 break;
-            case Win32.WM_KILLFOCUS:
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+            case Win32.WM_MOUSEMOVE:
+            {
+                int hover = Array.IndexOf(_hWndUsages, hWnd);
+                if (hover >= 0 && _usageHovered != hover)
+                {
+                    _usageHovered = hover;
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    var tme = new Win32.TRACKMOUSEEVENT
+                    {
+                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
+                        dwFlags = Win32.TME_LEAVE,
+                        hwndTrack = hWnd,
+                        dwHoverTime = 0
+                    };
+                    Win32.TrackMouseEvent(ref tme);
+                }
+                break;
+            }
+            case Win32.WM_MOUSELEAVE:
+                if (_usageHovered >= 0 && _hWndUsages[_usageHovered] == hWnd)
+                {
+                    _usageHovered = -1;
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                }
                 break;
             case Win32.WM_KEYDOWN:
             {
@@ -1803,30 +1870,6 @@ sealed class LearningModule : IDisposable
         Win32.SetTextColor(hdc, CLR_INSTRUCTION);
         var helpRect = new Win32.RECT { left = colX, top = S(BASE_USAGES_TOP + 40), right = colX + colW, bottom = S(BASE_USAGES_TOP + 70) };
         Win32.DrawTextW(hdc, L.Learning_UsagesHelp, -1, ref helpRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
-
-        // Libellés des cases, et le focus clavier autour de celui de la case focalisée.
-        IntPtr focused = Win32.GetFocus();
-        Win32.SetTextColor(hdc, CLR_HEADER_TITLE);
-        for (int i = 0; i < _hWndUsages.Length; i++)
-        {
-            var labelRect = UsageLabelRect(i, cw);
-            const uint flags = Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
-            Win32.DrawTextW(hdc, UsageLabel(i), -1, ref labelRect, flags);
-            if (focused != IntPtr.Zero && focused == _hWndUsages[i])
-            {
-                var textRect = labelRect;
-                Win32.DrawTextW(hdc, UsageLabel(i), -1, ref textRect, flags | Win32.DT_CALCRECT);
-                int textH = textRect.bottom - textRect.top;
-                var focus = new Win32.RECT
-                {
-                    left = labelRect.left - S(3),
-                    top = labelRect.top + (labelRect.bottom - labelRect.top - textH) / 2 - S(2),
-                    right = Math.Min(textRect.right, labelRect.right) + S(3),
-                };
-                focus.bottom = focus.top + textH + S(4);
-                Win32.DrawFocusRect(hdc, ref focus); // pointillé en XOR : visible sur le sombre
-            }
-        }
         Win32.SelectObject(hdc, hOldFont);
 
         // Filet entre les usages courants et la langue d'Afrique.

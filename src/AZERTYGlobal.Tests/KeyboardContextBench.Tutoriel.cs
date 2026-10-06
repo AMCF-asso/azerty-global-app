@@ -190,13 +190,9 @@ public partial class KeyboardContextBench
     /// le parcours Documents), sans reprendre le premier plan.</summary>
     private static void Route(LearningModule module, params string[] usages) => module.StartRoute(usages);
 
-    /// <summary>Coche la case <paramref name="index"/> de l'écran des usages.</summary>
-    private static void CheckUsage(LearningModule module, int index)
-    {
-        var cases = BancCapture.Field<IntPtr[]>(module, "_hWndUsages")
-            ?? throw new MissingFieldException(nameof(LearningModule), "_hWndUsages");
-        Win32.SendMessageW(cases[index], Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
-    }
+    /// <summary>Choisit l'usage <paramref name="index"/> de l'écran des usages, comme un clic.</summary>
+    private static void CheckUsage(LearningModule module, int index) =>
+        BancCapture.Call(module, "ToggleUsage", index);
 
     /// <summary>Position <paramref name="step"/> du parcours, curseur au début, comme après
     /// « Exercice suivant », sans reprendre le premier plan.</summary>
