@@ -30,6 +30,10 @@ static class LightTheme
     internal const uint Accent = 0x00B85F00; // #005FB8
     /// <summary>Lien survolé ou focalisé.</summary>
     internal const uint AccentHover = 0x00923E00; // #003E92
+    /// <summary>Bouton secondaire survolé (audit UX 1.3.0, #3).</summary>
+    internal const uint ControlHover = 0x00F8F5F3; // #F3F5F8
+    /// <summary>Bouton secondaire enfoncé.</summary>
+    internal const uint ControlPressed = 0x00F0ECE9; // #E9ECF0
     /// <summary>Texte posé sur l'accent.</summary>
     internal const uint OnAccent = 0x00FFFFFF; // #FFFFFF
     /// <summary>Message de réussite.</summary>

@@ -48,6 +48,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private const uint MB_YESNO = 0x00000004;
     private const uint MB_ICONWARNING = 0x00000030;
     private const int IDYES = 6;
+    private const int HTCLIENT = 1;
+    private const int IDC_HAND = 32649;
 
     private enum WindowMode { Lessons, Free }
 
@@ -148,6 +150,10 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private readonly PhysicalTextInputBuffer _pendingPhysicalText =
         new(PENDING_PHYSICAL_TEXT_TIMEOUT_MS);
     private bool _trackingMouseLeave;
+    // Audit UX 1.3.0, #10 : point survolé (int.MinValue hors fenêtre) et cible cliquable
+    // dessous ; le repeint en tire l'état « hot » des boutons et des lignes.
+    private int _hotX = int.MinValue, _hotY = int.MinValue;
+    private int _hotActionIndex = -1;
     private int _focusedActionIndex = -1;
     private string? _hoverTooltip;
     private Win32.RECT _hoverTooltipAnchor;
@@ -942,6 +948,15 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
                 case Win32.WM_MOUSELEAVE:
                     OnMouseLeave();
                     return IntPtr.Zero;
+                case Win32.WM_SETCURSOR:
+                    // #10 : main sur une cible cliquable, comme un lien ou un bouton web.
+                    if ((lParam.ToInt64() & 0xFFFF) == HTCLIENT && Win32.GetCursorPos(out var cursor)
+                        && Win32.ScreenToClient(_hWnd, ref cursor) && HitClickAction(cursor.x, cursor.y) >= 0)
+                    {
+                        Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)IDC_HAND));
+                        return (IntPtr)1;
+                    }
+                    break;
                 case Win32.WM_KEYDOWN:
                     if (_inputPaused)
                         return IntPtr.Zero;
@@ -1253,9 +1268,13 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
             countColor, Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
     }
 
+    // #10 : une ligne non sélectionnée survolée prend le fond de survol des boutons.
+    private uint SidebarItemFill(Win32.RECT rect, bool selected) =>
+        selected ? CLR_PANEL_2 : IsHot(rect) ? CLR_BUTTON_HOT : CLR_PANEL;
+
     private void DrawSidebarModuleItem(IntPtr hdc, Win32.RECT rect, string title, string count, bool selected)
     {
-        GdiHelpers.FillSolidRect(hdc, rect, selected ? CLR_PANEL_2 : CLR_PANEL);
+        GdiHelpers.FillSolidRect(hdc, rect, SidebarItemFill(rect, selected));
         if (selected)
             GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = rect.left, top = rect.top, right = rect.left + S(4), bottom = rect.bottom }, CLR_ACCENT);
         DrawSidebarItemText(hdc, _hFontSidebarModule, rect, title, count, CLR_TEXT, CLR_TEXT);
@@ -1263,7 +1282,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 
     private void DrawSidebarLessonItem(IntPtr hdc, Win32.RECT rect, string title, string count, bool selected)
     {
-        GdiHelpers.FillSolidRect(hdc, rect, selected ? CLR_PANEL_2 : CLR_PANEL);
+        GdiHelpers.FillSolidRect(hdc, rect, SidebarItemFill(rect, selected));
         if (selected)
             GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = rect.left, top = rect.top, right = rect.left + S(4), bottom = rect.bottom }, CLR_LESSON_ACCENT);
         uint color = selected ? CLR_TEXT : CLR_MUTED;
@@ -2148,13 +2167,13 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private void DrawButton(IntPtr hdc, Win32.RECT rect, string text, bool active, Action action)
     {
         // Bouton sombre de Windows 11 ; l'onglet ou le panneau actif porte l'accent.
-        GdiHelpers.DrawDarkButton(hdc, rect, text, _hFontButton, active, hot: false, pressed: false, S(4));
+        GdiHelpers.DrawDarkButton(hdc, rect, text, _hFontButton, active, hot: IsHot(rect), pressed: false, S(4));
         AddClick(rect, action, text);
     }
 
     private void DrawIconButton(IntPtr hdc, Win32.RECT rect, string icon, string tooltip, bool active, Action action, Action? doubleClickAction = null)
     {
-        GdiHelpers.DrawDarkButton(hdc, rect, icon, icon == "💡" ? _hFontEmoji : _hFontIcon, active, hot: false, pressed: false, S(4));
+        GdiHelpers.DrawDarkButton(hdc, rect, icon, icon == "💡" ? _hFontEmoji : _hFontIcon, active, hot: IsHot(rect), pressed: false, S(4));
         AddClick(rect, action, tooltip); // l'icône ne dit rien ; l'infobulle nomme le bouton
         if (doubleClickAction != null)
             AddDoubleClick(rect, doubleClickAction);
@@ -2239,17 +2258,19 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         if (_focusedActionIndex >= _clickActions.Count)
             _focusedActionIndex = _clickActions.Count - 1;
 
-        DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect);
+        // #10 : l'anneau d'accent se perdait contre l'onglet actif, rempli d'accent ; une cible
+        // focalisée au clavier prend l'anneau clair de Windows 11 en thème sombre.
+        DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect, CLR_TEXT);
     }
 
-    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect)
+    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect, uint color = CLR_CURRENT)
     {
         rect.left -= S(2);
         rect.top -= S(2);
         rect.right += S(2);
         rect.bottom += S(2);
 
-        var pen = Win32.CreatePen(0, Math.Max(1, S(2)), CLR_CURRENT);
+        var pen = Win32.CreatePen(0, Math.Max(1, S(2)), color);
         var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
         var oldPen = Win32.SelectObject(hdc, pen);
         Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, S(6), S(6));
@@ -2332,6 +2353,21 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         }
     }
 
+    /// <summary>Indice de la cible cliquable sous le point, dans l'ordre d'<see cref="OnClick"/> ; -1 sinon.</summary>
+    private int HitClickAction(int x, int y)
+    {
+        for (int i = 0; i < _clickActions.Count; i++)
+        {
+            var rect = _clickActions[i].Rect;
+            if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
+                return i;
+        }
+        return -1;
+    }
+
+    private bool IsHot(Win32.RECT rect) =>
+        _hotX >= rect.left && _hotX <= rect.right && _hotY >= rect.top && _hotY <= rect.bottom;
+
     private void OnMouseMove(IntPtr lParam)
     {
         int x = unchecked((short)((long)lParam & 0xFFFF));
@@ -2347,6 +2383,15 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
                 dwHoverTime = 0
             };
             _trackingMouseLeave = Win32.TrackMouseEvent(ref tme);
+        }
+
+        _hotX = x;
+        _hotY = y;
+        int hotIndex = HitClickAction(x, y);
+        if (hotIndex != _hotActionIndex)
+        {
+            _hotActionIndex = hotIndex;
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
         }
 
         string? tooltip = null;
@@ -2395,6 +2440,12 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private void OnMouseLeave()
     {
         _trackingMouseLeave = false;
+        _hotX = _hotY = int.MinValue;
+        if (_hotActionIndex >= 0)
+        {
+            _hotActionIndex = -1;
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        }
         if (_hoverTooltip == null) return;
         _hoverTooltip = null;
         _hoverTooltipAnchor = new Win32.RECT();
