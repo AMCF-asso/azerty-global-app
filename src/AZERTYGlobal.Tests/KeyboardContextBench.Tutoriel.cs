@@ -33,28 +33,29 @@ public partial class KeyboardContextBench
         // Exercice 1 : Verr. Maj. activée, pleine en vert, et la touche É en contour.
         new("tuto-ex1-verrmaj", (m, api, mapper) => { CapsLockOn(api, mapper); }),
         // Exercice 2 : Verr. Maj. gardée ; l'espace est dans la couche Caps.
-        new("tuto-ex2-espace", (m, api, mapper) => { GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "GRÂCE"); }),
-        // Exercice 2 : Â par touche morte, étape 1 et pastille ; Verr. Maj. reste « direct ».
-        new("tuto-ex2-etape1", (m, api, mapper) => { GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "GR"); }),
+        new("tuto-ex2-espace", (m, api, mapper) => { GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA"); }),
+        // Exercice 2 : l'espace fine avant « ! », AltGr + Espace ; Verr. Maj. reste « direct ».
+        // Les majuscules accentuées y sont directes : l'étape 1 et sa pastille sont en ex. 6.
+        new("tuto-ex2-fine", (m, api, mapper) => { GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN"); }),
         // Exercice 3 : premier caractère, et la même page avec Maj tenue.
         new("tuto-ex3", (m, api, mapper) => GoTo(m, 2)),
         new("tuto-ex3-maj-tenue", (m, api, mapper) => { GoTo(m, 2); Hold(api, mapper, VK_LSHIFT, 0x2A, 0); }),
         // Exercice 3 : une faute, le caractère courant en rouge.
         new("tuto-ex3-erreur", (m, api, mapper) => { GoTo(m, 2); Type(m, "x"); }),
         // Exercice 3 : la touche surlignée enfoncée.
-        new("tuto-ex3-enfoncee", (m, api, mapper) => { GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x24u); }),
-        // Exercice 4 : L demande Maj ; æ demande AltGr, puis AltGr tenue (pleine en vert).
-        new("tuto-ex4-maj", (m, api, mapper) => GoTo(m, 3)),
-        new("tuto-ex4-altgr", (m, api, mapper) => { GoTo(m, 3); Type(m, "L"); }),
-        new("tuto-ex4-altgr-tenue", (m, api, mapper) => { GoTo(m, 3); Type(m, "L"); Hold(api, mapper, VK_RMENU, 0x38, LLKHF_EXTENDED); }),
+        new("tuto-ex3-enfoncee", (m, api, mapper) => { GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Eu); }),
+        // Exercice 4 : « demande AltGr, puis AltGr tenue (pleine en vert) ; U demande Maj.
+        new("tuto-ex4-maj", (m, api, mapper) => { GoTo(m, 3); Type(m, "« "); }),
+        new("tuto-ex4-altgr", (m, api, mapper) => GoTo(m, 3)),
+        new("tuto-ex4-altgr-tenue", (m, api, mapper) => { GoTo(m, 3); Hold(api, mapper, VK_RMENU, 0x38, LLKHF_EXTENDED); }),
         // Exercice 5, facultatif : titre « (Bonus) », bouton « Passer », accolade par AltGr.
-        new("tuto-ex5", (m, api, mapper) => { GoTo(m, 4); Type(m, "type Config = "); }),
-        // Exercice 6 : aides des langues (◌/, ¿, ¡), ã par touche morte, étape 1.
-        new("tuto-ex6-etape1", (m, api, mapper) => { GoTo(m, 5); Type(m, "S"); }),
-        // Exercice 6 : ó, la bonne touche morte armée : étape 2 et clavier des résultats.
-        new("tuto-ex6-etape2", (m, api, mapper) => { GoTo(m, 5); Type(m, "São Paulo, C"); ActivateDeadKey(api, mapper, "dk_acute"); }),
-        // Exercice 6 : ã attendu, une autre touche morte armée : Retour arrière demandé.
-        new("tuto-ex6-retour", (m, api, mapper) => { GoTo(m, 5); Type(m, "S"); ActivateDeadKey(api, mapper, "dk_acute"); }),
+        new("tuto-ex5", (m, api, mapper) => { GoTo(m, 4); Type(m, "if (a || b) "); }),
+        // Exercice 6 : í par touche morte, étape 1.
+        new("tuto-ex6-etape1", (m, api, mapper) => { GoTo(m, 5); Type(m, "Mar"); }),
+        // Exercice 6 : í, la bonne touche morte armée : étape 2 et clavier des résultats.
+        new("tuto-ex6-etape2", (m, api, mapper) => { GoTo(m, 5); Type(m, "Mar"); ActivateDeadKey(api, mapper, "dk_acute"); }),
+        // Exercice 6 : ò attendu, une autre touche morte armée : Retour arrière demandé.
+        new("tuto-ex6-retour", (m, api, mapper) => { GoTo(m, 5); Type(m, "María et Niccol"); ActivateDeadKey(api, mapper, "dk_acute"); }),
         // Page de choix après le premier succès, page finale, voile de perte du focus.
         new("tuto-choix", (m, api, mapper) => Type(m, "É")),
         new("tuto-final", (m, api, mapper) => ShowFinalPage(m)),

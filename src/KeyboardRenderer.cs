@@ -166,8 +166,8 @@ internal static class KeyboardRenderer
         if (string.IsNullOrEmpty(value)) return false;
         if (profile == KeyboardRenderProfile.Full) return true;
 
-        // Tutoriel et Leçons : le clavier simplifié, plus ce que l'exercice révèle (l'exercice 6
-        // du tutoriel montre ◌/, ¿ et ¡ ; une leçon, ses caractères et l'indice).
+        // Tutoriel et Leçons : le clavier simplifié, plus ce que l'exercice révèle (ses caractères
+        // et l'indice, dans le tutoriel comme dans une leçon).
         if (IsOnboardingSlotVisible(scancode, layer, value)) return true;
         if (StringComparer.Ordinal.Equals(value, hintCharacter)) return true;
         if (lessonVisibleCharacters?.Contains(value) == true) return true;

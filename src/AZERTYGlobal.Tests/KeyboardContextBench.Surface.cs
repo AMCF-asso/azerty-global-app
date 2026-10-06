@@ -17,7 +17,7 @@ public partial class KeyboardContextBench
     private const string StrictModule = LessonCatalogLoader.InitiationModuleId;
     private const string StrictLesson = LessonCatalogLoader.InitiationLessonId;
     private const int StrictExercise = 3;
-    private const string StrictTyped = "Lætitia demande « d'o";
+    private const string StrictTyped = "« Un chef-d’œuvre";
 
     // Mode souple : deux fautes classiques, É tapé E et À tapé A.
     private const string FlexibleModule = "majuscules-accentuees";
@@ -32,10 +32,11 @@ public partial class KeyboardContextBench
     private static readonly SurfaceState[] SurfaceStates =
     {
         new("saisie", StrictModule, StrictLesson, StrictExercise, StrictTyped, Focus: true),
-        new("faute-stricte", StrictModule, StrictLesson, StrictExercise, StrictTyped + "u", Focus: true),
+        // Espace ordinaire au lieu de l'espace fine attendue avant « ! ».
+        new("faute-stricte", StrictModule, StrictLesson, StrictExercise, StrictTyped + " ", Focus: true),
         new("faute-souple", FlexibleModule, FlexibleLesson, 0, FlexibleTyped, Focus: true),
         // L'apostrophe est la lettre à taper : son soulignement garde sa largeur minimale.
-        new("etroite", StrictModule, StrictLesson, StrictExercise, "Lætitia demande « d", Focus: true),
+        new("etroite", StrictModule, StrictLesson, StrictExercise, "« Un chef-d", Focus: true),
         new("sans-focus", StrictModule, StrictLesson, StrictExercise, StrictTyped, Focus: false),
         // Tab a quitté la surface : son cadre s'efface, le premier bouton porte le focus.
         new("focus-bouton", StrictModule, StrictLesson, StrictExercise, StrictTyped, Focus: true, FocusedAction: 0),

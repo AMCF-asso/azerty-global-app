@@ -15,11 +15,13 @@ internal static class TutorialSteps
     public static readonly Step[] All =
     {
         new("É", KeepCapsLock: true, Skippable: false),
-        new("GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !", KeepCapsLock: true, Skippable: false),
-        new("jean.dupont@education.gouv.fr", KeepCapsLock: false, Skippable: false),
-        new("Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %.", KeepCapsLock: false, Skippable: false),
-        new("type Config = { items: string[]; sep: \"~\" | \"\\\\\" };", KeepCapsLock: false, Skippable: true),
-        new("São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe", KeepCapsLock: false, Skippable: true),
+        // Textes du testeur choisis le 29/09 (operations/2026-09-29-contenu-lecons/decisions.md,
+        // lot 1) : tronc commun, puis Documents, Code et Autres langues (choix du 06/10).
+        new("ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN\u202F!", KeepCapsLock: true, Skippable: false),
+        new("contact@exemple.com", KeepCapsLock: false, Skippable: false),
+        new("«\u00A0Un chef-d\u2019œuvre\u202F!\u00A0» — Maman", KeepCapsLock: false, Skippable: false),
+        new("if (a || b) { t[0] = \"\\n\"; }", KeepCapsLock: false, Skippable: true),
+        new("María et Niccolò arrivent à São Paulo.", KeepCapsLock: false, Skippable: true),
     };
 
     /// <summary>
