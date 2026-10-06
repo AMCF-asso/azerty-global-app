@@ -191,6 +191,9 @@ sealed class LearningModule : IDisposable
     private int _currentStep;
     private int _cursorPosition;
     private bool _currentCharError;
+    // Faute en cours (valables tant que _currentCharError) : caractère tapé, touche frappée.
+    private char _lastWrongChar;
+    private uint _errorScancode;
     // Page affichée : le choix des usages (première page, 06/10), l'exercice, le choix après
     // un succès (Recommencer / Suivant, à la place de l'ancienne transition automatique), la
     // page finale après le dernier exercice du parcours. Une seule valeur au lieu de deux
@@ -477,7 +480,8 @@ sealed class LearningModule : IDisposable
         _hFontOverlaySmall = Win32.CreateFontW(S(FONT_CHAR_SMALL), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontCtx = Win32.CreateFontW(S(FONT_CTX), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontTransition = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontBadge = Win32.CreateFontW(S(9), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
+        // Audit UX 1.3.0, #5 : 9 px de cellule donnaient des chiffres de 6-7 px sans ClearType.
+        _hFontBadge = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void DestroyFonts()
@@ -1310,7 +1314,7 @@ sealed class LearningModule : IDisposable
         if (typed == target[_cursorPosition])
         {
             _cursorPosition++;
-            _currentCharError = false;
+            ClearCharError();
 
             if (_cursorPosition >= target.Length)
             {
@@ -1336,9 +1340,42 @@ sealed class LearningModule : IDisposable
         }
         else
         {
+            // Audit UX 1.3.0, #6 : la faute se disait par la seule couleur. Le caractère tapé
+            // prend la place de l'attendu, la touche frappée est cerclée de rouge, une ligne dit
+            // quoi faire, et le lecteur d'écran l'annonce.
             _currentCharError = true;
+            _lastWrongChar = typed;
+            _errorScancode = _pressedScancode;
+            AnnounceTypingError(target[_cursorPosition]);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
         }
+    }
+
+    private string TypingErrorText(char expected) =>
+        L.Learning_TypingError(DescribeChar(_lastWrongChar), DescribeChar(expected));
+
+    private static string DescribeChar(char c) => c switch
+    {
+        ' ' => L.Learning_SpaceName,
+        ' ' => L.Learning_NbspName,
+        ' ' => L.Learning_NarrowNbspName,
+        _ => L.Learning_QuotedChar(c)
+    };
+
+    /// <summary>Nom accessible de la zone d'exercice (la fenêtre, qui a le focus pendant la
+    /// frappe) remplacé par le message de faute, puis EVENT_OBJECT_NAMECHANGE : le lecteur
+    /// d'écran lit le nouveau nom de l'élément focalisé. Le titre revient à la correction.</summary>
+    private void AnnounceTypingError(char expected)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        AccessibleName.TrySetAndNotify(_hWnd, TypingErrorText(expected));
+    }
+
+    private void ClearCharError()
+    {
+        if (_currentCharError && _hWnd != IntPtr.Zero)
+            AccessibleName.TrySet(_hWnd, L.Learning_WindowTitle);
+        _currentCharError = false;
     }
 
     private char ResolveTypedCharacter(char received)
@@ -1352,7 +1389,7 @@ sealed class LearningModule : IDisposable
         // Backspace l'efface pour permettre de retaper immédiatement le caractère attendu.
         if (_currentCharError)
         {
-            _currentCharError = false;
+            ClearCharError();
             ClearPendingPhysicalText();
             if (_hWnd != IntPtr.Zero)
             {
@@ -1376,7 +1413,7 @@ sealed class LearningModule : IDisposable
     {
         _currentStep++;
         _cursorPosition = 0;
-        _currentCharError = false;
+        ClearCharError();
         _page = TutorialPage.Exercise;
         _currentStepSuccessCount = 0; // reset pour le nouvel exercice (1er succes => « Bravo ! » s'affiche)
         ClearPendingPhysicalText();
@@ -1508,7 +1545,7 @@ sealed class LearningModule : IDisposable
     {
         _page = TutorialPage.Exercise;
         _cursorPosition = 0;
-        _currentCharError = false;
+        ClearCharError();
         ClearPendingPhysicalText();
         _mapper.RequestCapsLockOff(); // forcer Verr.Maj. off au reset (re-incite a l'activation si KeepCapsHighlight)
         UpdateHighlight();
@@ -1644,7 +1681,7 @@ sealed class LearningModule : IDisposable
         _route = TutorialSteps.BuildRoute(chosen);
         _currentStep = 0;
         _cursorPosition = 0;
-        _currentCharError = false;
+        ClearCharError();
         _currentStepSuccessCount = 0;
         _page = TutorialPage.Exercise;
         ClearPendingPhysicalText();
@@ -1958,39 +1995,58 @@ sealed class LearningModule : IDisposable
         int textX = margin;
         for (int i = 0; i < target.Length; i++)
         {
-            string ch = target[i].ToString();
-            // Mesurer la largeur du caractère
+            bool current = i == _cursorPosition;
+            bool error = current && _currentCharError;
+            // Audit UX 1.3.0, #6 : en faute, le caractère tapé prend la place de l'attendu ; la
+            // ligne sous le texte dit les deux. Une espace tapée à tort se voit en « · ».
+            char shown = error ? _lastWrongChar : target[i];
+            string ch = error && shown == ' ' ? "·" : shown.ToString();
+            // #1 : une espace insécable a une place visible, assez large pour son repère.
+            bool marked = KeyboardRenderer.IsMarkedSpace(shown);
             var measureRect = new Win32.RECT { left = 0, top = 0, right = 10000, bottom = 1000 };
             Win32.DrawTextW(hdc, ch, 1, ref measureRect, Win32.DT_CALCRECT);
             int charW = measureRect.right;
+            if (marked)
+                charW = Math.Max(charW, S(shown == ' ' ? 9 : 12));
 
-            if (i < _cursorPosition)
+            // Tapé correctement : vert ; en cours : blanc, ou rouge en faute ; à venir : gris.
+            uint color = i < _cursorPosition ? CLR_TARGET_CORRECT
+                : error ? CLR_TARGET_ERROR
+                : current ? CLR_TARGET_CURRENT
+                : CLR_TARGET_PENDING;
+            if (current)
             {
-                // Tapé correctement → vert
-                Win32.SetTextColor(hdc, CLR_TARGET_CORRECT);
-            }
-            else if (i == _cursorPosition)
-            {
-                // Caractère en cours
-                Win32.SetTextColor(hdc, _currentCharError ? CLR_TARGET_ERROR : CLR_TARGET_CURRENT);
-                // Souligné — décalé sous la base des lettres sans trop s'éloigner.
+                // Souligné — décalé sous la base des lettres sans trop s'éloigner ; plus épais
+                // en faute, pour qui ne distingue pas le rouge.
                 int underY = y + S(28);
-                var hPen = Win32.CreatePen(0, S(2), _currentCharError ? CLR_TARGET_ERROR : CLR_TARGET_CURRENT);
+                var hPen = Win32.CreatePen(0, error ? S(3) : S(2), color);
                 var hOldPen = Win32.SelectObject(hdc, hPen);
                 Win32.MoveToEx(hdc, textX, underY, IntPtr.Zero);
                 Win32.LineTo(hdc, textX + charW, underY);
                 Win32.SelectObject(hdc, hOldPen);
                 Win32.DeleteObject(hPen);
             }
+
+            if (marked)
+            {
+                KeyboardRenderer.DrawSpaceMarker(hdc, shown, textX + S(2), textX + charW - S(1), y + S(22), _dpiScale, color);
+            }
             else
             {
-                // Pas encore tapé → gris
-                Win32.SetTextColor(hdc, CLR_TARGET_PENDING);
+                Win32.SetTextColor(hdc, color);
+                var charRect = new Win32.RECT { left = textX, top = y, right = textX + charW + S(2), bottom = y + S(30) };
+                Win32.DrawTextW(hdc, ch, 1, ref charRect, 0);
             }
-
-            var charRect = new Win32.RECT { left = textX, top = y, right = textX + charW + S(2), bottom = y + S(30) };
-            Win32.DrawTextW(hdc, ch, 1, ref charRect, 0);
             textX += charW + S(1);
+        }
+
+        if (_currentCharError && _cursorPosition < target.Length)
+        {
+            Win32.SelectObject(hdc, _hFontStatus);
+            Win32.SetTextColor(hdc, CLR_TARGET_ERROR);
+            string message = TypingErrorText(target[_cursorPosition]);
+            var messageRect = new Win32.RECT { left = margin, top = y + S(34), right = cw - margin, bottom = y + S(54) };
+            Win32.DrawTextW(hdc, message, message.Length, ref messageRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         }
 
         Win32.SelectObject(hdc, hOldFont);
@@ -2190,6 +2246,7 @@ sealed class LearningModule : IDisposable
             CapsLock = _mapper.CapsLockActive,
             ActiveDeadKey = _mapper.ActiveDeadKey,
             PressedScancode = _pressedScancode,
+            ErrorScancode = _currentCharError ? _errorScancode : 0,
             ShowInvisibleMarkers = false,
             UiScale = _dpiScale,
             HighlightKind = _guidance.HighlightKind,

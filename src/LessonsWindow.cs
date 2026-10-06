@@ -1459,9 +1459,12 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         bool markers = ConfigManager.LessonInvisibleMarkersVisible;
         if (_lessonCharWidths.TryGetValue((ch, markers), out int width))
             return width;
-        string display = markers ? KeyboardRenderer.DisplayInvisible(ch.ToString()) : ch.ToString();
-        // Espacement naturel (29/09) : la case a la largeur du glyphe, sans marge ajoutée.
-        width = Math.Max(1, GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, display));
+        // Espacement naturel (29/09) : la case a la largeur du glyphe, sans marge ajoutée. Une
+        // espace insécable marquée a la largeur de son repère « ˽ » (audit UX 1.3.0, #1).
+        width = markers && KeyboardRenderer.IsMarkedSpace(ch)
+            ? S(ch == ' ' ? 10 : 14)
+            : Math.Max(1, GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine,
+                markers ? KeyboardRenderer.DisplayInvisible(ch.ToString()) : ch.ToString()));
         _lessonCharWidths[(ch, markers)] = width;
         return width;
     }
@@ -1578,7 +1581,14 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         if (charRect.right <= charRect.left)
             return false;
 
-        DrawText(hdc, _hFontLessonLine, FormatVisibleCharacter(ch.ToString()), charRect, color, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        // Audit UX 1.3.0, #1 : l'espace insécable se marquait par son nom (« esp. ins. ») dans
+        // la police de la ligne, qui se lisait comme du texte à taper ; un repère « ˽ » le
+        // remplace, le nom reste aux infobulles et à l'UI Automation. Une espace tapée à tort
+        // se voit en « · ».
+        if (ConfigManager.LessonInvisibleMarkersVisible && KeyboardRenderer.IsMarkedSpace(ch))
+            KeyboardRenderer.DrawSpaceMarker(hdc, ch, charRect.left + S(2), charRect.right - S(2), top + S(25), _dpiScale * _windowScale, color);
+        else
+            DrawText(hdc, _hFontLessonLine, ch == ' ' && color == CLR_BAD ? "·" : FormatVisibleCharacter(ch.ToString()), charRect, color, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         if (underline.HasValue)
         {
             int underlineY = Math.Min(charRect.bottom - S(3), top + S(34));
@@ -1589,7 +1599,11 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         {
             var belowRect = new Win32.RECT { left = charRect.left - S(4), top = top + S(37), right = charRect.right + S(4), bottom = top + S(52) };
             // Sans trait dessous (Antoine, planche du 01/10) : le soulignement rouge de la faute suffit.
-            DrawText(hdc, _hFontSmall, FormatVisibleCharacter(below.Value.ToString()), belowRect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+            // Attendu insécable : son repère, la case étroite couperait son nom.
+            if (ConfigManager.LessonInvisibleMarkersVisible && KeyboardRenderer.IsMarkedSpace(below.Value))
+                KeyboardRenderer.DrawSpaceMarker(hdc, below.Value, charRect.left + S(2), charRect.right - S(2), top + S(48), _dpiScale * _windowScale, CLR_TEXT);
+            else
+                DrawText(hdc, _hFontSmall, FormatVisibleCharacter(below.Value.ToString()), belowRect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
         }
         x += width;
         return true;

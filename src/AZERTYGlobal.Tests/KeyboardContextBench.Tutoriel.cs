@@ -42,8 +42,9 @@ public partial class KeyboardContextBench
         // Exercice 3 : premier caractère, et la même page avec Maj tenue.
         new("tuto-ex3", (m, api, mapper) => { Route(m); GoTo(m, 2); }),
         new("tuto-ex3-maj-tenue", (m, api, mapper) => { Route(m); GoTo(m, 2); Hold(api, mapper, VK_LSHIFT, 0x2A, 0); }),
-        // Exercice 3 : une faute, le caractère courant en rouge.
-        new("tuto-ex3-erreur", (m, api, mapper) => { Route(m); GoTo(m, 2); Type(m, "x"); }),
+        // Exercice 3 : une faute ; « x » tapé (touche 0x2D) à la place de l'attendu, en rouge,
+        // la touche cerclée, le message sous la ligne.
+        new("tuto-ex3-erreur", (m, api, mapper) => { Route(m); GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Du); Type(m, "x"); }),
         // Exercice 3 : la touche surlignée enfoncée.
         new("tuto-ex3-enfoncee", (m, api, mapper) => { Route(m); GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Eu); }),
         // Exercice 4 (Documents) : « demande AltGr, puis AltGr tenue (pleine en vert) ; U demande Maj.

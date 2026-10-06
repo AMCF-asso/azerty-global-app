@@ -38,6 +38,8 @@ internal sealed class KeyboardRenderState
     public bool CapsLock { get; init; }
     public string? ActiveDeadKey { get; init; }
     public uint PressedScancode { get; init; }
+    /// <summary>Touche de la dernière faute, cerclée de rouge jusqu'à la correction.</summary>
+    public uint ErrorScancode { get; init; }
     public HashSet<uint> HighlightedScancodes { get; } = new();
     public HashSet<string> HighlightedContextIds { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> HighlightedLabels { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -63,6 +65,8 @@ internal static class KeyboardRenderer
     private const uint CLR_KEY_PRESSED = DarkTheme.KeyPressed;
     private const uint CLR_KEY_DISABLED = DarkTheme.KeyDisabled;
     private const uint CLR_MOD_ACTIVE = DarkTheme.KeyPressed;
+    private const uint CLR_KEY_PRESSED_BORDER = DarkTheme.Accent;
+    private const uint CLR_KEY_ERROR = DarkTheme.Error;
     private const uint CLR_KEY_HIGHLIGHT_BORDER = DarkTheme.HighlightDirect;
     private const uint CLR_CTX_TEXT = DarkTheme.TextSecondary;
     private const uint CLR_KEY_LABEL = DarkTheme.TextSecondary;
@@ -397,24 +401,30 @@ internal static class KeyboardRenderer
         uint fill = key.IsContextual ? CLR_KEY_CONTEXT : CLR_KEY;
         uint border = CLR_KEY_BORDER;
         int borderWidth = 1;
+        // Audit UX 1.3.0, #4 : contour d'état épaissi avec l'échelle (2 px fixes à 150 % se
+        // perdaient). Le fond pressé ne se distingue pas du fond de touche (≈ 1:1) : la frappe
+        // et le modificateur tenu se disent aussi par un contour accent.
+        int stateWidth = Math.Max(2, (int)(placement.Scale * 0.05f));
         if (disabledBackspace)
         {
             fill = CLR_KEY_DISABLED;
+        }
+        else if (key.Scancode != 0 && key.Scancode == state.ErrorScancode)
+        {
+            border = CLR_KEY_ERROR;
+            borderWidth = stateWidth;
         }
         else if (pressed)
         {
             fill = CLR_KEY_PRESSED;
             // Le tutoriel montre la frappe seule ; les Leçons gardent le contour de l'indice.
-            if (highlighted && !tutorial)
-            {
-                border = highlightBorder;
-                borderWidth = 2;
-            }
+            border = highlighted && !tutorial ? highlightBorder : CLR_KEY_PRESSED_BORDER;
+            borderWidth = stateWidth;
         }
         else if (highlighted)
         {
             border = highlightBorder;
-            borderWidth = 2;
+            borderWidth = stateWidth;
             // Modificateur à presser et déjà pressé : le tutoriel le remplit de la couleur du genre.
             if (modifierActive)
                 fill = highlightFill;
@@ -422,6 +432,8 @@ internal static class KeyboardRenderer
         else if (modifierActive)
         {
             fill = CLR_MOD_ACTIVE;
+            border = CLR_KEY_PRESSED_BORDER;
+            borderWidth = stateWidth;
         }
 
         var brush = Win32.CreateSolidBrush(fill);
@@ -441,9 +453,8 @@ internal static class KeyboardRenderer
 
         if (key.Label == "Verr. Maj." && state.CapsLock)
         {
-            int barH = tutorial
-                ? Math.Max(2, (int)(placement.Scale * 0.08f))
-                : Math.Max(2, (rect.bottom - rect.top) / 18);
+            // #4 : une barre de 2-3 px passait inaperçue ; 4 px au moins, mis à l'échelle.
+            int barH = Math.Max(4, (int)(placement.Scale * 0.08f));
             var barRect = new Win32.RECT { left = rect.left, top = rect.bottom - barH, right = rect.right, bottom = rect.bottom };
             var barBrush = Win32.CreateSolidBrush(CLR_CAPS_BAR);
             Win32.FillRect(hdc, ref barRect, barBrush);
@@ -461,13 +472,15 @@ internal static class KeyboardRenderer
     }
 
     /// <summary>Pastille « 1 » ou « 2 » en haut à droite d'une touche du tutoriel : l'ordre
-    /// d'une séquence de touche morte.</summary>
+    /// d'une séquence de touche morte. Audit UX 1.3.0, #5 : elle débordait du cadre ; elle y
+    /// tient désormais, sous le contour. Le coin haut-droit (Maj+AltGr) reste le moins utile :
+    /// à gauche, elle cacherait la lettre principale.</summary>
     private static void DrawBadge(IntPtr hdc, Win32.RECT key, KeyHighlight kind, float uiScale, IntPtr hFont)
     {
         int S(int value) => (int)(value * uiScale);
-        int x = key.right - S(12);
-        int y = key.top + S(1);
-        int size = S(14);
+        int size = S(16);
+        int x = key.right - size - S(3);
+        int y = key.top + S(3);
         var rect = new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size };
         var brush = Win32.CreateSolidBrush(HighlightColors(kind).Border);
         Win32.FillRect(hdc, ref rect, brush);
@@ -932,6 +945,25 @@ internal static class KeyboardRenderer
             "\u200B" => L.Keyboard_ZeroWidthSpace,
             _ => value
         };
+    }
+
+    /// <summary>Espaces insécables repérées dans les lignes à taper (tutoriel, Leçons).</summary>
+    internal static bool IsMarkedSpace(char ch) => ch is ' ' or ' ';
+
+    /// <summary>
+    /// Audit UX 1.3.0, #1 : repère « ˽ » d'une espace insécable, peint (Segoe UI n'a pas le
+    /// glyphe) entre <paramref name="left"/> et <paramref name="right"/>, posé sur
+    /// <paramref name="baseline"/>. L'espace fine a des montants deux fois plus courts : les
+    /// deux se distinguent sans légende. Le nom long (« esp. ins. ») lu comme du texte à taper
+    /// faisait croire à des lettres.
+    /// </summary>
+    internal static void DrawSpaceMarker(IntPtr hdc, char ch, int left, int right, int baseline, float scale, uint color)
+    {
+        int stroke = Math.Max(1, (int)(1.5f * scale));
+        int tick = (int)((ch == ' ' ? 4 : 8) * scale);
+        GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = baseline - stroke, right = right, bottom = baseline }, color);
+        GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = baseline - tick, right = left + stroke, bottom = baseline }, color);
+        GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = right - stroke, top = baseline - tick, right = right, bottom = baseline }, color);
     }
 
     private static bool IsLetterChar(string? s) => s != null && s.Length == 1 && char.IsLetter(s[0]);
