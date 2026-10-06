@@ -1462,7 +1462,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         // Espacement naturel (29/09) : la case a la largeur du glyphe, sans marge ajoutée. Une
         // espace insécable marquée a la largeur de son repère « ˽ » (audit UX 1.3.0, #1).
         width = markers && KeyboardRenderer.IsMarkedSpace(ch)
-            ? S(ch == ' ' ? 10 : 14)
+            ? S(ch == '\u202F' ? 10 : 14)
             : Math.Max(1, GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine,
                 markers ? KeyboardRenderer.DisplayInvisible(ch.ToString()) : ch.ToString()));
         _lessonCharWidths[(ch, markers)] = width;

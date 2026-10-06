@@ -1357,8 +1357,8 @@ sealed class LearningModule : IDisposable
     private static string DescribeChar(char c) => c switch
     {
         ' ' => L.Learning_SpaceName,
-        ' ' => L.Learning_NbspName,
-        ' ' => L.Learning_NarrowNbspName,
+        '\u00A0' => L.Learning_NbspName,
+        '\u202F' => L.Learning_NarrowNbspName,
         _ => L.Learning_QuotedChar(c)
     };
 
@@ -2007,7 +2007,7 @@ sealed class LearningModule : IDisposable
             Win32.DrawTextW(hdc, ch, 1, ref measureRect, Win32.DT_CALCRECT);
             int charW = measureRect.right;
             if (marked)
-                charW = Math.Max(charW, S(shown == ' ' ? 9 : 12));
+                charW = Math.Max(charW, S(shown == '\u202F' ? 9 : 12));
 
             // Tapé correctement : vert ; en cours : blanc, ou rouge en faute ; à venir : gris.
             uint color = i < _cursorPosition ? CLR_TARGET_CORRECT

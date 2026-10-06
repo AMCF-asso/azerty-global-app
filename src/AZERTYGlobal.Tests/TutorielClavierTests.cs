@@ -150,8 +150,8 @@ public class TutorielClavierTests : IDisposable
     [Fact]
     public void Seules_les_espaces_insecables_ont_un_repere()
     {
-        Assert.True(KeyboardRenderer.IsMarkedSpace(' '));
-        Assert.True(KeyboardRenderer.IsMarkedSpace(' '));
+        Assert.True(KeyboardRenderer.IsMarkedSpace('\u00A0'));
+        Assert.True(KeyboardRenderer.IsMarkedSpace('\u202F'));
         Assert.False(KeyboardRenderer.IsMarkedSpace(' '));
     }
 
