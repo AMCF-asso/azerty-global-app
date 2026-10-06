@@ -36,10 +36,39 @@ public class ConflitNonDestructifTests
         Assert.NotEqual(IntPtr.Zero, garder);
         Assert.Equal(Win32.BS_DEFCOMMANDLINK, ButtonType(garder));
         Assert.Equal(Win32.BS_COMMANDLINK, ButtonType(quitter));
-        // L'ordre des enfants est l'ordre de Tab d'IsDialogMessageW.
-        IntPtr premier = GetWindow(BancCapture.Handle(fenêtre), GW_CHILD);
+        // L'ordre des enfants est l'ordre de Tab d'IsDialogMessageW ; les textes (STATIC, sans
+        // WS_TABSTOP) les précèdent pour la lecture et n'y prennent pas part.
+        IntPtr premier = NextTabStop(GetWindow(BancCapture.Handle(fenêtre), GW_CHILD));
         Assert.Equal(garder, premier);
-        Assert.Equal(quitter, GetWindow(premier, GW_HWNDNEXT));
+        Assert.Equal(quitter, NextTabStop(GetWindow(premier, GW_HWNDNEXT)));
+    }
+
+    private const long WS_TABSTOP = 0x00010000;
+
+    private static IntPtr NextTabStop(IntPtr child)
+    {
+        while (child != IntPtr.Zero && (GetWindowLongPtr(child, GWL_STYLE).ToInt64() & WS_TABSTOP) == 0)
+            child = GetWindow(child, GW_HWNDNEXT);
+        return child;
+    }
+
+    /// <summary>
+    /// Audit UX 1.3.0, #8 : titre, intro et question étaient peints en GDI et le Narrateur ne
+    /// les lisait pas. Ce sont des STATIC, avant les liens dans l'ordre de lecture.
+    /// </summary>
+    [Fact]
+    public void LesTextesSontDesContrôlesLisibles()
+    {
+        using var fenêtre = new LayoutConflictWindow(true, () => { }, () => { });
+        var textes = new List<string>();
+        for (IntPtr child = GetWindow(BancCapture.Handle(fenêtre), GW_CHILD); child != IntPtr.Zero; child = GetWindow(child, GW_HWNDNEXT))
+        {
+            var texte = new System.Text.StringBuilder(512);
+            Win32.GetWindowTextW(child, texte, texte.Capacity);
+            textes.Add(texte.ToString());
+        }
+        Assert.Equal(new[] { L.LayoutConflict_Title, L.LayoutConflict_IntroAtStartup, L.LayoutConflict_Question },
+            textes.Take(3));
     }
 
     [Fact]
