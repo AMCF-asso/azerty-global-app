@@ -453,7 +453,7 @@ public class LeconsAutomationTests
 
     /// <summary>
     /// Fenêtre des Leçons sur un fil STA, comme Program.Main ([STAThread]), avec l'exercice
-    /// d'initiation, « Lætitia » déjà tapé, le focus et un repeint. <paramref name="body"/> y
+    /// d'initiation, « « Un » déjà tapé, le focus et un repeint. <paramref name="body"/> y
     /// tourne ; le fil pompe ses messages tant qu'il attend, car les appels COM arrivent par là.
     /// </summary>
     private static void OnUiThread(Action<LessonsWindow, IntPtr> body)
@@ -471,7 +471,7 @@ public class LeconsAutomationTests
                 {
                     BancCapture.Call(window, "SelectExercise", LessonCatalogLoader.InitiationModuleId,
                         LessonCatalogLoader.InitiationLessonId, 3, false);
-                    foreach (char c in "Lætitia")
+                    foreach (char c in "« Un")
                         BancCapture.Call(window, "OnChar", c);
                     BancCapture.SetField(window, "_hasFocus", true);
                     IntPtr hwnd = BancCapture.Handle(window);
@@ -568,7 +568,7 @@ public class LeconsAutomationTests
             var client = StartClient(() => error = ListenForCaretMoves(hwnd, registered, events));
             PumpUntil(() => registered.IsSet || !client.IsAlive, "abonnement du client UIA");
 
-            BancCapture.Call(window, "OnChar", ' '); // la lettre attendue après « Lætitia »
+            BancCapture.Call(window, "OnChar", ' '); // l'espace attendue après « « Un »
             PaintNow(hwnd);
             PumpUntil(() => !client.IsAlive, "événement du client UIA");
         });

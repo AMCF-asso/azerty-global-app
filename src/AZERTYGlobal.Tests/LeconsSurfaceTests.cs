@@ -100,7 +100,7 @@ public class LeconsSurfaceTests
             BancCapture.Call(window, "OnChar", '\t'); // le WM_CHAR qui suit Tab
             Assert.Equal(0, BancCapture.Field<int>(window, "_focusedActionIndex"));
 
-            BancCapture.Call(window, "OnChar", 'L');
+            BancCapture.Call(window, "OnChar", '«');
             Assert.Equal(-1, BancCapture.Field<int>(window, "_focusedActionIndex"));
         }
         finally
@@ -116,7 +116,7 @@ public class LeconsSurfaceTests
         var window = OpenStrictExercise();
         try
         {
-            BancCapture.Call(window, "OnChar", 'L');
+            BancCapture.Call(window, "OnChar", '«');
             Paint(window);
             BancCapture.SetField(window, "_focusedActionIndex", 1);
             BancCapture.Call(window, "OnKeyDown", 0x08);
@@ -188,7 +188,7 @@ public class LeconsSurfaceTests
             Assert.Equal(expected.top, first.rcCaret.top);
             Assert.Equal(0u, first.flags & GUI_CARETBLINKING);
 
-            BancCapture.Call(window, "OnChar", 'L');
+            BancCapture.Call(window, "OnChar", '«');
             Paint(window);
             var second = CaretInfo();
             Assert.True(second.rcCaret.left > first.rcCaret.left, "le caret avance avec la frappe");
@@ -256,7 +256,7 @@ public class LeconsSurfaceTests
             Pump();
             moves.Clear();
 
-            BancCapture.Call(window, "OnChar", 'L');
+            BancCapture.Call(window, "OnChar", '«');
             Paint(window);
             Pump();
             Assert.Contains(hwnd, moves);

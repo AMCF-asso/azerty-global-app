@@ -104,8 +104,9 @@ sealed class LearningModule : IDisposable
     private const int FONT_CHAR_SMALL = 25;
     private const int FONT_CTX = 22;
 
-    // Exercice 6 : les aides des mots étrangers, que le clavier simplifié cache ailleurs.
-    private static readonly string[] LanguageExerciseCharacters = { "dk:stroke", "¿", "¡" };
+    // Caractères de l'exercice et leurs touches mortes, que le clavier simplifié cache parfois
+    // (’ sur AltGr + 4) : révélés comme dans les Leçons, une seule table pour tout le tutoriel.
+    private static readonly Lazy<LessonHintProvider> ExerciseCharacters = new(() => new LessonHintProvider());
 
     // ═══════════════════════════════════════════════════════════════
     // Champs d'instance
@@ -1785,8 +1786,8 @@ sealed class LearningModule : IDisposable
         state.HighlightedScancodes.UnionWith(_guidance.HighlightedScancodes);
         state.HighlightedLabels.UnionWith(_guidance.HighlightedLabels);
         state.HighlightedContextIds.UnionWith(_guidance.HighlightedContextIds);
-        if (_currentStep == Steps.Length - 1)
-            state.LessonVisibleCharacters.UnionWith(LanguageExerciseCharacters);
+        if (_currentStep < Steps.Length)
+            ExerciseCharacters.Value.AddRequiredCharacters(Steps[_currentStep].Target, state.LessonVisibleCharacters);
         return state;
     }
 

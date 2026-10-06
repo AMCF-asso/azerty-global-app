@@ -15,11 +15,11 @@ public class TutorialStepsTests : IDisposable
     private static readonly string[] Textes =
     {
         "É",
-        "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !",
-        "jean.dupont@education.gouv.fr",
-        "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %.",
-        "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };",
-        "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe",
+        "ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN\u202F!",
+        "contact@exemple.com",
+        "«\u00A0Un chef-d\u2019œuvre\u202F!\u00A0» — Maman",
+        "if (a || b) { t[0] = \"\\n\"; }",
+        "María et Niccolò arrivent à São Paulo.",
     };
 
     public TutorialStepsTests() => L.Language = "fr";
