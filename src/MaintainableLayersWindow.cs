@@ -134,6 +134,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
         Track(save, 350, 357, 140, 34);
+        LightButton.Attach(save); // audit UX 1.3.0, #3
     }
 
     private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)

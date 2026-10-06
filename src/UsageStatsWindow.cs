@@ -189,6 +189,9 @@ sealed class UsageStatsWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
+        // Audit UX 1.3.0, #3 : boutons clairs de Windows 11, « Fermer » porte l'accent.
+        LightButton.Attach(_hWndBtnCopy);
+        LightButton.Attach(_hWndBtnClose);
 
         RepositionControls();
     }

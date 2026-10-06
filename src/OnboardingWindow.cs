@@ -409,6 +409,10 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowSubclass(_hWndBtnNext, _buttonArrowSubclassProc, (UIntPtr)20, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndBtnPrev, _buttonArrowSubclassProc, (UIntPtr)21, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndBtnTry, _buttonArrowSubclassProc, (UIntPtr)22, IntPtr.Zero);
+        // Audit UX 1.3.0, #3 : boutons clairs de Windows 11, « Suivant » porte l'accent.
+        LightButton.Attach(_hWndBtnNext);
+        LightButton.Attach(_hWndBtnPrev);
+        LightButton.Attach(_hWndBtnTry);
 
         // ══ Étape 3 — Liens et checkboxes ══
         // Positions initiales temporaires — repositionnés dans RepositionControls
@@ -515,6 +519,10 @@ sealed class OnboardingWindow : IDisposable
         //   C — complete             : seul « Suivant » a la position de droite habituelle
         // Etapes 2/3 : seul « Suivant » / « C'est parti ! » a la position habituelle.
         bool isStep1NotAttempted = _currentStep == 0 && !_learningModuleAttempted && !_learningModuleDone; // etat A
+        // Audit UX 1.3.0, #3 : à l'état A, « Essayer maintenant » est la seule action et porte
+        // l'accent ; sinon « Suivant » le porte. Entrée presse toujours le bouton focalisé.
+        Win32.SendMessageW(_hWndBtnTry, 0x00F4 /* BM_SETSTYLE */,
+            (IntPtr)(isStep1NotAttempted ? Win32.BS_DEFPUSHBUTTON : Win32.BS_PUSHBUTTON), (IntPtr)1);
         bool isStep1Attempted    = _currentStep == 0 &&  _learningModuleAttempted && !_learningModuleDone; // etat B
         // etat C = _currentStep == 0 && _learningModuleDone (ou etapes 2/3) → comportement standard
 

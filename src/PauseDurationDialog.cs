@@ -287,6 +287,7 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        LightButton.Attach(hwnd); // audit UX 1.3.0, #3 : « Confirmer » porte l'accent
         return hwnd;
     }
 
