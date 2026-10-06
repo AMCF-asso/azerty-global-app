@@ -302,6 +302,8 @@ sealed class OnboardingWindow : IDisposable
     {
         Win32.SendMessageW(_hWndBtnNext, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnPrev, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        // « Activer et essayer » : sans ce renvoi, il gardait la police détruite au WM_DPICHANGED.
+        Win32.SendMessageW(_hWndBtnTry, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkLessons, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);

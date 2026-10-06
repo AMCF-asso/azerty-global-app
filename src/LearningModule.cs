@@ -2216,14 +2216,23 @@ sealed class LearningModule : IDisposable
         Win32.DeleteObject(hBmp);
         Win32.DeleteDC(hdcMem);
 
-        // Texte « Cliquez pour reprendre » centré
+        // « Cliquez pour reprendre » sur une carte centrée : posé à même le voile, le texte
+        // chevauchait les libellés des touches assombries.
+        string msg = L.Learning_ClickToResume;
         var hOldFont = Win32.SelectObject(hdc, _hFontTitle);
+        int textW = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontTitle, msg);
+        int textH = GdiHelpers.MeasureSingleLineHeight(hdc, _hFontTitle);
+        int cardW = Math.Min(cw - S(16), textW + S(48));
+        int cardH = textH + S(32);
+        int cardX = (cw - cardW) / 2;
+        int cardY = top + (bottom - top - cardH) / 2;
+        var card = new Win32.RECT { left = cardX, top = cardY, right = cardX + cardW, bottom = cardY + cardH };
+        GdiHelpers.DrawPanel(hdc, card, DarkTheme.Surface, DarkTheme.Border, 0, 0);
+        Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, DarkTheme.Text);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-        var rc = new Win32.RECT { left = 0, top = top, right = cw, bottom = bottom };
-        string msg = L.Learning_ClickToResume;
-        Win32.DrawTextW(hdc, msg, msg.Length, ref rc,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        Win32.DrawTextW(hdc, msg, msg.Length, ref card,
+            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
         Win32.SelectObject(hdc, hOldFont);
     }
 

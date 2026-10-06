@@ -1184,15 +1184,18 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         for (int i = 0; i < _catalog.Modules.Count && y < bottom - S(34); i++)
         {
             var module = _catalog.Modules[i];
-            var item = new Win32.RECT { left = rect.left + S(10), top = y, right = rect.right - S(10), bottom = y + S(36) };
             int completed = module.Lessons.SelectMany(l => l.Exercises).Count(_progress.IsCompleted);
             int total = module.Lessons.SelectMany(l => l.Exercises).Count();
+            string moduleCount = $"{completed}/{total}";
+            int moduleH = SidebarItemHeight(hdc, _hFontSidebarModule, module.Title, moduleCount,
+                rect.right - rect.left - S(20), S(36));
+            var item = new Win32.RECT { left = rect.left + S(10), top = y, right = rect.right - S(10), bottom = y + moduleH };
             bool selectedModule = i == _moduleIndex;
-            DrawSidebarModuleItem(hdc, item, $"{module.Title}  {completed}/{total}", selectedModule);
+            DrawSidebarModuleItem(hdc, item, module.Title, moduleCount, selectedModule);
             int captured = i;
             AddClick(item, () => SelectModule(captured), $"{module.Title} {completed}/{total}", LessonControlKind.ListItem,
                 selected: selectedModule);
-            y += S(40);
+            y += moduleH + S(4);
 
             if (!selectedModule)
             {
@@ -1203,13 +1206,16 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
             for (int j = 0; j < module.Lessons.Count && y < bottom - S(30); j++)
             {
                 var lesson = module.Lessons[j];
-                var lessonItem = new Win32.RECT { left = rect.left + S(28), top = y, right = rect.right - S(10), bottom = y + S(32) };
                 int lessonCompleted = lesson.Exercises.Count(_progress.IsCompleted);
-                DrawSidebarLessonItem(hdc, lessonItem, $"{lesson.Title}  {lessonCompleted}/{lesson.Exercises.Count}", j == _lessonIndex);
+                string lessonCount = $"{lessonCompleted}/{lesson.Exercises.Count}";
+                int lessonH = SidebarItemHeight(hdc, _hFontSidebarLesson, lesson.Title, lessonCount,
+                    rect.right - rect.left - S(38), S(32));
+                var lessonItem = new Win32.RECT { left = rect.left + S(28), top = y, right = rect.right - S(10), bottom = y + lessonH };
+                DrawSidebarLessonItem(hdc, lessonItem, lesson.Title, lessonCount, j == _lessonIndex);
                 int capturedLesson = j;
                 AddClick(lessonItem, () => SelectLesson(capturedLesson), $"{lesson.Title} {lessonCompleted}/{lesson.Exercises.Count}",
                     LessonControlKind.ListItem, selected: j == _lessonIndex);
-                y += S(34);
+                y += lessonH + S(2);
             }
 
             y += S(10);
@@ -1217,22 +1223,51 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 
     }
 
-    private void DrawSidebarModuleItem(IntPtr hdc, Win32.RECT rect, string text, bool selected)
+    // Audit UX 1.3.0, #12 : titre et compteur partageaient une ligne avec ellipse ; « Édition
+    // spéciale : la course aux 30 millions » perdait sa fin et son compteur. Le compteur a sa
+    // colonne à droite, le titre revient à la ligne (deux lignes au plus).
+    private const uint SidebarTitleFormat = Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_EDITCONTROL | Win32.DT_END_ELLIPSIS | Win32.DT_NOPREFIX;
+
+    /// <summary>Hauteur d'un élément de la barre latérale : <paramref name="minHeight"/>, ou le titre sur deux lignes et sa marge.</summary>
+    private int SidebarItemHeight(IntPtr hdc, IntPtr font, string title, string count, int itemWidth, int minHeight)
+    {
+        int titleW = SidebarTitleWidth(hdc, font, count, itemWidth);
+        int lineH = GdiHelpers.MeasureSingleLineHeight(hdc, font);
+        int textH = Math.Min(GdiHelpers.MeasureTextHeight(hdc, font, title, titleW, SidebarTitleFormat), lineH * 2);
+        return Math.Max(minHeight, textH + S(12));
+    }
+
+    private int SidebarTitleWidth(IntPtr hdc, IntPtr font, string count, int itemWidth) =>
+        itemWidth - S(12) - S(8) - GdiHelpers.MeasureSingleLineWidth(hdc, font, count) - S(10);
+
+    private void DrawSidebarItemText(IntPtr hdc, IntPtr font, Win32.RECT rect, string title, string count, uint titleColor, uint countColor)
+    {
+        int width = rect.right - rect.left;
+        int titleW = SidebarTitleWidth(hdc, font, count, width);
+        int lineH = GdiHelpers.MeasureSingleLineHeight(hdc, font);
+        int textH = Math.Min(GdiHelpers.MeasureTextHeight(hdc, font, title, titleW, SidebarTitleFormat), lineH * 2);
+        int top = rect.top + (rect.bottom - rect.top - textH) / 2;
+        DrawText(hdc, font, title, new Win32.RECT { left = rect.left + S(12), top = top, right = rect.left + S(12) + titleW, bottom = top + textH },
+            titleColor, SidebarTitleFormat);
+        DrawText(hdc, font, count, new Win32.RECT { left = rect.left + S(12) + titleW, top = rect.top, right = rect.right - S(8), bottom = rect.bottom },
+            countColor, Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+    }
+
+    private void DrawSidebarModuleItem(IntPtr hdc, Win32.RECT rect, string title, string count, bool selected)
     {
         GdiHelpers.FillSolidRect(hdc, rect, selected ? CLR_PANEL_2 : CLR_PANEL);
         if (selected)
             GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = rect.left, top = rect.top, right = rect.left + S(4), bottom = rect.bottom }, CLR_ACCENT);
-        DrawText(hdc, _hFontSidebarModule, text, new Win32.RECT { left = rect.left + S(12), top = rect.top, right = rect.right - S(8), bottom = rect.bottom },
-            CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
+        DrawSidebarItemText(hdc, _hFontSidebarModule, rect, title, count, CLR_TEXT, CLR_TEXT);
     }
 
-    private void DrawSidebarLessonItem(IntPtr hdc, Win32.RECT rect, string text, bool selected)
+    private void DrawSidebarLessonItem(IntPtr hdc, Win32.RECT rect, string title, string count, bool selected)
     {
         GdiHelpers.FillSolidRect(hdc, rect, selected ? CLR_PANEL_2 : CLR_PANEL);
         if (selected)
             GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = rect.left, top = rect.top, right = rect.left + S(4), bottom = rect.bottom }, CLR_LESSON_ACCENT);
-        DrawText(hdc, _hFontSidebarLesson, text, new Win32.RECT { left = rect.left + S(12), top = rect.top, right = rect.right - S(8), bottom = rect.bottom },
-            selected ? CLR_TEXT : CLR_MUTED, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
+        uint color = selected ? CLR_TEXT : CLR_MUTED;
+        DrawSidebarItemText(hdc, _hFontSidebarLesson, rect, title, count, color, color);
     }
 
     private void DrawSettingsContent(IntPtr hdc, Win32.RECT rect)
