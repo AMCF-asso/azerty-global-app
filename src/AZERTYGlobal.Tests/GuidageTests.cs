@@ -81,6 +81,19 @@ public class GuidageTests
     }
 
     [Fact]
+    public void Une_couche_Caps_avec_AltGr_surligne_aussi_AltGr()
+    {
+        // Espace fine de l'exercice 2 : AltGr + Espace, Verr. Maj. gardée (couche Caps+AltGr).
+        var methode = CharacterIndex.Shared.ByCharacter[" "].Caps!;
+        Assert.Equal("Caps+AltGr", methode.Layer);
+
+        var allumee = Guider(methode, " ", null, verrMaj: true, GuideOptions.Tutorial(keepCapsLock: true));
+        Assert.Equal(new[] { Touche("Space") }, allumee.HighlightedScancodes);
+        Assert.Contains("AltGr", allumee.HighlightedLabels);
+        Assert.Contains("Verr. Maj.", allumee.HighlightedLabels);
+    }
+
+    [Fact]
     public void Verr_Maj_active_remplace_Maj_pour_une_lettre_dans_le_tutoriel()
     {
         var methode = Recommandee("L"); // Maj + l

@@ -114,8 +114,12 @@ internal sealed class LessonHintProvider
             if (capsLockActive)
             {
                 AddKey(state, method.Key);
-                if (ParseLayers(method.Layer).HasFlag(HintLayers.Shift))
+                var layers = ParseLayers(method.Layer);
+                if (layers.HasFlag(HintLayers.Shift))
                     state.HighlightedContextIds.Add(VirtualKeyboard.ContextShiftLeft);
+                // « Caps+AltGr » : l'espace fine de l'exercice 2 (AltGr + Espace).
+                if (layers.HasFlag(HintLayers.AltGr))
+                    state.HighlightedLabels.Add("AltGr");
             }
             return;
         }
