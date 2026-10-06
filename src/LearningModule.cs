@@ -655,6 +655,7 @@ sealed class LearningModule : IDisposable
                 _hWnd, (IntPtr)(IDC_CHK_USAGE_FIRST + i), hInstance, IntPtr.Zero);
             Win32.SendMessageW(_hWndUsages[i], Win32.WM_SETFONT, _hFontInstruction, (IntPtr)1);
             Win32.SetWindowSubclass(_hWndUsages[i], _usagesSubclassProc, (UIntPtr)(10 + i), IntPtr.Zero);
+            AnnounceUsageState(i, focused: false, announce: false);
         }
 
         _hWndBtnUsagesContinue = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnContinue,
@@ -1549,6 +1550,17 @@ sealed class LearningModule : IDisposable
     {
         _usageSelected[i] = !_usageSelected[i];
         Win32.InvalidateRect(_hWndUsages[i], IntPtr.Zero, false);
+        AnnounceUsageState(i, focused: Win32.GetFocus() == _hWndUsages[i], announce: true);
+    }
+
+    /// <summary>
+    /// Bouton d'usage présenté aux lecteurs d'écran comme une case à cocher, avec son état
+    /// (owner-draw, il s'annonçait « bouton » sans dire s'il était choisi).
+    /// </summary>
+    private void AnnounceUsageState(int i, bool focused, bool announce)
+    {
+        if (i < 0 || i >= _hWndUsages.Length || _hWndUsages[i] == IntPtr.Zero) return;
+        AccessibleName.TrySetCheckState(_hWndUsages[i], _usageSelected[i], focused, announce);
     }
 
     /// <summary>
@@ -1657,6 +1669,10 @@ sealed class LearningModule : IDisposable
         {
             case Win32.WM_SETFOCUS:
                 _usageLastFocused = hWnd;
+                AnnounceUsageState(Array.IndexOf(_hWndUsages, hWnd), focused: true, announce: false);
+                break;
+            case Win32.WM_KILLFOCUS:
+                AnnounceUsageState(Array.IndexOf(_hWndUsages, hWnd), focused: false, announce: false);
                 break;
             case Win32.WM_MOUSEMOVE:
             {
