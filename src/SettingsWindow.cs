@@ -966,8 +966,9 @@ sealed class SettingsWindow : IDisposable
             layout.SearchRowY = searchRowY;
             layout.KeyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, keyOuterH);
             layout.SearchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, keyOuterH);
-            layout.KeyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, Math.Max(0, keyOuterH - 2));
-            layout.SearchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, Math.Max(0, keyOuterH - 2));
+            // Retrait de 2 px : le contour de focus et d'erreur des cases fait 2 px (DrawKeyBox).
+            layout.KeyboardEditRect = Rect(keyOuterX + 2, keyboardRowY - S(4) + 2, keyOuterW - 4, Math.Max(0, keyOuterH - 4));
+            layout.SearchEditRect = Rect(keyOuterX + 2, searchRowY - S(4) + 2, keyOuterW - 4, Math.Max(0, keyOuterH - 4));
             int resetY = searchRowY + Math.Max(S(20), m.Text + S(7));
             int resetWidth = Math.Max(S(150), m.ResetText + S(24));
             layout.ResetRect = Rect(labelX, resetY, resetWidth, Math.Max(S(28), m.Link + S(10)));
@@ -2025,13 +2026,16 @@ sealed class SettingsWindow : IDisposable
     private void DrawKeyBox(IntPtr hdc, Win32.RECT rect, bool valid, bool focused)
     {
         uint borderColor = !valid ? CLR_KEY_BORDER_INVALID : focused ? CLR_KEY_BORDER_FOCUS : CLR_KEY_BORDER;
+        // Audit UX 1.3.0, #7 : focus et erreur ne changeaient que la teinte d'un contour de
+        // 1 px ; ils l'épaississent à 2 px pour se voir sans dépendre de la couleur.
+        int border = !valid || focused ? 2 : 1;
         GdiHelpers.FillSolidRect(hdc, rect, borderColor);
         var innerRect = new Win32.RECT
         {
-            left = rect.left + 1,
-            top = rect.top + 1,
-            right = rect.right - 1,
-            bottom = rect.bottom - 1
+            left = rect.left + border,
+            top = rect.top + border,
+            right = rect.right - border,
+            bottom = rect.bottom - border
         };
         GdiHelpers.FillSolidRect(hdc, innerRect, CLR_KEY_BG);
     }

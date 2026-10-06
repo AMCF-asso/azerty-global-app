@@ -332,6 +332,7 @@ static class Win32
     public const uint DT_RIGHT = 0x02;
     public const uint DT_CALCRECT = 0x400;
     public const uint DT_NOPREFIX = 0x800;
+    public const uint DT_EDITCONTROL = 0x2000;
     public const uint DT_END_ELLIPSIS = 0x8000;
     public const uint SRCCOPY = 0x00CC0020;
     public const uint TME_LEAVE = 0x02;
