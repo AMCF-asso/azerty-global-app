@@ -76,9 +76,9 @@ internal static partial class L
 
     // ── Faute de frappe (audit UX 1.3.0, #6) ─────────────────────────────
     public static string Learning_TypingError(string typed, string expected) => T(
-        $"Faute : {typed} au lieu de {expected}. Retour arrière pour corriger.",
+        $"Faute\u00A0: {typed} au lieu de {expected}. Retour arrière pour corriger.",
         $"Mistake: {typed} instead of {expected}. Press Backspace to fix.");
-    public static string Learning_QuotedChar(char c) => T($"« {c} »", $"“{c}”");
+    public static string Learning_QuotedChar(char c) => T($"«\u00A0{c}\u00A0»", $"“{c}”");
     public static string Learning_SpaceName => T("espace", "space");
     public static string Learning_NbspName => T("espace insécable", "non-breaking space");
     public static string Learning_NarrowNbspName => T("espace fine insécable", "narrow non-breaking space");

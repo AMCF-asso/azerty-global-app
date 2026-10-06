@@ -948,7 +948,7 @@ internal static class KeyboardRenderer
     }
 
     /// <summary>Espaces insécables repérées dans les lignes à taper (tutoriel, Leçons).</summary>
-    internal static bool IsMarkedSpace(char ch) => ch is ' ' or ' ';
+    internal static bool IsMarkedSpace(char ch) => ch is '\u00A0' or '\u202F';
 
     /// <summary>
     /// Audit UX 1.3.0, #1 : repère « ˽ » d'une espace insécable, peint (Segoe UI n'a pas le
@@ -960,7 +960,7 @@ internal static class KeyboardRenderer
     internal static void DrawSpaceMarker(IntPtr hdc, char ch, int left, int right, int baseline, float scale, uint color)
     {
         int stroke = Math.Max(1, (int)(1.5f * scale));
-        int tick = (int)((ch == ' ' ? 4 : 8) * scale);
+        int tick = (int)((ch == '\u202F' ? 4 : 8) * scale);
         GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = baseline - stroke, right = right, bottom = baseline }, color);
         GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = baseline - tick, right = left + stroke, bottom = baseline }, color);
         GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = right - stroke, top = baseline - tick, right = right, bottom = baseline }, color);
