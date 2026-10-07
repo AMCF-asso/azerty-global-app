@@ -133,12 +133,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     // l'exercice, tentative courante comprise, et vrai si elle vient de l'établir.
     private int? _summaryBestWpm;
     private bool _summaryIsNewBest;
-    // Partage du défi (v1.2.0) : non null uniquement quand la séance qui vient de s'achever
-    // est le défi commun — les séances de prise en main dépendent de la progression
-    // individuelle, deux personnes n'y tapent pas le même extrait.
-    private string? _challengeShareText;
-    private bool _challengeShareCopied;
-    private bool _challengeSharedThisSession;
+    // Défi du jour : catalogue, fin de séance et partage (L-18).
+    private readonly ChallengeSessionState _challenge = new();
     private char? _hintCharacter;
     private MethodData? _hintMethod;
     private bool _hintBackspace;
@@ -169,7 +165,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _layout = layout;
         _mapper = mapper;
         _hook = hook;
-        _catalog = LoadCatalogWithChallenge();
+        _catalog = ChallengeSessionState.LoadCatalog();
         _progress = new LessonProgressStore();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         _hints = new LessonHintProvider();
@@ -224,7 +220,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void RefreshLanguage()
     {
         if (CatalogLanguage == L.Language) return;
-        _catalog = LoadCatalogWithChallenge();
+        _catalog = ChallengeSessionState.LoadCatalog();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         CatalogLanguage = L.Language;
         // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
@@ -243,37 +239,14 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     }
 
     /// <summary>
-    /// Catalogue des leçons + module synthétique « Défi du jour » (opt-in). Le module
-    /// n'apparaît que si les rappels sont activés et que la banque d'extraits est chargée.
-    /// </summary>
-    private static LessonCatalog LoadCatalogWithChallenge()
-    {
-        var catalog = LessonCatalogLoader.LoadFromResource();
-        // 1.3.0 : Défi masqué (DailyChallenge.Enabled), même avec l'opt-in déjà coché.
-        if (!DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled))
-            return catalog;
-        var challenge = DailyChallenge.BuildModule(
-            DateOnly.FromDateTime(DateTime.Now), ConfigManager.TrainingSequenceIndex);
-        if (challenge == null) return catalog;
-        return new LessonCatalog(catalog.Modules.Append(challenge).ToArray());
-    }
-
-    /// <summary>Le défi affiché correspond-il encore à aujourd'hui et à l'étape courante ?</summary>
-    private string? _challengeLessonKey;
-
-    /// <summary>
     /// Reconstruit le module Défi si la date ou l'étape a changé (fenêtre restée ouverte
     /// à cheval sur minuit, séance terminée) et repositionne les index si besoin.
     /// </summary>
     private void RefreshChallengeModuleIfStale()
     {
-        string key = DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled)
-            ? $"{DateOnly.FromDateTime(DateTime.Now):yyyyMMdd}/{ConfigManager.TrainingSequenceIndex}/{L.Language}"
-            : "off";
-        if (_challengeLessonKey == key) return;
-        _challengeLessonKey = key;
+        if (!_challenge.IsStale()) return;
         bool wasOnChallenge = CurrentModule.Id == DailyChallenge.ModuleId;
-        _catalog = LoadCatalogWithChallenge();
+        _catalog = ChallengeSessionState.LoadCatalog();
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
         _lessonIndex = Math.Clamp(_lessonIndex, 0, CurrentModule.Lessons.Count - 1);
         _exerciseIndex = Math.Clamp(_exerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
@@ -292,7 +265,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     public bool ShowChallenge()
     {
         if (!DailyChallenge.Enabled) return false; // 1.3.0 : Défi masqué
-        _challengeLessonKey = null; // forcer la reconstruction (date/étape du moment)
+        _challenge.Invalidate(); // forcer la reconstruction (date/étape du moment)
         RefreshChallengeModuleIfStale();
         for (int m = 0; m < _catalog.Modules.Count; m++)
         {
@@ -842,8 +815,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _errorScancode = 0;
         _showSummary = false;
         _lastCompletedStats = null;
-        _challengeShareText = null;
-        _challengeShareCopied = false;
+        _challenge.ClearShare();
         _hintCharacter = null;
         _hintMethod = null;
         _hintBackspace = false;
@@ -2030,59 +2002,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Défi du jour : le dernier exercice de la leçon du jour clôt la séance —
         // date enregistrée, séquence de désapprentissage avancée, compteur local +1.
         if (challengeFinale)
-        {
-            PrepareChallengeShare(previousBestWpm);
-            try { TrainingReminders.MarkSessionCompleted(DateOnly.FromDateTime(DateTime.Now)); }
-            catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeCompleted", ex); }
-        }
+            _challenge.Complete(_session.Stats, previousBestWpm);
 
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
-    /// <summary>
-    /// Prépare le texte partageable de la séance qui vient de s'achever, ou le laisse à null
-    /// si elle n'est pas comparable. Appelé avant <see cref="TrainingReminders.MarkSessionCompleted"/>,
-    /// qui fait avancer l'index de séquence et changerait la phase lue ici.
-    /// </summary>
-    private void PrepareChallengeShare(int? previousBestWpm)
-    {
-        _challengeShareText = null;
-        _challengeShareCopied = false;
-        try
-        {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var session = DailyChallenge.SessionFor(today, ConfigManager.TrainingSequenceIndex);
-            if (session == null || session.IsSequencePhase) return;
-
-            // Un premier résultat n'est pas un record : sans meilleur score antérieur,
-            // il n'y a rien à battre.
-            bool personalBest = previousBestWpm.HasValue && _session.Stats.Wpm.HasValue &&
-                                _session.Stats.Wpm.Value > previousBestWpm.Value;
-
-            _challengeShareText = ChallengeShare.Build(
-                today, session.Extract.Credit, _session.Stats, personalBest);
-        }
-        catch (Exception ex)
-        {
-            ConfigManager.Log("LessonsWindow.PrepareChallengeShare", ex);
-            _challengeShareText = null;
-        }
-    }
-
-    /// <summary>
-    /// Copie le résultat du défi. Le succès change le libellé du bouton et arme la
-    /// sollicitation d'avis différée : quelqu'un qui partage son résultat est la personne
-    /// la mieux disposée à noter l'application, et c'est le seul moment où l'application
-    /// le sait de source sûre.
-    /// </summary>
     private void OnCopyChallengeResult()
     {
-        if (_challengeShareText == null) return;
-        if (!ClipboardText.TrySet(_hWnd, _challengeShareText)) return;
-
-        _challengeShareCopied = true;
-        _challengeSharedThisSession = true;
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        if (_challenge.Copy(_hWnd))
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     private void ShowHint()
@@ -2506,9 +2434,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         // Le partage a eu lieu pendant cette séance : c'est maintenant, la fenêtre refermée,
         // que la sollicitation d'avis peut se présenter sans couper quoi que ce soit.
-        if (_challengeSharedThisSession)
+        if (_challenge.TakeSharedThisSession())
         {
-            _challengeSharedThisSession = false;
             try { ChallengeShared?.Invoke(); }
             catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeShared", ex); }
         }
