@@ -145,6 +145,9 @@ static class Program
                 L.Startup_FatalErrorTitle, 0x10); // MB_ICONERROR
         };
 
+        // Polices du site (refonte 1.3.0), privées au processus.
+        AppFonts.EnsureLoaded();
+
         using var app = new TrayApplication();
         app.Run();
     }
