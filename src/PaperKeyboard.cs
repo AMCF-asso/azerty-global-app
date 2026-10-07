@@ -186,6 +186,11 @@ internal static class PaperKeyboard
         else
             PaperDraw.RoundBox(hdc, rect, fill, border, radius, borderWidth, penStyle);
 
+        // La faute se voit aussi hors de la touche : un anneau rouge dans l'interstice. Le
+        // liseré seul disparaissait sur une touche cible pleine bleue (faute à l'espace fine).
+        if (error)
+            ErrorRing(hdc, rect, radius, stateWidth);
+
         // Contenu.
         var nameArea = isoEnter ? IsoEnterTop(rect, key) : rect;
         if (function || (def == null && key.Scancode != ScanSpace))
@@ -432,6 +437,21 @@ internal static class PaperKeyboard
             var box = new Win32.RECT { left = x - pad, top = lineTop - 1, right = x + width + pad, bottom = lineTop + lineHeight + 1 };
             DottedFrame(hdc, box, color);
         }
+    }
+
+    private static void ErrorRing(IntPtr hdc, Win32.RECT r, int radius, int width)
+    {
+        var pen = Win32.CreatePen(Win32.PS_SOLID, 1, PaperTheme.Error);
+        var oldPen = Win32.SelectObject(hdc, pen);
+        var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
+        for (int i = 1; i <= width; i++)
+        {
+            int round = (radius + i) * 2;
+            Win32.RoundRect(hdc, r.left - i, r.top - i, r.right + 1 + i, r.bottom + 1 + i, round, round);
+        }
+        Win32.SelectObject(hdc, oldBrush);
+        Win32.SelectObject(hdc, oldPen);
+        Win32.DeleteObject(pen);
     }
 
     private static void DottedFrame(IntPtr hdc, Win32.RECT r, uint color)

@@ -28,13 +28,13 @@ public partial class KeyboardContextBench
 
     private sealed record SurfaceState(string Slug, string Module, string Lesson, int Exercise, string Typed,
         bool Focus, int FocusedAction = -1, bool Free = false, bool Picker = false, bool Settings = false,
-        bool Complete = false);
+        bool Complete = false, uint ErrorScancode = 0);
 
     private static readonly SurfaceState[] SurfaceStates =
     {
         new("saisie", StrictModule, StrictLesson, StrictExercise, StrictTyped, Focus: true),
         // Espace ordinaire au lieu de l'espace fine attendue avant « ! ».
-        new("faute-stricte", StrictModule, StrictLesson, StrictExercise, StrictTyped + " ", Focus: true),
+        new("faute-stricte", StrictModule, StrictLesson, StrictExercise, StrictTyped + " ", Focus: true, ErrorScancode: 0x39),
         new("faute-souple", FlexibleModule, FlexibleLesson, 0, FlexibleTyped, Focus: true),
         // L'apostrophe est la lettre à taper : son soulignement garde sa largeur minimale.
         new("etroite", StrictModule, StrictLesson, StrictExercise, "« Un chef-d", Focus: true),
@@ -72,8 +72,18 @@ public partial class KeyboardContextBench
                 var modeType = typeof(LessonsWindow).GetNestedType("WindowMode", BindingFlags.NonPublic)!;
                 BancCapture.Call(window, "SwitchMode", Enum.Parse(modeType, "Free"));
             }
-            foreach (char c in state.Typed)
-                BancCapture.Call(window, "OnChar", c);
+            for (int i = 0; i < state.Typed.Length; i++)
+            {
+                // La faute passe par la frappe physique, comme au clavier : c'est elle qui
+                // donne la touche cerclée. Sans elle, le banc montrait une faute sans cercle.
+                if (state.ErrorScancode != 0 && i == state.Typed.Length - 1)
+                {
+                    BancCapture.SetField(window, "_visible", true);
+                    BancCapture.Call(window, "OnRawKeyDown", state.ErrorScancode);
+                    BancCapture.SetField(window, "_visible", false);
+                }
+                BancCapture.Call(window, "OnChar", state.Typed[i]);
+            }
             if (state.Complete)
             {
                 // Tout l'exercice, sans faute, jusqu'au récapitulatif.
