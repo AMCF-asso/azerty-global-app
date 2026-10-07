@@ -726,12 +726,12 @@ internal sealed partial class LessonsWindow
         DrawOutlineButton(hdc, nextRect, nextText, NextExercise, primary: true);
 
         int titleRight = right;
-        if (_challengeShareText != null)
+        if (_challenge.ShareText != null)
         {
-            string share = _challengeShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareButton;
-            var measure = DrawLink(hdc, 0, 0, share, _challengeShareCopied, OnCopyChallengeResult, measureOnly: true);
+            string share = _challenge.ShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareButton;
+            var measure = DrawLink(hdc, 0, 0, share, _challenge.ShareCopied, OnCopyChallengeResult, measureOnly: true);
             int w = measure.right - measure.left - S(8);
-            var link = DrawLink(hdc, right - w, box.top + S(22) + S(18), share, _challengeShareCopied, OnCopyChallengeResult, L.Challenge_ShareTooltip);
+            var link = DrawLink(hdc, right - w, box.top + S(22) + S(18), share, _challenge.ShareCopied, OnCopyChallengeResult, L.Challenge_ShareTooltip);
             titleRight = link.left - S(16);
         }
         PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_ExerciseSuccess, titleFont, titleRight - x), titleFont,
