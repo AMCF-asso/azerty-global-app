@@ -25,6 +25,7 @@ internal sealed class LessonAttemptStats
     private DateTimeOffset? _startedAt;
     private DateTimeOffset? _completedAt;
     private readonly Dictionary<char, int> _errorCountsByExpected = new();
+    private readonly Dictionary<char, int> _attemptCountsByExpected = new();
 
     public LessonAttemptStats(Func<DateTimeOffset>? clock = null)
     {
@@ -42,6 +43,11 @@ internal sealed class LessonAttemptStats
     {
         _startedAt ??= _clock();
         ProductiveKeystrokes++;
+        if (expected.HasValue)
+        {
+            _attemptCountsByExpected[expected.Value] =
+                _attemptCountsByExpected.TryGetValue(expected.Value, out int attempts) ? attempts + 1 : 1;
+        }
         if (expected.HasValue && actual == expected.Value)
         {
             CorrectKeystrokes++;
@@ -98,6 +104,14 @@ internal sealed class LessonAttemptStats
             if (ProductiveKeystrokes <= 0) return null;
             return (int)Math.Round(100d * CorrectKeystrokes / ProductiveKeystrokes);
         }
+    }
+
+    /// <summary>Par caractère attendu : frappes reçues à sa place, et fautes parmi elles.
+    /// Lu par la progression par geste à la fin de l'exercice.</summary>
+    public IEnumerable<(char Expected, int Attempts, int Errors)> GetCharacterCounts()
+    {
+        foreach (var (expected, attempts) in _attemptCountsByExpected)
+            yield return (expected, attempts, _errorCountsByExpected.TryGetValue(expected, out int errors) ? errors : 0);
     }
 
     public IReadOnlyList<char> GetHardestCharacters(int maxCount)

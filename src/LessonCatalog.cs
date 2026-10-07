@@ -110,6 +110,8 @@ internal static class LessonCatalogLoader
     public const string LessonsResourceName = "lessons.json";
     public const string InitiationModuleId = "initiation";
     public const string InitiationLessonId = "premiers-pas";
+    /// <summary>Séance de révision composée à la volée (progression par geste).</summary>
+    public const string ReviewModuleId = "revision";
 
     public static LessonCatalog LoadFromResource(string resourceName = LessonsResourceName)
     {

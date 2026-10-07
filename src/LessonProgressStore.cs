@@ -10,6 +10,10 @@ internal sealed class LessonProgressStore
 
     private readonly string _path;
     private readonly Dictionary<string, LessonExerciseProgress> _exercises = new(StringComparer.Ordinal);
+    // Progression par geste (refonte 1.3.0) : par caractère, indépendante des exercices.
+    // Champ « gestures » ajouté au format 1 : une version antérieure l'ignore à la lecture.
+    private readonly Dictionary<string, GestureMasteryEntry> _gestures = new(StringComparer.Ordinal);
+    private readonly Func<DateTimeOffset> _clock;
     private bool _loadFailed;
     // Fichier corrompu mis de côté (audit du 25/09, L-14) : message à montrer une seule
     // fois. Statique : la fenêtre Leçons crée le magasin, le tray affiche la bulle.
@@ -22,11 +26,18 @@ internal sealed class LessonProgressStore
     /// progression a été remise à zéro et qu'une copie est gardée.</summary>
     internal static bool TakeQuarantineNotice() => Interlocked.Exchange(ref _quarantineNoticePending, 0) == 1;
 
-    public LessonProgressStore(string? path = null)
+    public LessonProgressStore(string? path = null, Func<DateTimeOffset>? clock = null)
     {
         _path = path ?? Path.Combine(ConfigManager.LogDirectory, FileName);
+        _clock = clock ?? (() => DateTimeOffset.UtcNow);
         Load();
     }
+
+    public IReadOnlyDictionary<string, GestureMasteryEntry> Gestures => _gestures;
+
+    /// <summary>Les caractères à revoir maintenant, les plus fragiles d'abord.</summary>
+    public IReadOnlyList<GestureMasteryEntry> DueGestures(int maxCount) =>
+        GestureMastery.Due(_gestures.Values, _clock(), maxCount);
 
     public string? LastModuleId { get; private set; }
     public string? LastLessonId { get; private set; }
@@ -82,9 +93,22 @@ internal sealed class LessonProgressStore
         CommitOrRollback(snapshot, "LessonProgressStore.SetLastPosition");
     }
 
-    public void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats)
+    public void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats) =>
+        RecordSuccess(exercise, stats, GestureMastery.IsTracked);
+
+    /// <param name="isTracked">Caractères suivis par geste ; les tests en passent un sans
+    /// index de caractères.</param>
+    internal void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats, Func<char, bool> isTracked)
     {
         var snapshot = CaptureSnapshot();
+        RecordGesturesNoSave(stats, isTracked);
+        // Séance de révision : contenu tiré du jour, rien à retenir par exercice (L-13).
+        if (StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.ReviewModuleId))
+        {
+            CommitOrRollback(snapshot, "LessonProgressStore.RecordReview");
+            return;
+        }
+
         var progress = GetOrReset(exercise);
         progress.Completed = true;
         progress.SuccessfulAttempts++;
@@ -111,6 +135,19 @@ internal sealed class LessonProgressStore
         var snapshot = CaptureSnapshot();
         MarkCompletedNeutralNoSave(exercise);
         CommitOrRollback(snapshot, "LessonProgressStore.MarkCompletedNeutral");
+    }
+
+    private void RecordGesturesNoSave(LessonAttemptStats stats, Func<char, bool> isTracked)
+    {
+        var now = _clock();
+        foreach (var (expected, attempts, errors) in stats.GetCharacterCounts())
+        {
+            if (!isTracked(expected)) continue;
+            string key = expected.ToString();
+            if (!_gestures.TryGetValue(key, out var entry))
+                _gestures[key] = entry = new GestureMasteryEntry(key);
+            GestureMastery.Apply(entry, attempts, errors, now);
+        }
     }
 
     private void MarkCompletedNeutralNoSave(LessonExercise exercise)
@@ -150,6 +187,7 @@ internal sealed class LessonProgressStore
     {
         var snapshot = CaptureSnapshot();
         _exercises.Clear();
+        _gestures.Clear();
         LastModuleId = null;
         LastLessonId = null;
         LastExerciseIndex = 0;
@@ -185,12 +223,17 @@ internal sealed class LessonProgressStore
         foreach (var (key, progress) in _exercises)
             exercises[key] = progress.Clone();
 
+        var gestures = new Dictionary<string, GestureMasteryEntry>(StringComparer.Ordinal);
+        foreach (var (key, entry) in _gestures)
+            gestures[key] = entry.Clone();
+
         return new ProgressStoreSnapshot(
             LastModuleId,
             LastLessonId,
             LastExerciseIndex,
             _onboardingSynced.ToArray(),
-            exercises);
+            exercises,
+            gestures);
     }
 
     private void RestoreSnapshot(ProgressStoreSnapshot snapshot)
@@ -203,6 +246,9 @@ internal sealed class LessonProgressStore
         _exercises.Clear();
         foreach (var (key, progress) in snapshot.Exercises)
             _exercises[key] = progress.Clone();
+        _gestures.Clear();
+        foreach (var (key, entry) in snapshot.Gestures)
+            _gestures[key] = entry.Clone();
     }
 
     private void CommitOrRollback(ProgressStoreSnapshot snapshot, string operation)
@@ -214,6 +260,7 @@ internal sealed class LessonProgressStore
     private void Load()
     {
         _exercises.Clear();
+        _gestures.Clear();
         _loadFailed = false;
         if (!File.Exists(_path)) return;
         bool legacyErrorMatrixFound = false;
@@ -248,6 +295,23 @@ internal sealed class LessonProgressStore
                 {
                     if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int index) && index >= 0)
                         _onboardingSynced.Add(index);
+                }
+            }
+
+            if (root.TryGetProperty("gestures", out var gesturesEl) && gesturesEl.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var item in gesturesEl.EnumerateObject())
+                {
+                    var el = item.Value;
+                    if (item.Name.Length == 0 || el.ValueKind != JsonValueKind.Object) continue;
+                    _gestures[item.Name] = new GestureMasteryEntry(item.Name)
+                    {
+                        Attempts = Math.Max(0, ReadInt(el, "attempts")),
+                        Errors = Math.Max(0, ReadInt(el, "errors")),
+                        Box = Math.Clamp(ReadInt(el, "box"), 0, GestureMastery.MaxBox),
+                        LastReviewUtc = ReadDate(el, "lastReviewUtc"),
+                        DueUtc = ReadDate(el, "dueUtc"),
+                    };
                 }
             }
 
@@ -287,6 +351,7 @@ internal sealed class LessonProgressStore
         {
             ConfigManager.Log("LessonProgressStore.Load", ex);
             _exercises.Clear();
+            _gestures.Clear();
             LastModuleId = null;
             LastLessonId = null;
             LastExerciseIndex = 0;
@@ -369,6 +434,18 @@ internal sealed class LessonProgressStore
                     writer.WriteEndObject();
                 }
                 writer.WriteEndObject();
+                writer.WriteStartObject("gestures");
+                foreach (var (key, entry) in _gestures.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                {
+                    writer.WriteStartObject(key);
+                    writer.WriteNumber("attempts", entry.Attempts);
+                    writer.WriteNumber("errors", entry.Errors);
+                    writer.WriteNumber("box", entry.Box);
+                    WriteNullableDate(writer, "lastReviewUtc", entry.LastReviewUtc);
+                    WriteNullableDate(writer, "dueUtc", entry.DueUtc);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndObject();
                 writer.WriteEndObject();
                 // L-14 : atomique, mais pas durable sans ceci — après une coupure de courant,
                 // le fichier remplacé pouvait rester vide ou illisible.
@@ -431,6 +508,17 @@ internal sealed class LessonProgressStore
             : null;
     }
 
+    private static DateTimeOffset? ReadDate(JsonElement element, string name) =>
+        DateTimeOffset.TryParse(ReadString(element, name), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dto)
+            ? dto
+            : null;
+
+    private static void WriteNullableDate(Utf8JsonWriter writer, string name, DateTimeOffset? value)
+    {
+        if (value.HasValue) writer.WriteString(name, value.Value.ToString("O", CultureInfo.InvariantCulture));
+        else writer.WriteNull(name);
+    }
+
     private static void WriteNullableString(Utf8JsonWriter writer, string name, string? value)
     {
         if (value == null) writer.WriteNull(name);
@@ -489,4 +577,5 @@ internal sealed record ProgressStoreSnapshot(
     string? LastLessonId,
     int LastExerciseIndex,
     IReadOnlyList<int> OnboardingSynced,
-    IReadOnlyDictionary<string, LessonExerciseProgress> Exercises);
+    IReadOnlyDictionary<string, LessonExerciseProgress> Exercises,
+    IReadOnlyDictionary<string, GestureMasteryEntry> Gestures);
