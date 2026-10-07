@@ -74,14 +74,39 @@ public class SettingsClarityTests : IDisposable
         IntPtr search = BancCapture.Field<IntPtr>(window, "_hWndEditSearch");
         Assert.NotEqual(IntPtr.Zero, search);
 
+        uint searchVk = BancCapture.Field<uint>(window, "_searchVk");
         BancCapture.Call(window, "ApplyCapturedShortcut", search, (uint)'T');
         Assert.False(BancCapture.Field<bool>(window, "_searchValid"));
         Assert.Equal(L.SettingsClarity_ShortcutReservedLetter('T'), BancCapture.Field<string>(window, "_validationMessage"));
+        // La case montre la touche refusée, celle que nomme le message, sans l'enregistrer.
+        Assert.Equal(ConfigManager.GetShortcutDisplayName('T'), ShortcutText(search));
+        Assert.Equal((uint)'T', BancCapture.Field<uint>(window, "_searchShownVk"));
+        Assert.Equal(searchVk, BancCapture.Field<uint>(window, "_searchVk"));
 
         // Échap passe par la vraie procédure de la case : elle annule au lieu de fermer.
         Win32.SendMessageW(search, Win32.WM_KEYDOWN, (IntPtr)VK_ESCAPE, IntPtr.Zero);
         Assert.True(BancCapture.Field<bool>(window, "_searchValid"));
         Assert.Equal(string.Empty, BancCapture.Field<string>(window, "_validationMessage"));
+        Assert.Equal(ConfigManager.GetShortcutDisplayName(searchVk), ShortcutText(search));
+    }
+
+    [Fact]
+    public void La_perte_du_focus_apres_un_refus_rend_la_touche_en_place()
+    {
+        using var window = new SettingsWindow();
+        IntPtr search = BancCapture.Field<IntPtr>(window, "_hWndEditSearch");
+        uint searchVk = BancCapture.Field<uint>(window, "_searchVk");
+
+        BancCapture.Call(window, "ApplyCapturedShortcut", search, (uint)'T');
+        Win32.SendMessageW(search, Win32.WM_KILLFOCUS, IntPtr.Zero, IntPtr.Zero);
+        Assert.Equal(ConfigManager.GetShortcutDisplayName(searchVk), ShortcutText(search));
+    }
+
+    private static string ShortcutText(IntPtr hWnd)
+    {
+        var buffer = new System.Text.StringBuilder(64);
+        Win32.GetWindowTextW(hWnd, buffer, buffer.Capacity);
+        return buffer.ToString();
     }
 
     [Fact]
