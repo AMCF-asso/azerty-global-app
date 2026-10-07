@@ -31,6 +31,10 @@ internal sealed class PaperKeyboardState
     public Dictionary<uint, int> StepBadges { get; } = new();
     /// <summary>Pastilles des touches de contexte sans scancode (Maj, AltGr), par étiquette.</summary>
     public Dictionary<string, int> ContextStepBadges { get; } = new(StringComparer.Ordinal);
+    /// <summary>Clavier virtuel : le nom que la consigne donne à une touche à pastille
+    /// (« Frappez ù »), gravure de <see cref="Gesture.KeyLabel"/>. La touche le montre en
+    /// grand, et ce qu'elle tape dans la couche courante en petit (revue du 07/10, P1 n°2).</summary>
+    public Dictionary<uint, string> StepKeyNames { get; } = new();
     /// <summary>Leçons : filtre des légendes (<see cref="KeyboardRenderProfile.Lesson"/>) ou
     /// carte complète (<see cref="KeyboardRenderProfile.Full"/>).</summary>
     public KeyboardRenderProfile Profile { get; init; } = KeyboardRenderProfile.Full;
@@ -186,6 +190,9 @@ internal static class PaperKeyboard
         var nameArea = isoEnter ? IsoEnterTop(rect, key) : rect;
         if (function || (def == null && key.Scancode != ScanSpace))
             DrawFunctionName(hdc, nameArea, key, mode, onAction, k);
+        else if (mode == PaperKeyboardMode.ActiveLayer && step > 0
+                 && state.StepKeyNames.TryGetValue(key.Scancode, out var stepName))
+            DrawStepKeyName(hdc, rect, key, stepName, active, onAction, k);
         else if (mode == PaperKeyboardMode.ActiveLayer)
             DrawActiveSign(hdc, rect, key, active, activeIsDeadKey, onAction, k);
         else if (def != null)
@@ -323,6 +330,47 @@ internal static class PaperKeyboard
         }
         var font = FontSpec.Of(AppFonts.Title, Scaled(deadKey ? 28 : 23, u), TypeRamp.Semibold, 1f);
         PaperText.DrawLine(hdc, display, font, rect, ink, TextAlign.Center);
+    }
+
+    /// <summary>Touche à pastille : le nom que dit la consigne (« ù ») en grand, ce qu'elle tape
+    /// maintenant (« ´ ») en petit en haut à gauche ; la pastille garde le coin haut droit.</summary>
+    private static void DrawStepKeyName(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, string name,
+        string? active, bool onAction, float k)
+    {
+        float u = k * MockKey / 50f;
+        uint ink = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
+        uint secondary = onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary;
+        bool space = key.Scancode == ScanSpace;
+        // Un mot (« Espace ») se pose comme un nom de touche ; une gravure comme un signe.
+        var nameFont = name.Length > 2
+            ? FontSpec.Of(AppFonts.Text, Scaled(12, u), TypeRamp.Semibold, 1f)
+            : FontSpec.Of(AppFonts.Title, Scaled(23, u), TypeRamp.Semibold, 1f);
+        PaperText.DrawLine(hdc, name, nameFont, rect, ink, TextAlign.Center);
+
+        string? typed = TypedBesideName(name, active, space);
+        if (typed == null) return;
+        // Le signe dans la police des signes, assez grand pour qu'un accent seul se lise.
+        // Un accent seul a un trait fin : il garde la taille et l'encre d'un signe.
+        bool accent = IsDeadKeyRef(active);
+        var font = space
+            ? FontSpec.Of(AppFonts.Text, Scaled(11, u), TypeRamp.Regular, 1f)
+            : FontSpec.Of(AppFonts.Title, Scaled(accent ? 22 : 13, u), TypeRamp.Semibold, 1f);
+        var (ascent, descent) = PaperText.Metrics(hdc, font);
+        // En haut à gauche : un accent seul y reste un accent (en bas, « ´ » passait pour une
+        // virgule) ; la pastille tient le coin d'en face.
+        int lineTop = rect.top + Scaled(accent ? -2 : 2, u);
+        int baseline = lineTop + (font.Height - (ascent + descent)) / 2 + ascent;
+        int x = rect.left + Scaled(6, u);
+        PaperText.Draw(hdc, typed, font, x, baseline, accent ? ink : secondary);
+    }
+
+    /// <summary>Le petit signe d'une touche à pastille : ce qu'elle tape dans la couche courante,
+    /// ou rien s'il redit son nom (« z » sous « Z ») ou si elle ne tape rien.</summary>
+    internal static string? TypedBesideName(string name, string? active, bool space)
+    {
+        if (string.IsNullOrEmpty(active) || (space && active == " ")) return null;
+        string typed = space && active.Length == 1 && char.IsWhiteSpace(active[0]) ? SpaceName(active) : Display(active);
+        return string.Equals(typed, name, StringComparison.OrdinalIgnoreCase) ? null : typed;
     }
 
     // ── Carte à quatre légendes (Leçons F) ─────────────────────────────
