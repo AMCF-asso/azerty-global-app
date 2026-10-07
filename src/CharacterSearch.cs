@@ -298,6 +298,14 @@ sealed class CharacterSearch : IDisposable
         return !string.IsNullOrEmpty(entry.NameFr) ? entry.NameFr : entry.NameEn;
     }
 
+    /// <summary>Nom affiché en casse de phrase (« Lettre majuscule latine Z accent aigu ») : les
+    /// noms Unicode arrivent en capitales ; les lettres nommées seules gardent leur casse.</summary>
+    private static string GetSentenceName(CharEntry entry)
+    {
+        string name = VirtualKeyboard.InSentence(GetDisplayName(entry));
+        return name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name.Substring(1);
+    }
+
     /// <summary>Normalise un texte pour la recherche (supprime les diacritiques, met en minuscule).</summary>
     private static string NormalizeForSearch(string text)
     {
@@ -1186,7 +1194,7 @@ sealed class CharacterSearch : IDisposable
         int nameLeft = glyphRight + Scale(BASE_ROW_GAP);
         int nameRight = right - (gestureW > 0 ? gestureW + Scale(BASE_ROW_GAP) : 0);
         var font = RowNameFont(chosen);
-        string name = Ellipsize(hdc, GetDisplayName(entry), font, nameRight - nameLeft);
+        string name = Ellipsize(hdc, GetSentenceName(entry), font, nameRight - nameLeft);
         PaperText.DrawLine(hdc, name, font,
             new Win32.RECT { left = nameLeft, top = top, right = nameRight, bottom = top + h }, PaperTheme.Ink);
     }
@@ -1225,7 +1233,7 @@ sealed class CharacterSearch : IDisposable
         int lineH = TablatureStyle.Px(22, _dpiScale);
         int y = top;
         var title = PartTitleFont;
-        y += PaperText.DrawParagraph(hdc, new[] { new TextRun(GetDisplayName(entry), true) }, title, title,
+        y += PaperText.DrawParagraph(hdc, new[] { new TextRun(GetSentenceName(entry), true) }, title, title,
             new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
             PaperTheme.Ink, PaperTheme.Ink, lineH, draw);
         if (steps.Count == 0)
