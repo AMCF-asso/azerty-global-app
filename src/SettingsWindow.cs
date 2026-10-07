@@ -543,6 +543,7 @@ sealed partial class SettingsWindow : IDisposable
         RefreshCompatList(selectProcess: null);
         _controls = DescribeControls();
         PreparePaperButtons();
+        SetCompatDescriptions();
     }
 
     /// <summary>
@@ -1627,6 +1628,15 @@ sealed partial class SettingsWindow : IDisposable
             Win32.InvalidateRect(_hWndTabStrip, IntPtr.Zero, false);
     }
 
+    /// <summary>Le sous-titre peint sous chaque mode de compatibilité devient la description
+    /// accessible de son bouton radio : un lecteur d'écran le lit après le libellé.</summary>
+    private void SetCompatDescriptions()
+    {
+        AccessibleName.TrySetDescription(_hWndRadioCompatAuto, L.SettingsPaper_CompatHintAuto);
+        AccessibleName.TrySetDescription(_hWndRadioCompatForceOn, L.SettingsPaper_CompatHintForceOn);
+        AccessibleName.TrySetDescription(_hWndRadioCompatForceOff, L.SettingsPaper_CompatHintForceOff);
+    }
+
     /// <summary>Réapplique tous les libellés traduits de cette fenêtre (appelé après un changement de langue).</summary>
     private void RefreshLanguageTexts()
     {
@@ -1641,6 +1651,7 @@ sealed partial class SettingsWindow : IDisposable
         foreach (var control in _controls)
             if (control.Text != null)
                 Win32.SetWindowTextW(control.Handle, control.Text());
+        SetCompatDescriptions();
         RefreshCompatList(SelectedCompatProcess()); // libellés de mode traduits dans la liste
         RefreshShortcutTexts();
         SetValidationMessage(string.Empty);
