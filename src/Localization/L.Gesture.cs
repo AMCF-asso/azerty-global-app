@@ -11,7 +11,7 @@ internal static partial class L
     public static string Gesture_StrikeAfterHold => T(", frappez ", ", press ");
     public static string Gesture_StrikeCapital => T("Frappez ", "Press ");
     public static string Gesture_Strike => T("frappez ", "press ");
-    public static string Gesture_NothingYet => T(" : rien ne s'affiche encore.", ": nothing appears yet.");
+    public static string Gesture_NothingYet => T("\u00A0: rien ne s’affiche encore.", ": nothing appears yet.");
     public static string Gesture_Then => T(" Puis ", " Then ");
     /// <summary>Gravure courte d'Espace dans une case de portée.</summary>
     public static string Gesture_SpaceShort => T("Esp", "Spc");
