@@ -32,7 +32,9 @@ for stream in (sys.stdout, sys.stderr):
             pass
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE_URL = "https://raw.githubusercontent.com/AZERTYGlobal/website/main/"
+# Branche `refonte` tant que la disposition 2026.1 n'est publiée qu'avec la v2 du site
+# (décision du 2026-09-25) ; revenir à `main` à la bascule de la v2.
+BASE_URL = "https://raw.githubusercontent.com/AZERTYGlobal/website/refonte/"
 
 # (chemin distant dans le dépôt du site, chemin local dans ce dépôt).
 # Le nom local de la disposition porte son millésime, celui du site non : c'est la seule
