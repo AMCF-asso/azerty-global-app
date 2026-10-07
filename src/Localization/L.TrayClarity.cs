@@ -28,6 +28,13 @@ internal static partial class L
         $"{Product} ne reconnaît pas la fenêtre active et s’arrête au cas où ce serait un jeu protégé. Rien à faire : tout redevient comme avant quand vous changez de fenêtre.",
         $"{Product} can’t identify the active window and stops in case it is a protected game. Nothing to do: everything returns to normal when you switch windows.");
 
+    // Suivi des fenêtres non installé (ForegroundMonitor.IsTrackingAvailable faux) : toute
+    // fenêtre est « non reconnue », changer de fenêtre ne répare rien. Seul un redémarrage
+    // réessaie l'installation. Sert aussi au refus d'activation dans cet état.
+    public static string TrayClarity_TrackingUnavailableBody => T(
+        $"{Product} n’a pas pu suivre les changements de fenêtre et reste arrêté par précaution. Pour réessayer : menu de l’icône › Quitter, puis relancez {Product}.",
+        $"{Product} couldn’t track window changes and stays stopped as a precaution. To try again: icon menu › Quit, then restart {Product}.");
+
     public static string TrayClarity_UserOverrideSuspendedBody => T(
         "Vous avez choisi « Forcer la désactivation » pour cette application. Pour annuler : menu de l’icône › Compatibilité des applications › Auto.",
         "You chose “Force off” for this app. To undo it: icon menu › App compatibility › Auto.");

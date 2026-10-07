@@ -143,14 +143,38 @@ public class TrayClarityTests : IDisposable
         }
     }
 
+    [Fact]
+    public void AucuneBulleDeSuspensionQuandLApplicationEtaitDejaArretee()
+    {
+        // Désactivée ou en pause avant l'entrée : la suspension n'arrête rien.
+        foreach (CompatibilitySuspendReason reason in Enum.GetValues<CompatibilitySuspendReason>())
+        {
+            Assert.Null(TrayApplication.SuspensionBalloonBody(reason, wasActive: false, trackingAvailable: true));
+            Assert.Null(TrayApplication.SuspensionBalloonBody(reason, wasActive: false, trackingAvailable: false));
+        }
+        Assert.Equal(L.TrayClarity_AntiCheatSuspendedBody,
+            TrayApplication.SuspensionBalloonBody(CompatibilitySuspendReason.AntiCheat, wasActive: true, trackingAvailable: true));
+    }
+
+    [Fact]
+    public void SansSuiviDesFenetresLaBulleNeDitPasDeChangerDeFenetre()
+    {
+        // Toute fenêtre est alors « non reconnue » : seul un redémarrage réessaie.
+        string? body = TrayApplication.SuspensionBalloonBody(
+            CompatibilitySuspendReason.UnknownForeground, wasActive: true, trackingAvailable: false);
+        Assert.Equal(L.TrayClarity_TrackingUnavailableBody, body);
+        Assert.DoesNotContain("changez de fenêtre", body);
+        Assert.Contains(L.Tray_MenuQuit, body);
+    }
+
     [Theory, MemberData(nameof(Languages))]
     public void LesBullesDisentQuoiFaire(string lang)
     {
         // Chaque corps finit par une issue : rien à faire, un chemin, ou un état conservé.
         L.Language = lang;
         string[] issues = lang == "fr"
-            ? new[] { "Rien à faire", "Pour annuler", "Pour l’activer", "Pour reprendre", "Réactivez", "réglage n’a pas changé", "revient dès" }
-            : new[] { "Nothing to do", "To undo", "To turn it on", "To resume", "Turn it back on", "Turn ", "setting hasn’t changed", "comes back" };
+            ? new[] { "Rien à faire", "Pour annuler", "Pour l’activer", "Pour reprendre", "Réactivez", "réglage n’a pas changé", "revient dès", "Pour réessayer" }
+            : new[] { "Nothing to do", "To undo", "To turn it on", "To resume", "Turn it back on", "Turn ", "setting hasn’t changed", "comes back", "To try again" };
         foreach (var (name, value) in ClarityStrings().Where(s => s.Name.EndsWith("Body")))
             Assert.True(issues.Any(value.Contains), $"{lang} {name} ne dit pas quoi faire : \"{value}\"");
     }
