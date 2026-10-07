@@ -395,7 +395,8 @@ internal static class PaperKeyboard
             return;
         }
 
-        var mono = (int size) => FontSpec.Of(AppFonts.Mono, Scaled(size, k), TypeRamp.Regular, 1f);
+        // Medium (ag-mono-500) : les signes fins se lisent mieux qu’en Regular (QCM du 07/10).
+        var mono = (int size) => FontSpec.Of(AppFonts.Mono, Scaled(size, k), TypeRamp.Medium, 1f);
         bool letter = KeyboardRenderer.IsLetterKey(key.Scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
         string? shiftAltGr = def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null;
         if (letter)
