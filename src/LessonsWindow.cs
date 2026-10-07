@@ -2,14 +2,13 @@ using System.Runtime.InteropServices;
 
 namespace AZERTYGlobal;
 
-internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
+internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHost
 {
     private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("Lessons");
     private const int BASE_WIN_W = 1120;
     private const int BASE_WIN_H = 760;
     private const int BASE_MIN_W = 940;
     private const int BASE_MIN_H = 600;
-    private const int BASE_SIDEBAR_W = 330;
     private const int WMSZ_LEFT = 1;
     private const int WMSZ_RIGHT = 2;
     private const int WMSZ_TOP = 3;
@@ -30,20 +29,19 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private const int PENDING_PHYSICAL_TEXT_TIMEOUT_MS = 1000;
     private const int FREE_PREVIEW_MAX_CHARS = 220;
 
-    private const uint CLR_BG = DarkTheme.Background;
-    private const uint CLR_PANEL = DarkTheme.Surface;
-    private const uint CLR_PANEL_2 = DarkTheme.SurfaceRaised;
-    private const uint CLR_BORDER = DarkTheme.Border;
-    private const uint CLR_TEXT = DarkTheme.Text;
-    private const uint CLR_MUTED = DarkTheme.TextSecondary;
-    private const uint CLR_ACCENT = DarkTheme.Accent;
-    private const uint CLR_OK = DarkTheme.Success;
-    private const uint CLR_BAD = DarkTheme.Error;
-    private const uint CLR_CURRENT = DarkTheme.Accent;
-    private const uint CLR_PENDING = DarkTheme.TextTertiary;
-    private const uint CLR_BUTTON = DarkTheme.ControlFill;
-    private const uint CLR_BUTTON_HOT = DarkTheme.ControlHover;
-    private const uint CLR_LESSON_ACCENT = DarkTheme.Accent;
+    // Refonte 1.3.0 (Tablature, maquette Leçons F du 07/10) : la fenêtre passe au papier.
+    private const uint CLR_BG = PaperTheme.Paper;
+    private const uint CLR_PANEL = PaperTheme.Surface;
+    private const uint CLR_PANEL_2 = PaperTheme.Surface;
+    private const uint CLR_BORDER = PaperTheme.Border;
+    private const uint CLR_TEXT = PaperTheme.Ink;
+    private const uint CLR_MUTED = PaperTheme.TextSecondary;
+    private const uint CLR_ACCENT = PaperTheme.Action;
+    private const uint CLR_OK = PaperTheme.Success;
+    private const uint CLR_BAD = PaperTheme.Error;
+    private const uint CLR_CURRENT = PaperTheme.Action;
+    private const uint CLR_PENDING = PaperTheme.Pale;
+    private const uint CLR_LESSON_ACCENT = PaperTheme.Error;
 
     private const uint MB_YESNO = 0x00000004;
     private const uint MB_ICONWARNING = 0x00000030;
@@ -71,10 +69,9 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     // Audit du 25/09 (L-06) : les infobulles des 62 touches ne sont plus construites à chaque
     // repeint. Le repeint retient le cadre du clavier et l'état dessiné ; OnMouseMove en tire,
     // pour la seule touche survolée, le texte que _hoverAreas aurait porté.
-    private (Win32.RECT Bounds, KeyboardRenderProfile Profile, KeyboardRenderState State)? _keyboardHover;
-    // L-06 : largeur d'un caractère de la ligne de leçon, par caractère et selon l'affichage
-    // des invisibles ; vidée avec les polices (CreateScaledFonts), seules à la faire varier.
-    private readonly Dictionary<(char Ch, bool Markers), int> _lessonCharWidths = new();
+    // Refonte 1.3.0 : le clavier papier est placé à une taille de touche fixe ; on retient son
+    // placement, plus son cadre.
+    private (KeyboardPlacement Placement, KeyboardRenderProfile Profile, KeyboardRenderState State)? _keyboardHover;
 
     private IntPtr _hWnd;
     private bool _visible;
@@ -370,7 +367,6 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 
     private void CreateScaledFonts()
     {
-        _lessonCharWidths.Clear(); // L-06 : mesurées avec les polices et l'échelle d'avant
         _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontSubtitle = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
@@ -462,7 +458,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         CaptureBaseWindowMetrics();
         RestoreSavedBoundsIfVisible();
         UpdateRenderScaleFromCurrentClient(force: true);
-        NativeWindow.ApplyFrame(_hWnd, dark: true);
+        NativeWindow.ApplyFrame(_hWnd, dark: false); // refonte 1.3.0 : fenêtre papier, barre claire
     }
 
     private bool RestoreSavedBoundsIfVisible()
@@ -843,6 +839,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
         _session = new LessonTypingSession(CurrentExercise);
+        _errorScancode = 0;
         _showSummary = false;
         _lastCompletedStats = null;
         _challengeShareText = null;
@@ -1076,17 +1073,19 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         _systemCaretRect = null;
         _surfaceView = null;
 
-        DrawHeader(hdc, rc);
-        var body = new Win32.RECT { left = S(16), top = S(74), right = rc.right - S(16), bottom = rc.bottom - S(16) };
-        var sidebar = new Win32.RECT { left = body.left, top = body.top, right = body.left + S(BASE_SIDEBAR_W), bottom = body.bottom };
-        var content = new Win32.RECT { left = sidebar.right + S(14), top = body.top, right = body.right, bottom = body.bottom };
-        DrawSidebar(hdc, sidebar);
+        // Refonte 1.3.0 (maquette Leçons F) : en-tête d'une ligne, partition, clavier papier.
+        // Le sélecteur ouvert se dessine en dernier, par-dessus, et capte seul les clics.
+        var body = new Win32.RECT { left = S(24), top = S(76), right = rc.right - S(24), bottom = rc.bottom - S(20) };
+        // L'en-tête d'abord : l'ordre de Tab suit celui de la page.
+        DrawPaperHeader(hdc, rc);
         if (_settingsOpen)
-            DrawSettingsContent(hdc, content);
+            DrawPaperSettings(hdc, body);
         else if (_mode == WindowMode.Lessons)
-            DrawLessonContent(hdc, content);
+            DrawPaperLesson(hdc, rc, body);
         else
-            DrawFreeContent(hdc, content);
+            DrawPaperFree(hdc, rc, body);
+        if (_pickerOpen)
+            DrawPaperPicker(hdc, rc);
 
         DrawFocusRing(hdc);
         // K4 (accessibilité 1.3.0) : l'infobulle de survol garde la priorité ; à défaut, celle
@@ -1169,373 +1168,6 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         _systemCaretSize = null;
     }
 
-    private void DrawHeader(IntPtr hdc, Win32.RECT rc)
-    {
-        var titleRect = new Win32.RECT { left = S(20), top = S(12), right = rc.right / 2, bottom = S(44) };
-        DrawText(hdc, _hFontTitle, L.LessonsWin_Title, titleRect, CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-
-        int done = _progress.CountCompleted(_catalog);
-        var progressRect = new Win32.RECT { left = S(120), top = S(20), right = rc.right / 2, bottom = S(44) };
-        DrawText(hdc, _hFontSmall, L.LessonsWin_ExerciseCount(done, _catalog.TotalExerciseCount), progressRect, CLR_MUTED, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-
-        int tabsWidth = S(252);
-        int tabsLeft = Math.Max(S(220), (rc.right - tabsWidth) / 2);
-        var lessonsTab = new Win32.RECT { left = tabsLeft, top = S(18), right = tabsLeft + S(122), bottom = S(48) };
-        var freeTab = new Win32.RECT { left = tabsLeft + S(130), top = S(18), right = tabsLeft + S(252), bottom = S(48) };
-        var tabsFrame = new Win32.RECT { left = lessonsTab.left - S(3), top = lessonsTab.top - S(3), right = freeTab.right + S(3), bottom = freeTab.bottom + S(3) };
-        DrawRoundedBox(hdc, tabsFrame, CLR_PANEL_2, CLR_BORDER, S(8));
-        DrawButton(hdc, lessonsTab, L.LessonsWin_Title, !_settingsOpen && _mode == WindowMode.Lessons, () => SwitchMode(WindowMode.Lessons));
-        DrawButton(hdc, freeTab, L.LessonsWin_TabFree, !_settingsOpen && _mode == WindowMode.Free, () => SwitchMode(WindowMode.Free));
-        var settingsRect = new Win32.RECT { left = rc.right - S(136), top = S(18), right = rc.right - S(20), bottom = S(48) };
-        DrawButton(hdc, settingsRect, L.LessonsWin_SettingsTab, _settingsOpen, ToggleSettings);
-    }
-
-    private void DrawSidebar(IntPtr hdc, Win32.RECT rect)
-    {
-        GdiHelpers.DrawPanel(hdc, rect, CLR_PANEL, CLR_BORDER, 0, 0);
-        int y = rect.top + S(14);
-        int bottom = rect.bottom - S(12);
-
-        for (int i = 0; i < _catalog.Modules.Count && y < bottom - S(34); i++)
-        {
-            var module = _catalog.Modules[i];
-            int completed = module.Lessons.SelectMany(l => l.Exercises).Count(_progress.IsCompleted);
-            int total = module.Lessons.SelectMany(l => l.Exercises).Count();
-            string moduleCount = $"{completed}/{total}";
-            int moduleH = SidebarItemHeight(hdc, _hFontSidebarModule, module.Title, moduleCount,
-                rect.right - rect.left - S(20), S(36));
-            var item = new Win32.RECT { left = rect.left + S(10), top = y, right = rect.right - S(10), bottom = y + moduleH };
-            bool selectedModule = i == _moduleIndex;
-            DrawSidebarModuleItem(hdc, item, module.Title, moduleCount, selectedModule);
-            int captured = i;
-            AddClick(item, () => SelectModule(captured), $"{module.Title} {completed}/{total}", LessonControlKind.ListItem,
-                selected: selectedModule);
-            y += moduleH + S(4);
-
-            if (!selectedModule)
-            {
-                y += S(4);
-                continue;
-            }
-
-            for (int j = 0; j < module.Lessons.Count && y < bottom - S(30); j++)
-            {
-                var lesson = module.Lessons[j];
-                int lessonCompleted = lesson.Exercises.Count(_progress.IsCompleted);
-                string lessonCount = $"{lessonCompleted}/{lesson.Exercises.Count}";
-                int lessonH = SidebarItemHeight(hdc, _hFontSidebarLesson, lesson.Title, lessonCount,
-                    rect.right - rect.left - S(38), S(32));
-                var lessonItem = new Win32.RECT { left = rect.left + S(28), top = y, right = rect.right - S(10), bottom = y + lessonH };
-                DrawSidebarLessonItem(hdc, lessonItem, lesson.Title, lessonCount, j == _lessonIndex);
-                int capturedLesson = j;
-                AddClick(lessonItem, () => SelectLesson(capturedLesson), $"{lesson.Title} {lessonCompleted}/{lesson.Exercises.Count}",
-                    LessonControlKind.ListItem, selected: j == _lessonIndex);
-                y += lessonH + S(2);
-            }
-
-            y += S(10);
-        }
-
-    }
-
-    // Audit UX 1.3.0, #12 : titre et compteur partageaient une ligne avec ellipse ; « Édition
-    // spéciale : la course aux 30 millions » perdait sa fin et son compteur. Le compteur a sa
-    // colonne à droite, le titre revient à la ligne (deux lignes au plus).
-    private const uint SidebarTitleFormat = Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_EDITCONTROL | Win32.DT_END_ELLIPSIS | Win32.DT_NOPREFIX;
-
-    /// <summary>Hauteur d'un élément de la barre latérale : <paramref name="minHeight"/>, ou le titre sur deux lignes et sa marge.</summary>
-    private int SidebarItemHeight(IntPtr hdc, IntPtr font, string title, string count, int itemWidth, int minHeight)
-    {
-        int titleW = SidebarTitleWidth(hdc, font, count, itemWidth);
-        int lineH = GdiHelpers.MeasureSingleLineHeight(hdc, font);
-        int textH = Math.Min(GdiHelpers.MeasureTextHeight(hdc, font, title, titleW, SidebarTitleFormat), lineH * 2);
-        return Math.Max(minHeight, textH + S(12));
-    }
-
-    private int SidebarTitleWidth(IntPtr hdc, IntPtr font, string count, int itemWidth) =>
-        itemWidth - S(12) - S(8) - GdiHelpers.MeasureSingleLineWidth(hdc, font, count) - S(10);
-
-    private void DrawSidebarItemText(IntPtr hdc, IntPtr font, Win32.RECT rect, string title, string count, uint titleColor, uint countColor)
-    {
-        int width = rect.right - rect.left;
-        int titleW = SidebarTitleWidth(hdc, font, count, width);
-        int lineH = GdiHelpers.MeasureSingleLineHeight(hdc, font);
-        int textH = Math.Min(GdiHelpers.MeasureTextHeight(hdc, font, title, titleW, SidebarTitleFormat), lineH * 2);
-        int top = rect.top + (rect.bottom - rect.top - textH) / 2;
-        DrawText(hdc, font, title, new Win32.RECT { left = rect.left + S(12), top = top, right = rect.left + S(12) + titleW, bottom = top + textH },
-            titleColor, SidebarTitleFormat);
-        DrawText(hdc, font, count, new Win32.RECT { left = rect.left + S(12) + titleW, top = rect.top, right = rect.right - S(8), bottom = rect.bottom },
-            countColor, Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-    }
-
-    // #10 : une ligne non sélectionnée survolée prend le fond de survol des boutons.
-    private uint SidebarItemFill(Win32.RECT rect, bool selected) =>
-        selected ? CLR_PANEL_2 : IsHot(rect) ? CLR_BUTTON_HOT : CLR_PANEL;
-
-    private void DrawSidebarModuleItem(IntPtr hdc, Win32.RECT rect, string title, string count, bool selected)
-    {
-        GdiHelpers.FillSolidRect(hdc, rect, SidebarItemFill(rect, selected));
-        if (selected)
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = rect.left, top = rect.top, right = rect.left + S(4), bottom = rect.bottom }, CLR_ACCENT);
-        DrawSidebarItemText(hdc, _hFontSidebarModule, rect, title, count, CLR_TEXT, CLR_TEXT);
-    }
-
-    private void DrawSidebarLessonItem(IntPtr hdc, Win32.RECT rect, string title, string count, bool selected)
-    {
-        GdiHelpers.FillSolidRect(hdc, rect, SidebarItemFill(rect, selected));
-        if (selected)
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = rect.left, top = rect.top, right = rect.left + S(4), bottom = rect.bottom }, CLR_LESSON_ACCENT);
-        uint color = selected ? CLR_TEXT : CLR_MUTED;
-        DrawSidebarItemText(hdc, _hFontSidebarLesson, rect, title, count, color, color);
-    }
-
-    private void DrawSettingsContent(IntPtr hdc, Win32.RECT rect)
-    {
-        GdiHelpers.DrawPanel(hdc, rect, CLR_PANEL, CLR_BORDER, 0, 0);
-        int pad = S(22);
-        int y = rect.top + pad;
-
-        DrawText(hdc, _hFontTitle, L.LessonsWin_SettingsTab, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        y += S(48);
-
-        DrawText(hdc, _hFontSubtitle, L.LessonsWin_Title, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        y += S(30);
-        DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            L.LessonsWin_ToggleAutoHints, ConfigManager.LessonAutoHintsEnabled, ToggleAutoHints);
-        y += S(50);
-        DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            L.LessonsWin_ToggleSummary, ConfigManager.LessonSummaryVisible, () => ToggleBool(ConfigManager.LessonSummaryVisible, ConfigManager.SetLessonSummaryVisible));
-        y += S(50);
-
-        DrawText(hdc, _hFontSubtitle, L.LessonsWin_SectionDisplay, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        y += S(30);
-        DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            L.LessonsWin_ToggleFreeStats, ConfigManager.LessonFreeStatsVisible, () => ToggleBool(ConfigManager.LessonFreeStatsVisible, ConfigManager.SetLessonFreeStatsVisible));
-        y += S(50);
-        DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            L.LessonsWin_ToggleKeyboard, ConfigManager.LessonKeyboardVisible, () => ToggleBool(ConfigManager.LessonKeyboardVisible, ConfigManager.SetLessonKeyboardVisible));
-        y += S(50);
-        DrawToggleRow(hdc, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) },
-            L.LessonsWin_ToggleInvisibleMarkers, ConfigManager.LessonInvisibleMarkersVisible, () => ToggleBool(ConfigManager.LessonInvisibleMarkersVisible, ConfigManager.SetLessonInvisibleMarkersVisible));
-        y += S(62);
-
-        DrawText(hdc, _hFontSubtitle, L.LessonsWin_SectionActions, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(24) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        y += S(32);
-        int resetFreeW = ButtonWidth(hdc, L.LessonsWin_BtnResetFreeStats, 160);
-        var resetFree = new Win32.RECT { left = rect.left + pad, top = y, right = rect.left + pad + resetFreeW, bottom = y + S(36) };
-        var resetProgress = new Win32.RECT { left = resetFree.right + S(12), top = y, right = resetFree.right + S(196), bottom = y + S(36) };
-        DrawButton(hdc, resetFree, L.LessonsWin_BtnResetFreeStats, false, ResetFreeStats);
-        DrawButton(hdc, resetProgress, L.LessonsWin_BtnResetProgress, false, ResetProgress);
-    }
-
-    private void DrawToggleRow(IntPtr hdc, Win32.RECT row, string label, bool enabled, Action toggle)
-    {
-        DrawRoundedBox(hdc, row, CLR_PANEL_2, CLR_BORDER, S(6));
-        DrawText(hdc, _hFontText, label, new Win32.RECT { left = row.left + S(14), top = row.top, right = row.right - S(96), bottom = row.bottom }, CLR_TEXT,
-            Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-
-        var stateRect = new Win32.RECT { left = row.right - S(138), top = row.top, right = row.right - S(72), bottom = row.bottom };
-        DrawText(hdc, _hFontSmall, enabled ? L.LessonsWin_ToggleOn : L.LessonsWin_ToggleOff, stateRect, enabled ? CLR_TEXT : CLR_MUTED,
-            Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-
-        var pill = new Win32.RECT { left = row.right - S(58), top = row.top + S(9), right = row.right - S(14), bottom = row.bottom - S(9) };
-        DrawRoundedBox(hdc, pill, enabled ? CLR_ACCENT : CLR_BUTTON, enabled ? CLR_ACCENT : CLR_BORDER, S(12));
-        var knob = enabled
-            ? new Win32.RECT { left = pill.right - S(20), top = pill.top + S(2), right = pill.right - S(2), bottom = pill.bottom - S(2) }
-            : new Win32.RECT { left = pill.left + S(2), top = pill.top + S(2), right = pill.left + S(20), bottom = pill.bottom - S(2) };
-        DrawRoundedBox(hdc, knob, enabled ? DarkTheme.OnAccent : CLR_TEXT, enabled ? DarkTheme.OnAccent : CLR_TEXT, S(9));
-        AddClick(row, toggle, label, LessonControlKind.CheckBox, toggled: enabled);
-    }
-
-    private void DrawLessonContent(IntPtr hdc, Win32.RECT rect)
-    {
-        GdiHelpers.DrawPanel(hdc, rect, CLR_PANEL, CLR_BORDER, 0, 0);
-        int pad = S(18);
-        int y = rect.top + pad;
-        string exerciseLabel = L.LessonsWin_ExerciseLabel(_exerciseIndex + 1, CurrentLesson.Exercises.Count);
-        var topLine = new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(22) };
-        DrawText(hdc, _hFontSmall, exerciseLabel, topLine, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        DrawText(hdc, _hFontSmall, BuildTypingStatus(), topLine, CLR_MUTED, Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-        y += S(24);
-        DrawText(hdc, _hFontTitle, CurrentLesson.Title, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-        y += S(40);
-        DrawText(hdc, _hFontText, FormatLessonInstruction(CurrentExercise.Instruction), new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(42) }, CLR_MUTED, Win32.DT_LEFT | Win32.DT_WORDBREAK);
-        y += S(52);
-
-        var keyboardRect = new Win32.RECT { left = rect.left + pad, top = rect.bottom - S(315), right = rect.right - pad, bottom = rect.bottom - S(16) };
-        if (_showSummary && _lastCompletedStats != null)
-        {
-            MoveKeyboardCloserToInput(ref keyboardRect, y + S(116));
-            DrawCompletedExerciseControls(hdc, rect, y);
-            if (ConfigManager.LessonSummaryVisible)
-                DrawSummary(hdc, rect, keyboardRect, y, _lastCompletedStats);
-            else
-                DrawCompletionNotice(hdc, rect, keyboardRect, y);
-        }
-        else
-        {
-            DrawTargetLine(hdc, rect, ref y);
-            MoveKeyboardCloserToInput(ref keyboardRect, y);
-        }
-
-        if (ConfigManager.LessonKeyboardVisible)
-            DrawKeyboard(hdc, keyboardRect, KeyboardRenderProfile.Lesson);
-    }
-
-    private void MoveKeyboardCloserToInput(ref Win32.RECT keyboardRect, int yAfterInput)
-    {
-        int height = keyboardRect.bottom - keyboardRect.top;
-        int desiredTop = yAfterInput + S(34);
-        if (desiredTop >= keyboardRect.top)
-            return;
-
-        keyboardRect.top = desiredTop;
-        keyboardRect.bottom = desiredTop + height;
-    }
-
-    private void DrawCompletedExerciseControls(IntPtr hdc, Win32.RECT rect, int y)
-    {
-        // Le bouton « Copier mon résultat » vit sur la carte du récapitulatif, que
-        // l'utilisateur peut avoir repliée. Dans ce cas seulement, le partage se rabat sur
-        // une icône de cette rangée-ci, qui elle est toujours dessinée : replier le
-        // récapitulatif est un choix de compacité, pas un renoncement au partage.
-        bool shareAsIcon = _challengeShareText != null && !ConfigManager.LessonSummaryVisible;
-
-        var lineInfo = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(24) };
-        int iconAreaW = shareAsIcon ? S(178) : S(142);
-        DrawText(hdc, _hFontSmall, L.LessonsWin_ExerciseDone, new Win32.RECT { left = lineInfo.left, top = lineInfo.top, right = lineInfo.right - iconAreaW - S(8), bottom = lineInfo.bottom },
-            CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-        DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) }, shareAsIcon);
-    }
-
-    private void DrawTargetLine(IntPtr hdc, Win32.RECT rect, ref int y)
-    {
-        var lineInfo = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(24) };
-        int iconAreaW = S(142);
-        var lineLabel = new Win32.RECT { left = lineInfo.left, top = lineInfo.top, right = lineInfo.right - iconAreaW - S(8), bottom = lineInfo.bottom };
-        DrawText(hdc, _hFontSmall, L.LessonsWin_LineLabel(_session.LineIndex + 1, _session.TotalLines), lineLabel, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        DrawLessonIconButtons(hdc, new Win32.RECT { left = lineInfo.right - iconAreaW, top = lineInfo.top - S(12), right = lineInfo.right, bottom = lineInfo.top + S(20) });
-        y += S(24);
-
-        // Surface unique (lot Leçons 1.3.0, QCM du 28/09) : le modèle se colore à mesure de
-        // la frappe, à la place de l'ancienne paire modèle / zone de saisie.
-        var surface = new Win32.RECT { left = rect.left + S(18), top = y, right = rect.right - S(18), bottom = y + S(64) };
-        GdiHelpers.DrawPanel(hdc, surface, CLR_PANEL_2, CLR_BORDER, 0, 0);
-        int lineScroll = CalculateLessonLineScrollOffset(hdc, surface);
-        DrawLessonSurface(hdc, surface, lineScroll);
-        if (_hasFocus && _focusedActionIndex < 0)
-            DrawFocusOutline(hdc, surface);
-
-        y += S(68);
-    }
-
-    private int CalculateLessonLineScrollOffset(IntPtr hdc, Win32.RECT box)
-    {
-        string line = _session.CurrentLine;
-        int cursor = Math.Clamp(_session.CursorPosition, 0, line.Length);
-        int innerWidth = Math.Max(1, box.right - box.left - S(20));
-        int contentWidth = MeasureLessonLinePrefixWidth(hdc, line, line.Length);
-        int cursorX = MeasureLessonLinePrefixWidth(hdc, line, cursor);
-        int margin = Math.Min(S(90), innerWidth / 4);
-        int offset = Math.Max(0, cursorX - (innerWidth - margin));
-        int maxOffset = Math.Max(0, contentWidth - innerWidth + S(8));
-        return Math.Min(offset, maxOffset);
-    }
-
-    private int MeasureLessonLinePrefixWidth(IntPtr hdc, string text, int count)
-    {
-        int width = 0;
-        int max = Math.Min(count, text.Length);
-        for (int i = 0; i < max; i++)
-            width += MeasureLessonCharacterWidth(hdc, text[i]);
-        return width;
-    }
-
-    private int MeasureLessonCharacterWidth(IntPtr hdc, char ch)
-    {
-        // L-06 : chaque caractère était mesuré quatre fois par repeint (deux préfixes pour le
-        // défilement, cellule attendue, cellule tapée). Même texte que FormatVisibleCharacter,
-        // sur une seule lecture du réglage, qui fait partie de la clé.
-        bool markers = ConfigManager.LessonInvisibleMarkersVisible;
-        if (_lessonCharWidths.TryGetValue((ch, markers), out int width))
-            return width;
-        // Espacement naturel (29/09) : la case a la largeur du glyphe, sans marge ajoutée. Une
-        // espace insécable marquée a la largeur de son repère « ˽ » (audit UX 1.3.0, #1).
-        width = markers && KeyboardRenderer.IsMarkedSpace(ch)
-            ? S(ch == '\u202F' ? 10 : 14)
-            : Math.Max(1, GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine,
-                markers ? KeyboardRenderer.DisplayInvisible(ch.ToString()) : ch.ToString()));
-        _lessonCharWidths[(ch, markers)] = width;
-        return width;
-    }
-
-    private void DrawLessonSurface(IntPtr hdc, Win32.RECT box, int scrollOffset)
-    {
-        var expected = _session.GetCurrentLineSnapshot();
-        var typed = _session.GetTypedLineSnapshot();
-        int origin = box.left + S(10) - scrollOffset;
-        int x = origin;
-        int top = box.top + S(6);
-        // Une case par caractère attendu, puis, en mode souple, une par caractère tapé au-delà.
-        var widths = new int[Math.Max(expected.Count, typed.Count)];
-        for (int i = 0; i < widths.Length; i++)
-            widths[i] = MeasureLessonCharacterWidth(hdc, i < expected.Count ? expected[i].Expected : typed[i].Actual);
-
-        for (int i = 0; i < expected.Count; i++)
-        {
-            var cell = expected[i];
-            char shown = cell.Expected;
-            char? below = null;
-            uint color = cell.State switch
-            {
-                LessonCharacterState.Pending => CLR_PENDING,
-                LessonCharacterState.Wrong => CLR_BAD,
-                _ => CLR_TEXT
-            };
-            uint? underline = cell.State switch
-            {
-                LessonCharacterState.Current => CLR_CURRENT,
-                LessonCharacterState.Wrong => CLR_BAD,
-                _ => null
-            };
-            // V2, retenue sur planches le 29/09 : la faute tapée prend la place, en rouge, et
-            // l'attendu passe dessous.
-            if (cell.State == LessonCharacterState.Wrong && TypedCharacterAt(typed, i) is char actual)
-            {
-                shown = actual;
-                below = cell.Expected;
-            }
-            if (!DrawSurfaceCell(hdc, box, shown, widths[i], ref x, top, color, underline, below))
-                break;
-        }
-
-        // Mode souple : ce qui dépasse la fin du modèle reste écrit, en faute.
-        for (int i = expected.Count; i < typed.Count; i++)
-        {
-            if (!DrawSurfaceCell(hdc, box, typed[i].Actual, widths[i], ref x, top, CLR_BAD, CLR_BAD, null))
-                break;
-        }
-
-        // Aucune barre peinte (29/09) : le soulignement de la lettre à taper suffit. Le caret
-        // système, lui, est placé devant elle sans être affiché (PlaceSystemCaret).
-        bool active = !_session.IsLineComplete && !_session.IsExerciseComplete;
-        int caretX = SurfaceCaretX(widths, _session.CursorPosition, origin);
-        if (active && caretX >= box.left + S(8) && caretX <= box.right - S(8))
-            _systemCaretRect = new Win32.RECT { left = caretX, top = top, right = caretX + Math.Max(1, S(2)), bottom = top + S(36) };
-
-        // Pour l'UI Automation : la ligne attendue et la case de chacun de ses caractères.
-        var text = new char[expected.Count];
-        var cells = new Win32.RECT[expected.Count];
-        for (int i = 0, left = origin; i < expected.Count; left += widths[i], i++)
-        {
-            text[i] = expected[i].Expected;
-            cells[i] = new Win32.RECT { left = left, top = top, right = left + widths[i], bottom = top + S(36) };
-        }
-        _surfaceView = new LessonSurfaceView(L.LessonsWin_AutomationLineName,
-            $"{CurrentLesson.Title}. {FormatLessonInstruction(CurrentExercise.Instruction)}", new string(text),
-            Math.Clamp(_session.CursorPosition, 0, text.Length), box, cells, _systemCaretRect);
-    }
-
     /// <summary>Abscisse du curseur de la ligne : l'origine plus la largeur des cases qui le
     /// précèdent.</summary>
     internal static int SurfaceCaretX(IReadOnlyList<int> widths, int cursor, int origin)
@@ -1559,228 +1191,6 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private static char? TypedCharacterAt(IReadOnlyList<LessonTypedCharacterSnapshot> typed, int index) =>
         index < typed.Count ? typed[index].Actual : null;
 
-    private bool DrawSurfaceCell(IntPtr hdc, Win32.RECT box, char ch, int width, ref int x, int top, uint color, uint? underline, char? below)
-    {
-        int innerLeft = box.left + S(8);
-        int innerRight = box.right - S(8);
-        if (x + width < innerLeft)
-        {
-            x += width;
-            return true;
-        }
-        if (x > innerRight)
-            return false;
-
-        var charRect = new Win32.RECT
-        {
-            left = Math.Max(x, innerLeft),
-            top = top,
-            right = Math.Min(x + width, innerRight),
-            bottom = top + S(36)
-        };
-        if (charRect.right <= charRect.left)
-            return false;
-
-        // Audit UX 1.3.0, #1 : l'espace insécable se marquait par son nom (« esp. ins. ») dans
-        // la police de la ligne, qui se lisait comme du texte à taper ; un repère « ˽ » le
-        // remplace, le nom reste aux infobulles et à l'UI Automation. Une espace tapée à tort
-        // se voit en « · ».
-        if (ConfigManager.LessonInvisibleMarkersVisible && KeyboardRenderer.IsMarkedSpace(ch))
-            KeyboardRenderer.DrawSpaceMarker(hdc, ch, charRect.left + S(2), charRect.right - S(2), top + S(25), _dpiScale * _windowScale, color);
-        else
-            DrawText(hdc, _hFontLessonLine, ch == ' ' && color == CLR_BAD ? "·" : FormatVisibleCharacter(ch.ToString()), charRect, color, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-        if (underline.HasValue)
-        {
-            int underlineY = Math.Min(charRect.bottom - S(3), top + S(34));
-            var (left, right) = UnderlineSpan(charRect.left, charRect.right, S(2), S(6));
-            GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = left, top = underlineY, right = right, bottom = underlineY + S(2) }, underline.Value);
-        }
-        if (below.HasValue)
-        {
-            var belowRect = new Win32.RECT { left = charRect.left - S(4), top = top + S(37), right = charRect.right + S(4), bottom = top + S(52) };
-            // Sans trait dessous (Antoine, planche du 01/10) : le soulignement rouge de la faute suffit.
-            // Attendu insécable : son repère, la case étroite couperait son nom.
-            if (ConfigManager.LessonInvisibleMarkersVisible && KeyboardRenderer.IsMarkedSpace(below.Value))
-                KeyboardRenderer.DrawSpaceMarker(hdc, below.Value, charRect.left + S(2), charRect.right - S(2), top + S(48), _dpiScale * _windowScale, CLR_TEXT);
-            else
-                DrawText(hdc, _hFontSmall, FormatVisibleCharacter(below.Value.ToString()), belowRect, CLR_TEXT, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-        }
-        x += width;
-        return true;
-    }
-
-    private void DrawSummary(IntPtr hdc, Win32.RECT rect, Win32.RECT keyboardRect, int minTop, LessonAttemptStats stats)
-    {
-        int maxBottom = ConfigManager.LessonKeyboardVisible ? keyboardRect.top - S(10) : rect.bottom - S(22);
-        int cardH = S(132);
-        int top = Math.Max(minTop + S(40), maxBottom - cardH);
-        int minCardH = S(92);
-        if (maxBottom - top < minCardH)
-            top = Math.Max(rect.top + S(8), maxBottom - minCardH);
-        if (maxBottom <= top)
-            return;
-
-        var summaryRect = new Win32.RECT
-        {
-            left = rect.left + S(18),
-            top = top,
-            right = rect.right - S(18),
-            bottom = maxBottom
-        };
-
-        DrawRoundedBox(hdc, summaryRect, CLR_PANEL_2, CLR_BORDER, S(8));
-
-        int x = summaryRect.left + S(18);
-        int yy = summaryRect.top + S(12);
-
-        // Bouton de partage — uniquement après le défi commun, sur la ligne de titre :
-        // les métriques commencent 48 px plus bas et la ligne de détail occupe le bas
-        // de la carte, cette rangée est la seule libre.
-        int titleRight = summaryRect.right - S(12);
-        if (_challengeShareText != null)
-        {
-            int buttonW = S(150);
-            int buttonH = S(26);
-            var shareRect = new Win32.RECT
-            {
-                left = summaryRect.right - S(14) - buttonW,
-                top = summaryRect.top + S(10),
-                right = summaryRect.right - S(14),
-                bottom = summaryRect.top + S(10) + buttonH
-            };
-            DrawButton(hdc, shareRect,
-                _challengeShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareButton,
-                _challengeShareCopied, OnCopyChallengeResult);
-            AddHover(shareRect, L.Challenge_ShareTooltip, preferAbove: true);
-            titleRight = shareRect.left - S(10);
-        }
-
-        DrawText(hdc, _hFontSubtitle, L.LessonsWin_ExerciseSuccess, new Win32.RECT { left = x, top = yy, right = titleRight, bottom = yy + S(24) },
-            CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-
-        int metricY = summaryRect.top + S(48);
-        int contentRight = summaryRect.right - S(18);
-        int gap = S(28);
-        // « Record » (QW-4) : 4e colonne dès qu'un meilleur score existe — dès le
-        // premier passage réussi, la valeur étant relue après enregistrement.
-        int columns = _summaryBestWpm.HasValue ? 4 : 3;
-        int metricW = Math.Max(S(80), (contentRight - x - gap * (columns - 1)) / columns);
-        DrawSummaryTextMetric(hdc, x, metricY, metricW, L.LessonsWin_MetricSpeed, FormatWpm(stats.Wpm), CLR_TEXT);
-        DrawSummaryTextMetric(hdc, x + metricW + gap, metricY, metricW, L.LessonsWin_MetricAccuracy, FormatNullable(stats.AccuracyPercent, "%"), GetAccuracyColor(stats.AccuracyPercent));
-        DrawSummaryTextMetric(hdc, x + (metricW + gap) * 2, metricY, metricW, L.LessonsWin_MetricErrors, stats.ErrorCount.ToString(), GetErrorColor(stats.ErrorCount));
-        if (_summaryBestWpm.HasValue)
-            DrawSummaryTextMetric(hdc, x + (metricW + gap) * 3, metricY, metricW, L.LessonsWin_MetricBest,
-                FormatWpm(_summaryBestWpm), _summaryIsNewBest ? CLR_ACCENT : CLR_TEXT);
-
-        var hard = stats.GetHardestCharacters(3);
-        int elapsedSecondsRounded = (int)Math.Round(stats.ElapsedSeconds);
-        string detailText = hard.Count == 0
-            ? L.LessonsWin_DetailNoHardChar(elapsedSecondsRounded)
-            : L.LessonsWin_DetailHardChars(elapsedSecondsRounded, string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString()))));
-        int detailTop = metricY + S(52);
-        int detailBottom = summaryRect.bottom - S(10);
-        if (detailBottom > detailTop + S(12))
-        {
-            DrawText(hdc, _hFontSmall, detailText, new Win32.RECT { left = x, top = detailTop, right = summaryRect.right - S(18), bottom = detailBottom },
-                CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-        }
-    }
-
-    private void DrawSummaryTextMetric(IntPtr hdc, int x, int y, int width, string label, string value, uint valueColor)
-    {
-        DrawText(hdc, _hFontSmall, label, new Win32.RECT { left = x, top = y, right = x + width, bottom = y + S(16) },
-            CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-        DrawText(hdc, _hFontSubtitle, value, new Win32.RECT { left = x, top = y + S(14), right = x + width, bottom = y + S(40) },
-            valueColor, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-    }
-
-    private void DrawCompletionNotice(IntPtr hdc, Win32.RECT rect, Win32.RECT keyboardRect, int minTop)
-    {
-        int bottom = ConfigManager.LessonKeyboardVisible ? keyboardRect.top - S(10) : rect.bottom - S(22);
-        int top = Math.Max(minTop + S(46), bottom - S(64));
-        var doneRect = new Win32.RECT { left = rect.left + S(18), top = top, right = rect.right - S(18), bottom = Math.Max(top + S(52), bottom) };
-        DrawRoundedBox(hdc, doneRect, CLR_PANEL_2, CLR_BORDER, S(8));
-        GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = doneRect.left, top = doneRect.top + S(8), right = doneRect.left + S(4), bottom = doneRect.bottom - S(8) }, CLR_ACCENT);
-        DrawText(hdc, _hFontSubtitle, L.LessonsWin_ExerciseSuccess, new Win32.RECT { left = doneRect.left + S(18), top = doneRect.top, right = doneRect.right - S(18), bottom = doneRect.bottom },
-            CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-    }
-
-    private void DrawLessonIconButtons(IntPtr hdc, Win32.RECT rect, bool includeShare = false)
-    {
-        int size = Math.Min(S(30), rect.bottom - rect.top);
-        int gap = S(6);
-        int count = includeShare ? 5 : 4;
-        int total = size * count + gap * (count - 1);
-        int x = rect.right - total;
-        int y = rect.top + Math.Max(0, (rect.bottom - rect.top - size) / 2);
-
-        if (includeShare)
-        {
-            DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size },
-                "📋", _challengeShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareTooltip,
-                _challengeShareCopied, OnCopyChallengeResult);
-            x += size + gap;
-        }
-
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "‹", L.LessonsWin_IconPrevious, false, PreviousExercise);
-        x += size + gap;
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "›", L.LessonsWin_IconNext, false, NextExercise);
-        x += size + gap;
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "↻", L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true));
-        x += size + gap;
-        string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_IconHint : FormatHintButtonText();
-        DrawIconButton(hdc, new Win32.RECT { left = x, top = y, right = x + size, bottom = y + size }, "💡", hintTooltip,
-            _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, ToggleAutoHints);
-    }
-
-    private void DrawKeyboard(IntPtr hdc, Win32.RECT rect, KeyboardRenderProfile profile)
-    {
-        var state = new KeyboardRenderState
-        {
-            Shift = _mapper.ShiftDown,
-            AltGr = _mapper.AltGrDown,
-            Ctrl = _mapper.CtrlDown,
-            Alt = _mapper.AltDown,
-            CapsLock = _mapper.CapsLockActive,
-            ActiveDeadKey = _mapper.ActiveDeadKey,
-            PressedScancode = _pressedScancode,
-            HintCharacter = _hintCharacter?.ToString(),
-            ShowInvisibleMarkers = ConfigManager.LessonInvisibleMarkersVisible
-        };
-        if (profile == KeyboardRenderProfile.Lesson)
-        {
-            if (_mode == WindowMode.Lessons)
-            {
-                _hints.AddRequiredCharacters(CurrentLesson.Characters, state.LessonVisibleCharacters);
-                _hints.AddRequiredCharacters(CurrentExercise.Content, state.LessonVisibleCharacters);
-                if (_hintCharacter.HasValue)
-                {
-                    state.LessonVisibleCharacters.Add(_hintCharacter.Value.ToString());
-                    _hints.AddRequiredDeadKey(_hintCharacter.Value, state.LessonVisibleCharacters);
-                }
-                ApplyHintHighlight(state);
-            }
-            else if (_mode == WindowMode.Free)
-            {
-                _hints.AddRequiredCharacters(_freePreview, state.LessonVisibleCharacters);
-            }
-        }
-        KeyboardRenderer.Draw(hdc, rect, _layout, profile, state, _hFontKeyboard, _hFontKeyboardDeadKey, _hFontKeyboardSmall, _hFontKeyboardTiny, _hFontKeyboardContext);
-        AddKeyboardHoverAreas(rect, profile, state);
-    }
-
-    /// <summary>
-    /// L-06 : retient de quoi construire au survol l'infobulle d'une touche, au lieu des 62
-    /// textes à chaque repeint. Le clavier est dessiné en dernier dans les deux modes : ses
-    /// touches venaient après toutes les zones de <see cref="_hoverAreas"/>, et
-    /// <see cref="OnMouseMove"/> les consulte dans le même ordre. Aucune touche n'est une
-    /// cible cliquable : l'infobulle de la cible focalisée (K4) n'en dépend pas.
-    /// </summary>
-    private void AddKeyboardHoverAreas(Win32.RECT rect, KeyboardRenderProfile profile, KeyboardRenderState state)
-    {
-        _keyboardHover = (rect, profile, state);
-    }
-
     /// <summary>
     /// L-06 : infobulle de la touche sous (<paramref name="x"/>, <paramref name="y"/>), telle
     /// que le repeint la déclarait : touches dans l'ordre de
@@ -1789,8 +1199,14 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     /// </summary>
     internal static bool TryGetKeyboardTooltip(Layout layout, Win32.RECT bounds, KeyboardRenderProfile profile,
         KeyboardRenderState state, int x, int y, out string tooltip, out Win32.RECT anchor)
+        => TryGetKeyboardTooltip(layout, KeyboardRenderer.Place(bounds), profile, state, x, y, out tooltip, out anchor);
+
+    /// <summary>Même recherche, pour un clavier placé à taille de touche fixe (clavier papier
+    /// de la refonte 1.3.0, même géométrie que <see cref="KeyboardRenderer"/>).</summary>
+    internal static bool TryGetKeyboardTooltip(Layout layout, KeyboardPlacement placement, KeyboardRenderProfile profile,
+        KeyboardRenderState state, int x, int y, out string tooltip, out Win32.RECT anchor)
     {
-        foreach (var hit in KeyboardRenderer.BuildHitTestRects(bounds))
+        foreach (var hit in KeyboardRenderer.BuildHitTestRects(placement))
         {
             var rect = hit.Rect;
             if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)
@@ -1805,39 +1221,6 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         tooltip = "";
         anchor = new Win32.RECT();
         return false;
-    }
-
-    private void DrawFreeContent(IntPtr hdc, Win32.RECT rect)
-    {
-        GdiHelpers.DrawPanel(hdc, rect, CLR_PANEL, CLR_BORDER, 0, 0);
-        int pad = S(18);
-        int y = rect.top + pad;
-        DrawText(hdc, _hFontTitle, L.LessonsWin_FreeTitle, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(34) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        y += S(42);
-        DrawText(hdc, _hFontText, L.LessonsWin_FreeDescription, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(28) }, CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
-        y += S(44);
-
-        if (ConfigManager.LessonFreeStatsVisible)
-        {
-            string stats = BuildFreeStatsText();
-            var resetStats = new Win32.RECT { left = rect.right - pad - ButtonWidth(hdc, L.LessonsWin_BtnResetStats, 116), top = y, right = rect.right - pad, bottom = y + S(32) };
-            DrawText(hdc, _hFontSubtitle, stats, new Win32.RECT { left = rect.left + pad, top = y, right = resetStats.left - S(12), bottom = y + S(32) }, CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
-            DrawButton(hdc, resetStats, L.LessonsWin_BtnResetStats, false, ResetFreeStats);
-            y += S(46);
-        }
-
-        var preview = new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + S(140) };
-        _freePreviewRect = preview;
-        GdiHelpers.DrawPanel(hdc, preview, CLR_PANEL_2, CLR_BORDER, 0, 0);
-        DrawFreePreviewText(hdc, preview);
-        if (_hasFocus && _focusedActionIndex < 0)
-            DrawFocusOutline(hdc, preview);
-        // Géométrie des caractères non relevée ici : l'aperçu entier en tient lieu.
-        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, L.LessonsWin_FreeDescription, _freePreview,
-            Math.Clamp(_freeCursorIndex, 0, _freePreview.Length), preview, Array.Empty<Win32.RECT>(), _systemCaretRect);
-
-        if (ConfigManager.LessonKeyboardVisible)
-            DrawKeyboard(hdc, new Win32.RECT { left = rect.left + pad, top = rect.bottom - S(315), right = rect.right - pad, bottom = rect.bottom - S(16) }, KeyboardRenderProfile.Lesson);
     }
 
     private void DrawFreePreviewText(IntPtr hdc, Win32.RECT preview)
@@ -2171,29 +1554,6 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    /// <summary>
-    /// Largeur d'un bouton à libellé : sa largeur de base, élargie quand le libellé ne tient pas
-    /// (en 1.3.0, « Effacer les stats du mode libre » et « Effacer les statistiques »).
-    /// </summary>
-    private int ButtonWidth(IntPtr hdc, string text, int baseWidth)
-        => Math.Max(S(baseWidth), GdiHelpers.MeasureSingleLineWidth(hdc, _hFontButton, text) + S(24));
-
-    private void DrawButton(IntPtr hdc, Win32.RECT rect, string text, bool active, Action action)
-    {
-        // Bouton sombre de Windows 11 ; l'onglet ou le panneau actif porte l'accent.
-        GdiHelpers.DrawDarkButton(hdc, rect, text, _hFontButton, active, hot: IsHot(rect), pressed: false, S(4));
-        AddClick(rect, action, text);
-    }
-
-    private void DrawIconButton(IntPtr hdc, Win32.RECT rect, string icon, string tooltip, bool active, Action action, Action? doubleClickAction = null)
-    {
-        GdiHelpers.DrawDarkButton(hdc, rect, icon, icon == "💡" ? _hFontEmoji : _hFontIcon, active, hot: IsHot(rect), pressed: false, S(4));
-        AddClick(rect, action, tooltip); // l'icône ne dit rien ; l'infobulle nomme le bouton
-        if (doubleClickAction != null)
-            AddDoubleClick(rect, doubleClickAction);
-        AddHover(rect, tooltip, preferAbove: true, compact: true);
-    }
-
     private void DrawHoverTooltip(IntPtr hdc, Win32.RECT bounds)
     {
         DrawTooltip(hdc, bounds, _hoverTooltip, _hoverTooltipAnchor, _hoverTooltipPreferAbove, _hoverTooltipCompact);
@@ -2215,7 +1575,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 
     /// <summary>
     /// K4 : l'infobulle d'une cible cliquable est celle déclarée sur le même rectangle
-    /// (<see cref="DrawIconButton"/> passe le même aux deux listes) ; la première s'il y en a
+    /// (<see cref="AddLinkTooltip"/> passe le même aux deux listes) ; la première s'il y en a
     /// plusieurs, -1 quand la cible n'en a pas.
     /// </summary>
     internal static int FindHoverAreaFor(Win32.RECT target,
@@ -2239,7 +1599,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         int pad = S(8);
         string[] lines = text.Split('\n');
         int lineH = S(18);
-        int textWidth = lines.Max(line => GdiHelpers.MeasureSingleLineWidth(hdc, _hFontSmall, line));
+        var tipFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, PaperScale);
+        int textWidth = lines.Max(line => PaperText.Width(hdc, line, tipFont));
         int minWidth = compact ? 0 : S(80);
         int width = Math.Max(minWidth, textWidth) + pad * 2;
         int height = Math.Max(S(26), lines.Length * lineH + pad);
@@ -2254,12 +1615,12 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
             top = anchor.top - height - S(6);
 
         var rect = new Win32.RECT { left = left, top = top, right = left + width, bottom = top + height };
-        DrawRoundedBox(hdc, rect, CLR_PANEL_2, CLR_BORDER, S(6));
+        PaperDraw.RoundBox(hdc, rect, CLR_PANEL, CLR_BORDER, S(3));
         int y = rect.top + Math.Max(S(4), (height - lines.Length * lineH) / 2);
         foreach (var line in lines)
         {
-            DrawText(hdc, _hFontSmall, line, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + lineH },
-                CLR_TEXT, Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_END_ELLIPSIS);
+            PaperText.DrawLine(hdc, line, tipFont, new Win32.RECT { left = rect.left + pad, top = y, right = rect.right - pad, bottom = y + lineH },
+                CLR_TEXT, TextAlign.Left);
             y += lineH;
         }
     }
@@ -2287,7 +1648,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         var pen = Win32.CreatePen(0, Math.Max(1, S(2)), color);
         var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
         var oldPen = Win32.SelectObject(hdc, pen);
-        Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, S(6), S(6));
+        Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, S(4), S(4));
         Win32.SelectObject(hdc, oldPen);
         Win32.SelectObject(hdc, oldBrush);
         Win32.DeleteObject(pen);
@@ -2343,6 +1704,13 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
                 action();
                 return;
             }
+        }
+        if (_pickerOpen)
+        {
+            // Un clic hors du sélecteur ouvert le referme, sans rien faire d'autre.
+            ClosePicker();
+            Win32.SetFocus(_hWnd);
+            return;
         }
         if (_mode == WindowMode.Free && IsPointInRect(_freePreviewRect, x, y))
         {
@@ -2428,7 +1796,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         // L-06 : les touches du clavier après toutes les autres zones, comme au repeint, avec
         // l'état qu'il a dessiné ; ni au-dessus, ni compactes (valeurs par défaut d'AddHover).
         if (!found && _keyboardHover is { } keyboard &&
-            TryGetKeyboardTooltip(_layout, keyboard.Bounds, keyboard.Profile, keyboard.State, x, y,
+            TryGetKeyboardTooltip(_layout, keyboard.Placement, keyboard.Profile, keyboard.State, x, y,
                 out var keyTooltip, out var keyAnchor))
         {
             tooltip = keyTooltip;
@@ -2481,7 +1849,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     /// <summary>La page affiche-t-elle une surface où l'on tape (ligne d'exercice, aperçu du
     /// mode Libre) ? Elle prend alors place dans le cycle de Tab, à l'index -1.</summary>
     private bool HasTypingSurface =>
-        !_settingsOpen && (_mode == WindowMode.Free || !_showSummary);
+        !_settingsOpen && !_pickerOpen && (_mode == WindowMode.Free || !_showSummary);
 
     /// <summary>
     /// Cible suivante de Tab (Maj+Tab : <paramref name="direction"/> = -1) parmi
@@ -2522,6 +1890,11 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     {
         if (vk == 0x1B)
         {
+            if (_pickerOpen)
+            {
+                ClosePicker();
+                return;
+            }
             if (_settingsOpen)
             {
                 _settingsOpen = false;
@@ -2555,6 +1928,8 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
             var result = _session.Backspace();
             if (result.Accepted)
             {
+                if (!_session.NeedsBackspaceCorrection && !CurrentLineHasWrongCell())
+                    _errorScancode = 0;
                 ClearHint();
                 UpdateAutoHintIfEnabled();
             }
@@ -2578,6 +1953,11 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
         if (_showSummary) return;
         var result = _session.TypeCharAndAdvanceLine(c);
         if (!result.Accepted) return;
+        // La touche de la dernière faute reste cerclée sur le clavier jusqu'à sa correction.
+        if (result.WasError)
+            _errorScancode = _pressedScancode;
+        else if (!_session.NeedsBackspaceCorrection && !CurrentLineHasWrongCell())
+            _errorScancode = 0;
         ClearHint();
 
         if (result.LineCompleted)
@@ -2804,6 +2184,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
 
     private void ToggleSettings()
     {
+        _pickerOpen = false;
         _settingsOpen = !_settingsOpen;
         if (_settingsOpen)
         {
@@ -2828,6 +2209,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private void SwitchMode(WindowMode mode)
     {
         _settingsOpen = false;
+        _pickerOpen = false;
         _mode = mode;
         if (mode == WindowMode.Lessons)
         {
@@ -2893,6 +2275,7 @@ internal sealed class LessonsWindow : IDisposable, ILessonsAutomationHost
     private void SelectLesson(int index)
     {
         if (index < 0 || index >= CurrentModule.Lessons.Count) return;
+        _pickerOpen = false;
         _settingsOpen = false;
         _mode = WindowMode.Lessons;
         _lessonIndex = index;

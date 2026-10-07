@@ -27,7 +27,8 @@ public partial class KeyboardContextBench
     private const string FreeTyped = "María et Niccolò arrivent à São Paulo.";
 
     private sealed record SurfaceState(string Slug, string Module, string Lesson, int Exercise, string Typed,
-        bool Focus, int FocusedAction = -1, bool Free = false);
+        bool Focus, int FocusedAction = -1, bool Free = false, bool Picker = false, bool Settings = false,
+        bool Complete = false);
 
     private static readonly SurfaceState[] SurfaceStates =
     {
@@ -41,6 +42,10 @@ public partial class KeyboardContextBench
         // Tab a quitté la surface : son cadre s'efface, le premier bouton porte le focus.
         new("focus-bouton", StrictModule, StrictLesson, StrictExercise, StrictTyped, Focus: true, FocusedAction: 0),
         new("libre", StrictModule, StrictLesson, StrictExercise, FreeTyped, Focus: true, Free: true),
+        // Refonte 1.3.0 : sélecteur de leçon déroulé, Paramètres, récapitulatif d'exercice.
+        new("selecteur", FlexibleModule, FlexibleLesson, 0, "", Focus: true, Picker: true),
+        new("parametres", StrictModule, StrictLesson, StrictExercise, "", Focus: true, Settings: true),
+        new("recap", DeadKeyModule, DeadKeyLesson, 0, "", Focus: true, Complete: true),
     };
 
     private static void AddLessonSurfaceStates(List<(string Name, Action Run)> attempts, BancCapture.Target target,
@@ -69,6 +74,22 @@ public partial class KeyboardContextBench
             }
             foreach (char c in state.Typed)
                 BancCapture.Call(window, "OnChar", c);
+            if (state.Complete)
+            {
+                // Tout l'exercice, sans faute, jusqu'au récapitulatif.
+                for (int guard = 0; guard < 5000; guard++)
+                {
+                    var session = typeof(LessonsWindow).GetField("_session", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window)!;
+                    if ((bool)session.GetType().GetProperty("IsExerciseComplete")!.GetValue(session)!)
+                        break;
+                    var next = (char?)session.GetType().GetMethod("GetNextExpectedCharacter")!.Invoke(session, null);
+                    if (next is not char ch)
+                        break;
+                    BancCapture.Call(window, "OnChar", ch);
+                }
+            }
+            if (state.Settings)
+                BancCapture.Call(window, "ToggleSettings");
             if (state.Free)
                 BancCapture.SetField(window, "_freeStartedAt", null); // statistiques sans horloge
             BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
@@ -78,6 +99,8 @@ public partial class KeyboardContextBench
             BancCapture.SetField(window, "_visible", true);
             BancCapture.SetField(window, "_hasFocus", state.Focus);
             BancCapture.SetField(window, "_focusedActionIndex", state.FocusedAction);
+            if (state.Picker)
+                BancCapture.SetField(window, "_pickerOpen", true);
             Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, slug, windowDpi);
