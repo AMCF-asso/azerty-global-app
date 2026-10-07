@@ -310,14 +310,15 @@ internal static class TablatureRenderer
                 {
                     var r = new Win32.RECT { left = x, top = midY - tagH / 2, right = x + width, bottom = midY - tagH / 2 + tagH };
                     PaperDraw.RoundBox(hdc, r, ink, ink, radius);
-                    PaperText.DrawLine(hdc, text, tagFont, r, chosen ? PaperTheme.OnAction : PaperTheme.Paper, TextAlign.Center);
-                    break;
+                    PaperText.DrawLine(hdc, text, tagFont, r, chosen ? PaperTheme.OnAction : PaperTheme.Paper, TextAlign.Center);                    break;
                 }
                 case 1:
                 {
                     var r = new Win32.RECT { left = x, top = midY - caseH / 2, right = x + width, bottom = midY - caseH / 2 + caseH };
-                    PaperDraw.RoundBox(hdc, r, chosen ? PaperTheme.Action : PaperTheme.Surface, ink, TablatureStyle.Px(3, s));
-                    PaperText.DrawLine(hdc, text, caseFont, r, chosen ? PaperTheme.OnAction : PaperTheme.Ink, TextAlign.Center);
+                    // Une case se frappe : toujours cernée, même choisie, pour ne pas se confondre
+                    // avec un modificateur tenu (revue du 07/10, P1).
+                    PaperDraw.RoundBox(hdc, r, PaperTheme.Surface, ink, TablatureStyle.Px(3, s));
+                    PaperText.DrawLine(hdc, text, caseFont, r, ink, TextAlign.Center);
                     break;
                 }
                 default:
