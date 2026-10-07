@@ -110,6 +110,9 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT CompatAddRect;
         public Win32.RECT CompatRemoveRect;
         public Win32.RECT CompatModeLabelRect;
+        public Win32.RECT CompatAutoHintRect;
+        public Win32.RECT CompatForceOnHintRect;
+        public Win32.RECT CompatForceOffHintRect;
         public Win32.RECT CompatAutoRect;
         public Win32.RECT CompatForceOnRect;
         public Win32.RECT CompatForceOffRect;
@@ -982,6 +985,17 @@ sealed partial class SettingsWindow : IDisposable
             return r;
         }
 
+        // Ce que fait un mode, sous son bouton radio, aligné sur le libellé et coupé en lignes.
+        Win32.RECT Hint(ref int y, string text)
+        {
+            int indent = S(18) + S(10);
+            int h = MessageHeight(text, inner - indent);
+            // Le bouton radio est une fenêtre fille : le texte commence sous elle.
+            var r = Rect(margin + indent, y, inner - indent, h);
+            y += h + S(6);
+            return r;
+        }
+
         int ButtonWidth(int textWidth) => Math.Min(inner, textWidth + 2 * S(14) + 2);
 
         // ── Onglet « Général » : Raccourcis puis Préférences ────────────
@@ -1039,8 +1053,11 @@ sealed partial class SettingsWindow : IDisposable
             layout.CompatModeLabelRect = Rect(margin, y, inner, m.Small);
             y += m.Small + S(2);
             layout.CompatAutoRect = Choice(ref y);
+            layout.CompatAutoHintRect = Hint(ref y, L.SettingsPaper_CompatHintAuto);
             layout.CompatForceOnRect = Choice(ref y);
+            layout.CompatForceOnHintRect = Hint(ref y, L.SettingsPaper_CompatHintForceOn);
             layout.CompatForceOffRect = Choice(ref y);
+            layout.CompatForceOffHintRect = Hint(ref y, L.SettingsPaper_CompatHintForceOff);
             if (place == MessagePlace.Compat)
             {
                 layout.ValidationRect = Rect(margin, y + S(6), inner, messageHeight);
