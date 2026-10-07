@@ -1839,7 +1839,12 @@ sealed class TrayApplication : IDisposable
             // Corps propres à ce chemin : _enabled est faux, rien ne se réactive seul en
             // quittant l'application. Le titre dit un refus d'activation, pas de
             // compatibilité forcée, que l'utilisateur n'a pas demandée ici.
-            if (reason == CompatibilitySuspendReason.RemoteAccess)
+            if (_foregroundMonitor?.IsTrackingAvailable == false)
+            {
+                // Toute fenêtre est « non reconnue » : en changer ne réactive rien.
+                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.TrayClarity_TrackingUnavailableBody);
+            }
+            else if (reason == CompatibilitySuspendReason.RemoteAccess)
             {
                 ShowSecurityBalloon(L.Tray_ToggleRefusedTitle(procDisplay), L.TrayClarity_RemoteToggleRefusedBody);
                 ConfigManager.LogCompatCriticalEvent("RemoteAccessToggleRefused",
@@ -2214,28 +2219,54 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void AnnounceSuspension(CompatibilitySuspendReason reason, string procName, string procDisplay)
     {
+        // Le journal suit chaque suspension ; la bulle seulement celles qui arrêtent quelque chose.
+        string? body = SuspensionBalloonBody(reason, _wasEnabledBeforeAutoDisable,
+            _foregroundMonitor?.IsTrackingAvailable ?? true);
         switch (reason)
         {
             case CompatibilitySuspendReason.UnknownForeground:
-                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.TrayClarity_UnknownSuspendedBody);
+                if (body != null) ShowSecurityBalloon(L.Tray_PrecautionTitle, body);
                 ConfigManager.LogCompatCriticalEvent("UnknownForegroundSuspended", "action=disable");
                 break;
             case CompatibilitySuspendReason.RemoteAccess:
-                ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), L.TrayClarity_RemoteSuspendedBody);
+                if (body != null) ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), body);
                 ConfigManager.LogCompatCriticalEvent("RemoteAccessDetected",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                 break;
             case CompatibilitySuspendReason.UserOverride:
-                ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.TrayClarity_UserOverrideSuspendedBody);
+                if (body != null) ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), body);
                 ConfigManager.LogCompatEvent("UserOverrideApplied",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                 break;
             default:
-                ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), L.TrayClarity_AntiCheatSuspendedBody);
+                if (body != null) ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), body);
                 ConfigManager.LogCompatCriticalEvent("AntiCheatDetected",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                 break;
         }
+    }
+
+    /// <summary>
+    /// Corps de la bulle de suspension, ou null s'il n'y a rien à annoncer. Fonction pure,
+    /// éprouvée par TrayClarityTests.
+    ///
+    /// Pas de bulle quand l'application était déjà désactivée ou en pause : la suspension
+    /// n'arrête rien, et « tout redevient comme avant » n'apprend rien. Le journal, lui,
+    /// garde la trace. Sans suivi des fenêtres, chaque fenêtre est « non reconnue » :
+    /// « changez de fenêtre » serait faux, seul un redémarrage réessaie.
+    /// </summary>
+    internal static string? SuspensionBalloonBody(CompatibilitySuspendReason reason, bool wasActive,
+        bool trackingAvailable)
+    {
+        if (!wasActive) return null;
+        if (!trackingAvailable) return L.TrayClarity_TrackingUnavailableBody;
+        return reason switch
+        {
+            CompatibilitySuspendReason.UnknownForeground => L.TrayClarity_UnknownSuspendedBody,
+            CompatibilitySuspendReason.RemoteAccess => L.TrayClarity_RemoteSuspendedBody,
+            CompatibilitySuspendReason.UserOverride => L.TrayClarity_UserOverrideSuspendedBody,
+            _ => L.TrayClarity_AntiCheatSuspendedBody
+        };
     }
 
     /// <summary>
@@ -2937,7 +2968,9 @@ sealed class TrayApplication : IDisposable
         if (!_activationConsent) return;
         var reason = _suspendedForCompatibility
             ? _appliedSuspendReason : CompatibilitySuspendReason.None;
-        var application = _suspendedForCompatibility
+        // Sans suivi des fenêtres, la même suspension couvre toutes les applications : une
+        // seule bulle, pas une à chaque changement de fenêtre.
+        var application = _suspendedForCompatibility && _foregroundMonitor?.IsTrackingAvailable != false
             ? (_foregroundMonitor?.LastApplicationIdentity ?? default) : default;
 
         switch (NextAnnouncement(ref _announcementState,
