@@ -964,28 +964,39 @@ sealed class VirtualKeyboard : IDisposable
             PressedScancode = _pressedScancode,
         };
         if (_gesture is { } g)
+            AddGesture(state, g.Steps, namesOnKeys: !shortcut);
+        return state;
+    }
+
+    /// <summary>Le geste de la recherche sur le clavier : touches cernées, pastilles 1 et 2, et
+    /// sur chaque touche à pastille le nom que lui donne la consigne (<see cref="Gesture.Sentence"/>
+    /// écrit le même <see cref="GestureStep.KeyLabel"/>). Ctrl ou Alt tenu efface les signes :
+    /// les noms aussi.</summary>
+    internal static void AddGesture(PaperKeyboardState state, IReadOnlyList<GestureStep> steps, bool namesOnKeys)
+    {
+        for (int i = 0; i < steps.Count; i++)
         {
-            for (int i = 0; i < g.Steps.Count; i++)
+            var step = steps[i];
+            uint sc = step.KeyCode == Gesture.CapsLockCode ? 0x3Au
+                : KeyCodeToScancode.TryGetValue(step.KeyCode, out var found) ? found : 0u;
+            if (sc != 0)
             {
-                var step = g.Steps[i];
-                uint sc = step.KeyCode == Gesture.CapsLockCode ? 0x3Au
-                    : KeyCodeToScancode.TryGetValue(step.KeyCode, out var found) ? found : 0u;
-                if (sc != 0)
+                if (steps.Count > 1)
                 {
-                    if (g.Steps.Count > 1) state.StepBadges.TryAdd(sc, i + 1);
-                    else state.TargetScancodes.Add(sc);
+                    if (state.StepBadges.TryAdd(sc, i + 1) && namesOnKeys)
+                        state.StepKeyNames[sc] = step.KeyLabel;
                 }
-                if (step.Shift) state.TargetContextLabels.Add(ContextShiftLeft);
-                if (step.AltGr) state.TargetContextLabels.Add("AltGr");
-                if (g.Steps.Count > 1)
-                {
-                    // Maj et AltGr portent aussi le numéro de leur temps.
-                    if (step.Shift) state.ContextStepBadges.TryAdd(ContextShiftLeft, i + 1);
-                    if (step.AltGr) state.ContextStepBadges.TryAdd("AltGr", i + 1);
-                }
+                else state.TargetScancodes.Add(sc);
+            }
+            if (step.Shift) state.TargetContextLabels.Add(ContextShiftLeft);
+            if (step.AltGr) state.TargetContextLabels.Add("AltGr");
+            if (steps.Count > 1)
+            {
+                // Maj et AltGr portent aussi le numéro de leur temps.
+                if (step.Shift) state.ContextStepBadges.TryAdd(ContextShiftLeft, i + 1);
+                if (step.AltGr) state.ContextStepBadges.TryAdd("AltGr", i + 1);
             }
         }
-        return state;
     }
 
     /// <summary>Le bandeau : à gauche la portée (Maj et AltGr tenus, ou le geste de la
