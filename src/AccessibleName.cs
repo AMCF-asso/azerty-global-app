@@ -67,6 +67,20 @@ static class AccessibleName
     /// Automation des deux boutons, vue brute comme vue des contrôles, rendent le nom posé.
     /// </summary>
     public static bool TrySet(IntPtr hwnd, string name, uint childId)
+        => TrySetString(hwnd, PropIdAccName, name, childId);
+
+    // oleacc.h : PROPID_ACC_DESCRIPTION.
+    private static readonly Guid PropIdAccDescription = new("4D48DFE4-BD3F-491F-A648-492D6F20C588");
+
+    /// <summary>
+    /// Pose la description accessible de <paramref name="hwnd"/> : ce qu'un lecteur d'écran lit
+    /// après le nom (UI Automation : FullDescription). Sert au texte d'aide peint sous un
+    /// contrôle, que rien ne rattache sinon à lui. Rend faux, sans lever, si COM refuse.
+    /// </summary>
+    public static bool TrySetDescription(IntPtr hwnd, string description)
+        => TrySetString(hwnd, PropIdAccDescription, description, CHILDID_SELF);
+
+    private static bool TrySetString(IntPtr hwnd, Guid propId, string name, uint childId)
     {
         if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(name)) return false;
         IntPtr services = IntPtr.Zero;
@@ -79,7 +93,7 @@ static class AccessibleName
                 return false;
             var setHwndPropStr = Marshal.GetDelegateForFunctionPointer<SetHwndPropStrDelegate>(
                 VTableSlot(services, VT_SetHwndPropStr));
-            return setHwndPropStr(services, hwnd, OBJID_CLIENT, childId, PropIdAccName, name) == 0;
+            return setHwndPropStr(services, hwnd, OBJID_CLIENT, childId, propId, name) == 0;
         }
         catch (Exception ex) when (ex is ExternalException or MarshalDirectiveException
             or EntryPointNotFoundException or DllNotFoundException)
