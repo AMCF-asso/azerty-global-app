@@ -5,33 +5,12 @@ namespace AZERTYGlobal;
 
 /// <summary>
 /// Fenêtre Win32 affichant le clavier AZERTY Global.
-/// Phase 1 : couches base et shift. Réactif aux modificateurs.
+/// Couche active : chaque touche montre ce qu'elle tape avec les modificateurs tenus.
 /// </summary>
 sealed class VirtualKeyboard : IDisposable
 {
-    // ── Window messages (spécifiques VirtualKeyboard) ─────────────
-
-    // ── Colors (COLORREF = 0x00BBGGRR) ───────────────────────────
-    private const uint CLR_BG = DarkTheme.Background;         // Fond fenêtre (gris très foncé)
-    private const uint CLR_KEY = DarkTheme.Key;
-    private const uint CLR_KEY_BORDER = DarkTheme.Border;
-    private const uint CLR_KEY_PRESSED = DarkTheme.Accent;          // Touche enfoncée : l'accent, texte OnAccent
-    private const uint CLR_KEY_CTX = DarkTheme.KeyContext;
-    private const uint CLR_LABEL = DarkTheme.TextSecondary;         // Nom de la touche sous le résultat
-    private const uint CLR_CHAR = DarkTheme.Text;
-    private const uint CLR_DK_CHAR = DarkTheme.DeadKey;
-    private const uint CLR_CAPS_BAR = DarkTheme.Warning;            // Verr. Maj. actif
-    private const uint CLR_CTX_TEXT = DarkTheme.TextSecondary;
-
-    // ── Highlight search (COLORREF = 0x00BBGGRR) ────────────────
-    private const uint CLR_HL_DIRECT = DarkTheme.HighlightDirect;      // Vert (méthode directe)
-    private const uint CLR_HL_DIRECT_BG = DarkTheme.HighlightDirectFill;   // Fond vert discret
-    private const uint CLR_HL_DK = DarkTheme.DeadKey;                  // Activation d'une touche morte
-    private const uint CLR_HL_DK_BG = DarkTheme.DeadKeyFill;
-    private const uint CLR_HL_STEP1 = DarkTheme.HighlightStep1;        // Orange (étape 1)
-    private const uint CLR_HL_STEP1_BG = DarkTheme.HighlightStep1Fill;     // Fond orange discret
-    private const uint CLR_HL_STEP2 = DarkTheme.HighlightStep2;        // Vert (étape 2)
-    private const uint CLR_HL_STEP2_BG = DarkTheme.HighlightStep2Fill;     // Fond vert discret
+    // Refonte 1.3.0 (maquette A du 07/10, « couche active ») : papier clair, un signe par
+    // touche ; les couleurs viennent de PaperTheme, le clavier de PaperKeyboard.
 
     // ── Mapping Web API key code → scancode ─────────────────────
     internal static readonly Dictionary<string, uint> KeyCodeToScancode = new()
@@ -134,12 +113,28 @@ sealed class VirtualKeyboard : IDisposable
         return dict.TryGetValue(deadKeyId, out var name) ? name.ToUpperInvariant() : deadKeyId;
     }
 
-    // Taille de la fenêtre par défaut
-    private const int DEFAULT_WIDTH = 864;
-    private const int DEFAULT_HEIGHT = 336;
+    // Taille de la fenêtre par défaut : celle de la maquette A (854 de large ; bandeau de 78,
+    // clavier de 266, marge basse de 24). Toutes les mesures du dessin s'y rapportent.
+    private const int DEFAULT_WIDTH = 854;
+    private const int DEFAULT_HEIGHT = 368;
     private const int MIN_WIDTH = 480;
-    private const int MIN_HEIGHT = 187; // MIN_WIDTH / ASPECT_RATIO
-    private const float ASPECT_RATIO = 864f / 336f; // ~2.57
+    private const int MIN_HEIGHT = 207; // MIN_WIDTH / ASPECT_RATIO
+    private const float ASPECT_RATIO = 854f / 368f; // ~2.32
+
+    // Mesures de la maquette, en px à la taille par défaut.
+    private const float MockMargin = 24f;        // marges gauche, droite et basse
+    private const float MockBannerHeight = 78f;  // bandeau d'état, portée du geste comprise
+    private const float MockStateBannerHeight = 64f; // bandeau sans geste (min-height: 64px)
+    private const float MockBannerPadTop = 4f;
+    private const float MockBannerPadBottom = 12f;
+    private const float MockBannerGap = 28f;     // entre la portée et la phrase
+    private const float MockStaffLabel = 52f;    // colonne « Maj » / « AltGr »
+    private const float MockStaffLine = 150f;
+    private const float MockStaffRow = 16f;
+    private const float MockStaffBar = 7f;       // trait épais d'un modificateur tenu
+    private const int MockTextSize = 15;         // phrase : 15 px, interligne 1,45
+    private const float MockTextLine = 21.75f;
+    private const float MockTextMaxWidth = 405f; // max-width: 54ch (chiffre de 7,5 px en AG Texte 15)
 
     private static readonly VisualKey[] _visualKeys = BuildKeyLayout();
 
@@ -249,30 +244,22 @@ sealed class VirtualKeyboard : IDisposable
     private const uint KEYPRESS_DURATION_MS = 120;
     private uint _pressedScancode; // 0 = aucune touche pressée
 
-    // Highlight de recherche (clavier virtuel)
-    private static readonly UIntPtr TIMER_HIGHLIGHT_STEP2 = (UIntPtr)2;
-    private static readonly UIntPtr TIMER_HIGHLIGHT_CLEAR = (UIntPtr)3;
-    private readonly HashSet<uint> _highlightedScancodes = new();
-    private readonly HashSet<string> _highlightedLabels = new();
-    private readonly HashSet<string> _highlightedContextIds = new();
-    private string _highlightType = ""; // "direct", "dk", "step1", "step2"
-    private MethodData? _pendingStep2; // Données pour l'étape 2 d'une séquence DK
+    /// <summary>Geste venu de la recherche : ses temps (pastilles 1 et 2 sur le clavier,
+    /// portée dans le bandeau), le caractère et son nom, le signe de la touche morte qu'il
+    /// arme (« Frappez ù (´) »). Montré jusqu'au prochain choix de la recherche.</summary>
+    private sealed record ShownGesture(IReadOnlyList<GestureStep> Steps, string? Character, string? Name,
+        int ArmStep, string? DeadKeySign);
+    private ShownGesture? _gesture;
 
-    // Polices cachées (recréées sur WM_SIZE)
-    private IntPtr _hCharFont;
-    private IntPtr _hActiveDeadKeyCharFont;
-    private IntPtr _hLabelFont;
-    private IntPtr _hCtxFont;
-    private IntPtr _hBadgeFont;
-    private int _cachedCw; // Largeur client quand les polices ont été créées
-    private int _cachedCh;
+    /// <summary>La disposition sans aucun signe : Ctrl ou Alt tenu, les touches ne tapent rien.</summary>
+    private Layout? _blankLayout;
 
     // Tooltip
     private IntPtr _hTooltip;
 
     public bool IsVisible => _visible;
 
-    // ── Géométrie du clavier (partagée entre EnsureFonts, PaintContent, OnMouseMove) ──
+    // ── Ancienne géométrie du clavier (encore utilisée par le tutoriel) ──
 
     internal const float TOTAL_KEY_W = 16.3f; // Largeur max d'une rangée en unités
     internal const int KB_MARGIN = 10;
@@ -295,35 +282,43 @@ sealed class VirtualKeyboard : IDisposable
         return new KeyboardGeometry(scale, kbWidth, kbHeight, offsetX, offsetY, bottomReserve);
     }
 
-    /// <summary>Crée ou recrée les polices selon la taille client actuelle.</summary>
-    private void EnsureFonts(int cw, int ch)
+    /// <summary>Échelle du dessin : la taille client rapportée à celle de la maquette. La
+    /// fenêtre garde le ratio de la maquette ; un écran à 150 % l'agrandit (WM_DPICHANGED), et
+    /// tout grandit avec elle.</summary>
+    private static float PaintScale(int cw, int ch) => Math.Max(0.1f, Math.Min(cw / (float)DEFAULT_WIDTH, ch / (float)DEFAULT_HEIGHT));
+
+    private static int Px(float value, float scale) => (int)Math.Round(value * scale);
+
+    /// <summary>Le cadre du clavier, sous le bandeau ; c'est aussi celui des zones de survol
+    /// (<see cref="KeyboardRenderer.BuildHitTestRects(KeyboardPlacement)"/>).</summary>
+    private static KeyboardPlacement KeyboardPlacementFor(int cw, int ch)
     {
-        if (cw == _cachedCw && ch == _cachedCh && _hCharFont != IntPtr.Zero && _hActiveDeadKeyCharFont != IntPtr.Zero)
-            return;
+        float s = PaintScale(cw, ch);
+        var bounds = new Win32.RECT
+        {
+            left = Px(MockMargin, s),
+            top = Px(MockBannerHeight, s),
+            right = cw - Px(MockMargin, s),
+            bottom = ch - Px(MockMargin, s),
+        };
+        return PaperKeyboard.Place(bounds);
+    }
 
-        // Libérer les anciennes polices
-        if (_hCharFont != IntPtr.Zero) Win32.DeleteObject(_hCharFont);
-        if (_hActiveDeadKeyCharFont != IntPtr.Zero) Win32.DeleteObject(_hActiveDeadKeyCharFont);
-        if (_hLabelFont != IntPtr.Zero) Win32.DeleteObject(_hLabelFont);
-        if (_hCtxFont != IntPtr.Zero) Win32.DeleteObject(_hCtxFont);
-        if (_hBadgeFont != IntPtr.Zero) Win32.DeleteObject(_hBadgeFont);
+    /// <summary>« AZERTY Global, Clavier virtuel », comme sur la maquette.</summary>
+    private static string WindowTitle => $"{ProductIdentity.DisplayName}, {L.VirtualKeyboardPaper_Title}";
 
-        var geo = GetKeyboardGeometry(cw, ch);
+    private const uint DWMWA_CAPTION_COLOR = 35;
+    private const uint DWMWA_TEXT_COLOR = 36;
 
-        int charFontSize = Math.Max(14, (int)(geo.Scale * 0.72f));
-        int activeDeadKeyCharFontSize = Math.Max(12, (int)(charFontSize * 0.85f));
-        int labelFontSize = Math.Max(9, (int)(geo.Scale * 0.30f));
-        int ctxFontSize = Math.Max(10, (int)(geo.Scale * 0.35f));
-        int badgeFontSize = Math.Max(11, (int)(geo.Scale * 0.30f));
-
-        _hCharFont = Win32.CreateFontW(charFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
-        _hActiveDeadKeyCharFont = Win32.CreateFontW(activeDeadKeyCharFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Consolas");
-        _hLabelFont = Win32.CreateFontW(labelFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
-        _hCtxFont = Win32.CreateFontW(ctxFontSize, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
-        _hBadgeFont = Win32.CreateFontW(-badgeFontSize, 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI");
-
-        _cachedCw = cw;
-        _cachedCh = ch;
+    /// <summary>Barre de titre claire, couleur du papier (Windows 11 ; ignoré avant).</summary>
+    private static void ApplyPaperFrame(IntPtr hWnd)
+    {
+        NativeWindow.ApplyFrame(hWnd, dark: false);
+        if (hWnd == IntPtr.Zero) return;
+        int caption = (int)PaperTheme.Paper;
+        int text = (int)PaperTheme.TextSecondary;
+        Win32.DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
+        Win32.DwmSetWindowAttribute(hWnd, DWMWA_TEXT_COLOR, ref text, sizeof(int));
     }
 
     public VirtualKeyboard(Layout layout)
@@ -352,11 +347,11 @@ sealed class VirtualKeyboard : IDisposable
         _hWnd = Win32.CreateWindowExW(
             dwExStyle,
             className,
-            ProductIdentity.DisplayName,
+            WindowTitle,
             dwStyle,
             posX, posY, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        NativeWindow.ApplyFrame(_hWnd, dark: true);
+        ApplyPaperFrame(_hWnd);
 
         CreateTooltip();
         ConfigManager.WindowBoundsCleared += OnWindowBoundsCleared;
@@ -557,6 +552,8 @@ sealed class VirtualKeyboard : IDisposable
     private void OnAppLanguageChanged(string _)
     {
         _hoveredKeyIndex = -1;
+        if (_hWnd != IntPtr.Zero)
+            Win32.SetWindowTextW(_hWnd, WindowTitle);
         if (_visible && _hWnd != IntPtr.Zero)
             Invalidate();
     }
@@ -622,143 +619,101 @@ sealed class VirtualKeyboard : IDisposable
             Invalidate();
     }
 
-    /// <summary>Met en surbrillance les touches correspondant à une méthode de saisie.</summary>
+    /// <summary>Montre le geste d'un caractère choisi dans la recherche : pastilles 1 et 2 sur
+    /// les touches à frapper, portée et phrase dans le bandeau. Il reste affiché jusqu'au choix
+    /// suivant ; <c>null</c> l'efface.</summary>
     public void HighlightMethod(MethodData? method)
     {
-        // Annuler les timers de highlight en cours
-        Win32.KillTimer(_hWnd, TIMER_HIGHLIGHT_STEP2);
-        Win32.KillTimer(_hWnd, TIMER_HIGHLIGHT_CLEAR);
-        ClearHighlight();
+        bool had = _gesture != null;
+        _gesture = null;
 
-        if (method == null || !_visible || string.IsNullOrEmpty(method.Key))
+        var steps = method == null || !_visible || string.IsNullOrEmpty(method.Key)
+            ? Array.Empty<GestureStep>()
+            : Gesture.Of(method);
+        if (method == null || steps.Count == 0)
+        {
+            if (had && _visible) Invalidate();
             return;
-
-        if (method.Type == "direct" || method.Type == "deadkey_activation")
-        {
-            // Méthode directe ou activation de touche morte
-            _highlightType = method.Type == "deadkey_activation" ? "dk" : "direct";
-            AddKeyHighlight(method.Key, method.Layer);
-            Invalidate();
         }
-        else if (method.Type == "deadkey" && !string.IsNullOrEmpty(method.DkActivationKey))
-        {
-            // Séquence touche morte en 2 étapes
-            // Étape 1 : activer la touche morte
-            _highlightType = "step1";
-            AddKeyHighlight(method.DkActivationKey, method.DkActivationLayer);
-            _pendingStep2 = method;
-            Invalidate();
 
-            // Étape 2 après 2 secondes
-            Win32.SetTimer(_hWnd, TIMER_HIGHLIGHT_STEP2, 2000, IntPtr.Zero);
+        // La touche qui arme une touche morte : « Frappez ù (´) » (décision du 07/10).
+        int armStep = -1;
+        string? deadKey = null;
+        if (method.IsDeadKey)
+        {
+            deadKey = method.DeadKey;
+            for (int i = steps.Count - 2; i >= 0 && armStep < 0; i--)
+                if (steps[i].KeyCode != Gesture.CapsLockCode) armStep = i;
         }
-    }
-
-    private void ClearHighlight()
-    {
-        bool wasHighlighted = _highlightedScancodes.Count > 0 || _highlightedLabels.Count > 0 || _highlightedContextIds.Count > 0;
-        _highlightedScancodes.Clear();
-        _highlightedLabels.Clear();
-        _highlightedContextIds.Clear();
-        _highlightType = "";
-        _pendingStep2 = null;
-        if (wasHighlighted && _visible) Invalidate();
-    }
-
-    private void AddKeyHighlight(string keyCode, string layer)
-    {
-        // Ajouter la touche principale
-        if (KeyCodeToScancode.TryGetValue(keyCode, out var scancode))
-            _highlightedScancodes.Add(scancode);
-
-        // Ajouter les modificateurs selon le layer
-        switch (layer)
+        else if (string.Equals(method.Type, "deadkey_activation", StringComparison.OrdinalIgnoreCase))
         {
-            case "Shift":
-                _highlightedContextIds.Add(ContextShiftLeft);
-                break;
-            case "Caps":
-                _highlightedLabels.Add("Verr. Maj.");
-                break;
-            case "Caps+Shift":
-                _highlightedLabels.Add("Verr. Maj.");
-                _highlightedContextIds.Add(ContextShiftLeft);
-                break;
-            case "AltGr":
-                _highlightedLabels.Add("AltGr");
-                break;
-            case "Shift+AltGr":
-            case "AltGr+Shift":
-                _highlightedLabels.Add("AltGr");
-                _highlightedContextIds.Add(ContextShiftLeft);
-                break;
-            case "Caps+AltGr":
-                _highlightedLabels.Add("Verr. Maj.");
-                _highlightedLabels.Add("AltGr");
-                break;
-            case "Caps+Shift+AltGr":
-            case "Caps+AltGr+Shift":
-                _highlightedLabels.Add("Verr. Maj.");
-                _highlightedLabels.Add("AltGr");
-                _highlightedContextIds.Add(ContextShiftLeft);
-                break;
+            armStep = steps.Count - 1;
+            deadKey = method.DeadKey;
+            if (string.IsNullOrEmpty(deadKey) && KeyCodeToScancode.TryGetValue(steps[armStep].KeyCode, out uint sc)
+                && _layout.Keys.TryGetValue(sc, out var def))
+            {
+                string? output = def.GetOutput(steps[armStep].Shift, steps[armStep].AltGr, false);
+                if (output != null && output.StartsWith("dk_", StringComparison.Ordinal)) deadKey = output;
+            }
         }
-    }
+        string? sign = string.IsNullOrEmpty(deadKey) ? null : DeadKeySign(deadKey);
+        if (armStep < 0 || sign == null || sign == steps[armStep].KeyLabel)
+            armStep = -1;
 
-    /// <summary>Vérifie si une touche doit être mise en surbrillance par la recherche.</summary>
-    private bool IsKeyHighlighted(in VisualKey vk)
-    {
-        if (_highlightedScancodes.Count == 0 && _highlightedLabels.Count == 0 && _highlightedContextIds.Count == 0)
-            return false;
-        if (vk.Scancode != 0 && _highlightedScancodes.Contains(vk.Scancode))
-            return true;
-        if (vk.IsContextual && vk.ContextId is { Length: > 0 } && _highlightedContextIds.Contains(vk.ContextId))
-            return true;
-        if (vk.IsContextual && _highlightedLabels.Contains(vk.Label))
-            return true;
-        return false;
-    }
-
-    /// <summary>Retourne les couleurs de bordure et fond pour le highlight actuel.</summary>
-    private (uint border, uint bg) GetHighlightColors()
-    {
-        return _highlightType switch
+        // Le caractère et son nom : l'entrée de l'index qui porte cette méthode ; une touche
+        // morte seule se nomme par son signe et son nom.
+        string? character = null, name = null;
+        foreach (var entry in CharacterIndex.Shared.Entries)
         {
-            "direct" => (CLR_HL_DIRECT, CLR_HL_DIRECT_BG),
-            "dk" => (CLR_HL_DK, CLR_HL_DK_BG),
-            "step1" => (CLR_HL_STEP1, CLR_HL_STEP1_BG),
-            "step2" => (CLR_HL_STEP2, CLR_HL_STEP2_BG),
-            _ => (CLR_HL_DIRECT, CLR_HL_DIRECT_BG),
-        };
-    }
-
-    private void DrawHighlightStepBadge(IntPtr hdc, int kx, int ky, int kw, int kh, string text)
-    {
-        var (border, _) = GetHighlightColors();
-        int size = Math.Clamp(Math.Min(kw, kh) / 3, 18, 28);
-        int pad = Math.Max(1, size / 12);
-        var rect = new Win32.RECT
+            if (!entry.Methods.Contains(method)) continue;
+            character = entry.Character;
+            name = L.IsEnglish
+                ? (entry.NameEn.Length > 0 ? entry.NameEn : entry.NameFr)
+                : (entry.NameFr.Length > 0 ? entry.NameFr : entry.NameEn);
+            break;
+        }
+        if (character == null && !method.IsDeadKey && !string.IsNullOrEmpty(deadKey))
         {
-            left = kx + kw - size - pad,
-            top = ky + pad,
-            right = kx + kw - pad,
-            bottom = ky + pad + size
-        };
+            character = DeadKeySign(deadKey);
+            name = DeadKeyName(deadKey);
+        }
 
-        var brush = Win32.CreateSolidBrush(border);
-        var pen = Win32.CreatePen(0, 1, border);
-        var oldBrush = Win32.SelectObject(hdc, brush);
-        var oldPen = Win32.SelectObject(hdc, pen);
-        Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, size, size);
-        Win32.SelectObject(hdc, oldPen);
-        Win32.SelectObject(hdc, oldBrush);
-        Win32.DeleteObject(pen);
-        Win32.DeleteObject(brush);
-
-        Win32.SelectObject(hdc, _hBadgeFont != IntPtr.Zero ? _hBadgeFont : _hCtxFont);
-        Win32.SetTextColor(hdc, DarkTheme.OnAccent);
-        Win32.DrawTextW(hdc, text, text.Length, ref rect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        _gesture = new ShownGesture(steps, character, name, armStep, sign);
+        Invalidate();
     }
+
+    /// <summary>Le signe d'une touche morte, tel qu'Espace l'écrit seul (´, ^, µ…).</summary>
+    private string DeadKeySign(string deadKey)
+    {
+        if (_layout.DeadKeys.TryGetValue(deadKey, out var dk) && dk.GetIsolated() is { } isolated
+            && isolated.Trim().Length > 0)
+            return DisplayGlyph.ForStandaloneMark(isolated);
+        return TrayApplication.GetDeadKeySymbol(deadKey);
+    }
+
+    /// <summary>Le nom d'une touche morte en minuscules initiales (« accent aigu »).</summary>
+    private static string DeadKeyName(string deadKey)
+    {
+        var dict = L.IsEnglish ? L.DeadKeyNamesEn : _deadKeyNamesFr;
+        return dict.TryGetValue(deadKey, out var name) ? LowerFirst(name) : deadKey;
+    }
+
+    private static string LowerFirst(string text)
+        => text.Length == 0 ? text : char.ToLowerInvariant(text[0]) + text[1..];
+
+    /// <summary>Un nom Unicode dans la phrase : « LETTRE Z MAJUSCULE AVEC ACCENT AIGU » devient
+    /// « lettre Z majuscule avec accent aigu » ; la lettre nommée seule garde sa casse.</summary>
+    internal static string InSentence(string name)
+    {
+        if (name.Any(char.IsLower)) return LowerFirst(name);
+        var words = name.Split(' ');
+        for (int i = 0; i < words.Length; i++)
+            if (words[i].Length > 1) words[i] = words[i].ToLowerInvariant();
+        return string.Join(' ', words);
+    }
+
+    /// <summary>Ctrl ou Alt tenu sans AltGr : les touches servent de raccourcis.</summary>
+    private bool ShortcutHeld => (_ctrlDown || _altDown) && !_altGrDown;
 
     /// <summary>Notifie qu'une touche a été pressée (pour animation visuelle).</summary>
     public void NotifyKeyPress(uint scancode)
@@ -808,8 +763,8 @@ sealed class VirtualKeyboard : IDisposable
                 // de DPI different. lParam pointe vers une RECT* contenant la taille suggeree
                 // pour s'adapter au nouveau DPI. Sans handler explicite, la fenetre garderait
                 // sa taille → rendu flou ou disproportionne sur l'autre moniteur jusqu'au resize
-                // manuel. La logique EnsureFonts() detectera automatiquement la nouvelle taille
-                // au prochain WM_PAINT et recreera les polices a la bonne echelle.
+                // manuel. Le dessin suit la taille client (PaintScale) : tout se remet a
+                // l'echelle au prochain WM_PAINT.
                 if (lParam != IntPtr.Zero)
                 {
                     var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
@@ -846,29 +801,6 @@ sealed class VirtualKeyboard : IDisposable
                     Win32.KillTimer(hWnd, TIMER_KEYPRESS);
                     _pressedScancode = 0;
                     Invalidate();
-                }
-                else if (timerId == TIMER_HIGHLIGHT_STEP2)
-                {
-                    Win32.KillTimer(hWnd, TIMER_HIGHLIGHT_STEP2);
-                    // Passer à l'étape 2
-                    if (_pendingStep2 != null)
-                    {
-                        var step2 = _pendingStep2;
-                        _highlightedScancodes.Clear();
-                        _highlightedLabels.Clear();
-                        _highlightedContextIds.Clear();
-                        _highlightType = "step2";
-                        AddKeyHighlight(step2.Key, step2.Layer);
-                        _pendingStep2 = null;
-                        Invalidate();
-                        // Auto-clear après 2.5 secondes
-                        Win32.SetTimer(hWnd, TIMER_HIGHLIGHT_CLEAR, 2500, IntPtr.Zero);
-                    }
-                }
-                else if (timerId == TIMER_HIGHLIGHT_CLEAR)
-                {
-                    Win32.KillTimer(hWnd, TIMER_HIGHLIGHT_CLEAR);
-                    ClearHighlight();
                 }
                 return IntPtr.Zero;
 
@@ -990,201 +922,230 @@ sealed class VirtualKeyboard : IDisposable
         Win32.EndPaint(hWnd, ref ps);
     }
 
-    /// <summary>Dessine le contenu du clavier dans le DC mémoire.</summary>
+    /// <summary>Dessine le bandeau d'état et le clavier en couche active dans le DC mémoire.</summary>
     private void PaintContent(IntPtr hdc, ref Win32.RECT clientRect, int cw, int ch)
     {
-        // Fond
-        var hBgBrush = Win32.CreateSolidBrush(CLR_BG);
-        Win32.FillRect(hdc, ref clientRect, hBgBrush);
-        Win32.DeleteObject(hBgBrush);
-
-        // Calculer les marges et l'échelle
-        var geo = GetKeyboardGeometry(cw, ch);
-        float scale = geo.Scale;
-        int offsetX = geo.OffsetX;
-        int offsetY = geo.OffsetY;
-        float kbWidth = geo.KbWidth;
-        float kbHeight = geo.KbHeight;
-
-        // Polices cachées (recréées si la taille a changé)
-        EnsureFonts(cw, ch);
-        var hCharFont = _hCharFont;
-        var hLabelFont = _hLabelFont;
-        var hCtxFont = _hCtxFont;
-        int labelFontSize = Math.Max(9, (int)(scale * 0.30f));
-
-        // Pré-créer les brushes et pen partagés (évite ~130 create/destroy par frame)
-        var hBrushKey = Win32.CreateSolidBrush(CLR_KEY);
-        var hBrushKeyCtx = Win32.CreateSolidBrush(CLR_KEY_CTX);
-        var hBrushKeyPressed = Win32.CreateSolidBrush(CLR_KEY_PRESSED);
-        var hBrushCapsBar = Win32.CreateSolidBrush(CLR_CAPS_BAR);
-        var hPenBorder = Win32.CreatePen(0, 1, CLR_KEY_BORDER); // PS_SOLID
-
-        // Highlight de recherche (créés à la demande)
-        bool hasHighlight = _highlightedScancodes.Count > 0 || _highlightedLabels.Count > 0 || _highlightedContextIds.Count > 0;
-        var (hlBorderColor, hlBgColor) = GetHighlightColors();
-        var hBrushHl = hasHighlight ? Win32.CreateSolidBrush(hlBgColor) : IntPtr.Zero;
-        var hPenHl = hasHighlight ? Win32.CreatePen(0, 2, hlBorderColor) : IntPtr.Zero;
-
+        float s = PaintScale(cw, ch);
+        PaperDraw.Fill(hdc, clientRect, PaperTheme.Paper);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
 
-        // Dessiner chaque touche
-        for (int i = 0; i < _visualKeys.Length; i++)
+        var layout = ShortcutHeld ? BlankLayout : _layout;
+        PaperKeyboard.Draw(hdc, KeyboardPlacementFor(cw, ch), layout, PaperKeyboardMode.ActiveLayer, BuildKeyboardState());
+
+        DrawBanner(hdc, cw, s);
+    }
+
+    /// <summary>La disposition sans aucun signe, pour effacer toutes les touches.</summary>
+    private Layout BlankLayout
+    {
+        get
         {
-            ref readonly var vk = ref _visualKeys[i];
+            if (_blankLayout != null) return _blankLayout;
+            var blank = new Layout();
+            foreach (var (sc, def) in _layout.Keys)
+                blank.Keys[sc] = new KeyDefinition { Position = def.Position, Scancode = def.Scancode };
+            return _blankLayout = blank;
+        }
+    }
 
-            int kx = offsetX + (int)(vk.X * scale);
-            int ky = offsetY + (int)(vk.Y * scale);
-            int kw = (int)(vk.W * scale);
-            int kh = (int)(vk.H * scale);
-
-            // Couleur de fond de la touche
-            bool isPressed = IsKeyVisuallyPressed(vk);
-            bool isHighlighted = hasHighlight && IsKeyHighlighted(vk);
-            IntPtr hKeyBrush;
-            IntPtr hKeyPen;
-            if (vk.Label == "Verr. Maj." && _capsLockActive && !isHighlighted)
-                hKeyBrush = hBrushCapsBar;
-            else if (isPressed)
-                hKeyBrush = hBrushKeyPressed;
-            else if (isHighlighted)
-                hKeyBrush = hBrushHl;
-            else
-                hKeyBrush = vk.IsContextual ? hBrushKeyCtx : hBrushKey;
-            hKeyPen = isHighlighted ? hPenHl : hPenBorder;
-
-            var hOldBrush = Win32.SelectObject(hdc, hKeyBrush);
-            var hOldPen = Win32.SelectObject(hdc, hKeyPen);
-
-            // Touche Entrée ISO : forme en L inversé (haut large, bas étroit)
-            bool isIsoEnter = vk.Scancode == 0x1C && vk.H > KEY_H;
-            if (isIsoEnter)
+    /// <summary>L'état que montre le clavier : modificateurs tenus (en bleu), touche morte en
+    /// attente, appui en cours, et le geste de la recherche (pastilles 1 et 2).</summary>
+    private PaperKeyboardState BuildKeyboardState()
+    {
+        bool shortcut = ShortcutHeld;
+        var state = new PaperKeyboardState
+        {
+            Shift = _shiftDown,
+            AltGr = _altGrDown,
+            CapsLock = _capsLockActive,
+            Ctrl = _ctrlDown && !_altGrDown, // le Ctrl fantôme d'AltGr n'est pas tenu
+            Alt = _altDown && !_altGrDown,
+            ActiveDeadKey = shortcut ? null : _activeDeadKey,
+            PressedScancode = _pressedScancode,
+        };
+        if (_gesture is { } g)
+        {
+            for (int i = 0; i < g.Steps.Count; i++)
             {
-                // Partie haute : pleine largeur (1.5u)
-                // Partie basse : réduite (1.25u), alignée à droite
-                float stepY = vk.Y + KEY_H;             // cran au bas de la rangée 2 (avant le gap)
-                float botStartY = vk.Y + KEY_H + ROW_GAP; // début rangée 3
-                float botX = vk.X + (vk.W - 1.25f);       // retrait gauche partie basse
-                int px_tl = kx;
-                int py_tl = ky;
-                int px_tr = kx + kw;
-                int py_br = offsetY + (int)((botStartY + KEY_H) * scale);
-                int px_bl = offsetX + (int)(botX * scale);
-                int py_step = offsetY + (int)(stepY * scale);
-
-                var pts = new Win32.POINT[]
+                var step = g.Steps[i];
+                uint sc = step.KeyCode == Gesture.CapsLockCode ? 0x3Au
+                    : KeyCodeToScancode.TryGetValue(step.KeyCode, out var found) ? found : 0u;
+                if (sc != 0)
                 {
-                    new() { x = px_tl,  y = py_tl },    // haut-gauche
-                    new() { x = px_tr,  y = py_tl },    // haut-droite
-                    new() { x = px_tr,  y = py_br },    // bas-droite
-                    new() { x = px_bl,  y = py_br },    // bas-gauche (partie basse)
-                    new() { x = px_bl,  y = py_step },  // coin intérieur du L (bas rangée 2)
-                    new() { x = px_tl,  y = py_step },  // retour vers la gauche
-                };
-                Win32.Polygon(hdc, pts, 6);
-            }
-            else
-            {
-                Win32.RoundRect(hdc, kx, ky, kx + kw, ky + kh, 6, 6);
-            }
-
-            Win32.SelectObject(hdc, hOldBrush);
-            Win32.SelectObject(hdc, hOldPen);
-
-            if (vk.IsContextual)
-            {
-                // Touche contextuelle : label centré
-                // Texte blanc sur fond coloré (CapsLock, pressé, ou highlight), sinon couleur normale
-                uint ctxTextColor = isPressed ? DarkTheme.OnAccent
-                    : (vk.Label == "Verr. Maj." && _capsLockActive) || isHighlighted ? CLR_CHAR : CLR_CTX_TEXT;
-                // Pour Entrée ISO, centrer le label dans la colonne droite (partie commune du L)
-                int ctxLeft = isIsoEnter ? offsetX + (int)((vk.X + (vk.W - 1.25f)) * scale) : kx;
-                var ctxRect = new Win32.RECT { left = ctxLeft, top = ky, right = kx + kw, bottom = ky + kh };
-                Win32.SelectObject(hdc, hCtxFont);
-                Win32.SetTextColor(hdc, ctxTextColor);
-                string ctxText = L.Keyboard_KeyCap(vk.Label); // libellé interne → texte affiché
-                Win32.DrawTextW(hdc, ctxText, ctxText.Length, ref ctxRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-            }
-            else
-            {
-                // Touche de caractère : caractère principal centré
-                string? displayChar = GetDisplayChar(vk.Scancode);
-                bool isDkOutput = displayChar != null && displayChar.StartsWith("dk_");
-
-                if (isDkOutput)
-                {
-                    // Utiliser le caractère isolé (espace → symbole) de la table des touches mortes
-                    // Fallback au symbole hardcodé si GetIsolated() retourne un espace ou null
-                    string? isolated = null;
-                    if (_layout.DeadKeys.TryGetValue(displayChar!, out var dkDef))
-                        isolated = dkDef.GetIsolated();
-                    displayChar = (isolated != null && isolated.Trim().Length > 0)
-                        ? isolated
-                        : TrayApplication.GetDeadKeySymbol(displayChar!);
+                    if (g.Steps.Count > 1) state.StepBadges.TryAdd(sc, i + 1);
+                    else state.TargetScancodes.Add(sc);
                 }
-
-                // Labels AZERTY affichés quand une touche morte est active
-                bool showLabel = _activeDeadKey != null;
-
-                // Espace sans dessin (insécables, espaces de la 2026.1) : son nom court, en petit,
-                // comme dans les Leçons. Sans lui, la touche paraissait vide.
-                string? invisibleName = displayChar != null && !isDkOutput
-                    ? KeyboardRenderer.DisplayInvisible(displayChar)
-                    : null;
-                if (invisibleName != null && invisibleName != displayChar)
-                {
-                    int bottomOffset = showLabel ? labelFontSize + 2 : 0;
-                    var nameRect = new Win32.RECT { left = kx + 2, top = ky, right = kx + kw - 2, bottom = ky + kh - bottomOffset };
-                    Win32.SelectObject(hdc, hLabelFont);
-                    Win32.SetTextColor(hdc, isPressed ? DarkTheme.OnAccent : CLR_CHAR);
-                    Win32.DrawTextW(hdc, invisibleName, invisibleName.Length, ref nameRect,
-                        Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
-                }
-                else if (displayChar != null && displayChar.Length > 0)
-                {
-                    int bottomOffset = showLabel ? labelFontSize + 2 : 0;
-                    var charRect = new Win32.RECT { left = kx, top = ky, right = kx + kw, bottom = ky + kh - bottomOffset };
-                    Win32.SelectObject(hdc, showLabel && _hActiveDeadKeyCharFont != IntPtr.Zero ? _hActiveDeadKeyCharFont : hCharFont);
-                    // Texte sombre sur fond clair quand la touche est pressée
-                    uint charColor = isPressed ? DarkTheme.OnAccent : (isDkOutput ? CLR_DK_CHAR : CLR_CHAR);
-                    Win32.SetTextColor(hdc, charColor);
-                    displayChar = DisplayGlyph.ForStandaloneMark(displayChar);
-                    Win32.DrawTextW(hdc, displayChar, displayChar.Length, ref charRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP);
-                }
-
-                // Label en bas : quand touche morte active (toujours, même sans correspondance)
-                if (showLabel)
-                {
-                    var labelRect = new Win32.RECT { left = kx, top = ky + kh - labelFontSize - 4, right = kx + kw, bottom = ky + kh - 1 };
-                    Win32.SelectObject(hdc, hLabelFont);
-                    Win32.SetTextColor(hdc, CLR_LABEL);
-                    string labelText = L.Keyboard_KeyCap(vk.Label);
-                    Win32.DrawTextW(hdc, labelText, labelText.Length, ref labelRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
-                }
+                if (step.Shift) state.TargetContextLabels.Add(ContextShiftLeft);
+                if (step.AltGr) state.TargetContextLabels.Add("AltGr");
             }
+        }
+        return state;
+    }
 
-            if (isHighlighted && !vk.IsContextual && (_highlightType == "step1" || _highlightType == "step2"))
-                DrawHighlightStepBadge(hdc, kx, ky, kw, kh, _highlightType == "step1" ? "1" : "2");
+    /// <summary>Le bandeau : à gauche la portée (Maj et AltGr tenus, ou le geste de la
+    /// recherche), à droite la phrase qui dit ce que montre le clavier. La maquette le fait
+    /// haut de 64 px, 78 avec la portée d'un geste ; la fenêtre garde 78 pour que le clavier ne
+    /// saute pas, et l'état seul se pose en bas, contre le clavier, comme sur la maquette.</summary>
+    private void DrawBanner(IntPtr hdc, int cw, float s)
+    {
+        int bottom = Px(MockBannerHeight - MockBannerPadBottom, s);
+        int fullTop = Px(MockBannerPadTop, s);
+        int stateTop = Px(MockBannerHeight - MockStateBannerHeight + MockBannerPadTop, s);
+        int left = Px(MockMargin, s);
+        int right = cw - Px(MockMargin, s);
+
+        int staffRight;
+        int top;
+        if (_gesture is { } g)
+        {
+            top = fullTop;
+            var style = TablatureStyle.Banner(s);
+            var columns = TabColumn.FromGesture(g.Steps);
+            var widths = TablatureRenderer.MeasureColumns(hdc, columns, style);
+            int width = TablatureRenderer.TotalWidth(widths, style);
+            int staffTop = top + (bottom - top - style.Height) / 2;
+            TablatureRenderer.Draw(hdc, columns, widths, style,
+                new Win32.RECT { left = left, top = staffTop, right = left + width, bottom = staffTop + style.Height });
+            staffRight = left + width;
+        }
+        else
+        {
+            top = stateTop;
+            staffRight = DrawHeldStaff(hdc, left, top + (bottom - top - 2 * Px(MockStaffRow, s)) / 2, s);
         }
 
-        // Indication touche morte active — afficher la description (ex: "Accent circonflexe")
+        // La phrase : 15 px sur 54ch au plus ; si elle ne tient pas, tout le bandeau, puis 13 px.
+        int x = staffRight + Px(MockBannerGap, s);
+        int maxWidth = Math.Min(Px(MockTextMaxWidth, s), right - x);
+        if (maxWidth <= 0) return;
+        var runs = BannerSentence();
+        foreach (var (size, line) in new[] { (MockTextSize, MockTextLine), (13, 19f) })
+        {
+            var regular = FontSpec.Of(AppFonts.Text, size, TypeRamp.Regular, s);
+            var strong = FontSpec.Of(AppFonts.Text, size, TypeRamp.Semibold, s);
+            var rect = new Win32.RECT { left = x, top = fullTop, right = x + maxWidth, bottom = bottom };
+            int lineHeight = Px(line, s);
+            int textHeight = PaperText.DrawParagraph(hdc, runs, regular, strong, rect, PaperTheme.TextSecondary,
+                PaperTheme.Ink, lineHeight, draw: false);
+            if (textHeight > bottom - fullTop && size != 13) continue;
+            int bandTop = textHeight <= bottom - top ? top : fullTop;
+            rect.top = bandTop + Math.Max(0, (bottom - bandTop - textHeight) / 2);
+            rect.bottom = rect.top + textHeight;
+            PaperText.DrawParagraph(hdc, runs, regular, strong, rect, PaperTheme.TextSecondary, PaperTheme.Ink, lineHeight);
+            return;
+        }
+    }
+
+    /// <summary>La portée d'état : lignes Maj et AltGr, le trait épais quand on tient. Rend
+    /// son bord droit.</summary>
+    private int DrawHeldStaff(IntPtr hdc, int left, int top, float s)
+    {
+        var labelFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s);
+        int labelWidth = Px(MockStaffLabel, s);
+        int lineLeft = left + labelWidth;
+        int lineRight = lineLeft + Px(MockStaffLine, s);
+        int row = Px(MockStaffRow, s);
+        int hair = Math.Max(1, Px(1, s));
+        int bar = Math.Max(2, Px(MockStaffBar, s));
+        (string Label, bool Held)[] rows = { (L.Gesture_LineShift, _shiftDown), (L.Gesture_LineAltGr, _altGrDown) };
+        for (int r = 0; r < rows.Length; r++)
+        {
+            int rowTop = top + r * row;
+            PaperText.DrawLine(hdc, rows[r].Label, labelFont,
+                new Win32.RECT { left = left, top = rowTop, right = lineLeft, bottom = rowTop + row }, PaperTheme.TextSecondary);
+            int middle = rowTop + row / 2;
+            PaperDraw.Fill(hdc, lineLeft, middle - hair / 2, lineRight, middle - hair / 2 + hair, PaperTheme.Border);
+            if (rows[r].Held)
+                PaperDraw.Fill(hdc, lineLeft, middle - bar / 2, lineRight, middle - bar / 2 + bar, PaperTheme.Action);
+        }
+        return lineRight;
+    }
+
+    /// <summary>Ce que dit le bandeau, du plus précis au plus général : geste de la recherche,
+    /// touche morte en attente, raccourci, modificateurs tenus, Verr. Maj., repos.</summary>
+    private List<TextRun> BannerSentence()
+    {
+        var runs = new List<TextRun>();
+        if (_gesture is { } g)
+        {
+            if (!string.IsNullOrEmpty(g.Character))
+            {
+                string shown = KeyboardRenderer.DisplayInvisible(g.Character) is { } invisible && invisible != g.Character
+                    ? invisible
+                    : DisplayGlyph.ForStandaloneMark(g.Character);
+                runs.Add(new TextRun(shown, true));
+                runs.Add(new TextRun(string.IsNullOrEmpty(g.Name) ? ". " : ", " + InSentence(g.Name) + ". "));
+            }
+            runs.AddRange(GestureSentence(g));
+            return runs;
+        }
+
+        string shiftName = L.Settings_ShortcutModifier2;
+        if (ShortcutHeld)
+        {
+            runs.Add(new TextRun(_ctrlDown ? L.Keyboard_KeyCap("Ctrl") : L.Keyboard_KeyCap("Alt"), true));
+            runs.Add(new TextRun(L.VirtualKeyboardPaper_ShortcutHeld));
+            return runs;
+        }
         if (_activeDeadKey != null)
         {
-            string dkText = GetDeadKeyDisplayName(_activeDeadKey);
-            var dkRect = new Win32.RECT { left = offsetX, top = offsetY + (int)kbHeight + 2, right = offsetX + (int)kbWidth, bottom = ch - 2 };
-            Win32.SelectObject(hdc, hCtxFont);
-            Win32.SetTextColor(hdc, CLR_DK_CHAR);
-            Win32.DrawTextW(hdc, dkText, dkText.Length, ref dkRect, Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+            runs.Add(new TextRun(L.VirtualKeyboardPaper_DeadKeyLead));
+            runs.Add(new TextRun(DeadKeySign(_activeDeadKey), true));
+            string text = L.VirtualKeyboardPaper_DeadKeyWaits(DeadKeyName(_activeDeadKey));
+            if (_layout.DeadKeys.TryGetValue(_activeDeadKey, out var dk) && dk.GetIsolated() is { } alone
+                && alone.Trim().Length > 0)
+                text += L.VirtualKeyboardPaper_DeadKeySpace(DisplayGlyph.ForStandaloneMark(alone));
+            runs.Add(new TextRun(text));
+            return runs;
         }
+        var held = new List<string>(2);
+        if (_shiftDown) held.Add(shiftName);
+        if (_altGrDown) held.Add("AltGr");
+        if (held.Count > 0)
+        {
+            for (int i = 0; i < held.Count; i++)
+            {
+                if (i > 0) runs.Add(new TextRun(L.Gesture_And));
+                runs.Add(new TextRun(held[i], true));
+            }
+            runs.Add(new TextRun((held.Count > 1 ? L.VirtualKeyboardPaper_HeldMany : L.VirtualKeyboardPaper_HeldOne)
+                + string.Join(L.Gesture_And, held) + "."));
+            return runs;
+        }
+        if (_capsLockActive)
+        {
+            runs.Add(new TextRun(L.Keyboard_KeyCap("Verr. Maj."), true));
+            runs.Add(new TextRun(L.VirtualKeyboardPaper_CapsOn));
+            return runs;
+        }
+        runs.Add(new TextRun(L.VirtualKeyboardPaper_IdleLead));
+        runs.Add(new TextRun(shiftName, true));
+        runs.Add(new TextRun(L.VirtualKeyboardPaper_Or));
+        runs.Add(new TextRun("AltGr", true));
+        runs.Add(new TextRun(L.VirtualKeyboardPaper_IdleTail));
+        return runs;
+    }
 
-        // Nettoyage des objets GDI (polices cachées → pas de delete ici)
-        Win32.DeleteObject(hBrushKey);
-        Win32.DeleteObject(hBrushKeyCtx);
-        Win32.DeleteObject(hBrushKeyPressed);
-        Win32.DeleteObject(hBrushCapsBar);
-        Win32.DeleteObject(hPenBorder);
-        if (hBrushHl != IntPtr.Zero) Win32.DeleteObject(hBrushHl);
-        if (hPenHl != IntPtr.Zero) Win32.DeleteObject(hPenHl);
+    /// <summary>La phrase du geste (socle), avec le signe de la touche morte après la touche
+    /// qui l'arme : « Frappez ù (´) ».</summary>
+    private static List<TextRun> GestureSentence(ShownGesture g)
+    {
+        var runs = Gesture.Sentence(g.Steps);
+        if (g.ArmStep < 0 || g.DeadKeySign == null) return runs;
+        // Gesture.Sentence met en gras, pour chaque temps, les modificateurs tenus puis la touche.
+        int ordinal = 0;
+        for (int i = 0; i < g.ArmStep; i++)
+            ordinal += (g.Steps[i].Shift ? 1 : 0) + (g.Steps[i].AltGr ? 1 : 0) + 1;
+        ordinal += (g.Steps[g.ArmStep].Shift ? 1 : 0) + (g.Steps[g.ArmStep].AltGr ? 1 : 0);
+        int seen = 0;
+        for (int r = 0; r < runs.Count; r++)
+        {
+            if (!runs[r].Strong) continue;
+            if (seen++ != ordinal) continue;
+            runs.Insert(r + 1, new TextRun(" (" + g.DeadKeySign + ")"));
+            break;
+        }
+        return runs;
     }
 
     /// <summary>
@@ -1234,30 +1195,6 @@ sealed class VirtualKeyboard : IDisposable
         return output;
     }
 
-    /// <summary>Vérifie si une touche doit apparaître enfoncée.</summary>
-    private bool IsKeyVisuallyPressed(in VisualKey vk)
-    {
-        // Animation d'appui (flash temporaire via RawKeyDown)
-        if (vk.Scancode != 0 && vk.Scancode == _pressedScancode)
-            return true;
-
-        // Touches contextuelles : état maintenu
-        if (vk.IsContextual)
-        {
-            return vk.Label switch
-            {
-                "Maj ⇧" => _shiftDown,
-                "AltGr" => _altGrDown,
-                "Ctrl" => _ctrlDown && !_altGrDown, // Ignorer le phantom LCtrl de AltGr
-                "Alt" => _altDown && !_altGrDown,   // Ignorer si AltGr actif
-                "Verr. Maj." => _capsLockActive,
-                _ => false
-            };
-        }
-
-        return false;
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // Hit testing + tooltip
     // ═══════════════════════════════════════════════════════════════
@@ -1283,24 +1220,17 @@ sealed class VirtualKeyboard : IDisposable
         int cw = clientRect.right;
         int ch = clientRect.bottom;
 
-        var geo = GetKeyboardGeometry(cw, ch);
-        float scale = geo.Scale;
-        int offsetX = geo.OffsetX;
-        int offsetY = geo.OffsetY;
-
-        int hitIndex = -1;
-        for (int i = 0; i < _visualKeys.Length; i++)
+        // Mêmes cadres que le dessin (PaperKeyboard suit la géométrie de KeyboardRenderer).
+        int hitIndex = -1, index = 0;
+        foreach (var hit in KeyboardRenderer.BuildHitTestRects(KeyboardPlacementFor(cw, ch)))
         {
-            ref readonly var vk = ref _visualKeys[i];
-            int kx = offsetX + (int)(vk.X * scale);
-            int ky = offsetY + (int)(vk.Y * scale);
-            int kw = (int)(vk.W * scale);
-            int kh = (int)(vk.H * scale);
-            if (mx >= kx && mx < kx + kw && my >= ky && my < ky + kh)
+            var r = hit.Rect;
+            if (mx >= r.left && mx < r.right && my >= r.top && my < r.bottom)
             {
-                hitIndex = i;
+                hitIndex = index;
                 break;
             }
+            index++;
         }
 
         if (hitIndex != _hoveredKeyIndex)
@@ -1339,12 +1269,6 @@ sealed class VirtualKeyboard : IDisposable
             Win32.DestroyWindow(_hTooltip);
             _hTooltip = IntPtr.Zero;
         }
-        // Polices cachées
-        if (_hCharFont != IntPtr.Zero) { Win32.DeleteObject(_hCharFont); _hCharFont = IntPtr.Zero; }
-        if (_hActiveDeadKeyCharFont != IntPtr.Zero) { Win32.DeleteObject(_hActiveDeadKeyCharFont); _hActiveDeadKeyCharFont = IntPtr.Zero; }
-        if (_hLabelFont != IntPtr.Zero) { Win32.DeleteObject(_hLabelFont); _hLabelFont = IntPtr.Zero; }
-        if (_hCtxFont != IntPtr.Zero) { Win32.DeleteObject(_hCtxFont); _hCtxFont = IntPtr.Zero; }
-        if (_hBadgeFont != IntPtr.Zero) { Win32.DeleteObject(_hBadgeFont); _hBadgeFont = IntPtr.Zero; }
         if (_hWnd != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hWnd);

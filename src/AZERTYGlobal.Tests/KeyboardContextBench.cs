@@ -191,6 +191,18 @@ public partial class KeyboardContextBench
             Win32.ShowWindow(hwnd, 8); // SW_SHOWNA
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             target.Shoot(hwnd, "clavier-virtuel", windowDpi);
+
+            // Les trois états de la maquette A : AltGr tenu, touche morte en attente, geste
+            // venu de la recherche (Ź : la touche morte puis Maj + Z, pastilles 1 et 2).
+            keyboard.UpdateState(false, true, false, false, false, null);
+            target.Shoot(hwnd, "clavier-virtuel-altgr", windowDpi);
+            keyboard.UpdateState(false, false, false, false, false, "dk_acute");
+            target.Shoot(hwnd, "clavier-virtuel-morte", windowDpi);
+            keyboard.UpdateState(false, false, false, false, false, null);
+            BancCapture.SetField(keyboard, "_visible", true); // HighlightMethod n'agit que fenêtre visible
+            var entry = CharacterIndex.Shared.Entries.First(e => e.Character == "Ź");
+            keyboard.HighlightMethod(entry.Preferred);
+            target.Shoot(hwnd, "clavier-virtuel-geste", windowDpi);
         }
         finally
         {
