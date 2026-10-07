@@ -102,8 +102,8 @@ internal sealed class LessonProgressStore
     {
         var snapshot = CaptureSnapshot();
         RecordGesturesNoSave(stats, isTracked);
-        // Séance de révision : contenu tiré du jour, rien à retenir par exercice (L-13).
-        if (StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.ReviewModuleId))
+        // Révision ou texte collé : contenu composé, rien à retenir par exercice (L-13).
+        if (LessonCatalogLoader.IsComposed(exercise.ModuleId))
         {
             CommitOrRollback(snapshot, "LessonProgressStore.RecordReview");
             return;

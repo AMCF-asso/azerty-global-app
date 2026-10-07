@@ -112,6 +112,14 @@ internal static class LessonCatalogLoader
     public const string InitiationLessonId = "premiers-pas";
     /// <summary>Séance de révision composée à la volée (progression par geste).</summary>
     public const string ReviewModuleId = "revision";
+    /// <summary>Leçon tirée d'un texte collé par l'utilisateur.</summary>
+    public const string CustomTextModuleId = "texte";
+
+    /// <summary>Exercice composé à la volée : sa progression ne compte que par geste,
+    /// jamais par exercice (L-13).</summary>
+    public static bool IsComposed(string moduleId) =>
+        StringComparer.Ordinal.Equals(moduleId, ReviewModuleId) ||
+        StringComparer.Ordinal.Equals(moduleId, CustomTextModuleId);
 
     public static LessonCatalog LoadFromResource(string resourceName = LessonsResourceName)
     {
