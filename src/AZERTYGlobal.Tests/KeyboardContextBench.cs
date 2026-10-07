@@ -241,8 +241,24 @@ public partial class KeyboardContextBench
             BancCapture.Call(search, "ResizeToFitResults");
             target.Shoot(hwnd, "recherche-vide", windowDpi);
 
-            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(search, "_hEdit"), L.IsEnglish ? "acute" : "aigu");
+            IntPtr edit = BancCapture.Field<IntPtr>(search, "_hEdit");
+            Win32.SetWindowTextW(edit, L.IsEnglish ? "acute" : "aigu");
             target.Shoot(hwnd, "recherche", windowDpi);
+
+            // Refonte 1.3.0 : le choix descendu aux flèches, comme la maquette (4e ligne), puis
+            // une requête aux gestes à deux modificateurs et une requête sans correspondance.
+            // Les flèches passent par le sous-classement du champ, comme au clavier.
+            for (int i = 0; i < 3; i++)
+                Win32.SendMessageW(edit, Win32.WM_KEYDOWN, (IntPtr)0x28 /* VK_DOWN */, IntPtr.Zero);
+            target.Shoot(hwnd, "recherche-choix", windowDpi);
+
+            Win32.SetWindowTextW(edit, L.IsEnglish ? "quotation" : "guillemet");
+            for (int i = 0; i < 2; i++)
+                Win32.SendMessageW(edit, Win32.WM_KEYDOWN, (IntPtr)0x28 /* VK_DOWN */, IntPtr.Zero);
+            target.Shoot(hwnd, "recherche-guillemet", windowDpi);
+
+            Win32.SetWindowTextW(edit, "zzqx");
+            target.Shoot(hwnd, "recherche-aucun", windowDpi);
         }
         finally
         {
