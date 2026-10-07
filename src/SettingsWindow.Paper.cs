@@ -282,7 +282,12 @@ sealed partial class SettingsWindow
             DrawTitle(hdc, layout.ShortcutsTitleRect, L.Settings_SectionShortcuts);
             DrawShortcutRow(hdc, layout.KeyboardRowRect, layout.KeyboardBoxRect, L.Settings_ShortcutLabelKeyboard);
             DrawShortcutRow(hdc, layout.SearchRowRect, layout.SearchBoxRect, L.Settings_ShortcutLabelSearch);
+            DrawHint(hdc, layout.KeyboardHintRect, L.SettingsClarity_HintKeyboardShortcut);
+            DrawHint(hdc, layout.SearchHintRect, L.SettingsClarity_HintSearchShortcut);
             DrawTitle(hdc, layout.PreferencesTitleRect, L.Settings_SectionPreferences);
+            DrawHint(hdc, layout.AutoStartHintRect, L.SettingsClarity_HintAutoStart);
+            DrawHint(hdc, layout.NotificationsHintRect, L.SettingsClarity_HintNotifications);
+            DrawHint(hdc, layout.OnboardingHintRect, L.SettingsClarity_HintOnboarding);
         }
         else if (_activeTab == SettingsTab.Applications)
         {
@@ -299,6 +304,8 @@ sealed partial class SettingsWindow
         {
             DrawTitle(hdc, layout.LanguageTitleRect, L.Settings_SectionLanguage);
             DrawTitle(hdc, layout.WindowsTitleRect, L.Settings_SectionWindows);
+            DrawHint(hdc, layout.ResetVirtualKeyboardHintRect, L.SettingsClarity_HintResetWindow);
+            DrawHint(hdc, layout.ResetLessonsHintRect, L.SettingsClarity_HintResetWindow);
         }
 
         Win32.SetViewportOrgEx(hdc, origin.x, origin.y, IntPtr.Zero);
