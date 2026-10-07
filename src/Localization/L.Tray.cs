@@ -42,9 +42,6 @@ internal static partial class L
     public static string Tray_ActiveBalloonBody => T(
         $"Ctrl + Maj + Verr. Maj. pour activer ou désactiver {Product}.",
         $"Ctrl + Shift + Caps Lock turns {Product} on and off.");
-    public static string Tray_PausedBalloonBody => T(
-        $"Ctrl + Maj + Verr. Maj. ou le menu de l’icône pour reprendre {Product}.",
-        $"Ctrl + Shift + Caps Lock or the icon menu resumes {Product}.");
     public static string Tray_DisabledBalloonBody => T(
         $"Ctrl + Maj + Verr. Maj. pour réactiver {Product}.",
         $"Ctrl + Shift + Caps Lock turns {Product} back on.");
@@ -52,17 +49,10 @@ internal static partial class L
         $"L’application qui suspendait {Product} n’est plus au premier plan.",
         $"The app that suspended {Product} is no longer in the foreground.");
 
-    public static string Tray_GameCompatDisabledTitle => T("Compatibilité jeu désactivée", "Game compatibility disabled");
-    public static string Tray_GameCompatDisabledBody(string list) => T(
-        $"Ces jeux sont protégés par un système anti-triche : {list}. {Product} se mettra en pause à leur ouverture.",
-        $"These games are anti-cheat protected: {list}. {Product} will pause when they open.");
 
     public static string Tray_ThisGameFallback => T("ce jeu", "this game");
     // Refus de bascule ET refus de compatibilite forcee : meme situation vue par
     // l'utilisateur, deux chemins de code. Le nom du process vit dans le titre.
-    public static string Tray_AntiCheatRefusedBody => T(
-        $"Le système anti-triche du jeu peut y voir une fraude et bannir votre compte. {Product} reste désactivé.",
-        $"The game's anti-cheat could see it as cheating and ban your account. {Product} stays off.");
 
     public static string Tray_PausedForDuration => T(
         $"{Product} reprendra tout seul, ou par le menu de l’icône.",
@@ -72,29 +62,9 @@ internal static partial class L
         $"{Product} est de nouveau actif.",
         $"{Product} is active again.");
 
-    public static string Tray_SuspendedUnknownForeground => T(
-        $"{Product} s’est suspendu : l’application au premier plan est inconnue.",
-        $"{Product} suspended itself: the foreground app is unknown.");
-    public static string Tray_DisabledForAntiCheat => T(
-        $"Le système anti-triche du jeu interdit les frappes simulées. {Product} se désactive.",
-        $"The game's anti-cheat doesn't allow simulated keystrokes. {Product} turns itself off.");
-    public static string Tray_DisabledForRemoteAccess => T(
-        $"{Product} se suspend pour ne pas s’appliquer deux fois, ici et à distance.",
-        $"{Product} suspends itself so it doesn't apply twice, here and remotely.");
-    public static string Tray_DisabledByUserOverride => T(
-        $"Votre réglage de compatibilité suspend {Product} ici.",
-        $"Your compatibility setting suspends {Product} here.");
-    public static string Tray_ForceOnRemoteRefused => T(
-        $"{Product} reste suspendu : il s’appliquerait deux fois, ici et à distance.",
-        $"{Product} stays suspended: it would apply twice, here and remotely.");
-    public static string Tray_UserOverrideToggleRefused => T(
-        $"Choisissez « Auto » dans Compatibilité des applications pour réactiver {Product} ici.",
-        $"Choose “Auto” under App compatibility to turn {Product} back on here.");
 
     // ── Tooltip ────────────────────────────────────────────────────────
     public static string Tray_TooltipSuspendedCompat => T("Suspendu pour compatibilité", "Suspended for compatibility");
-    public static string Tray_TooltipPaused(string remaining) => T($"En pause {remaining}", $"Paused {remaining}");
-    public static string Tray_TooltipDisabled => T("Désactivé", "Off");
     public static string Tray_TooltipActive => T("Actif", "Active");
     public static string Tray_TooltipCapsLock => T("Verr. Maj.", "Caps Lock");
     public static string Tray_TooltipDeadKey(string symbol) => T($"Touche morte : {symbol}", $"Dead key: {symbol}");
