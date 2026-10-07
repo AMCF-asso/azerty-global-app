@@ -269,6 +269,35 @@ public class LeconsSurfaceTests
         }
     }
 
+    [Fact]
+    public void La_touche_de_la_faute_reste_cerclee_jusqu_a_sa_correction()
+    {
+        const uint Space = 0x39;
+        var window = OpenStrictExercise();
+        try
+        {
+            BancCapture.SetField(window, "_visible", true);
+            foreach (char c in "« Un chef-d’œuvre")
+                BancCapture.Call(window, "OnChar", c);
+
+            // Espace ordinaire au lieu de l'espace fine : la frappe physique donne la touche.
+            BancCapture.Call(window, "OnRawKeyDown", Space);
+            BancCapture.Call(window, "OnChar", ' ');
+            Assert.Equal(Space, BancCapture.Field<uint>(window, "_errorScancode"));
+
+            // Le temps d'appui écoulé n'efface pas le cercle de la faute.
+            BancCapture.SetField(window, "_pressedScancode", 0u);
+            Assert.Equal(Space, BancCapture.Field<uint>(window, "_errorScancode"));
+
+            BancCapture.Call(window, "OnChar", ' ');
+            Assert.Equal(0u, BancCapture.Field<uint>(window, "_errorScancode"));
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
     private static LessonsWindow OpenStrictExercise()
     {
         var layout = LayoutLoader.LoadFromResource();
