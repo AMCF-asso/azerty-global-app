@@ -262,10 +262,9 @@ internal static class PaperKeyboard
             PaperText.DrawLine(hdc, name, font, rect, color, TextAlign.Center);
             return;
         }
+        // Centré comme sur le clavier virtuel : un seul style de touche de fonction (QCM du 07/10).
         var small = FontSpec.Of(AppFonts.Text, Scaled(11, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular, 1f);
-        var (ascent, descent) = PaperText.Metrics(hdc, small);
-        int baseline = rect.bottom - Scaled(6, k) - descent;
-        PaperText.Draw(hdc, name, small, rect.left + Scaled(6, k), baseline, color);
+        PaperText.DrawLine(hdc, name, small, rect, color, TextAlign.Center);
     }
 
     /// <summary>Nom affiché : « Maj » sans flèche ; le reste comme partout ailleurs.</summary>
@@ -405,12 +404,16 @@ internal static class PaperKeyboard
         }
         else
         {
-            Corner(hdc, def.Shift, mono(11), left, right, top, bottom, Corner_.TopLeft, secondary, IsDeadKeyRef(def.Shift));
+            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, secondary, IsDeadKeyRef(def.Shift));
             Corner(hdc, def.Base, mono(15), left, right, top, bottom, Corner_.BottomLeft, ink, IsDeadKeyRef(def.Base));
         }
-        Corner(hdc, shiftAltGr, mono(10), left, right, top, bottom, Corner_.TopRight, secondary, IsDeadKeyRef(shiftAltGr));
-        Corner(hdc, def.AltGr, mono(11), left, right, top, bottom, Corner_.BottomRight, secondary, IsDeadKeyRef(def.AltGr));
+        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, secondary, IsDeadKeyRef(shiftAltGr));
+        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, secondary, IsDeadKeyRef(def.AltGr));
     }
+
+    /// <summary>Taille commune des trois légendes secondaires (Maj, AltGr, Maj+AltGr) : 10 et
+    /// 11 px rendaient ẞ plus petit que ß et les signes fins (! ¡ #) peu lisibles (QCM du 07/10).</summary>
+    private const int SecondaryLegend = 13;
 
     private enum Corner_ { TopLeft, TopRight, BottomLeft, BottomRight }
 
