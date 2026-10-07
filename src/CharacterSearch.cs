@@ -78,6 +78,10 @@ sealed class CharacterSearch : IDisposable
         public string[] NormalizedNameFrWords { get; set; } = Array.Empty<string>();
         public string[] NormalizedNameEnWords { get; set; } = Array.Empty<string>();
         public string NormalizedChar { get; set; } = "";
+        // Recherche par langue (language-search.json) : noms de langue, puis noms de signe
+        // (tons des accents combinants), découpés en mots normalisés.
+        public string[][] NormalizedLanguageAliasWords { get; set; } = Array.Empty<string[]>();
+        public string[][] NormalizedSignAliasWords { get; set; } = Array.Empty<string[]>();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -175,6 +179,15 @@ sealed class CharacterSearch : IDisposable
             entry2.NormalizedEnglishAliasWords = item.EnglishAliases.Select(a =>
                 NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
             ).ToArray();
+            if (LanguageSearchTable.Shared.ByCharacter.TryGetValue(charStr, out var languageAliases))
+            {
+                entry2.NormalizedLanguageAliasWords = languageAliases.Languages.Select(a =>
+                    NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
+                ).ToArray();
+                entry2.NormalizedSignAliasWords = languageAliases.Signs.Select(a =>
+                    NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
+                ).ToArray();
+            }
 
             entries.Add(entry2);
         }
@@ -364,6 +377,8 @@ sealed class CharacterSearch : IDisposable
             NormalizedNameFrWords = entry.NormalizedNameFrWords,
             NormalizedNameEnWords = entry.NormalizedNameEnWords,
             NormalizedChar = entry.NormalizedChar,
+            NormalizedLanguageAliasWords = entry.NormalizedLanguageAliasWords,
+            NormalizedSignAliasWords = entry.NormalizedSignAliasWords,
         };
     }
 
@@ -401,6 +416,50 @@ sealed class CharacterSearch : IDisposable
         return true;
     }
 
+    /// <summary>Poids d'un caractère trouvé par le nom d'une langue qui l'utilise.</summary>
+    internal const int LANGUAGE_SCORE = 45;
+
+    /// <summary>
+    /// Un alias de langue ou de signe répond à la requête quand chaque mot de la requête est un
+    /// mot de l'alias, ou le début d'un mot de l'alias à partir de trois lettres : « pul » trouve
+    /// « pulaar », mais « ma » ne trouve pas toutes les langues en « ma… » pendant la frappe.
+    /// Avec <paramref name="nameFr"/> et <paramref name="nameEn"/>, un mot peut aussi venir du
+    /// nom du caractère (règle de <see cref="AllWordsMatch"/>), à condition qu'au moins un mot
+    /// vienne de l'alias : « pulaar b » trouve ɓ.
+    /// </summary>
+    private static bool AnyLanguageAliasMatches(string[][] aliases, string[] queryWords,
+        string[]? nameFr, string[]? nameEn)
+    {
+        if (aliases.Length == 0 || queryWords.Length == 0) return false;
+        foreach (var aliasWords in aliases)
+        {
+            bool all = true, fromAlias = false;
+            foreach (var qw in queryWords)
+            {
+                if (aliasWords.Any(aw => aw == qw || (qw.Length >= 3 && aw.StartsWith(qw, StringComparison.Ordinal))))
+                {
+                    fromAlias = true;
+                    continue;
+                }
+                if (NameWordMatches(qw, nameFr) || NameWordMatches(qw, nameEn))
+                    continue;
+                all = false;
+                break;
+            }
+            if (all && fromAlias) return true;
+        }
+        return false;
+    }
+
+    private static bool NameWordMatches(string queryWord, string[]? nameWords)
+    {
+        if (nameWords == null) return false;
+        foreach (var tw in nameWords)
+            if (queryWord.Length == 1 ? tw == queryWord : tw.StartsWith(queryWord, StringComparison.Ordinal))
+                return true;
+        return false;
+    }
+
     /// <summary>Score de correspondance — identique au site web (tester-modal.js searchCharacters).</summary>
     private static int MatchScore(CharEntry entry, string query, string lowerQuery,
         string normalizedQuery, string[] queryWords, string?[] querySynonyms, string[] originalQueryWords)
@@ -430,6 +489,12 @@ sealed class CharacterSearch : IDisposable
         {
             score = 80;
         }
+        // Nom de signe (language-search.json) : « ton », « tone », « ton haut », « accent
+        // grave combinant ». Même poids qu'un alias : le ton passe avant le tonos grec (70).
+        else if (AnyLanguageAliasMatches(entry.NormalizedSignAliasWords, queryWords, null, null))
+        {
+            score = 80;
+        }
         // Nom français : tous les mots matchent (pré-normalisé)
         else if (entry.NormalizedNameFrWords.Length > 0 && queryWords.Length > 0)
         {
@@ -443,6 +508,17 @@ sealed class CharacterSearch : IDisposable
             if (AllWordsMatch(queryWords, querySynonyms, entry.NormalizedNameEnWords))
                 score = 50;
         }
+
+        // Recherche par langue (language-search.json). Poids sous tous les autres : un nom de
+        // langue qui est aussi un mot (« four », « gun ») ne passe jamais devant un caractère
+        // trouvé par son nom ou ses alias, et le classement des requêtes existantes reste le même.
+        if (score == 0 && AnyLanguageAliasMatches(entry.NormalizedLanguageAliasWords, queryWords, null, null))
+            score = LANGUAGE_SCORE;
+        // Langue et lettre mêlées : « pulaar b », « wolof e ».
+        if (score == 0 && queryWords.Length > 1
+            && AnyLanguageAliasMatches(entry.NormalizedLanguageAliasWords, queryWords,
+                entry.NormalizedNameFrWords, entry.NormalizedNameEnWords))
+            score = LANGUAGE_SCORE - 5;
 
         // Code Unicode (U+xxxx)
         if (score == 0 && lowerQuery.StartsWith("u+", StringComparison.Ordinal) &&
