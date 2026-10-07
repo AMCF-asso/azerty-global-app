@@ -212,7 +212,14 @@ public class CaptureBench
         var window = new SettingsWindow();
         try
         {
+            // Liste des applications de la maquette (config isolée par le banc) : un jeu, un
+            // éditeur, et la connexion à distance choisie, dont le mode s'écrit au-dessus des
+            // boutons radio.
+            ConfigManager.SetCompatibilityOverride("eldenring.exe", "forceOn");
+            ConfigManager.SetCompatibilityOverride("Code.exe", "forceOff");
+            ConfigManager.SetCompatibilityOverride("mstsc.exe", "forceOff");
             window.Show();
+            BancCapture.Call(window, "RefreshCompatList", "mstsc.exe");
             IntPtr hwnd = BancCapture.Handle(window);
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             IntPtr tabStrip = BancCapture.Field<IntPtr>(window, "_hWndTabStrip");
@@ -225,6 +232,16 @@ public class CaptureBench
                 BancCapture.Call(window, "SetActiveTab", Enum.ToObject(tabType, tab));
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}", windowDpi);
+
+                // Capture d'un raccourci : la case Recherche attend sa touche, l'invite
+                // s'écrit sous les raccourcis.
+                if (SettingsTabs[tab] == "general")
+                {
+                    Win32.SetFocus(BancCapture.Field<IntPtr>(window, "_hWndEditSearch"));
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-general-capture", windowDpi);
+                    Win32.SetFocus(hwnd);
+                }
 
                 // Le même onglet après un geste qui laisse un message : la ligne de
                 // validation doit se voir sur l'onglet qui l'a produit.
