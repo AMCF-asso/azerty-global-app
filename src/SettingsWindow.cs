@@ -16,7 +16,8 @@ sealed partial class SettingsWindow : IDisposable
 
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
-    private static string ShortcutCaptureHint => L.Settings_ShortcutCaptureHint;
+    // Lot « clarté » (07/10) : l'invite dit quelles touches sont acceptées et qu'Échap annule.
+    private static string ShortcutCaptureHint => L.SettingsClarity_CaptureHint;
 
     private const int IDC_TAB_STRIP = 3120;
     private const int IDC_VALIDATION = 3121;
@@ -116,6 +117,14 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT CompatAutoRect;
         public Win32.RECT CompatForceOnRect;
         public Win32.RECT CompatForceOffRect;
+        // Sous-titres des onglets « Général » et « Langue » (lot « clarté », 07/10).
+        public Win32.RECT KeyboardHintRect;
+        public Win32.RECT SearchHintRect;
+        public Win32.RECT AutoStartHintRect;
+        public Win32.RECT NotificationsHintRect;
+        public Win32.RECT OnboardingHintRect;
+        public Win32.RECT ResetVirtualKeyboardHintRect;
+        public Win32.RECT ResetLessonsHintRect;
         // Hauteur totale du contenu, marge basse comprise, avant tout défilement.
         // C'est elle qui décide de la hauteur de la fenêtre : le modèle v2.0.0 veut
         // une fenêtre qui mesure son contenu, jamais une constante (audit du
@@ -544,6 +553,7 @@ sealed partial class SettingsWindow : IDisposable
         _controls = DescribeControls();
         PreparePaperButtons();
         SetCompatDescriptions();
+        SetSettingDescriptions();
     }
 
     /// <summary>
@@ -702,16 +712,42 @@ sealed partial class SettingsWindow : IDisposable
         int height = Layout(width, tab, MessagePlace.Footer, 0, 0).ContentHeight;
         if (tab == SettingsTab.General)
         {
-            int message = Math.Max(MessageHeight(ShortcutCaptureHint, inner),
-                MessageHeight(L.Settings_ShortcutReserved, inner));
+            int message = 0;
+            foreach (string text in ShortcutMessages())
+                message = Math.Max(message, MessageHeight(text, inner));
             height = Math.Max(height, Layout(width, tab, MessagePlace.Shortcuts, message, 0).ContentHeight);
         }
         else if (tab == SettingsTab.Applications)
         {
-            int message = MessageHeight(L.Settings_CompatForceOnRefused, inner);
+            int message = Math.Max(MessageHeight(L.SettingsClarity_CompatRefusedAntiCheat, inner),
+                MessageHeight(L.SettingsClarity_CompatRefusedRemote, inner));
             height = Math.Max(height, Layout(width, tab, MessagePlace.Compat, message, 0).ContentHeight);
         }
         return height;
+    }
+
+    /// <summary>Tous les messages que peut porter la place sous les raccourcis : l'invite et
+    /// chaque refus possible. La taille fixe (C4) se mesure sur le plus haut.</summary>
+    private static IEnumerable<string> ShortcutMessages()
+    {
+        yield return ShortcutCaptureHint;
+        yield return L.SettingsClarity_ShortcutKeypadDigit;
+        yield return L.SettingsClarity_ShortcutOtherKey;
+        yield return L.SettingsClarity_ShortcutTakenByKeyboard("F12");
+        yield return L.SettingsClarity_ShortcutTakenBySearch("F12");
+        for (char letter = 'A'; letter <= 'Z'; letter++)
+            if (!ConfigManager.IsShortcutAllowedVk(letter))
+                yield return L.SettingsClarity_ShortcutReservedLetter(letter);
+    }
+
+    /// <summary>Le refus d'une touche, avec sa raison : lettre réservée (ce qu'elle fait déjà
+    /// ailleurs), chiffre du pavé numérique, ou autre touche. Null si la touche est acceptée.</summary>
+    internal static string? ShortcutRefusal(uint vk)
+    {
+        if (ConfigManager.IsShortcutAllowedVk(vk)) return null;
+        if (vk >= 'A' && vk <= 'Z') return L.SettingsClarity_ShortcutReservedLetter((char)vk);
+        if (vk >= 0x60 && vk <= 0x69) return L.SettingsClarity_ShortcutKeypadDigit; // VK_NUMPAD0-9
+        return L.SettingsClarity_ShortcutOtherKey;
     }
 
     private void ClampScroll()
@@ -987,9 +1023,10 @@ sealed partial class SettingsWindow : IDisposable
         }
 
         // Ce que fait un mode, sous son bouton radio, aligné sur le libellé et coupé en lignes.
-        Win32.RECT Hint(ref int y, string text)
+        // Sans retrait (indented: false) sous une ligne de raccourci, dont le libellé part de la marge.
+        Win32.RECT Hint(ref int y, string text, bool indented = true)
         {
-            int indent = S(18) + S(10);
+            int indent = indented ? S(18) + S(10) : 0;
             int h = MessageHeight(text, inner - indent);
             // Le bouton radio est une fenêtre fille : le texte commence sous elle.
             var r = Rect(margin + indent, y, inner - indent, h);
@@ -1004,10 +1041,14 @@ sealed partial class SettingsWindow : IDisposable
         {
             int y = top;
             layout.ShortcutsTitleRect = Title(ref y);
+            // Chaque raccourci porte sous sa ligne ce qu'il ouvre (lot « clarté »). La ligne
+            // de 40 px centre son libellé : le sous-titre remonte de 4 px pour s'y rattacher.
             layout.KeyboardRowRect = Rect(margin, y, inner, S(40));
-            y += S(40);
+            y += S(40) - S(4);
+            layout.KeyboardHintRect = Hint(ref y, L.SettingsClarity_HintKeyboardShortcut, indented: false);
             layout.SearchRowRect = Rect(margin, y, inner, S(40));
-            y += S(40);
+            y += S(40) - S(4);
+            layout.SearchHintRect = Hint(ref y, L.SettingsClarity_HintSearchShortcut, indented: false);
             layout.KeyboardBoxRect = KeyBox(layout.KeyboardRowRect, _keyboardVk);
             layout.SearchBoxRect = KeyBox(layout.SearchRowRect, _searchVk);
             layout.KeyboardEditRect = Inflate(layout.KeyboardBoxRect, focusPad);
@@ -1028,11 +1069,14 @@ sealed partial class SettingsWindow : IDisposable
 
             layout.PreferencesTitleRect = Title(ref y);
             layout.AutoStartRect = Choice(ref y);
+            layout.AutoStartHintRect = Hint(ref y, L.SettingsClarity_HintAutoStart);
             layout.NotificationsRect = Choice(ref y);
-            // Lignes « Géré par votre organisation » : sous la case. Hauteur nulle quand rien
-            // n'est imposé.
+            layout.NotificationsHintRect = Hint(ref y, L.SettingsClarity_HintNotifications);
+            // Lignes « Géré par votre organisation » : sous le sous-titre de la case. Hauteur
+            // nulle quand rien n'est imposé.
             layout.ManagedNotificationsRect = Managed(ref y, _managedNotifications);
             layout.OnboardingRect = Choice(ref y);
+            layout.OnboardingHintRect = Hint(ref y, L.SettingsClarity_HintOnboarding);
             layout.ManagedOnboardingRect = Managed(ref y, _managedOnboarding);
             // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0).
             layout.TrainingRect = Choice(ref y, DailyChallenge.Enabled);
@@ -1077,10 +1121,16 @@ sealed partial class SettingsWindow : IDisposable
             layout.ManagedLanguageRect = Managed(ref y, _managedLanguage);
             y += sectionGap;
             layout.WindowsTitleRect = Title(ref y);
+            // Sous chaque bouton, ce que fait la réinitialisation (lot « clarté »), sans retrait :
+            // le bouton part de la marge.
             layout.ResetVirtualKeyboardWindowRect = Rect(margin, y, ButtonWidth(m.ResetKeyboardText), buttonH);
-            y += buttonH + S(8);
+            y += buttonH + S(6);
+            layout.ResetVirtualKeyboardHintRect = Hint(ref y, L.SettingsClarity_HintResetWindow, indented: false);
+            y += S(6);
             layout.ResetLessonsWindowRect = Rect(margin, y, ButtonWidth(m.ResetLessonsText), buttonH);
-            return y + buttonH;
+            y += buttonH + S(6);
+            layout.ResetLessonsHintRect = Hint(ref y, L.SettingsClarity_HintResetWindow, indented: false);
+            return y;
         }
 
         // La case à frapper d'un raccourci, au bord droit de sa ligne : 34 px au moins, plus
@@ -1637,6 +1687,19 @@ sealed partial class SettingsWindow : IDisposable
         AccessibleName.TrySetDescription(_hWndRadioCompatForceOff, L.SettingsPaper_CompatHintForceOff);
     }
 
+    /// <summary>Même motif pour les sous-titres des onglets « Général » et « Langue » (lot
+    /// « clarté ») : chaque réglage décrit est lu avec ce qu'il change.</summary>
+    private void SetSettingDescriptions()
+    {
+        AccessibleName.TrySetDescription(_hWndEditKeyboard, L.SettingsClarity_HintKeyboardShortcut);
+        AccessibleName.TrySetDescription(_hWndEditSearch, L.SettingsClarity_HintSearchShortcut);
+        AccessibleName.TrySetDescription(_hWndChkAutoStart, L.SettingsClarity_HintAutoStart);
+        AccessibleName.TrySetDescription(_hWndChkNotifications, L.SettingsClarity_HintNotifications);
+        AccessibleName.TrySetDescription(_hWndChkOnboarding, L.SettingsClarity_HintOnboarding);
+        AccessibleName.TrySetDescription(_hWndResetVirtualKeyboardWindow, L.SettingsClarity_HintResetWindow);
+        AccessibleName.TrySetDescription(_hWndResetLessonsWindow, L.SettingsClarity_HintResetWindow);
+    }
+
     /// <summary>Réapplique tous les libellés traduits de cette fenêtre (appelé après un changement de langue).</summary>
     private void RefreshLanguageTexts()
     {
@@ -1652,6 +1715,7 @@ sealed partial class SettingsWindow : IDisposable
             if (control.Text != null)
                 Win32.SetWindowTextW(control.Handle, control.Text());
         SetCompatDescriptions();
+        SetSettingDescriptions();
         RefreshCompatList(SelectedCompatProcess()); // libellés de mode traduits dans la liste
         RefreshShortcutTexts();
         SetValidationMessage(string.Empty);
@@ -1748,7 +1812,11 @@ sealed partial class SettingsWindow : IDisposable
         if (mode == "forceOn" &&
             (GameRegistry.IsAntiCheatProcess(proc, null) || GameRegistry.IsRemoteAccessProcess(proc)))
         {
-            SetRefusalMessage(L.Settings_CompatForceOnRefused);
+            // Le refus dit pourquoi et ce qui se passe à la place (lot « clarté ») : la
+            // connexion à distance est testée la première, comme dans ForegroundMonitor.
+            SetRefusalMessage(GameRegistry.IsRemoteAccessProcess(proc)
+                ? L.SettingsClarity_CompatRefusedRemote
+                : L.SettingsClarity_CompatRefusedAntiCheat);
             RefreshCompatSelectionUi(); // re-cocher le radio du mode réel
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
@@ -1843,19 +1911,28 @@ sealed partial class SettingsWindow : IDisposable
             RefreshShortcutText(hWndShortcut, _searchVk);
         }
 
-        ClearCaptureHintIfVisible();
+        // L'invite ou le refus de raccourci disparaît : la touche d'avant est rendue.
+        if (ShortcutCaptureMessageShown)
+            SetValidationMessage(string.Empty);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
+
+    /// <summary>L'invite de capture ou un refus de raccourci est affiché sous les raccourcis :
+    /// Échap annule alors la saisie au lieu de fermer la fenêtre. Avant le lot « clarté », un
+    /// refus effaçait l'invite, et Échap fermait la fenêtre au lieu d'annuler.</summary>
+    private bool ShortcutCaptureMessageShown =>
+        _showCaptureHint || (_validationRefused && CurrentMessagePlace() == MessagePlace.Shortcuts);
 
     private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk)
     {
         bool isKeyboard = hWndShortcut == _hWndEditKeyboard;
         uint otherVk = isKeyboard ? _searchVk : _keyboardVk;
 
-        if (!ConfigManager.IsShortcutAllowedVk(vk))
+        // Lot « clarté » : chaque refus dit pourquoi, à la place de l'invite.
+        if (ShortcutRefusal(vk) is string refusal)
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetRefusalMessage(L.Settings_ShortcutReserved);
+            SetRefusalMessage(refusal);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -1863,7 +1940,10 @@ sealed partial class SettingsWindow : IDisposable
         if (vk == otherVk)
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetRefusalMessage(L.Settings_ShortcutAlreadyUsed);
+            string key = ConfigManager.GetShortcutDisplayName(vk);
+            SetRefusalMessage(isKeyboard
+                ? L.SettingsClarity_ShortcutTakenBySearch(key)
+                : L.SettingsClarity_ShortcutTakenByKeyboard(key));
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -1965,7 +2045,7 @@ sealed partial class SettingsWindow : IDisposable
 
                 if (vk == VK_ESCAPE)
                 {
-                    if (_showCaptureHint)
+                    if (ShortcutCaptureMessageShown)
                         CancelShortcutCapture(hWnd);
                     else
                         Close();

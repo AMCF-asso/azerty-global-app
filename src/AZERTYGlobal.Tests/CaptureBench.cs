@@ -237,9 +237,17 @@ public class CaptureBench
                 // s'écrit sous les raccourcis.
                 if (SettingsTabs[tab] == "general")
                 {
-                    Win32.SetFocus(BancCapture.Field<IntPtr>(window, "_hWndEditSearch"));
+                    IntPtr search = BancCapture.Field<IntPtr>(window, "_hWndEditSearch");
+                    Win32.SetFocus(search);
                     BancCapture.MarkActive(hwnd);
                     target.Shoot(hwnd, "parametres-general-capture", windowDpi);
+
+                    // Une lettre réservée (T) : le refus dit ce qu'elle fait déjà, à la
+                    // place de l'invite (lot « clarté »).
+                    BancCapture.Call(window, "ApplyCapturedShortcut", search, (uint)'T');
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-general-refus", windowDpi);
+                    BancCapture.Call(window, "CancelShortcutCapture", search);
                     Win32.SetFocus(hwnd);
                 }
 
@@ -249,12 +257,22 @@ public class CaptureBench
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}-message", windowDpi);
 
-                // Un refus, « Forcer compatibilité » sur une app protégée : en rouge.
+                // Un refus, « Compatibilité jeu » sur la connexion à distance choisie (mstsc),
+                // puis sur un jeu à anti-triche : en rouge, avec la raison et ce qui se passe à
+                // la place. Le vrai chemin du bouton radio, pas un texte posé à la main.
                 if (SettingsTabs[tab] == "applications")
                 {
-                    BancCapture.Call(window, "SetRefusalMessage", L.Settings_CompatForceOnRefused);
+                    BancCapture.Call(window, "ApplyCompatModeToSelection", "forceOn");
                     BancCapture.MarkActive(hwnd);
                     target.Shoot(hwnd, "parametres-applications-refus", windowDpi);
+
+                    ConfigManager.SetCompatibilityOverride("valorant.exe", "forceOff");
+                    BancCapture.Call(window, "RefreshCompatList", "valorant.exe");
+                    BancCapture.Call(window, "ApplyCompatModeToSelection", "forceOn");
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-applications-refus-jeu", windowDpi);
+                    ConfigManager.SetCompatibilityOverride("valorant.exe", null);
+                    BancCapture.Call(window, "RefreshCompatList", "mstsc.exe");
                 }
                 BancCapture.Call(window, "SetValidationMessage", string.Empty, false);
             }
