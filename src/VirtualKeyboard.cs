@@ -977,6 +977,12 @@ sealed class VirtualKeyboard : IDisposable
                 }
                 if (step.Shift) state.TargetContextLabels.Add(ContextShiftLeft);
                 if (step.AltGr) state.TargetContextLabels.Add("AltGr");
+                if (g.Steps.Count > 1)
+                {
+                    // Maj et AltGr portent aussi le numéro de leur temps.
+                    if (step.Shift) state.ContextStepBadges.TryAdd(ContextShiftLeft, i + 1);
+                    if (step.AltGr) state.ContextStepBadges.TryAdd("AltGr", i + 1);
+                }
             }
         }
         return state;

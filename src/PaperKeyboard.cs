@@ -29,6 +29,8 @@ internal sealed class PaperKeyboardState
     public HashSet<string> TargetContextLabels { get; } = new(StringComparer.Ordinal);
     /// <summary>Ordre des gestes venus de la recherche : pastille « 1 » ou « 2 ».</summary>
     public Dictionary<uint, int> StepBadges { get; } = new();
+    /// <summary>Pastilles des touches de contexte sans scancode (Maj, AltGr), par étiquette.</summary>
+    public Dictionary<string, int> ContextStepBadges { get; } = new(StringComparer.Ordinal);
     /// <summary>Leçons : filtre des légendes (<see cref="KeyboardRenderProfile.Lesson"/>) ou
     /// carte complète (<see cref="KeyboardRenderProfile.Full"/>).</summary>
     public KeyboardRenderProfile Profile { get; init; } = KeyboardRenderProfile.Full;
@@ -102,6 +104,8 @@ internal static class PaperKeyboard
                       || (function && state.TargetContextLabels.Contains(key.ContextId ?? key.Label));
         state.StepBadges.TryGetValue(key.Scancode, out int step);
         if (key.Scancode == 0) step = 0;
+        if (function && step == 0 && state.ContextStepBadges.TryGetValue(key.ContextId ?? key.Label, out int contextStep))
+            step = contextStep;
         bool pressed = key.Scancode != 0 && key.Scancode == state.PressedScancode;
         bool error = key.Scancode != 0 && key.Scancode == state.ErrorScancode;
 
@@ -132,7 +136,14 @@ internal static class PaperKeyboard
         int penStyle = Win32.PS_SOLID;
         bool onAction = false;
         int stateWidth = Math.Max(2, (int)Math.Round(2 * k));
-        if (held || target || step > 0)
+        if (mode == PaperKeyboardMode.ActiveLayer && !held && (target || step > 0))
+        {
+            // Couche active : le plein bleu dit « tenu en ce moment » ; un geste à faire est
+            // cerné de bleu et numéroté (revue du 07/10, P1 du clavier A).
+            border = PaperTheme.Action;
+            borderWidth = stateWidth;
+        }
+        else if (held || target || step > 0)
         {
             fill = border = PaperTheme.Action;
             onAction = true;
