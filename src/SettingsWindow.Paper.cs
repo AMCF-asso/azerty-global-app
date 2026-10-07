@@ -481,7 +481,7 @@ sealed partial class SettingsWindow
         bool keyboard = hWnd == _hWndEditKeyboard;
         bool valid = keyboard ? _keyboardValid : _searchValid;
         bool capturing = _focusedShortcut == hWnd;
-        string key = ConfigManager.GetShortcutDisplayName(keyboard ? _keyboardVk : _searchVk);
+        string key = ConfigManager.GetShortcutDisplayName(ShownVk(keyboard));
         int radius = S(3);
 
         uint textColor = CLR_TEXT;

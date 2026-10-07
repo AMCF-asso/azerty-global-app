@@ -204,6 +204,10 @@ sealed partial class SettingsWindow : IDisposable
     private bool _searchValid = true;
     private uint _keyboardVk;
     private uint _searchVk;
+    // Touche montrée par chaque case : celle en place, ou celle qu'un refus vient de
+    // nommer (0 : rien de montré encore, la touche en place).
+    private uint _keyboardShownVk;
+    private uint _searchShownVk;
     private bool _showCaptureHint;
     private string _validationMessage = string.Empty;
     private bool _validationRefused;
@@ -1049,8 +1053,8 @@ sealed partial class SettingsWindow : IDisposable
             layout.SearchRowRect = Rect(margin, y, inner, S(40));
             y += S(40) - S(4);
             layout.SearchHintRect = Hint(ref y, L.SettingsClarity_HintSearchShortcut, indented: false);
-            layout.KeyboardBoxRect = KeyBox(layout.KeyboardRowRect, _keyboardVk);
-            layout.SearchBoxRect = KeyBox(layout.SearchRowRect, _searchVk);
+            layout.KeyboardBoxRect = KeyBox(layout.KeyboardRowRect, ShownVk(keyboard: true));
+            layout.SearchBoxRect = KeyBox(layout.SearchRowRect, ShownVk(keyboard: false));
             layout.KeyboardEditRect = Inflate(layout.KeyboardBoxRect, focusPad);
             layout.SearchEditRect = Inflate(layout.SearchBoxRect, focusPad);
 
@@ -1533,6 +1537,10 @@ sealed partial class SettingsWindow : IDisposable
     /// <summary>Écrit la touche dans sa case. « F12 » élargit la case : la mise en page suit.</summary>
     private void RefreshShortcutText(IntPtr hWndShortcut, uint vk)
     {
+        if (hWndShortcut == _hWndEditKeyboard)
+            _keyboardShownVk = vk;
+        else if (hWndShortcut == _hWndEditSearch)
+            _searchShownVk = vk;
         Win32.SetWindowTextW(hWndShortcut, ConfigManager.GetShortcutDisplayName(vk));
         if (_controls.Length > 0)
             RepositionControls();
@@ -1610,6 +1618,10 @@ sealed partial class SettingsWindow : IDisposable
         if (_showCaptureHint)
             SetValidationMessage(string.Empty);
     }
+
+    private uint ShownVk(bool keyboard) => keyboard
+        ? (_keyboardShownVk != 0 ? _keyboardShownVk : _keyboardVk)
+        : (_searchShownVk != 0 ? _searchShownVk : _searchVk);
 
     private void SetShortcutValidity(IntPtr hWndShortcut, bool valid)
     {
@@ -1928,10 +1940,13 @@ sealed partial class SettingsWindow : IDisposable
         bool isKeyboard = hWndShortcut == _hWndEditKeyboard;
         uint otherVk = isKeyboard ? _searchVk : _keyboardVk;
 
-        // Lot « clarté » : chaque refus dit pourquoi, à la place de l'invite.
+        // Lot « clarté » : chaque refus dit pourquoi, à la place de l'invite. La case montre
+        // la touche refusée, en rouge, celle que nomme le message (QCM du 07/10) ; la touche
+        // en place revient à Échap ou à la perte du focus.
         if (ShortcutRefusal(vk) is string refusal)
         {
             SetShortcutValidity(hWndShortcut, false);
+            RefreshShortcutText(hWndShortcut, vk);
             SetRefusalMessage(refusal);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
@@ -1940,6 +1955,7 @@ sealed partial class SettingsWindow : IDisposable
         if (vk == otherVk)
         {
             SetShortcutValidity(hWndShortcut, false);
+            RefreshShortcutText(hWndShortcut, vk);
             string key = ConfigManager.GetShortcutDisplayName(vk);
             SetRefusalMessage(isKeyboard
                 ? L.SettingsClarity_ShortcutTakenBySearch(key)
@@ -2018,6 +2034,7 @@ sealed partial class SettingsWindow : IDisposable
                 if (_focusedShortcut == hWnd)
                     _focusedShortcut = IntPtr.Zero;
                 SetShortcutValidity(hWnd, true);
+                RefreshShortcutText(hWnd, hWnd == _hWndEditKeyboard ? _keyboardVk : _searchVk);
                 ClearCaptureHintIfVisible();
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                 IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
