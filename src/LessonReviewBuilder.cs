@@ -25,7 +25,7 @@ internal static class LessonReviewBuilder
         if (characters.Count == 0) return null;
 
         var words = catalog.Exercises
-            .Where(exercise => !StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.ReviewModuleId))
+            .Where(exercise => !LessonCatalogLoader.IsComposed(exercise.ModuleId))
             .SelectMany(exercise => exercise.Content.Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries))
             .Where(word => word.Length <= TargetLineLength)
             .Distinct(StringComparer.Ordinal)
