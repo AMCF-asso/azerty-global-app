@@ -291,6 +291,9 @@ sealed partial class SettingsWindow
             string? process = SelectedCompatProcess();
             string modeLabel = process != null ? L.SettingsPaper_CompatModeFor(process) : L.SettingsPaper_CompatModeNone;
             PaperText.DrawLine(hdc, modeLabel, FontSmall, layout.CompatModeLabelRect, CLR_MUTED);
+            DrawHint(hdc, layout.CompatAutoHintRect, L.SettingsPaper_CompatHintAuto);
+            DrawHint(hdc, layout.CompatForceOnHintRect, L.SettingsPaper_CompatHintForceOn);
+            DrawHint(hdc, layout.CompatForceOffHintRect, L.SettingsPaper_CompatHintForceOff);
         }
         else
         {
@@ -300,6 +303,10 @@ sealed partial class SettingsWindow
 
         Win32.SetViewportOrgEx(hdc, origin.x, origin.y, IntPtr.Zero);
     }
+
+    private void DrawHint(IntPtr hdc, Win32.RECT rect, string text)
+        => PaperText.DrawParagraph(hdc, new[] { new TextRun(text) }, FontSmall, FontSmall, rect,
+            CLR_MUTED, CLR_MUTED, MessageLineHeight);
 
     private void DrawTitle(IntPtr hdc, Win32.RECT rect, string title)
         => PaperText.DrawLine(hdc, title, FontSectionTitle, rect, CLR_TEXT);

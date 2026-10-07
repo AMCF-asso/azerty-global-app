@@ -15,4 +15,15 @@ internal static partial class L
 
     /// <summary>Le même libellé quand aucune application n'est choisie : les boutons sont grisés.</summary>
     public static string SettingsPaper_CompatModeNone => T("Mode pour l’application choisie", "Mode for the selected app");
+
+    // Ce que fait chaque mode, sous son bouton radio, dit par ce que l'on constate (QCM du 07/10).
+    public static string SettingsPaper_CompatHintAuto => T(
+        "Recommandé : AZERTY Global s’adapte seul à chaque application.",
+        "Recommended: AZERTY Global adapts to each app on its own.");
+    public static string SettingsPaper_CompatHintForceOn => T(
+        "Si des caractères ne s’écrivent pas dans un jeu : ils sont tapés comme de vraies touches.",
+        "If some characters don’t appear in a game: they are typed as real keys.");
+    public static string SettingsPaper_CompatHintForceOff => T(
+        "AZERTY Global ne tape rien dans cette application ; le clavier Windows reprend.",
+        "AZERTY Global types nothing in this app; the Windows keyboard takes over.");
 }
