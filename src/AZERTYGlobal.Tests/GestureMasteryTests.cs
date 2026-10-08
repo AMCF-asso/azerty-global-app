@@ -172,6 +172,39 @@ public class GestureMasteryTests
         }
     }
 
+    /// <summary>Fenêtre Leçons ouverte pendant le tutoriel : son magasin relit le fichier
+    /// avant d'écrire, les gestes du tutoriel ne sont pas écrasés.</summary>
+    [Fact]
+    public void Store_OpenLessonsStore_KeepsGesturesWrittenByTutorialMeanwhile()
+    {
+        string path = TempPath();
+        try
+        {
+            var exercise = new LessonExercise("m", "l", 0, "practice", "Tape", "é", LessonTypingMode.Flexible);
+            var first = new LessonTypingSession(exercise, () => T0);
+            first.TypeChar('é');
+            var lessons = new LessonProgressStore(path, () => T0);
+            lessons.RecordSuccess(exercise, first.Stats, c => c is 'é' or 'ŋ');
+
+            var tutorial = new LessonAttemptStats(() => T0);
+            tutorial.RecordChar('ŋ', 'ŋ');
+            new LessonProgressStore(path, () => T0).RecordGestures(tutorial, c => c is 'é' or 'ŋ');
+
+            var again = new LessonTypingSession(exercise, () => T0);
+            again.TypeChar('é');
+            lessons.RecordSuccess(exercise, again.Stats, c => c is 'é' or 'ŋ');
+
+            var reloaded = new LessonProgressStore(path, () => T0);
+            Assert.True(reloaded.Gestures.ContainsKey("ŋ"));
+            Assert.Equal(2, reloaded.Gestures["é"].Attempts);
+            Assert.True(reloaded.IsCompleted(exercise));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
     [Fact]
     public void Store_ResetAll_ClearsGestures()
     {
