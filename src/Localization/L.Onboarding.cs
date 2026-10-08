@@ -65,4 +65,39 @@ internal static partial class L
     public static string Onboarding_Card4Suffix => T(
         " puis tapez le nom d’un caractère : Entrée l’insère dans votre texte et le clavier virtuel montre comment le taper.",
         " then type a character's name: Enter inserts it into your text and the virtual keyboard shows how to type it.");
+
+    // ── Progression (4 étapes depuis la direction C, 08/10) ──────────
+    public static string Onboarding_StepOf(int step, int count) => T($"Étape {step} sur {count}", $"Step {step} of {count}");
+
+    // ── Étape 2 — écrire le peul, le wolof, le bambara (direction C, 08/10) ──
+    public static string Onboarding_LanguagesTitle => T("Écrire le peul, le wolof, le bambara", "Write Fula, Wolof and Bambara");
+    public static string Onboarding_LanguagesSubtitle => T(
+        "Leurs lettres sont sur le clavier, en deux frappes au plus.",
+        "Their letters are on the keyboard, two keystrokes at most.");
+    public static string Onboarding_LangFula => T("Peul", "Fula");
+    public static string Onboarding_LangWolof => "Wolof";
+    public static string Onboarding_LangBambara => "Bambara";
+    /// <summary>Une langue pour le lecteur d'écran : « Peul : ɓ ɗ ƴ ñ ŋ. ɓ = Frappez ù… ».</summary>
+    public static string Onboarding_LanguageSummary(string name, string letters, string example, string gesture) => T(
+        $"{name} : {letters}. {example} = {gesture}",
+        $"{name}: {letters}. {example} = {gesture}");
+    // L'essai : « Essayez ici : frappez ù (´), puis b. » ; ù et b en gras.
+    public static string Onboarding_TrialPrefix => T("Essayez ici : frappez ", "Try it here: press ");
+    public static string Onboarding_TrialDeadKey => "ù (´)";
+    public static string Onboarding_TrialThen => T(", puis ", ", then ");
+    public static string Onboarding_TrialLetter => "b";
+    public static string Onboarding_TrialSuffix => ".";
+    /// <summary>Nom accessible du champ d'essai.</summary>
+    public static string Onboarding_TrialFieldName => T(
+        "Essayez ici : frappez ù, puis b.",
+        "Try it here: press ù, then b.");
+    public static string Onboarding_TrialMatch(string letter) => T($"C’est bien {letter}.", $"That’s {letter}.");
+    public static string Onboarding_TrialOther => T(
+        "Ce n’est pas ɓ. Réessayez : ù, puis b.",
+        "That isn’t ɓ. Try again: ù, then b.");
+    // Astuce : « Une autre lettre : Ctrl + Maj + W, puis tapez « peul » ou « bambara ». »
+    public static string Onboarding_LanguagesTipPrefix => T("Une autre lettre : ", "Another letter: ");
+    public static string Onboarding_LanguagesTipSuffix => T(
+        ", puis tapez « peul » ou « bambara ».",
+        ", then type “Fula” or “Bambara”.");
 }
