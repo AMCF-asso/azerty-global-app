@@ -3,7 +3,8 @@ namespace AZERTYGlobal;
 internal static partial class L
 {
     public static string Search_WindowTitle => T("Rechercher un caractère", "Find a character");
-    public static string Search_Placeholder => T("Rechercher un caractère…", "Find a character…");
+    // Recherche par langue (1.3.0) : le champ dit qu'un nom de langue suffit (« wolof », « pulaar »).
+    public static string Search_Placeholder => T("Caractère, nom ou langue…", "Character, name or language…");
     public static string Search_NoResults => T("Aucun résultat", "No results");
     public static string Search_Tip => T("Entrée pour insérer · Échap pour fermer", "Enter to insert · Esc to close");
     public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"\"{ch}\" copied!");

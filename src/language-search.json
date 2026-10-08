@@ -1,0 +1,4023 @@
+{
+ "meta": {
+  "role": "Recherche par langue de la recherche de caractère (CharacterSearch).",
+  "genereePar": "scripts/build-language-search.py",
+  "referentiel": "AZERTYGlobal/website, révision d65e51d, data/afrique/*.json",
+  "index": "src/character-index.json (seuls ses caractères sont retenus)",
+  "provisoire": "true quand le référentiel du site marque la langue « provisoire » (source Wikipédia ou jeu repris d'une autre variété)."
+ },
+ "groupes": [
+  {
+   "id": "aar",
+   "type": "langue",
+   "nom": "Afar",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ʕ"
+   ],
+   "alias": [
+    {
+     "alias": "afar",
+     "source": "site d65e51d : data/afrique, nom « Afar »"
+    }
+   ]
+  },
+  {
+   "id": "ach",
+   "type": "langue",
+   "nom": "Acholi",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Acholi_(langue)",
+    "citation": "Alphabet : A, B, Bw, C, D, E, G, I, J, K, L, M, N, Ny, Ŋ, O, P, Pw, R, T, U, W, Y"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ"
+   ],
+   "alias": [
+    {
+     "alias": "acholi",
+     "source": "site d65e51d : data/afrique, nom « Acholi »"
+    }
+   ]
+  },
+  {
+   "id": "ada",
+   "type": "langue",
+   "nom": "Adangme (dangme)",
+   "source": {
+    "type": "complement",
+    "ref": "https://en.wikipedia.org/wiki/Adangme_language",
+    "citation": "Dangme is written in the Latin script, with the addition of the letters ɛ, ɔ, and ŋ. Tones are not normally written."
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "adangme",
+     "source": "site d65e51d : data/afrique, nom « Adangme (dangme) »"
+    },
+    {
+     "alias": "dangme",
+     "source": "site d65e51d : data/afrique, nom « Adangme (dangme) »"
+    }
+   ]
+  },
+  {
+   "id": "af",
+   "type": "langue",
+   "nom": "Afrikaans",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/af/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á",
+    "â",
+    "Â",
+    "ê",
+    "Ê",
+    "î",
+    "Î",
+    "ô",
+    "Ô",
+    "û",
+    "Û",
+    "ë",
+    "Ë",
+    "ï",
+    "Ï",
+    "ö",
+    "Ö"
+   ],
+   "alias": [
+    {
+     "alias": "afrikaans",
+     "source": "site d65e51d : data/afrique, nom « Afrikaans »"
+    }
+   ]
+  },
+  {
+   "id": "ak",
+   "type": "langue",
+   "nom": "Akan",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/ak/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "akan",
+     "source": "site d65e51d : data/afrique, nom « Akan »"
+    }
+   ]
+  },
+  {
+   "id": "any",
+   "type": "langue",
+   "nom": "Agni (Anyin)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "agni",
+     "source": "site d65e51d : data/afrique, nom « Agni (Anyin) »"
+    },
+    {
+     "alias": "anyin",
+     "source": "site d65e51d : data/afrique, nom « Agni (Anyin) »"
+    }
+   ]
+  },
+  {
+   "id": "ati",
+   "type": "langue",
+   "nom": "Attié",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Atti%C3%A9_(langue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ",
+    "ë",
+    "Ë",
+    "ö",
+    "Ö"
+   ],
+   "alias": [
+    {
+     "alias": "attié",
+     "source": "site d65e51d : data/afrique, nom « Attié »"
+    }
+   ]
+  },
+  {
+   "id": "bam",
+   "type": "langue",
+   "nom": "Bambara",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "bambara",
+     "source": "site d65e51d : data/afrique, nom « Bambara »"
+    },
+    {
+     "alias": "bamanankan",
+     "source": "en.wikipedia.org/wiki/Bambara_language : « Bambara, also known as Bamanankan »"
+    }
+   ]
+  },
+  {
+   "id": "bas",
+   "type": "langue",
+   "nom": "Basaa",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɓ",
+    "Ɓ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á",
+    "᷆",
+    "᷇"
+   ],
+   "alias": [
+    {
+     "alias": "basaa",
+     "source": "site d65e51d : data/afrique, nom « Basaa »"
+    }
+   ]
+  },
+  {
+   "id": "bba",
+   "type": "langue",
+   "nom": "Baatonum (Bariba)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Bariba_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "baatonum",
+     "source": "site d65e51d : data/afrique, nom « Baatonum (Bariba) »"
+    },
+    {
+     "alias": "bariba",
+     "source": "site d65e51d : data/afrique, nom « Baatonum (Bariba) »"
+    }
+   ]
+  },
+  {
+   "id": "bba-2",
+   "type": "langue",
+   "nom": "Banda",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://www.sil.org/system/files/reapdata/13/64/56/136456051877939641833626257917613742313/precis_orthographe_banda_linda_liy_2020.pdf"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɔ",
+    "Ɔ",
+    "ʼ",
+    "ɨ",
+    "Ɨ",
+    "ʉ",
+    "Ʉ"
+   ],
+   "alias": [
+    {
+     "alias": "banda",
+     "source": "site d65e51d : data/afrique, nom « Banda »"
+    }
+   ]
+  },
+  {
+   "id": "bbo",
+   "type": "langue",
+   "nom": "Bobo Madaré",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Alphabets_et_r%C3%A8gles_d'orthographe_des_langues_nationales"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "š",
+    "Š",
+    "ž",
+    "Ž"
+   ],
+   "alias": [
+    {
+     "alias": "bobo madaré",
+     "source": "site d65e51d : data/afrique, nom « Bobo Madaré »"
+    }
+   ]
+  },
+  {
+   "id": "bci",
+   "type": "langue",
+   "nom": "Baoulé",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "baoulé",
+     "source": "site d65e51d : data/afrique, nom « Baoulé »"
+    },
+    {
+     "alias": "baule",
+     "source": "ISO 639-3 (SIL), nom de référence du code bci « Baoulé » (forme anglaise Baule)"
+    }
+   ]
+  },
+  {
+   "id": "bet",
+   "type": "langue",
+   "nom": "Bété",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "bété",
+     "source": "site d65e51d : data/afrique, nom « Bété »"
+    }
+   ]
+  },
+  {
+   "id": "bfd",
+   "type": "langue",
+   "nom": "Bafut",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Bafut_(langue)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʼ",
+    "ɨ",
+    "Ɨ"
+   ],
+   "alias": [
+    {
+     "alias": "bafut",
+     "source": "site d65e51d : data/afrique, nom « Bafut »"
+    }
+   ]
+  },
+  {
+   "id": "bib",
+   "type": "langue",
+   "nom": "Bissa",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Bissa_language"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʋ",
+    "Ʋ",
+    "́",
+    "̀"
+   ],
+   "alias": [
+    {
+     "alias": "bissa",
+     "source": "site d65e51d : data/afrique, nom « Bissa »"
+    }
+   ]
+  },
+  {
+   "id": "bin",
+   "type": "langue",
+   "nom": "Édo (bini)",
+   "source": {
+    "type": "complement",
+    "ref": "https://edolanguageandculture.substack.com/p/the-edo-alphabet",
+    "citation": "Let’s start with the basics, do you know the Edo alphabet? A B D E Ẹ F G GB GH H I K KH KP KHW L M MW N O Ọ P R RR RH S T U V VB W Y Z"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ẹ",
+    "Ẹ",
+    "ọ",
+    "Ọ"
+   ],
+   "alias": [
+    {
+     "alias": "édo",
+     "source": "site d65e51d : data/afrique, nom « Édo (bini) »"
+    },
+    {
+     "alias": "bini",
+     "source": "site d65e51d : data/afrique, nom « Édo (bini) »"
+    }
+   ]
+  },
+  {
+   "id": "ble",
+   "type": "langue",
+   "nom": "Balante",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Balanta_language"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ɓ",
+    "Ɓ",
+    "ŧ",
+    "Ŧ",
+    "́",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "balante",
+     "source": "site d65e51d : data/afrique, nom « Balante »"
+    }
+   ]
+  },
+  {
+   "id": "bsc-gn",
+   "type": "langue",
+   "nom": "Bassari de Guinée",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Alphabet_national_guin%C3%A9en"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʃ",
+    "Ʃ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "ɉ",
+    "Ɉ"
+   ],
+   "alias": [
+    {
+     "alias": "bassari",
+     "source": "site d65e51d : data/afrique, nom « Bassari de Guinée »"
+    }
+   ]
+  },
+  {
+   "id": "bsc-sn",
+   "type": "langue",
+   "nom": "Bassari du Sénégal",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Bassari_language"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "́",
+    "ĥ",
+    "Ĥ",
+    "ŝ",
+    "Ŝ",
+    "ŵ",
+    "Ŵ",
+    "ŷ",
+    "Ŷ",
+    "ë",
+    "Ë",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "bassari",
+     "source": "site d65e51d : data/afrique, nom « Bassari du Sénégal »"
+    }
+   ]
+  },
+  {
+   "id": "bum",
+   "type": "langue",
+   "nom": "Bulu",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "bulu",
+     "source": "site d65e51d : data/afrique, nom « Bulu »"
+    }
+   ]
+  },
+  {
+   "id": "bzx",
+   "type": "langue",
+   "nom": "Bozo",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Bozo_languages"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "bozo",
+     "source": "site d65e51d : data/afrique, nom « Bozo »"
+    }
+   ]
+  },
+  {
+   "id": "ddn",
+   "type": "langue",
+   "nom": "Dendi",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Dendi_language_(Benin)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "́",
+    "̀",
+    "̄"
+   ],
+   "alias": [
+    {
+     "alias": "dendi",
+     "source": "site d65e51d : data/afrique, nom « Dendi »"
+    }
+   ]
+  },
+  {
+   "id": "dgi",
+   "type": "langue",
+   "nom": "Dagara",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Dagaare_language"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ƴ",
+    "Ƴ",
+    "ʼ",
+    "ɓ",
+    "Ɓ",
+    "ʋ",
+    "Ʋ",
+    "́",
+    "̀",
+    "̃"
+   ],
+   "alias": [
+    {
+     "alias": "dagara",
+     "source": "site d65e51d : data/afrique, nom « Dagara »"
+    }
+   ]
+  },
+  {
+   "id": "dgo",
+   "type": "langue",
+   "nom": "Dogon (groupe)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "dogon",
+     "source": "site d65e51d : data/afrique, nom « Dogon (groupe) »"
+    }
+   ]
+  },
+  {
+   "id": "dic",
+   "type": "langue",
+   "nom": "Dida",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Dida_(langue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʋ",
+    "Ʋ",
+    "́",
+    "̀"
+   ],
+   "alias": [
+    {
+     "alias": "dida",
+     "source": "site d65e51d : data/afrique, nom « Dida »"
+    }
+   ]
+  },
+  {
+   "id": "dje",
+   "type": "langue",
+   "nom": "Zarma",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ"
+   ],
+   "alias": [
+    {
+     "alias": "zarma",
+     "source": "site d65e51d : data/afrique, nom « Zarma »"
+    },
+    {
+     "alias": "djerma",
+     "source": "fr.wikipedia.org/wiki/Zarma_(langue) : « zarma ou djerma »"
+    }
+   ]
+  },
+  {
+   "id": "dnj",
+   "type": "langue",
+   "nom": "Dan",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɓ",
+    "Ɓ"
+   ],
+   "alias": [
+    {
+     "alias": "dan",
+     "source": "site d65e51d : data/afrique, nom « Dan »"
+    }
+   ]
+  },
+  {
+   "id": "dua",
+   "type": "langue",
+   "nom": "Douala",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "é",
+    "É",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú"
+   ],
+   "alias": [
+    {
+     "alias": "douala",
+     "source": "site d65e51d : data/afrique, nom « Douala »"
+    },
+    {
+     "alias": "duala",
+     "source": "ISO 639-3 (SIL), nom de référence du code dua « Duala »"
+    }
+   ]
+  },
+  {
+   "id": "dyo",
+   "type": "langue",
+   "nom": "Diola",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "é",
+    "É",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "diola",
+     "source": "site d65e51d : data/afrique, nom « Diola »"
+    },
+    {
+     "alias": "jola",
+     "source": "ISO 639-3 (SIL), nom de référence du code dyo « Jola-Fonyi »"
+    }
+   ]
+  },
+  {
+   "id": "dyu",
+   "type": "langue",
+   "nom": "Dioula",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "dioula",
+     "source": "site d65e51d : data/afrique, nom « Dioula »"
+    },
+    {
+     "alias": "dyula",
+     "source": "ISO 639-3 (SIL), nom de référence du code dyu « Dyula »"
+    },
+    {
+     "alias": "jula",
+     "source": "en.wikipedia.org/wiki/Dyula_language : « Dyula (or Jula) »"
+    }
+   ]
+  },
+  {
+   "id": "efi",
+   "type": "langue",
+   "nom": "Éfik",
+   "source": {
+    "type": "complement",
+    "ref": "https://efikeburutu.org/efik%20language.html",
+    "citation": "In order to satisfy the needs of written Efik, the letters in use have been sorted out and arranged as follows; Small Letters a b d e f g h gh i k kp kw m n ny ñ ñw o ọ p r s t u w y […] In the revised modern orthography therefore, a total of 26 letters are needed to write the Efik language."
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ọ",
+    "Ọ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "éfik",
+     "source": "site d65e51d : data/afrique, nom « Éfik »"
+    }
+   ]
+  },
+  {
+   "id": "emk",
+   "type": "langue",
+   "nom": "Manding-malinké (Maninkakan)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "manding-malinké",
+     "source": "site d65e51d : data/afrique, nom « Manding-malinké (Maninkakan) »"
+    },
+    {
+     "alias": "maninkakan",
+     "source": "site d65e51d : data/afrique, nom « Manding-malinké (Maninkakan) »"
+    },
+    {
+     "alias": "maninka",
+     "source": "ISO 639-3 (SIL), nom de référence du code emk « Eastern Maninkakan » et nom du site « Maninkakan »"
+    },
+    {
+     "alias": "malinke",
+     "source": "nom du site « Manding-malinké »"
+    },
+    {
+     "alias": "mandingue",
+     "source": "nom du site « Manding-malinké » (manding, forme française)"
+    }
+   ]
+  },
+  {
+   "id": "ewe",
+   "type": "langue",
+   "nom": "Éwé",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ƒ",
+    "Ƒ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á"
+   ],
+   "alias": [
+    {
+     "alias": "éwé",
+     "source": "site d65e51d : data/afrique, nom « Éwé »"
+    }
+   ]
+  },
+  {
+   "id": "ewo",
+   "type": "langue",
+   "nom": "Ewondo",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ì",
+    "Ì"
+   ],
+   "alias": [
+    {
+     "alias": "ewondo",
+     "source": "site d65e51d : data/afrique, nom « Ewondo »"
+    }
+   ]
+  },
+  {
+   "id": "fan",
+   "type": "langue",
+   "nom": "Fang",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "fang",
+     "source": "site d65e51d : data/afrique, nom « Fang »"
+    }
+   ]
+  },
+  {
+   "id": "ffm",
+   "type": "langue",
+   "nom": "Fulfulde Maasina",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "fulfulde maasina",
+     "source": "site d65e51d : data/afrique, nom « Fulfulde Maasina »"
+    },
+    {
+     "alias": "peul",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "fula",
+     "source": "src/character-index.json : alias déjà présents (« b peul », « b fula »)"
+    },
+    {
+     "alias": "fulani",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulah",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulfulde",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pulaar",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pular",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    }
+   ]
+  },
+  {
+   "id": "fon",
+   "type": "langue",
+   "nom": "Fon",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "fon",
+     "source": "site d65e51d : data/afrique, nom « Fon »"
+    }
+   ]
+  },
+  {
+   "id": "fub",
+   "type": "langue",
+   "nom": "Fulfulde Adamaoua",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "fulfulde adamaoua",
+     "source": "site d65e51d : data/afrique, nom « Fulfulde Adamaoua »"
+    },
+    {
+     "alias": "peul",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "fula",
+     "source": "src/character-index.json : alias déjà présents (« b peul », « b fula »)"
+    },
+    {
+     "alias": "fulani",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulah",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulfulde",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pulaar",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pular",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    }
+   ]
+  },
+  {
+   "id": "fuc",
+   "type": "langue",
+   "nom": "Pulaar (peul Sénégal)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "pulaar",
+     "source": "site d65e51d : data/afrique, nom « Pulaar (peul Sénégal) »"
+    },
+    {
+     "alias": "peul",
+     "source": "site d65e51d : data/afrique, nom « Pulaar (peul Sénégal) »"
+    },
+    {
+     "alias": "fula",
+     "source": "src/character-index.json : alias déjà présents (« b peul », « b fula »)"
+    },
+    {
+     "alias": "fulani",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulah",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulfulde",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pular",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    }
+   ]
+  },
+  {
+   "id": "fuf",
+   "type": "langue",
+   "nom": "Pular (peul Guinée)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "jeu repris du pulaar du Sénégal, sans source guinéenne"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "pular",
+     "source": "site d65e51d : data/afrique, nom « Pular (peul Guinée) »"
+    },
+    {
+     "alias": "peul",
+     "source": "site d65e51d : data/afrique, nom « Pular (peul Guinée) »"
+    },
+    {
+     "alias": "fula",
+     "source": "src/character-index.json : alias déjà présents (« b peul », « b fula »)"
+    },
+    {
+     "alias": "fulani",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulah",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulfulde",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pulaar",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    }
+   ]
+  },
+  {
+   "id": "fuv",
+   "type": "langue",
+   "nom": "Peul (fulfulde)",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Peul",
+    "citation": "Table « Lettres peul » : alphabet latin complété de ɓ, ɗ, ŋ, ɲ, ƴ"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "peul",
+     "source": "site d65e51d : data/afrique, nom « Peul (fulfulde) »"
+    },
+    {
+     "alias": "fulfulde",
+     "source": "site d65e51d : data/afrique, nom « Peul (fulfulde) »"
+    },
+    {
+     "alias": "fula",
+     "source": "src/character-index.json : alias déjà présents (« b peul », « b fula »)"
+    },
+    {
+     "alias": "fulani",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "fulah",
+     "source": "en.wikipedia.org/wiki/Fula_language : « Fula, also known as Fulani or Fulah »"
+    },
+    {
+     "alias": "pulaar",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    },
+    {
+     "alias": "pular",
+     "source": "site : scripts/build-afrique-data.mjs, commentaire « Le peul porte un code de variété différent selon le pays » (fuc, fuf, fub) ; data/afrique : « Fulfulde Maasina » (ffm), « Peul (fulfulde) » (fuv)"
+    }
+   ]
+  },
+  {
+   "id": "fvr",
+   "type": "langue",
+   "nom": "Four (fur)",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Four_(langue)",
+    "citation": "Alphabet four : a, a̱, b, d, e, g, h, i, ɨ, j, k, l, m, n, ŋ, ny, o, p, r, s, t, u, ʉ, w, y, z"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ɨ",
+    "Ɨ",
+    "ʉ",
+    "Ʉ"
+   ],
+   "alias": [
+    {
+     "alias": "four",
+     "source": "site d65e51d : data/afrique, nom « Four (fur) »"
+    },
+    {
+     "alias": "fur",
+     "source": "site d65e51d : data/afrique, nom « Four (fur) »"
+    }
+   ]
+  },
+  {
+   "id": "gaa",
+   "type": "langue",
+   "nom": "Ga",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/gaa/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "ga",
+     "source": "site d65e51d : data/afrique, nom « Ga »"
+    }
+   ]
+  },
+  {
+   "id": "gen",
+   "type": "langue",
+   "nom": "Mina (Gen)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ƒ",
+    "Ƒ",
+    "ʋ",
+    "Ʋ"
+   ],
+   "alias": [
+    {
+     "alias": "mina",
+     "source": "site d65e51d : data/afrique, nom « Mina (Gen) »"
+    },
+    {
+     "alias": "gen",
+     "source": "site d65e51d : data/afrique, nom « Mina (Gen) »"
+    }
+   ]
+  },
+  {
+   "id": "grb",
+   "type": "langue",
+   "nom": "Grebo",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Grebo_(langue)",
+    "citation": "Orthographe LIBTRALO 1997 : a b ch d e ɛ f gb h i j k kp l m n ngm ny o ɔ p s t u w"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "grebo",
+     "source": "site d65e51d : data/afrique, nom « Grebo »"
+    }
+   ]
+  },
+  {
+   "id": "gur",
+   "type": "langue",
+   "nom": "Farefare (frafra)",
+   "source": {
+    "type": "complement",
+    "ref": "https://en.wikipedia.org/wiki/Farefare_language",
+    "citation": "The Frafra language uses the letters of the Latin alphabet except for c, j, q, x, and with the addition of ɛ, ɩ, ŋ, ɔ, and ʋ."
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʋ",
+    "Ʋ"
+   ],
+   "alias": [
+    {
+     "alias": "farefare",
+     "source": "site d65e51d : data/afrique, nom « Farefare (frafra) »"
+    },
+    {
+     "alias": "frafra",
+     "source": "site d65e51d : data/afrique, nom « Farefare (frafra) »"
+    }
+   ]
+  },
+  {
+   "id": "guw",
+   "type": "langue",
+   "nom": "Gun",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "gun",
+     "source": "site d65e51d : data/afrique, nom « Gun »"
+    }
+   ]
+  },
+  {
+   "id": "gux",
+   "type": "langue",
+   "nom": "Gourmantché",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "gourmantché",
+     "source": "site d65e51d : data/afrique, nom « Gourmantché »"
+    },
+    {
+     "alias": "gourmanchema",
+     "source": "ISO 639-3 (SIL), nom de référence du code gux « Gourmanchéma »"
+    }
+   ]
+  },
+  {
+   "id": "gya",
+   "type": "langue",
+   "nom": "Gbaya",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Northwest_Gbaya_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʼ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "gbaya",
+     "source": "site d65e51d : data/afrique, nom « Gbaya »"
+    }
+   ]
+  },
+  {
+   "id": "hau",
+   "type": "langue",
+   "nom": "Haoussa (latin)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ƴ",
+    "Ƴ",
+    "ʼ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "ƙ",
+    "Ƙ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ì",
+    "Ì"
+   ],
+   "alias": [
+    {
+     "alias": "haoussa",
+     "source": "site d65e51d : data/afrique, nom « Haoussa (latin) »"
+    },
+    {
+     "alias": "hausa",
+     "source": "ISO 639-3 (SIL), nom de référence du code hau « Hausa »"
+    }
+   ]
+  },
+  {
+   "id": "ibb",
+   "type": "langue",
+   "nom": "Ibibio",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Ibibio_(langue)",
+    "citation": "Alphabet ibibio latin : a b d e ǝ f gh h i ị k kp m n ñ ñw ny o ọ ʌ p s t u ụ w y"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ʌ",
+    "Ʌ",
+    "ị",
+    "Ị",
+    "ọ",
+    "Ọ",
+    "ụ",
+    "Ụ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "ibibio",
+     "source": "site d65e51d : data/afrique, nom « Ibibio »"
+    }
+   ]
+  },
+  {
+   "id": "ig",
+   "type": "langue",
+   "nom": "Igbo",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/ig/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ị",
+    "Ị",
+    "ọ",
+    "Ọ",
+    "ụ",
+    "Ụ",
+    "ṅ",
+    "Ṅ"
+   ],
+   "alias": [
+    {
+     "alias": "igbo",
+     "source": "site d65e51d : data/afrique, nom « Igbo »"
+    }
+   ]
+  },
+  {
+   "id": "kab",
+   "type": "langue",
+   "nom": "Kabyle",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ḍ",
+    "Ḍ",
+    "ḥ",
+    "Ḥ",
+    "ṛ",
+    "Ṛ",
+    "ṣ",
+    "Ṣ",
+    "ṭ",
+    "Ṭ",
+    "ẓ",
+    "Ẓ",
+    "č",
+    "Č",
+    "ǧ",
+    "Ǧ"
+   ],
+   "alias": [
+    {
+     "alias": "kabyle",
+     "source": "site d65e51d : data/afrique, nom « Kabyle »"
+    }
+   ]
+  },
+  {
+   "id": "kam",
+   "type": "langue",
+   "nom": "Kamba",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/kam/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ĩ",
+    "Ĩ",
+    "ũ",
+    "Ũ"
+   ],
+   "alias": [
+    {
+     "alias": "kamba",
+     "source": "site d65e51d : data/afrique, nom « Kamba »"
+    }
+   ]
+  },
+  {
+   "id": "kau",
+   "type": "langue",
+   "nom": "Kanuri",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "kanuri",
+     "source": "site d65e51d : data/afrique, nom « Kanuri »"
+    }
+   ]
+  },
+  {
+   "id": "kbl",
+   "type": "langue",
+   "nom": "Kanembou",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Kanembou_(langue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "̂"
+   ],
+   "alias": [
+    {
+     "alias": "kanembou",
+     "source": "site d65e51d : data/afrique, nom « Kanembou »"
+    }
+   ]
+  },
+  {
+   "id": "kbp",
+   "type": "langue",
+   "nom": "Kabiyé",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʋ",
+    "Ʋ"
+   ],
+   "alias": [
+    {
+     "alias": "kabiyé",
+     "source": "site d65e51d : data/afrique, nom « Kabiyé »"
+    }
+   ]
+  },
+  {
+   "id": "kdh",
+   "type": "langue",
+   "nom": "Tem",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Tem_language"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɖ",
+    "Ɖ",
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʊ",
+    "Ʊ",
+    "́"
+   ],
+   "alias": [
+    {
+     "alias": "tem",
+     "source": "site d65e51d : data/afrique, nom « Tem »"
+    }
+   ]
+  },
+  {
+   "id": "kea",
+   "type": "langue",
+   "nom": "Capverdien",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/kea/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "capverdien",
+     "source": "site d65e51d : data/afrique, nom « Capverdien »"
+    }
+   ]
+  },
+  {
+   "id": "ki",
+   "type": "langue",
+   "nom": "Kikuyu",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/ki/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ĩ",
+    "Ĩ",
+    "ũ",
+    "Ũ"
+   ],
+   "alias": [
+    {
+     "alias": "kikuyu",
+     "source": "site d65e51d : data/afrique, nom « Kikuyu »"
+    }
+   ]
+  },
+  {
+   "id": "kon",
+   "type": "langue",
+   "nom": "Kikongo",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "kikongo",
+     "source": "site d65e51d : data/afrique, nom « Kikongo »"
+    },
+    {
+     "alias": "kongo",
+     "source": "ISO 639-3 (SIL), nom de référence du code kon « Kongo »"
+    }
+   ]
+  },
+  {
+   "id": "kpe",
+   "type": "langue",
+   "nom": "Kpellé (Guerzé)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɓ",
+    "Ɓ",
+    "ĝ",
+    "Ĝ"
+   ],
+   "alias": [
+    {
+     "alias": "kpellé",
+     "source": "site d65e51d : data/afrique, nom « Kpellé (Guerzé) »"
+    },
+    {
+     "alias": "guerzé",
+     "source": "site d65e51d : data/afrique, nom « Kpellé (Guerzé) »"
+    }
+   ]
+  },
+  {
+   "id": "kpo",
+   "type": "langue",
+   "nom": "Akposso",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Ikposso"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ɩ",
+    "Ɩ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʋ",
+    "Ʋ"
+   ],
+   "alias": [
+    {
+     "alias": "akposso",
+     "source": "site d65e51d : data/afrique, nom « Akposso »"
+    }
+   ]
+  },
+  {
+   "id": "kqs",
+   "type": "langue",
+   "nom": "Kissi",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Kissi_(langue)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "kissi",
+     "source": "site d65e51d : data/afrique, nom « Kissi »"
+    }
+   ]
+  },
+  {
+   "id": "kri",
+   "type": "langue",
+   "nom": "Krio",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Krio_(langue)",
+    "citation": "Alphabet krio (Fyle 1980) : a b c d e ɛ f g h i j k l m n o ɔ p r s t u v w y z"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "krio",
+     "source": "site d65e51d : data/afrique, nom « Krio »"
+    }
+   ]
+  },
+  {
+   "id": "kro",
+   "type": "langue",
+   "nom": "Klao",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Klao",
+    "citation": "Une traduction de la Bible en 2010 utilisant notamment les lettres ɛ, ɔ et l'accent grave, l'accent circonflexe et la ligne verticale suscrite."
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "klao",
+     "source": "site d65e51d : data/afrique, nom « Klao »"
+    }
+   ]
+  },
+  {
+   "id": "laj",
+   "type": "langue",
+   "nom": "Lango",
+   "source": {
+    "type": "complement",
+    "ref": "https://en.wikipedia.org/wiki/Lango_language_(Uganda)",
+    "citation": "Lango alphabet : a b c d e ë g i ï j k l m n ŋ ny o ö p r t u ü w y"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ë",
+    "Ë",
+    "ï",
+    "Ï",
+    "ö",
+    "Ö",
+    "ü",
+    "Ü"
+   ],
+   "alias": [
+    {
+     "alias": "lango",
+     "source": "site d65e51d : data/afrique, nom « Lango »"
+    }
+   ]
+  },
+  {
+   "id": "lee",
+   "type": "langue",
+   "nom": "Lyélé",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Ly%C3%A9l%C3%A9_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "́",
+    "̀",
+    "̂",
+    "̃",
+    "̌"
+   ],
+   "alias": [
+    {
+     "alias": "lyélé",
+     "source": "site d65e51d : data/afrique, nom « Lyélé »"
+    }
+   ]
+  },
+  {
+   "id": "lg",
+   "type": "langue",
+   "nom": "Ganda",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/lg/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ"
+   ],
+   "alias": [
+    {
+     "alias": "ganda",
+     "source": "site d65e51d : data/afrique, nom « Ganda »"
+    }
+   ]
+  },
+  {
+   "id": "lin",
+   "type": "langue",
+   "nom": "Lingala",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ",
+    "é",
+    "É",
+    "́",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú",
+    "̂",
+    "̌"
+   ],
+   "alias": [
+    {
+     "alias": "lingala",
+     "source": "site d65e51d : data/afrique, nom « Lingala »"
+    }
+   ]
+  },
+  {
+   "id": "lob",
+   "type": "langue",
+   "nom": "Lobi",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Lobiri"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ɔ",
+    "Ɔ",
+    "ƴ",
+    "Ƴ",
+    "ɓ",
+    "Ɓ",
+    "ʋ",
+    "Ʋ",
+    "̃"
+   ],
+   "alias": [
+    {
+     "alias": "lobi",
+     "source": "site d65e51d : data/afrique, nom « Lobi »"
+    }
+   ]
+  },
+  {
+   "id": "lu",
+   "type": "langue",
+   "nom": "Luba-katanga (kiluba)",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/lu/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "ù",
+    "Ù",
+    "́",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú",
+    "̀",
+    "ì",
+    "Ì",
+    "ò",
+    "Ò"
+   ],
+   "alias": [
+    {
+     "alias": "luba-katanga",
+     "source": "site d65e51d : data/afrique, nom « Luba-katanga (kiluba) »"
+    },
+    {
+     "alias": "kiluba",
+     "source": "site d65e51d : data/afrique, nom « Luba-katanga (kiluba) »"
+    }
+   ]
+  },
+  {
+   "id": "lua",
+   "type": "langue",
+   "nom": "Tshiluba",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "tshiluba",
+     "source": "site d65e51d : data/afrique, nom « Tshiluba »"
+    },
+    {
+     "alias": "luba",
+     "source": "ISO 639-3 (SIL), nom de référence du code lua « Luba-Lulua »"
+    }
+   ]
+  },
+  {
+   "id": "man",
+   "type": "langue",
+   "nom": "Mandinka",
+   "source": {
+    "type": "complement",
+    "ref": "https://en.wikipedia.org/wiki/Mandinka_language",
+    "citation": "In the Latin script, c represents /tʃ/, ŋ /ŋ/, and ñ /ɲ/; the letters v, x, z, and q are not used."
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "mandinka",
+     "source": "site d65e51d : data/afrique, nom « Mandinka »"
+    },
+    {
+     "alias": "mandingue",
+     "source": "en.wikipedia.org/wiki/Mandinka_language : langue mandingue"
+    },
+    {
+     "alias": "mandingo",
+     "source": "ISO 639-3 (SIL), nom de référence du code man « Mandingo »"
+    }
+   ]
+  },
+  {
+   "id": "mas",
+   "type": "langue",
+   "nom": "Maasaï",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/mas/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɨ",
+    "Ɨ",
+    "ʉ",
+    "Ʉ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "ù",
+    "Ù",
+    "́",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú",
+    "ì",
+    "Ì",
+    "ò",
+    "Ò",
+    "â",
+    "Â",
+    "ê",
+    "Ê",
+    "î",
+    "Î",
+    "ô",
+    "Ô",
+    "û",
+    "Û",
+    "ā",
+    "Ā",
+    "ē",
+    "Ē",
+    "ī",
+    "Ī",
+    "ō",
+    "Ō",
+    "ū",
+    "Ū"
+   ],
+   "alias": [
+    {
+     "alias": "maasaï",
+     "source": "site d65e51d : data/afrique, nom « Maasaï »"
+    }
+   ]
+  },
+  {
+   "id": "men",
+   "type": "langue",
+   "nom": "Mendé",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Mend%C3%A9_(langue)",
+    "citation": "Alphabet latin mendé : a, b, d, e, ɛ, f, g, gb, h, i, j, k, kp, l, m, mb, n, nd, ng, nj, ny, o, ɔ, p, s, t, u, v, w, y"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "mendé",
+     "source": "site d65e51d : data/afrique, nom « Mendé »"
+    }
+   ]
+  },
+  {
+   "id": "mer",
+   "type": "langue",
+   "nom": "Meru",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/mer/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ĩ",
+    "Ĩ",
+    "ũ",
+    "Ũ"
+   ],
+   "alias": [
+    {
+     "alias": "meru",
+     "source": "site d65e51d : data/afrique, nom « Meru »"
+    }
+   ]
+  },
+  {
+   "id": "mkw",
+   "type": "langue",
+   "nom": "Kituba",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "kituba",
+     "source": "site d65e51d : data/afrique, nom « Kituba »"
+    }
+   ]
+  },
+  {
+   "id": "mlg",
+   "type": "langue",
+   "nom": "Malgache",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á",
+    "ó",
+    "Ó",
+    "ì",
+    "Ì",
+    "ò",
+    "Ò",
+    "̂",
+    "ë",
+    "Ë",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "malgache",
+     "source": "site d65e51d : data/afrique, nom « Malgache »"
+    },
+    {
+     "alias": "malagasy",
+     "source": "ISO 639-3 (SIL), nom de référence du code mlg « Malagasy »"
+    }
+   ]
+  },
+  {
+   "id": "mos",
+   "type": "langue",
+   "nom": "Mooré",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ʋ",
+    "Ʋ"
+   ],
+   "alias": [
+    {
+     "alias": "mooré",
+     "source": "site d65e51d : data/afrique, nom « Mooré »"
+    },
+    {
+     "alias": "mossi",
+     "source": "ISO 639-3 (SIL), nom de référence du code mos « Mossi »"
+    }
+   ]
+  },
+  {
+   "id": "naq",
+   "type": "langue",
+   "nom": "Nama",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/naq/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "â",
+    "Â",
+    "î",
+    "Î",
+    "ô",
+    "Ô",
+    "û",
+    "Û"
+   ],
+   "alias": [
+    {
+     "alias": "nama",
+     "source": "site d65e51d : data/afrique, nom « Nama »"
+    },
+    {
+     "alias": "khoekhoe",
+     "source": "ISO 639-3 (SIL), nom de référence du code naq « Khoekhoe »"
+    }
+   ]
+  },
+  {
+   "id": "ngb",
+   "type": "langue",
+   "nom": "Ngbandi",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Ngbandi_du_Nord"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "ngbandi",
+     "source": "site d65e51d : data/afrique, nom « Ngbandi »"
+    }
+   ]
+  },
+  {
+   "id": "nnh",
+   "type": "langue",
+   "nom": "Ngiembɔɔn",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://raw.githubusercontent.com/unicode-org/cldr/main/common/main/nnh.xml"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ʼ",
+    "ʉ",
+    "Ʉ",
+    "́",
+    "̀",
+    "̂",
+    "ẅ",
+    "Ẅ",
+    "ÿ",
+    "Ÿ",
+    "̌"
+   ],
+   "alias": [
+    {
+     "alias": "ngiembɔɔn",
+     "source": "site d65e51d : data/afrique, nom « Ngiembɔɔn »"
+    }
+   ]
+  },
+  {
+   "id": "nso",
+   "type": "langue",
+   "nom": "Sotho du Nord",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/nso/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ê",
+    "Ê",
+    "ô",
+    "Ô",
+    "š",
+    "Š"
+   ],
+   "alias": [
+    {
+     "alias": "sotho",
+     "source": "site d65e51d : data/afrique, nom « Sotho du Nord »"
+    }
+   ]
+  },
+  {
+   "id": "nus",
+   "type": "langue",
+   "nom": "Nuer",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/nus/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "̈",
+    "ä",
+    "Ä",
+    "ë",
+    "Ë",
+    "ï",
+    "Ï",
+    "ö",
+    "Ö",
+    "̱"
+   ],
+   "alias": [
+    {
+     "alias": "nuer",
+     "source": "site d65e51d : data/afrique, nom « Nuer »"
+    }
+   ]
+  },
+  {
+   "id": "ny",
+   "type": "langue",
+   "nom": "Chewa",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/ny/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŵ",
+    "Ŵ"
+   ],
+   "alias": [
+    {
+     "alias": "chewa",
+     "source": "site d65e51d : data/afrique, nom « Chewa »"
+    }
+   ]
+  },
+  {
+   "id": "pcm",
+   "type": "langue",
+   "nom": "Pidgin nigérian",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/pcm/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ẹ",
+    "Ẹ",
+    "ọ",
+    "Ọ",
+    "é",
+    "É",
+    "́",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú"
+   ],
+   "alias": [
+    {
+     "alias": "pidgin",
+     "source": "site d65e51d : data/afrique, nom « Pidgin nigérian »"
+    }
+   ]
+  },
+  {
+   "id": "puu",
+   "type": "langue",
+   "nom": "Punu",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Punu_(langue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɣ",
+    "Ɣ",
+    "́",
+    "̀",
+    "̂",
+    "̌",
+    "̋"
+   ],
+   "alias": [
+    {
+     "alias": "punu",
+     "source": "site d65e51d : data/afrique, nom « Punu »"
+    }
+   ]
+  },
+  {
+   "id": "rif",
+   "type": "langue",
+   "nom": "Tarifit",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ḍ",
+    "Ḍ",
+    "ḥ",
+    "Ḥ",
+    "ṛ",
+    "Ṛ",
+    "ṣ",
+    "Ṣ",
+    "ṭ",
+    "Ṭ",
+    "ẓ",
+    "Ẓ"
+   ],
+   "alias": [
+    {
+     "alias": "tarifit",
+     "source": "site d65e51d : data/afrique, nom « Tarifit »"
+    }
+   ]
+  },
+  {
+   "id": "sag",
+   "type": "langue",
+   "nom": "Sango",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ù",
+    "Ù",
+    "â",
+    "Â",
+    "ê",
+    "Ê",
+    "î",
+    "Î",
+    "ô",
+    "Ô",
+    "û",
+    "Û",
+    "ä",
+    "Ä",
+    "ë",
+    "Ë",
+    "ï",
+    "Ï",
+    "ö",
+    "Ö"
+   ],
+   "alias": [
+    {
+     "alias": "sango",
+     "source": "site d65e51d : data/afrique, nom « Sango »"
+    }
+   ]
+  },
+  {
+   "id": "sba",
+   "type": "langue",
+   "nom": "Sara (groupe Ngambay)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "sara",
+     "source": "site d65e51d : data/afrique, nom « Sara (groupe Ngambay) »"
+    },
+    {
+     "alias": "ngambay",
+     "source": "site d65e51d : data/afrique, nom « Sara (groupe Ngambay) »"
+    }
+   ]
+  },
+  {
+   "id": "sef",
+   "type": "langue",
+   "nom": "Cebaara Sénoufo",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "cebaara sénoufo",
+     "source": "site d65e51d : data/afrique, nom « Cebaara Sénoufo »"
+    }
+   ]
+  },
+  {
+   "id": "seh",
+   "type": "langue",
+   "nom": "Cisena",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/seh/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "à",
+    "À",
+    "ç",
+    "Ç",
+    "é",
+    "É",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ó",
+    "Ó",
+    "ú",
+    "Ú",
+    "ò",
+    "Ò",
+    "â",
+    "Â",
+    "ê",
+    "Ê",
+    "ô",
+    "Ô",
+    "ã",
+    "Ã",
+    "õ",
+    "Õ"
+   ],
+   "alias": [
+    {
+     "alias": "cisena",
+     "source": "site d65e51d : data/afrique, nom « Cisena »"
+    }
+   ]
+  },
+  {
+   "id": "shi",
+   "type": "langue",
+   "nom": "Tachelhit",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ḍ",
+    "Ḍ",
+    "ḥ",
+    "Ḥ",
+    "ṛ",
+    "Ṛ",
+    "ṣ",
+    "Ṣ",
+    "ṭ",
+    "Ṭ",
+    "ẓ",
+    "Ẓ",
+    "č",
+    "Č",
+    "ǧ",
+    "Ǧ"
+   ],
+   "alias": [
+    {
+     "alias": "tachelhit",
+     "source": "site d65e51d : data/afrique, nom « Tachelhit »"
+    }
+   ]
+  },
+  {
+   "id": "shy",
+   "type": "langue",
+   "nom": "Chaoui (Tachawit)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wiktionary.org/wiki/Annexe:Alphabet_chaoui"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ḍ",
+    "Ḍ",
+    "ḥ",
+    "Ḥ",
+    "ṛ",
+    "Ṛ",
+    "ṣ",
+    "Ṣ",
+    "ṭ",
+    "Ṭ",
+    "ẓ",
+    "Ẓ",
+    "č",
+    "Č",
+    "ǧ",
+    "Ǧ"
+   ],
+   "alias": [
+    {
+     "alias": "chaoui",
+     "source": "site d65e51d : data/afrique, nom « Chaoui (Tachawit) »"
+    },
+    {
+     "alias": "tachawit",
+     "source": "site d65e51d : data/afrique, nom « Chaoui (Tachawit) »"
+    }
+   ]
+  },
+  {
+   "id": "snk",
+   "type": "langue",
+   "nom": "Soninké",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "soninké",
+     "source": "site d65e51d : data/afrique, nom « Soninké »"
+    }
+   ]
+  },
+  {
+   "id": "son",
+   "type": "langue",
+   "nom": "Songhay",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ"
+   ],
+   "alias": [
+    {
+     "alias": "songhay",
+     "source": "site d65e51d : data/afrique, nom « Songhay »"
+    }
+   ]
+  },
+  {
+   "id": "srr",
+   "type": "langue",
+   "nom": "Sérère",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ɓ",
+    "Ɓ",
+    "ƈ",
+    "Ƈ",
+    "ɗ",
+    "Ɗ",
+    "ƥ",
+    "Ƥ",
+    "ƭ",
+    "Ƭ",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "sérère",
+     "source": "site d65e51d : data/afrique, nom « Sérère »"
+    },
+    {
+     "alias": "serer",
+     "source": "ISO 639-3 (SIL), nom de référence du code srr « Serer »"
+    }
+   ]
+  },
+  {
+   "id": "sus",
+   "type": "langue",
+   "nom": "Soussou",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ɔ",
+    "Ɔ"
+   ],
+   "alias": [
+    {
+     "alias": "soussou",
+     "source": "site d65e51d : data/afrique, nom « Soussou »"
+    },
+    {
+     "alias": "susu",
+     "source": "ISO 639-3 (SIL), nom de référence du code sus « Susu »"
+    }
+   ]
+  },
+  {
+   "id": "tbz",
+   "type": "langue",
+   "nom": "Ditammari",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Ditammari_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɔ",
+    "Ɔ",
+    "́",
+    "̀",
+    "̃"
+   ],
+   "alias": [
+    {
+     "alias": "ditammari",
+     "source": "site d65e51d : data/afrique, nom « Ditammari »"
+    }
+   ]
+  },
+  {
+   "id": "tek",
+   "type": "langue",
+   "nom": "Teke (groupe)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/North_Teke_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ"
+   ],
+   "alias": [
+    {
+     "alias": "teke",
+     "source": "site d65e51d : data/afrique, nom « Teke (groupe) »"
+    }
+   ]
+  },
+  {
+   "id": "tiv",
+   "type": "langue",
+   "nom": "Tiv",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Tiv_(langue)",
+    "citation": "Alphabet tiv du comité ad-hoc de 1980 : ọ, ọọ (voyelle longue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ọ",
+    "Ọ"
+   ],
+   "alias": [
+    {
+     "alias": "tiv",
+     "source": "site d65e51d : data/afrique, nom « Tiv »"
+    }
+   ]
+  },
+  {
+   "id": "tmh",
+   "type": "langue",
+   "nom": "Tamashek (latin)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ḍ",
+    "Ḍ",
+    "ḥ",
+    "Ḥ",
+    "ṣ",
+    "Ṣ",
+    "ṭ",
+    "Ṭ",
+    "ẓ",
+    "Ẓ"
+   ],
+   "alias": [
+    {
+     "alias": "tamashek",
+     "source": "site d65e51d : data/afrique, nom « Tamashek (latin) »"
+    },
+    {
+     "alias": "tamasheq",
+     "source": "en.wikipedia.org/wiki/Tamasheq_language"
+    }
+   ]
+  },
+  {
+   "id": "tn",
+   "type": "langue",
+   "nom": "Tswana",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/tn/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ê",
+    "Ê",
+    "ô",
+    "Ô"
+   ],
+   "alias": [
+    {
+     "alias": "tswana",
+     "source": "site d65e51d : data/afrique, nom « Tswana »"
+    }
+   ]
+  },
+  {
+   "id": "tod",
+   "type": "langue",
+   "nom": "Toma (Loma)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Loma_(langue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ǝ",
+    "Ǝ",
+    "ɛ",
+    "Ɛ",
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ",
+    "ɠ",
+    "Ɠ",
+    "ʋ",
+    "Ʋ",
+    "́",
+    "̀"
+   ],
+   "alias": [
+    {
+     "alias": "toma",
+     "source": "site d65e51d : data/afrique, nom « Toma (Loma) »"
+    },
+    {
+     "alias": "loma",
+     "source": "site d65e51d : data/afrique, nom « Toma (Loma) »"
+    }
+   ]
+  },
+  {
+   "id": "tum",
+   "type": "langue",
+   "nom": "Tumbuka",
+   "source": {
+    "type": "complement",
+    "ref": "https://fr.wikipedia.org/wiki/Tumbuka_(langue)",
+    "citation": "Alphabet tumbuka : … ph, r, s, t, th, u, v, w, ŵ, y, z"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŵ",
+    "Ŵ"
+   ],
+   "alias": [
+    {
+     "alias": "tumbuka",
+     "source": "site d65e51d : data/afrique, nom « Tumbuka »"
+    }
+   ]
+  },
+  {
+   "id": "tuq",
+   "type": "langue",
+   "nom": "Tubu (Tedaga)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Teda_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "ê",
+    "Ê",
+    "î",
+    "Î",
+    "ô",
+    "Ô",
+    "û",
+    "Û",
+    "ã",
+    "Ã",
+    "ĩ",
+    "Ĩ",
+    "ñ",
+    "Ñ",
+    "ũ",
+    "Ũ",
+    "č",
+    "Č",
+    "š",
+    "Š"
+   ],
+   "alias": [
+    {
+     "alias": "tubu",
+     "source": "site d65e51d : data/afrique, nom « Tubu (Tedaga) »"
+    },
+    {
+     "alias": "tedaga",
+     "source": "site d65e51d : data/afrique, nom « Tubu (Tedaga) »"
+    }
+   ]
+  },
+  {
+   "id": "tzm",
+   "type": "langue",
+   "nom": "Tamazight central",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɣ",
+    "Ɣ",
+    "ḍ",
+    "Ḍ",
+    "ḥ",
+    "Ḥ",
+    "ṛ",
+    "Ṛ",
+    "ṣ",
+    "Ṣ",
+    "ṭ",
+    "Ṭ",
+    "ʷ"
+   ],
+   "alias": [
+    {
+     "alias": "tamazight central",
+     "source": "site d65e51d : data/afrique, nom « Tamazight central »"
+    },
+    {
+     "alias": "tamazight",
+     "source": "ISO 639-3 (SIL), nom de référence du code tzm « Central Atlas Tamazight »"
+    }
+   ]
+  },
+  {
+   "id": "ve",
+   "type": "langue",
+   "nom": "Venda",
+   "source": {
+    "type": "cldr",
+    "ref": "cldr-misc-full 48.2.0, main/ve/characters.json (exemplarCharacters)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ṅ",
+    "Ṅ"
+   ],
+   "alias": [
+    {
+     "alias": "venda",
+     "source": "site d65e51d : data/afrique, nom « Venda »"
+    }
+   ]
+  },
+  {
+   "id": "wec",
+   "type": "langue",
+   "nom": "Guéré (Wèni)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://fr.wikipedia.org/wiki/Gu%C3%A9r%C3%A9_(langue)"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ɩ",
+    "Ɩ",
+    "ɔ",
+    "Ɔ",
+    "ʋ",
+    "Ʋ"
+   ],
+   "alias": [
+    {
+     "alias": "guéré",
+     "source": "site d65e51d : data/afrique, nom « Guéré (Wèni) »"
+    },
+    {
+     "alias": "wèni",
+     "source": "site d65e51d : data/afrique, nom « Guéré (Wèni) »"
+    }
+   ]
+  },
+  {
+   "id": "wlc",
+   "type": "langue",
+   "nom": "Comorien shimwali",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "comorien shimwali",
+     "source": "site d65e51d : data/afrique, nom « Comorien shimwali »"
+    }
+   ]
+  },
+  {
+   "id": "wni",
+   "type": "langue",
+   "nom": "Comorien shinzwani",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "comorien shinzwani",
+     "source": "site d65e51d : data/afrique, nom « Comorien shinzwani »"
+    }
+   ]
+  },
+  {
+   "id": "wol",
+   "type": "langue",
+   "nom": "Wolof",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ŋ",
+    "Ŋ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "ó",
+    "Ó",
+    "ë",
+    "Ë",
+    "ã",
+    "Ã",
+    "ñ",
+    "Ñ"
+   ],
+   "alias": [
+    {
+     "alias": "wolof",
+     "source": "site d65e51d : data/afrique, nom « Wolof »"
+    }
+   ]
+  },
+  {
+   "id": "wwa",
+   "type": "langue",
+   "nom": "Waama (Otammari)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://www.omniglot.com/writing/waama.htm"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɛ",
+    "Ɛ",
+    "ŋ",
+    "Ŋ",
+    "ɔ",
+    "Ɔ",
+    "̀",
+    "̃"
+   ],
+   "alias": [
+    {
+     "alias": "waama",
+     "source": "site d65e51d : data/afrique, nom « Waama (Otammari) »"
+    },
+    {
+     "alias": "otammari",
+     "source": "site d65e51d : data/afrique, nom « Waama (Otammari) »"
+    }
+   ]
+  },
+  {
+   "id": "yor",
+   "type": "langue",
+   "nom": "Yoruba",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ẹ",
+    "Ẹ",
+    "ọ",
+    "Ọ",
+    "ṣ",
+    "Ṣ",
+    "à",
+    "À",
+    "é",
+    "É",
+    "è",
+    "È",
+    "á",
+    "Á",
+    "í",
+    "Í",
+    "ì",
+    "Ì",
+    "ò",
+    "Ò"
+   ],
+   "alias": [
+    {
+     "alias": "yoruba",
+     "source": "site d65e51d : data/afrique, nom « Yoruba »"
+    }
+   ]
+  },
+  {
+   "id": "zag",
+   "type": "langue",
+   "nom": "Zaghawa (Beria)",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Zaghawa_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ɲ",
+    "Ɲ",
+    "ŋ",
+    "Ŋ"
+   ],
+   "alias": [
+    {
+     "alias": "zaghawa",
+     "source": "site d65e51d : data/afrique, nom « Zaghawa (Beria) »"
+    },
+    {
+     "alias": "beria",
+     "source": "site d65e51d : data/afrique, nom « Zaghawa (Beria) »"
+    }
+   ]
+  },
+  {
+   "id": "zdj",
+   "type": "langue",
+   "nom": "Comorien shingazidja",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "data/afrique-selector.json (référentiel Afrique francophone, juin 2026)"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "ɓ",
+    "Ɓ",
+    "ɗ",
+    "Ɗ"
+   ],
+   "alias": [
+    {
+     "alias": "comorien shingazidja",
+     "source": "site d65e51d : data/afrique, nom « Comorien shingazidja »"
+    }
+   ]
+  },
+  {
+   "id": "zne",
+   "type": "langue",
+   "nom": "Zande",
+   "source": {
+    "type": "curation-2026-06",
+    "ref": "https://en.wikipedia.org/wiki/Zande_language"
+   },
+   "provisoire": true,
+   "caracteres": [
+    "ə",
+    "Ə",
+    "ɨ",
+    "Ɨ",
+    "ʉ",
+    "Ʉ",
+    "̃"
+   ],
+   "alias": [
+    {
+     "alias": "zande",
+     "source": "site d65e51d : data/afrique, nom « Zande »"
+    }
+   ]
+  },
+  {
+   "id": "ton-030B",
+   "type": "signe",
+   "nom": "DOUBLE ACCENT AIGU COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̋"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton très haut",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "extra high tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-0301",
+   "type": "signe",
+   "nom": "ACCENT AIGU COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "́"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton haut",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "high tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-0304",
+   "type": "signe",
+   "nom": "MACRON COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̄"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton moyen",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "mid tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-0300",
+   "type": "signe",
+   "nom": "ACCENT GRAVE COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̀"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton bas",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "low tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-030F",
+   "type": "signe",
+   "nom": "DOUBLE ACCENT GRAVE COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̏"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton très bas",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "extra low tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-0302",
+   "type": "signe",
+   "nom": "ACCENT CIRCONFLEXE COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̂"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton descendant",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "falling tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-030C",
+   "type": "signe",
+   "nom": "CARON COMBINANT",
+   "source": {
+    "ref": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̌"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "ton montant",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    },
+    {
+     "alias": "rising tone",
+     "source": "Alphabet phonétique international (révision 2020), « Tones and word accents »"
+    }
+   ]
+  },
+  {
+   "id": "ton-1DC6",
+   "type": "signe",
+   "nom": "U+1DC6",
+   "source": {
+    "ref": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "᷆"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    },
+    {
+     "alias": "tone",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    },
+    {
+     "alias": "ton modulé",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    },
+    {
+     "alias": "contour tone",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    }
+   ]
+  },
+  {
+   "id": "ton-1DC7",
+   "type": "signe",
+   "nom": "U+1DC7",
+   "source": {
+    "ref": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "᷇"
+   ],
+   "alias": [
+    {
+     "alias": "ton",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    },
+    {
+     "alias": "tone",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    },
+    {
+     "alias": "ton modulé",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    },
+    {
+     "alias": "contour tone",
+     "source": "Unicode, tableau U+1DC0, rubrique « Contour tone marks »"
+    }
+   ]
+  },
+  {
+   "id": "grave-combinant",
+   "type": "signe",
+   "nom": "ACCENT GRAVE COMBINANT",
+   "source": {
+    "ref": "decisions.md du 2026-09-27 (« grave combinant ») ; nom Unicode U+0300"
+   },
+   "provisoire": false,
+   "caracteres": [
+    "̀"
+   ],
+   "alias": [
+    {
+     "alias": "accent grave combinant",
+     "source": "decisions.md du 2026-09-27 (« grave combinant ») ; nom Unicode U+0300"
+    },
+    {
+     "alias": "combining grave accent",
+     "source": "decisions.md du 2026-09-27 (« grave combinant ») ; nom Unicode U+0300"
+    }
+   ]
+  }
+ ],
+ "horsIndex": {
+  "fvr": [
+   "a̱"
+  ],
+  "hz": [
+   "ḓ",
+   "Ḓ",
+   "ṋ",
+   "Ṋ",
+   "ṱ",
+   "Ṱ"
+  ],
+  "lob": [
+   "ⱳ"
+  ],
+  "naq": [
+   "ǀ",
+   "ǁ",
+   "ǂ",
+   "ǃ"
+  ],
+  "puu": [
+   "ꞵ"
+  ],
+  "ve": [
+   "ḓ",
+   "Ḓ",
+   "ḽ",
+   "Ḽ",
+   "ṋ",
+   "Ṋ",
+   "ṱ",
+   "Ṱ"
+  ]
+ }
+}
