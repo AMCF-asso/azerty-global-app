@@ -2,7 +2,13 @@
 
 ## Version 1.3.0 — 21 septembre 2026
 
-Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, sauf le Défi du jour, masqué en 1.3.0 (voir « Correctifs de l’audit du 24 septembre »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
+Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, Défi du jour compris : masqué le 24 septembre, il est réactivé le 7 octobre (voir « Défi du jour et Leçons »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
+
+**Défi du jour et Leçons (décisions d’Antoine du 7 et du 8 octobre)**
+
+- Le Défi du jour revient dès la 1.3.0 : entrée dans « Apprendre ▸ », module des Leçons, annonce unique, rappel d’entraînement, cases d’opt-in de l’accueil et des Paramètres, section de « Mes statistiques ». `DailyChallenge.Enabled` passe à vrai ; les données gardées depuis la 1.2.0 (opt-in, séquence, records) reprennent effet. Témoins : `DefiDuJourMasqueTests`.
+- Les exercices réussis du tutoriel d’accueil nourrissent la progression par geste des Leçons ; le compteur du tutoriel ne change pas.
+- Nouveau texte de l’Édition spéciale, « Un tour d’Afrique » : €, ɓ, ŋ, Ŋ et ɔ dans une phrase française.
 
 **Recherche par langue (décisions d’Antoine du 27 septembre et du 7 octobre)**
 
@@ -78,7 +84,7 @@ Les lots de simplicité de l’audit du 25 septembre (rapport `docs/audit-2026-0
 - Fenêtre Pause : « Quitter » pendant qu’elle est ouverte ferme bien l’application (le WM_QUIT est retransmis).
 - Textes : « Couches maintenables » devient « Couches verrouillables » (“Lockable layers”) ; l’erreur de démarrage renvoie vers contact@azerty.global et non vers la page de dons ; la recherche « insère » ; vouvoiement du Défi ; « anti-triche », « mots/min », « 12 s », « avant l’ouverture de session », « Verr. Maj. » harmonisé, boutons des Leçons en français.
 - Fiche Store : Nouveautés ramenées sous 1 500 caractères, notes de certification réécrites en anglais avec une procédure de test, description alignée FR/EN.
-- Défi du jour masqué jusqu’en 1.4.0, où il reviendra revu (décision d’Antoine du 2026-09-24) : plus d’entrée dans « Apprendre ▸ », qui garde Leçons et Revoir l’accueil ; plus de module dans les Leçons ; plus d’annonce unique ni de rappel d’entraînement, ce rappel n’ouvrant que le Défi ; plus de case d’opt-in dans l’accueil ni dans les Paramètres ; plus de section dans « Mes statistiques ». Un seul interrupteur, `DailyChallenge.Enabled`. Le code reste ; les données enregistrées (records, séquence, opt-in, annonce) ne sont ni effacées ni migrées. Témoins : `DefiDuJourMasqueTests`.
+- Défi du jour masqué jusqu’en 1.4.0, où il reviendra revu (décision d’Antoine du 2026-09-24 ; réactivé dès la 1.3.0 le 7 octobre, voir « Défi du jour et Leçons ») : plus d’entrée dans « Apprendre ▸ », qui garde Leçons et Revoir l’accueil ; plus de module dans les Leçons ; plus d’annonce unique ni de rappel d’entraînement, ce rappel n’ouvrant que le Défi ; plus de case d’opt-in dans l’accueil ni dans les Paramètres ; plus de section dans « Mes statistiques ». Un seul interrupteur, `DailyChallenge.Enabled`. Le code reste ; les données enregistrées (records, séquence, opt-in, annonce) ne sont ni effacées ni migrées. Témoins : `DefiDuJourMasqueTests`.
 - Sollicitation d’avis : jamais pendant une séance de Leçons ou le tutoriel de l’accueil, ni dans les 10 minutes qui suivent sa fermeture (décision d’Antoine du 2026-09-24). Ensuite, il faut une frappe hors exercice suivie des 15 s de silence. Les frappes des Leçons comptent toujours dans les statistiques et peuvent armer le seuil des 20 caractères enrichis, mais ne suffisent plus à déclencher la demande. La même garde vaut pour le partage d’un résultat. Témoins : `AvisApresSeanceTests`.
 - Reportés en 1.3.1 : `config.json` illisible qui bloque toute sauvegarde, Verr. Maj tenu, raccourci Ctrl+Maj+Verr. Maj exécuté dans le hook, consoles de VM absentes des hôtes distants, messages des onglets Applications et Langue, manifeste sans texte anglais. Faits depuis dans la 1.3.0 : `config.json` illisible (lot 4) et messages des onglets (lot 6), voir la suite de l’audit du 25 septembre.
 
