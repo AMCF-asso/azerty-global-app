@@ -4,6 +4,14 @@
 
 Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, sauf le Défi du jour, masqué en 1.3.0 (voir « Correctifs de l’audit du 24 septembre »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Recherche par langue (décisions d’Antoine du 27 septembre et du 7 octobre)**
+
+- Taper le nom d’une langue fait remonter ses caractères : « pulaar », « fulfulde », « peul », « fula », « wolof », « bambara », « malinké », « soussou », « lingala », « éwé », « yoruba »… en français, en anglais ou dans la langue, avec ou sans accents. 119 langues d’Afrique à alphabet latin, celles du référentiel de la page /afrique du site. Langue et lettre se combinent : « pulaar b » trouve ɓ.
+- « ton », « tone », « ton haut », « low tone »… trouvent les accents combinants des tons ; « grave combinant » trouve l’accent grave combinant en tête.
+- Les lettres trouvées par la langue passent après celles que leur nom ou leurs alias trouvaient déjà : le classement des autres requêtes ne change pas. Un nom de langue ne répond qu’à partir de trois lettres tapées.
+- Le champ dit « Caractère, nom ou langue… » (“Character, name or language…”).
+- Table `src/language-search.json`, générée par `scripts/build-language-search.py` depuis `data/afrique/*.json` du site (révision inscrite dans la table) ; `character-index.json` n’est pas touché. Témoin : `LanguageSearchTests`.
+
 **Disposition 2026.1 (décision d’Antoine du 4 octobre)**
 
 - L’application embarque la 2026.1 au lieu de la 2026 : 1 100 caractères au lieu de 1 005, 30 touches mortes au lieu de 29. Rien ne change de place : la 2026.1 ne fait qu’ajouter.
