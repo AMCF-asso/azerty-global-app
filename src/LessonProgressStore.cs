@@ -130,6 +130,26 @@ internal sealed class LessonProgressStore
         CommitOrRollback(snapshot, "LessonProgressStore.RecordSuccess");
     }
 
+    /// <summary>
+    /// Verse un exercice réussi du tutoriel d'accueil dans la progression par geste
+    /// (décision d'Antoine du 07/10). Les exercices du tutoriel n'ont pas d'entrée propre ici :
+    /// leur rang va toujours au compteur de la config, importé par <see cref="SyncOnboardingProgress(LessonCatalog, IReadOnlySet{int})"/>.
+    /// ⚠️ Une fenêtre Leçons ouverte en même temps garde son magasin en mémoire et réécrit
+    /// le fichier à sa prochaine réussite : ces gestes-là sont alors perdus.
+    /// </summary>
+    public static void RecordTutorialGestures(LessonAttemptStats stats)
+    {
+        try { new LessonProgressStore().RecordGestures(stats, GestureMastery.IsTracked); }
+        catch (Exception ex) { ConfigManager.Log("LessonProgressStore.RecordTutorialGestures", ex); }
+    }
+
+    internal void RecordGestures(LessonAttemptStats stats, Func<char, bool> isTracked)
+    {
+        var snapshot = CaptureSnapshot();
+        RecordGesturesNoSave(stats, isTracked);
+        CommitOrRollback(snapshot, "LessonProgressStore.RecordGestures");
+    }
+
     public void MarkCompletedNeutral(LessonExercise exercise)
     {
         var snapshot = CaptureSnapshot();
