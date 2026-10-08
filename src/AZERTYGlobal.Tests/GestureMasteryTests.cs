@@ -144,6 +144,34 @@ public class GestureMasteryTests
         }
     }
 
+    /// <summary>Tutoriel d'accueil (décision du 07/10) : ses frappes nourrissent les gestes,
+    /// faute comprise, sans créer d'entrée d'exercice.</summary>
+    [Fact]
+    public void Store_TutorialGestures_UpdateGesturesWithoutExerciseEntry()
+    {
+        string path = TempPath();
+        try
+        {
+            var stats = new LessonAttemptStats(() => T0);
+            stats.RecordChar('ŋ', 'ŋ');
+            stats.RecordChar('n', 'ɓ');
+            stats.RecordChar('ɓ', 'ɓ');
+            stats.RecordChar('a', 'a');
+
+            new LessonProgressStore(path, () => T0).RecordGestures(stats, c => c is 'ŋ' or 'ɓ');
+
+            var reloaded = new LessonProgressStore(path, () => T0);
+            Assert.Empty(reloaded.Exercises);
+            Assert.Equal(new[] { "ŋ", "ɓ" }, reloaded.Gestures.Keys.OrderBy(k => k == "ɓ"));
+            Assert.Equal(1, reloaded.Gestures["ŋ"].Box);
+            Assert.Equal(1, reloaded.Gestures["ɓ"].Errors);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
     [Fact]
     public void Store_ResetAll_ClearsGestures()
     {

@@ -190,6 +190,9 @@ sealed class LearningModule : IDisposable
     // État
     private int _currentStep;
     private int _cursorPosition;
+    // Frappes de l'exercice en cours, par caractère attendu : versées à la progression
+    // par geste des Leçons quand l'exercice est réussi (décision d'Antoine du 07/10).
+    private LessonAttemptStats _stepGestures = new();
     private bool _currentCharError;
     // Faute en cours (valables tant que _currentCharError) : caractère tapé, touche frappée.
     private char _lastWrongChar;
@@ -1311,6 +1314,7 @@ sealed class LearningModule : IDisposable
         if (_cursorPosition >= target.Length) return;
 
         char typed = ResolveTypedCharacter(c);
+        _stepGestures.RecordChar(typed, target[_cursorPosition]);
         if (typed == target[_cursorPosition])
         {
             _cursorPosition++;
@@ -1326,6 +1330,8 @@ sealed class LearningModule : IDisposable
                 // Persister la progression par rang fixe (le parcours varie avec les usages).
                 // Idempotent : un Recommencer puis un nouveau succès ne change rien.
                 ConfigManager.RecordLearningExerciseCompleted(Steps[_currentStep].Index);
+                LessonProgressStore.RecordTutorialGestures(_stepGestures);
+                _stepGestures = new LessonAttemptStats();
                 _mapper.RequestCapsLockOff(); // reinciter a appuyer sur Verr.Maj. au prochain exercice
                 ClearHighlight();
                 UpdateControlVisibility();
@@ -1413,6 +1419,7 @@ sealed class LearningModule : IDisposable
     {
         _currentStep++;
         _cursorPosition = 0;
+        _stepGestures = new LessonAttemptStats();
         ClearCharError();
         _page = TutorialPage.Exercise;
         _currentStepSuccessCount = 0; // reset pour le nouvel exercice (1er succes => « Bravo ! » s'affiche)
@@ -1545,6 +1552,7 @@ sealed class LearningModule : IDisposable
     {
         _page = TutorialPage.Exercise;
         _cursorPosition = 0;
+        _stepGestures = new LessonAttemptStats();
         ClearCharError();
         ClearPendingPhysicalText();
         _mapper.RequestCapsLockOff(); // forcer Verr.Maj. off au reset (re-incite a l'activation si KeepCapsHighlight)
@@ -1681,6 +1689,7 @@ sealed class LearningModule : IDisposable
         _route = TutorialSteps.BuildRoute(chosen);
         _currentStep = 0;
         _cursorPosition = 0;
+        _stepGestures = new LessonAttemptStats();
         ClearCharError();
         _currentStepSuccessCount = 0;
         _page = TutorialPage.Exercise;
