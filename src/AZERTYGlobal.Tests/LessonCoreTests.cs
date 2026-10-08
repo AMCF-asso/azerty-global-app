@@ -12,9 +12,9 @@ public class LessonCoreTests
 
         Assert.Equal(9, catalog.Modules.Count);
         Assert.Equal(8, catalog.SiteModuleCount);
-        Assert.Equal(34, catalog.SiteLessonCount);
-        Assert.Equal(73, catalog.SiteExerciseCount);
-        Assert.Equal(81, catalog.TotalExerciseCount); // 73 + les 8 exercices de l'Initiation
+        Assert.Equal(35, catalog.SiteLessonCount);
+        Assert.Equal(74, catalog.SiteExerciseCount);
+        Assert.Equal(82, catalog.TotalExerciseCount); // 74 + les 8 exercices de l'Initiation
         Assert.Equal("initiation", catalog.Modules[0].Id);
         Assert.Equal("email-web", catalog.Modules[1].Id);
         Assert.All(catalog.Modules.Skip(1).SelectMany(m => m.Lessons).SelectMany(l => l.Exercises),
