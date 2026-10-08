@@ -108,8 +108,8 @@ public class TrainingRemindersTests
         CurrentStreak: 0,
         HelperOpens: 0,
         ReviewPromptLastShown: null,
-        // Ces témoins éprouvent la cadence du rappel quand le Défi existe (1.4.0). Défi
-        // masqué en 1.3.0 : voir DefiDuJourMasqueTests.
+        // Ces témoins éprouvent la cadence du rappel quand le Défi existe. Interrupteur :
+        // voir DefiDuJourMasqueTests.
         ChallengeAvailable: true);
 
     private static readonly DateOnly Today = new(2026, 8, 15);

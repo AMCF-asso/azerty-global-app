@@ -1467,9 +1467,9 @@ sealed class TrayApplication : IDisposable
 
     /// <summary>
     /// L'annonce unique du Défi du jour doit-elle partir ? Décision pure. Défi masqué
-    /// (1.3.0, décision d'Antoine du 2026-09-24) : jamais, et rien n'est marqué — le
-    /// drapeau <c>challengeAnnounceDone</c> reste tel quel, pour que l'annonce reste
-    /// possible quand le Défi reviendra en 1.4.0.
+    /// (interrupteur coupé) : jamais, et rien n'est marqué — le drapeau
+    /// <c>challengeAnnounceDone</c> reste tel quel, pour que l'annonce parte à sa réactivation
+    /// (1.3.0, décision d'Antoine du 2026-10-07).
     /// </summary>
     internal static bool ShouldShowChallengeAnnouncement(bool challengeEnabled, bool announceDone,
         bool trainingEnabled, bool notificationsEnabled)
@@ -1700,8 +1700,8 @@ sealed class TrayApplication : IDisposable
         // 2026-08-16 — arbitrage assumé par Antoine au profit de la lisibilité du menu.
         var hLearnMenu = Win32.CreatePopupMenu();
         // Défi du jour : toujours visible depuis la décision du 2026-08-16, sans condition
-        // d'opt-in — sauf interrupteur coupé (1.3.0 : masqué, revient en 1.4.0, décision
-        // d'Antoine du 2026-09-24). Voir LearnMenuEntries.
+        // d'opt-in — sauf interrupteur coupé (masqué le 2026-09-24, réactivé en 1.3.0 le
+        // 2026-10-07). Voir LearnMenuEntries.
         foreach (int id in LearnMenuEntries(DailyChallenge.Enabled))
             Win32.AppendMenuW(hLearnMenu, MF_STRING, (nuint)id, LearnMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLearnMenu, L.Tray_MenuLearn);
