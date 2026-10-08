@@ -1037,6 +1037,29 @@
               "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
             }
           ]
+        },
+        {
+          "id": "course-20-millions-afrique",
+          "title": "Un tour d’Afrique",
+          "titleEn": "Around Africa",
+          "description": "Un thème du défi facultatif, sans chronomètre.",
+          "descriptionEn": "An optional theme, with no timer.",
+          "characters": [
+            "€",
+            "ɓ",
+            "ŋ",
+            "Ŋ",
+            "ɔ"
+          ],
+          "exercises": [
+            {
+              "type": "practice",
+              "instruction": "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+              "instructionEn": "Type the complete text; the help shows the next key.",
+              "content": "De Dakar à Lomé pour 45 € : on salue les Fulɓe du Fouta, on traverse le Dagbaŋ au nord du Ghana, puis on s'arrête à Ŋɔtsie. Bon voyage !",
+              "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
+            }
+          ]
         }
       ]
     }
