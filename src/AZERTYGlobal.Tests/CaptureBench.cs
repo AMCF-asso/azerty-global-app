@@ -9,7 +9,7 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Banc de captures des fenêtres à contrôles : À propos, Durée de pause, Conflit de
 /// disposition (au démarrage et après une bascule), Mes statistiques, Paramètres (les trois
-/// onglets), Accueil (les trois étapes) et Couches maintenables. Une image par fenêtre, par
+/// onglets), Accueil (les quatre étapes) et Couches maintenables. Une image par fenêtre, par
 /// langue et par échelle.
 ///
 /// Il existe parce que le contrôle visuel ne passe pas par le lancement de l'application :
@@ -44,7 +44,7 @@ public class CaptureBench
     };
 
     /// <summary>Les étapes de l'accueil. <c>_currentStep</c> va de 0 à 2.</summary>
-    private const int OnboardingSteps = 3;
+    private const int OnboardingSteps = OnboardingStep.Count;
 
     [Fact]
     public void RendLesFenetresAuxEchellesDemandees()
@@ -284,7 +284,7 @@ public class CaptureBench
     }
 
     /// <summary>
-    /// Les trois étapes, un fichier chacune, dans l'état d'un premier accueil (aucun exercice
+    /// Les quatre étapes, un fichier chacune, dans l'état d'un premier accueil (aucun exercice
     /// fait). L'étape est posée dans <c>_currentStep</c> puis <c>UpdateStepVisibility</c> la
     /// rend, comme le bouton Suivant, sans armer <c>_step3Reached</c> : la fermeture ne peut
     /// donc rien enregistrer, ni l'affichage au démarrage ni le lancement automatique.
