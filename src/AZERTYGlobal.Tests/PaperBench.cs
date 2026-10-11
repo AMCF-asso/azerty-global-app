@@ -63,6 +63,63 @@ public sealed class PaperBench
         });
     }
 
+    /// <summary>Notation « Mots » sous le caractère courant (QCM du 11/10) : ligne sans portée,
+    /// puis un geste par case de la planche (Ź, É avant « c », U, «, Recette).</summary>
+    [Fact]
+    public void LeconsNotation()
+    {
+        if (OutDir is not { Length: > 0 } dir) return;
+        Render(Path.Combine(dir, "papier-lecons-notation.png"), 1108, 640, hdc =>
+        {
+            PaperDraw.Fill(hdc, 0, 0, 1108, 640, PaperTheme.Paper);
+            var text = "Éclat de Źanna.";
+            var style = TablatureStyle.LessonsText(1f);
+            var columns = new List<TabColumn>();
+            for (int i = 0; i < text.Length; i++)
+                columns.Add(new TabColumn(text[i].ToString(), false, false, null,
+                    i < 9 ? TabState.Done : i == 9 ? TabState.Current : TabState.Upcoming));
+            var part = new Win32.RECT { left = 24, top = 24, right = 1084, bottom = 24 + 22 + style.Height + 10 + 128 + 14 + 2 };
+            PaperDraw.Fill(hdc, part, PaperTheme.Surface);
+            PaperDraw.Frame(hdc, part, PaperTheme.Border);
+            var widths = TablatureRenderer.MeasureColumns(hdc, columns, style);
+            var grid = new Win32.RECT { left = 25, top = 25 + 22, right = 1083, bottom = 25 + 22 + style.Height };
+            TablatureRenderer.Draw(hdc, columns, widths, style, grid, 0);
+            int x = grid.left + style.LabelWidth;
+            for (int c = 0; c < 9; c++) x += widths[c];
+            int center = x + widths[9] / 2;
+            var notation = KeyNotationStyle.Lessons(1f);
+            var (zSteps, zNotes, _) = KeyNotation.ForLesson(Gesture.Of("Ź"), 'a', false, false);
+            var (zw, _) = KeyNotation.Measure(hdc, zSteps, notation, zNotes);
+            int maxAbove = 2 * (notation.TagHeight + notation.Gap);
+            int top = grid.bottom + 10;
+            KeyNotation.Draw(hdc, zSteps, notation, center - zw / 2, top + maxAbove - KeyNotation.HeightAboveCases(zSteps, notation),
+                PaperTheme.Action, zNotes, 0, PaperTheme.Surface);
+
+            // Planche : un geste par case, sur la même ligne des cases.
+            var cases = new (string Label, string Glyph, char? Next, bool Caps)[]
+            {
+                ("É puis c", "É", 'c', false), ("É, Verr. Maj. allumée", "É", 'C', true), ("U", "U", null, false), ("«", "«", null, false),
+            };
+            int cx = 24, cy = part.bottom + 24;
+            foreach (var (label, glyph, next, caps) in cases)
+            {
+                PaperText.DrawLine(hdc, label, FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, 1f),
+                    new Win32.RECT { left = cx, top = cy, right = cx + 260, bottom = cy + 18 }, PaperTheme.TextSecondary, TextAlign.Left);
+                var (steps, notes, done) = KeyNotation.ForLesson(Gesture.Of(glyph), next, caps, false);
+                KeyNotation.Draw(hdc, steps, notation, cx, cy + 24 + maxAbove - KeyNotation.HeightAboveCases(steps, notation),
+                    PaperTheme.Action, notes, done, PaperTheme.Paper);
+                cx += 270;
+            }
+            var (rSteps, rNotes, _) = KeyNotation.ForLesson(Gesture.Of("É"), 'c', false, false);
+            PaperText.DrawParagraph(hdc, KeyNotation.Recipe(rSteps, rNotes),
+                FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, 1f), FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, 1f),
+                new Win32.RECT { left = 24, top = cy + 170, right = 1084, bottom = cy + 200 }, PaperTheme.TextSecondary, PaperTheme.Ink, 22);
+            PaperText.DrawParagraph(hdc, KeyNotation.Recipe(zSteps, zNotes),
+                FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, 1f), FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, 1f),
+                new Win32.RECT { left = 24, top = cy + 200, right = 1084, bottom = cy + 230 }, PaperTheme.TextSecondary, PaperTheme.Ink, 22);
+        });
+    }
+
     [Fact]
     public void Recherche()
     {

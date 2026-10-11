@@ -31,11 +31,14 @@ internal sealed partial class LessonsWindow
 
     /// <summary>
     /// Geste maîtrisé masqué (décidé le 11/10) : case cochée, caractère suivi, boîte 4 ou plus
-    /// et pas échu. L'Indice le remontre ; une faute fait redescendre la boîte.
+    /// et pas échu. L'Indice le remontre. La boîte ne bouge qu'en fin d'exercice : une faute
+    /// sur ce caractère dans l'exercice en cours le fait réapparaître tout de suite, comme le
+    /// promet KeyNotation_MasteredPanel.
     /// </summary>
     private bool CurrentGestureHidden(char current)
         => HideMasteredSetting && !HintActive && GestureMastery.IsTracked(current) &&
-           LessonNotations.IsMastered(_progress.Gestures.GetValueOrDefault(current.ToString()), DateTimeOffset.UtcNow);
+           LessonNotations.IsMastered(_progress.Gestures.GetValueOrDefault(current.ToString()), DateTimeOffset.UtcNow) &&
+           !_session.Stats.GetCharacterCounts().Any(c => c.Expected == current && c.Errors > 0);
 
     /// <summary>
     /// Le geste à montrer pour <paramref name="current"/>, ou null quand il n'y a rien à lire :
@@ -78,11 +81,19 @@ internal sealed partial class LessonsWindow
                     DrawCenteredRuns(hdc, KeyNotation.Recipe(g.Steps, g.Notes), top + S(6), center, minLeft, maxRight);
                     break;
                 case LessonNotation.NumberedKeyboard:
+                    // Le clavier ne porte qu'un numéro par touche : Verr. Maj. éteint se dit en mots.
+                    int numbered = NumberedSteps(g);
                     var runs = new List<TextRun>
                     {
                         new(L.KeyNotation_FollowKeyboard),
-                        new(g.Steps.Count == 1 ? L.KeyNotation_AllAtOnce : L.KeyNotation_StepsInOrder(g.Steps.Count), true),
+                        new(numbered == 1 ? L.KeyNotation_AllAtOnce : L.KeyNotation_StepsInOrder(numbered), true),
                     };
+                    if (numbered < g.Steps.Count)
+                    {
+                        runs.Add(new TextRun(L.KeyNotation_RecipeThenLast));
+                        runs.Add(new TextRun(g.Steps[^1].KeyLabel, true));
+                        runs.Add(new TextRun(L.KeyNotation_RecipeTurnsOff));
+                    }
                     DrawCenteredRuns(hdc, runs, top + S(6), center, minLeft, maxRight);
                     break;
                 default:
@@ -103,20 +114,27 @@ internal sealed partial class LessonsWindow
         }
     }
 
+    /// <summary>Temps numérotés sur le grand clavier : tous, sauf Verr. Maj. éteint, qui
+    /// retombe sur une touche déjà numérotée.</summary>
+    private static int NumberedSteps((List<GestureStep> Steps, KeyNotationNote[] Notes, int Done) g)
+        => g.Notes.Length > 0 && g.Notes[^1] == KeyNotationNote.TurnsOff ? g.Steps.Count - 1 : g.Steps.Count;
+
     /// <summary>
-    /// Grand clavier numéroté : le numéro du temps sur chaque touche frappée. Une touche frappée
-    /// deux fois (Verr. Maj. allumé puis éteint) garde son premier numéro.
+    /// Grand clavier numéroté : le numéro du temps sur chaque touche frappée, comme le texte
+    /// sous le caractère. Un temps déjà fait (Verr. Maj. allumée, touche morte armée) perd le sien.
     /// </summary>
     private void AddNumberedBadges(Dictionary<uint, int> badges, char current)
     {
         var line = _session.GetCurrentLineSnapshot();
         int next = _session.CursorPosition + 1;
         char? following = next >= 0 && next < line.Count ? line[next].Expected : null;
-        if (CurrentGesture(current, following) is not { } g || g.Steps.Count < 2) return;
-        for (int i = 0; i < g.Steps.Count; i++)
+        if (CurrentGesture(current, following) is not { } g) return;
+        int numbered = NumberedSteps(g);
+        if (numbered < 2) return;
+        for (int i = g.Done; i < numbered; i++)
         {
             if (VirtualKeyboard.KeyCodeToScancode.TryGetValue(g.Steps[i].KeyCode, out var sc))
-                badges.TryAdd(sc, i + 1);
+                badges[sc] = i + 1;
         }
     }
 
