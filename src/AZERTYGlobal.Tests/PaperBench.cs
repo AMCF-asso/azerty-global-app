@@ -120,6 +120,24 @@ public sealed class PaperBench
         });
     }
 
+    /// <summary>Mini-clavier (unité 24) et vignettes (17) sous le caractère, avec le temps
+    /// « Verr. Maj. éteint » que KeyNotation.ForLesson ajoute avant une minuscule.</summary>
+    [Fact]
+    public void LeconsMini()
+    {
+        if (OutDir is not { Length: > 0 } dir) return;
+        Render(Path.Combine(dir, "papier-lecons-mini.png"), 1108, 600, hdc =>
+        {
+            PaperDraw.Fill(hdc, 0, 0, 1108, 600, PaperTheme.Paper);
+            var (e, _, _) = KeyNotation.ForLesson(Gesture.Of("É"), 'c', false, false);
+            var z = Gesture.Of("Ź");
+            MiniKeyboardRenderer.DrawNumbered(hdc, 24, 24, 24f, e, 1f);
+            MiniKeyboardRenderer.DrawNumbered(hdc, 560, 24, 24f, z, 1f);
+            MiniKeyboardRenderer.DrawFrames(hdc, 24, 230, 17f, e, 1f);
+            MiniKeyboardRenderer.DrawFrames(hdc, 24, 410, 17f, z, 1f);
+        });
+    }
+
     [Fact]
     public void Recherche()
     {

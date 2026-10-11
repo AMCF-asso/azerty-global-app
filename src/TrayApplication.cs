@@ -1431,6 +1431,8 @@ sealed class TrayApplication : IDisposable
             // Un override modifié depuis la section Apps suspendues doit
             // s'appliquer immédiatement au process foreground courant.
             _settings.CompatibilityOverridesChanged = () => _foregroundMonitor?.Recompute();
+            // Notation des touches changée dans l'onglet Leçons : la fenêtre ouverte suit.
+            _settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
         }
         ApplyWindowInputState();
         _settings.Show();
