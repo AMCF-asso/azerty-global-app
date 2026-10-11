@@ -162,7 +162,8 @@ sealed class CharacterSearch : IDisposable
                 NameFr = nameFr,
                 NameEn = nameEn,
                 MethodDisplay = methodData != null ? FormatMethod(methodData) : "",
-                IsDirectAccess = item.Recommended?.Type == "direct",
+                // É È Ç À : recommandés par ^ depuis le 12/10, ils restent d'accès direct par Verr. Maj.
+                IsDirectAccess = item.Recommended?.Type == "direct" || item.Caps?.Type == "direct",
                 Method = methodData,
                 Methods = item.Methods,
             };

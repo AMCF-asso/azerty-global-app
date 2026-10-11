@@ -71,10 +71,10 @@ public class MiniKeyboardRendererTests : IDisposable
     [Fact]
     public void MajusculeAccentuee_CeQueGestureOfDonneReellement()
     {
-        // Vérifié à la lecture de Gesture.Of : É est la couche Caps de la touche 2 ; le geste a deux temps,
-        // Verr. Maj. puis é. Le temps « éteint » (refrapper Verr. Maj.) de la maquette n'existe pas dans
-        // GestureStep : c'est à la fenêtre Leçons de l'ajouter, s'il le faut.
-        var steps = Gesture.Of("É");
+        // É par sa méthode Caps (la recommandée est ^ puis é depuis le 12/10) : couche Caps de la touche 2,
+        // deux temps, Verr. Maj. puis é. Le temps « éteint » (refrapper Verr. Maj.) de la maquette n'existe
+        // pas dans GestureStep : c'est à la fenêtre Leçons de l'ajouter, s'il le faut.
+        var steps = Gesture.Of(CharacterIndex.Shared.ByCharacter["É"].Caps!);
         Assert.Equal(2, steps.Count);
         Assert.Equal((Gesture.CapsLockCode, "Digit2"), (steps[0].KeyCode, steps[1].KeyCode));
         Assert.All(steps, s => Assert.False(s.Shift || s.AltGr));
