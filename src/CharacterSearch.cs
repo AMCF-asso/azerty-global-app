@@ -1277,8 +1277,8 @@ sealed class CharacterSearch : IDisposable
 
     /// <summary>
     /// La partition du choix : le caractère en grand (AG Titre 84, bleu) à gauche ; à droite
-    /// son nom, sa portée (Maj, AltGr, Touche) et la phrase qui la lit, toujours visible :
-    /// c'est l'équivalent texte de la portée.
+    /// son nom, son geste en notation « Mots » et la phrase qui le lit, toujours visible :
+    /// c'est l'équivalent texte de la notation.
     /// </summary>
     private void DrawPartition(IntPtr hdc, CharEntry entry, int top, int cw)
     {
@@ -1316,14 +1316,12 @@ sealed class CharacterSearch : IDisposable
             return y - top;
 
         y += Scale(12);
-        var style = TablatureStyle.Search(_dpiScale);
+        // Notation « Mots » partout (QCM du 11/10) : pavés tenus au-dessus de la case frappée.
+        var style = KeyNotationStyle.Search(_dpiScale);
+        var (_, notationH) = KeyNotation.Measure(hdc, steps, style);
         if (draw)
-        {
-            var columns = TabColumn.FromGesture(steps);
-            var widths = TablatureRenderer.MeasureColumns(hdc, columns, style);
-            TablatureRenderer.Draw(hdc, columns, widths, style, new Win32.RECT { left = left, top = y, right = right, bottom = y + style.Height });
-        }
-        y += style.Height + Scale(12);
+            KeyNotation.Draw(hdc, steps, style, left, y, PaperTheme.Action, caseFill: PaperTheme.Paper);
+        y += notationH + Scale(12);
         y += PaperText.DrawParagraph(hdc, Gesture.Sentence(steps), SentenceFont(false), SentenceFont(true),
             new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
             PaperTheme.TextSecondary, PaperTheme.Ink, lineH, draw);
