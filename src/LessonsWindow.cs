@@ -225,8 +225,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         CatalogLanguage = L.Language;
         // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
-        _lessonIndex = Math.Clamp(_lessonIndex, 0, CurrentModule.Lessons.Count - 1);
-        _exerciseIndex = Math.Clamp(_exerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
+        _lessonIndex = Math.Clamp(_lessonIndex, 0, _catalog.Modules[_moduleIndex].Lessons.Count - 1); // le catalogue, pas la séance composée de l'accueil
+        _exerciseIndex = Math.Clamp(_exerciseIndex, 0, _catalog.Modules[_moduleIndex].Lessons[_lessonIndex].Exercises.Count - 1);
         if (_hWnd != IntPtr.Zero)
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
@@ -245,12 +245,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void RefreshChallengeModuleIfStale()
     {
         if (!_challenge.IsStale()) return;
-        bool wasOnChallenge = CurrentModule.Id == DailyChallenge.ModuleId;
+        bool wasOnChallenge = _catalog.Modules[_moduleIndex].Id == DailyChallenge.ModuleId;
         _catalog = ChallengeSessionState.LoadCatalog();
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
-        _lessonIndex = Math.Clamp(_lessonIndex, 0, CurrentModule.Lessons.Count - 1);
-        _exerciseIndex = Math.Clamp(_exerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
-        if (wasOnChallenge && CurrentModule.Id != DailyChallenge.ModuleId)
+        _lessonIndex = Math.Clamp(_lessonIndex, 0, _catalog.Modules[_moduleIndex].Lessons.Count - 1); // le catalogue, pas la séance composée de l'accueil
+        _exerciseIndex = Math.Clamp(_exerciseIndex, 0, _catalog.Modules[_moduleIndex].Lessons[_lessonIndex].Exercises.Count - 1);
+        if (wasOnChallenge && _catalog.Modules[_moduleIndex].Id != DailyChallenge.ModuleId)
         {
             // Le module a disparu (opt-out) : revenir au premier module proprement.
             _moduleIndex = 0; _lessonIndex = 0; _exerciseIndex = 0;
@@ -1933,8 +1933,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void OnChar(char c)
     {
         if (_settingsOpen) return;
-        if (HomeHandleChar(c)) return; // accueil : rien n'atteint la séance cachée
         c = ResolveTypedCharacter(c);
+        if (HomeHandleChar(c)) return; // accueil : après la résolution de la frappe physique, rien n'atteint la séance cachée
         if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
         ReturnFocusToSurface();
         if (_mode == WindowMode.Free)
@@ -2431,6 +2431,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void CaptureExpectedTextForPhysicalKey(uint scancode)
     {
         if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary)) return;
+        if (HomeShown && !HomePageHasSurface) return; // accueil : pas de champ où le texte attendu irait
         if (_mode == WindowMode.Lessons && _session.IsExerciseComplete) return;
         _pendingPhysicalText.CaptureKey(_layout, scancode, _mapper);
     }

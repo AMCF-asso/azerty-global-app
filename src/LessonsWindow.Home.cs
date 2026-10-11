@@ -71,8 +71,9 @@ internal sealed partial class LessonsWindow
     private void HomeClearComposed()
     {
         if (_homeComposed is not { } composed) return;
-        _exerciseIndex = composed.ReturnExerciseIndex;
         _homeComposed = null;
+        // Borné : le catalogue a pu être rechargé pendant la séance (langue, défi du jour).
+        _exerciseIndex = Math.Clamp(composed.ReturnExerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
     }
 
     /// <summary>« Suivant » à la fin d'une séance composée : retour à Aujourd'hui (rien après une

@@ -145,6 +145,71 @@ public class LessonsHomeWindowTests
     }
 
     [Fact]
+    public void UneRevisionTerminee_AfficheLeRecapitulatif_EnregistreLeGeste_SansEntreeDExercice_EtRevientPage()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            string character = ReviewableCharacter(window);
+            MakeDue(window, character);
+            var progress = BancCapture.Field<LessonProgressStore>(window, "_progress");
+            int attemptsBefore = progress.Gestures[character].Attempts;
+            string? lastModule = progress.LastModuleId;
+            int lastIndex = progress.LastExerciseIndex;
+            SetPage(window, "Today");
+            Paint(window);
+            Activate(window, L.LessonsHome_ReviewButton);
+
+            var exercise = (LessonExercise)BancCapture.Call(window, "get_CurrentExercise")!;
+            foreach (char c in string.Concat(exercise.Lines))
+                BancCapture.Call(window, "OnChar", c);
+
+            Assert.True(BancCapture.Field<bool>(window, "_showSummary"));
+            Paint(window); // le récapitulatif se dessine sur le module composé
+            Assert.Contains(Controls(window), control => control.Name == L.LessonsWin_IconNext);
+            Assert.Empty(progress.Exercises);                       // rien à retenir par exercice
+            Assert.Equal(lastModule, progress.LastModuleId);        // la position de « Reprendre » n'a pas bougé
+            Assert.Equal(lastIndex, progress.LastExerciseIndex);
+            Assert.True(progress.Gestures[character].Attempts > attemptsBefore); // mais le geste est enregistré
+
+            BancCapture.Call(window, "NextExercise");
+
+            Assert.Equal("Today", Page(window));
+            Assert.Null(BancCapture.Field<object?>(window, "_homeComposed"));
+            Paint(window);
+            Assert.Contains(L.LessonsHome_ReviewTitle, Summary(window));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    [Fact]
+    public void UnRechargementDeLangue_PendantUneSeanceComposee_GardeLaPositionDuCatalogue()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            string character = ReviewableCharacter(window);
+            MakeDue(window, character);
+            // Une position hors du premier module, pour que le sélecteur de séance ne la masque pas.
+            Assert.True((bool)BancCapture.Call(window, "SelectExercise", LessonCatalogLoader.InitiationModuleId,
+                LessonCatalogLoader.InitiationLessonId, 2, false)!);
+            SetPage(window, "Today");
+            Paint(window);
+            Activate(window, L.LessonsHome_ReviewButton);
+
+            L.Language = "en";
+            BancCapture.Call(window, "RefreshLanguage");
+
+            BancCapture.Call(window, "NextExercise"); // la fin de séance rend l'index du catalogue, intact
+            Assert.Equal(2, BancCapture.Field<int>(window, "_exerciseIndex"));
+            Assert.Equal(0, BancCapture.Field<int>(window, "_lessonIndex"));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    [Fact]
     public void Reprendre_RamenePageDExerciceSurLaPositionDuCatalogue()
     {
         using var isolation = new BancCapture.Isolation();
