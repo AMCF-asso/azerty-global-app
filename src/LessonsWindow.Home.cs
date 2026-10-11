@@ -772,16 +772,23 @@ internal sealed partial class LessonsWindow
             (L.LessonsHome_LegendUnseen, r => PaperDraw.Frame(hdc, r, p.Pale)),
             (L.LessonsHome_LegendNothing, r => { PaperDraw.Frame(hdc, r, p.HighContrast ? p.Border : PaperTheme.KeyFadedBorder); }),
         };
-        int sw = S(14), lx = area.left;
+        // Chaque entrée prend sa largeur réelle quand la ligne les tient toutes ; sinon parts égales.
+        int sw = S(14), gap = S(20), lx = area.left;
+        var textWidths = legend.Select(item => PaperText.Width(hdc, item.Text, hintFont)).ToArray();
+        int natural = textWidths.Sum() + legend.Length * (sw + S(6)) + (legend.Length - 1) * gap;
+        bool fits = natural <= area.right - area.left;
         int share = Math.Max(S(120), (area.right - area.left) / legend.Length);
-        foreach (var item in legend)
+        for (int i = 0; i < legend.Length; i++)
         {
+            var item = legend[i];
+            int width = fits ? sw + S(6) + textWidths[i] + gap : share;
             var swatch = new Win32.RECT { left = lx, top = legendTop + S(4), right = lx + sw, bottom = legendTop + S(4) + sw };
             item.Swatch(swatch);
-            PaperText.DrawLine(hdc, HomeEllipsize(hdc, item.Text, hintFont, share - sw - S(16)), hintFont,
-                new Win32.RECT { left = lx + sw + S(6), top = legendTop, right = lx + share, bottom = legendTop + S(22) },
+            string text = fits ? item.Text : HomeEllipsize(hdc, item.Text, hintFont, share - sw - S(16));
+            PaperText.DrawLine(hdc, text, hintFont,
+                new Win32.RECT { left = lx + sw + S(6), top = legendTop, right = lx + width, bottom = legendTop + S(22) },
                 pal.Muted, TextAlign.Left);
-            lx += share;
+            lx += width;
         }
     }
 
