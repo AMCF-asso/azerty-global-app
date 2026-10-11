@@ -1016,13 +1016,11 @@ sealed class VirtualKeyboard : IDisposable
         if (_gesture is { } g)
         {
             top = fullTop;
-            var style = TablatureStyle.Banner(s);
-            var columns = TabColumn.FromGesture(g.Steps);
-            var widths = TablatureRenderer.MeasureColumns(hdc, columns, style);
-            int width = TablatureRenderer.TotalWidth(widths, style);
-            int staffTop = top + (bottom - top - style.Height) / 2;
-            TablatureRenderer.Draw(hdc, columns, widths, style,
-                new Win32.RECT { left = left, top = staffTop, right = left + width, bottom = staffTop + style.Height });
+            // Notation « Mots » partout (QCM du 11/10), comme la recherche d'où vient le geste.
+            var style = KeyNotationStyle.Banner(s);
+            var (width, height) = KeyNotation.Measure(hdc, g.Steps, style);
+            int staffTop = top + Math.Max(0, (bottom - top - height) / 2);
+            KeyNotation.Draw(hdc, g.Steps, style, left, staffTop, PaperTheme.Action, caseFill: PaperTheme.Paper);
             staffRight = left + width;
         }
         else

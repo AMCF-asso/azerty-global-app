@@ -52,15 +52,16 @@ internal sealed record KeyNotationStyle
         Gap = Px(4, s), ThenPaddingX = Px(6, s), ThenFont = FontSpec.Of(AppFonts.Text, 14, TypeRamp.Regular, s),
     };
 
-    /// <summary>Bandeau du clavier virtuel : le geste venu de la recherche, sur une hauteur réduite.</summary>
+    /// <summary>Bandeau du clavier virtuel : le geste venu de la recherche. Maj et AltGr
+    /// empilés tiennent dans les 62 px du bandeau : 16 + 2 + 16 + 2 + 24 = 60.</summary>
     internal static KeyNotationStyle Banner(float s) => new()
     {
-        TagHeight = Px(18, s), TagMinWidth = Px(38, s), TagPaddingX = Px(7, s), TagRadius = Px(2, s),
-        TagFont = FontSpec.Of(AppFonts.Text, 11, TypeRamp.Semibold, s),
-        CaseHeight = Px(26, s), CaseMinWidth = Px(26, s), CasePaddingX = Px(5, s), CaseRadius = Px(3, s), CaseBorder = Px(1, s),
+        TagHeight = Px(16, s), TagMinWidth = Px(38, s), TagPaddingX = Px(7, s), TagRadius = Px(2, s),
+        TagFont = FontSpec.Of(AppFonts.Text, 10, TypeRamp.Semibold, s),
+        CaseHeight = Px(24, s), CaseMinWidth = Px(24, s), CasePaddingX = Px(5, s), CaseRadius = Px(3, s), CaseBorder = Px(1, s),
         CaseFont = FontSpec.Of(AppFonts.Mono, 13, TypeRamp.Semibold, s),
         CaseWordFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Semibold, s),
-        Gap = Px(3, s), ThenPaddingX = Px(4, s), ThenFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s),
+        Gap = Px(2, s), ThenPaddingX = Px(4, s), ThenFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s),
     };
 
     internal static int Px(float value, float scale) => Math.Max(1, (int)Math.Round(value * scale));
