@@ -10,6 +10,15 @@ Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0
 - Les exercices réussis du tutoriel d’accueil nourrissent la progression par geste des Leçons ; le compteur du tutoriel ne change pas.
 - Nouveau texte de l’Édition spéciale, « Un tour d’Afrique » : €, ɓ, ŋ, Ŋ et ɔ dans une phrase française.
 
+**Notation des touches à taper (décisions d’Antoine du 11 octobre)**
+
+- **Mots sous le caractère courant.** La ligne à taper n’a plus de portée à trois lignes : le geste du seul caractère à taper s’écrit dessous, Maj et AltGr en pavés pleins au-dessus de la touche frappée, cernée, « puis » entre deux temps. Rien ne s’affiche pour une lettre qui se tape sur sa propre touche ; « U » montre Maj + U.
+- **Verr. Maj. dit quand l’éteindre.** Avant une minuscule, É se lit « Verr. Maj. (allume) puis é puis Verr. Maj. (éteint) ». Un temps déjà fait (Verr. Maj. allumée, touche morte armée) passe en pâle.
+- **Une notation par état du clavier, au choix.** Avec le clavier : Mots, Recette écrite (« ù, puis Maj + Z ») ou Grand clavier numéroté. Sans le clavier : Mots, Recette écrite, Mini-clavier sous le caractère ou Une vignette par temps. Mots par défaut. Réglage dans la page Réglages des Leçons et dans un nouvel onglet « Leçons » des Paramètres ; la fenêtre ouverte suit.
+- **Gestes maîtrisés masqués.** Un caractère en boîte 4 ou 5, pas à revoir, ne montre plus son geste ni ses touches sur le clavier ; Indice le remontre, une faute dans l’exercice le fait réapparaître. Case « Masquer le geste des caractères maîtrisés », cochée par défaut.
+- **Même notation partout.** La partition de la recherche et le bandeau du clavier virtuel prennent les Mots ; les lignes de résultats l’avaient déjà.
+- Témoins : `KeyNotationTests`, `NotationConfigTests`, `MiniKeyboardRendererTests` ; bancs `PaperBench.LeconsNotation` et `PaperBench.LeconsMini`.
+
 **Recherche par langue (décisions d’Antoine du 27 septembre et du 7 octobre)**
 
 - Taper le nom d’une langue fait remonter ses caractères : « pulaar », « fulfulde », « peul », « fula », « wolof », « bambara », « malinké », « soussou », « lingala », « éwé », « yoruba »… en français, en anglais ou dans la langue, avec ou sans accents. 119 langues d’Afrique à alphabet latin, celles du référentiel de la page /afrique du site. Langue et lettre se combinent : « pulaar b » trouve ɓ.
