@@ -92,6 +92,23 @@ internal sealed record TablatureStyle
         BandOverflowTop = Px(26, s), BandOverflowBottom = Px(22, s), BandBorder = Px(2, s),
     };
 
+    /// <summary>
+    /// Leçons depuis le 11/10 : la ligne de texte seule, sans portée ni étiquettes ; le geste
+    /// du caractère courant se lit dessous en notation Mots (<see cref="KeyNotation"/>). La
+    /// bande de la colonne en cours s'arrête au bas des glyphes, au-dessus de la notation.
+    /// </summary>
+    internal static TablatureStyle LessonsText(float s) => new()
+    {
+        LabelWidth = Px(30, s),
+        LabelFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, s),
+        GlyphRowHeight = Px(78, s), GlyphFont = FontSpec.Of(AppFonts.Title, 50, TypeRamp.Semibold, s),
+        GlyphPadding = Px(1, s), NbspWidth = Px(22, s), ThinNbspWidth = Px(13, s), SpaceMarkHeight = Px(30, s),
+        MinColumnWidth = Px(10, s),
+        CaseFont = FontSpec.Of(AppFonts.Mono, 12, TypeRamp.Semibold, s),
+        ThenFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s),
+        BandOverflowTop = Px(22, s), BandOverflowBottom = Px(4, s), BandBorder = Px(2, s),
+    };
+
     /// <summary>Recherche B : la partition du caractère choisi, grandes cases de 38 px.</summary>
     internal static TablatureStyle Search(float s) => new()
     {
@@ -199,10 +216,14 @@ internal static class TablatureRenderer
         int bottom = keyTop + style.KeyRowHeight;
         int columnsLeft = bounds.left + style.LabelWidth;
 
-        // Étiquettes, fixes.
-        DrawLabel(hdc, L.Gesture_LineShift, style, bounds.left, shiftTop, style.ShiftRowHeight);
-        DrawLabel(hdc, L.Gesture_LineAltGr, style, bounds.left, altGrTop, style.AltGrRowHeight);
-        DrawLabel(hdc, L.Gesture_LineKey, style, bounds.left, keyTop, style.KeyRowHeight);
+        // Étiquettes, fixes ; une portée sans lignes (Leçons, notation Mots) n'en a pas.
+        bool staff = style.ShiftRowHeight + style.AltGrRowHeight + style.KeyRowHeight > 0;
+        if (staff)
+        {
+            DrawLabel(hdc, L.Gesture_LineShift, style, bounds.left, shiftTop, style.ShiftRowHeight);
+            DrawLabel(hdc, L.Gesture_LineAltGr, style, bounds.left, altGrTop, style.AltGrRowHeight);
+            DrawLabel(hdc, L.Gesture_LineKey, style, bounds.left, keyTop, style.KeyRowHeight);
+        }
 
         int saved = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, columnsLeft, top - style.BandOverflowTop, bounds.right, bottom + style.BandOverflowBottom);
@@ -222,17 +243,20 @@ internal static class TablatureRenderer
         }
 
         // Filets des trois lignes, interrompus par « puis » sur la ligne des touches.
-        int rulesRight = columnsLeft - scroll;
-        foreach (int w in widths) rulesRight += w;
-        DrawRule(hdc, columnsLeft - scroll, rulesRight, shiftTop + style.ShiftRowHeight / 2);
-        DrawRule(hdc, columnsLeft - scroll, rulesRight, altGrTop + style.AltGrRowHeight / 2);
-        x = columnsLeft - scroll;
-        int keyMid = keyTop + style.KeyRowHeight / 2;
-        for (int i = 0; i < columns.Count; i++)
+        if (staff)
         {
-            if (!columns[i].IsThen)
-                DrawRule(hdc, x, x + widths[i], keyMid);
-            x += widths[i];
+            int rulesRight = columnsLeft - scroll;
+            foreach (int w in widths) rulesRight += w;
+            DrawRule(hdc, columnsLeft - scroll, rulesRight, shiftTop + style.ShiftRowHeight / 2);
+            DrawRule(hdc, columnsLeft - scroll, rulesRight, altGrTop + style.AltGrRowHeight / 2);
+            x = columnsLeft - scroll;
+            int keyMid = keyTop + style.KeyRowHeight / 2;
+            for (int i = 0; i < columns.Count; i++)
+            {
+                if (!columns[i].IsThen)
+                    DrawRule(hdc, x, x + widths[i], keyMid);
+                x += widths[i];
+            }
         }
 
         // Colonnes.

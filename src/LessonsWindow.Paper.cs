@@ -350,8 +350,8 @@ internal sealed partial class LessonsWindow
 
     private void DrawPaperLesson(IntPtr hdc, Win32.RECT rc, Win32.RECT body)
     {
-        var style = TablatureStyle.Lessons(PaperScale);
-        int partH = 1 + S(26) + style.Height + S(22) + 1;
+        var style = TablatureStyle.LessonsText(PaperScale);
+        int partH = 1 + S(22) + style.Height + S(10) + NotationAreaHeight() + S(14) + 1;
         var part = new Win32.RECT { left = body.left, top = body.top, right = body.right, bottom = body.top + partH };
 
         int textTop = part.bottom + S(14);
@@ -405,11 +405,10 @@ internal sealed partial class LessonsWindow
     }
 
     /// <summary>
-    /// La ligne à taper en Tablature : une colonne par caractère attendu (glyphe, traits
-    /// tenus, case frappée si la touche n'est pas le caractère lui-même), une colonne sans
-    /// glyphe avant chaque temps d'armement d'une touche morte. Le socle n'a pas d'état
-    /// « faute » : la colonne fautive est tracée sans glyphe, puis le caractère tapé y est
-    /// repeint en rouge, souligné.
+    /// La ligne à taper : une colonne par caractère attendu, sans portée (QCM du 11/10) ; le
+    /// geste du seul caractère courant se lit dessous (<see cref="DrawCurrentNotation"/>). Le
+    /// socle n'a pas d'état « faute » : la colonne fautive est tracée sans glyphe, puis le
+    /// caractère tapé y est repeint en rouge, souligné.
     /// </summary>
     private void DrawPartition(IntPtr hdc, Win32.RECT part, TablatureStyle style)
     {
@@ -419,10 +418,9 @@ internal sealed partial class LessonsWindow
         bool strict = CurrentExercise.TypingMode == LessonTypingMode.Strict;
         int cursor = Math.Clamp(_session.CursorPosition, 0, Math.Max(expected.Count, typed.Count));
 
-        var measured = new List<TabColumn>(expected.Count * 2);
-        var drawn = new List<TabColumn>(expected.Count * 2);
+        var measured = new List<TabColumn>(expected.Count);
+        var drawn = new List<TabColumn>(expected.Count);
         var glyphColumn = new int[expected.Count];
-        var firstColumn = new int[expected.Count];
         var wrong = new List<(int Column, char Actual)>();
         for (int i = 0; i < expected.Count; i++)
         {
@@ -435,29 +433,10 @@ internal sealed partial class LessonsWindow
                 _ => TabState.Upcoming,
             };
             string glyph = cell.Expected.ToString();
-            var steps = Gesture.Of(glyph);
-            firstColumn[i] = measured.Count;
-            for (int s = 0; s < steps.Count - 1; s++)
-            {
-                var step = steps[s];
-                var armed = new TabColumn(null, step.Shift, step.AltGr, step.ShortLabel, state);
-                measured.Add(armed);
-                drawn.Add(armed);
-            }
-            bool shift = false, altGr = false;
-            string? key = null;
-            if (steps.Count > 0)
-            {
-                var last = steps[^1];
-                shift = last.Shift;
-                altGr = last.AltGr;
-                if (cell.Expected != ' ' && !Gesture.StrikesItsOwnKey(glyph, steps))
-                    key = last.ShortLabel;
-            }
             glyphColumn[i] = measured.Count;
-            measured.Add(new TabColumn(glyph, shift, altGr, key, state));
+            measured.Add(new TabColumn(glyph, false, false, null, state));
             bool isWrong = cell.State == LessonCharacterState.Wrong && TypedCharacterAt(typed, i) is char;
-            drawn.Add(new TabColumn(isWrong ? null : glyph, shift, altGr, key, state));
+            drawn.Add(new TabColumn(isWrong ? null : glyph, false, false, null, state));
             if (isWrong)
                 wrong.Add((glyphColumn[i], typed[i].Actual));
         }
@@ -470,7 +449,7 @@ internal sealed partial class LessonsWindow
         }
 
         int[] widths = TablatureRenderer.MeasureColumns(hdc, measured, style);
-        var grid = new Win32.RECT { left = part.left + 1, top = part.top + 1 + S(26), right = part.right - 1, bottom = part.bottom - 1 - S(22) };
+        var grid = new Win32.RECT { left = part.left + 1, top = part.top + 1 + S(22), right = part.right - 1, bottom = part.top + 1 + S(22) + style.Height };
         int columnsLeft = grid.left + style.LabelWidth;
         int viewport = Math.Max(1, grid.right - columnsLeft - S(16));
         int currentColumn = cursor < expected.Count ? glyphColumn[cursor] : measured.Count - 1;
@@ -483,27 +462,13 @@ internal sealed partial class LessonsWindow
         for (int c = 0; c < widths.Length; c++)
             lefts[c + 1] = lefts[c] + widths[c];
 
-        // Un caractère à deux temps occupe plusieurs colonnes « en cours » : le socle borde
-        // chacune. Une seule bande par caractère : les filets intérieurs sont effacés, puis les
-        // lignes de la portée qui les traversaient retracées.
+        // Le geste du caractère courant, sous sa colonne.
+        if (cursor < expected.Count)
         {
-            int bandTop = grid.top - style.BandOverflowTop;
-            int bandBottom = grid.top + style.Height + style.BandOverflowBottom;
-            uint tint = PaperDraw.Blend(PaperTheme.Action, style.Backdrop, 0.07f);
-            int shiftMid = grid.top + style.GlyphRowHeight + style.ShiftRowHeight / 2;
-            int altGrMid = grid.top + style.GlyphRowHeight + style.ShiftRowHeight + style.AltGrRowHeight / 2;
-            int keyMid = grid.top + style.GlyphRowHeight + style.ShiftRowHeight + style.AltGrRowHeight + style.KeyRowHeight / 2;
-            int clip = Win32.SaveDC(hdc);
-            Win32.IntersectClipRect(hdc, columnsLeft, bandTop, grid.right, bandBottom);
-            for (int c = 1; c < drawn.Count; c++)
-            {
-                if (drawn[c].State != TabState.Current || drawn[c - 1].State != TabState.Current) continue;
-                int sx = lefts[c];
-                PaperDraw.Fill(hdc, sx, bandTop, sx + style.BandBorder, bandBottom, tint);
-                foreach (int y in new[] { shiftMid, altGrMid, keyMid })
-                    PaperDraw.Fill(hdc, sx, y, sx + style.BandBorder, y + 1, PaperTheme.Border);
-            }
-            Win32.RestoreDC(hdc, clip);
+            int c = glyphColumn[cursor];
+            int center = (lefts[c] + lefts[c + 1]) / 2;
+            char? following = cursor + 1 < expected.Count ? expected[cursor + 1].Expected : null;
+            DrawCurrentNotation(hdc, part, grid.bottom + S(10), center, following);
         }
 
         // Fautes repeintes : le caractère tapé en rouge, souligné.
@@ -522,7 +487,7 @@ internal sealed partial class LessonsWindow
 
         // Caret système masqué, devant la colonne du caractère à taper.
         bool active = !_session.IsLineComplete && !_session.IsExerciseComplete;
-        int caretColumn = cursor < expected.Count ? firstColumn[cursor] : widths.Length;
+        int caretColumn = cursor < expected.Count ? glyphColumn[cursor] : widths.Length;
         int caretX = lefts[Math.Clamp(caretColumn, 0, widths.Length)];
         int caretTop = grid.top + S(14);
         if (active && caretX >= columnsLeft && caretX <= grid.right)
@@ -569,8 +534,8 @@ internal sealed partial class LessonsWindow
         return string.Join(' ', words);
     }
 
-    /// <summary>Panneau du geste : nom du caractère à taper, puis la phrase du geste et la
-    /// légende de la portée ; « Frappez Retour arrière. » quand une faute attend.</summary>
+    /// <summary>Panneau du geste : nom du caractère à taper, puis la phrase du geste (ou l'avis
+    /// de geste masqué) ; « Frappez Retour arrière. » quand une faute attend.</summary>
     private void DrawGesturePanel(IntPtr hdc, Win32.RECT panel, bool centered)
     {
         if (panel.right - panel.left < S(120)) return;
@@ -588,11 +553,16 @@ internal sealed partial class LessonsWindow
             char? next = _session.GetNextExpectedCharacter();
             if (!next.HasValue) return;
             title = CharacterDisplayName(next.Value);
-            var steps = Gesture.Of(next.Value.ToString());
-            if (steps.Count > 0)
+            if (CurrentGestureHidden(next.Value))
             {
-                runs.AddRange(Gesture.Sentence(steps));
-                runs.Add(new TextRun(" " + L.LessonsPaper_TabLegend));
+                runs.Add(new TextRun(L.KeyNotation_MasteredPanel));
+            }
+            else if (CurrentNotation() != LessonNotation.Recipe)
+            {
+                // La Recette se lit déjà sous le caractère : pas deux fois la même phrase.
+                var steps = Gesture.Of(next.Value.ToString());
+                if (steps.Count > 0)
+                    runs.AddRange(Gesture.Sentence(steps));
             }
         }
 
@@ -676,12 +646,15 @@ internal sealed partial class LessonsWindow
                 {
                     state.HighlightedScancodes.Add(0x0E);
                 }
-                else if (_session.GetNextExpectedCharacter() is char next && _hints.GetRecommendedMethod(next) is { } method)
+                else if (_session.GetNextExpectedCharacter() is char next && !CurrentGestureHidden(next) &&
+                         _hints.GetRecommendedMethod(next) is { } method)
                 {
                     if (!string.IsNullOrEmpty(method.DeadKeyToken))
                         state.LessonVisibleCharacters.Add(method.DeadKeyToken);
                     LessonHintProvider.Guide(state, method, next.ToString(), _mapper.ActiveDeadKey,
                         _mapper.CapsLockActive, GuideOptions.Lessons);
+                    if (CurrentNotation() == LessonNotation.NumberedKeyboard)
+                        AddNumberedBadges(stepBadges, next);
                 }
             }
         }
