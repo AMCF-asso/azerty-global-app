@@ -20,7 +20,8 @@ internal sealed partial class LessonsWindow
         LessonNotation.Recipe => S(40),
         LessonNotation.NumberedKeyboard => S(36),
         LessonNotation.MiniKeyboard or LessonNotation.Frames => S(172),
-        _ => S(128),
+        // Mots : deux pavés, la case et sa note (26 + 5) × 2 + 34 + 5 + 14 = 115 à 100 %.
+        _ => S(118),
     };
 
     /// <summary>Unités de touche des mini-claviers (rapport de lot/notation-mini) : 24 sous le
@@ -121,11 +122,9 @@ internal sealed partial class LessonsWindow
                     var style = KeyNotationStyle.Lessons(PaperScale);
                     var (w, _) = KeyNotation.Measure(hdc, g.Steps, style, g.Notes);
                     int left = Math.Clamp(center - w / 2, minLeft, Math.Max(minLeft, maxRight - w));
-                    // Les pavés montent au-dessus des cases : la ligne des cases reste à la même
-                    // hauteur pour « e », « U » ou « Ǹ ».
-                    int maxAbove = 2 * (style.TagHeight + style.Gap);
-                    int drawTop = top + maxAbove - KeyNotation.HeightAboveCases(g.Steps, style);
-                    KeyNotation.Draw(hdc, g.Steps, style, left, drawTop, CLR_ACCENT, g.Notes, g.Done, CLR_PANEL);
+                    // Collée sous le caractère : une réserve pour deux pavés la détachait de
+                    // la lettre de 60 px quand le geste n'en a pas (capture CI du 11/10).
+                    KeyNotation.Draw(hdc, g.Steps, style, left, top, CLR_ACCENT, g.Notes, g.Done, CLR_PANEL);
                     break;
             }
         }
