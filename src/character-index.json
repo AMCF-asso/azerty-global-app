@@ -3149,7 +3149,8 @@
           "type": "deadkey",
           "deadkey": "dk_circumflex",
           "key": "Digit0",
-          "layer": "Base"
+          "layer": "Base",
+          "recommended": true
         },
         {
           "type": "deadkey",
@@ -3160,8 +3161,7 @@
         {
           "type": "direct",
           "key": "Digit0",
-          "layer": "Caps",
-          "recommended": true
+          "layer": "Caps"
         },
         {
           "type": "deadkey",
@@ -3379,7 +3379,8 @@
           "type": "deadkey",
           "deadkey": "dk_circumflex",
           "key": "Digit9",
-          "layer": "Base"
+          "layer": "Base",
+          "recommended": true
         },
         {
           "type": "deadkey",
@@ -3390,8 +3391,7 @@
         {
           "type": "direct",
           "key": "Digit9",
-          "layer": "Caps",
-          "recommended": true
+          "layer": "Caps"
         },
         {
           "type": "deadkey",
@@ -3416,7 +3416,8 @@
           "type": "deadkey",
           "deadkey": "dk_circumflex",
           "key": "Digit7",
-          "layer": "Base"
+          "layer": "Base",
+          "recommended": true
         },
         {
           "type": "deadkey",
@@ -3427,8 +3428,7 @@
         {
           "type": "direct",
           "key": "Digit7",
-          "layer": "Caps",
-          "recommended": true
+          "layer": "Caps"
         },
         {
           "type": "deadkey",
@@ -3453,7 +3453,8 @@
           "type": "deadkey",
           "deadkey": "dk_circumflex",
           "key": "Digit2",
-          "layer": "Base"
+          "layer": "Base",
+          "recommended": true
         },
         {
           "type": "deadkey",
@@ -3464,8 +3465,7 @@
         {
           "type": "direct",
           "key": "Digit2",
-          "layer": "Caps",
-          "recommended": true
+          "layer": "Caps"
         },
         {
           "type": "deadkey",
