@@ -273,6 +273,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             var lesson = _catalog.Modules[m].Lessons[0];
             if (!SelectExercise(DailyChallenge.ModuleId, lesson.Id, 0, savePosition: false))
                 return false;
+            _homeOpenOnExercise = true; // accueil des Leçons : le défi s'ouvre sur son exercice (LessonsWindow.Home.cs)
             Show();
             return true;
         }
@@ -288,6 +289,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         _mapper.RequestCapsLockOff();
         _mapper.SyncState();
+        HomeOnShow(); // accueil des Leçons : « Aujourd'hui » à l'ouverture (LessonsWindow.Home.cs)
         _visible = true;
         LearningSessionTracker.Opened(this); // aucune demande d'avis pendant la séance
         Win32.ShowWindow(_hWnd, 1);
@@ -301,9 +303,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int D(int value) => (int)Math.Round(value * _dpiScale);
     private int S(int value) => (int)Math.Round(value * _dpiScale * _windowScale);
 
-    private LessonModule CurrentModule => _catalog.Modules[_moduleIndex];
-    private LessonLesson CurrentLesson => CurrentModule.Lessons[_lessonIndex];
-    private LessonExercise CurrentExercise => CurrentLesson.Exercises[_exerciseIndex];
+    // Accueil des Leçons : une séance composée (révision, touche, texte) prend la place de
+    // l'exercice du catalogue sans toucher aux index (LessonsWindow.Home.cs, HomeComposed).
+    private LessonModule CurrentModule => _homeComposed?.Module ?? _catalog.Modules[_moduleIndex];
+    private LessonLesson CurrentLesson => _homeComposed?.Lesson ?? CurrentModule.Lessons[_lessonIndex];
+    private LessonExercise CurrentExercise => _homeComposed?.Exercise ?? CurrentLesson.Exercises[_exerciseIndex];
 
     private void CreateFonts()
     {
@@ -796,6 +800,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 if (!StringComparer.Ordinal.Equals(_catalog.Modules[m].Lessons[l].Id, lessonId)) continue;
                 if (exerciseIndex < 0 || exerciseIndex >= _catalog.Modules[m].Lessons[l].Exercises.Count)
                     return false;
+                HomeClearComposed(); // accueil des Leçons : l'exercice du catalogue reprend la main
+                _homePage = HomePage.Exercise;
                 _moduleIndex = m;
                 _lessonIndex = l;
                 _exerciseIndex = exerciseIndex;
@@ -821,7 +827,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _hintBackspace = false;
         _hintButtonActive = false;
         ClearPendingPhysicalText();
-        if (savePosition)
+        if (savePosition && _homeComposed == null) // une séance composée n'est pas une position du catalogue
             _progress.SetLastPosition(CurrentExercise);
         UpdateAutoHintIfEnabled();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
@@ -1048,18 +1054,28 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Refonte 1.3.0 (maquette Leçons F) : en-tête d'une ligne, partition, clavier papier.
         // Le sélecteur ouvert se dessine en dernier, par-dessus, et capte seul les clics.
         var body = new Win32.RECT { left = S(24), top = S(76), right = rc.right - S(24), bottom = rc.bottom - S(20) };
-        // L'en-tête d'abord : l'ordre de Tab suit celui de la page.
-        DrawPaperHeader(hdc, rc);
-        if (_settingsOpen)
-            DrawPaperSettings(hdc, body);
-        else if (_mode == WindowMode.Lessons)
-            DrawPaperLesson(hdc, rc, body);
+        // Accueil des Leçons : la page « Aujourd'hui » a son propre en-tête, sa page et son anneau
+        // de focus (LessonsWindow.Home.cs) ; le reste de la méthode sert l'écran d'exercice.
+        bool home = HomeShown;
+        if (home)
+            DrawHome(hdc, rc);
         else
-            DrawPaperFree(hdc, rc, body);
-        if (_pickerOpen)
-            DrawPaperPicker(hdc, rc);
+        {
+            // L'en-tête d'abord : l'ordre de Tab suit celui de la page.
+            DrawPaperHeader(hdc, rc);
+            HomeDrawReturnLink(hdc); // lien « ‹ Aujourd'hui » sous l'en-tête (provisoire, voir Home.cs)
+            if (_settingsOpen)
+                DrawPaperSettings(hdc, body);
+            else if (_mode == WindowMode.Lessons)
+                DrawPaperLesson(hdc, rc, body);
+            else
+                DrawPaperFree(hdc, rc, body);
+            if (_pickerOpen)
+                DrawPaperPicker(hdc, rc);
+        }
 
-        DrawFocusRing(hdc);
+        if (!home)
+            DrawFocusRing(hdc);
         // K4 (accessibilité 1.3.0) : l'infobulle de survol garde la priorité ; à défaut, celle
         // de la cible focalisée au clavier.
         if (string.IsNullOrEmpty(_hoverTooltip))
@@ -1669,6 +1685,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         int x = unchecked((short)((long)lParam & 0xFFFF));
         int y = unchecked((short)(((long)lParam >> 16) & 0xFFFF));
         ReturnFocusToSurface();
+        HomeNoteClick(x, y); // accueil : le point sert à la carte (une zone, plusieurs touches)
         foreach (var (rect, action) in _clickActions)
         {
             if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
@@ -1821,7 +1838,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// <summary>La page affiche-t-elle une surface où l'on tape (ligne d'exercice, aperçu du
     /// mode Libre) ? Elle prend alors place dans le cycle de Tab, à l'index -1.</summary>
     private bool HasTypingSurface =>
-        !_settingsOpen && !_pickerOpen && (_mode == WindowMode.Free || !_showSummary);
+        !_settingsOpen && !_pickerOpen && (HomeShown ? HomePageHasSurface : _mode == WindowMode.Free || !_showSummary);
 
     /// <summary>
     /// Cible suivante de Tab (Maj+Tab : <paramref name="direction"/> = -1) parmi
@@ -1873,6 +1890,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                 return;
             }
+            if (HomeEscape()) // accueil : de « Votre carte » ou « Votre texte » vers « Aujourd'hui »
+                return;
             Hide();
             return;
         }
@@ -1882,11 +1901,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
-        if (vk == 0x0D || (_settingsOpen && vk == 0x20))
+        if (vk == 0x0D || ((_settingsOpen || HomeShown) && vk == 0x20))
         {
             if (ActivateFocusedAction())
                 return;
         }
+        if (HomeHandleKey(vk)) return; // accueil : rien n'atteint la séance cachée
         if (_settingsOpen) return;
         if (_mode == WindowMode.Free && HandleFreeModeKeyDown(vk))
         {
@@ -1913,6 +1933,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void OnChar(char c)
     {
         if (_settingsOpen) return;
+        if (HomeHandleChar(c)) return; // accueil : rien n'atteint la séance cachée
         c = ResolveTypedCharacter(c);
         if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
         ReturnFocusToSurface();
@@ -2156,6 +2177,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (!_visible ||
             _settingsOpen ||
+            HomeShown || // accueil : pas d'indice pour une séance qu'on ne voit pas
             _mode != WindowMode.Lessons ||
             !ConfigManager.LessonAutoHintsEnabled ||
             _showSummary ||
@@ -2192,6 +2214,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void SelectModule(int index)
     {
         if (index < 0 || index >= _catalog.Modules.Count) return;
+        HomeClearComposed(); // accueil : quitte la séance composée
+        _homePage = HomePage.Exercise;
         _settingsOpen = false;
         _mode = WindowMode.Lessons;
         _moduleIndex = index;
@@ -2202,6 +2226,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void SelectLesson(int index)
     {
+        HomeClearComposed(); // accueil : quitte la séance composée
+        _homePage = HomePage.Exercise;
         if (index < 0 || index >= CurrentModule.Lessons.Count) return;
         _pickerOpen = false;
         _settingsOpen = false;
@@ -2213,6 +2239,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void PreviousExercise()
     {
+        if (_homeComposed != null) // séance composée : un seul exercice, on repart de son début
+        {
+            StartCurrentSession(savePosition: false);
+            return;
+        }
         if (_exerciseIndex > 0)
         {
             _exerciseIndex--;
@@ -2229,6 +2260,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void NextExercise()
     {
+        if (HomeFinishComposed()) return; // séance composée : retour à « Aujourd'hui »
         if (_exerciseIndex < CurrentLesson.Exercises.Count - 1)
         {
             _exerciseIndex++;
@@ -2421,6 +2453,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // se présente, et les dix minutes sans avis s'appliquent aussi à lui.
         LearningSessionTracker.Closed(this);
         _settingsOpen = false;
+        HomeOnHide(); // accueil des Leçons : oublie le clic et le texte collé (LessonsWindow.Home.cs)
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
