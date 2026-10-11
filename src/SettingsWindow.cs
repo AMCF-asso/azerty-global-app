@@ -39,6 +39,13 @@ sealed partial class SettingsWindow : IDisposable
     private const int IDC_RADIO_COMPAT_AUTO = 3115;
     private const int IDC_RADIO_COMPAT_FORCEON = 3116;
     private const int IDC_RADIO_COMPAT_FORCEOFF = 3117;
+    // Onglet « Leçons » (11/10) : « Touches à taper ». Les boutons radio d'une liste ont des
+    // identifiants consécutifs à partir de la base, dans l'ordre de LessonNotations.WithKeyboard
+    // et WithoutKeyboard (au plus dix par liste).
+    private const int IDC_RADIO_NOTATION_WITH = 3122;
+    private const int IDC_RADIO_NOTATION_WITHOUT = 3132;
+    private const int IDC_CHK_LESSON_KEYBOARD = 3142;
+    private const int IDC_CHK_HIDE_MASTERED = 3143;
 
     // Listbox Win32 (section Apps suspendues), dessinée par la fenêtre : LBS_HASSTRINGS garde
     // le texte de chaque ligne pour les lecteurs d'écran.
@@ -125,6 +132,15 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT OnboardingHintRect;
         public Win32.RECT ResetVirtualKeyboardHintRect;
         public Win32.RECT ResetLessonsHintRect;
+        // Onglet « Leçons » (11/10). Les listes de rectangles sont nulles hors de cet onglet :
+        // les lire par NotationRect, qui rend un rectangle vide.
+        public Win32.RECT NotationTitleRect;
+        public Win32.RECT NotationWithLabelRect;
+        public Win32.RECT NotationWithoutLabelRect;
+        public Win32.RECT[]? NotationWithRects;
+        public Win32.RECT[]? NotationWithoutRects;
+        public Win32.RECT LessonKeyboardRect;
+        public Win32.RECT HideMasteredRect;
         // Hauteur totale du contenu, marge basse comprise, avant tout défilement.
         // C'est elle qui décide de la hauteur de la fenêtre : le modèle v2.0.0 veut
         // une fenêtre qui mesure son contenu, jamais une constante (audit du
@@ -132,8 +148,11 @@ sealed partial class SettingsWindow : IDisposable
         public int ContentHeight;
     }
 
-    /// <summary>Les trois onglets de la fenêtre. L'ordre est celui de la bande.</summary>
-    private enum SettingsTab { General = 0, Applications = 1, LanguageMaintenance = 2 }
+    /// <summary>Les onglets de la fenêtre. L'ordre est celui de la bande. « Leçons » (11/10) est
+    /// ajouté en dernier : le banc de captures désigne les trois premiers par leur numéro.</summary>
+    private enum SettingsTab { General = 0, Applications = 1, LanguageMaintenance = 2, Lessons = 3 }
+
+    private const int TabCount = 4;
 
     // Onglet affiché. Volontairement NON persisté : la fenêtre rouvre toujours sur
     // « Général », qui porte ce qu'on vient changer neuf fois sur dix. Mémoriser le
@@ -180,6 +199,12 @@ sealed partial class SettingsWindow : IDisposable
     private IntPtr _hWndRadioCompatAuto;
     private IntPtr _hWndRadioCompatForceOn;
     private IntPtr _hWndRadioCompatForceOff;
+    // Onglet « Leçons » : une liste de boutons radio par état du clavier (dans l'ordre de
+    // LessonNotations), puis les deux cases.
+    private IntPtr[] _hWndNotationWith = Array.Empty<IntPtr>();
+    private IntPtr[] _hWndNotationWithout = Array.Empty<IntPtr>();
+    private IntPtr _hWndChkLessonKeyboard;
+    private IntPtr _hWndChkHideMastered;
     // Noms de process affichés dans la listbox, dans l'ordre des index de la liste, et
     // leur mode (« forceOn » ou « forceOff »), que la ligne écrit à droite.
     private readonly List<string> _compatProcesses = new();
@@ -249,6 +274,10 @@ sealed partial class SettingsWindow : IDisposable
     /// <summary>Déclenché après tout changement d'override de compatibilité depuis cette
     /// fenêtre — TrayApplication doit relancer ForegroundMonitor.Recompute().</summary>
     public Action? CompatibilityOverridesChanged;
+    /// <summary>Déclenché après un changement de l'onglet « Leçons » (notation, clavier sous le
+    /// texte, masquage des gestes maîtrisés) : la fenêtre Leçons, si elle est ouverte, doit
+    /// relire ces réglages et se redessiner. À brancher dans TrayApplication.</summary>
+    public Action? LessonDisplayChanged;
 
     // Abonnement AppLanguageChanged (bascule initiée depuis le tray ou l'onboarding) —
     // désabonné dans Dispose (événement statique, sinon référence pendante).
@@ -553,11 +582,113 @@ sealed partial class SettingsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEOFF, hInstance, IntPtr.Zero);
 
+        // ── Onglet « Leçons » (11/10) : touches à taper ──────────────
+        // Deux listes de boutons radio, une notation mémorisée par état du clavier, puis deux
+        // cases. WS_GROUP sur le premier radio de chaque liste et sur la première case : il
+        // termine le groupe précédent, sinon cocher un mode décocherait ceux de l'autre liste.
+        _hWndNotationWith = CreateNotationRadios(hInstance, LessonNotations.WithKeyboard, IDC_RADIO_NOTATION_WITH);
+        _hWndNotationWithout = CreateNotationRadios(hInstance, LessonNotations.WithoutKeyboard, IDC_RADIO_NOTATION_WITHOUT);
+        _hWndChkLessonKeyboard = Win32.CreateWindowExW(0, "BUTTON", L.Notation_KeyboardUnderText,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | WS_GROUP | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_LESSON_KEYBOARD, hInstance, IntPtr.Zero);
+        _hWndChkHideMastered = Win32.CreateWindowExW(0, "BUTTON", L.Notation_HideMastered,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_HIDE_MASTERED, hInstance, IntPtr.Zero);
+        RefreshLessonControls();
+
         RefreshCompatList(selectProcess: null);
         _controls = DescribeControls();
         PreparePaperButtons();
         SetCompatDescriptions();
         SetSettingDescriptions();
+    }
+
+    /// <summary>Une liste de boutons radio de notation : un par notation de l'état, libellé par
+    /// <see cref="L.Notation_Name"/>, identifiants consécutifs à partir de <paramref name="firstId"/>.</summary>
+    private IntPtr[] CreateNotationRadios(IntPtr hInstance, LessonNotation[] notations, int firstId)
+    {
+        var handles = new IntPtr[notations.Length];
+        for (int i = 0; i < notations.Length; i++)
+        {
+            uint style = Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | Win32.WS_TABSTOP;
+            if (i == 0) style |= WS_GROUP;
+            handles[i] = Win32.CreateWindowExW(0, "BUTTON", L.Notation_Name(notations[i]), style,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)(firstId + i), hInstance, IntPtr.Zero);
+        }
+        return handles;
+    }
+
+    /// <summary>Les neuf contrôles de l'onglet « Leçons » pour la table des contrôles : les
+    /// radios d'abord, liste « avec » puis liste « sans », puis les deux cases.</summary>
+    private IEnumerable<ControlSlot> LessonSlots()
+    {
+        const SettingsTab Lessons = SettingsTab.Lessons;
+        for (int i = 0; i < _hWndNotationWith.Length; i++)
+        {
+            int index = i;
+            yield return new(_hWndNotationWith[index], Lessons, () => FontBody.Handle,
+                l => NotationRect(l.NotationWithRects, index), () => L.Notation_Name(LessonNotations.WithKeyboard[index]));
+        }
+        for (int i = 0; i < _hWndNotationWithout.Length; i++)
+        {
+            int index = i;
+            yield return new(_hWndNotationWithout[index], Lessons, () => FontBody.Handle,
+                l => NotationRect(l.NotationWithoutRects, index), () => L.Notation_Name(LessonNotations.WithoutKeyboard[index]));
+        }
+        yield return new(_hWndChkLessonKeyboard, Lessons, () => FontBody.Handle,
+            l => l.LessonKeyboardRect, () => L.Notation_KeyboardUnderText);
+        yield return new(_hWndChkHideMastered, Lessons, () => FontBody.Handle,
+            l => l.HideMasteredRect, () => L.Notation_HideMastered);
+    }
+
+    private static Win32.RECT NotationRect(Win32.RECT[]? rects, int index) =>
+        rects is not null && index < rects.Length ? rects[index] : default;
+
+    /// <summary>Remet les radios et les cases de l'onglet « Leçons » d'après la config. Appelé à
+    /// la création et à chaque ouverture : le menu « Affichage » de la fenêtre Leçons a pu les
+    /// changer pendant que Paramètres était fermé.</summary>
+    private void RefreshLessonControls()
+    {
+        SetRadioGroup(_hWndNotationWith, LessonNotations.WithKeyboard, ConfigManager.LessonNotationWithKeyboard);
+        SetRadioGroup(_hWndNotationWithout, LessonNotations.WithoutKeyboard, ConfigManager.LessonNotationWithoutKeyboard);
+        SetCheck(_hWndChkLessonKeyboard, ConfigManager.LessonKeyboardVisible);
+        SetCheck(_hWndChkHideMastered, ConfigManager.LessonHideMastered);
+    }
+
+    private static void SetRadioGroup(IntPtr[] radios, LessonNotation[] notations, LessonNotation selected)
+    {
+        for (int i = 0; i < radios.Length; i++)
+            SetCheck(radios[i], notations[i] == selected);
+    }
+
+    private static void SetCheck(IntPtr hWnd, bool isChecked) =>
+        Win32.SendMessageW(hWnd, Win32.BM_SETCHECK, isChecked ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+
+    private static bool IsChecked(IntPtr hWnd) =>
+        Win32.SendMessageW(hWnd, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
+
+    /// <summary>Un clic dans l'onglet « Leçons » : le réglage s'applique tout de suite, comme
+    /// ceux des autres onglets (pas d'OK ni d'Annuler). Rend faux si l'identifiant n'est pas un
+    /// des siens.</summary>
+    private bool ApplyLessonCommand(int id)
+    {
+        int withIndex = id - IDC_RADIO_NOTATION_WITH;
+        int withoutIndex = id - IDC_RADIO_NOTATION_WITHOUT;
+        if (withIndex >= 0 && withIndex < LessonNotations.WithKeyboard.Length)
+            ConfigManager.SetLessonNotationFor(true, LessonNotations.WithKeyboard[withIndex]);
+        else if (withoutIndex >= 0 && withoutIndex < LessonNotations.WithoutKeyboard.Length)
+            ConfigManager.SetLessonNotationFor(false, LessonNotations.WithoutKeyboard[withoutIndex]);
+        else if (id == IDC_CHK_LESSON_KEYBOARD)
+            ConfigManager.SetLessonKeyboardVisible(IsChecked(_hWndChkLessonKeyboard));
+        else if (id == IDC_CHK_HIDE_MASTERED)
+            ConfigManager.SetLessonHideMastered(IsChecked(_hWndChkHideMastered));
+        else
+            return false;
+        LessonDisplayChanged?.Invoke();
+        return true;
     }
 
     /// <summary>
@@ -599,7 +730,7 @@ sealed partial class SettingsWindow : IDisposable
 
             new(_hWndEditKeyboard, General, () => FontKey.Handle, l => l.KeyboardEditRect),
             new(_hWndEditSearch, General, () => FontKey.Handle, l => l.SearchEditRect),
-            // La ligne de validation sert les trois onglets : jamais masquée par onglet.
+            // La ligne de validation sert tous les onglets : jamais masquée par onglet.
             new(_hWndValidation, null, () => FontSmall.Handle, l => l.ValidationRect),
             new(_hWndLinkReset, General, () => FontButton.Handle, l => l.ResetRect,
                 () => L.Settings_LinkResetDefaults, PushButton: true),
@@ -629,7 +760,7 @@ sealed partial class SettingsWindow : IDisposable
                 () => L.Settings_ResetVirtualKeyboard, PushButton: true),
             new(_hWndResetLessonsWindow, LangMaint, () => FontButton.Handle, l => l.ResetLessonsWindowRect,
                 () => L.Settings_ResetLessonsModule, PushButton: true),
-        };
+        }.Concat(LessonSlots()).ToArray();
     }
 
     /// <summary>
@@ -656,6 +787,9 @@ sealed partial class SettingsWindow : IDisposable
         int generalHeight = MeasureContentHeight(SettingsTab.General);
         int applicationsHeight = MeasureContentHeight(SettingsTab.Applications);
         int languageHeight = MeasureContentHeight(SettingsTab.LanguageMaintenance);
+        // « Leçons » (11/10) ne compte pas dans la référence : la fenêtre ne grandit pas pour
+        // elle. Si elle dépassait un jour, elle défilerait (tabHeights, ci-dessous).
+        int lessonsHeight = MeasureContentHeight(SettingsTab.Lessons);
         int referenceHeight = Math.Max(generalHeight, Math.Max(applicationsHeight, languageHeight));
 
         Win32.GetWindowRect(_hWnd, out var currentRect);
@@ -676,7 +810,7 @@ sealed partial class SettingsWindow : IDisposable
         int maxClientH = Math.Max(S(200), workH - chromeH);
 
         var (clientH, reserveScrollBar) = SettingsScrollState.FixedViewport(
-            referenceHeight, maxClientH, generalHeight, applicationsHeight, languageHeight);
+            referenceHeight, maxClientH, generalHeight, applicationsHeight, languageHeight, lessonsHeight);
         _viewportHeight = clientH;
         _reserveScrollBar = reserveScrollBar;
         // Le contenu affiché, pied ancré au bas de la zone obtenue.
@@ -803,7 +937,7 @@ sealed partial class SettingsWindow : IDisposable
     }
 
     /// <summary>
-    /// Cree la bande de trois onglets. Un vrai SysTabControl32 et non trois libelles
+    /// Cree la bande de quatre onglets. Un vrai SysTabControl32 et non quatre libelles
     /// peints : lui seul est annonce « onglet 1 sur 3 » par les lecteurs d'ecran et
     /// repond aux fleches gauche/droite sans une ligne de notre part. Refonte 1.3.0 : il
     /// garde tout cela, seul son dessin change (sous-classe, <see cref="PaintTabStrip"/>).
@@ -834,6 +968,7 @@ sealed partial class SettingsWindow : IDisposable
         InsertTab(0, L.Settings_TabGeneral);
         InsertTab(1, L.Settings_TabApplications);
         InsertTab(2, L.Settings_TabLanguageMaintenance);
+        InsertTab(3, L.Settings_TabLessons);
         Win32.SendMessageW(_hWndTabStrip, Win32.TCM_SETCURSEL, (IntPtr)(int)_activeTab, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndTabStrip, _tabSubclassProc, (UIntPtr)5, IntPtr.Zero);
     }
@@ -986,6 +1121,7 @@ sealed partial class SettingsWindow : IDisposable
         {
             SettingsTab.General => LayoutGeneral(),
             SettingsTab.Applications => LayoutApplications(),
+            SettingsTab.Lessons => LayoutLessons(),
             _ => LayoutLanguageMaintenance(),
         } + S(20);
 
@@ -1137,6 +1273,38 @@ sealed partial class SettingsWindow : IDisposable
             return y;
         }
 
+        // ── Onglet « Leçons » : touches à taper ─────────────────────────
+        // Le titre du groupe, puis deux listes de boutons radio, chacune sous son libellé écrit en
+        // petit (comme « Mode pour… » de l'onglet Applications), puis les deux cases. Aucun
+        // message ni sous-titre : chaque réglage s'applique au clic et son état se voit.
+        int LayoutLessons()
+        {
+            int y = top;
+            layout.NotationTitleRect = Title(ref y);
+
+            layout.NotationWithLabelRect = Rect(margin, y, inner, m.Small);
+            y += m.Small + S(2);
+            layout.NotationWithRects = Choices(LessonNotations.WithKeyboard.Length, ref y);
+            y += S(14);
+
+            layout.NotationWithoutLabelRect = Rect(margin, y, inner, m.Small);
+            y += m.Small + S(2);
+            layout.NotationWithoutRects = Choices(LessonNotations.WithoutKeyboard.Length, ref y);
+            y += S(14);
+
+            layout.LessonKeyboardRect = Choice(ref y);
+            layout.HideMasteredRect = Choice(ref y);
+            return y;
+        }
+
+        Win32.RECT[] Choices(int count, ref int y)
+        {
+            var rects = new Win32.RECT[count];
+            for (int i = 0; i < count; i++)
+                rects[i] = Choice(ref y);
+            return rects;
+        }
+
         // La case à frapper d'un raccourci, au bord droit de sa ligne : 34 px au moins, plus
         // large pour « F12 ».
         Win32.RECT KeyBox(Win32.RECT row, uint vk)
@@ -1185,6 +1353,9 @@ sealed partial class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_SETCHECK,
             ConfigManager.ShowOnboardingAtStartup ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         RefreshLanguageRadios();
+        // Le menu « Affichage » de la fenêtre Leçons a pu changer ces réglages depuis la
+        // dernière ouverture.
+        RefreshLessonControls();
         SetValidationMessage(string.Empty);
         _keyboardValid = true;
         _searchValid = true;
@@ -1337,7 +1508,7 @@ sealed partial class SettingsWindow : IDisposable
                 {
                     int sel = (int)Win32.SendMessageW(_hWndTabStrip, Win32.TCM_GETCURSEL,
                         IntPtr.Zero, IntPtr.Zero);
-                    if (sel >= 0 && sel <= 2) SetActiveTab((SettingsTab)sel);
+                    if (sel >= 0 && sel < TabCount) SetActiveTab((SettingsTab)sel);
                 }
                 else if (nm.code == NM_CUSTOMDRAW && IsPaperButton(nm.hwndFrom))
                 {
@@ -1472,6 +1643,10 @@ sealed partial class SettingsWindow : IDisposable
                         break;
                     case IDC_RADIO_COMPAT_FORCEOFF:
                         if (code == 0) ApplyCompatModeToSelection("forceOff");
+                        break;
+                    // Onglet « Leçons » : plages d'identifiants, hors des cas constants.
+                    default:
+                        if (code == 0) ApplyLessonCommand(id);
                         break;
                 }
                 return IntPtr.Zero;
@@ -1710,6 +1885,13 @@ sealed partial class SettingsWindow : IDisposable
         AccessibleName.TrySetDescription(_hWndChkOnboarding, L.SettingsClarity_HintOnboarding);
         AccessibleName.TrySetDescription(_hWndResetVirtualKeyboardWindow, L.SettingsClarity_HintResetWindow);
         AccessibleName.TrySetDescription(_hWndResetLessonsWindow, L.SettingsClarity_HintResetWindow);
+        // Deux « Mots » et deux « Recette écrite » se suivent dans l'onglet « Leçons » : l'état du
+        // clavier que chaque liste règle devient la description de ses boutons radio, lue après
+        // le libellé (« Mots, Avec le clavier »).
+        foreach (IntPtr radio in _hWndNotationWith)
+            AccessibleName.TrySetDescription(radio, L.Notation_WithKeyboard);
+        foreach (IntPtr radio in _hWndNotationWithout)
+            AccessibleName.TrySetDescription(radio, L.Notation_WithoutKeyboard);
     }
 
     /// <summary>Réapplique tous les libellés traduits de cette fenêtre (appelé après un changement de langue).</summary>
@@ -1722,6 +1904,7 @@ sealed partial class SettingsWindow : IDisposable
         SetTabText(0, L.Settings_TabGeneral);
         SetTabText(1, L.Settings_TabApplications);
         SetTabText(2, L.Settings_TabLanguageMaintenance);
+        SetTabText(3, L.Settings_TabLessons);
         _metrics = null; // largeurs des libellés et de la bande, dans la nouvelle langue
         foreach (var control in _controls)
             if (control.Text != null)
