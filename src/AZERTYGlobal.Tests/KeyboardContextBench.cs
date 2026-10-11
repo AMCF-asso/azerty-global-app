@@ -98,7 +98,7 @@ public partial class KeyboardContextBench
                     // Leçons : la page « Aujourd'hui » de l'accueil B, sans progression puis avec
                     // des caractères à revoir.
                     attempts.Add(("lecons-aujourdhui-vide", () => CaptureLessonsHome(target, "lecons-aujourdhui-vide", layout, mapper, hook, "")));
-                    attempts.Add(("lecons-aujourdhui-revision", () => CaptureLessonsHome(target, "lecons-aujourdhui-revision", layout, mapper, hook, "éàçœ«")));
+                    attempts.Add(("lecons-aujourdhui-revision", () => CaptureLessonsHome(target, "lecons-aujourdhui-revision", layout, mapper, hook, "Éœ«—’")));
 
                     foreach (var (name, run) in attempts)
                     {
@@ -183,6 +183,8 @@ public partial class KeyboardContextBench
             var progress = BancCapture.Field<LessonProgressStore>(window, "_progress");
             foreach (char c in due)
             {
+                if (!GestureMastery.IsTracked(c))
+                    throw new InvalidOperationException($"« {c} » n'est pas suivi par geste : le produit ne l'enregistre jamais");
                 var stats = new LessonAttemptStats(() => DateTimeOffset.UtcNow);
                 stats.RecordChar('~', c);
                 stats.RecordChar(c, c);
