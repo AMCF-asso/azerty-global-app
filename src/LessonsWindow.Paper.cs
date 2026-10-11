@@ -793,6 +793,13 @@ internal sealed partial class LessonsWindow
         int w2 = OutlineButtonWidth(hdc, L.LessonsWin_BtnResetProgress);
         var reset2 = new Win32.RECT { left = reset1.right + S(12), top = y, right = reset1.right + S(12) + w2, bottom = y + S(34) };
         DrawOutlineButton(hdc, reset2, L.LessonsWin_BtnResetProgress, ResetProgress);
+
+        // Touches à taper : en seconde colonne quand elle tient, sinon sous les actions.
+        int column = right + S(48);
+        if (box.right - pad - column >= S(300))
+            DrawNotationSettings(hdc, column, box.top + S(22) + S(50), box.right - pad);
+        else
+            DrawNotationSettings(hdc, x, reset1.bottom + S(28), right);
     }
 
     // ── Écriture libre ───────────────────────────────────────────────

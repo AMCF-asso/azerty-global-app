@@ -33,13 +33,15 @@ public class CaptureBench
     private const string GateVariable = "AZERTY_CAPTURE";
 
     /// <summary>Les onglets de Paramètres, dans l'ordre de l'énumération privée <c>SettingsTab</c>.</summary>
-    private static readonly string[] SettingsTabs = { "general", "applications", "langue-maintenance" };
+    private static readonly string[] SettingsTabs = { "general", "applications", "langue-maintenance", "lecons" };
 
-    /// <summary>Un message que laisse un geste de chaque onglet, dans le même ordre.</summary>
+    /// <summary>Un message que laisse un geste de chaque onglet, dans le même ordre. L'onglet
+    /// Leçons n'en produit pas : un message d'un autre onglet y vérifie seulement la mise en page.</summary>
     private static readonly Func<string>[] SettingsMessages =
     {
         () => L.Settings_ShortcutsReset,
         () => L.Settings_CompatAdded("notepad.exe"),
+        () => L.Settings_VirtualKeyboardWindowReset,
         () => L.Settings_VirtualKeyboardWindowReset,
     };
 
