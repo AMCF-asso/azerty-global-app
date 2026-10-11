@@ -95,6 +95,11 @@ public partial class KeyboardContextBench
                     // Leçons : la surface de frappe unique et le mode Libre (lot Leçons).
                     AddLessonSurfaceStates(attempts, target, layout, mapper, hook);
 
+                    // Leçons : la page « Aujourd'hui » de l'accueil B, sans progression puis avec
+                    // des caractères à revoir.
+                    attempts.Add(("lecons-aujourdhui-vide", () => CaptureLessonsHome(target, "lecons-aujourdhui-vide", layout, mapper, hook, "")));
+                    attempts.Add(("lecons-aujourdhui-revision", () => CaptureLessonsHome(target, "lecons-aujourdhui-revision", layout, mapper, hook, "éàçœ«")));
+
                     foreach (var (name, run) in attempts)
                     {
                         if (!BancCapture.Wanted(name))
@@ -159,6 +164,43 @@ public partial class KeyboardContextBench
         {
             if (shift) mapper.TrackModifiers(VK_LSHIFT, 0x2A, 0, isKeyDown: false);
             if (altGr) mapper.TrackModifiers(VK_RMENU, 0x38, LLKHF_EXTENDED, isKeyDown: false);
+            BancCapture.Teardown(window);
+        }
+    }
+
+    /// <summary>
+    /// Accueil des Leçons, page « Aujourd'hui » : posée par réflexion comme dans
+    /// LessonsHomeWindowTests, sans <c>Show()</c>. Chaque caractère de <paramref name="due"/> est
+    /// tapé de travers puis juste, donc échu aussitôt (révision du jour et cornes de la carte).
+    /// </summary>
+    private static void CaptureLessonsHome(BancCapture.Target target, string slug, Layout layout, KeyMapper mapper,
+        KeyboardHook hook, string due)
+    {
+        ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
+        var window = new LessonsWindow(layout, mapper, hook);
+        try
+        {
+            var progress = BancCapture.Field<LessonProgressStore>(window, "_progress");
+            foreach (char c in due)
+            {
+                var stats = new LessonAttemptStats(() => DateTimeOffset.UtcNow);
+                stats.RecordChar('~', c);
+                stats.RecordChar(c, c);
+                progress.RecordGestures(stats, typed => typed == c);
+            }
+            var pageType = typeof(LessonsWindow).GetNestedType("HomePage", System.Reflection.BindingFlags.NonPublic)!;
+            BancCapture.SetField(window, "_homePage", Enum.Parse(pageType, "Today"));
+            BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
+            IntPtr hwnd = window.Handle;
+            Win32.ShowWindow(hwnd, 1);
+            int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
+            BancCapture.SetField(window, "_visible", true);
+            Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
+            BancCapture.MarkActive(hwnd);
+            target.Shoot(hwnd, slug, windowDpi);
+        }
+        finally
+        {
             BancCapture.Teardown(window);
         }
     }
