@@ -110,7 +110,7 @@ public sealed class PaperBench
                     PaperTheme.Action, notes, done, PaperTheme.Paper);
                 cx += 270;
             }
-            var (rSteps, rNotes, _) = KeyNotation.ForLesson(Gesture.Of(CharacterIndex.Shared.ByCharacter["É"].Caps!), 'c', false, false);
+            var (rSteps, rNotes, _) = KeyNotation.ForLesson(Gesture.Of("É"), 'c', false, false);
             PaperText.DrawParagraph(hdc, KeyNotation.Recipe(rSteps, rNotes),
                 FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, 1f), FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, 1f),
                 new Win32.RECT { left = 24, top = cy + 170, right = 1084, bottom = cy + 200 }, PaperTheme.TextSecondary, PaperTheme.Ink, 22);
@@ -129,7 +129,7 @@ public sealed class PaperBench
         Render(Path.Combine(dir, "papier-lecons-mini.png"), 1108, 600, hdc =>
         {
             PaperDraw.Fill(hdc, 0, 0, 1108, 600, PaperTheme.Paper);
-            var (e, _, _) = KeyNotation.ForLesson(Gesture.Of(CharacterIndex.Shared.ByCharacter["É"].Caps!), 'c', false, false);
+            var (e, _, _) = KeyNotation.ForLesson(Gesture.Of("É"), 'c', false, false);
             var z = Gesture.Of("Ź");
             MiniKeyboardRenderer.DrawNumbered(hdc, 24, 24, 24f, e, 1f);
             MiniKeyboardRenderer.DrawNumbered(hdc, 560, 24, 24f, z, 1f);

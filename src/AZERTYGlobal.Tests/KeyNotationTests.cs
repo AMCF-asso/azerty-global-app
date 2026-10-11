@@ -12,26 +12,10 @@ public class KeyNotationTests
 {
     private static readonly DateTimeOffset T0 = new(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
 
-    /// <summary>É par Verr. Maj. puis é : plus la méthode recommandée depuis le 12/10 (^ puis é), mais
-    /// toujours une méthode de l’index, et le seul geste réel qui allume Verr. Maj.</summary>
-    private static IReadOnlyList<GestureStep> VerrMajE => Gesture.Of(CharacterIndex.Shared.ByCharacter["É"].Caps!);
-
-    [Fact]
-    public void MajusculeAccentuee_RecommandeeParCirconflexe()
-    {
-        foreach (var (upper, lower) in new[] { ("É", "é"), ("È", "è"), ("Ç", "ç"), ("À", "à") })
-        {
-            var steps = Gesture.Of(upper);
-            Assert.Equal(2, steps.Count);
-            Assert.Equal(("BracketLeft", lower), (steps[0].KeyCode, steps[1].KeyLabel));
-            Assert.All(steps, s => Assert.False(s.Shift || s.AltGr));
-        }
-    }
-
     [Fact]
     public void VerrMaj_AvantUneMinuscule_AjouteLeTempsQuiLEteint()
     {
-        var gesture = VerrMajE;
+        var gesture = Gesture.Of("É");
         Assert.Equal(Gesture.CapsLockCode, gesture[0].KeyCode);
 
         var (steps, notes, done) = KeyNotation.ForLesson(gesture, 'c', capsLockActive: false, deadKeyArmed: false);
@@ -49,7 +33,7 @@ public class KeyNotationTests
     [InlineData('.')]
     public void VerrMaj_SansMinusculeEnSuivant_NeLEteintPas(char following)
     {
-        var gesture = VerrMajE;
+        var gesture = Gesture.Of("É");
 
         var (steps, notes, _) = KeyNotation.ForLesson(gesture, following, false, false);
 
@@ -60,7 +44,7 @@ public class KeyNotationTests
     [Fact]
     public void VerrMaj_DejaAllumee_PremierTempsFait()
     {
-        var (_, _, done) = KeyNotation.ForLesson(VerrMajE, null, capsLockActive: true, deadKeyArmed: false);
+        var (_, _, done) = KeyNotation.ForLesson(Gesture.Of("É"), null, capsLockActive: true, deadKeyArmed: false);
         Assert.Equal(1, done);
     }
 
@@ -94,7 +78,7 @@ public class KeyNotationTests
     [Fact]
     public void Recette_VerrMajEteinte_LeDit()
     {
-        var (steps, notes, _) = KeyNotation.ForLesson(VerrMajE, 'c', false, false);
+        var (steps, notes, _) = KeyNotation.ForLesson(Gesture.Of("É"), 'c', false, false);
 
         string plain = KeyNotation.PlainRecipe(steps, notes);
 

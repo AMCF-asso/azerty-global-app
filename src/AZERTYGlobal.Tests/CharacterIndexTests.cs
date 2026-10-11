@@ -107,12 +107,10 @@ public class CharacterIndexTests
     {
         var index = CharacterIndex.Shared;
 
-        // « É » : la méthode recommandée est ^ puis é (12/10) ; Verr. Maj. + 2 reste sa méthode Caps,
-        // qui n'est pas la première du fichier.
+        // « É » : la méthode recommandée (Verr. Maj. + 2) n'est pas la première du fichier.
         var e = index.ByCharacter["É"];
-        Assert.Equal(("deadkey", "dk_circumflex", "Digit2", "Base"), (e.Preferred!.Type, e.Preferred.DeadKey, e.Preferred.Key, e.Preferred.Layer));
-        Assert.Equal(("direct", "Digit2", "Caps"), (e.Caps!.Type, e.Caps.Key, e.Caps.Layer));
-        Assert.NotSame(e.Methods[0], e.Caps);
+        Assert.Equal(("direct", "Digit2", "Caps"), (e.Preferred!.Type, e.Preferred.Key, e.Preferred.Layer));
+        Assert.NotSame(e.Methods[0], e.Preferred);
 
         // « © » passe par la touche morte des symboles, activée par AltGr + ².
         var copyright = index.ByCharacter["©"].Preferred!;
