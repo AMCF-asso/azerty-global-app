@@ -570,6 +570,47 @@ static class ConfigManager
 
     public static void SetLessonKeyboardVisible(bool visible) => SetBool("lessonKeyboardVisible", visible);
 
+    // ── Notation des touches à taper (QCM du 11/10, voir LessonNotation.cs) ──────
+    // Une notation par état du clavier, chacune mémorisée ; stockée par nom d'enum (jamais par
+    // numéro : l'ordre de l'enum peut changer). Valeur absente, illisible, d'un autre type ou
+    // hors de la liste de l'état : Mots, sans toucher aux autres clés.
+
+    /// <summary>Notation du geste quand le clavier est affiché. Défaut : Mots.</summary>
+    public static LessonNotation LessonNotationWithKeyboard => GetLessonNotation("lessonNotationWithKeyboard", true);
+
+    public static void SetLessonNotationWithKeyboard(LessonNotation value) =>
+        SetString("lessonNotationWithKeyboard", LessonNotations.Valid(value, true).ToString());
+
+    /// <summary>Notation du geste quand le clavier est masqué. Défaut : Mots.</summary>
+    public static LessonNotation LessonNotationWithoutKeyboard => GetLessonNotation("lessonNotationWithoutKeyboard", false);
+
+    public static void SetLessonNotationWithoutKeyboard(LessonNotation value) =>
+        SetString("lessonNotationWithoutKeyboard", LessonNotations.Valid(value, false).ToString());
+
+    /// <summary>Notation de l'état courant du clavier (affiché ou masqué).</summary>
+    public static LessonNotation LessonNotationFor(bool keyboardVisible) =>
+        keyboardVisible ? LessonNotationWithKeyboard : LessonNotationWithoutKeyboard;
+
+    public static void SetLessonNotationFor(bool keyboardVisible, LessonNotation value)
+    {
+        if (keyboardVisible) SetLessonNotationWithKeyboard(value);
+        else SetLessonNotationWithoutKeyboard(value);
+    }
+
+    private static LessonNotation GetLessonNotation(string key, bool keyboardVisible)
+    {
+        // Enum.TryParse accepterait aussi « 2 » ou « Words, Recipe » : on exige le nom exact.
+        var raw = GetString(key);
+        if (raw is not null && Enum.TryParse<LessonNotation>(raw, out var parsed) && parsed.ToString() == raw)
+            return LessonNotations.Valid(parsed, keyboardVisible);
+        return LessonNotation.Words;
+    }
+
+    /// <summary>Masque le geste des caractères maîtrisés (boîte 4 ou plus). Défaut : true.</summary>
+    public static bool LessonHideMastered => GetBoolDefaultTrue("lessonHideMastered");
+
+    public static void SetLessonHideMastered(bool hide) => SetBool("lessonHideMastered", hide);
+
     /// <summary>Affiche les libelles des espaces invisibles. Defaut : true.</summary>
     public static bool LessonInvisibleMarkersVisible => GetBoolDefaultTrue("lessonInvisibleMarkersVisible");
 
