@@ -203,14 +203,18 @@ sealed partial class SettingsWindow
             _hWndChkAutoStart, _hWndChkNotifications, _hWndChkOnboarding, _hWndChkTraining,
             _hWndRadioLangFr, _hWndRadioLangEn,
             _hWndRadioCompatAuto, _hWndRadioCompatForceOn, _hWndRadioCompatForceOff,
-        }.Concat(_pushButtons).ToArray();
+            // Onglet « Leçons » (11/10) : sept boutons radio, deux cases.
+            _hWndChkLessonKeyboard, _hWndChkHideMastered,
+        }.Concat(_hWndNotationWith).Concat(_hWndNotationWithout).Concat(_pushButtons).ToArray();
     }
 
     private bool IsPaperButton(IntPtr hWnd) => hWnd != IntPtr.Zero && Array.IndexOf(_paperButtons, hWnd) >= 0;
 
     private bool IsRadio(IntPtr hWnd)
         => hWnd == _hWndRadioLangFr || hWnd == _hWndRadioLangEn
-           || hWnd == _hWndRadioCompatAuto || hWnd == _hWndRadioCompatForceOn || hWnd == _hWndRadioCompatForceOff;
+           || hWnd == _hWndRadioCompatAuto || hWnd == _hWndRadioCompatForceOn || hWnd == _hWndRadioCompatForceOff
+           || (hWnd != IntPtr.Zero
+               && (Array.IndexOf(_hWndNotationWith, hWnd) >= 0 || Array.IndexOf(_hWndNotationWithout, hWnd) >= 0));
 
     /// <summary>Marges des onglets : 11 px de chaque côté du libellé, soit les 22 px qui
     /// séparent deux libellés dans la maquette.</summary>
@@ -225,6 +229,7 @@ sealed partial class SettingsWindow
     {
         0 => L.Settings_TabGeneral,
         1 => L.Settings_TabApplications,
+        3 => L.Settings_TabLessons,
         _ => L.Settings_TabLanguageMaintenance,
     };
 
@@ -299,6 +304,14 @@ sealed partial class SettingsWindow
             DrawHint(hdc, layout.CompatAutoHintRect, L.SettingsPaper_CompatHintAuto);
             DrawHint(hdc, layout.CompatForceOnHintRect, L.SettingsPaper_CompatHintForceOn);
             DrawHint(hdc, layout.CompatForceOffHintRect, L.SettingsPaper_CompatHintForceOff);
+        }
+        else if (_activeTab == SettingsTab.Lessons)
+        {
+            // « Touches à taper » : le titre, puis l'état du clavier que règle chaque liste, en
+            // petit et en texte secondaire comme « Mode pour… » de l'onglet Applications.
+            DrawTitle(hdc, layout.NotationTitleRect, L.Notation_GroupTitle);
+            PaperText.DrawLine(hdc, L.Notation_WithKeyboard, FontSmall, layout.NotationWithLabelRect, CLR_MUTED);
+            PaperText.DrawLine(hdc, L.Notation_WithoutKeyboard, FontSmall, layout.NotationWithoutLabelRect, CLR_MUTED);
         }
         else
         {
@@ -566,7 +579,7 @@ sealed partial class SettingsWindow
         int line = Metrics.Tab;
         int textBottom = client.bottom - S(11);
         int lastRight = 0;
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < TabCount; i++)
         {
             var item = TabItemRect(i);
             if (item.right <= item.left) continue;
