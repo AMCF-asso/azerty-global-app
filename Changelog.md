@@ -10,6 +10,13 @@ Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0
 - Les exercices réussis du tutoriel d’accueil nourrissent la progression par geste des Leçons ; le compteur du tutoriel ne change pas.
 - Nouveau texte de l’Édition spéciale, « Un tour d’Afrique » : €, ɓ, ŋ, Ŋ et ɔ dans une phrase française.
 
+**Accueil des Leçons : « Votre texte » (maquette lecons-innov-b-texte, 12 octobre)**
+
+- **Une leçon faite de vos mots.** « Coller un texte », sur la carte « Votre texte » d’Aujourd’hui, ouvre une page à champ : on y colle (Ctrl+V) ou tape un nom, une adresse, une phrase. Les caractères à geste sont soulignés, ceux que la disposition ne tape pas encadrés en tirets. À droite, « Ce que vous allez taper » : passages, nouveau, à revoir et boîte de chaque caractère, puis les sautés ; dessous, la première ligne en Tablature. « Taper ce texte » lance la séance. Le texte est oublié à la fermeture des Leçons.
+- **Retour à Aujourd’hui.** L’en-tête des exercices porte un lien « Aujourd’hui ». Une séance de révision, de touche ou de texte se termine par « Terminer » ; « Reprendre » rouvre ensuite l’exercice de la leçon en cours au lieu du récapitulatif de la séance finie.
+- **Paramètres.** La version quitte la bande d’onglets pour le pied de l’onglet « Langue » (décision d’Antoine du 11 octobre).
+- Témoins : `LessonsHomeWindowTests` (« Votre texte », Espace et Entrée sur un bouton, Reprendre) ; banc `KeyboardContextBench`, sujet `lecons-texte`.
+
 **Notation des touches à taper (décisions d’Antoine du 11 octobre)**
 
 - **Mots sous le caractère courant.** La ligne à taper n’a plus de portée à trois lignes : le geste du seul caractère à taper s’écrit dessous, Maj et AltGr en pavés pleins au-dessus de la touche frappée, cernée, « puis » entre deux temps. Rien ne s’affiche pour une lettre qui se tape sur sa propre touche ; « U » montre Maj + U.

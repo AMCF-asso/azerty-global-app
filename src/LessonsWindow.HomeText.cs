@@ -458,15 +458,16 @@ internal sealed partial class LessonsWindow
             : Array.Empty<HomeTextBilanLine>();
         var skipped = LessonsHomeLogic.SkippedElements(items);
 
-        // Pied : le bouton s'il y a une séance, et une note.
-        int buttonH = S(34);
-        int noteH = S(32);
-        int footTop = box.bottom - pad - buttonH - S(6) - noteH;
+        // Pied : le bouton s'il y a une séance, et une note s'il y en a une (sans note, les
+        // lignes gardent sa hauteur).
         string? note = null;
         if (result.Exercise == null)
             note = _homeText.Trim().Length == 0 ? L.LessonsHome_TextEmpty : L.LessonsHome_TextNothingTypable;
         else if (HomeTextWasCut(items, result.Exercise))
             note = L.LessonsHome_TextCut(LessonCustomText.MaxLines);
+        int buttonH = S(34);
+        int noteH = S(32);
+        int footTop = box.bottom - pad - buttonH - (note != null ? S(6) + noteH : 0);
         if (result.Exercise != null)
         {
             string label = L.LessonsHome_TextStart;
