@@ -135,9 +135,32 @@ public class GameRegistryTests
     [InlineData("AnyDesk.exe")]
     [InlineData("TeamViewer.exe")]
     [InlineData("rustdesk.exe")]
+    [InlineData("vmconnect.exe")]
+    [InlineData("WindowsSandbox.exe")]
+    [InlineData("WindowsSandboxClient.exe")]
+    [InlineData("windowssandboxclient.exe")]
+    [InlineData("vmware.exe")]
+    [InlineData("vmplayer.exe")]
+    [InlineData("VirtualBoxVM.exe")]
+    [InlineData("wfica32.exe")]
+    [InlineData("CDViewer.exe")]
+    [InlineData("vmware-remotemks.exe")]
     public void IsRemoteAccessProcess_KnownClient_ReturnsTrue(string processName)
     {
         Assert.True(GameRegistry.IsRemoteAccessProcess(processName));
+    }
+
+    // Gestionnaires et services de VM : on y tape du texte ordinaire (noms, chemins), le
+    // remappage doit y rester actif ; seule la fenêtre de la console transmet des scan codes.
+    [Theory]
+    [InlineData("VirtualBox.exe")]
+    [InlineData("vmware-vmx.exe")]
+    [InlineData("vmms.exe")]
+    [InlineData("notepad.exe")]
+    [InlineData(null)]
+    public void IsRemoteAccessProcess_VmManagerOrOther_ReturnsFalse(string? processName)
+    {
+        Assert.False(GameRegistry.IsRemoteAccessProcess(processName));
     }
 
     // ── Hôtes de prise en main à distance (C5, décision d'Antoine du 2026-09-24) ──
