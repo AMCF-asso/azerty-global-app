@@ -84,12 +84,14 @@ internal sealed partial class LessonsWindow
         _exerciseIndex = Math.Clamp(composed.ReturnExerciseIndex, 0, CurrentLesson.Exercises.Count - 1);
     }
 
-    /// <summary>« Suivant » à la fin d'une séance composée : retour à Aujourd'hui (rien après une
-    /// révision). Vrai si c'était une séance composée.</summary>
+    /// <summary>« Terminer » à la fin d'une séance composée (révision, touche, texte) : retour à
+    /// Aujourd'hui. L'exercice du catalogue repart de son début, pour que « Reprendre » ne
+    /// retrouve ni le récapitulatif ni la séance finie. Vrai si c'était une séance composée.</summary>
     private bool HomeFinishComposed()
     {
         if (_homeComposed == null) return false;
         HomeClearComposed();
+        StartCurrentSession(savePosition: false);
         HomeShowPage(HomePage.Today);
         return true;
     }
@@ -105,7 +107,7 @@ internal sealed partial class LessonsWindow
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
-    /// <summary>Accroche pour l'en-tête papier : le lien « Aujourd'hui » de l'écran d'exercice.</summary>
+    /// <summary>Le lien « Aujourd'hui » de l'en-tête papier (écran d'exercice).</summary>
     private void HomeShowToday() => HomeShowPage(HomePage.Today);
 
     /// <summary>« Toutes les leçons », « Reprendre » : l'écran d'exercice, à la position du
@@ -161,13 +163,16 @@ internal sealed partial class LessonsWindow
     }
 
     /// <summary>Touches de l'accueil : rien n'atteint la séance cachée. Sur « Votre carte », les
-    /// flèches gauche et droite passent à la touche suivie précédente ou suivante.</summary>
+    /// flèches gauche et droite passent à la touche suivie précédente ou suivante ; sur « Votre
+    /// texte », elles déplacent le curseur du champ (LessonsWindow.HomeText.cs).</summary>
     private bool HomeHandleKey(int vk)
     {
         if (!HomeShown) return false;
         const int VK_LEFT = 0x25, VK_RIGHT = 0x27;
         if (_homePage == HomePage.Map && (vk == VK_LEFT || vk == VK_RIGHT))
             HomeMoveMapKey(vk == VK_RIGHT ? 1 : -1);
+        else if (_homePage == HomePage.Text)
+            HomeTextKey(vk);
         return true;
     }
 
@@ -217,27 +222,33 @@ internal sealed partial class LessonsWindow
             HomeShowMap(key);
     }
 
-    /// <summary>Caractères tapés sur l'accueil : rien n'atteint la séance cachée.</summary>
+    /// <summary>Caractères tapés sur l'accueil : rien n'atteint la séance cachée ; sur « Votre
+    /// texte », ils vont au champ.</summary>
     private bool HomeHandleChar(char c)
     {
         if (!HomeShown) return false;
+        if (_homePage == HomePage.Text) HomeTextChar(c);
         return true;
     }
 
-    /// <summary>La page de l'accueil a-t-elle un champ où l'on tape (Tab y passe en premier) ?</summary>
-    private bool HomePageHasSurface => false;
+    /// <summary>La page de l'accueil a-t-elle un champ où l'on tape (Tab y passe en premier) ?
+    /// Seule « Votre texte » en a un.</summary>
+    private bool HomePageHasSurface => _homePage == HomePage.Text;
 
     /// <summary>Le clic en cours : le point, retenu pour l'action de la carte ; le focus clavier
-    /// quitte la cible (pas de surface de frappe à lui rendre sur Aujourd'hui).</summary>
+    /// quitte la cible. Dans le champ de « Votre texte », le clic pose le curseur.</summary>
     private void HomeNoteClick(int x, int y)
     {
         _homeClickPoint = (x, y);
-        if (HomeShown) _focusedActionIndex = -1;
+        if (!HomeShown) return;
+        _focusedActionIndex = -1;
+        if (_homePage == HomePage.Text) HomeTextClick(x, y);
     }
 
     private void HomeOnHide()
     {
         _homeClickPoint = null;
+        HomeTextForget();
     }
 
     // ── Palette ──────────────────────────────────────────────────────────
@@ -328,6 +339,8 @@ internal sealed partial class LessonsWindow
         var body = new Win32.RECT { left = S(24), top = S(66), right = rc.right - S(24), bottom = rc.bottom - S(20) };
         if (_homePage == HomePage.Map)
             DrawHomeMapPage(hdc, body, pal, snapshot);
+        else if (_homePage == HomePage.Text)
+            DrawHomeTextPage(hdc, body, pal, snapshot);
         else
             DrawHomeToday(hdc, body, pal, snapshot);
         HomeDrawFocus(hdc, pal);
@@ -439,21 +452,6 @@ internal sealed partial class LessonsWindow
             var rect = HomeLink(hdc, lx, mid, link.Text, link.Text, link.Action, pal);
             lx = rect.right - S(4) + gap;
         }
-    }
-
-    /// <summary>
-    /// Accroche pour l'écran d'exercice : le lien « ‹ Aujourd'hui » sous l'en-tête papier, qui
-    /// ramène à l'accueil. À retirer quand l'en-tête papier porte lui-même ce lien
-    /// (<see cref="HomeShowToday"/>).
-    /// </summary>
-    private void HomeDrawReturnLink(IntPtr hdc)
-    {
-        if (_mode != WindowMode.Lessons || _settingsOpen) return;
-        var pal = HomePaletteNow();
-        // Entre l'en-tête (58) et le corps (88) : ni le cadre cliquable ni l'anneau de focus de
-        // la partition ne le recouvrent.
-        HomeLink(hdc, S(24), S(71), L.LessonsHome_BackToToday, L.LessonsHome_BackToTodayTooltip, HomeShowToday, pal,
-            L.LessonsHome_BackToTodayTooltip, half: 9);
     }
 
     // ── Aujourd'hui ──────────────────────────────────────────────────────
@@ -700,6 +698,12 @@ internal sealed partial class LessonsWindow
         };
         HomeParagraph(hdc, new Win32.RECT { left = card.left + pad, top = card.top + S(72), right = card.right - pad, bottom = card.bottom - S(60) },
             runs, pal);
+
+        // « Coller un texte » : la page « Votre texte » (LessonsWindow.HomeText.cs).
+        int footerTop = card.bottom - S(16) - S(34);
+        string label = L.LessonsHome_TextButton;
+        var button = new Win32.RECT { left = card.left + pad, top = footerTop, right = card.left + pad + HomeButtonWidth(hdc, label), bottom = footerTop + S(34) };
+        HomeButton(hdc, button, label, label, HomeOpenText, primary: false, pal);
     }
 
     // ── Carte de maîtrise en grand (lecture « un niveau par touche ») ────

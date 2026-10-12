@@ -11,8 +11,7 @@ internal static partial class L
     public static string LessonsHome_YourMap => T("Votre carte", "Your map");
     public static string LessonsHome_AllLessons => T("Toutes les leçons", "All lessons");
     public static string LessonsHome_YourText => T("Votre texte", "Your text");
-    /// <summary>Lien de retour depuis l’écran d’exercice.</summary>
-    public static string LessonsHome_BackToToday => T("‹ Aujourd’hui", "‹ Today");
+    /// <summary>Infobulle du lien « Aujourd’hui » de l’écran d’exercice et du fil de « Votre texte ».</summary>
     public static string LessonsHome_BackToTodayTooltip => T("Revenir à la page d’accueil des Leçons", "Back to the Lessons home page");
 
     // Révision du jour
@@ -68,6 +67,48 @@ internal static partial class L
     public static string LessonsHome_TextBodyTail =>
         T(". L’app la découpe en gestes et vous la fait taper.", ". The app splits it into gestures and has you type it.");
     public static string LessonsHome_TextButton => T("Coller un texte", "Paste a text");
+
+    // Votre texte (la page)
+    public static string LessonsHome_TextCrumbHint =>
+        T("collez un nom, une adresse, une phrase dans votre langue.", "paste a name, an address, a sentence in your language.");
+    public static string LessonsHome_TextPlaceholder =>
+        T("Collez votre texte ici (Ctrl+V) ou tapez-le.", "Paste your text here (Ctrl+V) or type it.");
+    public static string LessonsHome_TextLegendGesture => T("caractère à geste", "gesture character");
+    public static string LessonsHome_TextLegendSkipped => T("la disposition ne le tape pas", "the layout does not type it");
+    public static string LessonsHome_TextCount(int count) => count == 1
+        ? T("1 signe", "1 sign")
+        : T($"{count} signes", $"{count} signs");
+    public static string LessonsHome_TextBilanTitle => T("Ce que vous allez taper", "What you will type");
+    public static string LessonsHome_TextTimes(int count) => count == 1
+        ? T("1 fois", "once")
+        : T($"{count} fois", $"{count} times");
+    public static string LessonsHome_TextNew => T("nouveau", "new");
+    public static string LessonsHome_TextSkipped => T("sauté", "skipped");
+    public static string LessonsHome_TextBilanNone =>
+        T("Aucun caractère à geste : des lettres seulement.", "No gesture character: letters only.");
+    /// <summary>Infobulle d’une ligne du bilan : « ë, 3 fois, boîte 2 sur 5 ».</summary>
+    public static string LessonsHome_TextBilanSpoken(string character, string count, bool due, string level) =>
+        due ? T($"{character}, {count}, {level}, à revoir", $"{character}, {count}, {level}, to review")
+            : $"{character}, {count}, {level}";
+    public static string LessonsHome_TextStart => T("Taper ce texte", "Type this text");
+    public static string LessonsHome_TextStartName(int gestures, int skipped)
+    {
+        string name = T($"Taper ce texte : {gestures} caractère(s) à geste", $"Type this text: {gestures} gesture character(s)");
+        return skipped == 0 ? name : name + T($", {skipped} sauté(s)", $", {skipped} skipped");
+    }
+    public static string LessonsHome_TextEmpty => T("Collez ou tapez un texte pour commencer.", "Paste or type a text to begin.");
+    public static string LessonsHome_TextNothingTypable =>
+        T("La disposition ne tape aucun de ces caractères.", "The layout types none of these characters.");
+    public static string LessonsHome_TextCut(int lines) =>
+        T($"Seules les {lines} premières lignes seront tapées.", $"Only the first {lines} lines will be typed.");
+    public static string LessonsHome_TextPreviewTitle => T("Aperçu", "Preview");
+    public static string LessonsHome_TextPreviewSub =>
+        T("La première ligne en Tablature : ce que font les doigts.", "The first line in Tablature: what the fingers do.");
+    public static string LessonsHome_TextInstruction => T("Votre texte : tapez-le.", "Your text: type it.");
+    public static string LessonsHome_TextSurfaceHelp =>
+        T("Champ de texte : Ctrl+V colle. Tab atteint les boutons.", "Text field: Ctrl+V pastes. Tab reaches the buttons.");
+    /// <summary>Le bouton du récapitulatif d’une séance composée (révision, touche, texte).</summary>
+    public static string LessonsHome_Finish => T("Terminer", "Finish");
 
     // Carte de maîtrise
     public static string LessonsHome_MapTitle => T("Votre carte", "Your map");

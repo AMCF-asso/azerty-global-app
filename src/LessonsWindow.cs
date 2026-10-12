@@ -1053,10 +1053,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         // Refonte 1.3.0 (maquette Leçons F) : en-tête d'une ligne, partition, clavier papier.
         // Le sélecteur ouvert se dessine en dernier, par-dessus, et capte seul les clics.
-        // Le lien « ‹ Aujourd'hui » de l'exercice prend une ligne sous l'en-tête : la partition
-        // descend pour que son anneau de focus ne le recouvre pas.
-        bool returnLink = _mode == WindowMode.Lessons && !_settingsOpen;
-        var body = new Win32.RECT { left = S(24), top = S(returnLink ? 88 : 76), right = rc.right - S(24), bottom = rc.bottom - S(20) };
+        var body = new Win32.RECT { left = S(24), top = S(76), right = rc.right - S(24), bottom = rc.bottom - S(20) };
         // Accueil des Leçons : la page « Aujourd'hui » a son propre en-tête, sa page et son anneau
         // de focus (LessonsWindow.Home.cs) ; le reste de la méthode sert l'écran d'exercice.
         bool home = HomeShown;
@@ -1066,7 +1063,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         {
             // L'en-tête d'abord : l'ordre de Tab suit celui de la page.
             DrawPaperHeader(hdc, rc);
-            HomeDrawReturnLink(hdc); // lien « ‹ Aujourd'hui » sous l'en-tête (provisoire, voir Home.cs)
             if (_settingsOpen)
                 DrawPaperSettings(hdc, body);
             else if (_mode == WindowMode.Lessons)
@@ -2433,9 +2429,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void CaptureExpectedTextForPhysicalKey(uint scancode)
     {
-        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary)) return;
+        // Accueil : le récapitulatif et la fin de la séance cachée ne concernent pas le champ de
+        // « Votre texte », qui reçoit la frappe telle qu'AZERTY Global la produit.
+        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary && !HomeShown)) return;
         if (HomeShown && !HomePageHasSurface) return; // accueil : pas de champ où le texte attendu irait
-        if (_mode == WindowMode.Lessons && _session.IsExerciseComplete) return;
+        if (_mode == WindowMode.Lessons && !HomeShown && _session.IsExerciseComplete) return;
         _pendingPhysicalText.CaptureKey(_layout, scancode, _mapper);
     }
 
