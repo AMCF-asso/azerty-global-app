@@ -9,6 +9,7 @@ Préparée dans ce dépôt ; **non encore soumise au Microsoft Store**. La 1.2.0
 - Le Défi du jour revient dès la 1.3.0 : entrée dans « Apprendre ▸ », module des Leçons, annonce unique, rappel d’entraînement, cases d’opt-in de l’accueil et des Paramètres, section de « Mes statistiques ». `DailyChallenge.Enabled` passe à vrai ; les données gardées depuis la 1.2.0 (opt-in, séquence, records) reprennent effet. Témoins : `DefiDuJourMasqueTests`.
 - Les exercices réussis du tutoriel d’accueil nourrissent la progression par geste des Leçons ; le compteur du tutoriel ne change pas.
 - Nouveau texte de l’Édition spéciale, « Un tour d’Afrique » : €, ɓ, ŋ, Ŋ et ɔ dans une phrase française.
+- Leçon « Point-virgule » : la touche se nomme par son capuchon, « Maj + ; », comme sur le site. Les leçons de l’app restent celles du site, plus « Un tour d’Afrique » ; `check-layout-provenance.py` les compare ainsi (décision d’Antoine du 12 octobre).
 
 **Accueil des Leçons : « Votre texte » (maquette lecons-innov-b-texte, 12 octobre)**
 
