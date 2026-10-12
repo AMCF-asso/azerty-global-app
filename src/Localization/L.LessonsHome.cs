@@ -72,8 +72,65 @@ internal static partial class L
     // Carte de maîtrise
     public static string LessonsHome_MapTitle => T("Votre carte", "Your map");
     public static string LessonsHome_MapHint =>
-        T("Chaque touche se remplit selon le niveau des caractères déjà tapés. Survolez une touche pour le détail.",
-          "Each key fills up with the level of the characters already typed. Hover a key for details.");
+        T("Chaque touche se remplit selon le niveau des caractères déjà tapés. Cliquez une touche pour la travailler.",
+          "Each key fills up with the level of the characters already typed. Click a key to work on it.");
+    public static string LessonsHome_MapClickHint => T("Cliquez une touche pour la travailler.", "Click a key to work on it.");
+    /// <summary>Nom de la zone cliquable du clavier, pour le lecteur d’écran.</summary>
+    public static string LessonsHome_MapKeysName => T("Clavier de la carte, choisir une touche", "Map keyboard, choose a key");
+    public static string LessonsHome_MapKeysHelp =>
+        T("Flèches gauche et droite : touche précédente ou suivante.", "Left and right arrows: previous or next key.");
+
+    // Votre carte : détail d’une touche
+    public static string LessonsHome_KeyTitle(string key) => T($"Touche {key}", $"Key {key}");
+    public static string LessonsHome_KeySummary(int followed, int seen, int due)
+    {
+        if (L.IsEnglish)
+        {
+            string signs = followed == 1 ? "1 sign followed" : $"{followed} signs followed";
+            return seen == 0 ? $"{signs}, none typed." : $"{signs}: {seen} typed" + (due > 0 ? $", {due} to review" : "") + ".";
+        }
+        string signes = followed == 1 ? "1 signe suivi" : $"{followed} signes suivis";
+        return seen == 0 ? $"{signes}, aucun tapé."
+            : $"{signes} : {seen} tapé{(seen > 1 ? "s" : "")}" + (due > 0 ? $", {due} à revoir" : "") + ".";
+    }
+    public static string LessonsHome_KeySessionButton => T("Séance sur cette touche", "Practise this key");
+    public static string LessonsHome_KeySessionName(string key) => T($"Séance sur la touche {key}", $"Practise the {key} key");
+    public static string LessonsHome_KeySessionInstruction =>
+        T("Séance de la touche : tapez ces mots.", "Key session: type these words.");
+    /// <summary>Ce que la séance d’une touche fera taper : les signes déjà vus, puis le nouveau.</summary>
+    public static string LessonsHome_KeySessionNote(IReadOnlyList<string> seen, string? fresh)
+    {
+        string list = HomeJoin(seen);
+        if (seen.Count > 0 && fresh != null)
+            return T($"{list} d’abord, puis un signe nouveau : {fresh}.", $"{list} first, then a new sign: {fresh}.");
+        if (seen.Count > 0)
+            return T($"Les signes déjà vus : {list}.", $"Signs already seen: {list}.");
+        return fresh != null ? T($"Un signe nouveau : {fresh}.", $"A new sign: {fresh}.") : "";
+    }
+    public static string LessonsHome_KeySessionNone =>
+        T("Rien à travailler sur cette touche pour le moment.", "Nothing to practise on this key for now.");
+    public static string LessonsHome_LayerName(HomeLayer layer) => layer switch
+    {
+        HomeLayer.Shift => Gesture_LineShift,
+        HomeLayer.AltGr => "AltGr",
+        HomeLayer.ShiftAltGr => Gesture_LineShift + " AltGr",
+        _ => T("Touche seule", "Key alone"),
+    };
+    public static string LessonsHome_ThenLetter => T("puis la lettre", "then the letter");
+    public static string LessonsHome_Then(string rest) => T($"puis {rest}", $"then {rest}");
+    public static string LessonsHome_DueTag => T(" · à revoir", " · to review");
+    public static string LessonsHome_LayerMore(int count) => count == 1
+        ? T("Et 1 autre signe.", "And 1 more sign.")
+        : T($"Et {count} autres signes.", $"And {count} more signs.");
+    public static string LessonsHome_LayerNoneTyped => T("Rien de tapé sur cette couche.", "Nothing typed on this layer.");
+
+    /// <summary>« a, b et c » ; « a, b and c ».</summary>
+    private static string HomeJoin(IReadOnlyList<string> items) => items.Count switch
+    {
+        0 => "",
+        1 => items[0],
+        _ => string.Join(", ", items.Take(items.Count - 1)) + T(" et ", " and ") + items[^1],
+    };
     /// <summary>Résumé de la carte pour le lecteur d’écran.</summary>
     public static string LessonsHome_MapSpoken(int seen, int followed, int due) =>
         T($"Votre carte : {seen} touche(s) travaillée(s) sur {followed}, {due} avec des caractères à revoir.",

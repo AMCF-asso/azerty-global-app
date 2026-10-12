@@ -27,6 +27,14 @@ internal sealed partial class LessonsWindow
     // catalogue pour CurrentModule, CurrentLesson et CurrentExercise, sans toucher aux index.
     private HomeComposed? _homeComposed;
     private (string Key, HomeSession Session)? _homeReviewCache;
+    // Votre carte : la touche choisie (null : celle que DefaultKey propose), celle montrée au
+    // dernier repeint, les touches suivies dans l'ordre du clavier dessiné avec leur cadre (clic,
+    // flèches), la zone cliquable du clavier, la séance de la touche montrée.
+    private uint? _homeMapKey;
+    private uint? _homeMapShownKey;
+    private readonly List<(uint Scancode, Win32.RECT Rect)> _homeMapKeys = new();
+    private Win32.RECT _homeMapZone;
+    private (string Key, HomeSession Session)? _homeKeySessionCache;
 
     private sealed record HomeComposed(LessonModule Module, LessonLesson Lesson, LessonExercise Exercise,
         int ReturnExerciseIndex);
@@ -152,11 +160,61 @@ internal sealed partial class LessonsWindow
         return true;
     }
 
-    /// <summary>Touches de l'accueil : rien n'atteint la séance cachée.</summary>
+    /// <summary>Touches de l'accueil : rien n'atteint la séance cachée. Sur « Votre carte », les
+    /// flèches gauche et droite passent à la touche suivie précédente ou suivante.</summary>
     private bool HomeHandleKey(int vk)
     {
         if (!HomeShown) return false;
+        const int VK_LEFT = 0x25, VK_RIGHT = 0x27;
+        if (_homePage == HomePage.Map && (vk == VK_LEFT || vk == VK_RIGHT))
+            HomeMoveMapKey(vk == VK_RIGHT ? 1 : -1);
         return true;
+    }
+
+    private void HomeMoveMapKey(int delta)
+    {
+        if (_homeMapKeys.Count == 0) return;
+        int i = _homeMapKeys.FindIndex(k => k.Scancode == _homeMapShownKey);
+        i = i < 0 ? 0 : (i + delta + _homeMapKeys.Count) % _homeMapKeys.Count;
+        _homeMapKey = _homeMapKeys[i].Scancode;
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+    }
+
+    /// <summary>« Votre carte », sur <paramref name="key"/> s'il est donné, sinon sur la touche
+    /// déjà choisie.</summary>
+    private void HomeShowMap(uint? key = null)
+    {
+        if (key != null) _homeMapKey = key;
+        HomeShowPage(HomePage.Map);
+    }
+
+    /// <summary>
+    /// Le clavier de la carte : une seule zone cliquable (pas une par touche, qui noierait l'ordre
+    /// de Tab). Un clic choisit la touche suivie sous le point et ouvre « Votre carte » ; un clic
+    /// entre les touches ou sur une touche sans rien à suivre ne fait rien. Au clavier (Entrée,
+    /// pas de point dans la zone) : « Votre carte » sur la touche déjà choisie.
+    /// </summary>
+    private void HomeMapClick()
+    {
+        var point = _homeClickPoint;
+        _homeClickPoint = null;
+        var zone = _homeMapZone;
+        bool clicked = point is { } at && at.X >= zone.left && at.X <= zone.right && at.Y >= zone.top && at.Y <= zone.bottom;
+        uint? key = null;
+        if (clicked)
+        {
+            var (x, y) = point!.Value;
+            foreach (var (scancode, rect) in _homeMapKeys)
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) { key = scancode; break; }
+            if (key == null) return;
+        }
+        if (_homePage == HomePage.Map)
+        {
+            if (key != null) _homeMapKey = key;
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        }
+        else
+            HomeShowMap(key);
     }
 
     /// <summary>Caractères tapés sur l'accueil : rien n'atteint la séance cachée.</summary>
@@ -268,7 +326,10 @@ internal sealed partial class LessonsWindow
         var snapshot = HomeBuildSnapshot();
         DrawHomeHeader(hdc, rc, pal);
         var body = new Win32.RECT { left = S(24), top = S(66), right = rc.right - S(24), bottom = rc.bottom - S(20) };
-        DrawHomeToday(hdc, body, pal, snapshot);
+        if (_homePage == HomePage.Map)
+            DrawHomeMapPage(hdc, body, pal, snapshot);
+        else
+            DrawHomeToday(hdc, body, pal, snapshot);
         HomeDrawFocus(hdc, pal);
     }
 
@@ -356,6 +417,7 @@ internal sealed partial class LessonsWindow
         var tabs = new List<(string Text, bool Active, Action Action)>
         {
             (L.LessonsHome_Today, _homePage is HomePage.Today or HomePage.Text, () => HomeShowPage(HomePage.Today)),
+            (L.LessonsHome_YourMap, _homePage == HomePage.Map, () => HomeShowMap()),
             (L.LessonsHome_AllLessons, false, HomeShowExercise),
         };
         foreach (var tab in tabs)
@@ -412,7 +474,7 @@ internal sealed partial class LessonsWindow
         DrawHomeTextCard(hdc, text, pal);
 
         var map = new Win32.RECT { left = body.left, top = review.bottom + S(16), right = body.right, bottom = body.bottom };
-        DrawHomeMap(hdc, map, pal, snapshot);
+        DrawHomeMap(hdc, map, pal, snapshot, L.LessonsHome_MapTitle, L.LessonsHome_MapHint, selected: null);
 
         _surfaceView = HomeSurface(L.LessonsHome_Today, HomeTodaySummary(snapshot), body);
     }
@@ -708,16 +770,20 @@ internal sealed partial class LessonsWindow
     /// <summary>Le clavier papier (quatre légendes par touche) et, par-dessus, ce que la progression
     /// en dit : une touche se remplit du bas selon le niveau moyen de ses caractères tapés, porte une
     /// corne si l'un d'eux est à revoir, un bord pâle s'il n'a jamais été tapé, et s'efface s'il n'y
-    /// a rien à suivre. Chaque touche suivie a son infobulle.</summary>
-    private void DrawHomeMap(IntPtr hdc, Win32.RECT area, in HomePalette pal, HomeSnapshot snapshot)
+    /// a rien à suivre. Chaque touche suivie a son infobulle ; un clic la choisit
+    /// (<see cref="HomeMapClick"/>). <paramref name="selected"/> : la touche encadrée de
+    /// « Votre carte ». Sans <paramref name="title"/>, l'aide occupe seule la ligne du haut.
+    /// Rend le bas de la légende.</summary>
+    private int DrawHomeMap(IntPtr hdc, Win32.RECT area, in HomePalette pal, HomeSnapshot snapshot,
+        string? title, string hint, uint? selected)
     {
         var titleFont = HomeFont(AppFonts.Title, 19, TypeRamp.Semibold);
-        int titleW = PaperText.DrawLine(hdc, L.LessonsHome_MapTitle, titleFont,
+        int titleW = title == null ? -S(18) : PaperText.DrawLine(hdc, title, titleFont,
             new Win32.RECT { left = area.left, top = area.top, right = area.right, bottom = area.top + S(28) },
             pal.Ink, TextAlign.Left);
         var hintFont = HomeFont(AppFonts.Text, 13);
         int hintLeft = area.left + titleW + S(18);
-        PaperText.DrawLine(hdc, HomeEllipsize(hdc, L.LessonsHome_MapHint, hintFont, area.right - hintLeft), hintFont,
+        PaperText.DrawLine(hdc, HomeEllipsize(hdc, hint, hintFont, area.right - hintLeft), hintFont,
             new Win32.RECT { left = hintLeft, top = area.top + S(4), right = area.right, bottom = area.top + S(28) },
             pal.Muted, TextAlign.Left);
 
@@ -731,6 +797,8 @@ internal sealed partial class LessonsWindow
         PaperKeyboard.Draw(hdc, placement, _layout, PaperKeyboardMode.Map,
             new PaperKeyboardState { Profile = KeyboardRenderProfile.Full });
 
+        _homeMapKeys.Clear();
+        Win32.RECT? selectedRect = null;
         using (var blender = new HomeBlender(hdc))
         {
             foreach (var key in KeyboardRenderer.VisualKeys)
@@ -743,6 +811,8 @@ internal sealed partial class LessonsWindow
                     blender.Fill(rect, pal.Paper, pal.HighContrast ? (byte)150 : (byte)140);
                     continue;
                 }
+                _homeMapKeys.Add((key.Scancode, rect));
+                if (key.Scancode == selected) selectedRect = rect;
                 if (state.Kind == HomeKeyKind.Unseen)
                 {
                     PaperDraw.Frame(hdc, rect, pal.Pale, pal.HighContrast ? Math.Max(2, S(2)) : 1);
@@ -760,6 +830,18 @@ internal sealed partial class LessonsWindow
                 AddHover(rect, HomeKeyTooltip(key, state, snapshot), preferAbove: false, compact: true);
             }
         }
+
+        // La touche choisie : un cadre à la couleur d'action, détaché de la touche.
+        if (selectedRect is { } chosen)
+        {
+            int thick = Math.Max(2, S(3));
+            int off = Math.Max(1, S(2)) + thick;
+            PaperDraw.Frame(hdc, new Win32.RECT { left = chosen.left - off, top = chosen.top - off, right = chosen.right + off, bottom = chosen.bottom + off },
+                pal.Action, thick);
+        }
+
+        _homeMapZone = new Win32.RECT { left = area.left, top = kbTop, right = area.left + kbW, bottom = kbTop + kbH };
+        AddClick(_homeMapZone, HomeMapClick, L.LessonsHome_MapKeysName);
 
         // Légende : une ligne, ce qui ne tient pas est abrégé.
         int legendTop = kbTop + kbH + S(10);
@@ -790,6 +872,7 @@ internal sealed partial class LessonsWindow
                 pal.Muted, TextAlign.Left);
             lx += width;
         }
+        return legendTop + S(22);
     }
 
     private string HomeLevelText(int box) => box < 0 ? L.LessonsHome_LevelNever : L.LessonsHome_LevelOf(box);
@@ -809,6 +892,221 @@ internal sealed partial class LessonsWindow
             }
         if (state.Followed > listed)
             lines.Add(L.LessonsHome_KeyTooltipMore(state.Followed - listed));
+        return string.Join("\n", lines);
+    }
+
+    // ── Votre carte (maquette lecons-innov-b-carte, lecture d'Aujourd'hui : QCM du 12/10) ──
+
+    private void DrawHomeMapPage(IntPtr hdc, Win32.RECT body, in HomePalette pal, HomeSnapshot snapshot)
+    {
+        uint? key = _homeMapKey is { } chosen && snapshot.Keys.ContainsKey(chosen)
+            ? chosen
+            : LessonsHomeLogic.DefaultKey(snapshot.Keys);
+        _homeMapShownKey = key;
+        int bandH = S(200);
+        var map = new Win32.RECT { left = body.left, top = body.top, right = body.right, bottom = body.bottom - bandH - S(14) };
+        // Le clavier plafonne en largeur : la bande prend la place qu'il laisse.
+        int mapBottom = DrawHomeMap(hdc, map, pal, snapshot, null, L.LessonsHome_MapClickHint, key);
+        var band = new Win32.RECT { left = body.left, top = Math.Min(map.bottom, mapBottom) + S(14), right = body.right, bottom = body.bottom };
+        DrawHomeKeyBand(hdc, band, pal, snapshot, key);
+        _surfaceView = HomeSurface(L.LessonsHome_YourMap, HomeMapSummary(snapshot, key), body);
+    }
+
+    /// <summary>La gravure d'une touche, telle que le clavier la nomme (« ù », « 2 »).</summary>
+    private static string HomeKeyCap(uint scancode)
+    {
+        foreach (var key in KeyboardRenderer.VisualKeys)
+            if (key.Scancode == scancode) return L.Keyboard_KeyCap(key.Label);
+        return "?";
+    }
+
+    /// <summary>La touche morte qu'arme ce temps, ou null pour un temps qui tape un caractère.</summary>
+    private static string? HomeDeadKeyOf(GestureStep step)
+    {
+        foreach (var (deadKey, (key, layer)) in CharacterIndex.Shared.DeadKeyActivations)
+            if (key == step.KeyCode && layer.Contains("Shift", StringComparison.Ordinal) == step.Shift
+                && layer.Contains("AltGr", StringComparison.Ordinal) == step.AltGr)
+                return deadKey;
+        return null;
+    }
+
+    /// <summary>Le nom d'une touche morte en casse de phrase (« Accent aigu »).</summary>
+    private static string HomeDeadKeyName(string deadKey)
+    {
+        string name = VirtualKeyboard.GetDeadKeyDisplayName(deadKey).ToLowerInvariant();
+        return name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name[1..];
+    }
+
+    /// <summary>La séance d'une touche, gardée tant que la touche, le jour, la langue et son état
+    /// restent (BuildKeySession parcourt tous les textes des leçons).</summary>
+    private HomeSession HomeKeySession(HomeSnapshot snapshot, uint scancode, HomeKeyState state)
+    {
+        int seed = LessonsHomeLogic.DaySeed(DateTimeOffset.Now);
+        string key = $"{scancode}|{L.Language}|{seed}|{state.Seen}|{state.Due}|{state.Level:F3}";
+        if (_homeKeySessionCache is not { } cached || cached.Key != key)
+        {
+            var session = LessonsHomeLogic.BuildKeySession(_catalog, HomeKeyCatalog.Shared, snapshot.Entries, scancode,
+                snapshot.Now, L.LessonsHome_KeySessionInstruction, seed);
+            _homeKeySessionCache = cached = (key, session);
+        }
+        return cached.Session;
+    }
+
+    private void HomeStartKeySession(uint scancode)
+    {
+        var snapshot = HomeBuildSnapshot();
+        if (!snapshot.Keys.TryGetValue(scancode, out var state)) return;
+        var session = HomeKeySession(snapshot, scancode, state);
+        if (session.Exercise is not { } exercise) return;
+        HomeStartComposed(exercise, L.LessonsHome_YourMap, L.LessonsHome_KeyTitle(HomeKeyCap(scancode)), session.Covered);
+    }
+
+    private static string HomeKeySessionNote(HomeSession session) => session.Exercise == null
+        ? L.LessonsHome_KeySessionNone
+        : L.LessonsHome_KeySessionNote(session.Characters.Where(c => c != session.NewCharacter).ToList(), session.NewCharacter);
+
+    /// <summary>
+    /// La bande du bas : la touche choisie (gravure, ce qu'elle suit, la séance), puis une colonne
+    /// par couche qui suit quelque chose, ses caractères les plus utiles avec leur boîte en cinq crans.
+    /// </summary>
+    private void DrawHomeKeyBand(IntPtr hdc, Win32.RECT band, in HomePalette pal, HomeSnapshot snapshot, uint? scancode)
+    {
+        PaperDraw.RoundBox(hdc, band, pal.Surface, pal.Ink, S(3));
+        int pad = S(14);
+        if (scancode is not { } sc || !snapshot.Keys.TryGetValue(sc, out var state))
+        {
+            HomeParagraph(hdc, new Win32.RECT { left = band.left + pad, top = band.top + pad, right = band.right - pad, bottom = band.bottom - pad },
+                new[] { new TextRun(L.LessonsHome_MapEmpty) }, pal);
+            return;
+        }
+        string cap = HomeKeyCap(sc);
+        var session = HomeKeySession(snapshot, sc, state);
+
+        // Colonne de tête : gravure et titre, ce que la touche suit, la séance.
+        string buttonText = L.LessonsHome_KeySessionButton;
+        int buttonW = HomeButtonWidth(hdc, buttonText);
+        int headW = Math.Max(S(230), buttonW + 2 * pad);
+        int x0 = band.left + pad, x1 = band.left + headW - pad;
+        var capFont = HomeFont(AppFonts.Mono, 16, TypeRamp.Semibold);
+        int capW = Math.Max(S(30), PaperText.Width(hdc, cap, capFont) + S(12));
+        var capRect = new Win32.RECT { left = x0, top = band.top + S(12), right = x0 + capW, bottom = band.top + S(42) };
+        PaperDraw.RoundBox(hdc, capRect, pal.Surface, pal.Ink, S(3));
+        PaperText.DrawLine(hdc, cap, capFont, capRect, pal.Ink, TextAlign.Center);
+        var titleFont = HomeFont(AppFonts.Title, 22, TypeRamp.Semibold);
+        int tx = capRect.right + S(8);
+        PaperText.DrawLine(hdc, HomeEllipsize(hdc, L.LessonsHome_KeyTitle(cap), titleFont, x1 - tx), titleFont,
+            new Win32.RECT { left = tx, top = capRect.top - S(2), right = x1, bottom = capRect.bottom + S(2) }, pal.Ink, TextAlign.Left);
+        HomeParagraph(hdc, new Win32.RECT { left = x0, top = capRect.bottom + S(8), right = x1, bottom = capRect.bottom + S(48) },
+            new[] { new TextRun(L.LessonsHome_KeySummary(state.Followed, state.Seen, state.Due)) }, pal);
+
+        var note = new Win32.RECT { left = x0, top = band.bottom - S(10) - S(38), right = x1, bottom = band.bottom - S(10) };
+        if (session.Exercise != null)
+        {
+            var button = new Win32.RECT { left = x0, top = note.top - S(4) - S(34), right = x0 + buttonW, bottom = note.top - S(4) };
+            HomeButton(hdc, button, buttonText, L.LessonsHome_KeySessionName(cap), () => HomeStartKeySession(sc), primary: true, pal);
+        }
+        HomeParagraph(hdc, note, new[] { new TextRun(HomeKeySessionNote(session)) }, pal);
+
+        // Une colonne par couche.
+        // Autant de lignes que la bande en tient (titre, « puis la lettre », pied : S(84)), trois au moins.
+        int maxLines = Math.Max(LessonsHomeLogic.DetailLines, (band.bottom - band.top - S(84)) / S(30));
+        var layers = LessonsHomeLogic.KeyDetail(HomeKeyCatalog.Shared, snapshot.Entries, sc, snapshot.Now, maxLines);
+        int colLeft = band.left + headW;
+        int colW = (band.right - colLeft) / Math.Max(1, layers.Count);
+        for (int i = 0; i < layers.Count; i++)
+        {
+            var col = new Win32.RECT { left = colLeft + i * colW, top = band.top, right = i == layers.Count - 1 ? band.right : colLeft + (i + 1) * colW, bottom = band.bottom };
+            PaperDraw.Fill(hdc, col.left, band.top + 1, col.left + 1, band.bottom - 1, pal.Border);
+            DrawHomeLayerColumn(hdc, col, pal, layers[i]);
+        }
+    }
+
+    private void DrawHomeLayerColumn(IntPtr hdc, Win32.RECT col, in HomePalette pal, HomeLayerDetail layer)
+    {
+        int pad = S(14);
+        int x0 = col.left + pad, x1 = col.right - pad;
+        var small = HomeFont(AppFonts.Text, 12);
+
+        // Titre : la touche morte armée, ou la couche ; puis le premier temps en abrégé.
+        var headFont = HomeFont(AppFonts.Text, 14, TypeRamp.Semibold);
+        string? deadKey = HomeDeadKeyOf(layer.Step);
+        string name = deadKey != null ? HomeDeadKeyName(deadKey) : L.LessonsHome_LayerName(layer.Layer);
+        var first = new[] { layer.Step };
+        int gestureW = TablatureRenderer.DrawShortGesture(hdc, first, false, HomeScale, 0, 0, draw: false);
+        string shown = HomeEllipsize(hdc, name, headFont, x1 - x0 - gestureW - S(8));
+        int nameW = PaperText.DrawLine(hdc, shown, headFont,
+            new Win32.RECT { left = x0, top = col.top + S(10), right = x1, bottom = col.top + S(32) }, pal.Ink, TextAlign.Left);
+        if (x0 + nameW + S(8) + gestureW <= x1)
+            TablatureRenderer.DrawShortGesture(hdc, first, false, HomeScale, x0 + nameW + S(8) + gestureW, col.top + S(21));
+
+        int y = col.top + S(36);
+        if (deadKey != null)
+        {
+            PaperText.DrawLine(hdc, L.LessonsHome_ThenLetter, small,
+                new Win32.RECT { left = x0, top = y, right = x1, bottom = y + S(16) }, pal.Muted, TextAlign.Left);
+            y += S(18);
+        }
+        y += S(2);
+
+        var glyphFont = HomeFont(AppFonts.Title, 20, TypeRamp.Semibold);
+        var lineFont = HomeFont(AppFonts.Text, 13);
+        var lineBold = HomeFont(AppFonts.Text, 13, TypeRamp.Semibold);
+        int rowH = S(30), notchW = S(5), notchH = S(10), notchGap = Math.Max(1, S(1));
+        int gaugeW = GestureMastery.MaxBox * notchW + (GestureMastery.MaxBox - 1) * notchGap;
+        PaperDraw.Fill(hdc, x0, y, x1, y + 1, pal.Border);
+        foreach (var line in layer.Lines)
+        {
+            PaperText.DrawLine(hdc, HomeGlyph(line.Character), glyphFont,
+                new Win32.RECT { left = x0, top = y, right = x0 + S(26), bottom = y + rowH }, pal.Ink, TextAlign.Center);
+            int gx = x1 - gaugeW, gy = y + (rowH - notchH) / 2;
+            for (int k = 0; k < GestureMastery.MaxBox; k++)
+            {
+                var notch = new Win32.RECT { left = gx + k * (notchW + notchGap), top = gy, right = gx + k * (notchW + notchGap) + notchW, bottom = gy + notchH };
+                if (k < line.Box) PaperDraw.Fill(hdc, notch, pal.Action);
+                else PaperDraw.Frame(hdc, notch, pal.Pale);
+            }
+            int textLeft = x0 + S(32), textRight = gx - S(6);
+            int used = 0;
+            if (line.Then.Length > 0)
+                used = PaperText.DrawLine(hdc, HomeEllipsize(hdc, L.LessonsHome_Then(line.Then), lineFont, textRight - textLeft), lineFont,
+                    new Win32.RECT { left = textLeft, top = y, right = textRight, bottom = y + rowH }, pal.Muted, TextAlign.Left);
+            if (line.Due)
+            {
+                string tag = used == 0 ? L.LessonsHome_DueTag.TrimStart(' ', '·').TrimStart() : L.LessonsHome_DueTag;
+                PaperText.DrawLine(hdc, HomeEllipsize(hdc, tag, lineBold, textRight - textLeft - used), lineBold,
+                    new Win32.RECT { left = textLeft + used, top = y, right = textRight, bottom = y + rowH }, pal.Ink, TextAlign.Left);
+            }
+            y += rowH;
+            PaperDraw.Fill(hdc, x0, y - 1, x1, y, pal.Border);
+        }
+
+        string more = layer.Hidden > 0 ? L.LessonsHome_LayerMore(layer.Hidden) : layer.Seen == 0 ? L.LessonsHome_LayerNoneTyped : "";
+        if (more.Length > 0)
+            PaperText.DrawLine(hdc, HomeEllipsize(hdc, more, small, x1 - x0), small,
+                new Win32.RECT { left = x0, top = y + S(6), right = x1, bottom = y + S(22) }, pal.Muted, TextAlign.Left);
+    }
+
+    private string HomeMapSummary(HomeSnapshot snapshot, uint? scancode)
+    {
+        var lines = new List<string>
+        {
+            L.LessonsHome_MapSpoken(snapshot.Keys.Count(pair => pair.Value.Kind == HomeKeyKind.Seen),
+                snapshot.Keys.Count, snapshot.Keys.Count(pair => pair.Value.Due > 0)),
+        };
+        if (scancode is { } sc && snapshot.Keys.TryGetValue(sc, out var state))
+        {
+            lines.Add(L.LessonsHome_KeyTitle(HomeKeyCap(sc)) + ". " + L.LessonsHome_KeySummary(state.Followed, state.Seen, state.Due));
+            foreach (var layer in LessonsHomeLogic.KeyDetail(HomeKeyCatalog.Shared, snapshot.Entries, sc, snapshot.Now))
+            {
+                string? deadKey = HomeDeadKeyOf(layer.Step);
+                lines.Add(deadKey != null ? HomeDeadKeyName(deadKey) : L.LessonsHome_LayerName(layer.Layer));
+                foreach (var line in layer.Lines)
+                    lines.Add(L.LessonsHome_KeyTooltipLine(HomeGlyph(line.Character), HomeLevelText(line.Box), line.Due));
+                if (layer.Hidden > 0) lines.Add(L.LessonsHome_LayerMore(layer.Hidden));
+            }
+            lines.Add(HomeKeySessionNote(HomeKeySession(snapshot, sc, state)));
+        }
+        lines.Add(L.LessonsHome_MapKeysHelp);
         return string.Join("\n", lines);
     }
 

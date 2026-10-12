@@ -81,6 +81,53 @@ public class LessonsHomeWindowTests
     }
 
     [Fact]
+    public void VotreCarte_UnClicChoisitLaTouche_LesFlechesPassentALaVoisine_LaSeanceSeLance()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            string character = ReviewableCharacter(window);
+            MakeDue(window, character);
+            uint scancode = HomeKeyCatalog.Shared.All.First(c => c.Character == character).Place.Scancode;
+
+            // Aujourd'hui : un clic sur la touche ouvre « Votre carte » sur elle.
+            SetPage(window, "Today");
+            Paint(window);
+            var keys = BancCapture.Field<List<(uint Scancode, Win32.RECT Rect)>>(window, "_homeMapKeys");
+            var rect = keys.First(k => k.Scancode == scancode).Rect;
+            BancCapture.SetField(window, "_homeClickPoint", ((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2));
+            Activate(window, L.LessonsHome_MapKeysName);
+            Assert.Equal("Map", Page(window));
+            Assert.Equal(scancode, BancCapture.Field<uint?>(window, "_homeMapKey"));
+
+            Paint(window);
+            Assert.True(Assert.Single(Controls(window), c => c.Kind == LessonControlKind.ListItem && c.Name == L.LessonsHome_YourMap).Selected);
+            Assert.Contains(L.LessonsHome_MapKeysHelp, Summary(window));
+            Assert.Equal(scancode, BancCapture.Field<uint?>(window, "_homeMapShownKey"));
+
+            // Flèche droite puis gauche : la voisine, puis retour.
+            BancCapture.Call(window, "HomeHandleKey", 0x27);
+            Paint(window);
+            Assert.NotEqual(scancode, BancCapture.Field<uint?>(window, "_homeMapShownKey"));
+            BancCapture.Call(window, "HomeHandleKey", 0x25);
+            Paint(window);
+            Assert.Equal(scancode, BancCapture.Field<uint?>(window, "_homeMapShownKey"));
+
+            // Un clic entre les touches ne change rien.
+            BancCapture.SetField(window, "_homeClickPoint", (0, 0));
+            Activate(window, L.LessonsHome_MapKeysName);
+            Assert.Equal(scancode, BancCapture.Field<uint?>(window, "_homeMapKey"));
+
+            // La séance de la touche : une séance composée, sur l'écran d'exercice.
+            Activate(window, L.LessonsHome_KeySessionName(""));
+            Assert.Equal("Exercise", Page(window));
+            Assert.NotNull(BancCapture.Field<object?>(window, "_homeComposed"));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    [Fact]
     public void Aujourdhui_ONomme_LesOnglets_LesBoutons_EtResumeLaPageAuLecteurDEcran()
     {
         using var isolation = new BancCapture.Isolation();
