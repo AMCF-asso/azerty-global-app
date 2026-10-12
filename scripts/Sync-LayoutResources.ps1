@@ -135,7 +135,20 @@ if ($SyncPublicRepo) {
 
 Copy-Exact $sourceLayout $targetLayout
 Copy-Exact $sourceIndex $targetIndex
-Copy-Exact $sourceLessons $targetLessons
+
+# lessons.json est une copie enrichie : l'app y ajoute ses propres lecons, absentes du site
+# (QCM du 2026-10-12). La copier ecraserait ces lecons ; les changements du site se
+# reportent donc a la main, et scripts/check-layout-provenance.py verifie le reste. Meme
+# liste d'identifiants que APP_ONLY_LESSON_IDS dans ce script.
+$appOnlyLessonIds = @('course-20-millions-afrique')
+$appOnlyFound = @($appOnlyLessonIds | Where-Object {
+    Select-String -LiteralPath $targetLessons -SimpleMatch -Quiet "`"id`": `"$_`""
+})
+if ($appOnlyFound.Count -gt 0) {
+    Write-Host " - CONSERVE  lessons.json (lecons de l'app : $($appOnlyFound -join ', ')) ; reporter le site a la main"
+} else {
+    Copy-Exact $sourceLessons $targetLessons
+}
 
 Invoke-LayoutValidation
 
