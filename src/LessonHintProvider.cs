@@ -58,6 +58,18 @@ internal sealed class LessonHintProvider
         return _methods.TryGetValue(ch.ToString(), out var method) ? method : null;
     }
 
+    /// <summary>La méthode à enseigner devant <paramref name="next"/>, le caractère suivant du
+    /// texte (null : inconnu) : la circonflexe pour É È Ç À avant une minuscule, sinon la
+    /// recommandée, et toujours elle quand Verr. Maj. est déjà allumée
+    /// (<see cref="CharacterIndex.Entry.PreferredBefore"/>).</summary>
+    public MethodData? GetRecommendedMethod(char ch, char? next, bool capsLockActive = false)
+    {
+        if (CharacterIndex.Shared.ByCharacter.TryGetValue(ch.ToString(), out var entry)
+            && entry.PreferredBefore(next, capsLockActive) is { } method)
+            return method;
+        return GetRecommendedMethod(ch);
+    }
+
     public void AddRequiredCharacters(IEnumerable<string> characters, ISet<string> visibleCharacters)
     {
         foreach (var value in characters)

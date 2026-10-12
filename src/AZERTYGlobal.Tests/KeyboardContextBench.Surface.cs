@@ -46,6 +46,8 @@ public partial class KeyboardContextBench
         new("selecteur", FlexibleModule, FlexibleLesson, 0, "", Focus: true, Picker: true),
         new("parametres", StrictModule, StrictLesson, StrictExercise, "", Focus: true, Settings: true),
         new("recap", DeadKeyModule, DeadKeyLesson, 0, "", Focus: true, Complete: true),
+        // Règle du 12/10 : « École », É en début de mot, s'enseigne par la circonflexe.
+        new("capitale-mot", FlexibleModule, "caps-e-acute", 2, "", Focus: true),
     };
 
     private static void AddLessonSurfaceStates(List<(string Name, Action Run)> attempts, BancCapture.Target target,

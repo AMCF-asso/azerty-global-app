@@ -50,7 +50,9 @@ internal sealed partial class LessonsWindow
     {
         if (current == ' ') return null;
         string glyph = current.ToString();
-        var gesture = Gesture.Of(glyph);
+        // É, È, Ç, À avant une minuscule : touche morte circonflexe, pas Verr. Maj. (12/10),
+        // sauf Verr. Maj. déjà allumée.
+        var gesture = Gesture.Of(glyph, following, _mapper.CapsLockActive);
         if (gesture.Count == 0) return null;
         if (gesture.Count == 1 && !gesture[0].Shift && !gesture[0].AltGr && Gesture.StrikesItsOwnKey(glyph, gesture))
             return null;
@@ -210,16 +212,22 @@ internal sealed partial class LessonsWindow
     private static int NumberedSteps((List<GestureStep> Steps, KeyNotationNote[] Notes, int Done) g)
         => g.Notes.Length > 0 && g.Notes[^1] == KeyNotationNote.TurnsOff ? g.Steps.Count - 1 : g.Steps.Count;
 
+    /// <summary>Le caractère qui suit le caractère attendu sur la ligne de la séance, ou null en
+    /// fin de ligne. Le geste de É, È, Ç, À en dépend (<see cref="Gesture.Of(string, char?)"/>).</summary>
+    private char? FollowingExpectedCharacter()
+    {
+        var line = _session.GetCurrentLineSnapshot();
+        int next = _session.CursorPosition + 1;
+        return next >= 0 && next < line.Count ? line[next].Expected : null;
+    }
+
     /// <summary>
     /// Grand clavier numéroté : le numéro du temps sur chaque touche frappée, comme le texte
     /// sous le caractère. Un temps déjà fait (Verr. Maj. allumée, touche morte armée) perd le sien.
     /// </summary>
     private void AddNumberedBadges(Dictionary<uint, int> badges, char current)
     {
-        var line = _session.GetCurrentLineSnapshot();
-        int next = _session.CursorPosition + 1;
-        char? following = next >= 0 && next < line.Count ? line[next].Expected : null;
-        if (CurrentGesture(current, following) is not { } g) return;
+        if (CurrentGesture(current, FollowingExpectedCharacter()) is not { } g) return;
         int numbered = NumberedSteps(g);
         if (numbered < 2) return;
         for (int i = g.Done; i < numbered; i++)

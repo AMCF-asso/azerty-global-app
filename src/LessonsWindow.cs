@@ -2066,7 +2066,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
             return;
         }
-        var method = _hints.GetRecommendedMethod(next.Value);
+        var method = _hints.GetRecommendedMethod(next.Value, FollowingExpectedCharacter(), _mapper.CapsLockActive);
         if (method == null) return;
         _hintBackspace = false;
         _hintCharacter = next.Value;

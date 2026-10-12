@@ -12,6 +12,11 @@ public class KeyNotationTests
 {
     private static readonly DateTimeOffset T0 = new(2026, 10, 11, 12, 0, 0, TimeSpan.Zero);
 
+    // Depuis le 12/10, É devant une minuscule s'enseigne par la touche morte circonflexe
+    // (Gesture.Of("É", 'c'), voir RegleCapitalesAccentueesTests). Ces témoins gardent pourtant le
+    // temps « Verr. Maj. éteint » : ils appellent Gesture.Of("É") SANS contexte, donc la méthode
+    // Verr. Maj. de l'index, pour vérifier que ForLesson l'éteint devant une minuscule (tout
+    // geste Verr. Maj. suivi d'une minuscule : les autres capitales à Verr. Maj. en ont besoin).
     [Fact]
     public void VerrMaj_AvantUneMinuscule_AjouteLeTempsQuiLEteint()
     {
