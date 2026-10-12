@@ -19,7 +19,12 @@ function Resolve-FirstExistingPath([string[]]$Candidates, [string]$Label) {
 # restent en repli pour un arbre non migre, mais aucun des deux n'existe plus ici: le
 # script levait donc avant sa premiere copie, et personne ne s'en apercevait puisque les
 # trois JSON etaient deja synchronises a la main.
+# La 2026.1 n'est publiee qu'avec la v2 du site : la source est le worktree de la branche
+# `refonte` jusqu'a la bascule, comme pour scripts/check-layout-provenance.py (QCM du
+# 2026-10-12). '..\website' porte `main`, la v1 : en premier, il ramenait l'ancienne
+# disposition.
 $siteRoot = Resolve-FirstExistingPath @(
+    (Join-Path $projectRoot '..\refonte-website'),
     (Join-Path $projectRoot '..\website'),
     (Join-Path $projectRoot '..\Site AZERTY Global'),
     (Join-Path $projectRoot '..\2026\Site AZERTY Global')
