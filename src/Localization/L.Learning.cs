@@ -29,8 +29,8 @@ internal static partial class L
         "Type these foreign words — use the dead keys shown on the keyboard");
     public static string Learning_Step6Title => T("Messages", "Messages");
     public static string Learning_Step6Instruction => T(
-        "À et Ç avec Verr. Maj., puis éteignez-le — l’espace fine avant ! : AltGr + Espace",
-        "À and Ç with Caps Lock, then turn it off — the thin space before !: AltGr + Space");
+        "À avec Verr. Maj., puis éteignez-le ; Ça avec ^ puis ç — l’espace fine avant ! : AltGr + Espace",
+        "À with Caps Lock, then turn it off; Ça with ^ then ç — the thin space before !: AltGr + Space");
     public static string Learning_Step7Title => T("Les lettres des langues d’Afrique", "Letters of African languages");
     public static string Learning_Step7Instruction => T(
         "ɛ, ɔ, ŋ et ɲ : AltGr + 6, puis E, O, N ou J. ɓ : ù, puis B. ɗ : AltGr + 1, puis D.",
