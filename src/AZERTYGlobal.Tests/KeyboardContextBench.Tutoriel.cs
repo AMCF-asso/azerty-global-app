@@ -59,6 +59,9 @@ public partial class KeyboardContextBench
         new("tuto-ex6-etape2", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "Mar"); ActivateDeadKey(api, mapper, "dk_acute"); }),
         // Exercice 6 : ò attendu, une autre touche morte armée : Retour arrière demandé.
         new("tuto-ex6-retour", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "María et Niccol"); ActivateDeadKey(api, mapper, "dk_acute"); }),
+        // Exercice Messages : la consigne, À par Verr. Maj. ; puis « Ça » par ^ et ç (règle du 12/10).
+        new("tuto-messages", (m, api, mapper) => { Route(m, TutorialSteps.UsageMessages); GoTo(m, 3); }),
+        new("tuto-messages-ca", (m, api, mapper) => { Route(m, TutorialSteps.UsageMessages); GoTo(m, 3); Type(m, "À table ! "); }),
         // Exercice 8 (Afrique) : ɛ par AltGr + 6, étape 1.
         new("tuto-afrique-etape1", (m, api, mapper) => { Route(m, TutorialSteps.UsageAfrica); GoTo(m, 3); }),
         // Page de choix après le premier succès, page finale, voile de perte du focus.

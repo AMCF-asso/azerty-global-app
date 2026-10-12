@@ -150,11 +150,7 @@
               "type": "practice",
               "instruction": "Méthode 2 : Circonflexe (^) + é → É (idéal en début de mot)",
               "instructionEn": "Method 2: Circumflex (^) + é → É (ideal at the start of a word)",
-              "content": "É É É É É",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "é"
-              }
+              "content": "Été\nÉlan\nÉtoile\nÉcoute\nÉnergie"
             },
             {
               "type": "practice",
@@ -184,11 +180,7 @@
               "type": "practice",
               "instruction": "Méthode 2 : Circonflexe (^) + è → È (idéal en début de mot)",
               "instructionEn": "Method 2: Circumflex (^) + è → È (ideal at the start of a word)",
-              "content": "È È È È È",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "è"
-              }
+              "content": "Ève\nÈre\nÈbre\nÈze"
             },
             {
               "type": "practice",
@@ -218,11 +210,7 @@
               "type": "practice",
               "instruction": "Méthode 2 : Circonflexe (^) + ç → Ç (idéal en début de mot)",
               "instructionEn": "Method 2: Circumflex (^) + ç → Ç (ideal at the start of a word)",
-              "content": "Ç Ç Ç Ç Ç",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "ç"
-              }
+              "content": "Ça\nÇà et là\nÇa alors\nÇa y est\nÇa roule"
             },
             {
               "type": "practice",
@@ -236,8 +224,8 @@
           "id": "caps-a-grave",
           "title": "À majuscule",
           "titleEn": "Capital À",
-          "description": "Deux méthodes : Verr. Maj. + à ou Circonflexe + à",
-          "descriptionEn": "Two methods: Caps Lock + à or Circumflex + à",
+          "description": "Verr. Maj. + à : À est toujours un mot seul",
+          "descriptionEn": "Caps Lock + à: À is always a word on its own",
           "characters": [
             "À"
           ],
@@ -247,16 +235,6 @@
               "instruction": "Méthode 1 : Verr. Maj. + à → À",
               "instructionEn": "Method 1: Caps Lock + à → À",
               "content": "À À À À À"
-            },
-            {
-              "type": "practice",
-              "instruction": "Méthode 2 : Circonflexe (^) + à → À (idéal en début de mot)",
-              "instructionEn": "Method 2: Circumflex (^) + à → À (ideal at the start of a word)",
-              "content": "À À À À À",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "à"
-              }
             },
             {
               "type": "practice",
