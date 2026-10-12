@@ -319,6 +319,7 @@ sealed partial class SettingsWindow
             DrawTitle(hdc, layout.WindowsTitleRect, L.Settings_SectionWindows);
             DrawHint(hdc, layout.ResetVirtualKeyboardHintRect, L.SettingsClarity_HintResetWindow);
             DrawHint(hdc, layout.ResetLessonsHintRect, L.SettingsClarity_HintResetWindow);
+            PaperText.DrawLine(hdc, L.SettingsPaper_Version(Program.Version), FontVersion, layout.VersionRect, CLR_MUTED);
         }
 
         Win32.SetViewportOrgEx(hdc, origin.x, origin.y, IntPtr.Zero);
@@ -565,7 +566,8 @@ sealed partial class SettingsWindow
     /// <summary>
     /// La bande : libellés en 15 px, l'onglet ouvert en encre et demi-gras sur le trait
     /// épais bleu (décision d'Antoine du 07/10), les autres en texte secondaire ; filet
-    /// d'un pixel en bas ; la version à droite.
+    /// d'un pixel en bas. La version n'y est plus : elle ne tenait pas à côté des quatre
+    /// onglets, elle est au pied de « Langue et maintenance » (QCM du 11/10).
     /// </summary>
     private void PaintTabStrip(IntPtr hWnd)
     {
@@ -578,7 +580,6 @@ sealed partial class SettingsWindow
         int selected = (int)Win32.SendMessageW(hWnd, Win32.TCM_GETCURSEL, IntPtr.Zero, IntPtr.Zero);
         int line = Metrics.Tab;
         int textBottom = client.bottom - S(11);
-        int lastRight = 0;
         for (int i = 0; i < TabCount; i++)
         {
             var item = TabItemRect(i);
@@ -596,16 +597,7 @@ sealed partial class SettingsWindow
                 if (Win32.GetFocus() == hWnd && FocusCuesShown(hWnd))
                     PaperDraw.Frame(hdc, Inflate(textRect, S(3)), CLR_ACTION);
             }
-            lastRight = Math.Max(lastRight, left + width);
         }
-
-        // Version, alignée sur la marge droite de la fenêtre.
-        string version = L.SettingsPaper_Version(Program.Version);
-        int versionWidth = PaperText.Width(hdc, version, FontVersion);
-        var versionRect = Rect(client.right - S(20) - versionWidth, client.bottom - S(12) - Metrics.Version,
-            versionWidth, Metrics.Version);
-        if (versionRect.left > lastRight + S(12))
-            PaperText.DrawLine(hdc, version, FontVersion, versionRect, CLR_MUTED);
     }
 
     // ── Cases, boutons radio, lien et boutons (NM_CUSTOMDRAW) ─────────────
