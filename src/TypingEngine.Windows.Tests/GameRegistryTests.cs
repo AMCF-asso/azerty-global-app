@@ -139,6 +139,7 @@ public class GameRegistryTests
     [InlineData("WindowsSandbox.exe")]
     [InlineData("WindowsSandboxClient.exe")]
     [InlineData("windowssandboxclient.exe")]
+    [InlineData("WindowsSandboxRemoteSession.exe")]
     [InlineData("vmware.exe")]
     [InlineData("vmplayer.exe")]
     [InlineData("VirtualBoxVM.exe")]

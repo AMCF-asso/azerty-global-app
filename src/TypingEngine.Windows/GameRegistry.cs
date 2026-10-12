@@ -39,6 +39,7 @@ public static class GameRegistry
         "vmconnect.exe",           // Hyper-V, connexion de base et session améliorée
         "WindowsSandbox.exe",      // Windows Sandbox, lanceur
         "WindowsSandboxClient.exe", // Windows Sandbox, fenêtre de la session
+        "WindowsSandboxRemoteSession.exe", // Windows Sandbox livrée par le Store (Windows 11 24H2+)
         "vmware.exe",              // VMware Workstation
         "vmplayer.exe",            // VMware Workstation Player
         "VirtualBoxVM.exe",        // fenêtre d'une VM VirtualBox (6.0 et suivantes)
