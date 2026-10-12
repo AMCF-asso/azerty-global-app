@@ -101,6 +101,9 @@ public partial class KeyboardContextBench
                     attempts.Add(("lecons-aujourdhui-revision", () => CaptureLessonsHome(target, "lecons-aujourdhui-revision", layout, mapper, hook, "Éœ«—’")));
                     // « Votre carte » : la touche de l'accent aigu, ɓ à revoir et ó tapé (maquette B).
                     attempts.Add(("lecons-carte", () => CaptureLessonsHome(target, "lecons-carte", layout, mapper, hook, "ɓ", seen: "óÉ«", page: "Map")));
+                    // « Votre texte » : l'exemple wolof de la maquette, ë déjà tapé et ŋ à revoir.
+                    attempts.Add(("lecons-texte", () => CaptureLessonsHome(target, "lecons-texte", layout, mapper, hook, "ŋ", seen: "ë—",
+                        page: "Text", text: "Jërëjëf, Ndey Ñaŋ — Ndar 🙏")));
 
                     foreach (var (name, run) in attempts)
                     {
@@ -177,7 +180,7 @@ public partial class KeyboardContextBench
     /// chaque caractère de <paramref name="seen"/> est tapé juste, donc vu sans être échu.
     /// </summary>
     private static void CaptureLessonsHome(BancCapture.Target target, string slug, Layout layout, KeyMapper mapper,
-        KeyboardHook hook, string due, string seen = "", string page = "Today")
+        KeyboardHook hook, string due, string seen = "", string page = "Today", string? text = null)
     {
         ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
         var window = new LessonsWindow(layout, mapper, hook);
@@ -195,6 +198,7 @@ public partial class KeyboardContextBench
             }
             var pageType = typeof(LessonsWindow).GetNestedType("HomePage", System.Reflection.BindingFlags.NonPublic)!;
             BancCapture.SetField(window, "_homePage", Enum.Parse(pageType, page));
+            if (text != null) BancCapture.Call(window, "HomeTextInsert", text); // champ de « Votre texte »
             BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
             IntPtr hwnd = window.Handle;
             Win32.ShowWindow(hwnd, 1);

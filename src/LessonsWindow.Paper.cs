@@ -139,6 +139,8 @@ internal sealed partial class LessonsWindow
         var links = new List<(string Text, bool Active, Action Action, string? Tooltip, Action? DoubleClick)>();
         if (_mode == WindowMode.Lessons && !_settingsOpen)
         {
+            // Accueil des Leçons (LessonsWindow.Home.cs) : « Aujourd'hui » ramène à sa page.
+            links.Add((L.LessonsHome_Today, false, HomeShowToday, L.LessonsHome_BackToTodayTooltip, null));
             string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_IconHint : FormatHintButtonText();
             links.Add((L.LessonsWin_IconHint, _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, hintTooltip, ToggleAutoHints));
             links.Add((L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true), null, null));
@@ -692,8 +694,9 @@ internal sealed partial class LessonsWindow
         int right = box.right - pad;
         var titleFont = F(AppFonts.Title, 26, TypeRamp.Semibold);
 
-        // Suivant, en bas à droite ; le partage du défi, lien sur la ligne du titre.
-        string nextText = L.LessonsWin_IconNext;
+        // Suivant, en bas à droite ; le partage du défi, lien sur la ligne du titre. Une séance
+        // composée de l'accueil n'a pas de suite : « Terminer » ramène à Aujourd'hui.
+        string nextText = HomeIsComposedSession ? L.LessonsHome_Finish : L.LessonsWin_IconNext;
         int nextW = Math.Max(S(120), OutlineButtonWidth(hdc, nextText));
         var nextRect = new Win32.RECT { left = right - nextW, top = box.bottom - S(22) - S(36), right = right, bottom = box.bottom - S(22) };
         DrawOutlineButton(hdc, nextRect, nextText, NextExercise, primary: true);

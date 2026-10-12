@@ -180,7 +180,7 @@ public class LessonsHomeWindowTests
             Assert.Equal(lesson, BancCapture.Field<int>(window, "_lessonIndex"));
             Assert.Equal(exercise, BancCapture.Field<int>(window, "_exerciseIndex"));
             Paint(window); // l'écran d'exercice se dessine sur la séance composée
-            Assert.Contains(Controls(window), control => control.Name == L.LessonsHome_BackToTodayTooltip);
+            Assert.Contains(Controls(window), control => control.Name == L.LessonsHome_Today); // lien de l'en-tête papier
 
             BancCapture.Call(window, "NextExercise");
 
@@ -214,7 +214,7 @@ public class LessonsHomeWindowTests
 
             Assert.True(BancCapture.Field<bool>(window, "_showSummary"));
             Paint(window); // le récapitulatif se dessine sur le module composé
-            Assert.Contains(Controls(window), control => control.Name == L.LessonsWin_IconNext);
+            Assert.Contains(Controls(window), control => control.Name == L.LessonsHome_Finish); // pas de suite : « Terminer »
             Assert.Empty(progress.Exercises);                       // rien à retenir par exercice
             Assert.Equal(lastModule, progress.LastModuleId);        // la position de « Reprendre » n'a pas bougé
             Assert.Equal(lastIndex, progress.LastExerciseIndex);
@@ -226,6 +226,97 @@ public class LessonsHomeWindowTests
             Assert.Null(BancCapture.Field<object?>(window, "_homeComposed"));
             Paint(window);
             Assert.Contains(L.LessonsHome_ReviewTitle, Summary(window));
+
+            // « Reprendre » retrouve l'exercice du catalogue à son début, ni le récapitulatif ni
+            // la séance finie de la révision.
+            Activate(window, L.LessonsHome_StartButton, L.LessonsHome_ResumeButton);
+            Assert.Equal("Exercise", Page(window));
+            Assert.False(BancCapture.Field<bool>(window, "_showSummary"));
+            var session = BancCapture.Field<LessonTypingSession>(window, "_session");
+            Assert.Same(BancCapture.Call(window, "get_CurrentExercise"), session.Exercise);
+            Assert.NotEqual(LessonCatalogLoader.ReviewModuleId, session.Exercise.ModuleId);
+            Assert.Equal(0, session.CursorPosition);
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    [Fact]
+    public void VotreTexte_LeChampMarqueLesGestes_LeBilanEtLaSeance_TerminerRevientPage()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            SetPage(window, "Today");
+            Paint(window);
+            Activate(window, L.LessonsHome_TextButton);
+            Assert.Equal("Text", Page(window));
+            BancCapture.Call(window, "HomeTextForget"); // le presse-papiers de la machine n'entre pas dans le test
+
+            // La frappe va au champ, émoji compris (deux WM_CHAR) ; Entrée passe à la ligne.
+            foreach (char c in "Ñaŋ — ok 🙏\rNdar")
+                BancCapture.Call(window, "OnChar", c);
+            Assert.Equal("Ñaŋ — ok 🙏\nNdar", BancCapture.Field<string>(window, "_homeText"));
+            Paint(window);
+            Assert.Equal("Ñaŋ — ok 🙏\nNdar", Summary(window)); // le lecteur d'écran lit le champ
+            var start = Assert.Single(Controls(window), c => c.Name.StartsWith(L.LessonsHome_TextStart, StringComparison.Ordinal));
+            Assert.EndsWith(L.LessonsHome_TextStartName(0, 1)[L.LessonsHome_TextStartName(0, 0).Length..], start.Name); // 🙏 sauté
+            Assert.True((bool)BancCapture.Call(window, "get_HasTypingSurface")!);
+
+            // Retour arrière retire une grappe entière, Gauche puis Suppr celle d'après.
+            BancCapture.Call(window, "OnChar", '\b');
+            Assert.Equal("Ñaŋ — ok 🙏\nNda", BancCapture.Field<string>(window, "_homeText"));
+            BancCapture.Call(window, "HomeHandleKey", 0x25);
+            BancCapture.Call(window, "HomeHandleKey", 0x2E);
+            Assert.Equal("Ñaŋ — ok 🙏\nNd", BancCapture.Field<string>(window, "_homeText"));
+
+            // La séance : le texte sans 🙏, en séance composée, le catalogue intact.
+            int exercise = BancCapture.Field<int>(window, "_exerciseIndex");
+            Paint(window);
+            Activate(window, L.LessonsHome_TextStart);
+            Assert.Equal("Exercise", Page(window));
+            var current = (LessonExercise)BancCapture.Call(window, "get_CurrentExercise")!;
+            Assert.Equal(LessonCatalogLoader.CustomTextModuleId, current.ModuleId);
+            Assert.Equal("Ñaŋ — ok\nNd", current.Content);
+
+            foreach (char c in string.Concat(current.Lines))
+                BancCapture.Call(window, "OnChar", c);
+            Assert.True(BancCapture.Field<bool>(window, "_showSummary"));
+            Paint(window);
+            Activate(window, L.LessonsHome_Finish);
+            Assert.Equal("Today", Page(window));
+            Assert.Equal(exercise, BancCapture.Field<int>(window, "_exerciseIndex"));
+
+            // Le texte reste le temps de la fenêtre ; sa fermeture l'oublie.
+            Assert.Equal("Ñaŋ — ok 🙏\nNd", BancCapture.Field<string>(window, "_homeText"));
+            BancCapture.Call(window, "HomeOnHide");
+            Assert.Equal("", BancCapture.Field<string>(window, "_homeText"));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    [Fact]
+    public void VotreTexte_EspaceOuEntreeSurUnBouton_NEcriventRien_EchapRevientPage()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            SetPage(window, "Text");
+            Paint(window);
+            BancCapture.Call(window, "OnChar", 'a');
+            Paint(window);
+            BancCapture.Call(window, "OnKeyDown", 0x09); // Tab : du champ à la première cible
+            Assert.True(BancCapture.Field<int>(window, "_focusedActionIndex") >= 0);
+            BancCapture.Call(window, "HomeTextChar", ' ');
+            BancCapture.Call(window, "HomeTextChar", '\r');
+            Assert.Equal("a", BancCapture.Field<string>(window, "_homeText"));
+            BancCapture.Call(window, "OnChar", 'b'); // une lettre rend le focus au champ
+            Assert.Equal(-1, BancCapture.Field<int>(window, "_focusedActionIndex"));
+            Assert.Equal("ab", BancCapture.Field<string>(window, "_homeText"));
+
+            BancCapture.Call(window, "OnKeyDown", 0x1B);
+            Assert.Equal("Today", Page(window));
         }
         finally { BancCapture.Teardown(window); }
     }
