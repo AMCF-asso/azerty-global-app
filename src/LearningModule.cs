@@ -1823,6 +1823,13 @@ sealed class LearningModule : IDisposable
         var nextChar = target[_cursorPosition].ToString();
         if (!Index.ByCharacter.TryGetValue(nextChar, out var indexEntry) || indexEntry.Preferred is not { } method) return;
 
+        // É, È, Ç, À devant une minuscule : touche morte circonflexe puis la minuscule
+        // (décision du 12/10), sauf Verr. Maj. déjà allumée. Avant les cas particuliers
+        // ci-dessous, qui priment.
+        char? following = _cursorPosition + 1 < target.Length ? target[_cursorPosition + 1] : null;
+        if (indexEntry.PreferredBefore(following, _mapper.CapsLockActive) is { } contextual)
+            method = contextual;
+
         // Si l'exercice demande de garder Verr.Maj activée et qu'une variante Caps existe
         // pour ce caractère, l'utiliser (= ne pas demander Maj redondant à l'utilisateur).
         if (Steps[_currentStep].KeepCapsHighlight

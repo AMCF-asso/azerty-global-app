@@ -101,6 +101,15 @@ internal static class Gesture
             ? Of(method)
             : Array.Empty<GestureStep>();
 
+    /// <summary>Les temps à enseigner pour <paramref name="character"/> devant <paramref name="next"/>,
+    /// le caractère suivant du texte à taper (null : fin ou inconnu). É, È, Ç, À suivis d'une
+    /// minuscule prennent la touche morte circonflexe, sauf Verr. Maj. déjà allumée
+    /// (<see cref="CharacterIndex.Entry.PreferredBefore"/>).</summary>
+    internal static IReadOnlyList<GestureStep> Of(string character, char? next, bool capsLockActive = false)
+        => CharacterIndex.Shared.ByCharacter.TryGetValue(character, out var entry) && entry.PreferredBefore(next, capsLockActive) is { } method
+            ? Of(method)
+            : Array.Empty<GestureStep>();
+
     /// <summary>Les temps d'une méthode de saisie.</summary>
     internal static IReadOnlyList<GestureStep> Of(MethodData method)
     {

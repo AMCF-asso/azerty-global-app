@@ -560,7 +560,7 @@ internal sealed partial class LessonsWindow
             else if (CurrentNotation() != LessonNotation.Recipe)
             {
                 // La Recette se lit déjà sous le caractère : pas deux fois la même phrase.
-                var steps = Gesture.Of(next.Value.ToString());
+                var steps = Gesture.Of(next.Value.ToString(), FollowingExpectedCharacter(), _mapper.CapsLockActive);
                 if (steps.Count > 0)
                     runs.AddRange(Gesture.Sentence(steps));
             }
@@ -647,7 +647,7 @@ internal sealed partial class LessonsWindow
                     state.HighlightedScancodes.Add(0x0E);
                 }
                 else if (_session.GetNextExpectedCharacter() is char next && !CurrentGestureHidden(next) &&
-                         _hints.GetRecommendedMethod(next) is { } method)
+                         _hints.GetRecommendedMethod(next, FollowingExpectedCharacter(), _mapper.CapsLockActive) is { } method)
                 {
                     if (!string.IsNullOrEmpty(method.DeadKeyToken))
                         state.LessonVisibleCharacters.Add(method.DeadKeyToken);
