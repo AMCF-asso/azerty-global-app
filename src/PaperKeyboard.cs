@@ -390,8 +390,8 @@ internal static class PaperKeyboard
         if (key.Scancode == ScanSpace)
         {
             var nameFont = FontSpec.Of(AppFonts.Text, Scaled(10, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular, 1f);
-            Corner(hdc, SpaceLegend(def.ShiftAltGr), nameFont, left, right, top, bottom, Corner_.TopRight, secondary, false);
-            Corner(hdc, SpaceLegend(def.AltGr), nameFont, left, right, top, bottom, Corner_.BottomRight, secondary, false);
+            Corner(hdc, SpaceLegend(def.ShiftAltGr), nameFont, left, right, top, bottom, Corner_.TopRight, secondary);
+            Corner(hdc, SpaceLegend(def.AltGr), nameFont, left, right, top, bottom, Corner_.BottomRight, secondary);
             return;
         }
 
@@ -401,15 +401,15 @@ internal static class PaperKeyboard
         string? shiftAltGr = def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null;
         if (letter)
         {
-            Corner(hdc, def.Base, mono(17), left, right, top, bottom, Corner_.TopLeft, ink, IsDeadKeyRef(def.Base));
+            Corner(hdc, def.Base, mono(17), left, right, top, bottom, Corner_.TopLeft, ink);
         }
         else
         {
-            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, secondary, IsDeadKeyRef(def.Shift));
-            Corner(hdc, def.Base, mono(15), left, right, top, bottom, Corner_.BottomLeft, ink, IsDeadKeyRef(def.Base));
+            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, secondary);
+            Corner(hdc, def.Base, mono(15), left, right, top, bottom, Corner_.BottomLeft, ink);
         }
-        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, secondary, IsDeadKeyRef(shiftAltGr));
-        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, secondary, IsDeadKeyRef(def.AltGr));
+        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, secondary);
+        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, secondary);
     }
 
     /// <summary>Taille commune des trois légendes secondaires (Maj, AltGr, Maj+AltGr) : 10 et
@@ -418,9 +418,9 @@ internal static class PaperKeyboard
 
     private enum Corner_ { TopLeft, TopRight, BottomLeft, BottomRight }
 
-    /// <summary>Une légende dans un coin ; une touche morte a son signe dans un cadre pointillé.</summary>
+    /// <summary>Une légende dans un coin ; une touche morte a son signe seul, sans cadre (Antoine, 12/10).</summary>
     private static void Corner(IntPtr hdc, string? value, FontSpec font, int left, int right, int top, int bottom,
-        Corner_ corner, uint color, bool deadKey)
+        Corner_ corner, uint color)
     {
         if (string.IsNullOrEmpty(value)) return;
         string text = Display(value);
@@ -433,14 +433,8 @@ internal static class PaperKeyboard
         int lineHeight = font.Height;
         int lineTop = atTop ? top : bottom - lineHeight;
         int baseline = lineTop + (lineHeight - (ascent + descent)) / 2 + ascent;
-        int pad = deadKey ? Math.Max(2, font.Height / 6) : 0;
-        int x = atLeft ? left + pad : right - width - pad;
+        int x = atLeft ? left : right - width;
         PaperText.Draw(hdc, text, font, x, baseline, color);
-        if (deadKey)
-        {
-            var box = new Win32.RECT { left = x - pad, top = lineTop - 1, right = x + width + pad, bottom = lineTop + lineHeight + 1 };
-            DottedFrame(hdc, box, color);
-        }
     }
 
     private static void ErrorRing(IntPtr hdc, Win32.RECT r, int radius, int width)
@@ -453,17 +447,6 @@ internal static class PaperKeyboard
             int round = (radius + i) * 2;
             Win32.RoundRect(hdc, r.left - i, r.top - i, r.right + 1 + i, r.bottom + 1 + i, round, round);
         }
-        Win32.SelectObject(hdc, oldBrush);
-        Win32.SelectObject(hdc, oldPen);
-        Win32.DeleteObject(pen);
-    }
-
-    private static void DottedFrame(IntPtr hdc, Win32.RECT r, uint color)
-    {
-        var pen = Win32.CreatePen(Win32.PS_DOT, 1, color);
-        var oldPen = Win32.SelectObject(hdc, pen);
-        var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
-        Win32.RoundRect(hdc, r.left, r.top, r.right, r.bottom, 5, 5);
         Win32.SelectObject(hdc, oldBrush);
         Win32.SelectObject(hdc, oldPen);
         Win32.DeleteObject(pen);
