@@ -1053,7 +1053,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         // Refonte 1.3.0 (maquette Leçons F) : en-tête d'une ligne, partition, clavier papier.
         // Le sélecteur ouvert se dessine en dernier, par-dessus, et capte seul les clics.
-        var body = new Win32.RECT { left = S(24), top = S(76), right = rc.right - S(24), bottom = rc.bottom - S(20) };
+        // Le lien « ‹ Aujourd'hui » de l'exercice prend une ligne sous l'en-tête : la partition
+        // descend pour que son anneau de focus ne le recouvre pas.
+        bool returnLink = _mode == WindowMode.Lessons && !_settingsOpen;
+        var body = new Win32.RECT { left = S(24), top = S(returnLink ? 88 : 76), right = rc.right - S(24), bottom = rc.bottom - S(20) };
         // Accueil des Leçons : la page « Aujourd'hui » a son propre en-tête, sa page et son anneau
         // de focus (LessonsWindow.Home.cs) ; le reste de la méthode sert l'écran d'exercice.
         bool home = HomeShown;
