@@ -30,6 +30,21 @@ public static class GameRegistry
         "AnyDesk.exe",
         "TeamViewer.exe",
         "rustdesk.exe",
+
+        // Consoles de machines virtuelles et clients de bureau virtuel (ajout du 2026-10-12,
+        // report de l'audit du 2026-09-24, docs/audit-2026-09-24-v1.3.0-bugs/rapport.md:34).
+        // Elles transmettent des scan codes à l'invité : un caractère injecté en Unicode y
+        // devient la touche du scan code de même valeur (« . » U+002E reçu comme C, SC 0x2E,
+        // mesuré dans Windows Sandbox). L'invité garde sa propre disposition.
+        "vmconnect.exe",           // Hyper-V, connexion de base et session améliorée
+        "WindowsSandbox.exe",      // Windows Sandbox, lanceur
+        "WindowsSandboxClient.exe", // Windows Sandbox, fenêtre de la session
+        "vmware.exe",              // VMware Workstation
+        "vmplayer.exe",            // VMware Workstation Player
+        "VirtualBoxVM.exe",        // fenêtre d'une VM VirtualBox (6.0 et suivantes)
+        "wfica32.exe",             // Citrix Workspace, session ICA
+        "CDViewer.exe",            // Citrix Desktop Viewer
+        "vmware-remotemks.exe",    // VMware Horizon, affichage de la session
     };
 
     /// <summary>
