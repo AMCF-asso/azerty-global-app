@@ -450,8 +450,9 @@ internal sealed partial class LessonsWindow
     {
         if (_mode != WindowMode.Lessons || _settingsOpen) return;
         var pal = HomePaletteNow();
-        // Entre l'en-tête (58) et le corps (76) : le cadre cliquable ne déborde pas sur eux.
-        HomeLink(hdc, S(24), S(67), L.LessonsHome_BackToToday, L.LessonsHome_BackToTodayTooltip, HomeShowToday, pal,
+        // Entre l'en-tête (58) et le corps (88) : ni le cadre cliquable ni l'anneau de focus de
+        // la partition ne le recouvrent.
+        HomeLink(hdc, S(24), S(71), L.LessonsHome_BackToToday, L.LessonsHome_BackToTodayTooltip, HomeShowToday, pal,
             L.LessonsHome_BackToTodayTooltip, half: 9);
     }
 
