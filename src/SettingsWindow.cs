@@ -132,6 +132,8 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT OnboardingHintRect;
         public Win32.RECT ResetVirtualKeyboardHintRect;
         public Win32.RECT ResetLessonsHintRect;
+        // La version, au pied de l'onglet « Langue et maintenance » (QCM du 11/10, 20 h 15).
+        public Win32.RECT VersionRect;
         // Onglet « Leçons » (11/10). Les listes de rectangles sont nulles hors de cet onglet :
         // les lire par NotationRect, qui rend un rectangle vide.
         public Win32.RECT NotationTitleRect;
@@ -1270,6 +1272,10 @@ sealed partial class SettingsWindow : IDisposable
             layout.ResetLessonsWindowRect = Rect(margin, y, ButtonWidth(m.ResetLessonsText), buttonH);
             y += buttonH + S(6);
             layout.ResetLessonsHintRect = Hint(ref y, L.SettingsClarity_HintResetWindow, indented: false);
+            // La version : elle ne tient plus dans la bande à quatre onglets (QCM du 11/10).
+            y += S(14);
+            layout.VersionRect = Rect(margin, y, inner, m.Version);
+            y += m.Version;
             return y;
         }
 
