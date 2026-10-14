@@ -22,13 +22,9 @@ branche du site disparaît (décision d'Antoine du 2026-10-14, tri CI).
 Il ne lit que par le réseau ; seul `--epingler` écrit, et seulement le fichier d'épinglage.
 Les originaux ne sont jamais modifiés.
 
-Exception : `src/lessons.json` est une copie enrichie. L'app y ajoute ses propres leçons
-(APP_ONLY_LESSON_IDS) ; le contrôle les retire de la copie, puis exige que le reste soit
-le même JSON que l'original (décision d'Antoine, QCM du 2026-10-12).
-
 Codes de sortie, volontairement distincts :
 
-    0  les trois copies sont identiques à leur original (lessons.json : hors leçons de l'app)
+    0  les trois copies sont identiques à leur original
     1  au moins une copie a dérivé — soit le site a évolué, soit la copie a été éditée
     2  un original n'a pas pu être lu (réseau, dépôt renommé, commit ou branche disparus),
        ou l'épinglage est invalide
@@ -65,32 +61,11 @@ FILES = [
     ("tester/lessons.json", "src/lessons.json"),
 ]
 
-ENRICHED_COPY = "src/lessons.json"
-
-# Leçons propres à l'app, absentes du site : « Un tour d'Afrique » (1.3.0, décision du
-# 2026-10-07). Même liste dans scripts/Sync-LayoutResources.ps1, qui ne copie plus
-# lessons.json par-dessus elles.
-APP_ONLY_LESSON_IDS = frozenset({"course-20-millions-afrique"})
-
 TIMEOUT_SECONDS = 30
 
 
 def digest(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
-
-
-def strip_app_lessons(payload: bytes) -> tuple[object, list[str]]:
-    data = json.loads(payload)
-    removed = []
-    for module in data.get("modules", []):
-        kept = []
-        for lesson in module.get("lessons", []):
-            if lesson.get("id") in APP_ONLY_LESSON_IDS:
-                removed.append(lesson["id"])
-            else:
-                kept.append(lesson)
-        module["lessons"] = kept
-    return data, removed
 
 
 def fetch(url: str) -> bytes:
@@ -131,12 +106,6 @@ def compare(repository: str, ref: str) -> int:
         if expected == actual:
             print(f"IDENTIQUE  {local}  {actual[:16]}  {len(embedded)} o")
             continue
-
-        if local == ENRICHED_COPY:
-            stripped, removed = strip_app_lessons(embedded)
-            if removed and stripped == json.loads(canonical):
-                print(f"ENRICHIE   {local}  original + leçons de l'app : {', '.join(removed)}")
-                continue
 
         drifted += 1
         print(
