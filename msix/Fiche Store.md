@@ -114,15 +114,15 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 ```text
 Version 1.3.0 :
 • Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
-• Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le menu de l’icône, sous « Couches ».
-• La recherche de caractères (Ctrl+Maj+W) insère le caractère directement dans votre texte.
+• Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
+• La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
+• Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
+• Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet, Échap le libère.
 • Après la mise à jour, rouvrez AZERTY Global : votre clavier ne change qu’après votre accord, redemandé une fois.
-• Menu de l’icône plus court : « Apprendre » regroupe les Leçons et l’accueil, « À propos et aide » regroupe confidentialité, ressources, retours et notation. Rien n’a été retiré.
+• Menu de l’icône plus court : « Apprendre » regroupe les Leçons, le Défi et l’accueil, « À propos et aide » le reste. Rien n’a été retiré.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
-• Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
-• Les fenêtres se parcourent mieux au clavier (Tab, Entrée, Échap) et le Narrateur lit le nom des champs qui n’en avaient pas.
-• Paramètres et Leçons s’adaptent à la taille et à la mise à l’échelle de l’écran.
-• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global ; un accent en attente ne réapparaît plus dans une autre application après un changement de fenêtre ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
+• Les fenêtres se parcourent mieux au clavier et le Narrateur lit le nom des champs qui n’en avaient pas.
+• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
 
 ### Mots-clés de recherche (max 7, séparés par des points-virgules)
@@ -239,15 +239,15 @@ Free and open source (EUPL 1.2), no admin rights needed
 ```text
 Version 1.3.0:
 • Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
-• Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet in the open app, Esc releases it. Tick each layer in the icon menu, under “Layers”.
-• Character search (Ctrl+Shift+W) inserts the character directly into your text.
+• Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
+• Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
+• Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome window or in Settings.
+• Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet, Esc releases it.
 • After the update, reopen AZERTY Global: your keyboard only changes after you agree, and you're asked once more.
-• Shorter icon menu: “Learn” groups Lessons and the welcome tour, “About and help” groups privacy, resources, feedback and rating. Nothing was removed.
+• Shorter icon menu: “Learn” groups Lessons, the challenge and the welcome tour, “About and help” the rest. Nothing was removed.
 • You can rate the app without leaving AZERTY Global.
-• If the app doesn't start with Windows, a one-time notification offers to turn it on.
-• Windows are easier to use with the keyboard (Tab, Enter, Esc), and Narrator reads the name of fields that had none.
-• The Settings and Lessons windows adapt to your screen size and display scaling.
-• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
+• Windows are easier to use with the keyboard, and Narrator reads the name of fields that had none.
+• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
 ```
 
 ### Search terms (max 7, semicolon-separated)
