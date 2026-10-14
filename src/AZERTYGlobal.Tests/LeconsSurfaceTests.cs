@@ -298,6 +298,60 @@ public class LeconsSurfaceTests
         }
     }
 
+    /// <summary>
+    /// Audit final 1.3.0, A12-01 (planche du 14/10, variante D choisie par Antoine) : un
+    /// « m » tapé à la place d'une espace débordait de la colonne de 12 px et masquait ses
+    /// voisines. La colonne fautive prend la largeur du plus large des deux caractères, les
+    /// cases ne se chevauchent plus, et elle reprend sa largeur une fois la faute corrigée.
+    /// L'attendu écrit en petit au-dessus se juge sur la planche, pas ici.
+    /// </summary>
+    [Fact]
+    public void Une_faute_large_sur_une_espace_elargit_sa_colonne_sans_chevaucher()
+    {
+        var window = OpenStrictExercise();
+        try
+        {
+            var session = BancCapture.Field<LessonTypingSession>(window, "_session");
+            var line = session.GetCurrentLineSnapshot();
+            int k = 1;
+            while (k < line.Count && line[k].Expected != ' ')
+                k++;
+            Assert.True(k < line.Count - 1, "aucune espace ordinaire au milieu de la ligne");
+            for (int i = 0; i < k; i++)
+                BancCapture.Call(window, "OnChar", line[i].Expected);
+
+            Paint(window);
+            int avant = Largeur(window, k);
+            int suivanteAvant = Largeur(window, k + 1);
+
+            BancCapture.Call(window, "OnChar", 'm');
+            Paint(window);
+            var fautive = Case(window, k);
+            Assert.True(fautive.right - fautive.left > avant,
+                $"colonne de l'espace fautive : {fautive.right - fautive.left} px, {avant} px avant la faute");
+            Assert.True(Case(window, k - 1).right <= fautive.left, "chevauchement à gauche");
+            Assert.True(fautive.right <= Case(window, k + 1).left, "chevauchement à droite");
+            Assert.Equal(suivanteAvant, Largeur(window, k + 1));
+
+            BancCapture.Call(window, "OnChar", ' ');
+            Paint(window);
+            Assert.Equal(avant, Largeur(window, k));
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    private static Win32.RECT Case(LessonsWindow window, int index) =>
+        BancCapture.Field<LessonSurfaceView>(window, "_surfaceView").Cells[index];
+
+    private static int Largeur(LessonsWindow window, int index)
+    {
+        var c = Case(window, index);
+        return c.right - c.left;
+    }
+
     private static LessonsWindow OpenStrictExercise()
     {
         var layout = LayoutLoader.LoadFromResource();
