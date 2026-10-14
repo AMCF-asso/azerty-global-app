@@ -1,8 +1,8 @@
 # AZERTY Global — Application Windows
 
 <!-- suivi-version
-version-app: 1.3.0
-versions-historiques: 1.0.0, 1.1.0, 1.2.0
+version-app: 1.3.1
+versions-historiques: 1.0.0, 1.1.0, 1.2.0, 1.3.0, 1.3.0.0
 versions-hors-produit: 10.0.17763.0
 -->
 
