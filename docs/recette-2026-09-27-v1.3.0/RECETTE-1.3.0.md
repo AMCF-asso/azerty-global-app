@@ -7,7 +7,7 @@
 > 4. La recette automatique a été alignée le 14/10 sur l’accueil en 4 étapes, le Défi réactivé et les Paramètres en 4 onglets, sans être rejouée (aucun bundle n’existait). Ses lignes R20, R22-R26, R37, R39, R40, R47, R49, R58 et R70-R73 ont donc chacune un geste de repli (§ 2).
 > 5. Quatre lignes décident des textes publics de jeudi : R09 et R81-R82 (marqueurs des notes de certification), R135 (consigne « Pause » sous l’arabe), R134 (Ctrl droit + Alt gauche).
 
-- **Candidat** : le pré-candidat du 14/10, soit `lot/tutoriel-textes` après le lot 5 d’A1. Le bundle est construit par `ci.yml`, lancé à la main sur la branche. Pour le run et son commit, voir la commande ci-dessous. La recette du 06/10 sur `ac4ff72` est annulée, et `113ad17` (bundle `FBD052CC…`) est remplacé. Depuis `113ad17`, 76 commits : Leçons « Tablature », notation des touches, Aujourd’hui, Votre carte, Votre texte, recherche par langue, Défi du jour réactivé, tutoriel par usage, accueil en 4 étapes, Paramètres en 4 onglets, clavier virtuel « papier », bulles de la zone de notification, consoles de VM et Sandbox.
+- **Candidat** : le pré-candidat du 14/10, soit `lot/tutoriel-textes` après le lot 5 d’A1. Le bundle est construit par `ci.yml`, lancé à la main sur la branche. Annoncé par A1 le 14/10 à 14 h 46 : run `38566218506` sur `53d6033` ; la commande ci-dessous le retrouve, et l’en-tête suit le run réellement recetté s’il diffère. La recette du 06/10 sur `ac4ff72` est annulée, et `113ad17` (bundle `FBD052CC…`) est remplacé. Depuis `113ad17`, 76 commits : Leçons « Tablature », notation des touches, Aujourd’hui, Votre carte, Votre texte, recherche par langue, Défi du jour réactivé, tutoriel par usage, accueil en 4 étapes, Paramètres en 4 onglets, clavier virtuel « papier », bulles de la zone de notification, consoles de VM et Sandbox.
 - **Bundle** : `AZERTYGlobal-1.3.0.0.msixbundle` du run. **SHA-256 : `________________`**, lue par `verifier-candidat.ps1` (R02) puis reportée ici. Une recompilation change l’empreinte et annule la recette.
 - **Durée estimée** (estimation, pas une mesure) : P0 hors WACK 5 min ; recette automatique 6 à 8 min sans surveillance (mesuré le 28/09) ; P1 55 min ; P2 45 min ; WACK 25 min ; P3 selon le reste. Total visé : 2 h 30.
 - **Avant tout** : quitter AZERTY Global sur l’hôte pendant le travail dans le Sandbox. Depuis `d2a9ce8` et `1b342f6`, une app de l’hôte se suspend quand une fenêtre de VM ou du Sandbox est au premier plan (comportement voulu, jamais observé : ligne R126).
@@ -38,7 +38,7 @@ Ordre de jeu (durées estimées) :
 |---|---|---|
 | 18 h 15 | hôte | P0 : R01-R03 et R83 (5 min), puis R04 (recette automatique, sans surveillance) |
 | 18 h 25 | hôte | R05-R07 : lecture des verdicts automatiques |
-| 18 h 30 | Sandbox manuel | P1 : R08 à R125 (55 min) |
+| 18 h 30 | Sandbox manuel | P1 : R08 à R125, puis R142 (55 min) |
 | 19 h 25 | poste | P2 : R131 (vraie mise à jour, 30 min), puis R133 à R139 (25 min) |
 | 20 h 20 | poste | R80 (désinstaller), puis R81-R82 (WACK, 25 min). R140 sur Windows 10 pendant le WACK |
 | 20 h 45 | — | P3 s’il reste du temps, sinon vendredi |
@@ -130,10 +130,11 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 
 ### 3.8 Lot 5 (⏭️ si le correctif est absent du candidat : `git log` du run)
 
-- [ ] **R122** — A11-02 : menu ▸ Mettre en pause ▸ Personnaliser…, taper « 30 » dans les minutes sans cliquer, Entrée → « Reprise à <maintenant + 30 min> » (avant : 5 h 05). Les minutes s’arrêtent à 59. (A11-02 ; `PauseTests.Duree_BorneeDe1minA23h59`)
-- [ ] **R123** — A12-01 : Initiation, exercice 4, en strict, taper m au lieu de l → le caractère tapé reste entier, l’attendu lisible dessous. (A12-01)
-- [ ] **R124** — A02-02 : rechercher « ∉ », « ѓ », « ǣ », en FR puis en EN → le geste affiché, tapé dans Edge, donne bien ce caractère (avant : « AltGr + = » puis « E » donnait ∈). (A02-02)
-- [ ] **R125** — A08-02 (relance après une mise à jour) : ⏭️ ce soir. Le geste exige un paquet 1.3.0.1 posé plus d’une minute après le lancement (CE2). Noter le test xUnit qu’A1 cite pour ce correctif.
+- [ ] **R122** — A11-02 : menu ▸ Mettre en pause ▸ Personnaliser… → les minutes sont déjà sélectionnées. Taper « 30 » sans cliquer, Entrée → « Reprise à <maintenant + 30 min> » (avant : 5 h 05). Taper « 75 » dans les minutes → refus « Choisissez entre 1 min et 23 h 59. ». (A11-02, `941e919` ; `PauseTests.Duree_BorneeDe1minA23h59`, `PauseTests.Personnaliser_LesMinutesSontSelectionneesALOuverture`)
+- [ ] **R123** — A12-01 : ⏭️ ce soir, le correctif arrive après ce bundle (A1, 14/10). Vendredi, sur le bundle final : Initiation, exercice 4, en strict, taper m au lieu de l → le caractère tapé reste entier, l’attendu lisible dessous. (A12-01)
+- [ ] **R124** — A02-02 : rechercher « ∉ », « ѓ », « Ǣ », en FR puis en EN → la partition dit AltGr (et Maj pour « Ǣ ») au second temps, et le geste affiché, tapé dans Edge, donne bien ce caractère (avant : « AltGr + = » puis « E » donnait ∈). (A02-02, `1456dc9` ; `RechercheSecondeToucheTests`)
+- [ ] **R125** — A08-02 (relance après une mise à jour) : ⏭️ ce soir, couverte par `RelaunchSignalTests.Relance_apres_mise_a_jour_seulement` (`4221b25`, `RegisterApplicationRestart` avec `--apres-maj`). Vendredi : poser le paquet 1.3.0.1 de test fourni jeudi par A1, plus d’une minute après le lancement (CE2) → l’app se relance seule ; quittée à la main, elle ne se relance pas.
+- [ ] **R142** — Liens vers le site (`53d6033`, liste `operations/2026-10-14-sortie-v2-130/a1/urls-app.md`). Menu de l’icône ▸ « Donner mon avis » → `/contact?source=feedback…` ; « Signaler un bug » → `/contact?source=bug…` ; Ressources ▸ « Guide utilisateur imprimable » → `/assets/aide-memoire-azerty-global.pdf` ; Ressources ▸ « Cartes du clavier » → `/guide#aide-memoire`. Juger l’URL ouverte, pas la page : ce soir la production est encore la v1, un 404 est attendu avant la bascule. (`DiagnosticUrlTests`)
 
 ## 4. P2 — Essais exigés le 05/10 (sur le poste)
 
