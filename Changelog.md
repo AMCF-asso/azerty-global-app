@@ -1,5 +1,9 @@
 # Changelog — Application AZERTY Global
 
+## Version 1.3.1 — paquet de test, jamais publié
+
+- Paquet de test de la recette R125 (relance après une mise à jour), branche `lot/test-1301` : la 1.3.0 avec sa seule version relevée.
+
 ## Version 1.3.0 — 16 octobre 2026
 
 Préparée dans ce dépôt pour la soumission au Microsoft Store du 16 octobre 2026. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, Défi du jour compris : masqué le 24 septembre, il est réactivé le 7 octobre (voir « Défi du jour et Leçons »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
