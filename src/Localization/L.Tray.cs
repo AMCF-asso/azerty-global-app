@@ -145,7 +145,7 @@ internal static partial class L
     /// <summary>Dernière entrée du sous-menu Couches : ouvre la fenêtre complète.</summary>
     public static string Tray_MenuLayersConfigure => T("Configurer…", "Configure…");
     public static string Tray_MenuPrivacySecurity => T("Confidentialité et sécurité", "Privacy && security");
-    public static string Tray_MenuPrintableGuide => T("Guide utilisateur imprimable", "Printable user guide");
+    public static string Tray_MenuPrintableGuide => T("Aide-mémoire imprimable", "Printable cheat sheet");
     public static string Tray_MenuFiveChanges => T("Les 5 changements", "The 5 changes");
     public static string Tray_MenuKeyboardCards => T("Cartes du clavier", "Keyboard cards");
     public static string Tray_MenuWhatsNew => T("Nouveautés de la version", "What's new in this version");
