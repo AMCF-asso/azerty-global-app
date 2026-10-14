@@ -410,6 +410,15 @@ internal sealed partial class LessonsWindow
     /// que soit sa largeur, devient « · ».</summary>
     private static string WrongGlyph(char actual) => actual == ' ' || actual == ' ' || actual == ' ' ? "·" : actual.ToString();
 
+    /// <summary>L'attendu écrit en petit au-dessus d'une faute (A12-01) : « ␣ » pour une espace ;
+    /// null pour une espace insécable, qui reprend le repère de sa colonne normale.</summary>
+    internal static string? ExpectedHint(char expected) => expected switch
+    {
+        '\u00A0' or '\u202F' => null,
+        ' ' => "\u2423",
+        _ => expected.ToString(),
+    };
+
     /// <summary>
     /// La ligne à taper : une colonne par caractère attendu, sans portée (QCM du 11/10) ; le
     /// geste du seul caractère courant se lit dessous (<see cref="DrawCurrentNotation"/>). Le
@@ -498,9 +507,19 @@ internal sealed partial class LessonsWindow
             {
                 // L'attendu reste lisible : petit, pâle, en haut de la colonne.
                 var hint = FontSpec.Of(AppFonts.Text, 22, TypeRamp.Semibold, style.GlyphFont.Height / 50f);
-                string hintText = expectedChar == ' ' ? "\u2423" : expectedChar.ToString();
                 var hintRect = new Win32.RECT { left = cellRect.left, top = cellRect.top + S(2), right = cellRect.right, bottom = cellRect.top + S(2) + S(26) };
-                PaperText.DrawLine(hdc, hintText, hint, hintRect, CLR_MUTED, TextAlign.Center);
+                if (ExpectedHint(expectedChar) is string hintText)
+                    PaperText.DrawLine(hdc, hintText, hint, hintRect, CLR_MUTED, TextAlign.Center);
+                else
+                {
+                    // Espace insécable attendue (la faute type : une espace ordinaire à sa place) :
+                    // le repère de sa colonne normale, à la taille de l'aide.
+                    var (ascent, descent) = PaperText.Metrics(hdc, hint);
+                    int baseline = hintRect.top + (hintRect.bottom - hintRect.top - (ascent + descent)) / 2 + ascent;
+                    int markWidth = Math.Max(S(4), (expectedChar == '\u00A0' ? style.NbspWidth : style.ThinNbspWidth) * 22 / 50);
+                    PaperDraw.SpaceMark(hdc, expectedChar, (cellRect.left + cellRect.right - markWidth) / 2, markWidth, baseline,
+                        Math.Max(S(4), style.SpaceMarkHeight * 22 / 100), style.GlyphFont.Height / 50f * 22 / 50, CLR_MUTED);
+                }
             }
             var (ul, ur) = UnderlineSpan(cellRect.left, cellRect.right, S(2), S(6));
             int uy = cellRect.bottom - S(6);
