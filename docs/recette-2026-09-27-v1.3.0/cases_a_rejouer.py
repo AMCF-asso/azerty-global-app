@@ -16,6 +16,16 @@ TOUJOURS = ["R01", "R02", "R03", "R81", "R82", "R83", "R143"]
 # Gel du code (D4, plan du 14/10) : chaque commit postérieur au bundle recetté rejoue installation,
 # démarrage et désinstallation (R04, R06 : recette automatique), saisie (R28) et recherche (R33).
 SOCLE = ["R04", "R06", "R28", "R33"]
+# Ce que la recette de vendredi prouve, et ce qu'elle ne prouve pas (plan du 14/10, couloir A2).
+COUVERTURE = """**Couvert**
+- R01-R03 : le bundle est l'artefact du run, construit depuis son commit, empreinte et attestation vérifiées.
+- R81-R83 : WACK sur l'hôte x64 ; la CI lit version, package et empreintes x64 et arm64.
+- Sandbox (R04, R06) : installation, démarrage et désinstallation sur un Windows x64 neuf, sans Store.
+- R143 : mise à jour par-dessus la 1.1.0 du Store sur le poste, réglages et progression relus.
+
+**Non couvert** (à noter tel quel)
+- win-arm64 : paquet construit par `ci.yml`, jamais installé (aucun poste arm64).
+- Compte Windows standard : le poste est administrateur."""
 
 # Motif de chemin (regex, cherchée dans le chemin) → cases. Premier motif trouvé, pas le seul :
 # un fichier peut relever de plusieurs zones.
@@ -106,6 +116,7 @@ def main():
         print("\n**À juger à la main** (fichier de src/ sans règle) :")
         for x in a_juger:
             print(f"- {x}")
+    print(f"\n{COUVERTURE}")
 
 
 if __name__ == "__main__":
