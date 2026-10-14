@@ -1,7 +1,7 @@
 # Recette 1.3.0 — fiche unique (candidat du 14/10)
 
 > **En bref**
-> 1. Ce soir : recette complète du pré-candidat de `lot/tutoriel-textes`, 2 h 30 environ (estimation, jamais chronométrée). Vendredi de 16 h à 18 h : seulement les cases que touchent les commits ajoutés depuis (`CASES-A-REJOUER.md`), plus R01-R03 et R81-R83.
+> 1. Ce soir : recette complète du pré-candidat de `lot/tutoriel-textes`, 2 h 30 environ (estimation, jamais chronométrée). Code gelé jeudi à 8 h (D4). Vendredi de 9 h à 9 h 30, sur le bundle final : R01-R03 et R81-R83 (WACK, D1). Vendredi de 16 h à 18 h : R143 (mise à jour du poste), puis les cases que touchent les commits ajoutés depuis ce soir (`python docs/recette-2026-09-27-v1.3.0/cases_a_rejouer.py 53d6033 <commit du bundle final>`), chaque commit rejouant aussi installation, démarrage, recherche, saisie et désinstallation.
 > 2. Tri par priorité. **P0** bloque la soumission : R01-R03, R81-R83. **P1** : les nouveautés du candidat, jamais recettées. **P2** : les essais exigés le 05/10. **P3** : la non-régression. Si le temps manque, couper par le bas.
 > 3. L’ordre de jeu n’est pas l’ordre de priorité : le WACK passe en dernier, car il installe puis retire le paquet sur l’hôte (§ 0).
 > 4. La recette automatique a été alignée le 14/10 sur l’accueil en 4 étapes, le Défi réactivé et les Paramètres en 4 onglets, sans être rejouée (aucun bundle n’existait). Ses lignes R20, R22-R26, R37, R39, R40, R47, R49, R58 et R70-R73 ont donc chacune un geste de repli (§ 2).
@@ -139,6 +139,7 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 ## 4. P2 — Essais exigés le 05/10 (sur le poste)
 
 - [ ] **R131** — Vraie mise à jour (A10-01, A08-01). La 1.1.0 du Store, ouverte et utilisée, contient tes vrais réglages ; le dossier est sauvegardé (§ 0). Avant : noter un raccourci, une app en compatibilité, l’état du démarrage automatique, la place du clavier virtuel, et la progression des Leçons (Initiation et 3 exercices réussis, sinon les faire). Puis, la 1.1.0 restant ouverte : `powershell -ExecutionPolicy Bypass -File "$kit\installer-poste.ps1" -Bundle $b -MiseAJour`. Attendu, dans `installation-poste.txt` : « avant 1.1.0.0 (Store), app ouverte : oui » ; « après une seule 1.3.0.0, app ouverte : non » (fermée, pas relancée : attendu) ; 0 copie `.illisible`. Relancer depuis Démarrer → l’accueil redemande l’accord une fois. Après l’accord : réglages notés retrouvés, `firstRemapDate` inchangée dans `usage-stats.json`, exercices toujours réussis, clavier virtuel à sa place, démarrage automatique conservé, aucun avis ; une seule icône à la session suivante. Une casse de migration est **bloquante**. (A10-01 ; CE3 l. 260-300 ; `installer-poste.ps1 -MiseAJour`)
+- [ ] **R143** — Vendredi, 16 h, **bundle final** sur le poste (session du plan, 14/10) : la 1.1.0 du Store installée et ouverte (réinstallée après R80). Sauvegarder `%LOCALAPPDATA%\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\` (dont `LocalState`) comme au § 0 ; noter un réglage, un raccourci et la progression des Leçons. Puis `installer-poste.ps1 -Bundle <bundle final> -MiseAJour` → mêmes attendus que R131 : une seule 1.3.0.0, 0 copie `.illisible`, accord redemandé une fois, réglages et progression relus à l’identique. Non couvert, à noter tel quel : arm64 (aucun poste arm64) et compte Windows standard (le poste est administrateur). (plan § 1, D1)
 - [ ] **R132** — A08-02, condition de CE2 : la fermeture par `-ForceApplicationShutdown` est lue dans R131. Le vrai Store reste non observé jusqu’à sa première mise à jour réelle : le noter. (CE2 l. 118-125)
 - [ ] **R133** — A01-01 : Bloc-notes, Alt+Maj vers US sans changer de fenêtre, taper « azerty » puis la touche ² → « qwerty@ » confirme le défaut (prévu en 1.3.1), « azerty@ » le réfute. Cliquer une autre fenêtre et revenir → « azerty ». Refaire dans Edge : Ctrl+Z ne ferme pas l’onglet. Observation, non bloquante. (A01-01 ; CE1 l. 111-116)
 - [ ] **R134** — A01-03 : disposition US seule active. Dans le Bloc-notes puis dans Edge et Chrome : AltGr+O → œ, AltGr+E → €, AltGr+D → {, puis Ctrl droit + Alt gauche + O. Noter les caractères perdus et les bips. **Décide** : Ctrl droit + Alt gauche entre dans la fiche Store et la FAQ seulement s’il donne œ dans Chrome et Edge. (A01-03 ; CE1 l. 195-198)
@@ -152,7 +153,7 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 
 ## 5. P0 — WACK (sur l’hôte, en fin de soirée)
 
-- [ ] **R80** — Désinstaller AZERTY Global du poste (Paramètres › Applications) → clavier système utilisable. Après le WACK, réinstaller la 1.1.0 depuis le Store pour l’usage courant. (installer-poste.ps1 ; kit A12)
+- [ ] **R80** — Désinstaller AZERTY Global du poste (Paramètres › Applications) → clavier système utilisable. Après le WACK, réinstaller la 1.1.0 depuis le Store, l’ouvrir, changer un réglage et réussir un exercice : c’est le point de départ de R143 vendredi. (installer-poste.ps1 ; kit A12)
 - [ ] **R81** — PowerShell administrateur, aucune AZERTY Global installée, à la racine du dépôt (`$kit` et `$b` redéfinis) : `powershell -ExecutionPolicy Bypass -File "$kit\wack.ps1" -Bundle $b` → `$kit\evidence\wack-<12>\resume.txt` : empreinte de l’en-tête, `OVERALL_RESULT : PASS`. **Décide** du marqueur l. 300 des notes de certification. (kit A13 ; wack.ps1)
 - [ ] **R82** — Lignes non PASS de `resume.txt` → seule « Blocked executables » (optionnelle, `ShellExecuteW`) est admise. (Fiche Store, notes de certification)
 
@@ -235,6 +236,7 @@ Artefact `captures-<12>` du workflow « Captures des fenêtres » sur le commit 
 - [ ] **R87** — Fiche FR et EN collée depuis `msix/Fiche Store.md`. Compteur des notes de version sous 1 500 caractères (A07-03) ; aucun « standard » pour l’AZERTY de Windows en anglais (A07-02). La règle « ni Défi ni challenge » tombe avec le Défi réactivé : appliquer celle de la fiche validée jeudi. (PC ; A07)
 - [ ] **R88** — Notes de certification : texte anglais de la fiche ; marqueur l. 293 retiré si R09 est ✅, marqueur l. 300 si R81 et R82 le sont. (PC)
 - [ ] **R89** — Propriétés, IARC et confidentialité inchangés ; Publication : **Publishing hold** (plan du 14/10) ; soumettre. Tag `v1.3.0` sur le commit soumis ; release GitHub en brouillon jusqu’à J. (PC ; plan § 2)
+- [ ] **R144** — Après **Submit** : capture de l’écran de la soumission avec son identifiant, son statut et « publication manuelle » ; les reporter ici. Le message à Julien Lausson (`operations/2026-10-14-sortie-v2-130/a2/message-lausson.md`) ne part qu’après un Submit accepté. (plan, 14/10)
 
 ## Optionnels
 
