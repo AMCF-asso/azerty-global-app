@@ -343,6 +343,27 @@ public class LeconsSurfaceTests
         }
     }
 
+    /// <summary>
+    /// A12-01 : l'attendu écrit au-dessus d'une faute ne doit jamais être blanc. Une espace
+    /// fine attendue, remplacée par une espace ordinaire, est la faute type des leçons : elle
+    /// reprend le repère dessiné dans sa colonne (null), les autres caractères un texte visible.
+    /// </summary>
+    [Fact]
+    public void L_attendu_d_une_faute_reste_visible_pour_chaque_caractere_du_catalogue()
+    {
+        var caracteres = LessonCatalogLoader.LoadFromResource().Exercises
+            .SelectMany(exercise => exercise.Content).Where(c => c != '\n').ToHashSet();
+        Assert.Contains('\u202F', caracteres);
+        Assert.Contains(' ', caracteres);
+
+        Assert.All(caracteres, c =>
+        {
+            string? hint = LessonsWindow.ExpectedHint(c);
+            Assert.True(hint is null ? c is '\u00A0' or '\u202F' : !string.IsNullOrWhiteSpace(hint),
+                $"U+{(int)c:X4} : attendu blanc au-dessus de la faute");
+        });
+    }
+
     private static Win32.RECT Case(LessonsWindow window, int index) =>
         BancCapture.Field<LessonSurfaceView>(window, "_surfaceView").Cells[index];
 
