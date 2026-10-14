@@ -82,8 +82,24 @@ static class ProductIdentity
     /// </summary>
     public static string WindowClass(string suffix) => $"{Namespace}_{suffix}";
 
-    /// <summary>URL du site, chemin compris (« /guide », « /feedback »…).</summary>
+    /// <summary>URL du site, chemin compris (« /guide », « /contact »…).</summary>
     public static string Url(string path) => SiteBaseUrl + path;
+
+    // Pages du site v2 citées par l'app. Aucune ne doit tomber sur une redirection
+    // (runbook de bascule du site, point 7) : /feedback et /bug sont des 301 vers /contact,
+    // l'ancien PDF de prise en main une 301 vers l'aide-mémoire, et /guide n'a pas d'ancre
+    // « cartes ». Le paramètre source fait partie de la liste blanche de /contact
+    // (js/v2/contact.js du site).
+    /// <summary>« Donner mon avis » : formulaire de contact, provenance « feedback ».</summary>
+    public const string FeedbackPath = "/contact?source=feedback";
+    /// <summary>« Signaler un bug » : formulaire de contact, provenance « bug ».</summary>
+    public const string BugReportPath = "/contact?source=bug";
+    /// <summary>Sollicitation d'avis hors Store : provenance lue par le site depuis la 1.2.0.</summary>
+    public const string ReviewPromptPath = "/contact?source=app-notification";
+    /// <summary>Aide-mémoire imprimable (PDF A4 paysage), sans passer par la 301 de l'ancien guide.</summary>
+    public const string CheatSheetPdfPath = "/assets/aide-memoire-azerty-global.pdf";
+    /// <summary>« Cartes du clavier » : la section aide-mémoire de /guide.</summary>
+    public const string KeyboardCardsPath = "/guide#aide-memoire";
 
     /// <summary>
     /// URL du site enrichie des marqueurs de diagnostic : version du binaire, version de
