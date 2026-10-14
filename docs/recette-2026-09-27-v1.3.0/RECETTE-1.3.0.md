@@ -4,7 +4,7 @@
 > 1. Ce soir : recette complète du pré-candidat de `lot/tutoriel-textes`, 2 h 30 environ (estimation, jamais chronométrée). Vendredi de 16 h à 18 h : seulement les cases que touchent les commits ajoutés depuis (`CASES-A-REJOUER.md`), plus R01-R03 et R81-R83.
 > 2. Tri par priorité. **P0** bloque la soumission : R01-R03, R81-R83. **P1** : les nouveautés du candidat, jamais recettées. **P2** : les essais exigés le 05/10. **P3** : la non-régression. Si le temps manque, couper par le bas.
 > 3. L’ordre de jeu n’est pas l’ordre de priorité : le WACK passe en dernier, car il installe puis retire le paquet sur l’hôte (§ 0).
-> 4. La recette automatique n’est pas encore alignée sur l’accueil en 4 étapes, le Défi réactivé et les Paramètres en 4 onglets. Ses lignes R20, R22-R26, R37, R39, R40, R47, R49, R58 et R70-R73 peuvent rendre ECHEC à tort. Chacune donne son geste de repli.
+> 4. La recette automatique a été alignée le 14/10 sur l’accueil en 4 étapes, le Défi réactivé et les Paramètres en 4 onglets, sans être rejouée (aucun bundle n’existait). Ses lignes R20, R22-R26, R37, R39, R40, R47, R49, R58 et R70-R73 ont donc chacune un geste de repli (§ 2).
 > 5. Quatre lignes décident des textes publics de jeudi : R09 et R81-R82 (marqueurs des notes de certification), R135 (consigne « Pause » sous l’arabe), R134 (Ctrl droit + Alt gauche).
 
 - **Candidat** : le pré-candidat du 14/10, soit `lot/tutoriel-textes` après le lot 5 d’A1. Le bundle est construit par `ci.yml`, lancé à la main sur la branche. Pour le run et son commit, voir la commande ci-dessous. La recette du 06/10 sur `ac4ff72` est annulée, et `113ad17` (bundle `FBD052CC…`) est remplacé. Depuis `113ad17`, 76 commits : Leçons « Tablature », notation des touches, Aujourd’hui, Votre carte, Votre texte, recherche par langue, Défi du jour réactivé, tutoriel par usage, accueil en 4 étapes, Paramètres en 4 onglets, clavier virtuel « papier », bulles de la zone de notification, consoles de VM et Sandbox.
@@ -58,15 +58,15 @@ Le WACK (R81-R82) est aussi en P0. Il se joue en fin de soirée (§ 5).
 
 - [ ] **R04** — `powershell -ExecutionPolicy Bypass -File "$kit\sandbox\lancer-recette.ps1" -Bundle $b -Auto` : le Sandbox installe, joue, désinstalle et s’éteint seul. La console attend `done.txt` dans `$kit\evidence\recette-<12>\auto\`. (lancer-recette.ps1)
 - **R05** — couverte par A1 de `recette-auto.ps1` : empreinte, `…_1.3.0.0_x64__w9kghr08zmhbg`, `shadow stack ON ; CFG ON`. (kit A1)
-- [ ] **R06** — Verdict global dans `auto\resume-auto.txt`. Attendu sur ce candidat : ECHEC possible, à cause des seules lignes R20, R22-R26, R37, R39, R40, R47, R49, R58 et R70-R73, que le script juge encore sur l’ancienne interface. Pour toute autre ligne sous son attendu, rejouer son geste. Si A3 ou R75 rend A VOIR, le bouton 2011 a été cliqué faute d’Entrée : juger le clavier en R11. (kit A2-A12, B12)
+- [ ] **R06** — Verdict global dans `auto\resume-auto.txt` → OK attendu. Les lignes du tableau ci-dessous viennent d’être réécrites sans passage réel : sur ECHEC, lire leur observation dans `resultats.json` et jouer le repli avant de conclure à un défaut. Pour toute autre ligne sous son attendu, rejouer son geste. Si A3 ou R75 rend A VOIR, le bouton 2011 a été cliqué faute d’Entrée : juger le clavier en R11. (kit A2-A12, B12)
 - [ ] **R07** — Verdict A11 → OK (partiel) : copie `config.json.illisible-…` contenant `[1]`, `config.json` qui n’est plus `[1]`. (recette-auto.ps1, A11 ; L4)
 
-Lignes jugées sur l’ancienne interface, avec leur repli :
+Lignes réécrites le 14/10 sans passage réel, avec leur repli :
 
 | Ligne | Ce qui a changé | Repli |
 |---|---|---|
-| R20, R22-R26, R70-R73 | l’accueil a 4 étapes ; le script s’arrête à la 3ᵉ, la case de démarrage est à la 4ᵉ | R101 et R27 ; démarrage : R24 à la main (« C’est parti ! » coché → Paramètres › Général le montre activé) |
-| R37, R39, R40 | Défi du jour réactivé (`1ec1173`) | R116, R117 |
+| R20, R22-R26, R70-R73 | l’accueil a 4 étapes : Suivant jusqu’à la dernière, 3 cases attendues | R101 et R27 ; démarrage : R24 à la main (« C’est parti ! » coché → Paramètres › Général le montre activé) |
+| R37, R39, R40 | Défi du jour réactivé (`1ec1173`) : 3 entrées, section Défi, case visible | R116, R117 |
 | R47 | 4 onglets | R118 |
 | R49 | nouveau refus de raccourci | R119 |
 | R58 | le bouton des Couches s’appelle « Fermer » | R58 à la main : Espace, Tab jusqu’à « Fermer », Entrée → réglage gardé à la réouverture |
@@ -86,7 +86,7 @@ function Usage($jours) { [IO.File]::WriteAllText("$d\usage-stats.json", ('{{"fir
 
 - [ ] **R08** — Icône avant l’accord → grise ; l’infobulle commence par « Désactivé » et dit comment réactiver. (kit E4 ; `761817e`)
 - [ ] **R09** — Taper dans Win+R, fermer l’accueil par la croix, relancer depuis Démarrer ; refaire en fermant par Échap → clavier inchangé, l’accueil revient à chaque relance, aucun accord mémorisé. **Décide** du marqueur l. 293 des notes de certification. (kit A2 ; 24/09 l. 3)
-- [ ] **R101** — Parcourir les 4 étapes au bouton « Suivant », en FR puis en EN (drapeau). « Étape n sur 4 » s’affiche. L’étape 2 s’intitule « Écrire le peul, le wolof, le bambara » / « Write Fula, Wolof and Bambara ». Dans son champ « Essayez ici », taper ù puis b → « C’est bien ɓ. » ; une autre lettre → « Ce n’est pas ɓ. Réessayez… ». Noter si l’essai marche avant l’accord. L’étape 4 propose la case du démarrage, cochée, et « Rappels d’entraînement « Défi du jour » », décochée. Rien n’est coupé ni superposé. (`cadab2c` ; `AccueilVosLanguesTests`)
+- [ ] **R101** — Parcourir les 4 étapes au bouton « Suivant », en FR puis en EN (drapeau). « Étape n sur 4 » s’affiche. L’étape 2 s’intitule « Écrire le peul, le wolof, le bambara » / « Write Fula, Wolof and Bambara ». Dans son champ « Essayez ici », taper ù puis b → « C’est bien ɓ. » ; une autre lettre → « Ce n’est pas ɓ. Réessayez… ». Noter si l’essai marche avant l’accord. L’étape 4 montre trois cases : le démarrage (cochée), « Ne plus afficher » et « Rappels d’entraînement « Défi du jour » » (décochée). Rien n’est coupé ni superposé. (`cadab2c` ; `AccueilVosLanguesTests`)
 - [ ] **R10** — Tab et Maj+Tab dans l’accueil → aucun lien fantôme. Drapeau focalisé avec un cadre, puis Entrée, Espace et clic → la langue bascule à chaque geste, le focus reste sur le drapeau. (kit B11 ; L1)
 - [ ] **R11** — Revenir à l’étape 1. Tab jusqu’à « Activer et essayer », Entrée → tutoriel ouvert sur « Vous écrivez surtout… », remappage actif ; icône bleue, infobulle et bulle « Actif ». (kit A3, E4)
 

@@ -554,10 +554,11 @@ try {
     if (-not $menuFr -or -not $menuEn) { throw 'releves menu-fr.txt ou menu-en.txt absents (voir A10)' }
     $learnFr = SubItems $menuFr '^Apprendre >$'; $learnEn = SubItems $menuEn '^Learn >$'
     $defi = @(@($menuFr) + @($menuEn) | Where-Object { $_ -match 'D.fi|[Cc]hallenge' })
-    $okFr = ($null -ne $learnFr) -and $learnFr.Count -eq 2 -and $learnFr[0] -match '^Le.ons$' -and $learnFr[1] -match '^Revoir l.accueil$'
-    $okEn = ($null -ne $learnEn) -and $learnEn.Count -eq 2 -and $learnEn[0] -eq 'Lessons' -and $learnEn[1] -eq 'Replay the welcome tour'
-    $ok = $okFr -and $okEn -and $defi.Count -eq 0
-    Verdict 'R37' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ('Apprendre FR : ' + ($learnFr -join ' | ') + ' ; Learn EN : ' + ($learnEn -join ' | ') + ' ; entrees Defi ou Challenge : ' + $defi.Count + '. Sous-menus Couches, Apprendre, A propos et aide : A10. Ouverture a la souris non jugee.')
+    # Defi du jour reactive le 08/10 (1ec1173) : Lecons, Defi du jour, Revoir l'accueil.
+    $okFr = ($null -ne $learnFr) -and $learnFr.Count -eq 3 -and $learnFr[0] -match '^Le.ons$' -and $learnFr[1] -match '^D.fi du jour$' -and $learnFr[2] -match '^Revoir l.accueil$'
+    $okEn = ($null -ne $learnEn) -and $learnEn.Count -eq 3 -and $learnEn[0] -eq 'Lessons' -and $learnEn[1] -eq 'Daily challenge' -and $learnEn[2] -eq 'Replay the welcome tour'
+    $ok = $okFr -and $okEn
+    Verdict 'R37' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ('Apprendre FR : ' + ($learnFr -join ' | ') + ' ; Learn EN : ' + ($learnEn -join ' | ') + ' ; lignes citant le Defi : ' + $defi.Count + ' (Defi du jour reactive). Sous-menus Couches, Apprendre, A propos et aide : A10. Ouverture a la souris non jugee.')
 } catch { Verdict 'R37' 'ECHEC' $_.Exception.Message }
 
 try {
@@ -571,7 +572,8 @@ try {
             if ($c.Count -ge 4 -and $c[2] -match 'Rappels d.entra|training reminders') { if ($c[3] -eq 'True') { $shown++ } else { $hidden++ } }
         }
     }
-    $v = if ($missing.Count) { 'ECHEC' } elseif ($shown -eq 0) { 'OK (partiel)' } else { 'ECHEC' }
+    # Defi du jour reactive (1ec1173) : la case est attendue visible, en FR et en EN.
+    $v = if ($missing.Count) { 'ECHEC' } elseif ($shown -ge 1 -and $hidden -eq 0) { 'OK (partiel)' } else { 'ECHEC' }
     Verdict 'R40' $v ("case Rappels d'entrainement visible : $shown, presente mais masquee : $hidden (FR et EN)" + $(if ($missing) { ' ; releve absent : ' + ($missing -join ', ') } else { '' }) + '. Absence de trou : image parametres-general du banc.')
 } catch { Verdict 'R40' 'ECHEC' $_.Exception.Message }
 
@@ -683,10 +685,11 @@ try {
     Command 1033; Start-Sleep -Milliseconds 1500
     # Une passe par langue, dans l'ordre ou l'app les montre (sa langue de depart, puis l'autre).
     $both = @($wFr.labels, $wEn.labels)
-    $labelsOk = (@($both | Where-Object { $_ -match '^G.n.ral \| Applications \| Langue$' }).Count -eq 1) -and (@($both | Where-Object { $_ -match '^General \| Applications \| Language$' }).Count -eq 1)
+    # Quatre onglets depuis 061b099 (11/10) : Lecons ajoute en dernier.
+    $labelsOk = (@($both | Where-Object { $_ -match '^G.n.ral \| Applications \| Langue \| Le.ons$' }).Count -eq 1) -and (@($both | Where-Object { $_ -match '^General \| Applications \| Language \| Lessons$' }).Count -eq 1)
     Verdict 'R47' $(if ($wFr.ok -and $wEn.ok -and $labelsOk) { 'OK' } else { 'ECHEC' }) ('FR : ' + $wFr.note + ' ; EN : ' + $wEn.note + '.')
 
-    # R45 : Valeurs par defaut par Entree puis par Espace, reponse Non : config.json intact.
+    # R45 : Reinitialiser les raccourcis (3107) par Entree puis par Espace, reponse Non : config.json intact.
     [void](FrontSure $st)
     $cfgPath = DataFile 'config.json'
     $reset = Child $st 3107
@@ -702,7 +705,7 @@ try {
     $a2 = AnswerBox $VK_N 7
     $h2 = Hash $cfgPath
     $ok = ($f -ne [IntPtr]::Zero) -and ($f2 -ne [IntPtr]::Zero) -and $a1 -eq 'fermee au clavier' -and $a2 -eq 'fermee au clavier' -and $h0 -eq $h1 -and $h1 -eq $h2 -and $wFr.ok
-    Verdict 'R45' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("trois onglets au clavier (R47)=$($wFr.ok) ; Tab jusqu'a Valeurs par defaut=$($f -ne [IntPtr]::Zero) ; Entree : confirmation $a1 ; focus revenu seul sur le bouton=$back2, Espace : confirmation $a2 ; config.json inchange=$($h0 -eq $h1 -and $h1 -eq $h2). Focus visible sur chaque bouton : a l'oeil.")
+    Verdict 'R45' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("trois onglets au clavier (R47)=$($wFr.ok) ; Tab jusqu'a Reinitialiser les raccourcis=$($f -ne [IntPtr]::Zero) ; Entree : confirmation $a1 ; focus revenu seul sur le bouton=$back2, Espace : confirmation $a2 ; config.json inchange=$($h0 -eq $h1 -and $h1 -eq $h2). Focus visible sur chaque bouton : a l'oeil.")
 
     # R49 : touche reservee (T) dans le champ du clavier virtuel, puis Langue > Reinitialiser
     # clavier virtuel ; chaque changement d'onglet efface le message.
@@ -711,11 +714,12 @@ try {
     $kb = Child $st 3101
     $fk = TabTo $st { param($h) $h -eq $kb } 30
     if ($fk -ne [IntPtr]::Zero) { [W]::Key($VK_T); Start-Sleep -Milliseconds 500 }
-    $refusal = @(StaticTexts $st | Where-Object { $_ -match '^Touche r.serv|^Reserved key' }) | Select-Object -First 1
+    # Refus reecrit le 07/10 (0fd3c1d, L.SettingsClarity.cs:44) : Ctrl + Maj + T rouvre l'onglet ferme...
+    $refusal = @(StaticTexts $st | Where-Object { $_ -match 'rouvre l.onglet ferm|reopens a closed tab' }) | Select-Object -First 1
     $vk1 = CfgValue 'shortcutVirtualKeyboardVk'
     [void](TabTo $st { param($h) $h -eq $strip } 30)
     [W]::Key($VK_RIGHT); Start-Sleep -Milliseconds 400; [W]::Key($VK_RIGHT); Start-Sleep -Milliseconds 500
-    $cleared1 = @(StaticTexts $st | Where-Object { $_ -match '^Touche r.serv|^Reserved key' }).Count -eq 0
+    $cleared1 = @(StaticTexts $st | Where-Object { $_ -match 'rouvre l.onglet ferm|reopens a closed tab' }).Count -eq 0
     $vkBtn = Child $st 3108
     $fb = TabTo $st { param($h) $h -eq $vkBtn } 30
     if ($fb -ne [IntPtr]::Zero) { [W]::Key($VK_RETURN); Start-Sleep -Milliseconds 500 }
@@ -724,7 +728,7 @@ try {
     [W]::Key($VK_LEFT); Start-Sleep -Milliseconds 500
     $cleared2 = @(StaticTexts $st | Where-Object { $_ -match 'clavier virtuel r.initialis|Virtual keyboard window reset' }).Count -eq 0
     $ok = ($fk -ne [IntPtr]::Zero) -and $refusal -and ("$vk0" -eq "$vk1") -and $cleared1 -and ($fb -ne [IntPtr]::Zero) -and $confirm -and $cleared2
-    Verdict 'R49' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("T dans le champ du clavier virtuel : message '$refusal', raccourci inchange=$("$vk0" -eq "$vk1") ; onglet Langue : message efface=$cleared1 ; Reinitialiser clavier virtuel : '$confirm' ; onglet suivant : message efface=$cleared2. Rouge et vert : SettingsValidationColorTests et images parametres-*-message du banc.")
+    Verdict 'R49' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("T dans le champ du clavier virtuel : message '$refusal', raccourci inchange=$("$vk0" -eq "$vk1") ; onglet Langue : message efface=$cleared1 ; Reinitialiser clavier virtuel : '$confirm' ; onglet suivant : message efface=$cleared2. Rouge pour un refus : SettingsValidationColorTests et images parametres-*-message du banc.")
     CloseOthers
 } catch { Verdict 'R45/R47/R49' 'ECHEC' $_.Exception.Message; CloseOthers }
 
@@ -762,7 +766,7 @@ try {
     $inner = @(5202, 5203, 5204, 5205, 5206 | Where-Object { $path -notcontains $_ }).Count -eq 0
     $cycleOk = ($path.Count -ge 2) -and ($path[-1] -eq 5201) -and ($path -contains 5208) -and (-not $c1 -or $inner)
     $ok = ($init -eq 5201) -and ($c1 -ne $c0) -and $cycleOk -and ($back -eq 5208) -and $closed1 -and ($saved1 -eq $c1) -and ($init2 -eq 5201) -and ($c2 -eq $c0) -and $closed2 -and ($saved2 -eq $c2)
-    Verdict 'R58' $(if ($ok) { 'OK' } else { 'ECHEC' }) ("focus initial $init (5201 = case principale) ; Espace : case $c0 -> $c1 ; Tab : " + ($path -join '>') + " ; Maj+Tab : $back (5208 = Enregistrer) ; Entree : fermee=$closed1, boite $box1, enregistre=$saved1 ; rouverte, focus $init2, Espace -> $c2, Echap : fermee=$closed2, boite $box2, enregistre=$saved2.")
+    Verdict 'R58' $(if ($ok) { 'OK' } else { 'ECHEC' }) ("focus initial $init (5201 = case principale) ; Espace : case $c0 -> $c1 ; Tab : " + ($path -join '>') + " ; Maj+Tab : $back (5208 = Fermer) ; Entree : fermee=$closed1, boite $box1, enregistre=$saved1 ; rouverte, focus $init2, Espace -> $c2, Echap : fermee=$closed2, boite $box2, enregistre=$saved2.")
 } catch { Verdict 'R58' 'ECHEC' $_.Exception.Message; CloseOthers }
 
 # --- R60 : ouvrir, fermer, rouvrir deux fois chaque fenetre --------------------------------
@@ -792,15 +796,20 @@ try {
     Verdict 'R60' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ('trois ouvertures : ' + ($notes -join ' ; ') + ' ; defauts : ' + $(if ($bad) { $bad -join ', ' } else { 'aucun' }) + " ; RegisterClass dans error.log : $reg. Conflit non ouvrable dans le Sandbox (pas de disposition systeme).")
 } catch { Verdict 'R60' 'ECHEC' $_.Exception.Message; CloseOthers }
 
-# --- R20, R22 a R26 : etape 3 de l'accueil et demarrage automatique --------------------------
+# --- R20, R22 a R26 : derniere etape de l'accueil et demarrage automatique -------------------
 # Premier accueil rejoue a chaque cas : accord, choix du demarrage et statistiques effaces,
-# puis Activer et essayer (accord), tutoriel ferme, Suivant, Suivant. La case a ete calculee
-# a l'affichage (AutoStart.DefaultOnboardingCheck), avant l'accord : c'est le cas a juger.
+# puis Activer et essayer (accord), tutoriel ferme, Suivant jusqu'a la derniere etape. La case
+# a ete calculee a l'affichage (AutoStart.DefaultOnboardingCheck), avant l'accord : c'est le cas
+# a juger. Depuis cadab2c (08/10) l'accueil a 4 etapes : Suivant est clique jusqu'a ce que la
+# case du demarrage (2006, visible a la seule derniere etape) apparaisse, 5 fois au plus.
+function ToLastStep([IntPtr]$ob) {
+    for ($i = 0; $i -lt 5 -and -not [W]::IsWindowVisible((Child $ob 2006)); $i++) { ClickId $ob 2002 }
+}
 function ToStep3([IntPtr]$ob) {
     ClickId $ob 2011
     $lm = WaitFor { VisibleOf 'AZERTYGlobal_Learning' } 6
     if ($lm) { [void][W]::PostMessage($lm, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero); [void](WaitGone $lm 5) }
-    ClickId $ob 2002; ClickId $ob 2002
+    ToLastStep $ob
     return [bool]$lm
 }
 function FreshOnboarding {
@@ -827,8 +836,8 @@ try {
     $s0 = StartupState
     Say ('R20-R26 : etat de depart ' + $s0.text)
     $a = FreshOnboarding
-    $ok = $a.shown -and $a.step3 -and $a.now -and $a.boxes -eq 2 -and $a.consent
-    Verdict 'R20' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("premier accueil : case cochee a l'affichage=$($a.shown), etape 3 atteinte=$($a.step3), toujours cochee=$($a.now), cases visibles=$($a.boxes) (2 attendues), accord par Activer et essayer=$($a.consent), tutoriel ouvert puis ferme=$($a.lm). Sans vide : image accueil-etape3 du banc.")
+    $ok = $a.shown -and $a.step3 -and $a.now -and $a.boxes -eq 3 -and $a.consent
+    Verdict 'R20' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("premier accueil : case cochee a l'affichage=$($a.shown), derniere etape atteinte=$($a.step3), toujours cochee=$($a.now), cases visibles=$($a.boxes) (3 attendues : demarrage, ne plus afficher, rappels du Defi), accord par Activer et essayer=$($a.consent), tutoriel ouvert puis ferme=$($a.lm). Sans vide : image accueil-etape4 du banc.")
     [void][W]::Front($a.ob)
     $g = TabTo $a.ob { param($h) [W]::Text($h) -match 'Guide de prise en main|Getting started guide' } 20
     if ($g -ne [IntPtr]::Zero) { [W]::Key($VK_ESCAPE) }
@@ -908,7 +917,9 @@ try {
     if ($regOff -match '^\d+$') { Set-ItemProperty -Path $startupKey -Name State -Value ([int]$regOff) -Type DWord }
 } catch { Verdict 'R26' 'ECHEC' $_.Exception.Message; CloseOthers }
 
-# --- R39 : Defi masque, opt-in coche et annonce non faite ------------------------------------
+# --- R39 : Defi reactive, opt-in coche et annonce non faite -----------------------------------
+# Depuis 1ec1173 (08/10) : avec l'opt-in, l'annonce ne part pas (ShouldShowChallengeAnnouncement)
+# et Mes statistiques montre la section Defi (UsageStatsWindow.cs:28).
 try {
     [void](Quit)
     Cle 'trainingEnabled' $true; Cle 'challengeAnnounceDone' $null; Cle 'showOnboardingAtStartup' $false
@@ -923,18 +934,19 @@ try {
     $texts = if ($sw) { @([W]::Children($sw) | ForEach-Object { [W2]::Text($_) }) } else { @() }
     $defi = @($texts | Where-Object { $_ -match 'D.fi|[Cc]hallenge' }).Count
     CloseOthers
-    $ok = -not $announced -and -not $obShown -and $sw -and $ratio -gt 0 -and $ratio -lt 1.14 -and $defi -eq 0
-    Verdict 'R39' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("trainingEnabled=true, challengeAnnounceDone efface, accueil au demarrage coupe : annonce marquee apres 15 s=$announced, accueil affiche=$obShown ; Mes statistiques : zone $($size[0]) x $($size[1]) (hauteur/largeur $ratio, 1,00 sans section Defi, 1,28 avec), textes des enfants citant le Defi : $defi. Module Defi des Lecons : DefiDuJourMasqueTests.")
+    $ok = -not $announced -and -not $obShown -and $sw -and $defi -gt 0
+    Verdict 'R39' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("trainingEnabled=true, challengeAnnounceDone efface, accueil au demarrage coupe : annonce marquee apres 15 s=$announced, accueil affiche=$obShown ; Mes statistiques : zone $($size[0]) x $($size[1]) (hauteur/largeur $ratio, note), textes des enfants citant le Defi : $defi (au moins 1 attendu). Module Defi des Lecons : DefiDuJourMasqueTests.Le_module_Defi_entre_dans_les_Lecons_avec_l_opt_in.")
 } catch { Verdict 'R39' 'ECHEC' $_.Exception.Message; CloseOthers }
 
 # --- R41, R70 a R73 : avis pilotes par config.json et usage-stats.json -----------------------
-# Accueil ferme par son bouton final : Suivant, Suivant, puis Activer (accord) a l'etape 3.
+# Accueil ferme par son bouton final : Suivant jusqu'a la derniere etape (ToLastStep), puis
+# Activer (accord).
 # Clic par identifiant (IDC_BTN_NEXT = 2002) ; libelle releve a l'etape 3 sans accord :
 # Onboarding_Activate, Activer AZERTY Global / Turn on AZERTY Global (L.Onboarding.cs:10).
 # learningMaxStepCompleted = 1 montre Suivant des l'etape 1 sans ouvrir le tutoriel, dont la
 # fermeture interdirait l'avis dix minutes (ReviewPromptGate.LearningCooldownMinutes).
 function AcceptAtStep3([IntPtr]$ob) {
-    ClickId $ob 2002; ClickId $ob 2002
+    ToLastStep $ob
     $label = [W2]::Text((Child $ob 2002))
     ClickId $ob 2002
     $closed = WaitGone $ob 6
