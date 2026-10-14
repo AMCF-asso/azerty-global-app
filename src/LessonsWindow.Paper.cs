@@ -406,6 +406,10 @@ internal sealed partial class LessonsWindow
             PaperTheme.Pale, TextAlign.Left);
     }
 
+    /// <summary>Le caractère tapé tel qu'il se repeint dans la colonne fautive : une espace, quelle
+    /// que soit sa largeur, devient « · ».</summary>
+    private static string WrongGlyph(char actual) => actual == ' ' || actual == ' ' || actual == ' ' ? "·" : actual.ToString();
+
     /// <summary>
     /// La ligne à taper : une colonne par caractère attendu, sans portée (QCM du 11/10) ; le
     /// geste du seul caractère courant se lit dessous (<see cref="DrawCurrentNotation"/>). Le
@@ -421,9 +425,10 @@ internal sealed partial class LessonsWindow
         int cursor = Math.Clamp(_session.CursorPosition, 0, Math.Max(expected.Count, typed.Count));
 
         var measured = new List<TabColumn>(expected.Count);
+        var measuredShown = new List<TabColumn>(expected.Count);
         var drawn = new List<TabColumn>(expected.Count);
         var glyphColumn = new int[expected.Count];
-        var wrong = new List<(int Column, char Actual)>();
+        var wrong = new List<(int Column, char Actual, char Expected)>();
         for (int i = 0; i < expected.Count; i++)
         {
             var cell = expected[i];
@@ -438,19 +443,27 @@ internal sealed partial class LessonsWindow
             glyphColumn[i] = measured.Count;
             measured.Add(new TabColumn(glyph, false, false, null, state));
             bool isWrong = cell.State == LessonCharacterState.Wrong && TypedCharacterAt(typed, i) is char;
+            measuredShown.Add(isWrong
+                ? new TabColumn(WrongGlyph(typed[i].Actual), false, false, null, state)
+                : measured[^1]);
             drawn.Add(new TabColumn(isWrong ? null : glyph, false, false, null, state));
             if (isWrong)
-                wrong.Add((glyphColumn[i], typed[i].Actual));
+                wrong.Add((glyphColumn[i], typed[i].Actual, cell.Expected));
         }
         // Mode souple : ce qui dépasse la fin du modèle reste écrit, en faute.
         for (int i = expected.Count; i < typed.Count; i++)
         {
             measured.Add(new TabColumn(typed[i].Actual == ' ' ? "·" : typed[i].Actual.ToString(), false, false, null, TabState.Done));
+            measuredShown.Add(measured[^1]);
             drawn.Add(new TabColumn(null, false, false, null, TabState.Done));
-            wrong.Add((measured.Count - 1, typed[i].Actual));
+            wrong.Add((measured.Count - 1, typed[i].Actual, '\0'));
         }
 
         int[] widths = TablatureRenderer.MeasureColumns(hdc, measured, style);
+        // A12-01 : la colonne en faute prend la largeur du plus large des deux caractères.
+        int[] shownWidths = TablatureRenderer.MeasureColumns(hdc, measuredShown, style);
+        for (int c = 0; c < widths.Length; c++)
+            widths[c] = Math.Max(widths[c], shownWidths[c]);
         var grid = new Win32.RECT { left = part.left + 1, top = part.top + 1 + S(22), right = part.right - 1, bottom = part.top + 1 + S(22) + style.Height };
         int columnsLeft = grid.left + style.LabelWidth;
         int viewport = Math.Max(1, grid.right - columnsLeft - S(16));
@@ -476,11 +489,19 @@ internal sealed partial class LessonsWindow
         // Fautes repeintes : le caractère tapé en rouge, souligné.
         int saved = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, columnsLeft, grid.top, grid.right, grid.top + style.GlyphRowHeight);
-        foreach (var (column, actual) in wrong)
+        foreach (var (column, actual, expectedChar) in wrong)
         {
             var cellRect = new Win32.RECT { left = lefts[column], top = grid.top, right = lefts[column + 1], bottom = grid.top + style.GlyphRowHeight };
-            string shown = actual == ' ' || actual == ' ' || actual == ' ' ? "·" : actual.ToString();
+            string shown = WrongGlyph(actual);
             PaperText.DrawLine(hdc, shown, style.GlyphFont, cellRect, CLR_BAD, TextAlign.Center);
+            if (expectedChar != '\0')
+            {
+                // L'attendu reste lisible : petit, pâle, en haut de la colonne.
+                var hint = FontSpec.Of(AppFonts.Text, 22, TypeRamp.Semibold, style.GlyphFont.Height / 50f);
+                string hintText = expectedChar == ' ' ? "\u2423" : expectedChar.ToString();
+                var hintRect = new Win32.RECT { left = cellRect.left, top = cellRect.top + S(2), right = cellRect.right, bottom = cellRect.top + S(2) + S(26) };
+                PaperText.DrawLine(hdc, hintText, hint, hintRect, CLR_MUTED, TextAlign.Center);
+            }
             var (ul, ur) = UnderlineSpan(cellRect.left, cellRect.right, S(2), S(6));
             int uy = cellRect.bottom - S(6);
             PaperDraw.Fill(hdc, ul, uy, ur, uy + Math.Max(1, S(2)), CLR_BAD);
