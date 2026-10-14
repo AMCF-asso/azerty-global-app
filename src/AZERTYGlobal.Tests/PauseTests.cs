@@ -59,13 +59,38 @@ public class PauseTests
     [InlineData(0, 0, null)]      // durée nulle : refusée
     [InlineData(0, 1, 1)]
     [InlineData(1, 30, 90)]
-    [InlineData(0, 75, 75)]       // minutes au-delà de 59 à la frappe : 1 h 15
+    [InlineData(0, 59, 59)]
+    [InlineData(0, 60, null)]     // A11-02 : minutes bornées à 59
+    [InlineData(0, 75, null)]     // A11-02 : « 0 h 75 » ne vaut plus 1 h 15
+    [InlineData(0, 305, null)]    // A11-02 : « 30 » tapé devant le « 5 » par défaut
     [InlineData(23, 59, 1439)]
     [InlineData(23, 60, null)]    // au-delà de 23 h 59
     [InlineData(-1, 30, null)]
     public void Duree_BorneeDe1minA23h59(int heures, int minutes, int? attendu)
     {
         Assert.Equal(attendu, (int?)PauseDurationDialog.ParseDuration(heures, minutes)?.TotalMinutes);
+    }
+
+    /// <summary>
+    /// Audit final 1.3.0, A11-02 : à l'ouverture, le « 5 » par défaut des minutes est
+    /// sélectionné, donc remplacé par la première frappe. Sans sélection, le curseur restait
+    /// devant le « 5 » et « 30 » tapé donnait « 305 ».
+    /// </summary>
+    [Fact]
+    public void Personnaliser_LesMinutesSontSelectionneesALOuverture()
+    {
+        using var dialogue = new PauseDurationDialog();
+        typeof(PauseDurationDialog).GetMethod("CreateWindow", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(dialogue, new object[] { IntPtr.Zero });
+        IntPtr minutes = Field(dialogue, "_hEditMinutes");
+        // EM_GETSEL : début dans le mot bas, fin dans le mot haut.
+        Assert.Equal(0, (int)Win32.SendMessageW(minutes, 0x00B0, IntPtr.Zero, IntPtr.Zero));
+
+        typeof(PauseDurationDialog).GetMethod("FocusMinutes", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(dialogue, null);
+
+        int selection = (int)Win32.SendMessageW(minutes, 0x00B0, IntPtr.Zero, IntPtr.Zero);
+        Assert.Equal((0, 1), (selection & 0xFFFF, (selection >> 16) & 0xFFFF));
     }
 
     [Fact]
