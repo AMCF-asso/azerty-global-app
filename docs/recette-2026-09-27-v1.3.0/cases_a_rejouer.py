@@ -43,7 +43,7 @@ REGLES = [
      ["R28", "R29", "R30", "R31", "R32", "R133", "R134", "R135", "R138", "R141"]),
     (r"MaintainableLayers|LayerIndicator|L\.Layers", ["R58", "R31", "R96"]),
     (r"AboutWindow|L\.About|LinkBehavior|ProductIdentity", ["R56", "R60"]),
-    (r"ProductIdentity", ["R142"]),
+    (r"ProductIdentity|L\.Tray", ["R142"]),
     (r"NativeWindow|WindowSizing|DarkTheme|LightTheme|LightButton|GdiHelpers|AppFonts|Fonts/|Win32\.cs|"
      r"TypeRamp|PaintBuffer",
      ["R60", "R61", "R64b", "R67", "R77"]),
