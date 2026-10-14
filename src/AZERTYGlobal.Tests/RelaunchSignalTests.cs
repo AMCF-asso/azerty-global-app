@@ -21,9 +21,22 @@ public class RelaunchSignalTests
     [InlineData("-embedding")]
     [InlineData("-ToastActivated")]
     [InlineData("----ToastActivated")]
+    [InlineData(RelaunchSignal.AfterUpdateArgument)]
+    [InlineData("--APRES-MAJ")]
     public void Activation_systeme_reconnue(string argument)
     {
         Assert.True(RelaunchSignal.IsSystemActivation(new[] { Exe, argument }));
+    }
+
+    /// <summary>
+    /// A08-02 : l'inscription ne relance qu'après une mise à jour. RESTART_NO_PATCH (4) est
+    /// le seul bit qui coupe ce cas : allumé, la fonction disparaîtrait sans bruit.
+    /// </summary>
+    [Fact]
+    public void Relance_apres_mise_a_jour_seulement()
+    {
+        Assert.Equal(0, RestartRegistration.Flags & RestartRegistration.NoPatchFlag);
+        Assert.Equal(1 | 2 | 8, RestartRegistration.Flags); // ni plantage, ni blocage, ni redémarrage
     }
 
     [Fact]
