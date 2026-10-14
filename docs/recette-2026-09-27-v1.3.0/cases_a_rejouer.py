@@ -4,14 +4,18 @@ Usage, à la racine du dépôt :
   python docs/recette-2026-09-27-v1.3.0/cases_a_rejouer.py <commit du bundle recetté> <commit du bundle final>
 
 Sortie : un tableau Markdown « commit → fichiers → cases », puis la liste des cases à rejouer.
-R01-R03 et R81-R83 sont toujours rejouées : elles portent sur le bundle lui-même.
+R01-R03 et R81-R83 sont toujours rejouées : elles portent sur le bundle lui-même ; R143 aussi
+(mise à jour du poste depuis la 1.1.0). Chaque commit ajoute le socle R04, R06, R28, R33.
 Un fichier de src/ qu'aucune règle ne couvre donne « à juger » : la table ne se devine pas.
 """
 import re
 import subprocess
 import sys
 
-TOUJOURS = ["R01", "R02", "R03", "R81", "R82", "R83"]
+TOUJOURS = ["R01", "R02", "R03", "R81", "R82", "R83", "R143"]
+# Gel du code (D4, plan du 14/10) : chaque commit postérieur au bundle recetté rejoue installation,
+# démarrage et désinstallation (R04, R06 : recette automatique), saisie (R28) et recherche (R33).
+SOCLE = ["R04", "R06", "R28", "R33"]
 
 # Motif de chemin (regex, cherchée dans le chemin) → cases. Premier motif trouvé, pas le seul :
 # un fichier peut relever de plusieurs zones.
@@ -86,7 +90,7 @@ def main():
     for line in commits:
         h, sujet = line.split("\t", 1)
         fichiers = [f for f in git("show", "--name-only", "--format=", h).splitlines() if f]
-        cases = []
+        cases = list(SOCLE)
         for f in fichiers:
             c = cases_pour(f)
             if c is None:
@@ -95,7 +99,7 @@ def main():
             cases += [x for x in c if x not in cases]
         total.update(cases)
         noms = ", ".join(f"`{f.split('/')[-1]}`" for f in fichiers[:4]) + (f" (+{len(fichiers) - 4})" if len(fichiers) > 4 else "")
-        texte = ", ".join(sorted(cases, key=cle)) if cases else "aucune (docs ou tests)"
+        texte = ", ".join(sorted(cases, key=cle))
         print(f"| `{h}` {sujet[:60]} | {noms} | {texte} |")
     print(f"\n**À rejouer ({len(total)})** : {', '.join(sorted(total, key=cle))}.")
     if a_juger:
