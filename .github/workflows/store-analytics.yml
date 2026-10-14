@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   collect:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Chaque requête peut attendre jusqu'à 4 x 120 s plus les pauses de backoff.
     timeout-minutes: 45
     # Aucun secret ici : un `env:` de job est visible de toutes ses étapes, actions
@@ -100,6 +100,24 @@ jobs:
             --auth-mode login \
             --only-show-errors
 
+      # Manifeste du run précédent, lu avant que l'archivage ne l'écrase : il permet
+      # de distinguer un aléa isolé d'un jeu qui manque deux runs d'affilée.
+      - name: Reprendre le manifeste du run précédent
+        if: steps.collecte.outputs.code == '2'
+        shell: bash
+        env:
+          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_CONTAINER: ${{ vars.AZURE_STORAGE_CONTAINER }}
+        run: |
+          az storage blob download \
+            --account-name "$AZURE_STORAGE_ACCOUNT" \
+            --container-name "$AZURE_STORAGE_CONTAINER" \
+            --name "microsoft-store/azerty-global/manifest.json" \
+            --file "$RUNNER_TEMP/previous-manifest.json" \
+            --auth-mode login \
+            --only-show-errors \
+            || echo "Aucun manifeste précédent lisible : tout jeu manquant sera signalé en rouge."
+
       - name: Archiver dans Azure Blob
         shell: bash
         env:
@@ -115,19 +133,30 @@ jobs:
             --overwrite true \
             --only-show-errors
 
-      # Seul cas rouge de la collecte elle-même : des données manquent après les
-      # nouvelles tentatives. Le manifeste archivé porte `complete: false`.
+      # Des données manquent après les nouvelles tentatives ; le manifeste archivé
+      # porte `complete: false`. Rouge seulement si un même jeu manquait déjà au run
+      # précédent (ou si ce run est illisible) : un aléa isolé, rattrapé par la
+      # recollecte du lendemain, reste un avertissement (5 runs rouges sur 60 du
+      # 17/08 au 29/09, tous des aléas isolés).
       - name: Signaler les jeux de données manquants
         if: steps.collecte.outputs.code == '2'
         shell: bash
         run: |
-          python - "$STORE_ANALYTICS_OUTPUT/manifest.json" <<'PY'
+          python - "$STORE_ANALYTICS_OUTPUT/manifest.json" "$RUNNER_TEMP/previous-manifest.json" <<'PY'
           import json, sys
           manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+          try:
+              previous = json.load(open(sys.argv[2], encoding="utf-8"))
+              before = {f["dataset"] for f in previous.get("failures", [])}
+          except (OSError, ValueError, KeyError, TypeError):
+              before = None
           failures = manifest["failures"]
+          repeated = [f for f in failures if before is None or f["dataset"] in before]
           for f in failures:
-              print(f"::error title=Jeu Store manquant : {f['dataset']}::{f['error']}")
+              level = "error" if f in repeated else "warning"
+              print(f"::{level} title=Jeu Store manquant : {f['dataset']}::{f['error']}")
           print(f"{len(failures)} jeu(x) manquant(s) dans le run {manifest['runId']}, "
-                f"archivé avec complete=false ; les autres jeux sont archivés.")
+                f"archivé avec complete=false ; les autres jeux sont archivés. "
+                f"{len(repeated)} manquai(en)t déjà au run précédent.")
+          sys.exit(1 if repeated else 0)
           PY
-          exit 1
