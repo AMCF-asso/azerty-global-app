@@ -805,8 +805,8 @@ sealed class TrayApplication : IDisposable
                             break;
                         case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
                         case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
-                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/assets/Prise_en_main_AZERTY_Global.pdf"), null, null, 1); break;
-                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide#cartes"), null, null, 1); break;
+                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath), null, null, 1); break;
+                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.KeyboardCardsPath), null, null, 1); break;
                         case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/mentions-legales#confidentialite-securite"), null, null, 1); break;
                         case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
@@ -2135,14 +2135,14 @@ sealed class TrayApplication : IDisposable
             _mapper.DisplayDeadKey);
     }
 
-    private void OnReportBug() => OpenDiagnosticPage("/bug", "app");
+    private void OnReportBug() => OpenDiagnosticPage(ProductIdentity.BugReportPath, "app");
 
     /// <summary>
     /// Ouvre la page de retour, version et OS compris (R16). Le paramètre <c>source</c>
     /// déjà présent dans l'URL de la sollicitation d'avis est conservé tel quel : le site
     /// le lit depuis la 1.2.0, et le renommer casserait sa mesure.
     /// </summary>
-    private void OpenFeedback(string source, string path = "/feedback") =>
+    private void OpenFeedback(string source, string path = ProductIdentity.FeedbackPath) =>
         OpenDiagnosticPage(path, source);
 
     private static void OpenDiagnosticPage(string path, string source) =>
@@ -2644,7 +2644,7 @@ sealed class TrayApplication : IDisposable
         if (toStore && ConfigManager.IsPackaged)
             OpenStoreReview();
         else
-            OpenFeedback("app-notification", "/feedback?source=app-notification");
+            OpenFeedback("app-notification", ProductIdentity.ReviewPromptPath);
     }
 
     /// <summary>
