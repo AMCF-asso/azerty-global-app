@@ -38,10 +38,10 @@ Installez l’application, cliquez sur « Activer et essayer » dans l’accue
 Les majuscules accentuées É, È, Ç, À, Ù s’obtiennent avec le Verr. Maj., qui n’agit plus que sur les lettres. Guillemets « », apostrophe ’, œ et æ, points de suspension …, tirets — et –, espaces insécables normale et fine : tout est au clavier.
 
 CODER SANS SE TORDRE LES DOIGTS
-{ } [ ] | \ sont sur la rangée de repos, avec AltGr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement.
+{ } \ | [ ] sont sur la rangée de repos, avec AltGr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement.
 
 ÉCRIRE D’AUTRES LANGUES
-La touche à droite du M porte les accents aigu, grave et tilde : l’espagnol, le portugais ou l’italien se tapent sans changer de clavier. Vous avez aussi l’allemand, de nombreuses langues d’Afrique francophone (wolof, bambara, yoruba, haoussa…), les alphabets grec et cyrillique et les signes mathématiques. Pour écrire plusieurs lettres grecques d’affilée, une couche se verrouille d’un double appui, en option.
+La touche à droite du M porte les accents aigu, grave et tilde : l’espagnol, le portugais ou l’italien se tapent sans changer de clavier. Vous avez aussi l’allemand, de nombreuses langues d’Afrique francophone (wolof, bambara, yoruba, haoussa…), les alphabets grec et cyrillique et les signes mathématiques. Pour écrire plusieurs lettres grecques d’affilée, une couche se verrouille d’un double appui, en option. Pour écrire en arabe ou dans un autre alphabet avec une disposition de Windows, mettez d’abord AZERTY Global en pause (menu de l’icône) ou désactivez-le (Ctrl+Maj+Verr. Maj.).
 
 RETROUVER N’IMPORTE QUEL CARACTÈRE
 Ctrl+Maj+W ouvre la recherche : tapez le nom d’un caractère, Entrée l’insère dans votre texte et la recherche vous montre comment le taper. Ctrl+Maj+Q affiche le clavier virtuel, avec les quatre niveaux de chaque touche.
@@ -109,20 +109,20 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 
 ### Nouveautés de cette version (notes de version)
 
-> Bloc à coller tel quel, 1 500 caractères au plus. Les utilisateurs du Store viennent de la 1.1.0 : ces notes reprennent donc aussi la 1.2.0, jamais publiée, sans le Défi du jour. La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
+> Bloc à coller tel quel, 1 500 caractères au plus. Les utilisateurs du Store viennent de la 1.1.0 : ces notes reprennent donc aussi la 1.2.0, jamais publiée. Le Défi du jour, masqué le 24/09, est réactivé le 08/10 (`1ec1173`). La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
 
 ```text
 Version 1.3.0 :
-• Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
-• Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet dans l’application ouverte, Échap le libère. Chaque couche se coche dans le menu de l’icône, sous « Couches ».
-• La recherche de caractères (Ctrl+Maj+W) insère le caractère directement dans votre texte.
-• Votre clavier ne change qu’après votre accord : après la mise à jour, l’accueil vous le redemande une fois.
-• Menu de l’icône plus court : « Apprendre » regroupe les Leçons et l’accueil, « À propos et aide » regroupe confidentialité, ressources, retours et notation. Rien n’a été retiré.
+• Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
+• Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
+• La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
+• Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
+• Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet, Échap le libère.
+• Après la mise à jour, rouvrez AZERTY Global : votre clavier ne change qu’après votre accord, redemandé une fois.
+• Menu de l’icône plus court : « Apprendre » regroupe les Leçons, le Défi et l’accueil, « À propos et aide » le reste. Rien n’a été retiré.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
-• Si l’application ne démarre pas avec Windows, une notification unique propose de l’activer.
-• Les fenêtres se parcourent mieux au clavier (Tab, Entrée, Échap) et le Narrateur lit le nom des champs qui n’en avaient pas.
-• Les fenêtres Paramètres et Leçons s’adaptent à la taille et à la mise à l’échelle de l’écran.
-• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; le raccourci de recherche ne ferme plus la fenêtre d’une application où vous avez désactivé AZERTY Global ; un accent en attente ne réapparaît plus dans une autre application après un changement de fenêtre ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
+• Les fenêtres se parcourent mieux au clavier et le Narrateur lit le nom des champs qui n’en avaient pas.
+• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
 
 ### Mots-clés de recherche (max 7, séparés par des points-virgules)
@@ -156,19 +156,19 @@ AZERTY Global - Improved French Keyboard
 ```text
 Type É, Ç, « » or œ without Alt codes or copy-paste, on the AZERTY keyboard you already know.
 
-On the standard Windows French keyboard, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 12 characters move to another key, and 99% of your keystrokes are preserved.
+On the traditional Windows French AZERTY, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 12 characters move to another key, and 99% of your keystrokes are preserved.
 
-Install the app, click “Activate and try” in the welcome window, and you're done. No admin rights and no account needed. Ctrl+Shift+Caps Lock gives you back the original AZERTY whenever you want.
+Install the app, click “Turn on and try” in the welcome window, and you're done. No admin rights and no account needed. Ctrl+Shift+Caps Lock gives you back the original AZERTY whenever you want.
 
 
 WRITE CORRECT FRENCH
 Accented capitals É, È, Ç, À, Ù come from Caps Lock, which now only affects letters. Guillemets « », typographic apostrophe ’, œ and æ, ellipsis …, dashes — and –, regular and narrow non-breaking spaces: everything is on the keyboard.
 
 CODE WITHOUT TWISTING YOUR FINGERS
-{ } [ ] | \ are on the home row, with AltGr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access.
+{ } \ | [ ] are on the home row, with AltGr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access.
 
 TYPE OTHER LANGUAGES
-The key to the right of M carries the acute, grave and tilde accents, so Spanish, Portuguese or Italian need no other keyboard. German is covered too, as are many francophone African languages (Wolof, Bambara, Yoruba, Hausa…), the Greek and Cyrillic alphabets and math symbols. To type several Greek letters in a row, an optional layer locks with a double press.
+The key to the right of M carries the acute, grave and tilde accents, so Spanish, Portuguese or Italian need no other keyboard. German is covered too, as are many francophone African languages (Wolof, Bambara, Yoruba, Hausa…), the Greek and Cyrillic alphabets and math symbols. To type several Greek letters in a row, an optional layer locks with a double press. To type Arabic or another script with a Windows layout, first pause AZERTY Global (icon menu) or turn it off (Ctrl+Shift+Caps Lock).
 
 FIND ANY CHARACTER
 Ctrl+Shift+W opens the search: type a character's name, Enter inserts it into your text and the search shows you how to type it. Ctrl+Shift+Q shows the virtual keyboard, with all four levels of each key.
@@ -184,7 +184,7 @@ WHAT CHANGES, EXACTLY
 5. Acute ´, grave ` and tilde ~ accents on the ù key; ù and % move elsewhere
 
 YOUR TYPING STAYS ON YOUR PC
-Nothing changes on your keyboard until you click “Activate”. Keystrokes are never logged, stored or transmitted, there is no telemetry and no account, and the app sends nothing over the network on its own. Preferences, statistics and progress stay on your device. In password fields, layers and search pause. The “Report a bug” and “Give feedback” links open only when you click them, and include the app and Windows version.
+Nothing changes on your keyboard until you click “Turn on”. Keystrokes are never logged, stored or transmitted, there is no telemetry and no account, and the app sends nothing over the network on its own. Preferences, statistics and progress stay on your device. In password fields, layers and search pause. The “Report a bug” and “Give feedback” links open only when you click them, and include the app and Windows version.
 
 GAMES AND REMOTE DESKTOP
 AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software when it is in the foreground. Detection runs on your PC; no app name is transmitted.
@@ -239,15 +239,15 @@ Free and open source (EUPL 1.2), no admin rights needed
 ```text
 Version 1.3.0:
 • Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
-• Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet in the open app, Esc releases it. Tick each layer in the icon menu, under “Layers”.
-• Character search (Ctrl+Shift+W) inserts the character directly into your text.
-• Your keyboard only changes after you agree: after the update, the welcome window asks you once more.
-• Shorter icon menu: “Learn” groups Lessons and the welcome tour, “About and help” groups privacy, resources, feedback and rating. Nothing was removed.
+• Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
+• Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
+• Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome window or in Settings.
+• Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet, Esc releases it.
+• After the update, reopen AZERTY Global: your keyboard only changes after you agree, and you're asked once more.
+• Shorter icon menu: “Learn” groups Lessons, the challenge and the welcome tour, “About and help” the rest. Nothing was removed.
 • You can rate the app without leaving AZERTY Global.
-• If the app doesn't start with Windows, a one-time notification offers to turn it on.
-• Windows are easier to use with the keyboard (Tab, Enter, Esc), and Narrator reads the name of fields that had none.
-• The Settings and Lessons windows adapt to your screen size and display scaling.
-• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; the search shortcut no longer closes the window of an app where you turned AZERTY Global off; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the standard AZERTY.
+• Windows are easier to use with the keyboard, and Narrator reads the name of fields that had none.
+• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
 ```
 
 ### Search terms (max 7, semicolon-separated)
@@ -286,18 +286,18 @@ contact@azerty.global
 
 ### Notes pour l'équipe de certification Microsoft (à coller, en anglais)
 
-> Retirer les deux marqueurs entre crochets après vérification, avant de coller.
+> Retirer les deux marqueurs entre crochets après vérification, avant de coller. Sans eux, le bloc fait 1 968 caractères (1 977 si chaque retour à la ligne compte double) : Microsoft Learn donne 2 000 au plus pour les apps MSI/EXE, et rien pour MSIX. Lire le compteur après collage.
 
-AZERTY Global 1.3.0 is a notification-area (system tray) app that applies an improved French keyboard layout. After setup it has no main window.
-How to test: 1) Launch the app; the welcome window opens. Click "Activate and try" (French UI: "Activer et essayer"); the flag button switches the language. 2) The AG icon appears in the notification area (possibly in the ^ overflow); right-click it for the menu. 3) In Notepad: Caps Lock then é gives É; Ctrl+Shift+Caps Lock turns the layout off and on. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts the character).
+AZERTY Global 1.3.0 is a system-tray app that applies an improved French keyboard layout. After setup it has no main window.
+How to test: 1) Launch the app; the welcome window opens. Click "Turn on and try" (French UI: "Activer et essayer"). 2) The AG icon appears in the notification area (possibly in the ^ overflow); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock turns the layout off and on. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts the character). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z. Both are also in the icon menu.
 If the welcome window is closed without activating, relaunching from the Start menu reopens it. [à vérifier sur le bundle final : correctif de relance]
 Technical notes:
-• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Activate. Output is sent with SendInput. No DLL or code is injected into other processes.
+• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Turn on. Output is sent with SendInput. No DLL or code is injected into other processes.
 • Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, and running process names every 5 s) is used to pause in anti-cheat games and remote-desktop clients and to detect remote-control hosts. Nothing is logged by name or transmitted.
 • UI Automation IsPassword is read only to turn off advanced features in password fields.
-• The startup task is declared disabled. The last welcome step offers it pre-checked; it is registered only if the user confirms that step. Closing with X or Esc applies the checkbox only if the user changed it. A refusal in Settings > Apps > Startup is respected.
-• No account, no telemetry, no automatic network traffic. Links open in the browser only when clicked; in-app rating uses StoreContext.RequestRateAndReviewAppAsync. Toast clicks use the COM activator declared in the manifest.
-• runFullTrust: Win32 desktop app (.NET 8 Native AOT). WACK: PASS. The optional "Blocked executables" test fails because of ShellExecuteW (used to open links), as in previously accepted versions. [à vérifier sur le rapport WACK du bundle final]
+• The startup task is declared disabled; the last welcome step offers it pre-checked and registers it only on confirmation (X or Esc apply the checkbox only if changed). A refusal in Settings > Apps > Startup is respected.
+• No account, no telemetry, no automatic network traffic. Links open in the browser only when clicked; in-app rating uses StoreContext.RequestRateAndReviewAppAsync.
+• runFullTrust: Win32 desktop app (.NET 10 Native AOT). WACK: PASS. The optional "Blocked executables" test fails because of ShellExecuteW (used to open links), as in previously accepted versions. [à vérifier sur le rapport WACK du bundle final]
 
 ---
 
@@ -374,7 +374,7 @@ L’accueil présente les cinq changements. Votre clavier ne change qu’après 
 ```
 EN
 ```text
-The welcome window shows the five changes. Your keyboard only changes after you click “Activate and try”.
+The welcome window shows the five changes. Your keyboard only changes after you click “Turn on and try”.
 ```
 
 ---
