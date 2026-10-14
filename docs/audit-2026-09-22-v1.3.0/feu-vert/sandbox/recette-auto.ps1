@@ -428,12 +428,18 @@ try {
 } catch { Verdict 'A2' 'ECHEC' $_.Exception.Message }
 
 # --- A3 : accueil au clavier seul jusqu'a << Activer et essayer >>, Entree -------------
+# Bouton trouve par son identifiant, comme R20 (IDC_BTN_TRY = 2011, src/OnboardingWindow.cs:25) :
+# son libelle suit la langue et l'accord (Activer et essayer, Turn on and try, Essayer
+# maintenant). Le chemin reste le clavier (Tab, Entree), objet de la ligne. Si l'Entree ne
+# donne pas l'accord, clic par identifiant en repli (ClickId 2011), pour que A5, B12, R57b,
+# R57 et R60 ne tournent pas sans accord ; la ligne passe alors A VOIR (clavier : R11).
 try {
     Command 1010
     $ob = WaitFor { VisibleOf 'AZERTYGlobal_Onboarding' } 5
     if (-not $ob) { throw 'accueil non rouvert' }
-    $try = [W]::Children($ob) | Where-Object { [W]::Cls($_) -eq 'Button' -and [W]::Text($_) -match 'Activer et essayer|Activate and try' } | Select-Object -First 1
-    if (-not $try) { throw ('bouton introuvable ; boutons : ' + (([W]::Children($ob) | Where-Object { [W]::Cls($_) -eq 'Button' } | ForEach-Object { [W]::Text($_) }) -join ' | ')) }
+    $try = Child $ob 2011
+    if ($try -eq [IntPtr]::Zero) { throw ('bouton 2011 introuvable ; boutons : ' + (([W]::Children($ob) | Where-Object { [W]::Cls($_) -eq 'Button' } | ForEach-Object { [string][W2]::GetDlgCtrlID($_) + ':' + [W]::Text($_) }) -join ' | ')) }
+    $label = [W]::Text($try)
     $front = [W]::Front($ob)
     $path = @()
     for ($i = 0; $i -lt 20 -and [W]::Focus($ob) -ne $try; $i++) {
@@ -443,10 +449,12 @@ try {
     $reached = ([W]::Focus($ob) -eq $try)
     if ($reached) { [W]::Key($VK_RETURN) }
     $consent = [bool](WaitFor { Consent } 5)
+    $byClick = $false
+    if (-not $consent) { ClickId $ob 2011; $byClick = [bool](WaitFor { Consent } 5) }
     # Le bouton lance le module d'apprentissage de l'accueil (LaunchLearningModule), pas la fenetre Lecons.
     $lesson = [bool](WaitFor { VisibleOf 'AZERTYGlobal_Learning' } 5)
-    $ok = $front -and $reached -and $consent -and $lesson
-    Verdict 'A3' $(if ($ok) { 'OK' } else { 'ECHEC' }) ("premier plan=$front ; Tab x$($path.Count) jusqu'au bouton=$reached (" + ($path -join ' > ') + ") ; Entree : accord=$consent, lecon ouverte=$lesson. Remappage actif non juge (frappe simulee).")
+    $v = if ($front -and $reached -and $consent -and $lesson) { 'OK' } elseif ($byClick -and $lesson) { 'A VOIR' } else { 'ECHEC' }
+    Verdict 'A3' $v ("bouton 2011 '$label' ; premier plan=$front ; Tab x$($path.Count) jusqu'au bouton=$reached (" + ($path -join ' > ') + ") ; Entree : accord=$consent" + $(if ($consent) { '' } else { " ; repli par clic (identifiant 2011) : accord=$byClick, clavier a juger en R11" }) + " ; lecon ouverte=$lesson. Remappage actif non juge (frappe simulee).")
     CloseOthers
 } catch { Verdict 'A3' 'ECHEC' $_.Exception.Message; CloseOthers }
 
@@ -512,8 +520,10 @@ function Missing($rows, $expected) { return @($expected | Where-Object { $e = $_
 
 # Pause refaite le 28/09 (e7c7217) : fleches Windows (Up-down), sans nom MSAA propre ; les
 # champs Heures et Minutes gardent le leur. Les anciens boutons Augmenter/Diminuer n'existent plus.
-$fr = @('^Heures$', '^Minutes$', 'Clavier virtuel', '^Recherche$', 'Apps suspendues', 'Rechercher un caract')
-$en = @('^Hours$', '^Minutes$', 'Virtual keyboard', '^Search$', 'Suspended apps', 'Find a character')
+# Section des Parametres renommee par e3327c6 : Compatibilite des applications / App compatibility
+# (Settings_SectionCompat, src/Localization/L.Settings.cs:49), ex-Apps suspendues.
+$fr = @('^Heures$', '^Minutes$', 'Clavier virtuel', '^Recherche$', 'Compatibilit. des applications', 'Rechercher un caract')
+$en = @('^Hours$', '^Minutes$', 'Virtual keyboard', '^Search$', 'App compatibility', 'Find a character')
 try {
     $first = Pass
     Command 1033; Start-Sleep -Seconds 1
@@ -919,6 +929,8 @@ try {
 
 # --- R41, R70 a R73 : avis pilotes par config.json et usage-stats.json -----------------------
 # Accueil ferme par son bouton final : Suivant, Suivant, puis Activer (accord) a l'etape 3.
+# Clic par identifiant (IDC_BTN_NEXT = 2002) ; libelle releve a l'etape 3 sans accord :
+# Onboarding_Activate, Activer AZERTY Global / Turn on AZERTY Global (L.Onboarding.cs:10).
 # learningMaxStepCompleted = 1 montre Suivant des l'etape 1 sans ouvrir le tutoriel, dont la
 # fermeture interdirait l'avis dix minutes (ReviewPromptGate.LearningCooldownMinutes).
 function AcceptAtStep3([IntPtr]$ob) {
@@ -956,7 +968,7 @@ try {
     Verdict 'R71' $(if ($ok71) { 'OK (partiel)' } else { 'ECHEC' }) ("apres l'accord et 20 s : reviewPromptCount=$n, reviewPromptLastShown=$ls ($j3 attendu), cleRecette=$cr, shortcutVirtualKeyboardVk=$vk. Branche apres frappe : Essai2_six_jours_apres_le_premier_refuse.")
     [void](Quit); [void](Launch); Start-Sleep -Seconds 3
     $kept = Consent; $cr2 = CfgValue 'cleRecette'; $vk2 = CfgValue 'shortcutVirtualKeyboardVk'
-    $ok70 = ($acc.label -match '^Activer |^Activate ') -and $acc.closed -and $acc.consent -and $kept -and "$cr2" -eq '42' -and "$vk2" -eq '120'
+    $ok70 = ($acc.label -match '^Activer |^Turn on ') -and $acc.closed -and $acc.consent -and $kept -and "$cr2" -eq '42' -and "$vk2" -eq '120'
     Verdict 'R70' $(if ($ok70) { 'OK' } else { 'ECHEC' }) ("config 1.2 simulee : accueil ouvert au lancement, bouton '$($acc.label)', ferme=$($acc.closed), accord=$($acc.consent) ; relance : accord garde=$kept, cleRecette=$cr2, raccourci=$vk2.")
     CloseOthers
 } catch { Verdict 'R70/R71' 'ECHEC' $_.Exception.Message; CloseOthers }
@@ -1034,25 +1046,24 @@ try {
 } catch { Verdict 'A11' 'ECHEC' $_.Exception.Message }
 
 # --- R75 : suite d'A11 : accueil, app inactive jusqu'a l'accord, accord, relance active ---
+# Accord par clic par identifiant (IDC_BTN_TRY = 2011), comme R20 : le chemin clavier (Tab,
+# Entree) a echoue les 28 et 29/09 sur le refus de premier plan, et le libelle suit la langue.
+# Le clavier de l'accueil est juge par A3 (et R11 a la main).
 try {
     $ob = WaitFor { VisibleOf 'AZERTYGlobal_Onboarding' } 6
     $consent0 = Consent
     $rows0 = DumpMenuRows
     $menu0 = @($rows0 | Where-Object { $_.depth -eq 0 -and -not $_.separator }) | Select-Object -First 1
     $inactive = $menu0 -and $menu0.text -match '^Activer\t|^Turn on\t'
-    $consent1 = $false; $lesson = $false
+    $consent1 = $false; $lesson = $false; $label = 'accueil absent'
     if ($ob) {
-        # Le releve du menu laisse le premier plan a la fenetre cachee de l'icone : passer par
-        # l'Explorateur rend une vraie activation a l'accueil.
-        [void](Calm)
-        $front = FrontSure $ob
-        $try = [W]::Children($ob) | Where-Object { [W]::Cls($_) -eq 'Button' -and [W]::Text($_) -match 'Activer et essayer|Activate and try' } | Select-Object -First 1
-        if ($try) {
-            $f = TabTo $ob { param($h) $h -eq $try } 20
-            if ($f -ne [IntPtr]::Zero) { [W]::Key($VK_RETURN) }
+        $try = Child $ob 2011
+        if ($try -ne [IntPtr]::Zero) {
+            $label = [W]::Text($try)
+            ClickId $ob 2011
             $consent1 = [bool](WaitFor { Consent } 5)
             $lesson = [bool](WaitFor { VisibleOf 'AZERTYGlobal_Learning' } 5)
-        }
+        } else { $label = 'bouton 2011 introuvable' }
     }
     CloseOthers
     [void](Quit); [void](Launch); Start-Sleep -Seconds 3
@@ -1061,7 +1072,7 @@ try {
     $menu2 = @($rows2 | Where-Object { $_.depth -eq 0 -and -not $_.separator }) | Select-Object -First 1
     $active = $menu2 -and $menu2.text -match '^D.sactiver\t|^Turn off\t'
     $ok = [bool]$ob -and -not $consent0 -and $inactive -and $consent1 -and $consent2 -and $active
-    Verdict 'R75' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("apres [1] : accueil ouvert=$([bool]$ob), accord=$consent0, menu " + $(if ($menu0) { "'" + ($menu0.text -replace "`t", ' ') + "'" } else { 'non releve' }) + " (inactive=$inactive) ; Activer et essayer au clavier : accord=$consent1, tutoriel=$lesson ; relance : accord=$consent2, menu " + $(if ($menu2) { "'" + ($menu2.text -replace "`t", ' ') + "'" } else { 'non releve' }) + " (active=$active). Bulle unique : QuarantaineTests (config corrompue, message une seule fois).")
+    Verdict 'R75' $(if ($ok) { 'OK (partiel)' } else { 'ECHEC' }) ("apres [1] : accueil ouvert=$([bool]$ob), accord=$consent0, menu " + $(if ($menu0) { "'" + ($menu0.text -replace "`t", ' ') + "'" } else { 'non releve' }) + " (inactive=$inactive) ; accord par clic (identifiant 2011, '$label') : accord=$consent1, tutoriel=$lesson ; relance : accord=$consent2, menu " + $(if ($menu2) { "'" + ($menu2.text -replace "`t", ' ') + "'" } else { 'non releve' }) + " (active=$active). Bulle unique : QuarantaineTests (config corrompue, message une seule fois).")
     CloseOthers
 } catch { Verdict 'R75' 'ECHEC' $_.Exception.Message; CloseOthers }
 
