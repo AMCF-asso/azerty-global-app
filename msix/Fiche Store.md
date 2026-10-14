@@ -112,7 +112,7 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 > Bloc à coller tel quel, 1 500 caractères au plus. Les utilisateurs du Store viennent de la 1.1.0 : ces notes reprennent donc aussi la 1.2.0, jamais publiée. Le Défi du jour, masqué le 24/09, est réactivé le 08/10 (`1ec1173`). La ligne « Version 1.3.0 : » garde une espace ordinaire avant le deux-points : `scripts/Verify-Release.ps1` la cherche sous cette forme.
 
 ```text
-Version 1.3.0 :
+Version 1.3.1 :
 • Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
 • Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
 • La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
@@ -237,7 +237,7 @@ Free and open source (EUPL 1.2), no admin rights needed
 ### What's new (release notes)
 
 ```text
-Version 1.3.0:
+Version 1.3.1:
 • Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
 • Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
 • Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
