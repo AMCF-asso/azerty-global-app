@@ -70,6 +70,20 @@ public class CouchesEcritureDiffereeTests : IDisposable
         catch (IOException) { return false; }
     }
 
+    /// <summary>
+    /// Message des attentes : compteur d'écritures et error.log du dossier du test, où
+    /// l'écrivain journalise chaque File.Replace raté. Le run 36634888985 (29/09) a vu
+    /// « l'activation n'a jamais atteint config.json » sans rien d'autre ; deux échecs
+    /// d'affilée (délai 2 s + essais à 1 s et 5 s) dépasseraient l'attente de 6 s.
+    /// </summary>
+    private string Diagnostic()
+    {
+        string journal;
+        try { journal = File.ReadAllText(Path.Combine(_dir, "error.log")).Trim(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { journal = "(absent)"; }
+        return $" — écritures : {Écritures()}, error.log : {journal}";
+    }
+
     private static bool Attendre(Func<bool> condition, int millisecondes)
     {
         var limite = DateTime.UtcNow.AddMilliseconds(millisecondes);
@@ -114,10 +128,10 @@ public class CouchesEcritureDiffereeTests : IDisposable
 
         Assert.Equal(1, boîtes); // la boîte « activé » s'est ouverte
         Assert.True(réglésÀ >= 0);
-        Assert.True(écritÀ >= 0, "l'activation n'a pas atteint config.json tant que la boîte était ouverte");
+        Assert.True(écritÀ >= 0, "l'activation n'a pas atteint config.json tant que la boîte était ouverte" + Diagnostic());
         Assert.InRange(écritÀ - réglésÀ, 350, 3_000); // pas avant le délai de regroupement
         // Le compteur est incrémenté juste après File.Replace : le fichier peut se voir avant lui.
-        Assert.True(Attendre(() => Écritures() >= avant + 1, 2_000), "le compteur d'écritures n'a pas suivi");
+        Assert.True(Attendre(() => Écritures() >= avant + 1, 2_000), "le compteur d'écritures n'a pas suivi" + Diagnostic());
         Assert.Equal(avant + 1, Écritures()); // une seule écriture pour les sept réglages
     }
 
@@ -147,9 +161,9 @@ public class CouchesEcritureDiffereeTests : IDisposable
         // … alors que l'application a bien pris l'activation…
         Assert.True(ConfigManager.MaintainableLayersEnabled);
         // … et que le fichier suit seul, sans autre geste ni fermeture de l'application.
-        Assert.True(Attendre(ActivéSurLeDisque, 6_000), "l'activation n'a jamais atteint config.json");
+        Assert.True(Attendre(ActivéSurLeDisque, 6_000), "l'activation n'a jamais atteint config.json" + Diagnostic());
         // Le compteur est incrémenté juste après File.Replace : le fichier peut se voir avant lui.
-        Assert.True(Attendre(() => Écritures() >= avant + 1, 2_000), "le compteur d'écritures n'a pas suivi");
+        Assert.True(Attendre(() => Écritures() >= avant + 1, 2_000), "le compteur d'écritures n'a pas suivi" + Diagnostic());
         Assert.Equal(avant + 1, Écritures());
     }
 }

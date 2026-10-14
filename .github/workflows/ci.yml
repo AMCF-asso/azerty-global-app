@@ -13,14 +13,22 @@ permissions:
   id-token: write     # pour attestation SLSA / sigstore
   attestations: write
 
+# Une PR ne garde que son dernier run : un nouveau push annule le précédent.
+# Sur push, chaque run a son propre groupe (run_id) et va jusqu'au bout.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   # Job séparé, et volontairement pas un `needs:` du build : les trois JSON de src/ sont
   # des copies de fichiers protégés du dépôt du site, et ce contrôle lit l'original sur
   # son URL brute publique. Une panne réseau ne doit donc pas empêcher une release de se
   # construire — elle sort en 2, la dérive sort en 1, et le run passe au rouge dans les
   # deux cas. Pour rendre le contrôle bloquant, ajouter `needs: provenance` au job build.
+  # L'original est lu au commit du site épinglé dans scripts/layout-provenance.json : une
+  # évolution du site ne rougit plus les PR ; provenance-drift.yml la signale chaque jour.
   provenance:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +44,7 @@ jobs:
   # désactivés des deux côtés, pour qu'un poste sans eux rende le même verdict.
   # Version et empreinte épinglées (asset de la release v1.7.12 de rhysd/actionlint).
   actionlint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
       ACTIONLINT_VERSION: 1.7.12

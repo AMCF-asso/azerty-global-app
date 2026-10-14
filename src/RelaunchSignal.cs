@@ -29,20 +29,27 @@ internal static class RelaunchSignal
     /// <summary>Identifiant du message, identique dans les deux processus.</summary>
     internal static uint RegisterMessage() => Win32.RegisterWindowMessageW(MessageName);
 
+    /// <summary>Argument de la relance par Windows après une mise à jour
+    /// (<see cref="RestartRegistration"/>, audit final 1.3.0, A08-02).</summary>
+    internal const string AfterUpdateArgument = "--apres-maj";
+
     /// <summary>
     /// Vrai si la ligne de commande est celle d'une activation par Windows, qui doit mourir
     /// en silence : serveur COM de l'activateur de toast (« -Embedding », forme standard
-    /// d'un ExeServer lancé par COM, le manifeste ne déclarant aucun Arguments) ou
-    /// « -ToastActivated », forme documentée pour les toasts de bureau. Le premier élément,
-    /// le chemin de l'exécutable, est ignoré.
+    /// d'un ExeServer lancé par COM, le manifeste ne déclarant aucun Arguments),
+    /// « -ToastActivated », forme documentée pour les toasts de bureau, ou relance après une
+    /// mise à jour (<see cref="AfterUpdateArgument"/>) arrivée après le démarrage auto. Le
+    /// premier élément, le chemin de l'exécutable, est ignoré.
     /// </summary>
     internal static bool IsSystemActivation(IReadOnlyList<string> args)
     {
+        string afterUpdate = AfterUpdateArgument.TrimStart('-', '/');
         for (int i = 1; i < args.Count; i++)
         {
             var arg = args[i].TrimStart('-', '/');
             if (arg.Equals("Embedding", StringComparison.OrdinalIgnoreCase) ||
-                arg.StartsWith("ToastActivated", StringComparison.OrdinalIgnoreCase))
+                arg.StartsWith("ToastActivated", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals(afterUpdate, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;

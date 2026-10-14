@@ -194,8 +194,9 @@ sealed class CharacterSearch : IDisposable
         return entries;
     }
 
-    /// <summary>Formate une méthode de saisie en texte lisible.</summary>
-    private string FormatMethod(MethodData method)
+    /// <summary>Formate une méthode de saisie en texte lisible : une ligne pour une méthode
+    /// directe, deux pour une touche morte (l'activation, puis la seconde touche).</summary>
+    internal static string FormatMethod(MethodData method)
     {
         if (method.Type == "direct")
         {

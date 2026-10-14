@@ -315,7 +315,7 @@ sealed class UsageStatsWindow : IDisposable
                             break;
                         case IDC_LINK_FEEDBACK:
                             Win32.ShellExecuteW(IntPtr.Zero, "open",
-                                ProductIdentity.DiagnosticUrl("/feedback", Program.Version,
+                                ProductIdentity.DiagnosticUrl(ProductIdentity.FeedbackPath, Program.Version,
                                     ProductIdentity.OsDescription(), "stats"), null, null, 1);
                             break;
                         case IDC_LINK_DISCORD:
