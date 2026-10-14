@@ -38,8 +38,8 @@
           "id": "point-virgule",
           "title": "Point-virgule ;",
           "titleEn": "Semicolon ;",
-          "description": "Le point-virgule est maintenant sur Maj + ,",
-          "descriptionEn": "The semicolon is now on Shift + ,",
+          "description": "Le point-virgule est maintenant sur Maj + ;",
+          "descriptionEn": "The semicolon is now on Shift + ;",
           "characters": [
             ";",
             "."
