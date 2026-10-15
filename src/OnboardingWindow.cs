@@ -1102,7 +1102,7 @@ sealed class OnboardingWindow : IDisposable
     /// <summary>Curseur au-dessus du drapeau de langue du header (coordonnées client) ?</summary>
     private bool IsCursorOverFlag()
     {
-        if (!Win32.GetCursorPos(out var pt)) return false;
+        if (!CursorSource.TryGet(out var pt)) return false;
         if (!Win32.ScreenToClient(_hWnd, ref pt)) return false;
         return pt.x >= _flagRect.left && pt.x < _flagRect.right &&
                pt.y >= _flagRect.top && pt.y < _flagRect.bottom;

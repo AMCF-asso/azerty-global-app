@@ -584,7 +584,7 @@ sealed class VirtualKeyboard : IDisposable
             ? Win32.MonitorFromWindow(referenceWindow, Win32.MONITOR_DEFAULTTONEAREST)
             : IntPtr.Zero;
 
-        if (monitor == IntPtr.Zero && Win32.GetCursorPos(out var cursorPt))
+        if (monitor == IntPtr.Zero && CursorSource.TryGet(out var cursorPt))
             monitor = Win32.MonitorFromPoint(cursorPt, Win32.MONITOR_DEFAULTTONEAREST);
 
         var mi = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
@@ -657,7 +657,7 @@ sealed class VirtualKeyboard : IDisposable
             }
         }
         string? sign = string.IsNullOrEmpty(deadKey) ? null : DeadKeySign(deadKey);
-        if (armStep < 0 || sign == null || sign == steps[armStep].KeyLabel)
+        if (armStep < 0 || sign == null || sign == steps[armStep].SpokenLabel)
             armStep = -1;
 
         // Le caractère et son nom : l'entrée de l'index qui porte cette méthode ; une touche
@@ -1020,7 +1020,8 @@ sealed class VirtualKeyboard : IDisposable
             var style = KeyNotationStyle.Banner(s);
             var (width, height) = KeyNotation.Measure(hdc, g.Steps, style);
             int staffTop = top + Math.Max(0, (bottom - top - height) / 2);
-            KeyNotation.Draw(hdc, g.Steps, style, left, staffTop, PaperTheme.Action, caseFill: PaperTheme.Paper);
+            KeyNotation.Draw(hdc, g.Steps, style, left, staffTop, PaperTheme.Step1, caseFill: PaperTheme.Paper,
+                secondInk: PaperTheme.Step2);
             staffRight = left + width;
         }
         else

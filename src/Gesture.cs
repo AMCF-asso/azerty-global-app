@@ -4,17 +4,23 @@ namespace AZERTYGlobal;
 /// <summary>
 /// Un temps du geste : les modificateurs tenus (le trait épais de la portée) et la touche
 /// frappée (la case). <see cref="KeyLabel"/> est la gravure AZERTY de la touche physique
-/// (« W », « ù », « Espace »), celle qu'on cherche des yeux sur son clavier.
+/// (« W », « Espace »), celle qu'on cherche des yeux sur son clavier, sauf là où AZERTY Global
+/// tape autre chose que la gravure : « @ » en haut à gauche, « ´ » à droite du M.
 /// </summary>
 internal readonly record struct GestureStep(bool Shift, bool AltGr, string KeyCode, string KeyLabel)
 {
     /// <summary>La case de la portée : gravure courte (« Esp » pour Espace).</summary>
     public string ShortLabel => Gesture.ShortKeyLabel(KeyCode, KeyLabel);
+
+    /// <summary>La touche dans la phrase : sa gravure, ou sa place quand la gravure AZERTY
+    /// n'est pas ce qu'elle tape (« la touche à droite du M »).</summary>
+    public string SpokenLabel => Gesture.SpokenKeyLabel(KeyCode, KeyLabel);
 }
 
 /// <summary>
 /// Les temps qui tapent un caractère : un seul pour une frappe directe ; deux pour une touche
-/// morte (« Frappez ù : rien ne s'affiche encore. Puis tenez Maj, frappez Z. ») ; Verr. Maj.
+/// morte (« Frappez la touche à droite du M (´) : rien ne s'affiche encore. Puis tenez Maj,
+/// frappez Z. ») ; Verr. Maj.
 /// d'abord pour une couche Caps. Lu dans la méthode recommandée de character-index.json,
 /// commun aux Leçons, à la recherche et au clavier virtuel.
 /// </summary>
@@ -24,7 +30,9 @@ internal static class Gesture
     /// langue de l'interface ; seule « Espace » se traduit (<see cref="KeyLabel"/>).</summary>
     internal static readonly IReadOnlyDictionary<string, string> KeyLegends = new Dictionary<string, string>
     {
-        ["Backquote"] = "²",
+        // ² et ù : AZERTY Global y met @ et les accents ; la touche montre ce qu'elle tape et
+        // la phrase la nomme par sa place (SpokenKeyLabel, choix d'Antoine du 15/10).
+        ["Backquote"] = "@",
         ["Digit1"] = "&",
         ["Digit2"] = "é",
         ["Digit3"] = "\"",
@@ -59,7 +67,7 @@ internal static class Gesture
         ["KeyK"] = "K",
         ["KeyL"] = "L",
         ["Semicolon"] = "M",
-        ["Quote"] = "ù",
+        ["Quote"] = "´",
         ["Backslash"] = "*",
         ["IntlBackslash"] = "<",
         ["KeyZ"] = "W",
@@ -84,6 +92,15 @@ internal static class Gesture
         "Space" => L.Search_SpaceKeyLabel,
         CapsLockCode => L.Search_CapsLockWord,
         _ => KeyLegends.TryGetValue(keyCode, out var legend) ? legend : keyCode,
+    };
+
+    /// <summary>La touche telle que la phrase la nomme : sa place pour la touche en haut à
+    /// gauche et celle à droite du M, sa gravure sinon.</summary>
+    internal static string SpokenKeyLabel(string keyCode, string label) => keyCode switch
+    {
+        "Backquote" => L.Gesture_KeyTopLeft,
+        "Quote" => L.Gesture_KeyRightOfM,
+        _ => label,
     };
 
     /// <summary>Gravure courte d'une case de portée (« Esp », « VM »).</summary>
@@ -140,7 +157,7 @@ internal static class Gesture
     /// <summary>Le geste a-t-il besoin d'une case sur la portée des Leçons ? Non quand on
     /// frappe la touche gravée du caractère lui-même (« n », « U » avec Maj, « ! »).</summary>
     internal static bool StrikesItsOwnKey(string character, IReadOnlyList<GestureStep> steps)
-        => steps.Count == 1 && steps[0].KeyCode != "Space"
+        => steps.Count == 1 && steps[0].KeyCode != "Space" && steps[0].SpokenLabel == steps[0].KeyLabel
            && string.Equals(steps[0].KeyLabel, character, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
@@ -174,9 +191,9 @@ internal static class Gesture
             {
                 runs.Add(new TextRun(first ? L.Gesture_StrikeCapital : L.Gesture_Strike));
             }
-            runs.Add(new TextRun(step.KeyLabel, true));
+            runs.Add(new TextRun(step.SpokenLabel, true));
             bool armsDeadKey = steps.Count > 1 && i < steps.Count - 1 && step.KeyCode != CapsLockCode;
-            runs.Add(new TextRun(armsDeadKey ? L.Gesture_NothingYet : step.KeyLabel.EndsWith('.') ? "" : "."));
+            runs.Add(new TextRun(armsDeadKey ? L.Gesture_NothingYet : step.SpokenLabel.EndsWith('.') ? "" : "."));
         }
         return runs;
     }

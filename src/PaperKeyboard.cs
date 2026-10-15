@@ -151,13 +151,18 @@ internal static class PaperKeyboard
         if (mode == PaperKeyboardMode.ActiveLayer && !held && (target || step > 0))
         {
             // Couche active : le plein bleu dit « tenu en ce moment » ; un geste à faire est
-            // cerné de bleu et numéroté (revue du 07/10, P1 du clavier A).
-            border = PaperTheme.Action;
+            // cerné et numéroté (revue du 07/10, P1 du clavier A), de la couleur de son étape.
+            border = StepColor(step);
             borderWidth = stateWidth;
+            if (step == 1 && PaperTheme.Step1Fill != PaperTheme.Surface)
+            {
+                fill = PaperTheme.Step1Fill;
+                onAction = PaperTheme.Step1Fill == PaperTheme.Step1;
+            }
         }
         else if (held || target || step > 0)
         {
-            fill = border = PaperTheme.Action;
+            fill = border = held ? PaperTheme.Action : StepColor(step);
             onAction = true;
         }
         else if (armed)
@@ -513,7 +518,7 @@ internal static class PaperKeyboard
         int size = Scaled(17, u), inset = Scaled(4, u);
         var r = new Win32.RECT { left = rect.right - inset - size, top = rect.top + inset, right = rect.right - inset, bottom = rect.top + inset + size };
         var brush = Win32.CreateSolidBrush(PaperTheme.Surface);
-        var pen = Win32.CreatePen(Win32.PS_SOLID, 1, PaperTheme.Action);
+        var pen = Win32.CreatePen(Win32.PS_SOLID, 1, StepColor(step));
         var oldBrush = Win32.SelectObject(hdc, brush);
         var oldPen = Win32.SelectObject(hdc, pen);
         Win32.Ellipse(hdc, r.left, r.top, r.right + 1, r.bottom + 1);
@@ -522,8 +527,17 @@ internal static class PaperKeyboard
         Win32.DeleteObject(pen);
         Win32.DeleteObject(brush);
         PaperText.DrawLine(hdc, step.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            FontSpec.Of(AppFonts.Text, Scaled(11, u), TypeRamp.Semibold, 1f), r, PaperTheme.Action, TextAlign.Center);
+            FontSpec.Of(AppFonts.Text, Scaled(11, u), TypeRamp.Semibold, 1f), r, StepColor(step), TextAlign.Center);
     }
+
+    /// <summary>Couleur d'une étape de geste : l'étape 2 se distingue de l'étape 1 ; sans étape,
+    /// l'action.</summary>
+    internal static uint StepColor(int step) => step switch
+    {
+        1 => PaperTheme.Step1,
+        2 => PaperTheme.Step2,
+        _ => PaperTheme.Action,
+    };
 
     // ── Signes ─────────────────────────────────────────────────────────
 
