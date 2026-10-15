@@ -41,11 +41,12 @@ static class LightButton
     [DllImport("user32.dll")]
     private static extern IntPtr GetParent(IntPtr hWnd);
 
-    /// <summary>Repeint <paramref name="button"/> au style clair ; sans effet sur un handle nul.</summary>
-    public static void Attach(IntPtr button)
+    /// <summary>Repeint <paramref name="button"/> au style clair ; sans effet sur un handle nul.
+    /// <paramref name="paper"/> : palette papier des Leçons (Accueil, refonte du 15/10).</summary>
+    public static void Attach(IntPtr button, bool paper = false)
     {
         if (button == IntPtr.Zero) return;
-        Win32.SetWindowSubclass(button, Proc, SubclassId, IntPtr.Zero);
+        Win32.SetWindowSubclass(button, Proc, SubclassId, paper ? (IntPtr)1 : IntPtr.Zero);
         Win32.InvalidateRect(button, IntPtr.Zero, true);
     }
 
@@ -57,12 +58,12 @@ static class LightButton
             case Win32.WM_PAINT:
             {
                 IntPtr hdc = Win32.BeginPaint(hWnd, out var ps);
-                Paint(hWnd, hdc);
+                Paint(hWnd, hdc, dwRefData != IntPtr.Zero);
                 Win32.EndPaint(hWnd, ref ps);
                 return IntPtr.Zero;
             }
             case Win32.WM_PRINTCLIENT:
-                Paint(hWnd, wParam);
+                Paint(hWnd, wParam, dwRefData != IntPtr.Zero);
                 return IntPtr.Zero;
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
@@ -87,7 +88,7 @@ static class LightButton
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
-    private static void Paint(IntPtr hWnd, IntPtr hdc)
+    private static void Paint(IntPtr hWnd, IntPtr hdc, bool paper)
     {
         Win32.GetClientRect(hWnd, out var rect);
         int dpi = Math.Max(96, Win32.GetDpiForWindow(hWnd));
@@ -101,7 +102,7 @@ static class LightButton
         IntPtr font = Win32.SendMessageW(hWnd, WM_GETFONT, IntPtr.Zero, IntPtr.Zero);
 
         GdiHelpers.DrawLightButton(hdc, rect, text.ToString(), font, primary,
-            hot: (state & BST_HOT) != 0, pressed: (state & BST_PUSHED) != 0, enabled, S(4), Backdrop(hWnd, hdc));
+            hot: (state & BST_HOT) != 0, pressed: (state & BST_PUSHED) != 0, enabled, S(4), Backdrop(hWnd, hdc), paper);
 
         bool hideFocus = ((int)Win32.SendMessageW(hWnd, WM_QUERYUISTATE, IntPtr.Zero, IntPtr.Zero) & UISF_HIDEFOCUS) != 0;
         if ((state & BST_FOCUS) != 0 && !hideFocus)
