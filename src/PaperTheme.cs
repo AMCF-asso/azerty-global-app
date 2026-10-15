@@ -20,6 +20,14 @@ static class PaperTheme
     internal const uint Border = 0x00C3D2D9; // #D9D2C3
     /// <summary>Action, colonne en cours, geste à faire, liens, focus (--action).</summary>
     internal const uint Action = 0x00F23E1A; // #1A3EF2
+    /// <summary>Étape 1 d'un geste à deux temps (touche morte) : contour ambre et pastille. Les
+    /// deux étapes avaient le même bleu, « pas archi lisible » (Antoine, 15/10) ; il a choisi le
+    /// jaune sur planche (vague 4) : l'étape 1 est la plus voyante, le caractère reste noir.</summary>
+    internal const uint Step1 = 0x000762A1; // #A16207
+    /// <summary>Fond de la touche de l'étape 1 ; la surface blanche s'il n'y en a pas.</summary>
+    internal const uint Step1Fill = 0x003BD4FF; // #FFD43B
+    /// <summary>Étape 2 d'un geste à deux temps : l'action.</summary>
+    internal const uint Step2 = Action;
     /// <summary>Ce qui reste à venir : caractères et gestes pas encore joués (--pale).</summary>
     internal const uint Pale = 0x0074848C; // #8C8474
     /// <summary>Touches de fonction (Tab, Maj, Entrée…).</summary>

@@ -1321,7 +1321,8 @@ sealed class CharacterSearch : IDisposable
         var style = KeyNotationStyle.Search(_dpiScale);
         var (_, notationH) = KeyNotation.Measure(hdc, steps, style);
         if (draw)
-            KeyNotation.Draw(hdc, steps, style, left, y, PaperTheme.Action, caseFill: PaperTheme.Paper);
+            KeyNotation.Draw(hdc, steps, style, left, y, PaperTheme.Step1, caseFill: PaperTheme.Paper,
+                secondInk: PaperTheme.Step2);
         y += notationH + Scale(12);
         y += PaperText.DrawParagraph(hdc, Gesture.Sentence(steps), SentenceFont(false), SentenceFont(true),
             new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
