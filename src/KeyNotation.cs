@@ -172,10 +172,11 @@ internal static class KeyNotation
     /// <summary>
     /// Dessine la notation, coin haut gauche en (<paramref name="left"/>, <paramref name="top"/>).
     /// <paramref name="ink"/> colore pavés et contours ; les <paramref name="done"/> premiers temps,
-    /// déjà faits, passent en pâle. Rend la largeur dessinée.
+    /// déjà faits, passent en pâle. <paramref name="secondInk"/>, s'il est donné, colore le second
+    /// temps, comme l'étape 2 du clavier virtuel. Rend la largeur dessinée.
     /// </summary>
     internal static int Draw(IntPtr hdc, IReadOnlyList<GestureStep> steps, KeyNotationStyle style, int left, int top, uint ink,
-        IReadOnlyList<KeyNotationNote>? notes = null, int done = 0, uint caseFill = PaperTheme.Surface)
+        IReadOnlyList<KeyNotationNote>? notes = null, int done = 0, uint caseFill = PaperTheme.Surface, uint? secondInk = null)
     {
         if (steps.Count == 0) return 0;
         int caseTop = top + HeightAboveCases(steps, style);
@@ -194,7 +195,7 @@ internal static class KeyNotation
             var step = steps[i];
             var note = notes is null ? KeyNotationNote.None : notes[i];
             int cw = ColumnWidth(hdc, step, note, style);
-            uint color = i < done ? PaperTheme.Pale : ink;
+            uint color = i < done ? PaperTheme.Pale : i == 1 && secondInk is uint second ? second : ink;
 
             // Pavés empilés au-dessus de la case, le plus proche de la case en dernier (Maj, puis AltGr).
             var held = HeldNames(step).ToList();

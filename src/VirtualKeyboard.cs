@@ -1020,7 +1020,8 @@ sealed class VirtualKeyboard : IDisposable
             var style = KeyNotationStyle.Banner(s);
             var (width, height) = KeyNotation.Measure(hdc, g.Steps, style);
             int staffTop = top + Math.Max(0, (bottom - top - height) / 2);
-            KeyNotation.Draw(hdc, g.Steps, style, left, staffTop, PaperTheme.Action, caseFill: PaperTheme.Paper);
+            KeyNotation.Draw(hdc, g.Steps, style, left, staffTop, PaperTheme.Step1, caseFill: PaperTheme.Paper,
+                secondInk: PaperTheme.Step2);
             staffRight = left + width;
         }
         else
