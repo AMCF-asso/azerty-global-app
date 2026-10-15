@@ -157,12 +157,26 @@ static class GdiHelpers
     /// de contrôle. Un bouton désactivé reste lisible sans ressembler à une action.
     /// </summary>
     internal static void DrawLightButton(IntPtr hdc, Win32.RECT rect, string text, IntPtr font, bool primary,
-        bool hot, bool pressed, bool enabled, int radius, uint backdrop)
+        bool hot, bool pressed, bool enabled, int radius, uint backdrop, bool paper = false)
     {
         FillSolidRect(hdc, rect, backdrop);
 
         uint fill, border, textColor;
-        if (!enabled)
+        if (paper)
+        {
+            // Palette papier (Accueil, refonte du 15/10) : le principal porte l'action des
+            // Leçons, le secondaire est blanc cerné d'encre comme dans les Paramètres.
+            if (!enabled)
+                (fill, border, textColor) = (PaperTheme.Paper, PaperTheme.Border, PaperTheme.Pale);
+            else if (primary)
+            {
+                fill = hot || pressed ? PaperDraw.Blend(PaperTheme.Ink, PaperTheme.Action, 0.25f) : PaperTheme.Action;
+                (border, textColor) = (fill, PaperTheme.OnAction);
+            }
+            else
+                (fill, border, textColor) = (hot || pressed ? PaperTheme.FunctionKey : PaperTheme.Surface, PaperTheme.Ink, PaperTheme.Ink);
+        }
+        else if (!enabled)
             (fill, border, textColor) = (LightTheme.Background, LightTheme.Border, LightTheme.TextSecondary);
         else if (primary)
         {

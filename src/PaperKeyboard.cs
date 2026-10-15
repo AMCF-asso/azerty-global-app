@@ -40,6 +40,14 @@ internal sealed class PaperKeyboardState
     public KeyboardRenderProfile Profile { get; init; } = KeyboardRenderProfile.Full;
     public HashSet<string> LessonVisibleCharacters { get; } = new(StringComparer.Ordinal);
     public string? HintCharacter { get; init; }
+    /// <summary>Accueil (<see cref="PaperKeyboardMode.Map"/>) : la couche de base seule, centrée
+    /// sur chaque touche comme une gravure du commerce.</summary>
+    public bool CenteredBase { get; init; }
+    /// <summary>Accueil : touches dont le signe est encadré de bleu, celles qui changent.</summary>
+    public HashSet<uint> FramedScancodes { get; } = new();
+    /// <summary>Accueil : touches de fonction qui gardent leur nom (<see cref="VirtualKeyboard.VisualKey.Label"/>) ;
+    /// les autres restent muettes.</summary>
+    public HashSet<string> NamedFunctionLabels { get; } = new(StringComparer.Ordinal);
 }
 
 internal static class PaperKeyboard
@@ -193,6 +201,11 @@ internal static class PaperKeyboard
 
         // Contenu.
         var nameArea = isoEnter ? IsoEnterTop(rect, key) : rect;
+        if (state.CenteredBase && mode == PaperKeyboardMode.Map)
+        {
+            DrawCenteredContent(hdc, rect, nameArea, key, def, state, k);
+            return;
+        }
         if (function || (def == null && key.Scancode != ScanSpace))
             DrawFunctionName(hdc, nameArea, key, mode, onAction, k);
         else if (mode == PaperKeyboardMode.ActiveLayer && step > 0
@@ -415,6 +428,45 @@ internal static class PaperKeyboard
     /// <summary>Taille commune des trois légendes secondaires (Maj, AltGr, Maj+AltGr) : 10 et
     /// 11 px rendaient ẞ plus petit que ß et les signes fins (! ¡ #) peu lisibles (QCM du 07/10).</summary>
     private const int SecondaryLegend = 13;
+
+    // ── Accueil : couche de base centrée (maquette v4 « Cadres », 15/10) ──
+
+    /// <summary>Le signe que la touche tape sans modificateur, au centre ; cadre bleu si la touche
+    /// change. Les tailles viennent de la maquette, en fraction de la touche (0,42 u).</summary>
+    private static void DrawCenteredContent(IntPtr hdc, Win32.RECT rect, Win32.RECT nameArea, VirtualKeyboard.VisualKey key,
+        KeyDefinition? def, PaperKeyboardState state, float k)
+    {
+        if (key.IsContextual || (def == null && key.Scancode != ScanSpace))
+        {
+            if (state.NamedFunctionLabels.Contains(key.Label))
+            {
+                var nameFont = FontSpec.Of(AppFonts.Text, Scaled(0.27f * MockKey, k), TypeRamp.Regular, 1f);
+                PaperText.DrawLine(hdc, FunctionName(key.Label), nameFont, nameArea, PaperTheme.TextSecondary, TextAlign.Center);
+            }
+            return;
+        }
+        if (key.Scancode == ScanSpace || def == null || string.IsNullOrEmpty(def.Base)) return;
+
+        string text = Display(def.Base);
+        int cx = (rect.left + rect.right + 1) / 2, cy = (rect.top + rect.bottom + 1) / 2;
+        int letterSize = Scaled(0.42f * MockKey, k);
+        if (state.FramedScancodes.Contains(key.Scancode))
+        {
+            // Centré sur l'œil du caractère, accents et jambages compris.
+            float u = k * MockKey;
+            int bw = (int)Math.Round(u * 0.64f), bh = (int)Math.Round(u * 0.8f);
+            int top = cy + (int)Math.Round(letterSize * 0.08f) - bh / 2;
+            var frame = new Win32.RECT { left = cx - bw / 2, top = top, right = cx - bw / 2 + bw - 1, bottom = top + bh - 1 };
+            PaperDraw.RoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, (int)Math.Round(bw * 0.24f),
+                Math.Max(1, (int)Math.Round(u * 1.25f / 38f)));
+        }
+        // Un accent seul (´ ` ¨ ˜) est minuscule à la taille des lettres : plus grand, abaissé vers le centre.
+        bool thinAccent = IsDeadKeyRef(def.Base) && text is "´" or "`" or "¨" or "˜";
+        int size = thinAccent ? Scaled(0.8f * MockKey, k) : letterSize;
+        var font = FontSpec.Of(AppFonts.Mono, size, TypeRamp.Medium, 1f);
+        int baseline = cy + (int)Math.Round(size * (thinAccent ? 0.62f : 0.34f));
+        PaperText.Draw(hdc, text, font, cx - PaperText.Width(hdc, text, font) / 2, baseline, PaperTheme.Ink);
+    }
 
     private enum Corner_ { TopLeft, TopRight, BottomLeft, BottomRight }
 

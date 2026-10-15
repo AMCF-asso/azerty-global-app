@@ -306,6 +306,16 @@ public class CaptureBench
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"accueil-etape{step + 1}", windowDpi);
             }
+
+            // Étape 1 dans l'autre état de l'accord d'activation, en mémoire seulement : le
+            // bouton dit « Activer et essayer » sans accord, « Essayer maintenant » avec.
+            bool accepted = BancCapture.Field<bool>(window, "_activationAccepted");
+            BancCapture.SetField(window, "_activationAccepted", !accepted);
+            BancCapture.SetField(window, "_currentStep", 0);
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(window, "_hWndBtnTry"), (string)BancCapture.Call(window, "get_TryButtonText")!);
+            BancCapture.Call(window, "UpdateStepVisibility");
+            BancCapture.MarkActive(hwnd);
+            target.Shoot(hwnd, accepted ? "accueil-etape1-sans-accord" : "accueil-etape1-avec-accord", windowDpi);
         }
         finally
         {

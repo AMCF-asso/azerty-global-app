@@ -44,9 +44,20 @@ internal static partial class L
     public static string Onboarding_Feature5Desc => T(
         "Accent aigu, accent grave et tilde, en touches mortes.",
         "Acute accent, grave accent and tilde, as dead keys.");
+    // Refonte du 15/10 (textes validés par Antoine) : le clavier et ses cinq notes au trait.
+    public static string Onboarding_Step1Subtitle => T(
+        "Les nouveautés sont en bleu ; vos lettres restent à leur place.",
+        "What’s new is in blue; your letters stay where they are.");
+    public static string Onboarding_NoteAt => T("sans AltGr (# avec Maj)", "without AltGr (# with Shift)");
+    public static string Onboarding_NoteCaps => T("Verr. Maj., puis é è ç à", "Caps Lock, then é è ç à");
+    public static string Onboarding_NoteCoding => T("Programmation facilitée : AltGr + D à K", "Easier coding: AltGr + D to K");
+    public static string Onboarding_NotePeriod => T("le point, sans Maj", "the period, without Shift");
+    public static string Onboarding_NoteAccents => T("puis la lettre ; ù : AltGr + u", "then the letter; ù: AltGr + u");
+    // « Aucune frappe enregistrée » serait faux : l'app garde des compteurs locaux agrégés (UsageStats).
     public static string Onboarding_PrivacyReassurance => T(
-        "Activation : adaptation locale des touches, sans envoi ni journal de frappe.",
-        "Activation: local key remapping, with no keystroke logging or transmission.");
+        "Tout se passe sur votre ordinateur : ce que vous tapez n’est ni enregistré ni envoyé.",
+        "Everything happens on your computer: what you type is never recorded or sent.");
+    public static string Onboarding_TurnOffAnyTime => T("Vous pouvez le désactiver à tout moment.", "You can turn it off at any time.");
 
     // ── Étape 2 — comment utiliser ────────────────────────────────────
     public static string Onboarding_Step2Title => T($"Comment utiliser {Product}", $"How to use {Product}");
