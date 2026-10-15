@@ -133,8 +133,9 @@ public class MiniKeyboardRendererTests : IDisposable
         Assert.All(tout, k => Assert.Equal(MiniKeyState.Off, k.State));
         Assert.Equal("é", tout.Single(k => k.Key.Scancode == ScanDigit2).Label);
         Assert.Equal("W", tout.Single(k => k.Key.Scancode == 0x2C).Label);   // la touche gravée W est KeyZ
-        Assert.Equal("ù", tout.Single(k => k.Key.Scancode == 0x28).Label);
-        Assert.Equal("²", tout.Single(k => k.Key.Scancode == 0x29).Label);
+        // Là où AZERTY Global tape autre chose que la gravure : son signe (15/10).
+        Assert.Equal("´", tout.Single(k => k.Key.Scancode == 0x28).Label);
+        Assert.Equal("@", tout.Single(k => k.Key.Scancode == 0x29).Label);
         Assert.All(tout.Where(k => k.IsFunction), k => Assert.Equal("", k.Label));
         Assert.Equal("", tout.Single(k => k.Key.Scancode == 0x39).Label);   // la barre d'espace
     }
