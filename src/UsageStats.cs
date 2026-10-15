@@ -54,7 +54,7 @@ static class UsageStats
     // Profondeur d'exclusion (non persistée). Tant qu'elle est > 0, RecordEmittedText
     // n'enregistre RIEN : ni minute active, ni jour actif, ni caractère enrichi.
     // Posée par le module d'apprentissage du tutoriel (décision d'Antoine du 2026-09-21,
-    // observée en VM : les 6 exercices produisent 21 caractères enrichis pour un seuil
+    // observée en VM : les 6 exercices d'alors produisaient 21 caractères enrichis pour un seuil
     // de 20, donc l'onboarding déclenchait à lui seul la sollicitation d'avis). Un
     // parcours imposé à l'installation ne prouve aucun usage. ⛔ Les Leçons
     // (LessonsWindow) ne la posent pas : elles sont choisies, elles comptent.

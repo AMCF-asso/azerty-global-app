@@ -95,6 +95,16 @@ public partial class KeyboardContextBench
                     // Leçons : la surface de frappe unique et le mode Libre (lot Leçons).
                     AddLessonSurfaceStates(attempts, target, layout, mapper, hook);
 
+                    // Leçons : la page « Aujourd'hui » de l'accueil B, sans progression puis avec
+                    // des caractères à revoir.
+                    attempts.Add(("lecons-aujourdhui-vide", () => CaptureLessonsHome(target, "lecons-aujourdhui-vide", layout, mapper, hook, "")));
+                    attempts.Add(("lecons-aujourdhui-revision", () => CaptureLessonsHome(target, "lecons-aujourdhui-revision", layout, mapper, hook, "Éœ«—’")));
+                    // « Votre carte » : la touche de l'accent aigu, ɓ à revoir et ó tapé (maquette B).
+                    attempts.Add(("lecons-carte", () => CaptureLessonsHome(target, "lecons-carte", layout, mapper, hook, "ɓ", seen: "óÉ«", page: "Map")));
+                    // « Votre texte » : l'exemple wolof de la maquette, ë déjà tapé et ŋ à revoir.
+                    attempts.Add(("lecons-texte", () => CaptureLessonsHome(target, "lecons-texte", layout, mapper, hook, "ŋ", seen: "ë—",
+                        page: "Text", text: "Jërëjëf, Ndey Ñaŋ — Ndar 🙏")));
+
                     foreach (var (name, run) in attempts)
                     {
                         if (!BancCapture.Wanted(name))
@@ -164,6 +174,47 @@ public partial class KeyboardContextBench
     }
 
     /// <summary>
+    /// Accueil des Leçons, page « Aujourd'hui » : posée par réflexion comme dans
+    /// LessonsHomeWindowTests, sans <c>Show()</c>. Chaque caractère de <paramref name="due"/> est
+    /// tapé de travers puis juste, donc échu aussitôt (révision du jour et cornes de la carte) ;
+    /// chaque caractère de <paramref name="seen"/> est tapé juste, donc vu sans être échu.
+    /// </summary>
+    private static void CaptureLessonsHome(BancCapture.Target target, string slug, Layout layout, KeyMapper mapper,
+        KeyboardHook hook, string due, string seen = "", string page = "Today", string? text = null)
+    {
+        ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
+        var window = new LessonsWindow(layout, mapper, hook);
+        try
+        {
+            var progress = BancCapture.Field<LessonProgressStore>(window, "_progress");
+            foreach (var (c, wrongFirst) in due.Select(c => (c, true)).Concat(seen.Select(c => (c, false))))
+            {
+                if (!GestureMastery.IsTracked(c))
+                    throw new InvalidOperationException($"« {c} » n'est pas suivi par geste : le produit ne l'enregistre jamais");
+                var stats = new LessonAttemptStats(() => DateTimeOffset.UtcNow);
+                if (wrongFirst) stats.RecordChar('~', c);
+                stats.RecordChar(c, c);
+                progress.RecordGestures(stats, typed => typed == c);
+            }
+            var pageType = typeof(LessonsWindow).GetNestedType("HomePage", System.Reflection.BindingFlags.NonPublic)!;
+            BancCapture.SetField(window, "_homePage", Enum.Parse(pageType, page));
+            if (text != null) BancCapture.Call(window, "HomeTextInsert", text); // champ de « Votre texte »
+            BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
+            IntPtr hwnd = window.Handle;
+            Win32.ShowWindow(hwnd, 1);
+            int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
+            BancCapture.SetField(window, "_visible", true);
+            Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
+            BancCapture.MarkActive(hwnd);
+            target.Shoot(hwnd, slug, windowDpi);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    /// <summary>
     /// Indice demandé : le bouton reste allumé 1 s (HINT_FLASH_MS), et la capture tombait avant
     /// ou après selon le runner (lecons-indice-etape2, 01/10). Son minuteur est coupé : le
     /// bouton reste allumé, comme juste après le clic.
@@ -191,6 +242,18 @@ public partial class KeyboardContextBench
             Win32.ShowWindow(hwnd, 8); // SW_SHOWNA
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             target.Shoot(hwnd, "clavier-virtuel", windowDpi);
+
+            // Les trois états de la maquette A : AltGr tenu, touche morte en attente, geste
+            // venu de la recherche (Ź : la touche morte puis Maj + Z, pastilles 1 et 2).
+            keyboard.UpdateState(false, true, false, false, false, null);
+            target.Shoot(hwnd, "clavier-virtuel-altgr", windowDpi);
+            keyboard.UpdateState(false, false, false, false, false, "dk_acute");
+            target.Shoot(hwnd, "clavier-virtuel-morte", windowDpi);
+            keyboard.UpdateState(false, false, false, false, false, null);
+            BancCapture.SetField(keyboard, "_visible", true); // HighlightMethod n'agit que fenêtre visible
+            var entry = CharacterIndex.Shared.Entries.First(e => e.Character == "Ź");
+            keyboard.HighlightMethod(entry.Preferred);
+            target.Shoot(hwnd, "clavier-virtuel-geste", windowDpi);
         }
         finally
         {
@@ -202,7 +265,8 @@ public partial class KeyboardContextBench
     /// Mini-tutoriel de l'accueil, sans propriétaire. <c>Show()</c> n'est pas appelé : il
     /// arracherait le premier plan au poste (AttachThreadInput, relances par minuterie), et
     /// une perte de focus affiche « Cliquez pour reprendre » au hasard du poste. La fenêtre est
-    /// affichée sans activation, dans l'état « focus présent » où elle naît.
+    /// affichée sans activation, dans l'état « focus présent » où elle naît : sa 1re page, le
+    /// choix des usages, aucune case cochée.
     /// </summary>
     private static void CaptureLearningModule(BancCapture.Target target, Layout layout, KeyMapper mapper, KeyboardHook hook)
     {
@@ -240,8 +304,24 @@ public partial class KeyboardContextBench
             BancCapture.Call(search, "ResizeToFitResults");
             target.Shoot(hwnd, "recherche-vide", windowDpi);
 
-            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(search, "_hEdit"), L.IsEnglish ? "acute" : "aigu");
+            IntPtr edit = BancCapture.Field<IntPtr>(search, "_hEdit");
+            Win32.SetWindowTextW(edit, L.IsEnglish ? "acute" : "aigu");
             target.Shoot(hwnd, "recherche", windowDpi);
+
+            // Refonte 1.3.0 : le choix descendu aux flèches, comme la maquette (4e ligne), puis
+            // une requête aux gestes à deux modificateurs et une requête sans correspondance.
+            // Les flèches passent par le sous-classement du champ, comme au clavier.
+            for (int i = 0; i < 3; i++)
+                Win32.SendMessageW(edit, Win32.WM_KEYDOWN, (IntPtr)0x28 /* VK_DOWN */, IntPtr.Zero);
+            target.Shoot(hwnd, "recherche-choix", windowDpi);
+
+            Win32.SetWindowTextW(edit, L.IsEnglish ? "quotation" : "guillemet");
+            for (int i = 0; i < 2; i++)
+                Win32.SendMessageW(edit, Win32.WM_KEYDOWN, (IntPtr)0x28 /* VK_DOWN */, IntPtr.Zero);
+            target.Shoot(hwnd, "recherche-guillemet", windowDpi);
+
+            Win32.SetWindowTextW(edit, "zzqx");
+            target.Shoot(hwnd, "recherche-aucun", windowDpi);
         }
         finally
         {

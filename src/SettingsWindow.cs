@@ -1,18 +1,26 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Text;
 namespace AZERTYGlobal;
 
-sealed class SettingsWindow : IDisposable
+/// <summary>
+/// Fenêtre Paramètres. Refonte 1.3.0 (maquette « onglets en tête », validée par Antoine le
+/// 07/10) : papier, polices AG, bande d'onglets Win32 dont l'onglet ouvert porte le trait
+/// épais bleu, raccourcis écrits en geste. Les contrôles restent natifs (onglets, cases,
+/// boutons radio, boutons, liste) : ils gardent rôle, état, focus et clavier ; seul leur
+/// dessin change, dans <c>SettingsWindow.Paper.cs</c>.
+/// </summary>
+sealed partial class SettingsWindow : IDisposable
 {
     private const uint WS_GROUP = 0x00020000;
     private const uint EM_SETREADONLY = 0x00CF;
 
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
-    private const uint CLR_KEY_BORDER_FOCUS = LightTheme.Accent;
-    private static string ShortcutCaptureHint => L.Settings_ShortcutCaptureHint;
+    // Lot « clarté » (07/10) : l'invite dit quelles touches sont acceptées et qu'Échap annule.
+    private static string ShortcutCaptureHint => L.SettingsClarity_CaptureHint;
 
     private const int IDC_TAB_STRIP = 3120;
+    private const int IDC_VALIDATION = 3121;
     private const int IDC_EDIT_KEYBOARD = 3101;
     private const int IDC_EDIT_SEARCH = 3102;
     private const int IDC_CHK_AUTOSTART = 3103;
@@ -31,99 +39,129 @@ sealed class SettingsWindow : IDisposable
     private const int IDC_RADIO_COMPAT_AUTO = 3115;
     private const int IDC_RADIO_COMPAT_FORCEON = 3116;
     private const int IDC_RADIO_COMPAT_FORCEOFF = 3117;
+    // Onglet « Leçons » (11/10) : « Touches à taper ». Les boutons radio d'une liste ont des
+    // identifiants consécutifs à partir de la base, dans l'ordre de LessonNotations.WithKeyboard
+    // et WithoutKeyboard (au plus dix par liste).
+    private const int IDC_RADIO_NOTATION_WITH = 3122;
+    private const int IDC_RADIO_NOTATION_WITHOUT = 3132;
+    private const int IDC_CHK_LESSON_KEYBOARD = 3142;
+    private const int IDC_CHK_HIDE_MASTERED = 3143;
 
-    // Listbox Win32 (section Apps suspendues)
+    // Listbox Win32 (section Apps suspendues), dessinée par la fenêtre : LBS_HASSTRINGS garde
+    // le texte de chaque ligne pour les lecteurs d'écran.
     private const uint LBS_NOTIFY = 0x0001;
+    private const uint LBS_OWNERDRAWFIXED = 0x0010;
+    private const uint LBS_HASSTRINGS = 0x0040;
     private const uint LBS_NOINTEGRALHEIGHT = 0x0100;
     private const uint LB_ADDSTRING = 0x0180;
     private const uint LB_RESETCONTENT = 0x0184;
     private const uint LB_SETCURSEL = 0x0186;
     private const uint LB_GETCURSEL = 0x0188;
+    private const uint LB_GETCOUNT = 0x018B;
+    private const uint LB_SETITEMHEIGHT = 0x01A0;
     private const int LBN_SELCHANGE = 1;
     private const uint WS_VSCROLL = 0x00200000;
-    private const uint WS_BORDER = 0x00800000;
+    private const uint SS_OWNERDRAW = 0x000D;
 
-    // 240 → 300 le 2026-07-16 (smoke test) : « Virtual keyboard » était tronqué en EN
-    // et la fenêtre était disproportionnée (deux fois plus haute que large).
-    // 470 → 680 le 2026-07-30 : section « Apps suspendues » + opt-in Défi du jour (v1.2.0).
-    // 300 → 340 le 2026-09-28 (lot visuel 1.3.0) : le corps passe de 11 à 14 px.
-    private const int BASE_WIN_W = 340;
-    private const int BASE_WIN_H = 680;
+    // 240 → 300 le 2026-07-16, 300 → 340 le 2026-09-28, 340 → 380 le 2026-10-07 (refonte
+    // 1.3.0) : la largeur de la maquette « onglets en tête ».
+    private const int BASE_WIN_W = 380;
+    private const int BASE_WIN_H = 480;
 
-    private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Text;
-    private const uint CLR_TEXT = LightTheme.Text;
-    private const uint CLR_MUTED = LightTheme.TextSecondary;
-    private const uint CLR_VERSION = LightTheme.TextSecondary;
-    private const uint CLR_PANEL_BG = LightTheme.Card;
-    private const uint CLR_PANEL_BORDER = LightTheme.Border;
-    private const uint CLR_LINK = LightTheme.Accent;
-    private const uint CLR_INLINE_HIGHLIGHT = LightTheme.Accent;
-    private const uint CLR_VALID = LightTheme.Success;
-    private const uint CLR_INVALID = LightTheme.Error;
-    private const uint CLR_KEY_BG = LightTheme.Field;
-    private const uint CLR_KEY_BORDER = LightTheme.ControlBorder;
-    private const uint CLR_KEY_BORDER_INVALID = LightTheme.Error;
-    private const uint CLR_SEPARATOR = LightTheme.Border;
+    // Jetons de la maquette (PaperTheme), un rôle par constante.
+    private const uint CLR_BG = PaperTheme.Paper;
+    private const uint CLR_SURFACE = PaperTheme.Surface;
+    private const uint CLR_TEXT = PaperTheme.Ink;
+    private const uint CLR_MUTED = PaperTheme.TextSecondary;
+    private const uint CLR_BORDER = PaperTheme.Border;
+    private const uint CLR_ACTION = PaperTheme.Action;
+    private const uint CLR_PALE = PaperTheme.Pale;
+    private const uint CLR_INVALID = PaperTheme.Error;
+
+    /// <summary>Où s'écrit le message du dernier geste. Chaque nature a sa place dans la
+    /// maquette : l'invite de capture et un refus de raccourci sous les raccourcis, un refus de
+    /// compatibilité sous les boutons radio, une confirmation dans le pied.</summary>
+    private enum MessagePlace { None, Shortcuts, Compat, Footer }
 
     private struct LayoutInfo
     {
         public int Margin;
         public Win32.RECT TabStripRect;
-        public int HeaderTitleX;
-        public int HeaderTitleY;
-        public int HeaderDividerY;
-        public Win32.RECT LogoRect;
-        public Win32.RECT ShortcutsPanel;
-        public int ShortcutsLabelX;
-        public int ShortcutsLabelWidth;
-        public int ShortcutsShortcutX;
-        public int ShortcutsShortcutWidth;
-        public int KeyboardRowY;
-        public int SearchRowY;
+        public Win32.RECT ShortcutsTitleRect;
+        public Win32.RECT KeyboardRowRect;
+        public Win32.RECT SearchRowRect;
+        // La case dessinée, et le contrôle qui la porte avec son contour de focus.
         public Win32.RECT KeyboardBoxRect;
         public Win32.RECT SearchBoxRect;
         public Win32.RECT KeyboardEditRect;
         public Win32.RECT SearchEditRect;
+        public MessagePlace MessagePlace;
         public Win32.RECT ValidationRect;
         public Win32.RECT ResetRect;
-        public Win32.RECT PreferencesPanel;
+        public Win32.RECT PreferencesTitleRect;
         public Win32.RECT AutoStartRect;
         public Win32.RECT NotificationsRect;
         public Win32.RECT ManagedNotificationsRect;
         public Win32.RECT OnboardingRect;
         public Win32.RECT ManagedOnboardingRect;
         public Win32.RECT TrainingRect;
-        public Win32.RECT LanguagePanel;
+        public Win32.RECT LanguageTitleRect;
         public Win32.RECT LanguageFrRect;
         public Win32.RECT LanguageEnRect;
         public Win32.RECT ManagedLanguageRect;
-        public Win32.RECT WindowsPanel;
+        public Win32.RECT WindowsTitleRect;
         public Win32.RECT ResetVirtualKeyboardWindowRect;
         public Win32.RECT ResetLessonsWindowRect;
-        public Win32.RECT CompatPanel;
+        public Win32.RECT CompatTitleRect;
+        public Win32.RECT CompatListFrame;
         public Win32.RECT CompatListRect;
         public Win32.RECT CompatAddRect;
         public Win32.RECT CompatRemoveRect;
+        public Win32.RECT CompatModeLabelRect;
+        public Win32.RECT CompatAutoHintRect;
+        public Win32.RECT CompatForceOnHintRect;
+        public Win32.RECT CompatForceOffHintRect;
         public Win32.RECT CompatAutoRect;
         public Win32.RECT CompatForceOnRect;
         public Win32.RECT CompatForceOffRect;
+        // Sous-titres des onglets « Général » et « Langue » (lot « clarté », 07/10).
+        public Win32.RECT KeyboardHintRect;
+        public Win32.RECT SearchHintRect;
+        public Win32.RECT AutoStartHintRect;
+        public Win32.RECT NotificationsHintRect;
+        public Win32.RECT OnboardingHintRect;
+        public Win32.RECT ResetVirtualKeyboardHintRect;
+        public Win32.RECT ResetLessonsHintRect;
+        // La version, au pied de l'onglet « Langue et maintenance » (QCM du 11/10, 20 h 15).
+        public Win32.RECT VersionRect;
+        // Onglet « Leçons » (11/10). Les listes de rectangles sont nulles hors de cet onglet :
+        // les lire par NotationRect, qui rend un rectangle vide.
+        public Win32.RECT NotationTitleRect;
+        public Win32.RECT NotationWithLabelRect;
+        public Win32.RECT NotationWithoutLabelRect;
+        public Win32.RECT[]? NotationWithRects;
+        public Win32.RECT[]? NotationWithoutRects;
+        public Win32.RECT LessonKeyboardRect;
+        public Win32.RECT HideMasteredRect;
         // Hauteur totale du contenu, marge basse comprise, avant tout défilement.
         // C'est elle qui décide de la hauteur de la fenêtre : le modèle v2.0.0 veut
         // une fenêtre qui mesure son contenu, jamais une constante (audit du
         // 2026-08-28, § 17 — BASE_WIN_H était devenue fausse à chaque section ajoutée).
         public int ContentHeight;
-        // GuideRect et CloseButtonRect retirés — la croix système suffit
     }
 
-    /// <summary>Les trois onglets de la fenêtre. L'ordre est celui de la bande.</summary>
-    private enum SettingsTab { General = 0, Applications = 1, LanguageMaintenance = 2 }
+    /// <summary>Les onglets de la fenêtre. L'ordre est celui de la bande. « Leçons » (11/10) est
+    /// ajouté en dernier : le banc de captures désigne les trois premiers par leur numéro.</summary>
+    private enum SettingsTab { General = 0, Applications = 1, LanguageMaintenance = 2, Lessons = 3 }
+
+    private const int TabCount = 4;
 
     // Onglet affiché. Volontairement NON persisté : la fenêtre rouvre toujours sur
     // « Général », qui porte ce qu'on vient changer neuf fois sur dix. Mémoriser le
     // dernier onglet ferait rouvrir sur « Langue » après un unique passage.
     private SettingsTab _activeTab = SettingsTab.General;
     private IntPtr _hWndTabStrip;
+    private IntPtr _hWndLabelTabs;
 
     private IntPtr _hWnd;
     private IntPtr _hWndEditKeyboard;
@@ -163,20 +201,29 @@ sealed class SettingsWindow : IDisposable
     private IntPtr _hWndRadioCompatAuto;
     private IntPtr _hWndRadioCompatForceOn;
     private IntPtr _hWndRadioCompatForceOff;
-    // Noms de process affichés dans la listbox, dans l'ordre des index de la liste
+    // Onglet « Leçons » : une liste de boutons radio par état du clavier (dans l'ordre de
+    // LessonNotations), puis les deux cases.
+    private IntPtr[] _hWndNotationWith = Array.Empty<IntPtr>();
+    private IntPtr[] _hWndNotationWithout = Array.Empty<IntPtr>();
+    private IntPtr _hWndChkLessonKeyboard;
+    private IntPtr _hWndChkHideMastered;
+    // Noms de process affichés dans la listbox, dans l'ordre des index de la liste, et
+    // leur mode (« forceOn » ou « forceOff »), que la ligne écrit à droite.
     private readonly List<string> _compatProcesses = new();
+    private readonly List<string> _compatModes = new();
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Win32.SUBCLASSPROC _shortcutSubclassProc;
+    private readonly Win32.SUBCLASSPROC _tabSubclassProc;
     private IntPtr _focusedShortcut;
 
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
-    private readonly IntPtr _hPanelBrush;
-    private readonly IntPtr _hKeyBrush;
+    // Fond blanc de la liste des applications (WM_CTLCOLORLISTBOX).
+    private readonly IntPtr _hSurfaceBrush;
 
+    // GDI+ : cercles des boutons radio et coche des cases, lissés.
     private IntPtr _gdipToken;
-    private IntPtr _gdipLogo;
 
     private bool _visible;
     private bool _inputPaused;
@@ -184,6 +231,10 @@ sealed class SettingsWindow : IDisposable
     private bool _searchValid = true;
     private uint _keyboardVk;
     private uint _searchVk;
+    // Touche montrée par chaque case : celle en place, ou celle qu'un refus vient de
+    // nommer (0 : rien de montré encore, la touche en place).
+    private uint _keyboardShownVk;
+    private uint _searchShownVk;
     private bool _showCaptureHint;
     private string _validationMessage = string.Empty;
     private bool _validationRefused;
@@ -205,21 +256,30 @@ sealed class SettingsWindow : IDisposable
     private bool _reserveScrollBar;
     private const uint SIF_DISABLENOSCROLL = 0x0008;
 
-    private IntPtr _hFontTitle;
-    private IntPtr _hFontVersion;
-    private IntPtr _hFontPanelTitle;
-    private IntPtr _hFontText;
-    private IntPtr _hFontBold;
-    private IntPtr _hFontEdit;
-    private IntPtr _hFontLinkStrong;
-    private IntPtr _hFontSmall;
-    private IntPtr _hFontButton;
+    // Polices de la maquette (px à 96 DPI), portées à l'échelle courante. Les HFONT sont
+    // partagées et gardées par AppFonts : ne jamais les détruire.
+    private FontSpec FontTab => FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, _dpiScale);
+    private FontSpec FontTabIdle => FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontVersion => FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontSectionTitle => FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, _dpiScale);
+    private FontSpec FontBody => FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontSmall => FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontSmallStrong => FontSpec.Of(AppFonts.Text, 13, TypeRamp.Semibold, _dpiScale);
+    private FontSpec FontButton => FontSpec.Of(AppFonts.Text, 14, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontListName => FontSpec.Of(AppFonts.Text, 14, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontListNameChosen => FontSpec.Of(AppFonts.Text, 14, TypeRamp.Semibold, _dpiScale);
+    private FontSpec FontHeld => FontSpec.Of(AppFonts.Text, 12, TypeRamp.Semibold, _dpiScale);
+    private FontSpec FontKey => FontSpec.Of(AppFonts.Mono, 15, TypeRamp.Semibold, _dpiScale);
 
     public bool IsVisible => _visible;
     public Action? ShortcutChanged;
     /// <summary>Déclenché après tout changement d'override de compatibilité depuis cette
     /// fenêtre — TrayApplication doit relancer ForegroundMonitor.Recompute().</summary>
     public Action? CompatibilityOverridesChanged;
+    /// <summary>Déclenché après un changement de l'onglet « Leçons » (notation, clavier sous le
+    /// texte, masquage des gestes maîtrisés) : la fenêtre Leçons, si elle est ouverte, doit
+    /// relire ces réglages et se redessiner. À brancher dans TrayApplication.</summary>
+    public Action? LessonDisplayChanged;
 
     // Abonnement AppLanguageChanged (bascule initiée depuis le tray ou l'onboarding) —
     // désabonné dans Dispose (événement statique, sinon référence pendante).
@@ -229,8 +289,8 @@ sealed class SettingsWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         _shortcutSubclassProc = ShortcutSubclassProc;
-        _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
-        _hKeyBrush = Win32.CreateSolidBrush(CLR_KEY_BG);
+        _tabSubclassProc = TabStripSubclassProc;
+        _hSurfaceBrush = Win32.CreateSolidBrush(CLR_SURFACE);
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
@@ -239,10 +299,8 @@ sealed class SettingsWindow : IDisposable
 
         var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
         Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
-        _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(SettingsWindow), ProductIdentity.LogoResourceName);
         LoadShortcutStateFromConfig();
 
-        CreateFonts();
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
@@ -271,14 +329,18 @@ sealed class SettingsWindow : IDisposable
     }
 
     /// <summary>Mesures de texte de la mise en page (audit du 25/09, F-12). Elles ne changent
-    /// qu'avec les polices, et avec la langue pour le bouton de réinitialisation : GetLayout,
-    /// appelé cinq fois par remesure, n'ouvre plus de DC pour les reprendre.</summary>
+    /// qu'avec l'échelle et avec la langue : GetLayout, appelé plusieurs fois par remesure,
+    /// n'ouvre plus de DC pour les reprendre. Hauteurs de ligne (montant + jambage) et
+    /// largeurs des libellés traduits.</summary>
     private struct LineMetrics
     {
-        public int Title, Version, PanelTitle, Text, Bold, Link, Small, ResetText;
+        public int SectionTitle, Body, Small, Button, Version, Tab;
+        public int ResetText, AddText, RemoveText, ResetKeyboardText, ResetLessonsText;
+        public int KeyAdvance;
+        public int TabStripLeft;
     }
 
-    private LineMetrics? _metrics; // remis à zéro par CreateFonts et RefreshLanguageTexts
+    private LineMetrics? _metrics; // remis à zéro par RecreateFonts et RefreshLanguageTexts
 
     private LineMetrics Metrics => _metrics ??= MeasureLineMetrics();
 
@@ -287,16 +349,26 @@ sealed class SettingsWindow : IDisposable
         IntPtr hdc = Win32.GetDC(_hWnd);
         try
         {
+            int Line(FontSpec font)
+            {
+                var (ascent, descent) = PaperText.Metrics(hdc, font);
+                return ascent + descent;
+            }
             return new LineMetrics
             {
-                Title = MeasureSingleLineHeight(hdc, _hFontTitle),
-                Version = MeasureSingleLineHeight(hdc, _hFontVersion),
-                PanelTitle = MeasureSingleLineHeight(hdc, _hFontPanelTitle),
-                Text = MeasureSingleLineHeight(hdc, _hFontText),
-                Bold = MeasureSingleLineHeight(hdc, _hFontBold),
-                Link = MeasureSingleLineHeight(hdc, _hFontLinkStrong),
-                Small = MeasureSingleLineHeight(hdc, _hFontSmall),
-                ResetText = MeasureSingleLineWidth(hdc, _hFontButton, L.Settings_LinkResetDefaults),
+                SectionTitle = Line(FontSectionTitle),
+                Body = Line(FontBody),
+                Small = Line(FontSmall),
+                Button = Line(FontButton),
+                Version = Line(FontVersion),
+                Tab = Line(FontTab),
+                ResetText = PaperText.Width(hdc, L.Settings_LinkResetDefaults, FontButton),
+                AddText = PaperText.Width(hdc, L.Settings_CompatAdd, FontButton),
+                RemoveText = PaperText.Width(hdc, L.Settings_CompatRemove, FontButton),
+                ResetKeyboardText = PaperText.Width(hdc, L.Settings_ResetVirtualKeyboard, FontButton),
+                ResetLessonsText = PaperText.Width(hdc, L.Settings_ResetLessonsModule, FontButton),
+                KeyAdvance = PaperText.Width(hdc, "0", FontKey),
+                TabStripLeft = MeasureTabStripLeft(hdc),
             };
         }
         finally
@@ -305,48 +377,28 @@ sealed class SettingsWindow : IDisposable
         }
     }
 
-    private void CreateFonts()
-    {
-        _metrics = null;
-        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontVersion = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontPanelTitle = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontBold = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontEdit = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontLinkStrong = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 1, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontSmall = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-    }
-
-    private void DestroyFonts()
-    {
-        Win32.DeleteObject(_hFontTitle);
-        Win32.DeleteObject(_hFontVersion);
-        Win32.DeleteObject(_hFontPanelTitle);
-        Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontBold);
-        Win32.DeleteObject(_hFontEdit);
-        Win32.DeleteObject(_hFontLinkStrong);
-        Win32.DeleteObject(_hFontSmall);
-        Win32.DeleteObject(_hFontButton);
-    }
-
+    /// <summary>Les polices n'ont rien à créer ni à détruire (AppFonts les garde) : changer
+    /// d'échelle, c'est oublier les mesures et rendre aux contrôles les polices nouvelles.</summary>
     private void RecreateFonts()
     {
-        DestroyFonts();
-        CreateFonts();
+        _metrics = null;
         ApplyFontsToControls();
     }
 
     private void ApplyFontsToControls()
     {
-        // RecreateFonts supprime les anciennes polices : chaque contrôle de la table reçoit
-        // la nouvelle, bande d'onglets comprise.
+        // Chaque contrôle de la table reçoit la police de l'échelle courante, bande
+        // d'onglets comprise : elle mesure ses onglets avec.
+        ApplyTabStripPadding();
         foreach (var control in _controls)
             if (control.Font != null)
                 Win32.SendMessageW(control.Handle, Win32.WM_SETFONT, control.Font(), (IntPtr)1);
+        if (_hWndCompatList != IntPtr.Zero)
+            Win32.SendMessageW(_hWndCompatList, LB_SETITEMHEIGHT, IntPtr.Zero, (IntPtr)CompatRowHeight);
     }
+
+    /// <summary>Hauteur d'une ligne de la liste des applications.</summary>
+    private int CompatRowHeight => S(36);
 
     private void CreateMainWindow()
     {
@@ -370,6 +422,7 @@ sealed class SettingsWindow : IDisposable
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd, EnsureFocusVisible);
+        // Barre de titre claire, sur le papier.
         NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
@@ -388,6 +441,8 @@ sealed class SettingsWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
+        // La bande d'onglets n'avait pas de nom accessible (suivi 1.3.1) : même étiquette N8.
+        _hWndLabelTabs = CreateHiddenLabel(hInstance, L.SettingsPaper_TabsName);
         CreateTabStrip(hInstance);
 
         _hWndLabelKeyboard = CreateHiddenLabel(hInstance, L.Settings_ShortcutLabelKeyboard);
@@ -408,10 +463,13 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndEditSearch, EM_SETREADONLY, (IntPtr)1, IntPtr.Zero);
         Win32.SetWindowSubclass(_hWndEditSearch, _shortcutSubclassProc, (UIntPtr)4, IntPtr.Zero);
 
+        // Le message du dernier geste : un STATIC dont le texte reste lisible par les
+        // lecteurs d'écran, dessiné par la fenêtre (SS_OWNERDRAW) à la place que lui donne
+        // sa nature (invite, refus, confirmation dans le pied).
         _hWndValidation = Win32.CreateWindowExW(0, "STATIC", "",
-            Win32.WS_CHILD | Win32.WS_VISIBLE,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_OWNERDRAW,
             0, 0, 0, 0,
-            _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+            _hWnd, (IntPtr)IDC_VALIDATION, hInstance, IntPtr.Zero);
 
         _hWndLinkReset = Win32.CreateWindowExW(0, "BUTTON", L.Settings_LinkResetDefaults,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
@@ -489,10 +547,13 @@ sealed class SettingsWindow : IDisposable
             _hWnd, (IntPtr)IDC_RESET_LESSONS_WINDOW, hInstance, IntPtr.Zero);
 
         // ── Section « Apps suspendues » (v1.2.0) ─────────────────────
+        // La liste se dessine à la manière de la recherche : nom à gauche, mode à droite,
+        // ligne choisie teintée et marquée du trait d'action. Le cadre est peint par la
+        // fenêtre (pas de WS_BORDER, dont le trait système est noir).
         _hWndLabelCompat = CreateHiddenLabel(hInstance, L.Settings_SectionCompat);
         _hWndCompatList = Win32.CreateWindowExW(0, "LISTBOX", "",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP |
-            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_BORDER,
+            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LIST_COMPAT, hInstance, IntPtr.Zero);
 
@@ -523,8 +584,113 @@ sealed class SettingsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_RADIO_COMPAT_FORCEOFF, hInstance, IntPtr.Zero);
 
+        // ── Onglet « Leçons » (11/10) : touches à taper ──────────────
+        // Deux listes de boutons radio, une notation mémorisée par état du clavier, puis deux
+        // cases. WS_GROUP sur le premier radio de chaque liste et sur la première case : il
+        // termine le groupe précédent, sinon cocher un mode décocherait ceux de l'autre liste.
+        _hWndNotationWith = CreateNotationRadios(hInstance, LessonNotations.WithKeyboard, IDC_RADIO_NOTATION_WITH);
+        _hWndNotationWithout = CreateNotationRadios(hInstance, LessonNotations.WithoutKeyboard, IDC_RADIO_NOTATION_WITHOUT);
+        _hWndChkLessonKeyboard = Win32.CreateWindowExW(0, "BUTTON", L.Notation_KeyboardUnderText,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | WS_GROUP | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_LESSON_KEYBOARD, hInstance, IntPtr.Zero);
+        _hWndChkHideMastered = Win32.CreateWindowExW(0, "BUTTON", L.Notation_HideMastered,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_HIDE_MASTERED, hInstance, IntPtr.Zero);
+        RefreshLessonControls();
+
         RefreshCompatList(selectProcess: null);
         _controls = DescribeControls();
+        PreparePaperButtons();
+        SetCompatDescriptions();
+        SetSettingDescriptions();
+    }
+
+    /// <summary>Une liste de boutons radio de notation : un par notation de l'état, libellé par
+    /// <see cref="L.Notation_Name"/>, identifiants consécutifs à partir de <paramref name="firstId"/>.</summary>
+    private IntPtr[] CreateNotationRadios(IntPtr hInstance, LessonNotation[] notations, int firstId)
+    {
+        var handles = new IntPtr[notations.Length];
+        for (int i = 0; i < notations.Length; i++)
+        {
+            uint style = Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTORADIOBUTTON | Win32.WS_TABSTOP;
+            if (i == 0) style |= WS_GROUP;
+            handles[i] = Win32.CreateWindowExW(0, "BUTTON", L.Notation_Name(notations[i]), style,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)(firstId + i), hInstance, IntPtr.Zero);
+        }
+        return handles;
+    }
+
+    /// <summary>Les neuf contrôles de l'onglet « Leçons » pour la table des contrôles : les
+    /// radios d'abord, liste « avec » puis liste « sans », puis les deux cases.</summary>
+    private IEnumerable<ControlSlot> LessonSlots()
+    {
+        const SettingsTab Lessons = SettingsTab.Lessons;
+        for (int i = 0; i < _hWndNotationWith.Length; i++)
+        {
+            int index = i;
+            yield return new(_hWndNotationWith[index], Lessons, () => FontBody.Handle,
+                l => NotationRect(l.NotationWithRects, index), () => L.Notation_Name(LessonNotations.WithKeyboard[index]));
+        }
+        for (int i = 0; i < _hWndNotationWithout.Length; i++)
+        {
+            int index = i;
+            yield return new(_hWndNotationWithout[index], Lessons, () => FontBody.Handle,
+                l => NotationRect(l.NotationWithoutRects, index), () => L.Notation_Name(LessonNotations.WithoutKeyboard[index]));
+        }
+        yield return new(_hWndChkLessonKeyboard, Lessons, () => FontBody.Handle,
+            l => l.LessonKeyboardRect, () => L.Notation_KeyboardUnderText);
+        yield return new(_hWndChkHideMastered, Lessons, () => FontBody.Handle,
+            l => l.HideMasteredRect, () => L.Notation_HideMastered);
+    }
+
+    private static Win32.RECT NotationRect(Win32.RECT[]? rects, int index) =>
+        rects is not null && index < rects.Length ? rects[index] : default;
+
+    /// <summary>Remet les radios et les cases de l'onglet « Leçons » d'après la config. Appelé à
+    /// la création et à chaque ouverture : le menu « Affichage » de la fenêtre Leçons a pu les
+    /// changer pendant que Paramètres était fermé.</summary>
+    private void RefreshLessonControls()
+    {
+        SetRadioGroup(_hWndNotationWith, LessonNotations.WithKeyboard, ConfigManager.LessonNotationWithKeyboard);
+        SetRadioGroup(_hWndNotationWithout, LessonNotations.WithoutKeyboard, ConfigManager.LessonNotationWithoutKeyboard);
+        SetCheck(_hWndChkLessonKeyboard, ConfigManager.LessonKeyboardVisible);
+        SetCheck(_hWndChkHideMastered, ConfigManager.LessonHideMastered);
+    }
+
+    private static void SetRadioGroup(IntPtr[] radios, LessonNotation[] notations, LessonNotation selected)
+    {
+        for (int i = 0; i < radios.Length; i++)
+            SetCheck(radios[i], notations[i] == selected);
+    }
+
+    private static void SetCheck(IntPtr hWnd, bool isChecked) =>
+        Win32.SendMessageW(hWnd, Win32.BM_SETCHECK, isChecked ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+
+    private static bool IsChecked(IntPtr hWnd) =>
+        Win32.SendMessageW(hWnd, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
+
+    /// <summary>Un clic dans l'onglet « Leçons » : le réglage s'applique tout de suite, comme
+    /// ceux des autres onglets (pas d'OK ni d'Annuler). Rend faux si l'identifiant n'est pas un
+    /// des siens.</summary>
+    private bool ApplyLessonCommand(int id)
+    {
+        int withIndex = id - IDC_RADIO_NOTATION_WITH;
+        int withoutIndex = id - IDC_RADIO_NOTATION_WITHOUT;
+        if (withIndex >= 0 && withIndex < LessonNotations.WithKeyboard.Length)
+            ConfigManager.SetLessonNotationFor(true, LessonNotations.WithKeyboard[withIndex]);
+        else if (withoutIndex >= 0 && withoutIndex < LessonNotations.WithoutKeyboard.Length)
+            ConfigManager.SetLessonNotationFor(false, LessonNotations.WithoutKeyboard[withoutIndex]);
+        else if (id == IDC_CHK_LESSON_KEYBOARD)
+            ConfigManager.SetLessonKeyboardVisible(IsChecked(_hWndChkLessonKeyboard));
+        else if (id == IDC_CHK_HIDE_MASTERED)
+            ConfigManager.SetLessonHideMastered(IsChecked(_hWndChkHideMastered));
+        else
+            return false;
+        LessonDisplayChanged?.Invoke();
+        return true;
     }
 
     /// <summary>
@@ -554,79 +720,79 @@ sealed class SettingsWindow : IDisposable
         const SettingsTab LangMaint = SettingsTab.LanguageMaintenance;
         return new ControlSlot[]
         {
-            // ⛔ La bande d'onglets doit rester dans la table : RecreateFonts supprime les
-            // anciennes polices, et un contrôle oublié garderait un HFONT détruit après un
-            // changement de DPI (geste 40 de la recette VM). Ses libellés, eux, passent par
-            // TCM_SETITEMW (SetTabText), pas par le texte de fenêtre.
-            new(_hWndTabStrip, null, () => _hFontText, l => l.TabStripRect),
+            // ⛔ La bande d'onglets doit rester dans la table : elle mesure ses onglets avec
+            // sa police, qui change avec l'échelle (geste 40 de la recette VM). Ses libellés,
+            // eux, passent par TCM_SETITEMW (SetTabText), pas par le texte de fenêtre.
+            new(_hWndTabStrip, null, () => FontTab.Handle, l => l.TabStripRect),
             // Étiquettes N8 jamais affichées : un texte, ni police ni place.
+            new(_hWndLabelTabs, null, null, null, () => L.SettingsPaper_TabsName),
             new(_hWndLabelKeyboard, null, null, null, () => L.Settings_ShortcutLabelKeyboard),
             new(_hWndLabelSearch, null, null, null, () => L.Settings_ShortcutLabelSearch),
             new(_hWndLabelCompat, null, null, null, () => L.Settings_SectionCompat),
 
-            new(_hWndEditKeyboard, General, () => _hFontEdit, l => l.KeyboardEditRect),
-            new(_hWndEditSearch, General, () => _hFontEdit, l => l.SearchEditRect),
-            // La ligne de validation sert les trois onglets : jamais masquée par onglet.
-            new(_hWndValidation, null, () => _hFontSmall, l => l.ValidationRect),
-            new(_hWndLinkReset, General, () => _hFontButton, l => l.ResetRect,
+            new(_hWndEditKeyboard, General, () => FontKey.Handle, l => l.KeyboardEditRect),
+            new(_hWndEditSearch, General, () => FontKey.Handle, l => l.SearchEditRect),
+            // La ligne de validation sert tous les onglets : jamais masquée par onglet.
+            new(_hWndValidation, null, () => FontSmall.Handle, l => l.ValidationRect),
+            new(_hWndLinkReset, General, () => FontButton.Handle, l => l.ResetRect,
                 () => L.Settings_LinkResetDefaults, PushButton: true),
-            new(_hWndChkAutoStart, General, () => _hFontBold, l => l.AutoStartRect, () => L.Settings_AutoStart),
-            new(_hWndChkNotifications, General, () => _hFontBold, l => l.NotificationsRect, () => L.Settings_Notifications),
-            new(_hWndManagedNotifications, General, () => _hFontSmall, l => l.ManagedNotificationsRect,
+            new(_hWndChkAutoStart, General, () => FontBody.Handle, l => l.AutoStartRect, () => L.Settings_AutoStart),
+            new(_hWndChkNotifications, General, () => FontBody.Handle, l => l.NotificationsRect, () => L.Settings_Notifications),
+            new(_hWndManagedNotifications, General, () => FontSmall.Handle, l => l.ManagedNotificationsRect,
                 () => L.Settings_ManagedByOrganization, () => _managedNotifications),
-            new(_hWndChkOnboarding, General, () => _hFontBold, l => l.OnboardingRect, () => L.Settings_OnboardingWindow),
-            new(_hWndManagedOnboarding, General, () => _hFontSmall, l => l.ManagedOnboardingRect,
+            new(_hWndChkOnboarding, General, () => FontBody.Handle, l => l.OnboardingRect, () => L.Settings_OnboardingWindow),
+            new(_hWndManagedOnboarding, General, () => FontSmall.Handle, l => l.ManagedOnboardingRect,
                 () => L.Settings_ManagedByOrganization, () => _managedOnboarding),
-            new(_hWndChkTraining, General, () => _hFontBold, l => l.TrainingRect,
+            new(_hWndChkTraining, General, () => FontBody.Handle, l => l.TrainingRect,
                 () => L.Challenge_OptIn, () => DailyChallenge.Enabled),
 
-            new(_hWndCompatList, Apps, () => _hFontText, l => l.CompatListRect),
-            new(_hWndCompatAdd, Apps, () => _hFontButton, l => l.CompatAddRect, () => L.Settings_CompatAdd, PushButton: true),
-            new(_hWndCompatRemove, Apps, () => _hFontButton, l => l.CompatRemoveRect, () => L.Settings_CompatRemove, PushButton: true),
-            new(_hWndRadioCompatAuto, Apps, () => _hFontBold, l => l.CompatAutoRect, () => L.Settings_CompatModeAuto),
-            new(_hWndRadioCompatForceOn, Apps, () => _hFontBold, l => l.CompatForceOnRect, () => L.Settings_CompatModeForceOn),
-            new(_hWndRadioCompatForceOff, Apps, () => _hFontBold, l => l.CompatForceOffRect, () => L.Settings_CompatModeForceOff),
+            new(_hWndCompatList, Apps, () => FontListName.Handle, l => l.CompatListRect),
+            new(_hWndCompatAdd, Apps, () => FontButton.Handle, l => l.CompatAddRect, () => L.Settings_CompatAdd, PushButton: true),
+            new(_hWndCompatRemove, Apps, () => FontButton.Handle, l => l.CompatRemoveRect, () => L.Settings_CompatRemove, PushButton: true),
+            new(_hWndRadioCompatAuto, Apps, () => FontBody.Handle, l => l.CompatAutoRect, () => L.Settings_CompatModeAuto),
+            new(_hWndRadioCompatForceOn, Apps, () => FontBody.Handle, l => l.CompatForceOnRect, () => L.Settings_CompatModeForceOn),
+            new(_hWndRadioCompatForceOff, Apps, () => FontBody.Handle, l => l.CompatForceOffRect, () => L.Settings_CompatModeForceOff),
 
             // Noms de langue : endonymes, jamais retraduits.
-            new(_hWndRadioLangFr, LangMaint, () => _hFontBold, l => l.LanguageFrRect),
-            new(_hWndRadioLangEn, LangMaint, () => _hFontBold, l => l.LanguageEnRect),
-            new(_hWndManagedLanguage, LangMaint, () => _hFontSmall, l => l.ManagedLanguageRect,
+            new(_hWndRadioLangFr, LangMaint, () => FontBody.Handle, l => l.LanguageFrRect),
+            new(_hWndRadioLangEn, LangMaint, () => FontBody.Handle, l => l.LanguageEnRect),
+            new(_hWndManagedLanguage, LangMaint, () => FontSmall.Handle, l => l.ManagedLanguageRect,
                 () => L.Settings_ManagedByOrganization, () => _managedLanguage),
-            new(_hWndResetVirtualKeyboardWindow, LangMaint, () => _hFontButton, l => l.ResetVirtualKeyboardWindowRect,
+            new(_hWndResetVirtualKeyboardWindow, LangMaint, () => FontButton.Handle, l => l.ResetVirtualKeyboardWindowRect,
                 () => L.Settings_ResetVirtualKeyboard, PushButton: true),
-            new(_hWndResetLessonsWindow, LangMaint, () => _hFontButton, l => l.ResetLessonsWindowRect,
+            new(_hWndResetLessonsWindow, LangMaint, () => FontButton.Handle, l => l.ResetLessonsWindowRect,
                 () => L.Settings_ResetLessonsModule, PushButton: true),
-        };
+        }.Concat(LessonSlots()).ToArray();
     }
 
     /// <summary>
     /// Donne à la fenêtre la hauteur de son contenu, plafonnée à la zone de travail de
     /// l'écran qui la porte, et arme le défilement si le plafond a mordu.
     ///
-    /// Écart 4 de la recette VM du 2026-09-19 : en 1366×768 à 150 %, BASE_WIN_H valait
-    /// 680 × 1,5 = 1 020 px de client pour 728 px utiles — la fenêtre dépassait par le
-    /// bas et le troisième bouton radio de compatibilité était inatteignable, sans
-    /// aucun moyen de l'atteindre puisque la fenêtre n'est pas redimensionnable.
-    /// Le modèle v2.0.0 (audit du 2026-08-28, § 17) pose la règle : aucune fenêtre ne
-    /// dépasse la zone de travail, et une fenêtre mesure son contenu plutôt que de le
-    /// supposer. BASE_WIN_H ne sert donc plus que d'amorce avant la première mesure.
+    /// Écart 4 de la recette VM du 2026-09-19 : en 1366×768 à 150 %, la fenêtre dépassait
+    /// par le bas et le troisième bouton radio de compatibilité était inatteignable. Le
+    /// modèle v2.0.0 (audit du 2026-08-28, § 17) pose la règle : aucune fenêtre ne dépasse
+    /// la zone de travail, et une fenêtre mesure son contenu plutôt que de le supposer.
     ///
-    /// C4, décision d'Antoine du 2026-09-24 : la fenêtre changeait de taille à chaque
-    /// changement d'onglet, ce qui dérangeait. Elle prend désormais toujours la taille de
-    /// l'onglet « Général », ligne du message de validation comprise, pour que ce message
-    /// ne la fasse pas grandir non plus. Un onglet plus court laisse du vide en bas ; un
-    /// onglet plus haut défile. La mesure est refaite à chaque appel, donc à l'échelle
-    /// courante : un changement de DPI ou de langue la recalcule, toujours sur « Général ».
+    /// C4, décision d'Antoine du 2026-09-24 : la fenêtre ne change pas de taille d'un onglet
+    /// à l'autre, ni quand un message s'affiche. Refonte 1.3.0 : la référence est l'onglet le
+    /// plus haut, message compris — « Applications » l'est devenu avec sa liste de trois
+    /// lignes, et le prendre pour référence évite qu'il défile à 100 %. Un onglet plus court
+    /// laisse du papier en bas, où le pied s'ancre. La mesure est refaite à chaque appel,
+    /// donc à l'échelle courante : un changement de DPI ou de langue la recalcule.
     /// </summary>
     private void FitWindowToContent()
     {
         uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
 
         // Mesures sans défilement : la hauteur du contenu ne dépend pas de la position.
-        int referenceHeight = MeasureContentHeight(SettingsTab.General, showValidationRow: true);
-        int applicationsHeight = MeasureContentHeight(SettingsTab.Applications, showValidationRow: true);
-        int languageHeight = MeasureContentHeight(SettingsTab.LanguageMaintenance, showValidationRow: true);
-        _contentHeight = MeasureContentHeight(_activeTab, !string.IsNullOrEmpty(_validationMessage));
+        int generalHeight = MeasureContentHeight(SettingsTab.General);
+        int applicationsHeight = MeasureContentHeight(SettingsTab.Applications);
+        int languageHeight = MeasureContentHeight(SettingsTab.LanguageMaintenance);
+        // « Leçons » (11/10) ne compte pas dans la référence : la fenêtre ne grandit pas pour
+        // elle. Si elle dépassait un jour, elle défilerait (tabHeights, ci-dessous).
+        int lessonsHeight = MeasureContentHeight(SettingsTab.Lessons);
+        int referenceHeight = Math.Max(generalHeight, Math.Max(applicationsHeight, languageHeight));
 
         Win32.GetWindowRect(_hWnd, out var currentRect);
         int cx = (currentRect.left + currentRect.right) / 2;
@@ -646,9 +812,11 @@ sealed class SettingsWindow : IDisposable
         int maxClientH = Math.Max(S(200), workH - chromeH);
 
         var (clientH, reserveScrollBar) = SettingsScrollState.FixedViewport(
-            referenceHeight, maxClientH, referenceHeight, applicationsHeight, languageHeight);
+            referenceHeight, maxClientH, generalHeight, applicationsHeight, languageHeight, lessonsHeight);
         _viewportHeight = clientH;
         _reserveScrollBar = reserveScrollBar;
+        // Le contenu affiché, pied ancré au bas de la zone obtenue.
+        _contentHeight = GetLayout(S(BASE_WIN_W)).ContentHeight;
 
         // La barre de défilement mange de la largeur du client : l'ajouter à la
         // fenêtre pour que le contenu garde sa largeur de mise en page. Réservée pour
@@ -673,9 +841,54 @@ sealed class SettingsWindow : IDisposable
         UpdateScrollBar();
     }
 
-    /// <summary>Hauteur de contenu d'un onglet, sans défilement, à l'échelle courante.</summary>
-    private int MeasureContentHeight(SettingsTab tab, bool showValidationRow) =>
-        GetLayout(S(BASE_WIN_W), tab, showValidationRow).ContentHeight;
+    /// <summary>Hauteur d'un onglet, sans défilement, à l'échelle courante, avec la plus haute
+    /// des places que peut prendre un message sur cet onglet : le pied partout, l'invite ou
+    /// un refus de raccourci sur « Général », le refus de compatibilité (mesuré sur son vrai
+    /// texte, deux lignes en français) sur « Applications ».</summary>
+    private int MeasureContentHeight(SettingsTab tab)
+    {
+        int width = S(BASE_WIN_W);
+        int inner = width - 2 * S(20);
+        int height = Layout(width, tab, MessagePlace.Footer, 0, 0).ContentHeight;
+        if (tab == SettingsTab.General)
+        {
+            int message = 0;
+            foreach (string text in ShortcutMessages())
+                message = Math.Max(message, MessageHeight(text, inner));
+            height = Math.Max(height, Layout(width, tab, MessagePlace.Shortcuts, message, 0).ContentHeight);
+        }
+        else if (tab == SettingsTab.Applications)
+        {
+            int message = Math.Max(MessageHeight(L.SettingsClarity_CompatRefusedAntiCheat, inner),
+                MessageHeight(L.SettingsClarity_CompatRefusedRemote, inner));
+            height = Math.Max(height, Layout(width, tab, MessagePlace.Compat, message, 0).ContentHeight);
+        }
+        return height;
+    }
+
+    /// <summary>Tous les messages que peut porter la place sous les raccourcis : l'invite et
+    /// chaque refus possible. La taille fixe (C4) se mesure sur le plus haut.</summary>
+    private static IEnumerable<string> ShortcutMessages()
+    {
+        yield return ShortcutCaptureHint;
+        yield return L.SettingsClarity_ShortcutKeypadDigit;
+        yield return L.SettingsClarity_ShortcutOtherKey;
+        yield return L.SettingsClarity_ShortcutTakenByKeyboard("F12");
+        yield return L.SettingsClarity_ShortcutTakenBySearch("F12");
+        for (char letter = 'A'; letter <= 'Z'; letter++)
+            if (!ConfigManager.IsShortcutAllowedVk(letter))
+                yield return L.SettingsClarity_ShortcutReservedLetter(letter);
+    }
+
+    /// <summary>Le refus d'une touche, avec sa raison : lettre réservée (ce qu'elle fait déjà
+    /// ailleurs), chiffre du pavé numérique, ou autre touche. Null si la touche est acceptée.</summary>
+    internal static string? ShortcutRefusal(uint vk)
+    {
+        if (ConfigManager.IsShortcutAllowedVk(vk)) return null;
+        if (vk >= 'A' && vk <= 'Z') return L.SettingsClarity_ShortcutReservedLetter((char)vk);
+        if (vk >= 0x60 && vk <= 0x69) return L.SettingsClarity_ShortcutKeypadDigit; // VK_NUMPAD0-9
+        return L.SettingsClarity_ShortcutOtherKey;
+    }
 
     private void ClampScroll()
     {
@@ -726,9 +939,10 @@ sealed class SettingsWindow : IDisposable
     }
 
     /// <summary>
-    /// Cree la bande de trois onglets. Un vrai SysTabControl32 et non trois libelles
+    /// Cree la bande de quatre onglets. Un vrai SysTabControl32 et non quatre libelles
     /// peints : lui seul est annonce « onglet 1 sur 3 » par les lecteurs d'ecran et
-    /// repond aux fleches gauche/droite sans une ligne de notre part.
+    /// repond aux fleches gauche/droite sans une ligne de notre part. Refonte 1.3.0 : il
+    /// garde tout cela, seul son dessin change (sous-classe, <see cref="PaintTabStrip"/>).
     /// ⛔ Pas de TCS_FOCUSNEVER (revue du 2026-09-21, R1) : la bande est un arrêt de
     /// tabulation comme les autres. Tab y arrive, les flèches changent d'onglet, Tab en
     /// repart vers le premier contrôle de l'onglet actif. Sans ce focus, rien ne permettait
@@ -751,30 +965,14 @@ sealed class SettingsWindow : IDisposable
             _hWnd, (IntPtr)IDC_TAB_STRIP, hInstance, IntPtr.Zero);
         if (_hWndTabStrip == IntPtr.Zero) return;
 
-        Win32.SendMessageW(_hWndTabStrip, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        ApplyTabStripPadding();
+        Win32.SendMessageW(_hWndTabStrip, Win32.WM_SETFONT, FontTab.Handle, (IntPtr)1);
         InsertTab(0, L.Settings_TabGeneral);
         InsertTab(1, L.Settings_TabApplications);
         InsertTab(2, L.Settings_TabLanguageMaintenance);
+        InsertTab(3, L.Settings_TabLessons);
         Win32.SendMessageW(_hWndTabStrip, Win32.TCM_SETCURSEL, (IntPtr)(int)_activeTab, IntPtr.Zero);
-    }
-
-    /// <summary>Hauteur de la bande : celle des onglets, plus les deux traits du cadre de
-    /// page. Avec les contrôles communs 6.0, tout ce qui dépasse s'affiche comme une page
-    /// blanche vide sous les onglets (7 px à 150 % avec l'ancienne hauteur fixe S(24),
-    /// mesuré sur les captures du 2026-09-28). La hauteur d'un onglet suit la police : on
-    /// la demande au contrôle plutôt que de la deviner.</summary>
-    private int TabStripHeight()
-    {
-        if (_hWndTabStrip == IntPtr.Zero) return S(24);
-
-        IntPtr pRect = Marshal.AllocHGlobal(Marshal.SizeOf<Win32.RECT>());
-        try
-        {
-            if (Win32.SendMessageW(_hWndTabStrip, Win32.TCM_GETITEMRECT, IntPtr.Zero, pRect) == IntPtr.Zero)
-                return S(24);
-            return Marshal.PtrToStructure<Win32.RECT>(pRect).bottom + 2;
-        }
-        finally { Marshal.FreeHGlobal(pRect); }
+        Win32.SetWindowSubclass(_hWndTabStrip, _tabSubclassProc, (UIntPtr)5, IntPtr.Zero);
     }
 
     private void InsertTab(int index, string text)
@@ -816,6 +1014,8 @@ sealed class SettingsWindow : IDisposable
             if (control.Bounds != null)
                 Place(control.Handle, control.Bounds(layout));
         ApplyTabVisibility();
+        if (_hWndValidation != IntPtr.Zero)
+            Win32.InvalidateRect(_hWndValidation, IntPtr.Zero, false);
     }
 
     /// <summary>Place un contrôle. La mise en page est en coordonnées de contenu : c'est ici,
@@ -850,6 +1050,7 @@ sealed class SettingsWindow : IDisposable
         _activeTab = tab;
         // Un message répond à un geste de l'onglet quitté : il ne le suit pas.
         _validationMessage = string.Empty;
+        _validationRefused = false;
         _showCaptureHint = false;
         Win32.SetWindowTextW(_hWndValidation, string.Empty);
         // Le défilement d'un onglet n'a pas de sens dans le suivant : il est plus
@@ -858,176 +1059,265 @@ sealed class SettingsWindow : IDisposable
         FitWindowToContent();
         RepositionControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        if (_hWndTabStrip != IntPtr.Zero)
+            Win32.InvalidateRect(_hWndTabStrip, IntPtr.Zero, false);
     }
 
-    private LayoutInfo GetLayout(int winW) =>
-        GetLayout(winW, _activeTab, !string.IsNullOrEmpty(_validationMessage));
+    /// <summary>Place du message affiché : sa nature et l'onglet qui l'a produit.</summary>
+    private MessagePlace CurrentMessagePlace()
+    {
+        if (string.IsNullOrEmpty(_validationMessage)) return MessagePlace.None;
+        if (_activeTab == SettingsTab.General && (_showCaptureHint || _validationRefused))
+            return MessagePlace.Shortcuts;
+        if (_activeTab == SettingsTab.Applications && _validationRefused)
+            return MessagePlace.Compat;
+        return MessagePlace.Footer;
+    }
 
-    /// <summary>Mise en page d'un onglet donné. Les paramètres explicites permettent de
-    /// mesurer un autre onglet que l'onglet affiché (taille fixe, C4). Seuls l'en-tête et
-    /// l'onglet demandé sont calculés, chacun par sa fonction : les rectangles des autres
-    /// onglets restent vides, leurs contrôles étant masqués par ApplyTabVisibility, jamais
-    /// déplacés hors écran (audit du 25/09, F-04). Coordonnées de contenu : le défilement
-    /// s'applique au placement des contrôles (Place) et au tracé (SetViewportOrgEx).</summary>
-    private LayoutInfo GetLayout(int winW, SettingsTab tab, bool showValidationRow)
+    /// <summary>Hauteur du pied de confirmation.</summary>
+    private int FooterHeight => S(38);
+
+    /// <summary>Interligne des messages sur deux lignes (13 px × 1,4).</summary>
+    private int MessageLineHeight => S(18);
+
+    private LayoutInfo GetLayout(int winW)
+    {
+        var place = CurrentMessagePlace();
+        int inner = winW - 2 * S(20);
+        int height = place is MessagePlace.Shortcuts or MessagePlace.Compat
+            ? ValidationTextHeight(_activeTab, inner, MessageLineHeight)
+            : 0;
+        return Layout(winW, _activeTab, place, height, _viewportHeight);
+    }
+
+    /// <summary>Mise en page d'un onglet, aux mesures de la maquette (px à 96 DPI portés à
+    /// l'échelle). Les paramètres explicites permettent de mesurer un autre onglet que
+    /// l'onglet affiché, et une autre place de message (taille fixe, C4). Seuls la bande et
+    /// l'onglet demandé sont calculés : les rectangles des autres onglets restent vides, leurs
+    /// contrôles étant masqués par ApplyTabVisibility, jamais déplacés hors écran (audit du
+    /// 25/09, F-04). Coordonnées de contenu : le défilement s'applique au placement des
+    /// contrôles (Place) et au tracé (SetViewportOrgEx).</summary>
+    /// <param name="messageHeight">Hauteur du message sous les raccourcis ou les modes.</param>
+    /// <param name="viewport">Hauteur de la zone cliente, où le pied s'ancre ; 0 en mesure.</param>
+    private LayoutInfo Layout(int winW, SettingsTab tab, MessagePlace place, int messageHeight, int viewport)
     {
         var m = Metrics;
-        int margin = S(8);
-        int contentWidth = winW - margin * 2;
-        int headerTop = S(8);
-        int logoSize = S(24);
-        int panelPadX = S(9);
-        int headerLineHeight = Math.Max(logoSize, Math.Max(m.Title, m.Version) + S(4));
-        int headerBottom = headerTop + headerLineHeight + S(9);
+        int margin = S(20);
+        int inner = winW - margin * 2;
+        int bandHeight = S(44);
+        int titleGap = S(10);
+        int sectionGap = S(22);
+        int choiceH = S(32);
+        int buttonH = S(32);
+        int focusPad = S(4); // place du contour de focus autour d'une case ou d'une coche
 
-        int labelX = margin + panelPadX;
-        int labelWidth = S(120); // assez pour « Virtual keyboard » sans troncature
-        int keyOuterW = S(28);
-        int keyOuterH = S(24);
-        int keyOuterX = margin + contentWidth - panelPadX - keyOuterW;
-        int shortcutX = labelX + labelWidth + S(6);
-        int innerWidth = contentWidth - panelPadX * 2;
-
-        // Espacements communs aux trois onglets.
-        int sectionTitleH = m.PanelTitle + S(9);
-        int rowH = Math.Max(S(18), m.Bold);
-        int rowGap = S(6);
-        int managedHeight = Math.Max(S(13), m.Small);
-        int managedIndent = S(18);
-        int managedGap = S(2);
-        int managedWidth = innerWidth - managedIndent;
-        int buttonHeight = S(28);
-
-        // ── Bande d'onglets ─────────────────────────────────────────────
-        // Trois onglets au lieu d'une colonne de cinq sections. La fenêtre se cale
-        // alors sur l'onglet le plus haut au lieu de la somme de tout. Découpage
-        // décidé par Antoine le 2026-09-21 après mesure des hauteurs : Général
-        // ~224 px, Applications ~196 px, Langue et maintenance ~175 px, contre
-        // ~631 px cumulés. ⛔ « Langue » appartient au troisième onglet et non au
-        // premier : avec elle, « Général » culminait à ~310 px et commandait seul
-        // la hauteur, ce qui ramenait le défilement à 175 % sur 1366×768 — le cas
-        // exact du geste 36 de la recette VM.
         var layout = new LayoutInfo
         {
             Margin = margin,
-            TabStripRect = Rect(margin, headerBottom + S(4), contentWidth, TabStripHeight()),
-            HeaderTitleX = margin + logoSize + S(6),
-            HeaderTitleY = headerTop + Math.Max(0, (headerLineHeight - m.Title) / 2),
-            HeaderDividerY = headerBottom,
-            LogoRect = Rect(margin, headerTop + Math.Max(0, (headerLineHeight - logoSize) / 2), logoSize, logoSize),
-            ShortcutsLabelX = labelX,
-            ShortcutsLabelWidth = labelWidth,
-            ShortcutsShortcutX = shortcutX,
-            ShortcutsShortcutWidth = keyOuterX - shortcutX - S(8),
+            MessagePlace = place,
+            TabStripRect = Rect(m.TabStripLeft, 0, winW - m.TabStripLeft, bandHeight),
         };
 
-        int contentTop = layout.TabStripRect.bottom + S(7);
-        int contentBottom = tab switch
+        int top = bandHeight + S(18);
+        int contentEnd = tab switch
         {
             SettingsTab.General => LayoutGeneral(),
             SettingsTab.Applications => LayoutApplications(),
+            SettingsTab.Lessons => LayoutLessons(),
             _ => LayoutLanguageMaintenance(),
-        };
+        } + S(20);
 
-        // Le panneau de fond couvre tout l'onglet ; chaque section en garde le bas.
-        int panelBottom = contentBottom + S(12);
-        layout.ShortcutsPanel = Rect(margin, contentTop, contentWidth, panelBottom - contentTop);
-        CloseSection(ref layout.PreferencesPanel);
-        CloseSection(ref layout.CompatPanel);
-        CloseSection(ref layout.LanguagePanel);
-        CloseSection(ref layout.WindowsPanel);
-        layout.ContentHeight = panelBottom + margin;
+        if (place == MessagePlace.Footer)
+        {
+            int footerTop = Math.Max(contentEnd, viewport - FooterHeight);
+            layout.ValidationRect = Rect(0, footerTop, winW, FooterHeight);
+            layout.ContentHeight = footerTop + FooterHeight;
+        }
+        else
+        {
+            layout.ContentHeight = contentEnd;
+        }
         return layout;
 
-        void CloseSection(ref Win32.RECT section)
+        Win32.RECT Title(ref int y)
         {
-            if (section.right > section.left) section.bottom = panelBottom;
+            var r = Rect(margin, y, inner, m.SectionTitle);
+            y += m.SectionTitle + titleGap;
+            return r;
         }
 
-        Win32.RECT Section(int top) => Rect(margin, top, contentWidth, 0);
-
-        // Ligne du message de validation, sous le contrôle du geste qui l'a produit. Chaque
-        // onglet a la sienne : les messages des onglets Applications et Langue s'écrivaient
-        // dans une ligne que seul « Général » montrait (suite de l'audit du 25/09).
-        int ValidationRow(int top)
+        // Une case à cocher ou un bouton radio : ligne de 32 px, le contrôle déborde de la
+        // marge de quoi porter son contour de focus.
+        Win32.RECT Choice(ref int y, bool shown = true)
         {
-            int rowTop = showValidationRow ? top + S(5) : top;
-            layout.ValidationRect = Rect(labelX, rowTop, innerWidth,
-                showValidationRow ? Math.Max(S(15), ValidationTextHeight(tab, innerWidth, m.Small)) : 0);
-            return layout.ValidationRect.bottom;
+            var r = Rect(margin - focusPad, y, inner + 2 * focusPad, shown ? choiceH : 0);
+            if (shown) y += choiceH;
+            return r;
         }
+
+        // La ligne « Géré par votre organisation », alignée sur le libellé de la case.
+        Win32.RECT Managed(ref int y, bool shown)
+        {
+            int indent = S(18) + S(10);
+            var r = Rect(margin + indent, y, inner - indent, shown ? m.Small : 0);
+            if (shown) y += m.Small + S(4);
+            return r;
+        }
+
+        // Ce que fait un mode, sous son bouton radio, aligné sur le libellé et coupé en lignes.
+        // Sans retrait (indented: false) sous une ligne de raccourci, dont le libellé part de la marge.
+        Win32.RECT Hint(ref int y, string text, bool indented = true)
+        {
+            int indent = indented ? S(18) + S(10) : 0;
+            int h = MessageHeight(text, inner - indent);
+            // Le bouton radio est une fenêtre fille : le texte commence sous elle.
+            var r = Rect(margin + indent, y, inner - indent, h);
+            y += h + S(6);
+            return r;
+        }
+
+        int ButtonWidth(int textWidth) => Math.Min(inner, textWidth + 2 * S(14) + 2);
 
         // ── Onglet « Général » : Raccourcis puis Préférences ────────────
         int LayoutGeneral()
         {
-            int keyboardRowY = contentTop + S(30);
-            int searchRowY = keyboardRowY + Math.Max(S(28), m.Text + S(11));
-            layout.KeyboardRowY = keyboardRowY;
-            layout.SearchRowY = searchRowY;
-            layout.KeyboardBoxRect = Rect(keyOuterX, keyboardRowY - S(4), keyOuterW, keyOuterH);
-            layout.SearchBoxRect = Rect(keyOuterX, searchRowY - S(4), keyOuterW, keyOuterH);
-            layout.KeyboardEditRect = Rect(keyOuterX + 1, keyboardRowY - S(3), keyOuterW - 2, Math.Max(0, keyOuterH - 2));
-            layout.SearchEditRect = Rect(keyOuterX + 1, searchRowY - S(3), keyOuterW - 2, Math.Max(0, keyOuterH - 2));
-            int resetY = searchRowY + Math.Max(S(20), m.Text + S(7));
-            int resetWidth = Math.Max(S(150), m.ResetText + S(24));
-            layout.ResetRect = Rect(labelX, resetY, resetWidth, Math.Max(S(28), m.Link + S(10)));
+            int y = top;
+            layout.ShortcutsTitleRect = Title(ref y);
+            // Chaque raccourci porte sous sa ligne ce qu'il ouvre (lot « clarté »). La ligne
+            // de 40 px centre son libellé : le sous-titre remonte de 4 px pour s'y rattacher.
+            layout.KeyboardRowRect = Rect(margin, y, inner, S(40));
+            y += S(40) - S(4);
+            layout.KeyboardHintRect = Hint(ref y, L.SettingsClarity_HintKeyboardShortcut, indented: false);
+            layout.SearchRowRect = Rect(margin, y, inner, S(40));
+            y += S(40) - S(4);
+            layout.SearchHintRect = Hint(ref y, L.SettingsClarity_HintSearchShortcut, indented: false);
+            layout.KeyboardBoxRect = KeyBox(layout.KeyboardRowRect, ShownVk(keyboard: true));
+            layout.SearchBoxRect = KeyBox(layout.SearchRowRect, ShownVk(keyboard: false));
+            layout.KeyboardEditRect = Inflate(layout.KeyboardBoxRect, focusPad);
+            layout.SearchEditRect = Inflate(layout.SearchBoxRect, focusPad);
 
-            int prefsTitleTop = ValidationRow(layout.ResetRect.bottom) + S(10);
-            layout.PreferencesPanel = Section(prefsTitleTop);
-            layout.AutoStartRect = Rect(labelX, prefsTitleTop + sectionTitleH, innerWidth, rowH);
-            layout.NotificationsRect = Rect(labelX, layout.AutoStartRect.bottom + rowGap, innerWidth, rowH);
-            // Lignes « Géré par votre organisation » : sous la case, décalées de la largeur
-            // de la coche pour s'aligner sur son libellé. Hauteur nulle quand rien n'est
-            // imposé — la fenêtre est alors exactement celle d'avant le lot C.
-            layout.ManagedNotificationsRect = Rect(labelX + managedIndent,
-                layout.NotificationsRect.bottom + managedGap, managedWidth,
-                _managedNotifications ? managedHeight : 0);
-            layout.OnboardingRect = Rect(labelX,
-                (_managedNotifications ? layout.ManagedNotificationsRect.bottom : layout.NotificationsRect.bottom) + rowGap,
-                innerWidth, rowH);
-            layout.ManagedOnboardingRect = Rect(labelX + managedIndent,
-                layout.OnboardingRect.bottom + managedGap, managedWidth,
-                _managedOnboarding ? managedHeight : 0);
+            // L'invite de capture et les refus de raccourci, sous les deux lignes, à droite.
+            if (place == MessagePlace.Shortcuts)
+            {
+                layout.ValidationRect = Rect(margin, y + S(4), inner, messageHeight);
+                y = layout.ValidationRect.bottom + S(2);
+            }
+
+            // « Réinitialiser les raccourcis », écrit comme un lien : le contrôle déborde du
+            // texte de quoi porter son contour de focus.
+            int linkTop = y + S(8);
+            layout.ResetRect = Rect(margin - S(3), linkTop - S(3), m.ResetText + S(6), m.Button + S(6));
+            y = linkTop + m.Button + sectionGap;
+
+            layout.PreferencesTitleRect = Title(ref y);
+            layout.AutoStartRect = Choice(ref y);
+            layout.AutoStartHintRect = Hint(ref y, L.SettingsClarity_HintAutoStart);
+            layout.NotificationsRect = Choice(ref y);
+            layout.NotificationsHintRect = Hint(ref y, L.SettingsClarity_HintNotifications);
+            // Lignes « Géré par votre organisation » : sous le sous-titre de la case. Hauteur
+            // nulle quand rien n'est imposé.
+            layout.ManagedNotificationsRect = Managed(ref y, _managedNotifications);
+            layout.OnboardingRect = Choice(ref y);
+            layout.OnboardingHintRect = Hint(ref y, L.SettingsClarity_HintOnboarding);
+            layout.ManagedOnboardingRect = Managed(ref y, _managedOnboarding);
             // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0).
-            layout.TrainingRect = Rect(labelX,
-                (_managedOnboarding ? layout.ManagedOnboardingRect.bottom : layout.OnboardingRect.bottom)
-                    + (DailyChallenge.Enabled ? rowGap : 0),
-                innerWidth, DailyChallenge.Enabled ? rowH : 0);
-            return layout.TrainingRect.bottom;
+            layout.TrainingRect = Choice(ref y, DailyChallenge.Enabled);
+            return y;
         }
 
         // ── Onglet « Applications » : apps suspendues ───────────────────
         int LayoutApplications()
         {
-            layout.CompatPanel = Section(contentTop);
-            layout.CompatListRect = Rect(labelX, contentTop + sectionTitleH, innerWidth, S(58));
-            int compatBtnW = (innerWidth - S(6)) / 2;
-            layout.CompatAddRect = Rect(labelX, layout.CompatListRect.bottom + S(6), compatBtnW, S(24));
-            layout.CompatRemoveRect = Rect(labelX + compatBtnW + S(6), layout.CompatAddRect.top,
-                innerWidth - compatBtnW - S(6), S(24));
-            layout.CompatAutoRect = Rect(labelX, layout.CompatAddRect.bottom + S(8), innerWidth, rowH);
-            layout.CompatForceOnRect = Rect(labelX, layout.CompatAutoRect.bottom + S(4), innerWidth, rowH);
-            layout.CompatForceOffRect = Rect(labelX, layout.CompatForceOnRect.bottom + S(4), innerWidth, rowH);
-            return ValidationRow(layout.CompatForceOffRect.bottom);
+            int y = top;
+            layout.CompatTitleRect = Title(ref y);
+            // Trois lignes visibles, cadre d'un pixel peint par la fenêtre.
+            layout.CompatListFrame = Rect(margin, y, inner, 3 * CompatRowHeight + 2);
+            layout.CompatListRect = Inflate(layout.CompatListFrame, -1);
+            y = layout.CompatListFrame.bottom + S(8);
+            layout.CompatAddRect = Rect(margin, y, ButtonWidth(m.AddText), buttonH);
+            layout.CompatRemoveRect = Rect(layout.CompatAddRect.right + S(8), y, ButtonWidth(m.RemoveText), buttonH);
+            y += buttonH + S(14);
+            layout.CompatModeLabelRect = Rect(margin, y, inner, m.Small);
+            y += m.Small + S(2);
+            layout.CompatAutoRect = Choice(ref y);
+            layout.CompatAutoHintRect = Hint(ref y, L.SettingsPaper_CompatHintAuto);
+            layout.CompatForceOnRect = Choice(ref y);
+            layout.CompatForceOnHintRect = Hint(ref y, L.SettingsPaper_CompatHintForceOn);
+            layout.CompatForceOffRect = Choice(ref y);
+            layout.CompatForceOffHintRect = Hint(ref y, L.SettingsPaper_CompatHintForceOff);
+            if (place == MessagePlace.Compat)
+            {
+                layout.ValidationRect = Rect(margin, y + S(6), inner, messageHeight);
+                y = layout.ValidationRect.bottom;
+            }
+            return y;
         }
 
-        // ── Onglet « Langue et maintenance » ────────────────────────────
+        // ── Onglet « Langue » : langue, puis fenêtres ───────────────────
         int LayoutLanguageMaintenance()
         {
-            layout.LanguagePanel = Section(contentTop);
-            layout.LanguageFrRect = Rect(labelX, contentTop + sectionTitleH, innerWidth, rowH);
-            layout.LanguageEnRect = Rect(labelX, layout.LanguageFrRect.bottom + rowGap, innerWidth, rowH);
-            layout.ManagedLanguageRect = Rect(labelX + managedIndent,
-                layout.LanguageEnRect.bottom + managedGap, managedWidth,
-                _managedLanguage ? managedHeight : 0);
+            int y = top;
+            layout.LanguageTitleRect = Title(ref y);
+            layout.LanguageFrRect = Choice(ref y);
+            layout.LanguageEnRect = Choice(ref y);
+            layout.ManagedLanguageRect = Managed(ref y, _managedLanguage);
+            y += sectionGap;
+            layout.WindowsTitleRect = Title(ref y);
+            // Sous chaque bouton, ce que fait la réinitialisation (lot « clarté »), sans retrait :
+            // le bouton part de la marge.
+            layout.ResetVirtualKeyboardWindowRect = Rect(margin, y, ButtonWidth(m.ResetKeyboardText), buttonH);
+            y += buttonH + S(6);
+            layout.ResetVirtualKeyboardHintRect = Hint(ref y, L.SettingsClarity_HintResetWindow, indented: false);
+            y += S(6);
+            layout.ResetLessonsWindowRect = Rect(margin, y, ButtonWidth(m.ResetLessonsText), buttonH);
+            y += buttonH + S(6);
+            layout.ResetLessonsHintRect = Hint(ref y, L.SettingsClarity_HintResetWindow, indented: false);
+            // La version : elle ne tient plus dans la bande à quatre onglets (QCM du 11/10).
+            y += S(14);
+            layout.VersionRect = Rect(margin, y, inner, m.Version);
+            y += m.Version;
+            return y;
+        }
 
-            int windowsTitleTop =
-                (_managedLanguage ? layout.ManagedLanguageRect.bottom : layout.LanguageEnRect.bottom) + S(18);
-            layout.WindowsPanel = Section(windowsTitleTop);
-            layout.ResetVirtualKeyboardWindowRect = Rect(labelX, windowsTitleTop + sectionTitleH, innerWidth, buttonHeight);
-            layout.ResetLessonsWindowRect = Rect(labelX,
-                layout.ResetVirtualKeyboardWindowRect.bottom + S(7), innerWidth, buttonHeight);
-            return ValidationRow(layout.ResetLessonsWindowRect.bottom);
+        // ── Onglet « Leçons » : touches à taper ─────────────────────────
+        // Le titre du groupe, puis deux listes de boutons radio, chacune sous son libellé écrit en
+        // petit (comme « Mode pour… » de l'onglet Applications), puis les deux cases. Aucun
+        // message ni sous-titre : chaque réglage s'applique au clic et son état se voit.
+        int LayoutLessons()
+        {
+            int y = top;
+            layout.NotationTitleRect = Title(ref y);
+
+            layout.NotationWithLabelRect = Rect(margin, y, inner, m.Small);
+            y += m.Small + S(2);
+            layout.NotationWithRects = Choices(LessonNotations.WithKeyboard.Length, ref y);
+            y += S(14);
+
+            layout.NotationWithoutLabelRect = Rect(margin, y, inner, m.Small);
+            y += m.Small + S(2);
+            layout.NotationWithoutRects = Choices(LessonNotations.WithoutKeyboard.Length, ref y);
+            y += S(14);
+
+            layout.LessonKeyboardRect = Choice(ref y);
+            layout.HideMasteredRect = Choice(ref y);
+            return y;
+        }
+
+        Win32.RECT[] Choices(int count, ref int y)
+        {
+            var rects = new Win32.RECT[count];
+            for (int i = 0; i < count; i++)
+                rects[i] = Choice(ref y);
+            return rects;
+        }
+
+        // La case à frapper d'un raccourci, au bord droit de sa ligne : 34 px au moins, plus
+        // large pour « F12 ».
+        Win32.RECT KeyBox(Win32.RECT row, uint vk)
+        {
+            int size = S(34);
+            int width = Math.Max(size, ConfigManager.GetShortcutDisplayName(vk).Length * m.KeyAdvance + S(16));
+            return Rect(row.right - width, row.top + (row.bottom - row.top - size) / 2, width, size);
         }
     }
 
@@ -1041,6 +1331,14 @@ sealed class SettingsWindow : IDisposable
             bottom = top + height
         };
     }
+
+    private static Win32.RECT Inflate(Win32.RECT r, int by) => new()
+    {
+        left = r.left - by,
+        top = r.top - by,
+        right = r.right + by,
+        bottom = r.bottom + by,
+    };
 
     public void Show()
     {
@@ -1061,6 +1359,9 @@ sealed class SettingsWindow : IDisposable
         Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_SETCHECK,
             ConfigManager.ShowOnboardingAtStartup ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         RefreshLanguageRadios();
+        // Le menu « Affichage » de la fenêtre Leçons a pu changer ces réglages depuis la
+        // dernière ouverture.
+        RefreshLessonControls();
         SetValidationMessage(string.Empty);
         _keyboardValid = true;
         _searchValid = true;
@@ -1138,11 +1439,8 @@ sealed class SettingsWindow : IDisposable
                 return (IntPtr)1;
 
             // Les contrôles thémés demandent le fond de leur parent (DrawThemeParentBackground) :
-            // les onglets pour la zone à droite du dernier, où ils laissaient sinon le gris
-            // système #F0F0F0. La réponse est la fenêtre elle-même, peinte dans leur DC déjà
-            // décalé : les cases, posées sur un panneau, y trouvent le panneau et non le fond
-            // de la fenêtre (un simple remplissage les cernait de bandes grises, vu sur les
-            // captures du 2026-09-28). SaveDC : nos polices ne restent pas dans leur DC.
+            // la réponse est la fenêtre elle-même, peinte dans leur DC déjà décalé. SaveDC : nos
+            // objets GDI ne restent pas dans leur DC.
             case Win32.WM_PRINTCLIENT:
             {
                 Win32.GetClientRect(hWnd, out var client);
@@ -1216,10 +1514,50 @@ sealed class SettingsWindow : IDisposable
                 {
                     int sel = (int)Win32.SendMessageW(_hWndTabStrip, Win32.TCM_GETCURSEL,
                         IntPtr.Zero, IntPtr.Zero);
-                    if (sel >= 0 && sel <= 2) SetActiveTab((SettingsTab)sel);
+                    if (sel >= 0 && sel < TabCount) SetActiveTab((SettingsTab)sel);
+                }
+                else if (nm.code == NM_CUSTOMDRAW && IsPaperButton(nm.hwndFrom))
+                {
+                    return (IntPtr)OnButtonCustomDraw(lParam);
                 }
                 break;
             }
+
+            case Win32.WM_DRAWITEM:
+            {
+                var dis = Marshal.PtrToStructure<Win32.DRAWITEMSTRUCT>(lParam);
+                if (dis.CtlID == IDC_LIST_COMPAT)
+                {
+                    DrawCompatItem(dis);
+                    return (IntPtr)1;
+                }
+                if (dis.CtlID == IDC_VALIDATION)
+                {
+                    DrawValidation(dis);
+                    return (IntPtr)1;
+                }
+                break;
+            }
+
+            case WM_MEASUREITEM:
+            {
+                var mis = Marshal.PtrToStructure<MEASUREITEMSTRUCT>(lParam);
+                if (mis.CtlID == IDC_LIST_COMPAT)
+                {
+                    mis.itemHeight = (uint)CompatRowHeight;
+                    Marshal.StructureToPtr(mis, lParam, false);
+                    return (IntPtr)1;
+                }
+                break;
+            }
+
+            case WM_CTLCOLORLISTBOX:
+                if (lParam == _hWndCompatList)
+                {
+                    Win32.SetBkColor(wParam, CLR_SURFACE);
+                    return _hSurfaceBrush;
+                }
+                break;
 
             case Win32.WM_COMMAND:
             {
@@ -1312,87 +1650,25 @@ sealed class SettingsWindow : IDisposable
                     case IDC_RADIO_COMPAT_FORCEOFF:
                         if (code == 0) ApplyCompatModeToSelection("forceOff");
                         break;
+                    // Onglet « Leçons » : plages d'identifiants, hors des cas constants.
+                    default:
+                        if (code == 0) ApplyLessonCommand(id);
+                        break;
                 }
                 return IntPtr.Zero;
             }
 
             case Win32.WM_CTLCOLORSTATIC:
             {
+                // Lignes « Géré par votre organisation » : texte secondaire sur le papier.
                 IntPtr hdcStatic = wParam;
                 IntPtr hCtrl = lParam;
-                if (hCtrl == _hWndValidation)
-                {
-                    Win32.SetBkMode(hdcStatic, 1);
-                    Win32.SetTextColor(hdcStatic, ValidationTextColor(_validationRefused));
-                    return _hPanelBrush;
-                }
-
-                // Les champs Q/W sont en lecture seule : Windows leur adresse WM_CTLCOLORSTATIC,
-                // jamais WM_CTLCOLOREDIT. C'est donc ici que le rouge d'un refus s'applique.
-                if (hCtrl == _hWndEditKeyboard || hCtrl == _hWndEditSearch)
-                {
-                    bool valid = hCtrl == _hWndEditKeyboard ? _keyboardValid : _searchValid;
-                    Win32.SetTextColor(hdcStatic, valid ? CLR_TEXT : CLR_INVALID);
-                    Win32.SetBkColor(hdcStatic, CLR_KEY_BG);
-                    return _hKeyBrush;
-                }
-
-                // Lignes de politique, cases et radios : Windows leur adresse WM_CTLCOLORSTATIC,
-                // actives ou non. Le fond du panneau pour toutes ; le gris pour le seul texte
-                // d'un contrôle désactivé (les styles visuels dessinent eux-mêmes ce cas).
                 if (hCtrl == _hWndManagedNotifications || hCtrl == _hWndManagedOnboarding ||
                     hCtrl == _hWndManagedLanguage)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
                     Win32.SetTextColor(hdcStatic, CLR_MUTED);
-                    return _hPanelBrush;
-                }
-                if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkNotifications || hCtrl == _hWndChkOnboarding ||
-                    hCtrl == _hWndChkTraining ||
-                    hCtrl == _hWndRadioLangFr || hCtrl == _hWndRadioLangEn ||
-                    hCtrl == _hWndRadioCompatAuto || hCtrl == _hWndRadioCompatForceOn || hCtrl == _hWndRadioCompatForceOff)
-                {
-                    Win32.SetBkMode(hdcStatic, 1);
-                    Win32.SetTextColor(hdcStatic, Win32.IsWindowEnabled(hCtrl) ? CLR_TEXT : CLR_MUTED);
-                    return _hPanelBrush;
-                }
-                break;
-            }
-
-            case Win32.WM_CTLCOLORBTN:
-            {
-                IntPtr hdcButton = wParam;
-                IntPtr hCtrl = lParam;
-                if (hCtrl == _hWndChkAutoStart || hCtrl == _hWndChkNotifications || hCtrl == _hWndChkOnboarding ||
-                    hCtrl == _hWndChkTraining ||
-                    hCtrl == _hWndRadioLangFr || hCtrl == _hWndRadioLangEn ||
-                    hCtrl == _hWndResetVirtualKeyboardWindow || hCtrl == _hWndResetLessonsWindow ||
-                    hCtrl == _hWndCompatAdd || hCtrl == _hWndCompatRemove ||
-                    hCtrl == _hWndRadioCompatAuto || hCtrl == _hWndRadioCompatForceOn || hCtrl == _hWndRadioCompatForceOff)
-                {
-                    Win32.SetBkMode(hdcButton, 1);
-                    Win32.SetTextColor(hdcButton, CLR_TEXT);
-                    return _hPanelBrush;
-                }
-                break;
-            }
-
-            case Win32.WM_CTLCOLOREDIT:
-            {
-                IntPtr hdcEdit = wParam;
-                IntPtr hCtrlEdit = lParam;
-                if (hCtrlEdit == _hWndEditKeyboard)
-                {
-                    Win32.SetTextColor(hdcEdit, _keyboardValid ? CLR_TEXT : CLR_INVALID);
-                    Win32.SetBkColor(hdcEdit, CLR_KEY_BG);
-                    return _hKeyBrush;
-                }
-
-                if (hCtrlEdit == _hWndEditSearch)
-                {
-                    Win32.SetTextColor(hdcEdit, _searchValid ? CLR_TEXT : CLR_INVALID);
-                    Win32.SetBkColor(hdcEdit, CLR_KEY_BG);
-                    return _hKeyBrush;
+                    return _hBgBrush;
                 }
                 break;
             }
@@ -1439,34 +1715,49 @@ sealed class SettingsWindow : IDisposable
         RefreshShortcutText(_hWndEditSearch, _searchVk);
     }
 
+    /// <summary>Écrit la touche dans sa case. « F12 » élargit la case : la mise en page suit.</summary>
     private void RefreshShortcutText(IntPtr hWndShortcut, uint vk)
     {
+        if (hWndShortcut == _hWndEditKeyboard)
+            _keyboardShownVk = vk;
+        else if (hWndShortcut == _hWndEditSearch)
+            _searchShownVk = vk;
         Win32.SetWindowTextW(hWndShortcut, ConfigManager.GetShortcutDisplayName(vk));
+        if (_controls.Length > 0)
+            RepositionControls();
+        Win32.InvalidateRect(hWndShortcut, IntPtr.Zero, false);
     }
 
-    /// <summary>Couleur de la ligne de validation : rouge pour un refus, vert sinon. Elle ne
-    /// dépend que du message affiché : un raccourci resté invalide ne teint plus en rouge
-    /// le message d'un autre geste, et un refus ne s'affiche plus en vert.</summary>
-    internal static uint ValidationTextColor(bool refused) => refused ? CLR_INVALID : CLR_VALID;
+    /// <summary>Couleur du message : rouge pour un refus, texte secondaire pour une
+    /// confirmation (le ✓ du pied prend la couleur de l'action). Elle ne dépend que du message
+    /// affiché : un raccourci resté invalide ne teint plus en rouge le message d'un autre
+    /// geste, et un refus ne s'affiche plus comme une confirmation.</summary>
+    internal static uint ValidationTextColor(bool refused) => refused ? CLR_INVALID : CLR_MUTED;
 
     private void SetRefusalMessage(string text) => ShowValidationMessage(text, false, true);
 
     private void SetValidationMessage(string text, bool captureHint = false)
         => ShowValidationMessage(text, captureHint, false);
 
-    /// <summary>Hauteur du message de validation, sur autant de lignes qu'il en faut. Le
-    /// STATIC revient à la ligne, mais on ne lui donnait qu'une ligne : en français à 100 %,
-    /// le refus de compatibilité jeu s'arrêtait sur « …ou de connexion à » (décision
-    /// d'Antoine du 26/09). Seul l'onglet affiché porte un message : les mesures des autres
-    /// onglets, qui fixent la taille de la fenêtre (C4), gardent une ligne.</summary>
+    /// <summary>Hauteur du message sous les raccourcis ou les modes, sur autant de lignes qu'il
+    /// en faut (décision d'Antoine du 26/09 : le refus de compatibilité jeu tient sur deux
+    /// lignes en français à 100 %). Seul l'onglet affiché porte un message.</summary>
     private int ValidationTextHeight(SettingsTab tab, int width, int oneLine)
     {
         if (tab != _activeTab || string.IsNullOrEmpty(_validationMessage) || _hWnd == IntPtr.Zero)
             return oneLine;
+        return Math.Max(oneLine, MessageHeight(_validationMessage, width));
+    }
+
+    /// <summary>Hauteur d'un message de 13 px coupé dans <paramref name="width"/>.</summary>
+    private int MessageHeight(string text, int width)
+    {
+        if (_hWnd == IntPtr.Zero || string.IsNullOrEmpty(text)) return MessageLineHeight;
         IntPtr hdc = Win32.GetDC(_hWnd);
         try
         {
-            return Math.Max(oneLine, GdiHelpers.MeasureTextHeight(hdc, _hFontSmall, _validationMessage, width));
+            return Math.Max(MessageLineHeight, PaperText.DrawParagraph(hdc, new[] { new TextRun(text) },
+                FontSmall, FontSmall, Rect(0, 0, width, 0), CLR_MUTED, CLR_MUTED, MessageLineHeight, draw: false));
         }
         finally
         {
@@ -1482,22 +1773,25 @@ sealed class SettingsWindow : IDisposable
 
     private void ShowValidationMessage(string text, bool captureHint, bool refused)
     {
+        var placeBefore = CurrentMessagePlace();
         bool rowChanged = ValidationNeedsRelayout(_validationMessage, text);
         _validationMessage = text;
         _validationRefused = refused;
         _showCaptureHint = captureHint;
+        rowChanged |= placeBefore != CurrentMessagePlace();
         Win32.SetWindowTextW(_hWndValidation, text);
         if (rowChanged && _hWnd != IntPtr.Zero && _hWndValidation != IntPtr.Zero)
         {
             // Le message fait grandir le contenu, parfois de deux lignes. Sans remesure,
-            // la fenêtre gardait sa hauteur et le message débordait sans que le défilement
-            // s'arme : le bas du contenu devenait inatteignable (R12 de la revue du
-            // 2026-09-21). Même enchaînement que OnLanguageChanged, pour la même raison.
-            // Un message qui en remplace un autre peut passer d'une à deux lignes : il
-            // remesure aussi (26/09). Les mesures de police restent gardées (F-12).
+            // le message débordait sans que le défilement s'arme : le bas du contenu
+            // devenait inatteignable (R12 de la revue du 2026-09-21). Un message qui en
+            // remplace un autre peut changer de place ou de nombre de lignes (26/09).
             FitWindowToContent();
             RepositionControls();
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         }
+        if (_hWndValidation != IntPtr.Zero)
+            Win32.InvalidateRect(_hWndValidation, IntPtr.Zero, false);
     }
 
     private void ClearCaptureHintIfVisible()
@@ -1506,12 +1800,18 @@ sealed class SettingsWindow : IDisposable
             SetValidationMessage(string.Empty);
     }
 
+    private uint ShownVk(bool keyboard) => keyboard
+        ? (_keyboardShownVk != 0 ? _keyboardShownVk : _keyboardVk)
+        : (_searchShownVk != 0 ? _searchShownVk : _searchVk);
+
     private void SetShortcutValidity(IntPtr hWndShortcut, bool valid)
     {
         if (hWndShortcut == _hWndEditKeyboard)
             _keyboardValid = valid;
         else if (hWndShortcut == _hWndEditSearch)
             _searchValid = valid;
+        if (hWndShortcut != IntPtr.Zero)
+            Win32.InvalidateRect(hWndShortcut, IntPtr.Zero, false);
     }
 
     /// <summary>Crée la ligne « Géré par votre organisation » d'un réglage. Toujours créée,
@@ -1561,18 +1861,48 @@ sealed class SettingsWindow : IDisposable
     {
         RefreshLanguageTexts();
         RefreshLanguageRadios();
-        // Les libellés traduits changent de hauteur (les textes anglais tiennent parfois
-        // sur une ligne de moins) : remesurer, sinon la fenêtre garde la hauteur de
-        // l'autre langue et le bas du contenu redevient inatteignable.
+        // Les libellés traduits changent de largeur et de hauteur : remesurer, sinon la
+        // fenêtre garde la hauteur de l'autre langue et le bas du contenu redevient
+        // inatteignable.
         FitWindowToContent();
         RepositionControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        if (_hWndTabStrip != IntPtr.Zero)
+            Win32.InvalidateRect(_hWndTabStrip, IntPtr.Zero, false);
     }
 
-    /// <summary>R\u00e9applique tous les libell\u00e9s traduits de cette fen\u00eatre (appel\u00e9 apr\u00e8s un changement de langue).</summary>
+    /// <summary>Le sous-titre peint sous chaque mode de compatibilité devient la description
+    /// accessible de son bouton radio : un lecteur d'écran le lit après le libellé.</summary>
+    private void SetCompatDescriptions()
+    {
+        AccessibleName.TrySetDescription(_hWndRadioCompatAuto, L.SettingsPaper_CompatHintAuto);
+        AccessibleName.TrySetDescription(_hWndRadioCompatForceOn, L.SettingsPaper_CompatHintForceOn);
+        AccessibleName.TrySetDescription(_hWndRadioCompatForceOff, L.SettingsPaper_CompatHintForceOff);
+    }
+
+    /// <summary>Même motif pour les sous-titres des onglets « Général » et « Langue » (lot
+    /// « clarté ») : chaque réglage décrit est lu avec ce qu'il change.</summary>
+    private void SetSettingDescriptions()
+    {
+        AccessibleName.TrySetDescription(_hWndEditKeyboard, L.SettingsClarity_HintKeyboardShortcut);
+        AccessibleName.TrySetDescription(_hWndEditSearch, L.SettingsClarity_HintSearchShortcut);
+        AccessibleName.TrySetDescription(_hWndChkAutoStart, L.SettingsClarity_HintAutoStart);
+        AccessibleName.TrySetDescription(_hWndChkNotifications, L.SettingsClarity_HintNotifications);
+        AccessibleName.TrySetDescription(_hWndChkOnboarding, L.SettingsClarity_HintOnboarding);
+        AccessibleName.TrySetDescription(_hWndResetVirtualKeyboardWindow, L.SettingsClarity_HintResetWindow);
+        AccessibleName.TrySetDescription(_hWndResetLessonsWindow, L.SettingsClarity_HintResetWindow);
+        // Deux « Mots » et deux « Recette écrite » se suivent dans l'onglet « Leçons » : l'état du
+        // clavier que chaque liste règle devient la description de ses boutons radio, lue après
+        // le libellé (« Mots, Avec le clavier »).
+        foreach (IntPtr radio in _hWndNotationWith)
+            AccessibleName.TrySetDescription(radio, L.Notation_WithKeyboard);
+        foreach (IntPtr radio in _hWndNotationWithout)
+            AccessibleName.TrySetDescription(radio, L.Notation_WithoutKeyboard);
+    }
+
+    /// <summary>Réapplique tous les libellés traduits de cette fenêtre (appelé après un changement de langue).</summary>
     private void RefreshLanguageTexts()
     {
-        _metrics = null; // largeur du bouton de réinitialisation, dans la nouvelle langue
         Win32.SetWindowTextW(_hWnd, L.Settings_WindowTitle);
         // La bande d'onglets n'est pas un contrôle à texte de fenêtre : ses trois libellés
         // vivent dans le contrôle onglet et ne se réécrivent qu'avec TCM_SETITEMW. Ils
@@ -1580,9 +1910,13 @@ sealed class SettingsWindow : IDisposable
         SetTabText(0, L.Settings_TabGeneral);
         SetTabText(1, L.Settings_TabApplications);
         SetTabText(2, L.Settings_TabLanguageMaintenance);
+        SetTabText(3, L.Settings_TabLessons);
+        _metrics = null; // largeurs des libellés et de la bande, dans la nouvelle langue
         foreach (var control in _controls)
             if (control.Text != null)
                 Win32.SetWindowTextW(control.Handle, control.Text());
+        SetCompatDescriptions();
+        SetSettingDescriptions();
         RefreshCompatList(SelectedCompatProcess()); // libellés de mode traduits dans la liste
         RefreshShortcutTexts();
         SetValidationMessage(string.Empty);
@@ -1598,6 +1932,10 @@ sealed class SettingsWindow : IDisposable
         return sel >= 0 && sel < _compatProcesses.Count ? _compatProcesses[sel] : null;
     }
 
+    /// <summary>Libellé court d'un mode dans la liste, à droite du nom du process.</summary>
+    private static string CompatListLabel(string mode)
+        => mode == "forceOn" ? L.Settings_CompatListForceOn : L.Settings_CompatListForceOff;
+
     /// <summary>
     /// Repeuple la listbox depuis config.json (tri alphabétique), restaure la sélection
     /// sur <paramref name="selectProcess"/> si présent, puis synchronise radios et boutons.
@@ -1608,6 +1946,7 @@ sealed class SettingsWindow : IDisposable
     {
         var overrides = ConfigManager.GetAllCompatibilityOverrides();
         _compatProcesses.Clear();
+        _compatModes.Clear();
         _compatProcesses.AddRange(overrides.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase));
 
         Win32.SendMessageW(_hWndCompatList, LB_RESETCONTENT, IntPtr.Zero, IntPtr.Zero);
@@ -1615,10 +1954,10 @@ sealed class SettingsWindow : IDisposable
         for (int i = 0; i < _compatProcesses.Count; i++)
         {
             string name = _compatProcesses[i];
-            string modeLabel = overrides[name] == "forceOn"
-                ? L.Settings_CompatListForceOn
-                : L.Settings_CompatListForceOff;
-            SendListBoxAddString(_hWndCompatList, $"{name} — {modeLabel}");
+            _compatModes.Add(overrides[name]);
+            // Le texte de la ligne reste entier pour les lecteurs d'écran ; le dessin écrit
+            // le nom à gauche et le mode à droite.
+            SendListBoxAddString(_hWndCompatList, $"{name} — {CompatListLabel(overrides[name])}");
             if (string.Equals(name, selectProcess, StringComparison.OrdinalIgnoreCase))
                 selIndex = i;
         }
@@ -1635,7 +1974,8 @@ sealed class SettingsWindow : IDisposable
     }
 
     /// <summary>Synchronise radios et bouton Retirer avec l'entrée sélectionnée
-    /// (radios décochées et grisées quand rien n'est sélectionné).</summary>
+    /// (radios décochées et grisées quand rien n'est sélectionné), et le libellé
+    /// « Mode pour … » qui les surmonte.</summary>
     private void RefreshCompatSelectionUi()
     {
         string? proc = SelectedCompatProcess();
@@ -1653,6 +1993,9 @@ sealed class SettingsWindow : IDisposable
             mode == "forceOn" ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         Win32.SendMessageW(_hWndRadioCompatForceOff, Win32.BM_SETCHECK,
             mode == "forceOff" ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+
+        if (_hWnd != IntPtr.Zero && _activeTab == SettingsTab.Applications)
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
     /// <summary>
@@ -1670,7 +2013,11 @@ sealed class SettingsWindow : IDisposable
         if (mode == "forceOn" &&
             (GameRegistry.IsAntiCheatProcess(proc, null) || GameRegistry.IsRemoteAccessProcess(proc)))
         {
-            SetRefusalMessage(L.Settings_CompatForceOnRefused);
+            // Le refus dit pourquoi et ce qui se passe à la place (lot « clarté ») : la
+            // connexion à distance est testée la première, comme dans ForegroundMonitor.
+            SetRefusalMessage(GameRegistry.IsRemoteAccessProcess(proc)
+                ? L.SettingsClarity_CompatRefusedRemote
+                : L.SettingsClarity_CompatRefusedAntiCheat);
             RefreshCompatSelectionUi(); // re-cocher le radio du mode réel
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
@@ -1765,19 +2112,31 @@ sealed class SettingsWindow : IDisposable
             RefreshShortcutText(hWndShortcut, _searchVk);
         }
 
-        ClearCaptureHintIfVisible();
+        // L'invite ou le refus de raccourci disparaît : la touche d'avant est rendue.
+        if (ShortcutCaptureMessageShown)
+            SetValidationMessage(string.Empty);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
+
+    /// <summary>L'invite de capture ou un refus de raccourci est affiché sous les raccourcis :
+    /// Échap annule alors la saisie au lieu de fermer la fenêtre. Avant le lot « clarté », un
+    /// refus effaçait l'invite, et Échap fermait la fenêtre au lieu d'annuler.</summary>
+    private bool ShortcutCaptureMessageShown =>
+        _showCaptureHint || (_validationRefused && CurrentMessagePlace() == MessagePlace.Shortcuts);
 
     private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk)
     {
         bool isKeyboard = hWndShortcut == _hWndEditKeyboard;
         uint otherVk = isKeyboard ? _searchVk : _keyboardVk;
 
-        if (!ConfigManager.IsShortcutAllowedVk(vk))
+        // Lot « clarté » : chaque refus dit pourquoi, à la place de l'invite. La case montre
+        // la touche refusée, en rouge, celle que nomme le message (QCM du 07/10) ; la touche
+        // en place revient à Échap ou à la perte du focus.
+        if (ShortcutRefusal(vk) is string refusal)
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetRefusalMessage(L.Settings_ShortcutReserved);
+            RefreshShortcutText(hWndShortcut, vk);
+            SetRefusalMessage(refusal);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -1785,7 +2144,11 @@ sealed class SettingsWindow : IDisposable
         if (vk == otherVk)
         {
             SetShortcutValidity(hWndShortcut, false);
-            SetRefusalMessage(L.Settings_ShortcutAlreadyUsed);
+            RefreshShortcutText(hWndShortcut, vk);
+            string key = ConfigManager.GetShortcutDisplayName(vk);
+            SetRefusalMessage(isKeyboard
+                ? L.SettingsClarity_ShortcutTakenBySearch(key)
+                : L.SettingsClarity_ShortcutTakenByKeyboard(key));
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -1824,20 +2187,49 @@ sealed class SettingsWindow : IDisposable
                 return (IntPtr)DialogNavigation.DialogCodeKeepingTab(baseResult.ToInt64(), lParam);
             }
 
+            // La case est dessinée par la fenêtre (PaintShortcutBox) : ni fond système, ni
+            // sélection, ni curseur texte, que l'EDIT dessinerait par-dessus.
+            case Win32.WM_PAINT:
+                PaintShortcutBox(hWnd);
+                return IntPtr.Zero;
+
+            case Win32.WM_ERASEBKGND:
+                return (IntPtr)1;
+
+            case EM_SETSEL:
+            case Win32.WM_LBUTTONDBLCLK:
+            case Win32.WM_LBUTTONUP:
+            case Win32.WM_MOUSEMOVE:
+                return IntPtr.Zero;
+
+            case Win32.WM_LBUTTONDOWN:
+                Win32.SetFocus(hWnd);
+                return IntPtr.Zero;
+
             case Win32.WM_SETFOCUS:
+            {
                 _focusedShortcut = hWnd;
                 SetShortcutValidity(hWnd, true);
                 SetValidationMessage(ShortcutCaptureHint, true);
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-                break;
+                IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+                HideCaret(hWnd);
+                Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                return result;
+            }
 
             case Win32.WM_KILLFOCUS:
+            {
                 if (_focusedShortcut == hWnd)
                     _focusedShortcut = IntPtr.Zero;
                 SetShortcutValidity(hWnd, true);
+                RefreshShortcutText(hWnd, hWnd == _hWndEditKeyboard ? _keyboardVk : _searchVk);
                 ClearCaptureHintIfVisible();
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-                break;
+                IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+                Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                return result;
+            }
 
             case Win32.WM_CHAR:
             case Win32.WM_PASTE:
@@ -1859,7 +2251,7 @@ sealed class SettingsWindow : IDisposable
 
                 if (vk == VK_ESCAPE)
                 {
-                    if (_showCaptureHint)
+                    if (ShortcutCaptureMessageShown)
                         CancelShortcutCapture(hWnd);
                     else
                         Close();
@@ -1877,191 +2269,6 @@ sealed class SettingsWindow : IDisposable
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
-    private void OnPaint(IntPtr hWnd)
-    {
-        using var paint = new PaintBuffer(hWnd);
-        PaintClient(paint.Hdc, paint.Client);
-    }
-
-    /// <summary>Toute la zone cliente dans <paramref name="hdc"/>, à partir de l'origine qu'il
-    /// porte déjà : (0, 0) pour WM_PAINT, celle d'un contrôle enfant pour WM_PRINTCLIENT.</summary>
-    private void PaintClient(IntPtr hdc, Win32.RECT clientRect)
-    {
-        int cw = clientRect.right;
-        LayoutInfo layout = GetLayout(cw);
-        Win32.GetViewportOrgEx(hdc, out var origin);
-
-        Win32.FillRect(hdc, ref clientRect, _hBgBrush);
-        Win32.SetBkMode(hdc, 1);
-        // Le contenu se dessine en coordonnées de contenu, décalées du défilement. GDI+,
-        // créé après, suit la même origine (mesuré le 26/09).
-        Win32.SetViewportOrgEx(hdc, origin.x, origin.y - _scrollY, IntPtr.Zero);
-
-        Win32.GdipCreateFromHDC(hdc, out IntPtr gfx);
-        if (gfx != IntPtr.Zero)
-        {
-            Win32.GdipSetSmoothingMode(gfx, 4);
-            Win32.GdipSetInterpolationMode(gfx, 7);
-            Win32.GdipSetTextRenderingHint(gfx, 4);
-        }
-
-        DrawHeader(hdc, gfx, layout, cw);
-        GdiHelpers.DrawPanel(hdc, layout.ShortcutsPanel, CLR_PANEL_BG, CLR_PANEL_BORDER, 0, 0);
-        // Seules les sections de l'onglet actif se dessinent. Les autres ont des
-        // rectangles de hauteur nulle : les tracer ne planterait pas, mais leurs
-        // titres de panneau, eux, se dessineraient les uns sur les autres.
-        if (_activeTab == SettingsTab.General)
-        {
-            PaintShortcutPanel(hdc, layout);
-            DrawSectionTitle(hdc, layout.PreferencesPanel, L.Settings_SectionPreferences);
-        }
-        else if (_activeTab == SettingsTab.Applications)
-        {
-            DrawSectionTitle(hdc, layout.CompatPanel, L.Settings_SectionCompat);
-        }
-        else
-        {
-            DrawSectionTitle(hdc, layout.LanguagePanel, L.Settings_SectionLanguage);
-            DrawSectionTitle(hdc, layout.WindowsPanel, L.Settings_SectionWindows);
-        }
-
-        if (gfx != IntPtr.Zero)
-            Win32.GdipDeleteGraphics(gfx);
-
-        Win32.SetViewportOrgEx(hdc, origin.x, origin.y, IntPtr.Zero);
-    }
-
-    private void DrawHeader(IntPtr hdc, IntPtr gfx, LayoutInfo layout, int cw)
-    {
-        if (gfx != IntPtr.Zero && _gdipLogo != IntPtr.Zero)
-        {
-            Win32.GdipDrawImageRectI(gfx, _gdipLogo,
-                layout.LogoRect.left, layout.LogoRect.top,
-                layout.LogoRect.right - layout.LogoRect.left,
-                layout.LogoRect.bottom - layout.LogoRect.top);
-        }
-
-        string version = $"v{Program.Version}";
-        Win32.SelectObject(hdc, _hFontVersion);
-        int versionHeight = MeasureSingleLineHeight(hdc, _hFontVersion);
-        int titleHeight = MeasureSingleLineHeight(hdc, _hFontTitle);
-        int versionTextWidth = MeasureSingleLineWidth(hdc, _hFontVersion, version);
-        int versionWidth = versionTextWidth + S(24);
-        int versionRight = cw - layout.Margin - S(6);
-        int versionLeft = versionRight - versionWidth;
-        int headerLineTop = Math.Min(layout.LogoRect.top, layout.HeaderTitleY);
-        int headerLineBottom = Math.Max(layout.LogoRect.bottom, layout.HeaderTitleY + titleHeight);
-
-        string title = ProductIdentity.DisplayName;
-        int titleRight = versionLeft - S(8);
-        Win32.SelectObject(hdc, _hFontTitle);
-        Win32.SetTextColor(hdc, CLR_TITLE);
-        var titleRect = new Win32.RECT
-        {
-            left = layout.HeaderTitleX,
-            top = layout.HeaderTitleY,
-            right = titleRight,
-            bottom = layout.HeaderTitleY + Math.Max(S(20), titleHeight)
-        };
-        Win32.DrawTextW(hdc, title, -1, ref titleRect,
-            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-
-        Win32.SelectObject(hdc, _hFontVersion);
-        Win32.SetTextColor(hdc, CLR_VERSION);
-        var versionRect = new Win32.RECT
-        {
-            left = versionLeft,
-            top = headerLineTop - S(1),
-            right = versionRight,
-            bottom = headerLineBottom + S(3)
-        };
-        Win32.DrawTextW(hdc, version, -1, ref versionRect,
-            Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-
-        GdiHelpers.FillSolidRect(hdc, Rect(layout.Margin, layout.HeaderDividerY, cw - layout.Margin * 2, 1), CLR_SEPARATOR);
-    }
-
-    private void PaintShortcutPanel(IntPtr hdc, LayoutInfo layout)
-    {
-        int titleX = layout.ShortcutsPanel.left + S(12);
-        DrawPanelTitle(hdc, titleX, layout.ShortcutsPanel.top + S(8),
-            layout.ShortcutsPanel.right - S(12) - titleX, L.Settings_SectionShortcuts);
-
-        DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.KeyboardRowY,
-            L.Settings_ShortcutLabelKeyboard, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
-        DrawKeyBox(hdc, layout.KeyboardBoxRect, _keyboardValid, _focusedShortcut == _hWndEditKeyboard);
-
-        DrawShortcutRow(hdc, layout.ShortcutsLabelX, layout.ShortcutsLabelWidth, layout.SearchRowY,
-            L.Settings_ShortcutLabelSearch, GetShortcutPrefixRuns(), layout.ShortcutsShortcutX, layout.ShortcutsShortcutWidth);
-        DrawKeyBox(hdc, layout.SearchBoxRect, _searchValid, _focusedShortcut == _hWndEditSearch);
-    }
-
-    /// <summary>Titre d'une section et, au-dessus, son séparateur (audit du 25/09, F-06 :
-    /// quatre méthodes recopiaient ce bloc à côté de DrawPanelTitle, qui ne servait pas).</summary>
-    private void DrawSectionTitle(IntPtr hdc, Win32.RECT section, string title)
-    {
-        int x = section.left + S(12);
-        GdiHelpers.FillSolidRect(hdc, Rect(x, section.top - S(8), section.right - section.left - S(24), 1), CLR_SEPARATOR);
-        DrawPanelTitle(hdc, x, section.top, section.right - S(12) - x, title);
-    }
-
-    private void DrawShortcutRow(IntPtr hdc, int labelX, int labelWidth, int rowY,
-        string label, (string Text, uint Color, IntPtr Font)[] shortcutRuns, int shortcutX, int shortcutWidth)
-    {
-        Win32.SelectObject(hdc, _hFontText);
-        Win32.SetTextColor(hdc, CLR_TEXT);
-        var labelRect = new Win32.RECT
-        {
-            left = labelX,
-            top = rowY + S(1),
-            right = labelX + labelWidth,
-            bottom = rowY + S(22)
-        };
-        Win32.DrawTextW(hdc, label, -1, ref labelRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_VCENTER | Win32.DT_NOPREFIX);
-
-        GdiHelpers.DrawColoredRuns(hdc, shortcutX, rowY + S(2), shortcutWidth, S(20), shortcutRuns);
-    }
-
-    private void DrawKeyBox(IntPtr hdc, Win32.RECT rect, bool valid, bool focused)
-    {
-        uint borderColor = !valid ? CLR_KEY_BORDER_INVALID : focused ? CLR_KEY_BORDER_FOCUS : CLR_KEY_BORDER;
-        GdiHelpers.FillSolidRect(hdc, rect, borderColor);
-        var innerRect = new Win32.RECT
-        {
-            left = rect.left + 1,
-            top = rect.top + 1,
-            right = rect.right - 1,
-            bottom = rect.bottom - 1
-        };
-        GdiHelpers.FillSolidRect(hdc, innerRect, CLR_KEY_BG);
-    }
-
-    private void DrawPanelTitle(IntPtr hdc, int x, int y, int width, string title)
-    {
-        Win32.SelectObject(hdc, _hFontPanelTitle);
-        Win32.SetTextColor(hdc, CLR_LINK);
-        var rect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + Math.Max(S(20), Metrics.PanelTitle) };
-        Win32.DrawTextW(hdc, title, -1, ref rect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-    }
-
-    // Méthodes GDI factorisées dans GdiHelpers.cs — wrappers d'instance pour le DPI scaling
-    private int MeasureSingleLineWidth(IntPtr hdc, IntPtr hFont, string text)
-        => GdiHelpers.MeasureSingleLineWidth(hdc, hFont, text);
-
-    private int MeasureSingleLineHeight(IntPtr hdc, IntPtr hFont)
-        => GdiHelpers.MeasureSingleLineHeight(hdc, hFont);
-
-    private (string Text, uint Color, IntPtr Font)[] GetShortcutPrefixRuns()
-    {
-        return new[]
-        {
-            ("Ctrl", CLR_INLINE_HIGHLIGHT, _hFontEdit),
-            (" + ", CLR_TEXT, _hFontText),
-            (L.Settings_ShortcutModifier2, CLR_INLINE_HIGHLIGHT, _hFontEdit),
-            (" + ", CLR_TEXT, _hFontText)
-        };
-    }
-
     public void Dispose()
     {
         if (_onAppLanguageChanged != null)
@@ -2070,6 +2277,8 @@ sealed class SettingsWindow : IDisposable
             Win32.RemoveWindowSubclass(_hWndEditKeyboard, _shortcutSubclassProc, (UIntPtr)3);
         if (_hWndEditSearch != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndEditSearch, _shortcutSubclassProc, (UIntPtr)4);
+        if (_hWndTabStrip != IntPtr.Zero)
+            Win32.RemoveWindowSubclass(_hWndTabStrip, _tabSubclassProc, (UIntPtr)5);
         if (_hWnd != IntPtr.Zero)
         {
             // AG130-40 : desinscrire AVANT de detruire — Windows recycle les HWND.
@@ -2078,15 +2287,8 @@ sealed class SettingsWindow : IDisposable
             _hWnd = IntPtr.Zero;
         }
 
-        DestroyFonts();
-        Win32.DeleteObject(_hPanelBrush);
-        Win32.DeleteObject(_hKeyBrush);
+        Win32.DeleteObject(_hSurfaceBrush);
 
-        if (_gdipLogo != IntPtr.Zero)
-        {
-            Win32.GdipDisposeImage(_gdipLogo);
-            _gdipLogo = IntPtr.Zero;
-        }
         if (_gdipToken != IntPtr.Zero)
         {
             Win32.GdiplusShutdown(_gdipToken);

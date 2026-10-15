@@ -83,10 +83,10 @@ L'onboarding actuel s'organise en deux niveaux :
 - [x] **Bouton « Essayer maintenant »** dans l'étape 1 lance les exercices interactifs (sans avancer silencieusement à l'étape 2). À la sortie, le bouton se transforme en « Suivant ».
 - [x] **Esc + croix X** pour fermer.
 
-#### Module d'exercices intégré — 6 exercices
+#### Module d'exercices intégré — 8 exercices
 
-- [x] 4 exercices obligatoires (premier É, ponctuation, e-mail, typographie française).
-- [x] 2 exercices bonus (skippables) : ligne de code, mots étrangers — identifiés par une pill « Bonus » à côté du titre.
+- [x] Tronc commun de 3 exercices (premier É, ponctuation, e-mail), puis un exercice par usage coché (documents et typographie française, messages, code, autres langues, langues africaines) ; le premier usage selon l'ordre de priorité est obligatoire, les suivants facultatifs. Aucun usage coché : l'exercice documents.
+- [x] Exercices facultatifs (skippables) identifiés par une pill « Bonus » à côté du titre.
 - [x] Bouton « Passer cet exercice » disponible sur les bonus.
 - [x] Page de félicitations en fin de parcours : titre « Bravo ! » + sous-titre « Vous maîtrisez les bases d'AZERTY Global. » + bouton « Terminer ».
 - [x] Clavier virtuel intégré : caractère principal + AltGr discret en bas-droite pour les lettres ; grille 2×2 (Maj/Maj+AltGr/Base/AltGr) pour les symboles ; AltGr en accent bleu (cohérence avec le testeur du site).

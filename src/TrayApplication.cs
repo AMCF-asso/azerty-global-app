@@ -464,7 +464,7 @@ sealed class TrayApplication : IDisposable
             {
                 var list = string.Join(", ", conflicting);
                 // Bypass NotificationsEnabled : on utilise Shell_NotifyIconW directement
-                ShowSecurityBalloon(L.Tray_GameCompatDisabledTitle, L.Tray_GameCompatDisabledBody(list));
+                ShowSecurityBalloon(L.TrayClarity_GameCompatRemovedTitle, L.TrayClarity_GameCompatRemovedBody(list));
             }
         }
         catch (Exception ex)
@@ -723,9 +723,9 @@ sealed class TrayApplication : IDisposable
                         _mapper?.AdvancedFeaturesSuppressed != true)
                         _characterSearch?.Toggle();
                     else if (_mapper?.AdvancedFeaturesSuppressed == true)
-                        ShowBalloon(L.Layers_SearchSecureTitle, L.Layers_SearchSecureBody);
+                        ShowBalloon(L.Layers_SearchSecureTitle, L.TrayClarity_SearchSecureBody);
                     else if (IsPaused)
-                        ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
+                        ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
                     else
                         ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
                     return IntPtr.Zero;
@@ -733,8 +733,15 @@ sealed class TrayApplication : IDisposable
                 case WM_APP_VKBD:
                     if (ShouldProcessHook)
                         _virtualKeyboard?.Toggle();
+                    // Le raccourci n'arrive ici, sous suspension, que si elle est choisie
+                    // (ShouldDetectShortcutsWhileBlocked). « Désactivé — Ctrl+Maj+Verr. Maj.
+                    // pour réactiver » y était faux : ce raccourci aurait désactivé l'app.
+                    else if (IsUserOverrideSuspension)
+                        ShowBalloon(L.Tray_SuspendedInTitle(FormatProcessName(
+                                _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback)),
+                            L.TrayClarity_UserOverrideSuspendedBody);
                     else if (IsPaused)
-                        ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
+                        ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
                     else
                         ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
                     return IntPtr.Zero;
@@ -778,7 +785,7 @@ sealed class TrayApplication : IDisposable
                             else if (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true)
                                 _characterSearch?.Show(_lastForegroundBeforeTrayMenu);
                             else if (_mapper?.AdvancedFeaturesSuppressed == true)
-                                ShowBalloon(L.Layers_SearchSecureTitle, L.Layers_SearchSecureBody);
+                                ShowBalloon(L.Layers_SearchSecureTitle, L.TrayClarity_SearchSecureBody);
                             break;
                         case IDM_SETTINGS:
                             ShowSettingsWindow();
@@ -798,8 +805,8 @@ sealed class TrayApplication : IDisposable
                             break;
                         case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
                         case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
-                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/assets/Prise_en_main_AZERTY_Global.pdf"), null, null, 1); break;
-                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide#cartes"), null, null, 1); break;
+                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath), null, null, 1); break;
+                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.KeyboardCardsPath), null, null, 1); break;
                         case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/mentions-legales#confidentialite-securite"), null, null, 1); break;
                         case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
@@ -1370,7 +1377,7 @@ sealed class TrayApplication : IDisposable
             if (ShouldProcessHook)
                 ShowBalloon(L.Tray_ActiveTitle, L.Tray_ActiveBalloonBody);
             else if (IsPaused)
-                ShowBalloon(L.Tray_PausedTitle, L.Tray_PausedBalloonBody);
+                ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
             else if (!_enabled)
                 ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
         }
@@ -1424,6 +1431,8 @@ sealed class TrayApplication : IDisposable
             // Un override modifié depuis la section Apps suspendues doit
             // s'appliquer immédiatement au process foreground courant.
             _settings.CompatibilityOverridesChanged = () => _foregroundMonitor?.Recompute();
+            // Notation des touches changée dans l'onglet Leçons : la fenêtre ouverte suit.
+            _settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
         }
         ApplyWindowInputState();
         _settings.Show();
@@ -1460,9 +1469,9 @@ sealed class TrayApplication : IDisposable
 
     /// <summary>
     /// L'annonce unique du Défi du jour doit-elle partir ? Décision pure. Défi masqué
-    /// (1.3.0, décision d'Antoine du 2026-09-24) : jamais, et rien n'est marqué — le
-    /// drapeau <c>challengeAnnounceDone</c> reste tel quel, pour que l'annonce reste
-    /// possible quand le Défi reviendra en 1.4.0.
+    /// (interrupteur coupé) : jamais, et rien n'est marqué — le drapeau
+    /// <c>challengeAnnounceDone</c> reste tel quel, pour que l'annonce parte à sa réactivation
+    /// (1.3.0, décision d'Antoine du 2026-10-07).
     /// </summary>
     internal static bool ShouldShowChallengeAnnouncement(bool challengeEnabled, bool announceDone,
         bool trainingEnabled, bool notificationsEnabled)
@@ -1627,6 +1636,14 @@ sealed class TrayApplication : IDisposable
         // Les IDM_* ne changent pas ; seuls l'ordre, les regroupements et trois libellés bougent.
 
         // ── État ────────────────────────────────────────────────────
+        // Suspension de compatibilité : une ligne grisée dit pourquoi avant les commandes,
+        // sans quoi « Désactiver » s'affiche alors que rien n'est actif (lot clarté du
+        // 2026-10-07). Même texte que l'infobulle.
+        if (ShouldShowCompatibilitySuspension(_suspendedForCompatibility, _activationConsent))
+        {
+            Win32.AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, SuspensionReasonText(_appliedSuspendReason));
+            Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
+        }
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE,
             _enabled ? L.Tray_MenuDisable : L.Tray_MenuEnable);
         if (IsPaused)
@@ -1685,8 +1702,8 @@ sealed class TrayApplication : IDisposable
         // 2026-08-16 — arbitrage assumé par Antoine au profit de la lisibilité du menu.
         var hLearnMenu = Win32.CreatePopupMenu();
         // Défi du jour : toujours visible depuis la décision du 2026-08-16, sans condition
-        // d'opt-in — sauf interrupteur coupé (1.3.0 : masqué, revient en 1.4.0, décision
-        // d'Antoine du 2026-09-24). Voir LearnMenuEntries.
+        // d'opt-in — sauf interrupteur coupé (masqué le 2026-09-24, réactivé en 1.3.0 le
+        // 2026-10-07). Voir LearnMenuEntries.
         foreach (int id in LearnMenuEntries(DailyChallenge.Enabled))
             Win32.AppendMenuW(hLearnMenu, MF_STRING, (nuint)id, LearnMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLearnMenu, L.Tray_MenuLearn);
@@ -1782,7 +1799,7 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hMenu, languageFlags, IDM_SWITCH_LANGUAGE, L.Tray_MenuSwitchLanguage);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_QUIT, L.Tray_MenuQuit);
 
-        Win32.GetCursorPos(out var pt);
+        CursorSource.TryGet(out var pt);
         _lastForegroundBeforeTrayMenu = Win32.GetForegroundWindow();
         if (_lastForegroundBeforeTrayMenu == _hWnd)
             _lastForegroundBeforeTrayMenu = IntPtr.Zero;
@@ -1821,26 +1838,34 @@ sealed class TrayApplication : IDisposable
             var procName = _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback;
             var procDisplay = FormatProcessName(procName);
             var reason = _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.UnknownForeground;
-            if (reason == CompatibilitySuspendReason.RemoteAccess)
+            // Corps propres à ce chemin : _enabled est faux, rien ne se réactive seul en
+            // quittant l'application. Le titre dit un refus d'activation, pas de
+            // compatibilité forcée, que l'utilisateur n'a pas demandée ici.
+            if (_foregroundMonitor?.IsTrackingAvailable == false)
             {
-                ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_ForceOnRemoteRefused);
+                // Toute fenêtre est « non reconnue » : en changer ne réactive rien.
+                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.TrayClarity_TrackingUnavailableBody);
+            }
+            else if (reason == CompatibilitySuspendReason.RemoteAccess)
+            {
+                ShowSecurityBalloon(L.Tray_ToggleRefusedTitle(procDisplay), L.TrayClarity_RemoteToggleRefusedBody);
                 ConfigManager.LogCompatCriticalEvent("RemoteAccessToggleRefused",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, attempted=enable");
             }
             else if (reason == CompatibilitySuspendReason.AntiCheat)
             {
-                ShowSecurityBalloon(L.Tray_ToggleRefusedTitle(procDisplay), L.Tray_AntiCheatRefusedBody);
+                ShowSecurityBalloon(L.Tray_ToggleRefusedTitle(procDisplay), L.TrayClarity_AntiCheatToggleRefusedBody);
                 // Audit sécu 2026-05 SEV-A1-02 : anonymisation du process name dans le log.
                 ConfigManager.LogCompatCriticalEvent("AntiCheatToggleRefused",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, attempted=enable");
             }
             else if (reason == CompatibilitySuspendReason.UserOverride)
             {
-                ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_UserOverrideToggleRefused);
+                ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.TrayClarity_UserOverrideToggleRefusedBody);
             }
             else
             {
-                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.Tray_SuspendedUnknownForeground);
+                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.TrayClarity_UnknownToggleRefusedBody);
             }
             return;
         }
@@ -2110,14 +2135,14 @@ sealed class TrayApplication : IDisposable
             _mapper.DisplayDeadKey);
     }
 
-    private void OnReportBug() => OpenDiagnosticPage("/bug", "app");
+    private void OnReportBug() => OpenDiagnosticPage(ProductIdentity.BugReportPath, "app");
 
     /// <summary>
     /// Ouvre la page de retour, version et OS compris (R16). Le paramètre <c>source</c>
     /// déjà présent dans l'URL de la sollicitation d'avis est conservé tel quel : le site
     /// le lit depuis la 1.2.0, et le renommer casserait sa mesure.
     /// </summary>
-    private void OpenFeedback(string source, string path = "/feedback") =>
+    private void OpenFeedback(string source, string path = ProductIdentity.FeedbackPath) =>
         OpenDiagnosticPage(path, source);
 
     private static void OpenDiagnosticPage(string path, string source) =>
@@ -2196,28 +2221,54 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void AnnounceSuspension(CompatibilitySuspendReason reason, string procName, string procDisplay)
     {
+        // Le journal suit chaque suspension ; la bulle seulement celles qui arrêtent quelque chose.
+        string? body = SuspensionBalloonBody(reason, _wasEnabledBeforeAutoDisable,
+            _foregroundMonitor?.IsTrackingAvailable ?? true);
         switch (reason)
         {
             case CompatibilitySuspendReason.UnknownForeground:
-                ShowSecurityBalloon(L.Tray_PrecautionTitle, L.Tray_SuspendedUnknownForeground);
+                if (body != null) ShowSecurityBalloon(L.Tray_PrecautionTitle, body);
                 ConfigManager.LogCompatCriticalEvent("UnknownForegroundSuspended", "action=disable");
                 break;
             case CompatibilitySuspendReason.RemoteAccess:
-                ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), L.Tray_DisabledForRemoteAccess);
+                if (body != null) ShowSecurityBalloon(L.Tray_SuspendedDuringTitle(procDisplay), body);
                 ConfigManager.LogCompatCriticalEvent("RemoteAccessDetected",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                 break;
             case CompatibilitySuspendReason.UserOverride:
-                ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledByUserOverride);
+                if (body != null) ShowBalloon(L.Tray_SuspendedInTitle(procDisplay), body);
                 ConfigManager.LogCompatEvent("UserOverrideApplied",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                 break;
             default:
-                ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), L.Tray_DisabledForAntiCheat);
+                if (body != null) ShowSecurityBalloon(L.Tray_SuspendedInTitle(procDisplay), body);
                 ConfigManager.LogCompatCriticalEvent("AntiCheatDetected",
                     $"process={ConfigManager.AnonymizeProcessName(procName)}, action=disable");
                 break;
         }
+    }
+
+    /// <summary>
+    /// Corps de la bulle de suspension, ou null s'il n'y a rien à annoncer. Fonction pure,
+    /// éprouvée par TrayClarityTests.
+    ///
+    /// Pas de bulle quand l'application était déjà désactivée ou en pause : la suspension
+    /// n'arrête rien, et « tout redevient comme avant » n'apprend rien. Le journal, lui,
+    /// garde la trace. Sans suivi des fenêtres, chaque fenêtre est « non reconnue » :
+    /// « changez de fenêtre » serait faux, seul un redémarrage réessaie.
+    /// </summary>
+    internal static string? SuspensionBalloonBody(CompatibilitySuspendReason reason, bool wasActive,
+        bool trackingAvailable)
+    {
+        if (!wasActive) return null;
+        if (!trackingAvailable) return L.TrayClarity_TrackingUnavailableBody;
+        return reason switch
+        {
+            CompatibilitySuspendReason.UnknownForeground => L.TrayClarity_UnknownSuspendedBody,
+            CompatibilitySuspendReason.RemoteAccess => L.TrayClarity_RemoteSuspendedBody,
+            CompatibilitySuspendReason.UserOverride => L.TrayClarity_UserOverrideSuspendedBody,
+            _ => L.TrayClarity_AntiCheatSuspendedBody
+        };
     }
 
     /// <summary>
@@ -2344,15 +2395,30 @@ sealed class TrayApplication : IDisposable
         return Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
     }
 
+    /// <summary>
+    /// Le pourquoi d'une suspension en quelques mots, pour l'infobulle et la ligne d'état
+    /// du menu (lot clarté du 2026-10-07). « Suspendu pour compatibilité » ne disait ni
+    /// la cause ni s'il fallait agir. Fonction pure, éprouvée par TrayClarityTests.
+    /// </summary>
+    internal static string SuspensionReasonText(CompatibilitySuspendReason reason) => reason switch
+    {
+        CompatibilitySuspendReason.RemoteAccess => L.TrayClarity_ReasonRemote,
+        CompatibilitySuspendReason.UserOverride => L.TrayClarity_ReasonUserOverride,
+        CompatibilitySuspendReason.UnknownForeground => L.TrayClarity_ReasonUnknown,
+        // AntiCheat, et None par prudence : une suspension sans motif connu est traitée
+        // comme la plus stricte, à l'image d'AnnounceSuspension.
+        _ => L.TrayClarity_ReasonAntiCheat
+    };
+
     private void UpdateTooltip()
     {
         var parts = new List<string> { ProductIdentity.DisplayName + " v" + Program.Version };
         if (ShouldShowCompatibilitySuspension(_suspendedForCompatibility, _activationConsent))
-            parts.Add(L.Tray_TooltipSuspendedCompat);
+            parts.Add(SuspensionReasonText(_appliedSuspendReason));
         else if (IsPaused)
-            parts.Add(L.Tray_TooltipPaused(FormatPauseRemaining()));
+            parts.Add(L.TrayClarity_TooltipPausedByYou(FormatPauseRemaining()));
         else if (!_enabled)
-            parts.Add(L.Tray_TooltipDisabled);
+            parts.Add(L.TrayClarity_TooltipDisabled);
         else
         {
             parts.Add(L.Tray_TooltipActive);
@@ -2578,7 +2644,7 @@ sealed class TrayApplication : IDisposable
         if (toStore && ConfigManager.IsPackaged)
             OpenStoreReview();
         else
-            OpenFeedback("app-notification", "/feedback?source=app-notification");
+            OpenFeedback("app-notification", ProductIdentity.ReviewPromptPath);
     }
 
     /// <summary>
@@ -2904,7 +2970,9 @@ sealed class TrayApplication : IDisposable
         if (!_activationConsent) return;
         var reason = _suspendedForCompatibility
             ? _appliedSuspendReason : CompatibilitySuspendReason.None;
-        var application = _suspendedForCompatibility
+        // Sans suivi des fenêtres, la même suspension couvre toutes les applications : une
+        // seule bulle, pas une à chaque changement de fenêtre.
+        var application = _suspendedForCompatibility && _foregroundMonitor?.IsTrackingAvailable != false
             ? (_foregroundMonitor?.LastApplicationIdentity ?? default) : default;
 
         switch (NextAnnouncement(ref _announcementState,
@@ -2933,13 +3001,13 @@ sealed class TrayApplication : IDisposable
 
         if (mode == "forceOn" && GameRegistry.IsRemoteAccessProcess(proc))
         {
-            ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_ForceOnRemoteRefused);
+            ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.TrayClarity_RemoteForceRefusedBody);
             return;
         }
 
         if (mode == "forceOn" && GameRegistry.IsAntiCheatProcess(proc, _compatibilityMenuFullPath))
         {
-            ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.Tray_AntiCheatRefusedBody);
+            ShowSecurityBalloon(L.Tray_ForceRefusedTitle, L.TrayClarity_AntiCheatForceRefusedBody);
             return;
         }
 

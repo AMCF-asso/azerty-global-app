@@ -332,6 +332,7 @@ static class Win32
     public const uint DT_RIGHT = 0x02;
     public const uint DT_CALCRECT = 0x400;
     public const uint DT_NOPREFIX = 0x800;
+    public const uint DT_EDITCONTROL = 0x2000;
     public const uint DT_END_ELLIPSIS = 0x8000;
     public const uint SRCCOPY = 0x00CC0020;
     public const uint TME_LEAVE = 0x02;
@@ -521,6 +522,51 @@ static class Win32
 
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetTextFaceW(IntPtr hdc, int count, char[] faceName);
+
+    /// <summary>Police privée au processus, lue en mémoire (polices embarquées de la 1.3.0).</summary>
+    [DllImport("gdi32.dll")]
+    public static extern IntPtr AddFontMemResourceEx(IntPtr pbFont, uint cbFont, IntPtr pdv, out uint pcFonts);
+
+    [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+    public static extern uint GetGlyphIndicesW(IntPtr hdc, string lpstr, int c, [Out] ushort[] pgi, uint fl);
+
+    /// <summary>Glyphe absent de la police : index 0xFFFF au lieu du glyphe par défaut.</summary>
+    public const uint GGI_MARK_NONEXISTING_GLYPHS = 1;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SIZE { public int cx; public int cy; }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct TEXTMETRICW
+    {
+        public int tmHeight, tmAscent, tmDescent, tmInternalLeading, tmExternalLeading,
+            tmAveCharWidth, tmMaxCharWidth, tmWeight, tmOverhang, tmDigitizedAspectX, tmDigitizedAspectY;
+        public char tmFirstChar, tmLastChar, tmDefaultChar, tmBreakChar;
+        public byte tmItalic, tmUnderlined, tmStruckOut, tmPitchAndFamily, tmCharSet;
+    }
+
+    [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool GetTextMetricsW(IntPtr hdc, out TEXTMETRICW lptm);
+
+    [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool GetTextExtentPoint32W(IntPtr hdc, string lpString, int c, out SIZE psizl);
+
+    [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool TextOutW(IntPtr hdc, int x, int y, string lpString, int c);
+
+    [DllImport("gdi32.dll")]
+    public static extern uint SetTextAlign(IntPtr hdc, uint align);
+
+    [DllImport("gdi32.dll")]
+    public static extern int IntersectClipRect(IntPtr hdc, int left, int top, int right, int bottom);
+
+    public const int PS_SOLID = 0;
+    public const int PS_DASH = 1;
+    public const int PS_DOT = 2;
+
+    public const uint TA_LEFT = 0;
+    public const uint TA_TOP = 0;
+    public const uint TA_BASELINE = 24;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int DrawTextW(IntPtr hdc, string text, int count, ref RECT rc, uint format);

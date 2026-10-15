@@ -6,7 +6,7 @@ versions-historiques: 1.0.0, 1.1.0, 1.2.0
 versions-hors-produit: 10.0.17763.0
 -->
 
-> 🇬🇧 Windows companion app for **AZERTY Global**, the free, open-source (EUPL 1.2) corrected French keyboard layout — available on the [Microsoft Store](https://apps.microsoft.com/detail/9N4BTS43SSSZ). C# / .NET 8.0, native AOT. Project home: [azerty.global](https://azerty.global). README in French below.
+> 🇬🇧 Windows companion app for **AZERTY Global**, the free, open-source (EUPL 1.2) corrected French keyboard layout — available on the [Microsoft Store](https://apps.microsoft.com/detail/9N4BTS43SSSZ). C# / .NET 10, native AOT. Project home: [azerty.global](https://azerty.global). README in French below.
 
 Application AZERTY Global pour Windows, disponible sur le [Microsoft Store](https://apps.microsoft.com/detail/9N4BTS43SSSZ).
 
@@ -24,11 +24,11 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 
 ### Fonctionnalités
 
-- **Remapping clavier complet** — 48 touches, 8 couches par touche, 29 touches mortes
+- **Remapping clavier complet** — 48 touches, 8 couches par touche, 30 touches mortes
 - **Verrouillage Majuscule Intelligent** — N'affecte que les lettres : `É`, `È`, `Ç`, `À` en un appui
 - **Clavier virtuel** — Visualisation interactive de la disposition
 - **Recherche de caractères** — Trouvez n'importe quel caractère parmi les 1 000+ disponibles, avec insertion directe dans l'application d'origine
-- **Couches maintenables** *(désactivées par défaut)* — Grec, cyrillique et scientifique en appui simple ou en verrouillage par application, sans changer les touches mortes existantes
+- **Couches verrouillables** *(désactivées par défaut)* — Grec, cyrillique et scientifique en appui simple ou en verrouillage par application, sans changer les touches mortes existantes
 - **Module d'apprentissage** — Leçons interactives pour s'entraîner aux 5 améliorations
 - **Interface française et anglaise** — Changement de langue à chaud dans toute l'application
 - **Statistiques locales** — Compteurs agrégés conservés sur l'appareil, sans télémétrie réseau
@@ -37,7 +37,7 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 - **Compatibilité jeux renforcée** — Mode d'émission natif par scancode et désactivation de sécurité pour les anti-cheats connus
 - **Détection de l'application au premier plan** — Pour des comportements contextuels par application
 - **Icône dans la zone de notification** — Activation / désactivation rapide
-- **Aucune installation requise** — Fonctionne depuis le Microsoft Store
+- **Sans droits administrateur** — Installée depuis le Microsoft Store, sans disposition posée dans Windows
 
 ### Configuration requise
 

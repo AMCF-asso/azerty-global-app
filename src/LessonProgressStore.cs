@@ -10,7 +10,13 @@ internal sealed class LessonProgressStore
 
     private readonly string _path;
     private readonly Dictionary<string, LessonExerciseProgress> _exercises = new(StringComparer.Ordinal);
+    // Progression par geste (refonte 1.3.0) : par caractère, indépendante des exercices.
+    // Champ « gestures » ajouté au format 1 : une version antérieure l'ignore à la lecture.
+    private readonly Dictionary<string, GestureMasteryEntry> _gestures = new(StringComparer.Ordinal);
+    private readonly Func<DateTimeOffset> _clock;
     private bool _loadFailed;
+    // Date d'écriture du fichier lors de notre dernière lecture ou écriture.
+    private DateTime? _knownWriteUtc;
     // Fichier corrompu mis de côté (audit du 25/09, L-14) : message à montrer une seule
     // fois. Statique : la fenêtre Leçons crée le magasin, le tray affiche la bulle.
     private static int _quarantineNoticePending;
@@ -22,16 +28,42 @@ internal sealed class LessonProgressStore
     /// progression a été remise à zéro et qu'une copie est gardée.</summary>
     internal static bool TakeQuarantineNotice() => Interlocked.Exchange(ref _quarantineNoticePending, 0) == 1;
 
-    public LessonProgressStore(string? path = null)
+    public LessonProgressStore(string? path = null, Func<DateTimeOffset>? clock = null)
     {
         _path = path ?? Path.Combine(ConfigManager.LogDirectory, FileName);
+        _clock = clock ?? (() => DateTimeOffset.UtcNow);
         Load();
+    }
+
+    public IReadOnlyDictionary<string, GestureMasteryEntry> Gestures => _gestures;
+
+    /// <summary>Les caractères à revoir maintenant, les plus fragiles d'abord.</summary>
+    public IReadOnlyList<GestureMasteryEntry> DueGestures(int maxCount)
+    {
+        ReloadIfChangedOnDisk(); // gestes versés par le tutoriel pendant que les Leçons sont ouvertes
+        return GestureMastery.Due(_gestures.Values, _clock(), maxCount);
     }
 
     public string? LastModuleId { get; private set; }
     public string? LastLessonId { get; private set; }
     public int LastExerciseIndex { get; private set; }
-    public int OnboardingSyncedMaxStep { get; private set; }
+    // Rangs de l'Initiation déjà importés du tutoriel. Le fichier garde le compteur
+    // « onboardingSyncedMaxStep » (la suite depuis 0, lue par les versions précédentes) et,
+    // depuis le parcours par usage, la liste complète « onboardingSyncedExercises ».
+    private readonly SortedSet<int> _onboardingSynced = new();
+
+    /// <summary>Longueur de la suite des rangs importés depuis 0.</summary>
+    public int OnboardingSyncedMaxStep
+    {
+        get
+        {
+            int rank = 0;
+            while (_onboardingSynced.Contains(rank)) rank++;
+            return rank;
+        }
+    }
+
+    public IReadOnlySet<int> OnboardingSyncedExercises => _onboardingSynced;
     public IReadOnlyDictionary<string, LessonExerciseProgress> Exercises => _exercises;
 
     public LessonExerciseProgress? GetValidProgress(LessonExercise exercise)
@@ -59,6 +91,7 @@ internal sealed class LessonProgressStore
 
     public void SetLastPosition(LessonExercise exercise)
     {
+        ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
         LastModuleId = exercise.ModuleId;
         LastLessonId = exercise.LessonId;
@@ -66,9 +99,23 @@ internal sealed class LessonProgressStore
         CommitOrRollback(snapshot, "LessonProgressStore.SetLastPosition");
     }
 
-    public void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats)
+    public void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats) =>
+        RecordSuccess(exercise, stats, GestureMastery.IsTracked);
+
+    /// <param name="isTracked">Caractères suivis par geste ; les tests en passent un sans
+    /// index de caractères.</param>
+    internal void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats, Func<char, bool> isTracked)
     {
+        ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
+        RecordGesturesNoSave(stats, isTracked);
+        // Révision ou texte collé : contenu composé, rien à retenir par exercice (L-13).
+        if (LessonCatalogLoader.IsComposed(exercise.ModuleId))
+        {
+            CommitOrRollback(snapshot, "LessonProgressStore.RecordReview");
+            return;
+        }
+
         var progress = GetOrReset(exercise);
         progress.Completed = true;
         progress.SuccessfulAttempts++;
@@ -90,11 +137,46 @@ internal sealed class LessonProgressStore
         CommitOrRollback(snapshot, "LessonProgressStore.RecordSuccess");
     }
 
+    /// <summary>
+    /// Verse un exercice réussi du tutoriel d'accueil dans la progression par geste
+    /// (décision d'Antoine du 07/10). Les exercices du tutoriel n'ont pas d'entrée propre ici :
+    /// leur rang va toujours au compteur de la config, importé par <see cref="SyncOnboardingProgress(LessonCatalog, IReadOnlySet{int})"/>.
+    /// Une fenêtre Leçons ouverte en même temps relit le fichier avant d'écrire
+    /// (<see cref="ReloadIfChangedOnDisk"/>) : ces gestes ne sont pas écrasés.
+    /// </summary>
+    public static void RecordTutorialGestures(LessonAttemptStats stats)
+    {
+        try { new LessonProgressStore().RecordGestures(stats, GestureMastery.IsTracked); }
+        catch (Exception ex) { ConfigManager.Log("LessonProgressStore.RecordTutorialGestures", ex); }
+    }
+
+    internal void RecordGestures(LessonAttemptStats stats, Func<char, bool> isTracked)
+    {
+        ReloadIfChangedOnDisk();
+        var snapshot = CaptureSnapshot();
+        RecordGesturesNoSave(stats, isTracked);
+        CommitOrRollback(snapshot, "LessonProgressStore.RecordGestures");
+    }
+
     public void MarkCompletedNeutral(LessonExercise exercise)
     {
+        ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
         MarkCompletedNeutralNoSave(exercise);
         CommitOrRollback(snapshot, "LessonProgressStore.MarkCompletedNeutral");
+    }
+
+    private void RecordGesturesNoSave(LessonAttemptStats stats, Func<char, bool> isTracked)
+    {
+        var now = _clock();
+        foreach (var (expected, attempts, errors) in stats.GetCharacterCounts())
+        {
+            if (!isTracked(expected)) continue;
+            string key = expected.ToString();
+            if (!_gestures.TryGetValue(key, out var entry))
+                _gestures[key] = entry = new GestureMasteryEntry(key);
+            GestureMastery.Apply(entry, attempts, errors, now);
+        }
     }
 
     private void MarkCompletedNeutralNoSave(LessonExercise exercise)
@@ -104,32 +186,47 @@ internal sealed class LessonProgressStore
         progress.SuccessfulAttempts = Math.Max(1, progress.SuccessfulAttempts);
     }
 
-    public void SyncOnboardingProgress(LessonCatalog catalog, int completedSteps)
+    /// <summary>Import d'un compteur seul : les <paramref name="completedSteps"/> premiers
+    /// exercices de l'Initiation (sens des configs d'avant le parcours par usage).</summary>
+    public void SyncOnboardingProgress(LessonCatalog catalog, int completedSteps) =>
+        SyncOnboardingProgress(catalog, Enumerable.Range(0, Math.Max(0, completedSteps)).ToHashSet());
+
+    /// <summary>
+    /// Importe les réussites du tutoriel dans l'Initiation, par rang fixe
+    /// (<see cref="ConfigManager.LearningCompletedExercises"/>) : le parcours du tutoriel varie
+    /// avec les usages, l'exercice de rang i de l'Initiation reste le même. Un rang déjà
+    /// importé ne l'est plus, même après une remise à zéro des Leçons.
+    /// </summary>
+    public void SyncOnboardingProgress(LessonCatalog catalog, IReadOnlySet<int> completedExercises)
     {
-        if (completedSteps <= OnboardingSyncedMaxStep) return;
+        if (completedExercises.All(_onboardingSynced.Contains)) return;
+        ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
-        int imported = 0;
         foreach (var exercise in catalog.Exercises)
         {
             if (!StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.InitiationModuleId))
                 continue;
-            if (imported >= completedSteps) break;
-            if (imported >= OnboardingSyncedMaxStep)
+            if (completedExercises.Contains(exercise.ExerciseIndex) && !_onboardingSynced.Contains(exercise.ExerciseIndex))
                 MarkCompletedNeutralNoSave(exercise);
-            imported++;
         }
-        OnboardingSyncedMaxStep = Math.Max(OnboardingSyncedMaxStep, completedSteps);
+        _onboardingSynced.UnionWith(completedExercises);
         CommitOrRollback(snapshot, "LessonProgressStore.SyncOnboardingProgress");
     }
 
     public void ResetAll(int? onboardingSyncedMaxStep = null)
     {
+        ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
         _exercises.Clear();
+        _gestures.Clear();
         LastModuleId = null;
         LastLessonId = null;
         LastExerciseIndex = 0;
-        OnboardingSyncedMaxStep = onboardingSyncedMaxStep ?? ConfigManager.LearningMaxStepCompleted;
+        _onboardingSynced.Clear();
+        if (onboardingSyncedMaxStep is int maxStep)
+            _onboardingSynced.UnionWith(Enumerable.Range(0, Math.Max(0, maxStep)));
+        else
+            _onboardingSynced.UnionWith(ConfigManager.LearningCompletedExercises);
         CommitOrRollback(snapshot, "LessonProgressStore.ResetAll");
     }
 
@@ -157,12 +254,17 @@ internal sealed class LessonProgressStore
         foreach (var (key, progress) in _exercises)
             exercises[key] = progress.Clone();
 
+        var gestures = new Dictionary<string, GestureMasteryEntry>(StringComparer.Ordinal);
+        foreach (var (key, entry) in _gestures)
+            gestures[key] = entry.Clone();
+
         return new ProgressStoreSnapshot(
             LastModuleId,
             LastLessonId,
             LastExerciseIndex,
-            OnboardingSyncedMaxStep,
-            exercises);
+            _onboardingSynced.ToArray(),
+            exercises,
+            gestures);
     }
 
     private void RestoreSnapshot(ProgressStoreSnapshot snapshot)
@@ -170,10 +272,34 @@ internal sealed class LessonProgressStore
         LastModuleId = snapshot.LastModuleId;
         LastLessonId = snapshot.LastLessonId;
         LastExerciseIndex = snapshot.LastExerciseIndex;
-        OnboardingSyncedMaxStep = snapshot.OnboardingSyncedMaxStep;
+        _onboardingSynced.Clear();
+        _onboardingSynced.UnionWith(snapshot.OnboardingSynced);
         _exercises.Clear();
         foreach (var (key, progress) in snapshot.Exercises)
             _exercises[key] = progress.Clone();
+        _gestures.Clear();
+        foreach (var (key, entry) in snapshot.Gestures)
+            _gestures[key] = entry.Clone();
+    }
+
+    /// <summary>
+    /// Relit le fichier quand un autre magasin l'a réécrit depuis notre dernière lecture ou
+    /// écriture : le tutoriel d'accueil verse ses gestes pendant que la fenêtre Leçons garde
+    /// le sien ouvert. Chaque écrivain part ainsi de l'état sur disque, rien n'est écrasé.
+    /// Toutes les écritures passent avant par ici ; un fichier non chargé reste intouché.
+    /// </summary>
+    private void ReloadIfChangedOnDisk()
+    {
+        if (_loadFailed) return;
+        try
+        {
+            DateTime? current = File.Exists(_path) ? File.GetLastWriteTimeUtc(_path) : null;
+            if (current != _knownWriteUtc) Load();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ConfigManager.Log("LessonProgressStore.ReloadIfChangedOnDisk", ex);
+        }
     }
 
     private void CommitOrRollback(ProgressStoreSnapshot snapshot, string operation)
@@ -185,9 +311,13 @@ internal sealed class LessonProgressStore
     private void Load()
     {
         _exercises.Clear();
+        _gestures.Clear();
         _loadFailed = false;
+        _knownWriteUtc = null;
         if (!File.Exists(_path)) return;
         bool legacyErrorMatrixFound = false;
+        try { _knownWriteUtc = File.GetLastWriteTimeUtc(_path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
 
         try
         {
@@ -211,7 +341,33 @@ internal sealed class LessonProgressStore
             LastModuleId = ReadString(root, "lastModuleId");
             LastLessonId = ReadString(root, "lastLessonId");
             LastExerciseIndex = ReadInt(root, "lastExerciseIndex");
-            OnboardingSyncedMaxStep = ReadInt(root, "onboardingSyncedMaxStep");
+            _onboardingSynced.Clear();
+            _onboardingSynced.UnionWith(Enumerable.Range(0, Math.Max(0, ReadInt(root, "onboardingSyncedMaxStep"))));
+            if (root.TryGetProperty("onboardingSyncedExercises", out var syncedEl) && syncedEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in syncedEl.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int index) && index >= 0)
+                        _onboardingSynced.Add(index);
+                }
+            }
+
+            if (root.TryGetProperty("gestures", out var gesturesEl) && gesturesEl.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var item in gesturesEl.EnumerateObject())
+                {
+                    var el = item.Value;
+                    if (item.Name.Length == 0 || el.ValueKind != JsonValueKind.Object) continue;
+                    _gestures[item.Name] = new GestureMasteryEntry(item.Name)
+                    {
+                        Attempts = Math.Max(0, ReadInt(el, "attempts")),
+                        Errors = Math.Max(0, ReadInt(el, "errors")),
+                        Box = Math.Clamp(ReadInt(el, "box"), 0, GestureMastery.MaxBox),
+                        LastReviewUtc = ReadDate(el, "lastReviewUtc"),
+                        DueUtc = ReadDate(el, "dueUtc"),
+                    };
+                }
+            }
 
             if (!root.TryGetProperty("exercises", out var exercisesEl) || exercisesEl.ValueKind != JsonValueKind.Object)
                 return;
@@ -249,10 +405,11 @@ internal sealed class LessonProgressStore
         {
             ConfigManager.Log("LessonProgressStore.Load", ex);
             _exercises.Clear();
+            _gestures.Clear();
             LastModuleId = null;
             LastLessonId = null;
             LastExerciseIndex = 0;
-            OnboardingSyncedMaxStep = 0;
+            _onboardingSynced.Clear();
 
             if (FileQuarantine.IsReadFailure(ex))
             {
@@ -309,6 +466,10 @@ internal sealed class LessonProgressStore
                 WriteNullableString(writer, "lastLessonId", LastLessonId);
                 writer.WriteNumber("lastExerciseIndex", LastExerciseIndex);
                 writer.WriteNumber("onboardingSyncedMaxStep", OnboardingSyncedMaxStep);
+                writer.WriteStartArray("onboardingSyncedExercises");
+                foreach (int index in _onboardingSynced)
+                    writer.WriteNumberValue(index);
+                writer.WriteEndArray();
                 writer.WriteStartObject("exercises");
                 foreach (var (key, progress) in _exercises.OrderBy(pair => pair.Key, StringComparer.Ordinal))
                 {
@@ -327,6 +488,18 @@ internal sealed class LessonProgressStore
                     writer.WriteEndObject();
                 }
                 writer.WriteEndObject();
+                writer.WriteStartObject("gestures");
+                foreach (var (key, entry) in _gestures.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                {
+                    writer.WriteStartObject(key);
+                    writer.WriteNumber("attempts", entry.Attempts);
+                    writer.WriteNumber("errors", entry.Errors);
+                    writer.WriteNumber("box", entry.Box);
+                    WriteNullableDate(writer, "lastReviewUtc", entry.LastReviewUtc);
+                    WriteNullableDate(writer, "dueUtc", entry.DueUtc);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndObject();
                 writer.WriteEndObject();
                 // L-14 : atomique, mais pas durable sans ceci — après une coupure de courant,
                 // le fichier remplacé pouvait rester vide ou illisible.
@@ -339,6 +512,7 @@ internal sealed class LessonProgressStore
             else
                 File.Move(tempPath, _path);
 
+            _knownWriteUtc = File.GetLastWriteTimeUtc(_path);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -387,6 +561,17 @@ internal sealed class LessonProgressStore
         return element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out double result)
             ? result
             : null;
+    }
+
+    private static DateTimeOffset? ReadDate(JsonElement element, string name) =>
+        DateTimeOffset.TryParse(ReadString(element, name), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dto)
+            ? dto
+            : null;
+
+    private static void WriteNullableDate(Utf8JsonWriter writer, string name, DateTimeOffset? value)
+    {
+        if (value.HasValue) writer.WriteString(name, value.Value.ToString("O", CultureInfo.InvariantCulture));
+        else writer.WriteNull(name);
     }
 
     private static void WriteNullableString(Utf8JsonWriter writer, string name, string? value)
@@ -446,5 +631,6 @@ internal sealed record ProgressStoreSnapshot(
     string? LastModuleId,
     string? LastLessonId,
     int LastExerciseIndex,
-    int OnboardingSyncedMaxStep,
-    IReadOnlyDictionary<string, LessonExerciseProgress> Exercises);
+    IReadOnlyList<int> OnboardingSynced,
+    IReadOnlyDictionary<string, LessonExerciseProgress> Exercises,
+    IReadOnlyDictionary<string, GestureMasteryEntry> Gestures);

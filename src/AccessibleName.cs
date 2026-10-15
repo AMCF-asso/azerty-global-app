@@ -67,6 +67,20 @@ static class AccessibleName
     /// Automation des deux boutons, vue brute comme vue des contrôles, rendent le nom posé.
     /// </summary>
     public static bool TrySet(IntPtr hwnd, string name, uint childId)
+        => TrySetString(hwnd, PropIdAccName, name, childId);
+
+    // oleacc.h : PROPID_ACC_DESCRIPTION.
+    private static readonly Guid PropIdAccDescription = new("4D48DFE4-BD3F-491F-A648-492D6F20C588");
+
+    /// <summary>
+    /// Pose la description accessible de <paramref name="hwnd"/> : ce qu'un lecteur d'écran lit
+    /// après le nom (UI Automation : FullDescription). Sert au texte d'aide peint sous un
+    /// contrôle, que rien ne rattache sinon à lui. Rend faux, sans lever, si COM refuse.
+    /// </summary>
+    public static bool TrySetDescription(IntPtr hwnd, string description)
+        => TrySetString(hwnd, PropIdAccDescription, description, CHILDID_SELF);
+
+    private static bool TrySetString(IntPtr hwnd, Guid propId, string name, uint childId)
     {
         if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(name)) return false;
         IntPtr services = IntPtr.Zero;
@@ -79,7 +93,89 @@ static class AccessibleName
                 return false;
             var setHwndPropStr = Marshal.GetDelegateForFunctionPointer<SetHwndPropStrDelegate>(
                 VTableSlot(services, VT_SetHwndPropStr));
-            return setHwndPropStr(services, hwnd, OBJID_CLIENT, childId, PropIdAccName, name) == 0;
+            return setHwndPropStr(services, hwnd, OBJID_CLIENT, childId, propId, name) == 0;
+        }
+        catch (Exception ex) when (ex is ExternalException or MarshalDirectiveException
+            or EntryPointNotFoundException or DllNotFoundException)
+        {
+            return false;
+        }
+        finally
+        {
+            if (services != IntPtr.Zero)
+                Marshal.GetDelegateForFunctionPointer<ReleaseDelegate>(VTableSlot(services, VT_Release))(services);
+        }
+    }
+
+    private const uint EVENT_OBJECT_NAMECHANGE = 0x800C;
+
+    /// <summary>
+    /// Pose le nom puis lève EVENT_OBJECT_NAMECHANGE : un lecteur d'écran relit le nom de
+    /// l'élément focalisé quand il change. Sert d'annonce là où rien d'autre n'est lu (faute
+    /// de frappe du tutoriel, peinte en GDI).
+    /// </summary>
+    public static bool TrySetAndNotify(IntPtr hwnd, string name)
+    {
+        if (!TrySet(hwnd, name)) return false;
+        NotifyWinEvent(EVENT_OBJECT_NAMECHANGE, hwnd, unchecked((int)OBJID_CLIENT), (int)CHILDID_SELF);
+        return true;
+    }
+
+    // oleacc.h : PROPID_ACC_ROLE, PROPID_ACC_STATE ; rôle et états MSAA.
+    private static readonly Guid PropIdAccRole = new("CB905FF2-7BD1-4C05-B3C8-E6C241364D70");
+    private static readonly Guid PropIdAccState = new("A8D4D5B0-0A21-42D0-A5C0-514E984F457B");
+    private const int VT_SetHwndProp = 6;
+    private const int ROLE_SYSTEM_CHECKBUTTON = 0x2C;
+    private const int STATE_SYSTEM_CHECKED = 0x10;
+    private const int STATE_SYSTEM_FOCUSED = 0x4;
+    private const int STATE_SYSTEM_FOCUSABLE = 0x100000;
+    private const uint EVENT_OBJECT_STATECHANGE = 0x800A;
+    private const ushort VT_I4 = 3;
+
+    /// <summary>VARIANT de 24 octets (l'application ne vise que win-x64 et win-arm64).</summary>
+    [StructLayout(LayoutKind.Explicit, Size = 24)]
+    private struct Variant
+    {
+        [FieldOffset(0)] public ushort Vt;
+        [FieldOffset(8)] public int IntVal;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int SetHwndPropDelegate(IntPtr self, IntPtr hwnd, uint idObject, uint idChild,
+        Guid idProp, Variant var);
+
+    [DllImport("user32.dll")]
+    private static extern void NotifyWinEvent(uint winEvent, IntPtr hwnd, int idObject, int idChild);
+
+    /// <summary>
+    /// Présente un bouton owner-draw comme une case à cocher : rôle « case à cocher » et état
+    /// coché ou non, que MSAA et UI Automation (motif Toggle) lisent. Une annotation est
+    /// statique : l'appelant la repose à chaque bascule et à chaque gain ou perte du focus,
+    /// sinon l'état focalisé resterait figé. <paramref name="announce"/> lève
+    /// EVENT_OBJECT_STATECHANGE pour que le lecteur d'écran dise le nouvel état. Rend faux,
+    /// sans lever, si COM ou oleacc refusent : le bouton reste alors un simple bouton.
+    /// </summary>
+    public static bool TrySetCheckState(IntPtr hwnd, bool isChecked, bool focused, bool announce)
+    {
+        if (hwnd == IntPtr.Zero) return false;
+        IntPtr services = IntPtr.Zero;
+        try
+        {
+            Guid clsid = ClsidAccPropServices;
+            Guid iid = IidIAccPropServices;
+            if (CoCreateInstance(ref clsid, IntPtr.Zero, CLSCTX_INPROC_SERVER, ref iid, out services) != 0
+                || services == IntPtr.Zero)
+                return false;
+            var setHwndProp = Marshal.GetDelegateForFunctionPointer<SetHwndPropDelegate>(
+                VTableSlot(services, VT_SetHwndProp));
+            int state = STATE_SYSTEM_FOCUSABLE | (isChecked ? STATE_SYSTEM_CHECKED : 0) | (focused ? STATE_SYSTEM_FOCUSED : 0);
+            bool ok = setHwndProp(services, hwnd, OBJID_CLIENT, CHILDID_SELF, PropIdAccRole,
+                    new Variant { Vt = VT_I4, IntVal = ROLE_SYSTEM_CHECKBUTTON }) == 0
+                && setHwndProp(services, hwnd, OBJID_CLIENT, CHILDID_SELF, PropIdAccState,
+                    new Variant { Vt = VT_I4, IntVal = state }) == 0;
+            if (ok && announce)
+                NotifyWinEvent(EVENT_OBJECT_STATECHANGE, hwnd, unchecked((int)OBJID_CLIENT), (int)CHILDID_SELF);
+            return ok;
         }
         catch (Exception ex) when (ex is ExternalException or MarshalDirectiveException
             or EntryPointNotFoundException or DllNotFoundException)

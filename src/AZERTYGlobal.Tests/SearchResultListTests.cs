@@ -5,8 +5,9 @@ namespace AZERTYGlobal.Tests;
 
 /// <summary>
 /// Audit du 25/09, corrections de la recherche de caractère : le clic suit la géométrie du
-/// dessin (V-07), le pied annonce le vrai nombre de correspondances (V-08), et les mots de la
-/// méthode de saisie prennent leur couleur dans la langue courante (V-06).
+/// dessin (V-07) et le pied annonce le vrai nombre de correspondances (V-08). Refonte 1.3.0 :
+/// le pied de la maquette « partition du choix » (nombre en gras, Entrée insère « Ź »), et
+/// les gravures de la méthode viennent de la table du socle.
 ///
 /// Ce qui n'est pas éprouvé ici, et reste à la recette : le rendu à l'écran et le clic réel.
 /// </summary>
@@ -69,50 +70,55 @@ public class SearchResultListTests : IDisposable
     }
 
     [Fact]
+    public void LaMaquetteDeCinqLignesDe49PxSuitLeDessin()
+    {
+        // Champ de 60 px, filet en 60 ; lignes de 49 px séparées d'un filet : 61-109, 111-159…
+        static int Hauteur49(int index) => 49;
+        Assert.Equal(0, CharacterSearch.RowIndexAt(109, 60, 0, 5, Hauteur49));
+        Assert.Equal(-1, CharacterSearch.RowIndexAt(110, 60, 0, 5, Hauteur49));
+        Assert.Equal(4, CharacterSearch.RowIndexAt(309, 60, 0, 5, Hauteur49));  // 5e ligne : 261-309
+        Assert.Equal(-1, CharacterSearch.RowIndexAt(310, 60, 0, 5, Hauteur49)); // filet sur la partition
+    }
+
+    private static string Texte(List<TextRun> runs) => string.Concat(runs.Select(r => r.Text));
+
+    [Fact]
     public void LePiedDitCombienDeCorrespondancesDepassentLePlafond()
     {
         // « cyrillique » : 98 correspondances, 20 lignes affichées.
-        Assert.Equal("20 sur 98 résultats — Entrée pour insérer", CharacterSearch.FooterCountText(20, 98));
+        var runs = CharacterSearch.FooterCountRuns(20, 98);
+        Assert.Equal("20 résultats affichés sur 98", Texte(runs));
+        Assert.True(runs[0].Strong);
+        Assert.Equal("20", runs[0].Text);
 
         L.Language = "en";
-        Assert.Equal("20 of 98 results — Enter to insert", CharacterSearch.FooterCountText(20, 98));
+        Assert.Equal("20 of 98 results shown", Texte(CharacterSearch.FooterCountRuns(20, 98)));
     }
 
     [Fact]
-    public void SousLePlafondLePiedGardeSesTextes()
+    public void SousLePlafondLePiedCompteSimplement()
     {
-        Assert.Equal(L.Search_ResultCountPlural(12), CharacterSearch.FooterCountText(12, 12));
-        Assert.Equal(L.Search_ResultCountPlural(20), CharacterSearch.FooterCountText(20, 20));
-        Assert.Equal(L.Search_ResultCountSingular, CharacterSearch.FooterCountText(1, 1));
-    }
-
-    [Theory]
-    [InlineData("fr")]
-    [InlineData("en")]
-    public void LesMotsDeLaMethodeSeColorentDansLaLangueCourante(string langue)
-    {
-        L.Language = langue;
-        // Le texte réel d'une couche Maj suivie d'une touche morte, tel que la recherche l'affiche.
-        string methode = $"{L.Search_LayerKeyLabel("Shift", "é")} {L.Search_AfterDeadKeyLabel("Base", "e")}";
-        var genres = methode.Split(' ').Select(CharacterSearch.ClassifyMethodToken).ToArray();
-
-        Assert.Equal(new[]
-        {
-            CharacterSearch.MethodToken.Shift,      // « Maj » / « Shift »
-            CharacterSearch.MethodToken.Separator,  // « + »
-            CharacterSearch.MethodToken.Key,        // « é »
-            CharacterSearch.MethodToken.Separator,  // « puis » / « then »
-            CharacterSearch.MethodToken.Key,        // « e »
-        }, genres);
+        Assert.Equal("12 résultats", Texte(CharacterSearch.FooterCountRuns(12, 12)));
+        Assert.Equal("20 résultats", Texte(CharacterSearch.FooterCountRuns(20, 20)));
+        Assert.Equal("1 résultat", Texte(CharacterSearch.FooterCountRuns(1, 1)));
+        L.Language = "en";
+        Assert.Equal("1 result", Texte(CharacterSearch.FooterCountRuns(1, 1)));
     }
 
     [Fact]
-    public void AltGrGardeSaCouleurEtUneToucheResteUneTouche()
+    public void LePiedDitCeQuInsereEntree()
     {
-        Assert.Equal(CharacterSearch.MethodToken.AltGr, CharacterSearch.ClassifyMethodToken("AltGr"));
-        Assert.Equal(CharacterSearch.MethodToken.Key, CharacterSearch.ClassifyMethodToken("ù"));
-        // Hors de sa langue, le mot d'une autre langue n'est plus pris pour un modificateur.
+        Assert.Equal("Entrée insère « Ź »", L.Search_FooterInsert("Ź"));
         L.Language = "en";
-        Assert.Equal(CharacterSearch.MethodToken.Key, CharacterSearch.ClassifyMethodToken("Maj"));
+        Assert.Equal("Enter inserts “Ź”", L.Search_FooterInsert("Ź"));
+    }
+
+    [Fact]
+    public void LesGravuresDeLaRechercheSontCellesDuSocle()
+    {
+        // Refonte 1.3.0 : la table des gravures n'est plus recopiée dans la recherche.
+        var prop = typeof(CharacterSearch).GetProperty("KeyLabels",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        Assert.Same(Gesture.KeyLegends, prop.GetValue(null));
     }
 }

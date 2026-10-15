@@ -31,11 +31,18 @@ sealed class LayoutConflictWindow : IDisposable
     // Couleurs alignees sur AboutWindow / SettingsWindow
     private const uint CLR_BG = LightTheme.Background;
     private const uint CLR_TITLE = LightTheme.Text;
-    private const uint CLR_TEXT = LightTheme.Text;
+    // Audit UX 1.3.0, #8 : l'intro passe en texte secondaire, la question garde le texte plein.
+    private const uint CLR_TEXT = LightTheme.TextSecondary;
+    private const uint SS_NOPREFIX = 0x0080;
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnQuit;
     private IntPtr _hWndBtnKeep;
+    // #8 : titre, intro et question étaient peints en GDI, invisibles du Narrateur. Ce sont
+    // des STATIC, que la fenêtre place (LayoutText) et colore (WM_CTLCOLORSTATIC).
+    private IntPtr _hTitle;
+    private IntPtr _hIntro;
+    private IntPtr _hQuestion;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly IntPtr _hBgBrush;
@@ -121,6 +128,9 @@ sealed class LayoutConflictWindow : IDisposable
     {
         Win32.SendMessageW(_hWndBtnQuit, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnKeep, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hTitle, Win32.WM_SETFONT, _hFontTitle, (IntPtr)1);
+        Win32.SendMessageW(_hIntro, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
+        Win32.SendMessageW(_hQuestion, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
     }
 
     private void CreateMainWindow()
@@ -154,6 +164,13 @@ sealed class LayoutConflictWindow : IDisposable
     private void CreateControls()
     {
         var hInstance = Win32.GetModuleHandleW(null);
+
+        // Avant les liens dans l'ordre Z : le Narrateur les lit dans l'ordre de lecture.
+        IntPtr CreateText(string text) => Win32.CreateWindowExW(0, "STATIC", text,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | SS_NOPREFIX, 0, 0, 0, 0, _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+        _hTitle = CreateText(L.LayoutConflict_Title);
+        _hIntro = CreateText(_isAtStartup ? L.LayoutConflict_IntroAtStartup : L.LayoutConflict_IntroAfterSwitch);
+        _hQuestion = CreateText(L.LayoutConflict_Question);
 
         _hWndBtnKeep = Win32.CreateWindowExW(0, "BUTTON", L.LayoutConflict_BtnKeep,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_DEFCOMMANDLINK,
@@ -206,7 +223,7 @@ sealed class LayoutConflictWindow : IDisposable
 
         IntPtr hdc = Win32.GetDC(_hWnd);
         int y;
-        try { y = LayoutText(hdc, contentW, draw: false) + S(4); }
+        try { y = LayoutText(hdc, contentW) + S(4); }
         finally { Win32.ReleaseDC(_hWnd, hdc); }
 
         int keepH = IdealHeight(_hWndBtnKeep, contentW, S(72));
@@ -276,8 +293,8 @@ sealed class LayoutConflictWindow : IDisposable
                         case IDC_BTN_KEEP: Close(false); break;
                         // K2 (accessibilite 1.3.0) : IsDialogMessageW ne livre jamais Entree ni
                         // Echap en WM_KEYDOWN, il les convertit en IDOK et IDCANCEL (voir
-                        // DialogNavigation.IsEscapeCommand). Le gestionnaire VK_ESCAPE plus bas
-                        // etait donc mort, et Entree ne pressait rien. Entree presse le bouton
+                        // DialogNavigation.IsEscapeCommand). L'ancien gestionnaire VK_ESCAPE
+                        // etait donc mort (retire, audit UX #8), et Entree ne pressait rien. Entree presse le bouton
                         // focalise, et lui seul : cette fenetre peut surgir pendant une frappe
                         // (bascule Ctrl+Maj), une Entree tapee pour un document ne doit pas
                         // quitter l'application. Echap garde l'app, comme la croix.
@@ -293,13 +310,10 @@ sealed class LayoutConflictWindow : IDisposable
                     return IntPtr.Zero;
                 }
 
-                case Win32.WM_KEYDOWN:
-                    if (wParam == (IntPtr)0x1B) // VK_ESCAPE → choix non-destructif (garder)
-                    {
-                        Close(false);
-                        return IntPtr.Zero;
-                    }
-                    break;
+                case Win32.WM_CTLCOLORSTATIC:
+                    Win32.SetTextColor(wParam, lParam == _hIntro ? CLR_TEXT : CLR_TITLE);
+                    Win32.SetBkColor(wParam, CLR_BG);
+                    return _hBgBrush;
 
                 case Win32.WM_CLOSE:
                     Close(false); // croix X = garder l'app
@@ -325,46 +339,29 @@ sealed class LayoutConflictWindow : IDisposable
     private void PaintClient(IntPtr hdc, Win32.RECT clientRect)
     {
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
-        Win32.SetBkMode(hdc, 1);
-        LayoutText(hdc, clientRect.right - S(24) * 2, draw: true);
     }
 
-    /// <summary>Titre, phrase d'intro et question ; rend le bas de la question. Sert au dessin
-    /// et au placement des liens, pour qu'ils ne divergent pas.</summary>
-    private int LayoutText(IntPtr hdc, int contentW, bool draw)
+    /// <summary>Place titre, intro et question (STATIC) ; rend le bas de la question, sous
+    /// lequel viennent les liens.</summary>
+    private int LayoutText(IntPtr hdc, int contentW)
     {
         int x = S(24);
         int y = S(20);
 
-        // Titre
-        Win32.SelectObject(hdc, _hFontTitle);
-        Win32.SetTextColor(hdc, CLR_TITLE);
-        var titleRect = new Win32.RECT { left = x, top = y, right = x + contentW, bottom = y + S(28) };
-        if (draw)
-            Win32.DrawTextW(hdc, L.LayoutConflict_Title, -1, ref titleRect,
-                Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-        y += S(36);
+        // #8 : le titre revient à la ligne au lieu d'être coupé (DT_SINGLELINE sur S(28)).
+        int titleH = MeasureWrapped(hdc, _hFontTitle, L.LayoutConflict_Title, contentW);
+        Win32.MoveWindow(_hTitle, x, y, contentW, titleH, true);
+        y += titleH + S(8);
 
-        // Intro variable selon origine
-        Win32.SetTextColor(hdc, CLR_TEXT);
         string introText = _isAtStartup
             ? L.LayoutConflict_IntroAtStartup
             : L.LayoutConflict_IntroAfterSwitch;
         int introH = MeasureWrapped(hdc, _hFontText, introText, contentW);
-        var introRect = new Win32.RECT { left = x, top = y, right = x + contentW, bottom = y + introH };
-        if (draw)
-            Win32.DrawTextW(hdc, introText, -1, ref introRect,
-                Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
+        Win32.MoveWindow(_hIntro, x, y, contentW, introH, true);
         y += introH + S(14);
 
-        // Question
-        Win32.SelectObject(hdc, _hFontBold);
-        Win32.SetTextColor(hdc, CLR_TITLE);
         int qH = MeasureWrapped(hdc, _hFontBold, L.LayoutConflict_Question, contentW);
-        var qRect = new Win32.RECT { left = x, top = y, right = x + contentW, bottom = y + qH };
-        if (draw)
-            Win32.DrawTextW(hdc, L.LayoutConflict_Question, -1, ref qRect,
-                Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
+        Win32.MoveWindow(_hQuestion, x, y, contentW, qH, true);
         return y + qH + S(8);
     }
 

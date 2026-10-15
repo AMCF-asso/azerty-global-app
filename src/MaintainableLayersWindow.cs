@@ -30,6 +30,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hScientific;
     private IntPtr _hVisual;
     private IntPtr _hDelay;
+    // Libellés liés à l'interrupteur général : grisés avec leurs contrôles.
+    private IntPtr _hAvailableLabel;
+    private IntPtr _hDelayLabel;
+    private IntPtr _hDelayUnit;
     private IntPtr _hFont;
     private IntPtr _hFontTitle;
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
@@ -109,25 +113,28 @@ internal sealed class MaintainableLayersWindow : IDisposable
         CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 66, _hFont);
 
         _hMaster = CreateCheckbox(instance, IDC_MASTER, L.Layers_MasterCheckbox, 24, 134, 455, 28);
-        CreateStatic(instance, L.Layers_AvailableLabel, 45, 175, 250, 24, _hFont);
+        _hAvailableLabel = CreateStatic(instance, L.Layers_AvailableLabel, 45, 175, 250, 24, _hFont);
         _hGreek = CreateCheckbox(instance, IDC_GREEK, L.Layers_GreekCheckbox, 45, 202, 210, 26);
         _hCyrillic = CreateCheckbox(instance, IDC_CYRILLIC, L.Layers_CyrillicCheckbox, 270, 202, 220, 26);
         _hScientific = CreateCheckbox(instance, IDC_SCIENTIFIC, L.Layers_ScientificCheckbox, 45, 234, 260, 26);
 
         _hVisual = CreateCheckbox(instance, IDC_VISUAL, L.Layers_VisualCheckbox, 24, 282, 360, 26);
-        CreateStatic(instance, L.Layers_DelayLabel, 24, 322, 185, 26, _hFont);
+        _hDelayLabel = CreateStatic(instance, L.Layers_DelayLabel, 24, 322, 185, 26, _hFont);
         _hDelay = Win32.CreateWindowExW(0, "EDIT", "500",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | Win32.ES_NUMBER | Win32.ES_CENTER,
             210, 317, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
         SetFont(_hDelay, _hFont);
         Track(_hDelay, 210, 317, 70, 28);
-        CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
+        _hDelayUnit = CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
 
-        IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Layers_SaveButton,
+        // « Fermer » : la fenêtre enregistre à toute fermeture (croix, Échap, Entrée) et n'a
+        // pas d'annulation ; « Enregistrer » laissait croire que les autres sorties perdaient.
+        IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_DEFPUSHBUTTON,
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
         Track(save, 350, 357, 140, 34);
+        LightButton.Attach(save); // audit UX 1.3.0, #3
     }
 
     private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)
@@ -140,13 +147,14 @@ internal sealed class MaintainableLayersWindow : IDisposable
         return control;
     }
 
-    private void CreateStatic(IntPtr instance, string text, int x, int y, int w, int h, IntPtr font)
+    private IntPtr CreateStatic(IntPtr instance, string text, int x, int y, int w, int h, IntPtr font)
     {
         IntPtr control = Win32.CreateWindowExW(0, "STATIC", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE,
             x, y, w, h, _hWnd, IntPtr.Zero, instance, IntPtr.Zero);
         SetFont(control, font);
         Track(control, x, y, w, h, font == _hFontTitle);
+        return control;
     }
 
     private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
@@ -235,6 +243,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
         Win32.EnableWindow(_hScientific, enabled);
         Win32.EnableWindow(_hVisual, enabled);
         Win32.EnableWindow(_hDelay, enabled);
+        Win32.EnableWindow(_hAvailableLabel, enabled);
+        Win32.EnableWindow(_hDelayLabel, enabled);
+        Win32.EnableWindow(_hDelayUnit, enabled);
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)

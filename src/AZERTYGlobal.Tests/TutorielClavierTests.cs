@@ -70,7 +70,7 @@ public class TutorielClavierTests : IDisposable
     // Points de lecture : le contour gauche, un coin du fond, la place de la pastille.
     private static (int, int) Contour(Win32.RECT r) => (r.left, (r.top + r.bottom) / 2);
     private static (int, int) Fond(Win32.RECT r) => (r.left + 3, r.bottom - 3);
-    private static (int, int) Pastille(Win32.RECT r) => (r.right - 11, r.top + 2);
+    private static (int, int) Pastille(Win32.RECT r) => (r.right - 11, r.top + 5);
 
     [Fact]
     public void L_etape_1_se_dit_en_orange_avec_sa_pastille()
@@ -118,13 +118,41 @@ public class TutorielClavierTests : IDisposable
     }
 
     [Fact]
-    public void La_touche_enfoncee_perd_son_contour_dans_le_tutoriel_seulement()
+    public void La_touche_enfoncee_prend_le_contour_accent_dans_le_tutoriel_seulement()
     {
+        // Audit UX 1.3.0, #4 : le fond pressé ne se distingue pas du fond de touche ; le
+        // tutoriel montre la frappe par un contour accent, les Leçons gardent celui de l'indice.
         var etat = new KeyboardRenderState { PressedScancode = SC_Q };
         etat.HighlightedScancodes.Add(SC_Q);
 
-        Assert.Equal(Bordure, Peindre(KeyboardRenderProfile.Onboarding, etat, c => Contour(c("", SC_Q))));
+        Assert.Equal(DarkTheme.Accent, Peindre(KeyboardRenderProfile.Onboarding, etat, c => Contour(c("", SC_Q))));
         Assert.Equal(DirectContour, Peindre(KeyboardRenderProfile.Lesson, etat, c => Contour(c("", SC_Q))));
+    }
+
+    [Fact]
+    public void La_touche_de_la_faute_est_cerclee_de_rouge()
+    {
+        var etat = new KeyboardRenderState { PressedScancode = SC_Q, ErrorScancode = SC_Q };
+
+        Assert.Equal(DarkTheme.Error, Peindre(KeyboardRenderProfile.Onboarding, etat, c => Contour(c("", SC_Q))));
+        Assert.Equal(Bordure, Peindre(KeyboardRenderProfile.Onboarding, new KeyboardRenderState(), c => Contour(c("", SC_Q))));
+    }
+
+    [Fact]
+    public void Un_modificateur_tenu_prend_le_contour_accent()
+    {
+        var etat = new KeyboardRenderState { Shift = true };
+
+        Assert.Equal(DarkTheme.Accent, Peindre(KeyboardRenderProfile.Onboarding, etat, c => Contour(c("Maj ⇧", null))));
+        Assert.Equal(ModificateurActif, Peindre(KeyboardRenderProfile.Onboarding, etat, c => Fond(c("Maj ⇧", null))));
+    }
+
+    [Fact]
+    public void Seules_les_espaces_insecables_ont_un_repere()
+    {
+        Assert.True(KeyboardRenderer.IsMarkedSpace('\u00A0'));
+        Assert.True(KeyboardRenderer.IsMarkedSpace('\u202F'));
+        Assert.False(KeyboardRenderer.IsMarkedSpace(' '));
     }
 
     [Fact]

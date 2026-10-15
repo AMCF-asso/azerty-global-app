@@ -191,7 +191,9 @@ static class ConfigManager
     public static void SetShowOnboardingAtStartup(bool show) => SetBool("showOnboardingAtStartup", show);
 
     /// <summary>
-    /// Compteur monotone du nombre d'exercices d'apprentissage complétés (0..6).
+    /// Compteur monotone des exercices du tutoriel réussis, en rang fixe : n vaut « les
+    /// exercices 0 à n − 1 de <see cref="TutorialSteps.All"/> sont réussis » (0..8 ; les
+    /// configs d'avant le parcours par usage vont jusqu'à 6, même sens).
     /// Utilisé pour conditionner l'affichage du wizard d'accueil au démarrage : tant que
     /// les 3 premiers exercices ne sont pas tous complétés, le wizard s'affiche
     /// (sauf si l'utilisateur a explicitement désactivé l'option dans les Settings).
@@ -207,6 +209,51 @@ static class ConfigManager
         if (step <= LearningMaxStepCompleted) return;
         SetUInt("learningMaxStepCompleted", (uint)step);
     }
+
+    /// <summary>
+    /// Exercices du tutoriel réussis, par rang fixe (<see cref="TutorialSteps.All"/>) : ceux
+    /// du compteur (0 à <see cref="LearningMaxStepCompleted"/> − 1), plus ceux réussis hors de
+    /// cette suite depuis le parcours par usage (clé <c>learningCompletedExercises</c>).
+    /// L'import vers l'Initiation des Leçons lit cet ensemble, pas la place dans le parcours.
+    /// </summary>
+    public static IReadOnlySet<int> LearningCompletedExercises
+    {
+        get
+        {
+            var done = new SortedSet<int>(Enumerable.Range(0, Math.Min(LearningMaxStepCompleted, TutorialSteps.All.Length)));
+            foreach (int index in GetIntList("learningCompletedExercises"))
+            {
+                if (index >= 0 && index < TutorialSteps.All.Length)
+                    done.Add(index);
+            }
+            return done;
+        }
+    }
+
+    /// <summary>
+    /// Enregistre la réussite de l'exercice de rang fixe <paramref name="index"/> : dans la
+    /// liste, puis le compteur avance tant que la suite depuis 0 est complète.
+    /// </summary>
+    public static void RecordLearningExerciseCompleted(int index)
+    {
+        if (index < 0 || index >= TutorialSteps.All.Length) return;
+        var done = new SortedSet<int>(LearningCompletedExercises) { index };
+        int rank = LearningMaxStepCompleted;
+        while (done.Contains(rank)) rank++;
+        SetLearningMaxStepCompleted(rank);
+        // Seuls les rangs au-delà du compteur ont besoin de la liste.
+        SetIntList("learningCompletedExercises", done.Where(i => i >= rank));
+    }
+
+    /// <summary>
+    /// Usages cochés au dernier passage sur l'écran de choix du tutoriel (identifiants de
+    /// <see cref="TutorialSteps.UsagesByPriority"/>). Gardés dans la config locale seulement,
+    /// jamais envoyés : ils recochent les cases quand le tutoriel est rouvert.
+    /// </summary>
+    public static string[] LearningUsages => TutorialSteps.NormalizeUsages(GetStringList("learningUsages"));
+
+    public static void SetLearningUsages(IEnumerable<string> usages) =>
+        SetStringList("learningUsages", TutorialSteps.NormalizeUsages(usages));
 
     /// <summary>Cache de compatibilité du lancement automatique. L'UI doit utiliser AutoStart.IsRegistered.</summary>
     public static bool AutoStartEnabled => GetBool("autoStartEnabled");
@@ -522,6 +569,47 @@ static class ConfigManager
     public static bool LessonKeyboardVisible => GetBoolDefaultTrue("lessonKeyboardVisible");
 
     public static void SetLessonKeyboardVisible(bool visible) => SetBool("lessonKeyboardVisible", visible);
+
+    // ── Notation des touches à taper (QCM du 11/10, voir LessonNotation.cs) ──────
+    // Une notation par état du clavier, chacune mémorisée ; stockée par nom d'enum (jamais par
+    // numéro : l'ordre de l'enum peut changer). Valeur absente, illisible, d'un autre type ou
+    // hors de la liste de l'état : Mots, sans toucher aux autres clés.
+
+    /// <summary>Notation du geste quand le clavier est affiché. Défaut : Mots.</summary>
+    public static LessonNotation LessonNotationWithKeyboard => GetLessonNotation("lessonNotationWithKeyboard", true);
+
+    public static void SetLessonNotationWithKeyboard(LessonNotation value) =>
+        SetString("lessonNotationWithKeyboard", LessonNotations.Valid(value, true).ToString());
+
+    /// <summary>Notation du geste quand le clavier est masqué. Défaut : Mots.</summary>
+    public static LessonNotation LessonNotationWithoutKeyboard => GetLessonNotation("lessonNotationWithoutKeyboard", false);
+
+    public static void SetLessonNotationWithoutKeyboard(LessonNotation value) =>
+        SetString("lessonNotationWithoutKeyboard", LessonNotations.Valid(value, false).ToString());
+
+    /// <summary>Notation de l'état courant du clavier (affiché ou masqué).</summary>
+    public static LessonNotation LessonNotationFor(bool keyboardVisible) =>
+        keyboardVisible ? LessonNotationWithKeyboard : LessonNotationWithoutKeyboard;
+
+    public static void SetLessonNotationFor(bool keyboardVisible, LessonNotation value)
+    {
+        if (keyboardVisible) SetLessonNotationWithKeyboard(value);
+        else SetLessonNotationWithoutKeyboard(value);
+    }
+
+    private static LessonNotation GetLessonNotation(string key, bool keyboardVisible)
+    {
+        // Enum.TryParse accepterait aussi « 2 » ou « Words, Recipe » : on exige le nom exact.
+        var raw = GetString(key);
+        if (raw is not null && Enum.TryParse<LessonNotation>(raw, out var parsed) && parsed.ToString() == raw)
+            return LessonNotations.Valid(parsed, keyboardVisible);
+        return LessonNotation.Words;
+    }
+
+    /// <summary>Masque le geste des caractères maîtrisés (boîte 4 ou plus). Défaut : true.</summary>
+    public static bool LessonHideMastered => GetBoolDefaultTrue("lessonHideMastered");
+
+    public static void SetLessonHideMastered(bool hide) => SetBool("lessonHideMastered", hide);
 
     /// <summary>Affiche les libelles des espaces invisibles. Defaut : true.</summary>
     public static bool LessonInvisibleMarkersVisible => GetBoolDefaultTrue("lessonInvisibleMarkersVisible");
@@ -1013,6 +1101,68 @@ static class ConfigManager
         {
             EnsureLoaded();
             using var doc = JsonDocument.Parse(value.ToString());
+            SetValueLocked(key, doc.RootElement.Clone());
+        }
+    }
+
+    /// <summary>Tableau JSON d'entiers ; les éléments d'un autre type sont ignorés.</summary>
+    private static List<int> GetIntList(string key)
+    {
+        var values = new List<int>();
+        lock (_lock)
+        {
+            EnsureLoaded();
+            if (_cache!.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in val.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Number && item.TryGetInt32(out int number))
+                        values.Add(number);
+                }
+            }
+        }
+        return values;
+    }
+
+    /// <summary>Tableau JSON de chaînes ; les éléments d'un autre type sont ignorés.</summary>
+    private static List<string> GetStringList(string key)
+    {
+        var values = new List<string>();
+        lock (_lock)
+        {
+            EnsureLoaded();
+            if (_cache!.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in val.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.String && item.GetString() is { } text)
+                        values.Add(text);
+                }
+            }
+        }
+        return values;
+    }
+
+    private static void SetIntList(string key, IEnumerable<int> values) =>
+        SetArray(key, writer => { foreach (int value in values) writer.WriteNumberValue(value); });
+
+    private static void SetStringList(string key, IEnumerable<string> values) =>
+        SetArray(key, writer => { foreach (string value in values) writer.WriteStringValue(value); });
+
+    // Sérialisation par Utf8JsonWriter : pas de JsonSerializer par réflexion sous NativeAOT.
+    private static void SetArray(string key, Action<Utf8JsonWriter> writeItems)
+    {
+        using var buffer = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartArray();
+            writeItems(writer);
+            writer.WriteEndArray();
+        }
+        lock (_lock)
+        {
+            EnsureLoaded();
+            using var doc = JsonDocument.Parse(buffer.ToArray());
             SetValueLocked(key, doc.RootElement.Clone());
         }
     }

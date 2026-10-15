@@ -17,6 +17,7 @@ sealed class PauseDurationDialog : IDisposable
     private const int IDCANCEL = 2;
     private const int IDC_EDIT_HOURS = 4301;
     private const int IDC_EDIT_MINUTES = 4302;
+    private const uint EM_SETSEL = 0x00B1;
 
     internal const int MaxHours = 23;
     internal const int MaxMinutes = 59;
@@ -75,7 +76,7 @@ sealed class PauseDurationDialog : IDisposable
 
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
-        Win32.SetFocus(_hEditMinutes);
+        FocusMinutes();
 
         try
         {
@@ -287,6 +288,7 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        LightButton.Attach(hwnd); // audit UX 1.3.0, #3 : « Confirmer » porte l'accent
         return hwnd;
     }
 
@@ -365,12 +367,25 @@ sealed class PauseDurationDialog : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
-    /// <summary>Durée saisie, ou null hors de 1 min à 23 h 59. Les minutes peuvent dépasser
-    /// 59 à la frappe : « 0 h 75 » vaut 1 h 15.</summary>
+    /// <summary>
+    /// Le focus va aux minutes, leur contenu sélectionné : la première frappe le remplace.
+    /// Audit final 1.3.0, A11-02 : <c>SetFocus</c> seul laissait le curseur avant le « 5 »
+    /// par défaut (seule la tabulation sélectionne tout), et « 30 » tapé faisait « 305 ».
+    /// </summary>
+    private void FocusMinutes()
+    {
+        Win32.SetFocus(_hEditMinutes);
+        Win32.SendMessageW(_hEditMinutes, EM_SETSEL, IntPtr.Zero, (IntPtr)(-1));
+    }
+
+    /// <summary>Durée saisie, ou null hors de 1 min à 23 h 59, minutes de 0 à 59.
+    /// Audit final 1.3.0, A11-02 (décision d'Antoine du 05/10) : « 0 h 75 » n'est plus lu
+    /// 1 h 15. Une frappe ajoutée au « 5 » par défaut (« 305 », « 530 ») faisait une pause
+    /// de plusieurs heures sans refus ; elle est désormais refusée comme hors bornes.</summary>
     internal static TimeSpan? ParseDuration(int hours, int minutes)
     {
         int total = hours * 60 + minutes;
-        return hours < 0 || minutes < 0 || total < 1 || total > MaxHours * 60 + MaxMinutes
+        return hours < 0 || minutes < 0 || minutes > MaxMinutes || total < 1 || total > MaxHours * 60 + MaxMinutes
             ? null
             : TimeSpan.FromMinutes(total);
     }

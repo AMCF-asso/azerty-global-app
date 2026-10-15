@@ -14,7 +14,6 @@ internal static partial class L
     public static string Settings_ShortcutModifier2 => T("Maj", "Shift");
 
     public static string Settings_LinkResetDefaults => T("Réinitialiser les raccourcis", "Reset shortcuts");
-    public static string Settings_ShortcutCaptureHint => T("Appuyez sur une touche autorisée", "Press an allowed key");
 
     public static string Settings_AutoStart => T("Lancer au démarrage de Windows", "Launch at Windows startup");
     public static string Settings_Notifications => T("Notifications", "Notifications");
@@ -40,8 +39,6 @@ internal static partial class L
     public static string Settings_ShortcutsReset => T("Raccourcis réinitialisés ✓", "Shortcuts reset ✓");
     public static string Settings_VirtualKeyboardWindowReset => T("Fenêtre du clavier virtuel réinitialisée ✓", "Virtual keyboard window reset ✓");
     public static string Settings_LessonsWindowReset => T("Fenêtre Leçons réinitialisée ✓", "Lessons window reset ✓");
-    public static string Settings_ShortcutReserved => T("Touche réservée : conflit avec d’autres applications", "Reserved key (conflicts with apps)");
-    public static string Settings_ShortcutAlreadyUsed => T("Déjà utilisée", "Already in use");
     public static string Settings_ShortcutKeyboardUpdated => T("Raccourci du clavier virtuel mis à jour ✓", "Virtual keyboard shortcut updated ✓");
     public static string Settings_ShortcutSearchUpdated => T("Raccourci de recherche mis à jour ✓", "Search shortcut updated ✓");
 
@@ -58,9 +55,6 @@ internal static partial class L
     public static string Settings_CompatAdded(string process) => T($"« {process} » ajoutée ✓", $"\"{process}\" added ✓");
     public static string Settings_CompatRemoved(string process) => T($"« {process} » retirée ✓", $"\"{process}\" removed ✓");
     public static string Settings_CompatUpdated(string process) => T($"« {process} » mise à jour ✓", $"\"{process}\" updated ✓");
-    public static string Settings_CompatForceOnRefused => T(
-        "Compatibilité jeu refusée : application protégée ou de connexion à distance",
-        "Game compatibility refused: protected or remote-access app");
     public static string Settings_CompatFilterExe => T("Applications (*.exe)", "Applications (*.exe)");
     public static string Settings_CompatPickerTitle => T("Choisir une application", "Choose an app");
 }

@@ -7,16 +7,18 @@ namespace AZERTYGlobal.Tests;
 /// Couleur de la ligne de validation des Paramètres (décision d'Antoine du 2026-09-26) : un
 /// refus s'affiche en rouge, tout autre message en vert. Avant, la couleur ne suivait que la
 /// validité des deux raccourcis : « Forcer compatibilité » refusé sortait en vert, et un
-/// raccourci resté invalide teintait en rouge le message d'un autre geste.
+/// raccourci resté invalide teintait en rouge le message d'un autre geste. Refonte 1.3.0
+/// (maquette du 07/10) : la confirmation s'écrit dans le pied en texte secondaire, son ✓ en
+/// bleu ; le refus reste rouge.
 /// </summary>
 public class SettingsValidationColorTests
 {
-    // Couleurs COLORREF de SettingsWindow (CLR_VALID, CLR_INVALID).
-    private const uint Vert = LightTheme.Success;
-    private const uint Rouge = LightTheme.Error;
+    // Couleurs COLORREF de SettingsWindow (CLR_MUTED, CLR_INVALID).
+    private const uint Secondaire = PaperTheme.TextSecondary;
+    private const uint Rouge = PaperTheme.Error;
 
     [Fact]
-    public void Un_refus_s_affiche_en_rouge_et_le_message_suivant_en_vert()
+    public void Un_refus_s_affiche_en_rouge_et_le_message_suivant_en_texte_secondaire()
     {
         // Fenêtre jamais affichée : aucun handle, rien n'est dessiné ni redimensionné.
         using var window = new SettingsWindow();
@@ -25,14 +27,14 @@ public class SettingsValidationColorTests
         Assert.Equal(Rouge, SettingsWindow.ValidationTextColor(BancCapture.Field<bool>(window, "_validationRefused")));
 
         BancCapture.Call(window, "SetValidationMessage", "fait", false);
-        Assert.Equal(Vert, SettingsWindow.ValidationTextColor(BancCapture.Field<bool>(window, "_validationRefused")));
+        Assert.Equal(Secondaire, SettingsWindow.ValidationTextColor(BancCapture.Field<bool>(window, "_validationRefused")));
     }
 
     [Fact]
     public void La_couleur_ne_depend_que_de_la_nature_du_message()
     {
         Assert.Equal(Rouge, SettingsWindow.ValidationTextColor(refused: true));
-        Assert.Equal(Vert, SettingsWindow.ValidationTextColor(refused: false));
+        Assert.Equal(Secondaire, SettingsWindow.ValidationTextColor(refused: false));
     }
 
     // Retour à la ligne (26/09) : un message neuf peut passer d'une à deux lignes, la

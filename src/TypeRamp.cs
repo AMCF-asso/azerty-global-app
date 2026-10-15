@@ -14,6 +14,8 @@ static class TypeRamp
     internal const int Title = 20;
 
     internal const int Regular = 400;
+    /// <summary>Gravures du clavier papier seulement (AG Mono 500), pas le texte d’interface.</summary>
+    internal const int Medium = 500;
     internal const int Semibold = 600;
 
     internal const string Family = "Segoe UI";

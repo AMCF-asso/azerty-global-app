@@ -236,7 +236,7 @@ static class NativeWindow
             ? Win32.MonitorFromWindow(owner, Win32.MONITOR_DEFAULTTONEAREST)
             : IntPtr.Zero;
 
-        if (monitor == IntPtr.Zero && Win32.GetCursorPos(out var cursor))
+        if (monitor == IntPtr.Zero && CursorSource.TryGet(out var cursor))
             monitor = Win32.MonitorFromPoint(cursor, Win32.MONITOR_DEFAULTTONEAREST);
 
         var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };

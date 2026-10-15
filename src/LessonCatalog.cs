@@ -110,6 +110,16 @@ internal static class LessonCatalogLoader
     public const string LessonsResourceName = "lessons.json";
     public const string InitiationModuleId = "initiation";
     public const string InitiationLessonId = "premiers-pas";
+    /// <summary>Séance de révision composée à la volée (progression par geste).</summary>
+    public const string ReviewModuleId = "revision";
+    /// <summary>Leçon tirée d'un texte collé par l'utilisateur.</summary>
+    public const string CustomTextModuleId = "texte";
+
+    /// <summary>Exercice composé à la volée : sa progression ne compte que par geste,
+    /// jamais par exercice (L-13).</summary>
+    public static bool IsComposed(string moduleId) =>
+        StringComparer.Ordinal.Equals(moduleId, ReviewModuleId) ||
+        StringComparer.Ordinal.Equals(moduleId, CustomTextModuleId);
 
     public static LessonCatalog LoadFromResource(string resourceName = LessonsResourceName)
     {
@@ -190,13 +200,15 @@ internal static class LessonCatalogLoader
     {
         var exercises = new List<LessonExercise>
         {
-            // Les six exercices du tutoriel (TutorialSteps), avec les consignes des Leçons.
+            // Les huit exercices du tutoriel (TutorialSteps), avec les consignes des Leçons.
             InitiationExercise(0, L.Lessons_Init0, TutorialSteps.All[0].Target),
             InitiationExercise(1, L.Lessons_Init1, TutorialSteps.All[1].Target),
             InitiationExercise(2, L.Lessons_Init2, TutorialSteps.All[2].Target),
             InitiationExercise(3, L.Lessons_Init3, TutorialSteps.All[3].Target),
             InitiationExercise(4, L.Lessons_Init4, TutorialSteps.All[4].Target),
-            InitiationExercise(5, L.Lessons_Init5, TutorialSteps.All[5].Target)
+            InitiationExercise(5, L.Lessons_Init5, TutorialSteps.All[5].Target),
+            InitiationExercise(6, L.Lessons_Init6, TutorialSteps.All[6].Target),
+            InitiationExercise(7, L.Lessons_Init7, TutorialSteps.All[7].Target)
         };
 
         var lesson = new LessonLesson(
