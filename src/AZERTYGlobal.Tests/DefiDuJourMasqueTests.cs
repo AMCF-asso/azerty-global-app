@@ -4,8 +4,8 @@ using Xunit;
 namespace AZERTYGlobal.Tests;
 
 /// <summary>
-/// Défi du jour masqué en 1.3.0 (décision d'Antoine du 2026-09-24) : il revient, revu, en
-/// 1.4.0. Un seul interrupteur, <see cref="DailyChallenge.Enabled"/>, ferme toutes les
+/// Défi du jour masqué le 2026-09-24, réactivé dès la 1.3.0 (décision d'Antoine du
+/// 2026-10-07). Un seul interrupteur, <see cref="DailyChallenge.Enabled"/>, ferme toutes les
 /// portes d'entrée ; ces témoins tiennent les décisions pures qui en dépendent.
 ///
 /// ⚠️ Limite assumée : les fenêtres (case d'opt-in de l'accueil et des Paramètres, section
@@ -28,11 +28,11 @@ public class DefiDuJourMasqueTests : IDisposable
         try { Directory.Delete(_tempDir, true); } catch { }
     }
 
-    /// <summary>⛔ À retourner en 1.4.0, et seulement là : c'est l'état livré de la 1.3.0.</summary>
+    /// <summary>État livré de la 1.3.0 : le Défi est offert.</summary>
     [Fact]
-    public void L_interrupteur_est_coupe_en_1_3_0()
+    public void L_interrupteur_est_leve_en_1_3_0()
     {
-        Assert.False(DailyChallenge.Enabled);
+        Assert.True(DailyChallenge.Enabled);
     }
 
     [Fact]
@@ -44,13 +44,13 @@ public class DefiDuJourMasqueTests : IDisposable
     }
 
     [Fact]
-    public void Le_menu_construit_avec_l_interrupteur_reel_n_a_pas_d_entree_Defi()
+    public void Le_menu_construit_avec_l_interrupteur_reel_a_l_entree_Defi()
     {
-        Assert.DoesNotContain(TrayApplication.IDM_CHALLENGE,
+        Assert.Contains(TrayApplication.IDM_CHALLENGE,
             TrayApplication.LearnMenuEntries(DailyChallenge.Enabled));
     }
 
-    /// <summary>Témoin du retour en 1.4.0 : le Défi reprend sa place entre les deux.</summary>
+    /// <summary>Le Défi reprend sa place entre les deux.</summary>
     [Fact]
     public void Interrupteur_leve_le_Defi_revient_entre_Lecons_et_accueil()
     {
@@ -70,9 +70,9 @@ public class DefiDuJourMasqueTests : IDisposable
     }
 
     [Fact]
-    public void L_annonce_ne_part_pas_avec_l_interrupteur_reel()
+    public void L_annonce_part_avec_l_interrupteur_reel()
     {
-        Assert.False(TrayApplication.ShouldShowChallengeAnnouncement(DailyChallenge.Enabled,
+        Assert.True(TrayApplication.ShouldShowChallengeAnnouncement(DailyChallenge.Enabled,
             announceDone: false, trainingEnabled: false, notificationsEnabled: true));
     }
 
@@ -101,22 +101,24 @@ public class DefiDuJourMasqueTests : IDisposable
     [Fact]
     public void Le_rappel_lit_l_interrupteur_meme_opt_in_coche()
     {
-        // Un testeur de la 1.2.0 a coché l'opt-in : la valeur reste sur disque, intacte.
+        // Un testeur de la 1.2.0 a coché l'opt-in : la valeur reste sur disque, intacte, et
+        // reprend effet avec le Défi.
         ConfigManager.SetTrainingEnabled(true);
         var signaux = TrainingReminders.Snapshot();
 
         Assert.True(signaux.Enabled);
         Assert.Equal(DailyChallenge.Enabled, signaux.ChallengeAvailable);
         var soir = DateOnly.FromDateTime(DateTime.Now).ToDateTime(new TimeOnly(TrainingReminders.EarliestHour + 1, 0));
-        Assert.False(TrainingReminders.ShouldRemind(soir, signaux));
+        // Séquence inachevée, aucune séance : le rappel du soir part.
+        Assert.True(TrainingReminders.ShouldRemind(soir, signaux));
     }
 
     [Fact]
-    public void Le_module_Defi_n_entre_pas_dans_les_Lecons_meme_avec_l_opt_in()
+    public void Le_module_Defi_entre_dans_les_Lecons_avec_l_opt_in()
     {
         Assert.False(DailyChallenge.ShouldOfferModule(challengeEnabled: false, trainingEnabled: true));
-        Assert.False(DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, trainingEnabled: true));
-        // Règle d'avant, inchangée pour la 1.4.0 : interrupteur et opt-in.
+        Assert.True(DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, trainingEnabled: true));
+        // Règle d'avant, inchangée : interrupteur et opt-in.
         Assert.True(DailyChallenge.ShouldOfferModule(challengeEnabled: true, trainingEnabled: true));
         Assert.False(DailyChallenge.ShouldOfferModule(challengeEnabled: true, trainingEnabled: false));
     }

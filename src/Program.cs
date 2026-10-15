@@ -128,6 +128,10 @@ static class Program
         // Rotation log centralisée : si error.log > 5 Mo, renommer en error.log.old
         ConfigManager.RotateLogIfNeeded();
 
+        // A08-02 (audit final 1.3.0) : relance par Windows après une mise à jour du Store,
+        // seulement pour l'instance qui tient le mutex.
+        RestartRegistration.Register();
+
         // Gestion des erreurs fatales (le handler ne peut pas empêcher la terminaison)
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
@@ -144,6 +148,9 @@ static class Program
                 L.Startup_FatalErrorBody,
                 L.Startup_FatalErrorTitle, 0x10); // MB_ICONERROR
         };
+
+        // Polices du site (refonte 1.3.0), privées au processus.
+        AppFonts.EnsureLoaded();
 
         using var app = new TrayApplication();
         app.Run();

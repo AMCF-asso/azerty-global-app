@@ -9,7 +9,7 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Banc de captures des fenêtres à contrôles : À propos, Durée de pause, Conflit de
 /// disposition (au démarrage et après une bascule), Mes statistiques, Paramètres (les trois
-/// onglets), Accueil (les trois étapes) et Couches maintenables. Une image par fenêtre, par
+/// onglets), Accueil (les quatre étapes) et Couches maintenables. Une image par fenêtre, par
 /// langue et par échelle.
 ///
 /// Il existe parce que le contrôle visuel ne passe pas par le lancement de l'application :
@@ -33,18 +33,20 @@ public class CaptureBench
     private const string GateVariable = "AZERTY_CAPTURE";
 
     /// <summary>Les onglets de Paramètres, dans l'ordre de l'énumération privée <c>SettingsTab</c>.</summary>
-    private static readonly string[] SettingsTabs = { "general", "applications", "langue-maintenance" };
+    private static readonly string[] SettingsTabs = { "general", "applications", "langue-maintenance", "lecons" };
 
-    /// <summary>Un message que laisse un geste de chaque onglet, dans le même ordre.</summary>
+    /// <summary>Un message que laisse un geste de chaque onglet, dans le même ordre. L'onglet
+    /// Leçons n'en produit pas : un message d'un autre onglet y vérifie seulement la mise en page.</summary>
     private static readonly Func<string>[] SettingsMessages =
     {
         () => L.Settings_ShortcutsReset,
         () => L.Settings_CompatAdded("notepad.exe"),
         () => L.Settings_VirtualKeyboardWindowReset,
+        () => L.Settings_VirtualKeyboardWindowReset,
     };
 
     /// <summary>Les étapes de l'accueil. <c>_currentStep</c> va de 0 à 2.</summary>
-    private const int OnboardingSteps = 3;
+    private const int OnboardingSteps = OnboardingStep.Count;
 
     [Fact]
     public void RendLesFenetresAuxEchellesDemandees()
@@ -212,7 +214,14 @@ public class CaptureBench
         var window = new SettingsWindow();
         try
         {
+            // Liste des applications de la maquette (config isolée par le banc) : un jeu, un
+            // éditeur, et la connexion à distance choisie, dont le mode s'écrit au-dessus des
+            // boutons radio.
+            ConfigManager.SetCompatibilityOverride("eldenring.exe", "forceOn");
+            ConfigManager.SetCompatibilityOverride("Code.exe", "forceOff");
+            ConfigManager.SetCompatibilityOverride("mstsc.exe", "forceOff");
             window.Show();
+            BancCapture.Call(window, "RefreshCompatList", "mstsc.exe");
             IntPtr hwnd = BancCapture.Handle(window);
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             IntPtr tabStrip = BancCapture.Field<IntPtr>(window, "_hWndTabStrip");
@@ -226,18 +235,46 @@ public class CaptureBench
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}", windowDpi);
 
+                // Capture d'un raccourci : la case Recherche attend sa touche, l'invite
+                // s'écrit sous les raccourcis.
+                if (SettingsTabs[tab] == "general")
+                {
+                    IntPtr search = BancCapture.Field<IntPtr>(window, "_hWndEditSearch");
+                    Win32.SetFocus(search);
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-general-capture", windowDpi);
+
+                    // Une lettre réservée (T) : le refus dit ce qu'elle fait déjà, à la
+                    // place de l'invite (lot « clarté »).
+                    BancCapture.Call(window, "ApplyCapturedShortcut", search, (uint)'T');
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-general-refus", windowDpi);
+                    BancCapture.Call(window, "CancelShortcutCapture", search);
+                    Win32.SetFocus(hwnd);
+                }
+
                 // Le même onglet après un geste qui laisse un message : la ligne de
                 // validation doit se voir sur l'onglet qui l'a produit.
                 BancCapture.Call(window, "SetValidationMessage", SettingsMessages[tab](), false);
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}-message", windowDpi);
 
-                // Un refus, « Forcer compatibilité » sur une app protégée : en rouge.
+                // Un refus, « Compatibilité jeu » sur la connexion à distance choisie (mstsc),
+                // puis sur un jeu à anti-triche : en rouge, avec la raison et ce qui se passe à
+                // la place. Le vrai chemin du bouton radio, pas un texte posé à la main.
                 if (SettingsTabs[tab] == "applications")
                 {
-                    BancCapture.Call(window, "SetRefusalMessage", L.Settings_CompatForceOnRefused);
+                    BancCapture.Call(window, "ApplyCompatModeToSelection", "forceOn");
                     BancCapture.MarkActive(hwnd);
                     target.Shoot(hwnd, "parametres-applications-refus", windowDpi);
+
+                    ConfigManager.SetCompatibilityOverride("valorant.exe", "forceOff");
+                    BancCapture.Call(window, "RefreshCompatList", "valorant.exe");
+                    BancCapture.Call(window, "ApplyCompatModeToSelection", "forceOn");
+                    BancCapture.MarkActive(hwnd);
+                    target.Shoot(hwnd, "parametres-applications-refus-jeu", windowDpi);
+                    ConfigManager.SetCompatibilityOverride("valorant.exe", null);
+                    BancCapture.Call(window, "RefreshCompatList", "mstsc.exe");
                 }
                 BancCapture.Call(window, "SetValidationMessage", string.Empty, false);
             }
@@ -249,7 +286,7 @@ public class CaptureBench
     }
 
     /// <summary>
-    /// Les trois étapes, un fichier chacune, dans l'état d'un premier accueil (aucun exercice
+    /// Les quatre étapes, un fichier chacune, dans l'état d'un premier accueil (aucun exercice
     /// fait). L'étape est posée dans <c>_currentStep</c> puis <c>UpdateStepVisibility</c> la
     /// rend, comme le bouton Suivant, sans armer <c>_step3Reached</c> : la fermeture ne peut
     /// donc rien enregistrer, ni l'affichage au démarrage ni le lancement automatique.
@@ -269,6 +306,16 @@ public class CaptureBench
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"accueil-etape{step + 1}", windowDpi);
             }
+
+            // Étape 1 dans l'autre état de l'accord d'activation, en mémoire seulement : le
+            // bouton dit « Activer et essayer » sans accord, « Essayer maintenant » avec.
+            bool accepted = BancCapture.Field<bool>(window, "_activationAccepted");
+            BancCapture.SetField(window, "_activationAccepted", !accepted);
+            BancCapture.SetField(window, "_currentStep", 0);
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(window, "_hWndBtnTry"), (string)BancCapture.Call(window, "get_TryButtonText")!);
+            BancCapture.Call(window, "UpdateStepVisibility");
+            BancCapture.MarkActive(hwnd);
+            target.Shoot(hwnd, accepted ? "accueil-etape1-sans-accord" : "accueil-etape1-avec-accord", windowDpi);
         }
         finally
         {

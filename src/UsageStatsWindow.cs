@@ -189,6 +189,9 @@ sealed class UsageStatsWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
+        // Audit UX 1.3.0, #3 : boutons clairs de Windows 11, « Fermer » porte l'accent.
+        LightButton.Attach(_hWndBtnCopy);
+        LightButton.Attach(_hWndBtnClose);
 
         RepositionControls();
     }
@@ -312,7 +315,7 @@ sealed class UsageStatsWindow : IDisposable
                             break;
                         case IDC_LINK_FEEDBACK:
                             Win32.ShellExecuteW(IntPtr.Zero, "open",
-                                ProductIdentity.DiagnosticUrl("/feedback", Program.Version,
+                                ProductIdentity.DiagnosticUrl(ProductIdentity.FeedbackPath, Program.Version,
                                     ProductIdentity.OsDescription(), "stats"), null, null, 1);
                             break;
                         case IDC_LINK_DISCORD:

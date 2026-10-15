@@ -66,6 +66,13 @@ public static class Win32
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT { public int x, y; }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetCursorPos(out POINT lpPoint);
+
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);
 

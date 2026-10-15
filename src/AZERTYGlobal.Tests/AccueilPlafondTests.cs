@@ -6,14 +6,15 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Plafond de l'Accueil (1.3.0) — la fenêtre, de hauteur fixe, tient dans son écran.
 ///
-/// Zone client de l'Accueil : 560 × 763 à 96 DPI, fois 0,75 (<c>ONBOARDING_UI_SCALE</c>), fois
-/// l'échelle. Cadres mesurés au banc le 29/09 (écran à 120 DPI) : 2 × 39 px. Zones de travail :
-/// écran moins la barre des tâches de Windows 11 (48 px à 100 %).
+/// Zone client de l'Accueil : 960 × 720 à 96 DPI, fois 0,75 (<c>ONBOARDING_UI_SCALE</c>), soit
+/// 720 × 540 à 100 % (fenêtre en largeur de la refonte du 15/10), fois l'échelle. Cadres mesurés
+/// au banc le 29/09 (écran à 120 DPI) : 2 × 39 px. Zones de travail : écran moins la barre des
+/// tâches de Windows 11 (48 px à 100 %).
 /// </summary>
 public class AccueilPlafondTests
 {
-    private const float BaseW = 560 * 0.75f;
-    private const float BaseH = 763 * 0.75f;
+    private const float BaseW = 960 * 0.75f;
+    private const float BaseH = 720 * 0.75f;
 
     private static (int W, int H) Client(float scale) => ((int)(BaseW * scale), (int)(BaseH * scale));
 
@@ -24,8 +25,8 @@ public class AccueilPlafondTests
     }
 
     [Theory]
-    [InlineData(1.25f, 39, 1366, 768 - 60)]   // 754 px de haut pour 708 : boutons coupés
-    [InlineData(1.75f, 54, 1920, 1080 - 84)]  // environ 1 055 pour 996
+    [InlineData(1.25f, 39, 1366, 768 - 60)]   // 714 px de haut pour 708 : boutons coupés
+    [InlineData(1.75f, 54, 1920, 1080 - 84)]  // 999 pour 996
     [InlineData(1.50f, 47, 1024, 768 - 72)]   // l'écran du banc CI
     public void ÉcranTropPetit_LaFenêtreTientAuPixelPrès(float screenScale, int cadreH, int zoneW, int zoneH)
     {
@@ -51,7 +52,7 @@ public class AccueilPlafondTests
     [Fact]
     public void ÉcranÉtroit_CEstLaLargeurQuiMord()
     {
-        // 600 × 1024 à 150 % : la hauteur tient, pas les 630 px de large.
+        // 600 × 1024 à 150 % : la hauteur tient, pas les 1 080 px de large.
         float scale = Fit(1.5f, 16, 47, 600, 1024 - 72);
         var (w, _) = Client(scale);
         Assert.True(w + 16 <= 600, $"largeur {w}");

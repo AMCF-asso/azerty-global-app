@@ -150,11 +150,7 @@
               "type": "practice",
               "instruction": "Méthode 2 : Circonflexe (^) + é → É (idéal en début de mot)",
               "instructionEn": "Method 2: Circumflex (^) + é → É (ideal at the start of a word)",
-              "content": "É É É É É",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "é"
-              }
+              "content": "Été\nÉlan\nÉtoile\nÉcoute\nÉnergie"
             },
             {
               "type": "practice",
@@ -184,11 +180,7 @@
               "type": "practice",
               "instruction": "Méthode 2 : Circonflexe (^) + è → È (idéal en début de mot)",
               "instructionEn": "Method 2: Circumflex (^) + è → È (ideal at the start of a word)",
-              "content": "È È È È È",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "è"
-              }
+              "content": "Ève\nÈre\nÈbre\nÈze"
             },
             {
               "type": "practice",
@@ -218,11 +210,7 @@
               "type": "practice",
               "instruction": "Méthode 2 : Circonflexe (^) + ç → Ç (idéal en début de mot)",
               "instructionEn": "Method 2: Circumflex (^) + ç → Ç (ideal at the start of a word)",
-              "content": "Ç Ç Ç Ç Ç",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "ç"
-              }
+              "content": "Ça\nÇà et là\nÇa alors\nÇa y est\nÇa roule"
             },
             {
               "type": "practice",
@@ -236,8 +224,8 @@
           "id": "caps-a-grave",
           "title": "À majuscule",
           "titleEn": "Capital À",
-          "description": "Deux méthodes : Verr. Maj. + à ou Circonflexe + à",
-          "descriptionEn": "Two methods: Caps Lock + à or Circumflex + à",
+          "description": "Verr. Maj. + à : À est toujours un mot seul",
+          "descriptionEn": "Caps Lock + à: À is always a word on its own",
           "characters": [
             "À"
           ],
@@ -247,16 +235,6 @@
               "instruction": "Méthode 1 : Verr. Maj. + à → À",
               "instructionEn": "Method 1: Caps Lock + à → À",
               "content": "À À À À À"
-            },
-            {
-              "type": "practice",
-              "instruction": "Méthode 2 : Circonflexe (^) + à → À (idéal en début de mot)",
-              "instructionEn": "Method 2: Circumflex (^) + à → À (ideal at the start of a word)",
-              "content": "À À À À À",
-              "hintMethod": {
-                "deadKey": "dk_circumflex",
-                "baseChar": "à"
-              }
             },
             {
               "type": "practice",
@@ -1034,6 +1012,29 @@
               "instruction": "Tapez le texte en entier ; l’aide indique la prochaine touche.",
               "instructionEn": "Type the complete text; the help shows the next key.",
               "content": "Four à 180 °C ± 5, ½ citron, ¼ d'oignon → 2 × 20 min ≈ 40 min, ≤ 1 h. 10³ mercis ≠ 10² © ™",
+              "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
+            }
+          ]
+        },
+        {
+          "id": "course-20-millions-afrique",
+          "title": "Un tour d’Afrique",
+          "titleEn": "Around Africa",
+          "description": "Un thème du défi facultatif, sans chronomètre.",
+          "descriptionEn": "An optional theme, with no timer.",
+          "characters": [
+            "€",
+            "ɓ",
+            "ŋ",
+            "Ŋ",
+            "ɔ"
+          ],
+          "exercises": [
+            {
+              "type": "practice",
+              "instruction": "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+              "instructionEn": "Type the complete text; the help shows the next key.",
+              "content": "De Dakar à Lomé pour 45 € : on salue les Fulɓe du Fouta, on traverse le Dagbaŋ au nord du Ghana, puis on s'arrête à Ŋɔtsie. Bon voyage !",
               "success": "Texte terminé : ces caractères sont maintenant sous vos doigts."
             }
           ]

@@ -16,10 +16,12 @@ namespace AZERTYGlobal.Tests;
 /// Outillage commun des deux bancs de capture, <see cref="CaptureBench"/> (les fenêtres à
 /// contrôles) et <see cref="KeyboardContextBench"/> (les fenêtres qui portent un clavier).
 ///
-/// Principe (option A de la revue du 25/09) : rien n'est ajouté à <c>src/</c>. Les bancs
-/// ouvrent les fenêtres par leurs points d'entrée publics, et n'atteignent les membres privés
-/// que par réflexion. Le code du produit reste donc identique à l'octet près, et les mêmes
-/// fichiers de banc peuvent être déposés sur un commit « avant » pour une comparaison.
+/// Principe (option A de la revue du 25/09) : les bancs ouvrent les fenêtres par leurs points
+/// d'entrée publics, et n'atteignent les membres privés que par réflexion. Une seule exception,
+/// voulue par Antoine le 15/10 (« simuler le curseur ») : le produit lit le curseur par
+/// <c>CursorSource</c>, donc par la couche <c>IWin32Api</c>, que <see cref="Isolation"/>
+/// remplace par une position hors fenêtre. Le banc ne déplace plus la vraie souris. Conséquence :
+/// les fichiers de banc ne se déposent plus tels quels sur un commit antérieur à ce lot.
 ///
 /// Portes et réglages, tous par variable d'environnement :
 /// <list type="bullet">
@@ -27,12 +29,13 @@ namespace AZERTYGlobal.Tests;
 /// clavier. Sans elles, chaque [Fact] sort tout de suite et compte comme réussi.</item>
 /// <item><c>AZERTY_CAPTURE_DIR</c> : dossier de sortie commun. À défaut, la valeur de la porte
 /// si ce n'est pas « 1 » (usage hérité du banc de main).</item>
-/// <item><c>AZERTY_CAPTURE_DPI</c> : DPI à rendre, séparés par des virgules. Défaut :
-/// 96,120,144,168, soit 100, 125, 150 et 175 %.</item>
-/// <item><c>AZERTY_CAPTURE_LANG</c> : langues à rendre. Défaut : fr,en.</item>
+/// <item><c>AZERTY_CAPTURE_DPI</c> : DPI à rendre, séparés par des virgules. Défaut en CI :
+/// 96,120,144,168, soit 100, 125, 150 et 175 % ; sur un poste : 96.</item>
+/// <item><c>AZERTY_CAPTURE_LANG</c> : langues à rendre. Défaut en CI : fr,en ; sur un poste : fr.</item>
 /// <item><c>AZERTY_CAPTURE_ONLY</c> : sujets à rendre, séparés par des virgules ; un sujet est
 /// retenu quand son nom commence par l'un d'eux (« lecons » prend tous les états des Leçons).
-/// Défaut : tous.</item>
+/// Obligatoire hors CI : sans lui, le banc échoue au lieu de tout rendre.</item>
+/// <item><c>AZERTY_CAPTURE_ALL=1</c> : banc entier sur un poste, seulement sur demande explicite.</item>
 /// <item><c>AZERTY_FENETRES_VISIBLES=1</c> : montre les fenêtres, que <see cref="Isolation"/>
 /// rend sinon invisibles (<see cref="FenetresInvisibles"/>).</item>
 /// </list>
@@ -53,9 +56,15 @@ internal static class BancCapture
     internal const string DpiVariable = "AZERTY_CAPTURE_DPI";
     internal const string LangVariable = "AZERTY_CAPTURE_LANG";
     internal const string OnlyVariable = "AZERTY_CAPTURE_ONLY";
+    internal const string AllVariable = "AZERTY_CAPTURE_ALL";
 
-    private static readonly int[] DefaultDpis = { 96, 120, 144, 168 };
-    private static readonly string[] DefaultLanguages = { "fr", "en" };
+    /// <summary>GitHub Actions pose GITHUB_ACTIONS=true : la CI garde le banc complet.</summary>
+    internal static bool OnCi =>
+        string.Equals(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"), "true", StringComparison.OrdinalIgnoreCase);
+
+    // Sur un poste : une image par sujet (fr, 100 %), choix d'Antoine du 07/10.
+    private static int[] DefaultDpis => OnCi ? new[] { 96, 120, 144, 168 } : new[] { 96 };
+    private static string[] DefaultLanguages => OnCi ? new[] { "fr", "en" } : new[] { "fr" };
 
     /// <summary>
     /// Dossier de sortie, ou null quand la porte est fermée. Une porte ouverte sans dossier est
@@ -68,6 +77,15 @@ internal static class BancCapture
         if (string.IsNullOrWhiteSpace(gate))
             return null;
 
+        // Règle d'Antoine (07/10) : sur un poste, un banc ne rend que les sujets touchés. Un
+        // banc entier fait défiler des centaines de fenêtres pendant des minutes.
+        if (RefuseFullBench(OnCi, Environment.GetEnvironmentVariable(OnlyVariable), Environment.GetEnvironmentVariable(AllVariable)))
+        {
+            throw new InvalidOperationException(
+                $"Banc entier refusé hors CI : donner les sujets touchés dans {OnlyVariable} " +
+                $"(préfixes séparés par des virgules), ou {AllVariable}=1 sur demande explicite.");
+        }
+
         string? dir = Environment.GetEnvironmentVariable(DirVariable);
         if (!string.IsNullOrWhiteSpace(dir))
             return dir;
@@ -78,6 +96,10 @@ internal static class BancCapture
         throw new InvalidOperationException(
             $"{gateVariable} est ouverte mais {DirVariable} ne donne aucun dossier de sortie.");
     }
+
+    /// <summary>Vrai quand un banc s'apprête à tout rendre sur un poste sans qu'on l'ait demandé.</summary>
+    internal static bool RefuseFullBench(bool onCi, string? only, string? all) =>
+        !onCi && string.IsNullOrWhiteSpace(only) && all != "1";
 
     /// <summary>Les DPI demandés, dans l'ordre donné, sans doublon.</summary>
     internal static int[] Dpis
@@ -172,6 +194,7 @@ internal static class BancCapture
         private readonly string _previousLanguage;
         private readonly IDisposable _policy;
         private readonly IDisposable _channel;
+        private readonly IDisposable _cursor;
         private readonly IntPtr _previousDpiContext;
         private readonly IntPtr _gdipToken;
         private readonly IntPtr _activationContext;
@@ -197,6 +220,7 @@ internal static class BancCapture
 
             _policy = PolicyManager.OverrideForTests((_, _) => null);
             _channel = AppChannel.OverrideForTests(DistributionChannel.Store);
+            _cursor = CursorSource.OverrideForTests(SimulatedCursor());
             _previousLanguage = L.Language;
             _previousDpiContext = Native.SetThreadDpiAwarenessContext(PerMonitorAwareV2);
 
@@ -214,6 +238,15 @@ internal static class BancCapture
             var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
             Win32.GdiplusStartup(out _gdipToken, ref input, IntPtr.Zero);
         }
+
+        /// <summary>
+        /// Le curseur que voient les fenêtres du produit pendant le banc : un faux Win32 qui rend
+        /// toujours (0, 0), coin de l'écran principal, comme l'ancien stationnement de la vraie
+        /// souris. Le placement des fenêtres (écran du curseur) reste donc celui des rendus
+        /// antérieurs, et la vraie souris d'Antoine n'est ni lue ni déplacée.
+        /// </summary>
+        private static TypingEngine.Windows.Testing.MockWin32Api SimulatedCursor() =>
+            new() { CursorPosition = (0, 0) };
 
         /// <summary>Langue de l'interface, dans la configuration et dans L : les Paramètres
         /// lisent la première pour cocher leur bouton radio, tout le reste lit la seconde.</summary>
@@ -269,7 +302,7 @@ internal static class BancCapture
             _channel.Dispose();
             _policy.Dispose();
             _invisibles.Dispose();
-            RestoreCursor();
+            _cursor.Dispose();
 
             if (_previousStatsPath is string statsPath)
                 UsageStats.OverrideStatsPathForTests(statsPath);
@@ -478,35 +511,17 @@ internal static class BancCapture
     /// L'image est recadrée sur le cadre visible (DWMWA_EXTENDED_FRAME_BOUNDS) : GetWindowRect
     /// compte les bordures invisibles de redimensionnement, qui sortiraient en noir.
     /// </summary>
-    /// <summary>Position du curseur avant la première prise du fil, rendue par <see cref="RestoreCursor"/>.</summary>
-    [ThreadStatic] private static Win32.POINT? t_cursorBeforeBench;
-
-    private static void ParkCursor()
-    {
-        if (t_cursorBeforeBench == null && Win32.GetCursorPos(out var cursor))
-            t_cursorBeforeBench = cursor;
-        Native.SetCursorPos(0, 0);
-    }
-
-    private static void RestoreCursor()
-    {
-        if (t_cursorBeforeBench is { } cursor)
-            Native.SetCursorPos(cursor.x, cursor.y);
-        t_cursorBeforeBench = null;
-    }
-
     internal static (int Width, int Height, string Source) Capture(IntPtr hwnd, string file)
     {
         if (hwnd == IntPtr.Zero)
             throw new InvalidOperationException($"{Path.GetFileName(file)} : handle nul");
 
         // Le curseur du runner ouvrait parfois l'infobulle de la touche qu'il survolait (Leçons
-        // du lot surface, 125 %, 01/10). En (0, 0), il est hors de la fenêtre ou sur sa barre de
-        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE. Fenêtre
-        // invisible comprise : les Leçons lisent GetCursorPos, pas les messages de souris que la
-        // fenêtre laisse passer (infobulles revenues à 100 et 125 % sur la CI du 04/10).
-        // Isolation remet le curseur où il était.
-        ParkCursor();
+        // du lot surface, 125 %, 01/10 ; revenues le 04/10). Les fenêtres lisent désormais le
+        // curseur simulé d'Isolation (position hors fenêtre), et la vraie souris
+        // reste où elle est. L'ancien stationnement fermait aussi l'infobulle déjà ouverte par
+        // WM_MOUSELEAVE : le banc l'envoie lui-même.
+        Win32.SendMessageW(hwnd, Win32.WM_MOUSELEAVE, IntPtr.Zero, IntPtr.Zero);
         Pump(20);
         bool onScreen = KeepOnMonitor(hwnd);
 
@@ -733,9 +748,6 @@ internal static class BancCapture
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool PeekMessageW(out Win32.MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
-
-        [DllImport("user32.dll")]
-        internal static extern bool SetCursorPos(int x, int y);
 
         [DllImport("user32.dll")]
         internal static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);

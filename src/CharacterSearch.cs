@@ -12,6 +12,9 @@ sealed class CharacterSearch : IDisposable
 {
 
     private const uint EN_CHANGE = 0x0300;
+    private const uint EM_SETMARGINS = 0x00D3;
+    private const int EC_LEFTMARGIN = 0x0001;
+    private const int EC_RIGHTMARGIN = 0x0002;
 
     private const int VK_ESCAPE = 0x1B;
     private const int VK_RETURN = 0x0D;
@@ -22,32 +25,31 @@ sealed class CharacterSearch : IDisposable
     private const int IDC_SEARCH = 3001;
     private const int IDC_TIMER_COPYFEEDBACK = 3002;
 
-    // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────
-    private const uint CLR_BG = DarkTheme.Background;           // Fond sombre
-    private const uint CLR_SEARCH_BG = DarkTheme.Surface;    // Fond champ recherche
-    private const uint CLR_SEPARATOR = DarkTheme.Border;    // Séparateur
-    private const uint CLR_CHAR = DarkTheme.AccentText;          // Caractère (bleu vif)
-    private const uint CLR_NAME = DarkTheme.Text;          // Nom (gris clair)
-    private const uint CLR_METHOD_ALTGR = DarkTheme.AltGr;  // AltGr (jaune doré)
-    private const uint CLR_METHOD_MAJ = DarkTheme.Shift;    // Maj (bleu ciel)
-    private const uint CLR_METHOD_SEP = DarkTheme.TextTertiary;    // + et "puis" (gris)
-    private const uint CLR_METHOD_KEY = DarkTheme.Text;    // Noms de touches (blanc)
-    private const uint CLR_FOOTER = DarkTheme.TextSecondary;        // Footer (gris clair)
-    private const uint CLR_SELECTED = DarkTheme.Selected;      // Fond sélectionné (brun chaud)
-    private const uint CLR_COPIED = DarkTheme.Success;        // Vert "Copié !"
-    private const uint CLR_HINT = DarkTheme.TextTertiary;          // Texte d'aide (gris moyen)
-
-    // ── Dimensions (base 96 DPI) ─────────────────────────────────
-    private const int BASE_WIN_W = 520;
-    private const int BASE_WIN_H_MIN = 68;      // Hauteur minimale (juste le champ de recherche)
-    private const int BASE_WIN_H_MAX = 420;
-    private const int BASE_SEARCH_H = 28;
-    private const int BASE_CHAR_COL_W = 48;
-    private const int BASE_NAME_COL_W = 280;
-    private const int BASE_ROW_PAD = 8;
-    private const int BASE_FOOTER_H = 42;
+    // ── Mesures de la maquette « Recherche B, partition du choix » (px à 96 DPI) ──
+    // Couleurs : PaperTheme (jetons de la refonte 1.3.0).
+    private const int BASE_WIN_W = 560;
+    private const int BASE_FIELD_H = 60;        // Champ : loupe, saisie
+    private const int BASE_FIELD_PAD_X = 20;
+    private const int BASE_LOUPE = 18;
+    private const int BASE_LOUPE_GAP = 12;
+    private const int BASE_EDIT_FONT = 19;
+    private const int BASE_ROW_H = 49;          // Ligne de résultat, filet de 1 px en plus
+    private const int BASE_ROW_GLYPH_LEFT = 10; // Colonne du caractère : 52 px
+    private const int BASE_ROW_GLYPH_W = 52;
+    private const int BASE_ROW_GAP = 12;
+    private const int BASE_ROW_PAD_RIGHT = 16;
+    private const int BASE_PART_PAD_TOP = 18;   // Partition du choix
+    private const int BASE_PART_PAD_BOTTOM = 20;
+    private const int BASE_PART_PAD_LEFT = 4;
+    private const int BASE_PART_GLYPH_W = 116;
+    private const int BASE_PART_GAP = 8;
+    private const int BASE_PART_PAD_RIGHT = 20;
+    private const int BASE_PART_MIN_H = 100;    // Le grand caractère tient toujours
+    private const int BASE_FOOTER_H = 38;       // Pied, filet compris
+    private const int BASE_EMPTY_H = 38;        // Bande d'aide sous le champ vide
+    private const int BASE_NO_RESULT_H = 52;
     private const int MAX_RESULTS = 20;
-    private const int VISIBLE_RESULTS = 4;
+    private const int VISIBLE_RESULTS = 5;
 
     private const uint CF_UNICODETEXT = 13;
     private const uint GMEM_MOVEABLE = 0x0002;
@@ -76,6 +78,10 @@ sealed class CharacterSearch : IDisposable
         public string[] NormalizedNameFrWords { get; set; } = Array.Empty<string>();
         public string[] NormalizedNameEnWords { get; set; } = Array.Empty<string>();
         public string NormalizedChar { get; set; } = "";
+        // Recherche par langue (language-search.json) : noms de langue, puis noms de signe
+        // (tons des accents combinants), découpés en mots normalisés.
+        public string[][] NormalizedLanguageAliasWords { get; set; } = Array.Empty<string[]>();
+        public string[][] NormalizedSignAliasWords { get; set; } = Array.Empty<string[]>();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -105,70 +111,12 @@ sealed class CharacterSearch : IDisposable
     // d'écran si la souris y passait pendant la saisie.
     private Win32.RECT _workArea;
 
-    // Polices cachées (créées une fois, détruites au Dispose)
-    private IntPtr _hFontChar;
-    private IntPtr _hFontName;
-    private IntPtr _hFontMethod;
-    private IntPtr _hFontFooter;
-    private IntPtr _hFontPlaceholder;
-    private IntPtr _hFontEdit;
-
-    // Séparateurs pour tokeniser les noms/alias (doit matcher le site : tester-search.js)
+    // Séparateurs pour tokeniser les noms/alias (doit matcher le site : tester-search.js)
     private static readonly char[] SearchSeparators = { ' ', '-', '\'', '\u2019', '(', ')' };
 
-    // Mapping key code (Web API style) → label AZERTY
-    private static readonly Dictionary<string, string> KeyLabels = new()
-    {
-        ["Backquote"] = "²",
-        ["Digit1"] = "&",
-        ["Digit2"] = "é",
-        ["Digit3"] = "\"",
-        ["Digit4"] = "'",
-        ["Digit5"] = "(",
-        ["Digit6"] = "-",
-        ["Digit7"] = "è",
-        ["Digit8"] = "_",
-        ["Digit9"] = "ç",
-        ["Digit0"] = "à",
-        ["Minus"] = ")",
-        ["Equal"] = "=",
-        ["KeyQ"] = "A",
-        ["KeyW"] = "Z",
-        ["KeyE"] = "E",
-        ["KeyR"] = "R",
-        ["KeyT"] = "T",
-        ["KeyY"] = "Y",
-        ["KeyU"] = "U",
-        ["KeyI"] = "I",
-        ["KeyO"] = "O",
-        ["KeyP"] = "P",
-        ["BracketLeft"] = "^",
-        ["BracketRight"] = "$",
-        ["KeyA"] = "Q",
-        ["KeyS"] = "S",
-        ["KeyD"] = "D",
-        ["KeyF"] = "F",
-        ["KeyG"] = "G",
-        ["KeyH"] = "H",
-        ["KeyJ"] = "J",
-        ["KeyK"] = "K",
-        ["KeyL"] = "L",
-        ["Semicolon"] = "M",
-        ["Quote"] = "ù",
-        ["Backslash"] = "*",
-        ["IntlBackslash"] = "<",
-        ["KeyZ"] = "W",
-        ["KeyX"] = "X",
-        ["KeyC"] = "C",
-        ["KeyV"] = "V",
-        ["KeyB"] = "B",
-        ["KeyN"] = "N",
-        ["KeyM"] = ",",
-        ["Comma"] = ".",
-        ["Period"] = "/",
-        ["Slash"] = "§",
-        ["Space"] = "Espace",
-    };
+    /// <summary>Code de touche (style Web API) → gravure AZERTY : la table du socle, commune
+    /// aux Leçons et au clavier virtuel. « Espace » se traduit à part (<see cref="GetKeyLabel"/>).</summary>
+    private static IReadOnlyDictionary<string, string> KeyLabels => Gesture.KeyLegends;
 
     /// <summary>Événement déclenché quand la sélection dans les résultats change.</summary>
     public event Action<MethodData?>? SelectionChanged;
@@ -231,14 +179,24 @@ sealed class CharacterSearch : IDisposable
             entry2.NormalizedEnglishAliasWords = item.EnglishAliases.Select(a =>
                 NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
             ).ToArray();
+            if (LanguageSearchTable.Shared.ByCharacter.TryGetValue(charStr, out var languageAliases))
+            {
+                entry2.NormalizedLanguageAliasWords = languageAliases.Languages.Select(a =>
+                    NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
+                ).ToArray();
+                entry2.NormalizedSignAliasWords = languageAliases.Signs.Select(a =>
+                    NormalizeForSearch(a).Split(SearchSeparators, StringSplitOptions.RemoveEmptyEntries)
+                ).ToArray();
+            }
 
             entries.Add(entry2);
         }
         return entries;
     }
 
-    /// <summary>Formate une méthode de saisie en texte lisible.</summary>
-    private string FormatMethod(MethodData method)
+    /// <summary>Formate une méthode de saisie en texte lisible : une ligne pour une méthode
+    /// directe, deux pour une touche morte (l'activation, puis la seconde touche).</summary>
+    internal static string FormatMethod(MethodData method)
     {
         if (method.Type == "direct")
         {
@@ -354,6 +312,14 @@ sealed class CharacterSearch : IDisposable
         return !string.IsNullOrEmpty(entry.NameFr) ? entry.NameFr : entry.NameEn;
     }
 
+    /// <summary>Nom affiché en casse de phrase (« Lettre majuscule latine Z accent aigu ») : les
+    /// noms Unicode arrivent en capitales ; les lettres nommées seules gardent leur casse.</summary>
+    private static string GetSentenceName(CharEntry entry)
+    {
+        string name = VirtualKeyboard.InSentence(GetDisplayName(entry));
+        return name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name.Substring(1);
+    }
+
     /// <summary>Normalise un texte pour la recherche (supprime les diacritiques, met en minuscule).</summary>
     private static string NormalizeForSearch(string text)
     {
@@ -412,6 +378,8 @@ sealed class CharacterSearch : IDisposable
             NormalizedNameFrWords = entry.NormalizedNameFrWords,
             NormalizedNameEnWords = entry.NormalizedNameEnWords,
             NormalizedChar = entry.NormalizedChar,
+            NormalizedLanguageAliasWords = entry.NormalizedLanguageAliasWords,
+            NormalizedSignAliasWords = entry.NormalizedSignAliasWords,
         };
     }
 
@@ -449,6 +417,50 @@ sealed class CharacterSearch : IDisposable
         return true;
     }
 
+    /// <summary>Poids d'un caractère trouvé par le nom d'une langue qui l'utilise.</summary>
+    internal const int LANGUAGE_SCORE = 45;
+
+    /// <summary>
+    /// Un alias de langue ou de signe répond à la requête quand chaque mot de la requête est un
+    /// mot de l'alias, ou le début d'un mot de l'alias à partir de trois lettres : « pul » trouve
+    /// « pulaar », mais « ma » ne trouve pas toutes les langues en « ma… » pendant la frappe.
+    /// Avec <paramref name="nameFr"/> et <paramref name="nameEn"/>, un mot peut aussi venir du
+    /// nom du caractère (règle de <see cref="AllWordsMatch"/>), à condition qu'au moins un mot
+    /// vienne de l'alias : « pulaar b » trouve ɓ.
+    /// </summary>
+    private static bool AnyLanguageAliasMatches(string[][] aliases, string[] queryWords,
+        string[]? nameFr, string[]? nameEn)
+    {
+        if (aliases.Length == 0 || queryWords.Length == 0) return false;
+        foreach (var aliasWords in aliases)
+        {
+            bool all = true, fromAlias = false;
+            foreach (var qw in queryWords)
+            {
+                if (aliasWords.Any(aw => aw == qw || (qw.Length >= 3 && aw.StartsWith(qw, StringComparison.Ordinal))))
+                {
+                    fromAlias = true;
+                    continue;
+                }
+                if (NameWordMatches(qw, nameFr) || NameWordMatches(qw, nameEn))
+                    continue;
+                all = false;
+                break;
+            }
+            if (all && fromAlias) return true;
+        }
+        return false;
+    }
+
+    private static bool NameWordMatches(string queryWord, string[]? nameWords)
+    {
+        if (nameWords == null) return false;
+        foreach (var tw in nameWords)
+            if (queryWord.Length == 1 ? tw == queryWord : tw.StartsWith(queryWord, StringComparison.Ordinal))
+                return true;
+        return false;
+    }
+
     /// <summary>Score de correspondance — identique au site web (tester-modal.js searchCharacters).</summary>
     private static int MatchScore(CharEntry entry, string query, string lowerQuery,
         string normalizedQuery, string[] queryWords, string?[] querySynonyms, string[] originalQueryWords)
@@ -478,6 +490,12 @@ sealed class CharacterSearch : IDisposable
         {
             score = 80;
         }
+        // Nom de signe (language-search.json) : « ton », « tone », « ton haut », « accent
+        // grave combinant ». Même poids qu'un alias : le ton passe avant le tonos grec (70).
+        else if (AnyLanguageAliasMatches(entry.NormalizedSignAliasWords, queryWords, null, null))
+        {
+            score = 80;
+        }
         // Nom français : tous les mots matchent (pré-normalisé)
         else if (entry.NormalizedNameFrWords.Length > 0 && queryWords.Length > 0)
         {
@@ -491,6 +509,17 @@ sealed class CharacterSearch : IDisposable
             if (AllWordsMatch(queryWords, querySynonyms, entry.NormalizedNameEnWords))
                 score = 50;
         }
+
+        // Recherche par langue (language-search.json). Poids sous tous les autres : un nom de
+        // langue qui est aussi un mot (« four », « gun ») ne passe jamais devant un caractère
+        // trouvé par son nom ou ses alias, et le classement des requêtes existantes reste le même.
+        if (score == 0 && AnyLanguageAliasMatches(entry.NormalizedLanguageAliasWords, queryWords, null, null))
+            score = LANGUAGE_SCORE;
+        // Langue et lettre mêlées : « pulaar b », « wolof e ».
+        if (score == 0 && queryWords.Length > 1
+            && AnyLanguageAliasMatches(entry.NormalizedLanguageAliasWords, queryWords,
+                entry.NormalizedNameFrWords, entry.NormalizedNameEnWords))
+            score = LANGUAGE_SCORE - 5;
 
         // Code Unicode (U+xxxx)
         if (score == 0 && lowerQuery.StartsWith("u+", StringComparison.Ordinal) &&
@@ -554,17 +583,19 @@ sealed class CharacterSearch : IDisposable
 
         // Calculer la position en bas à droite — démarrer avec la hauteur minimale
         CaptureWorkArea();
-        var (x, y) = GetBottomRightPosition(BASE_WIN_W, BASE_WIN_H_MIN);
+        int baseH = BASE_FIELD_H + 1 + BASE_EMPTY_H;
+        var (x, y) = GetBottomRightPosition(BASE_WIN_W, baseH);
 
         _hWnd = Win32.CreateWindowExW(
             Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW,
             className,
             L.Search_WindowTitle,
             Win32.WS_POPUP | Win32.WS_BORDER | Win32.WS_CLIPCHILDREN,
-            x, y, BASE_WIN_W, BASE_WIN_H_MIN,
+            x, y, BASE_WIN_W, baseH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
-        NativeWindow.ApplyFrame(_hWnd, dark: true);
+        NativeWindow.ApplyClassBackground(_hWnd, PaperTheme.Paper);
+        // Refonte 1.3.0 : fenêtre papier, cadre DWM clair.
+        NativeWindow.ApplyFrame(_hWnd, dark: false);
 
         // Récupérer le DPI
         _dpiScale = Win32.GetDpiForWindow(_hWnd) / 96.0f;
@@ -572,12 +603,10 @@ sealed class CharacterSearch : IDisposable
         // Redimensionner selon le DPI
         {
             int w = Scale(BASE_WIN_W);
-            int h = Scale(BASE_WIN_H_MIN);
+            int h = Scale(baseH);
             var (dx, dy) = GetBottomRightPosition(w, h);
             Win32.MoveWindow(_hWnd, dx, dy, w, h, false);
         }
-
-        CreateFonts();
 
         // N8 (accessibilité 1.3.0) : MSAA et UI Automation nomment un EDIT par le STATIC qui
         // le précède dans l'ordre Z, visible ou non (mesuré le 2026-09-23). Même libellé que
@@ -592,56 +621,50 @@ sealed class CharacterSearch : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_SEARCH, hInstance, IntPtr.Zero);
 
-        Win32.SendMessageW(_hEdit, Win32.WM_SETFONT, _hFontEdit, (IntPtr)1);
-        ResizeEditControl();
+        ApplyEditFont();
 
-        // Pas de placeholder natif — on dessine le nôtre en italique dans OnPaint
+        // Pas de placeholder natif — on dessine le nôtre dans le sous-classement du champ.
 
-        // Brush pour le fond sombre de l'Edit
-        _hEditBgBrush = Win32.CreateSolidBrush(CLR_SEARCH_BG);
+        // Fond papier du champ (WM_CTLCOLOREDIT)
+        _hEditBgBrush = Win32.CreateSolidBrush(PaperTheme.Paper);
 
         // Subclasser l'Edit pour intercepter les touches (Entrée, flèches, Échap)
         Win32.SetWindowSubclass(_hEdit, _editSubclassProc, (UIntPtr)1, IntPtr.Zero);
     }
 
-    private void CreateFonts()
+    // ── Polices (AG Texte, AG Titre : HFONT partagées par AppFonts, jamais détruites) ──
+    private FontSpec EditFont => FontSpec.Of(AppFonts.Text, BASE_EDIT_FONT, TypeRamp.Regular, _dpiScale);
+    private FontSpec RowGlyphFont => FontSpec.Of(AppFonts.Title, 28, TypeRamp.Semibold, _dpiScale);
+    private FontSpec RowNameFont(bool chosen) => FontSpec.Of(AppFonts.Text, 15, chosen ? TypeRamp.Semibold : TypeRamp.Regular, _dpiScale);
+    private FontSpec PartTitleFont => FontSpec.Of(AppFonts.Text, 17, TypeRamp.Semibold, _dpiScale);
+    private FontSpec SentenceFont(bool strong) => FontSpec.Of(AppFonts.Text, 15, strong ? TypeRamp.Semibold : TypeRamp.Regular, _dpiScale);
+    private FontSpec FooterFont(bool strong) => FontSpec.Of(AppFonts.Text, 13, strong ? TypeRamp.Semibold : TypeRamp.Regular, _dpiScale);
+
+    /// <summary>Police du champ, sans marges internes : la saisie et le texte d'attente
+    /// commencent au même pixel. Rappelé à chaque changement de DPI.</summary>
+    private void ApplyEditFont()
     {
-        _hFontChar = Win32.CreateFontW(-Scale(24), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
-        _hFontName = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        // Hors rampe, décision d'Antoine sur les planches du lot visuel : la méthode de frappe
-        // est l'information que l'on vient chercher, elle garde ses 18 px semi-gras d'avant.
-        _hFontMethod = Win32.CreateFontW(-Scale(18), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontFooter = Win32.CreateFontW(-Scale(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontPlaceholder = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 1, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontEdit = Win32.CreateFontW(-Scale(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        if (_hEdit == IntPtr.Zero)
+            return;
+        Win32.SendMessageW(_hEdit, Win32.WM_SETFONT, EditFont.Handle, (IntPtr)1);
+        Win32.SendMessageW(_hEdit, EM_SETMARGINS, (IntPtr)(EC_LEFTMARGIN | EC_RIGHTMARGIN), IntPtr.Zero);
+        ResizeEditControl();
     }
 
-    private void DestroyFonts()
-    {
-        if (_hFontChar != IntPtr.Zero) { Win32.DeleteObject(_hFontChar); _hFontChar = IntPtr.Zero; }
-        if (_hFontName != IntPtr.Zero) { Win32.DeleteObject(_hFontName); _hFontName = IntPtr.Zero; }
-        if (_hFontMethod != IntPtr.Zero) { Win32.DeleteObject(_hFontMethod); _hFontMethod = IntPtr.Zero; }
-        if (_hFontFooter != IntPtr.Zero) { Win32.DeleteObject(_hFontFooter); _hFontFooter = IntPtr.Zero; }
-        if (_hFontPlaceholder != IntPtr.Zero) { Win32.DeleteObject(_hFontPlaceholder); _hFontPlaceholder = IntPtr.Zero; }
-        if (_hFontEdit != IntPtr.Zero) { Win32.DeleteObject(_hFontEdit); _hFontEdit = IntPtr.Zero; }
-    }
-
-    private void RecreateFonts()
-    {
-        DestroyFonts();
-        CreateFonts();
-        if (_hEdit != IntPtr.Zero)
-            Win32.SendMessageW(_hEdit, Win32.WM_SETFONT, _hFontEdit, (IntPtr)1);
-    }
-
+    /// <summary>Le champ, à droite de la loupe, centré dans la bande de 60 px : sa hauteur est
+    /// celle de la police, le texte d'une ligne s'y pose donc au milieu.</summary>
     private void ResizeEditControl()
     {
         if (_hEdit == IntPtr.Zero)
             return;
 
-        int searchH = Scale(BASE_SEARCH_H);
-        int editPad = Scale(5);
-        Win32.MoveWindow(_hEdit, editPad, editPad, Scale(BASE_WIN_W) - editPad * 2, searchH, true);
+        var hdc = Win32.GetDC(_hEdit);
+        var (ascent, descent) = PaperText.Metrics(hdc, EditFont);
+        Win32.ReleaseDC(_hEdit, hdc);
+        int h = ascent + descent;
+        int left = Scale(BASE_FIELD_PAD_X + BASE_LOUPE + BASE_LOUPE_GAP);
+        int top = (Scale(BASE_FIELD_H) - h) / 2;
+        Win32.MoveWindow(_hEdit, left, top, Scale(BASE_WIN_W) - left - Scale(BASE_FIELD_PAD_X), h, true);
     }
 
     /// <summary>Retient la zone de travail de l'écran du curseur : à la création, puis à
@@ -649,7 +672,7 @@ sealed class CharacterSearch : IDisposable
     private void CaptureWorkArea()
     {
         // Trouver l'écran principal (ou celui où se trouve la souris)
-        Win32.GetCursorPos(out var pt);
+        CursorSource.TryGet(out var pt);
         var hMonitor = Win32.MonitorFromPoint(pt, 0x00000001); // MONITOR_DEFAULTTOPRIMARY
         var mi = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         Win32.GetMonitorInfo(hMonitor, ref mi);
@@ -667,36 +690,45 @@ sealed class CharacterSearch : IDisposable
 
     private int Scale(int value) => (int)(value * _dpiScale);
 
-    /// <summary>Redimensionne la fenêtre selon le nombre de résultats.</summary>
+    /// <summary>
+    /// Redimensionne la fenêtre selon l'état : champ seul et son aide (vide), « Aucun
+    /// résultat », ou champ, cinq lignes au plus, partition du choix et pied. La zone cliente
+    /// fait 560 px de large (96 DPI), le cadre s'y ajoute.
+    /// </summary>
     private void ResizeToFitResults()
     {
-        int searchAreaH = Scale(BASE_SEARCH_H) + Scale(8) * 2 + 1; // +1 pour le séparateur
-        int footerH = Scale(BASE_FOOTER_H);
-        int w = Scale(BASE_WIN_W);
-
+        int clientH = Scale(BASE_FIELD_H) + 1;
         if (_filteredResults.Count == 0)
         {
-            int h = searchAreaH + Scale(40);
-            var (x, y) = GetBottomRightPosition(w, h);
-            Win32.MoveWindow(_hWnd, x, y, w, h, true);
-            return;
+            clientH += Scale(GetEditTextLength() > 0 ? BASE_NO_RESULT_H : BASE_EMPTY_H);
         }
-
-        // Calculer la hauteur totale des lignes visibles
-        int totalRowH = 0;
-        int rowCount = Math.Min(_filteredResults.Count, VISIBLE_RESULTS);
-        for (int i = 0; i < rowCount; i++)
+        else
         {
-            totalRowH += GetRowHeight(i) + 1; // +1 séparateur
+            clientH += ListHeight(Math.Min(_filteredResults.Count, VISIBLE_RESULTS));
+            var hdc = Win32.GetDC(_hWnd);
+            clientH += PartitionHeight(hdc);
+            Win32.ReleaseDC(_hWnd, hdc);
+            clientH += Scale(BASE_FOOTER_H);
         }
 
-        int targetH = searchAreaH + totalRowH + footerH;
-        int maxH = Scale(BASE_WIN_H_MAX);
-        targetH = Math.Min(targetH, maxH);
+        // Le cadre (WS_BORDER) en plus de la zone cliente.
+        Win32.GetWindowRect(_hWnd, out var wr);
+        Win32.GetClientRect(_hWnd, out var cr);
+        int frameW = (wr.right - wr.left) - (cr.right - cr.left);
+        int frameH = (wr.bottom - wr.top) - (cr.bottom - cr.top);
+        int w = Scale(BASE_WIN_W) + frameW;
+        int h = clientH + frameH;
+        // Jamais plus haute que l'écran retenu : à 150 % sur un petit écran, le pied reste visible.
+        int workH = _workArea.bottom - _workArea.top;
+        if (workH > 0)
+            h = Math.Min(h, workH - 20);
 
-        var (px, py) = GetBottomRightPosition(w, targetH);
-        Win32.MoveWindow(_hWnd, px, py, w, targetH, true);
+        var (x, y) = GetBottomRightPosition(w, h);
+        Win32.MoveWindow(_hWnd, x, y, w, h, true);
     }
+
+    /// <summary>Hauteur de <paramref name="rows"/> lignes et des filets qui les séparent.</summary>
+    private int ListHeight(int rows) => rows <= 0 ? 0 : rows * Scale(BASE_ROW_H) + (rows - 1);
 
     // ═══════════════════════════════════════════════════════════════
     // Affichage / Masquage
@@ -866,16 +898,15 @@ sealed class CharacterSearch : IDisposable
                     if (newDpi > 0)
                         _dpiScale = newDpi / 96f;
 
-                    RecreateFonts();
-                    ResizeEditControl();
+                    ApplyEditFont();
                     ResizeToFitResults();
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
                 }
 
                 case Win32.WM_CTLCOLOREDIT:
-                    Win32.SetTextColor(wParam, CLR_NAME);      // texte clair
-                    Win32.SetBkColor(wParam, CLR_SEARCH_BG);   // fond édit sombre
+                    Win32.SetTextColor(wParam, PaperTheme.Ink);
+                    Win32.SetBkColor(wParam, PaperTheme.Paper);
                     return _hEditBgBrush;
 
                 case Win32.WM_DESTROY:
@@ -941,21 +972,15 @@ sealed class CharacterSearch : IDisposable
                 return IntPtr.Zero;
         }
 
-        // Placeholder en italique blanc quand le champ est vide
+        // Texte d'attente quand le champ est vide : même police que la saisie, texte secondaire.
         if (msg == Win32.WM_PAINT)
         {
             var result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-            if (GetEditText().Length == 0)
+            if (GetEditTextLength() == 0)
             {
                 var hdc = Win32.GetDC(hWnd);
-                Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-                Win32.SetTextColor(hdc, DarkTheme.TextTertiary);
-                Win32.SelectObject(hdc, _hFontPlaceholder);
                 Win32.GetClientRect(hWnd, out var editRect);
-                editRect.left += Scale(4);
-                var phText = L.Search_Placeholder;
-                Win32.DrawTextW(hdc, phText, phText.Length, ref editRect,
-                    Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+                PaperText.DrawLine(hdc, L.Search_Placeholder, EditFont, editRect, PaperTheme.TextSecondary);
                 Win32.ReleaseDC(hWnd, hdc);
             }
             return result;
@@ -980,6 +1005,9 @@ sealed class CharacterSearch : IDisposable
             _scrollOffset = index - VISIBLE_RESULTS + 1;
     }
 
+    private int GetEditTextLength()
+        => _hEdit == IntPtr.Zero ? 0 : (int)Win32.SendMessageW(_hEdit, Win32.WM_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero);
+
     private string GetEditText()
     {
         int len = (int)Win32.SendMessageW(_hEdit, Win32.WM_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero);
@@ -1000,7 +1028,7 @@ sealed class CharacterSearch : IDisposable
     private void HandleClick(int mouseY)
     {
         if (_inputPaused) return;
-        int searchH = Scale(BASE_SEARCH_H) + Scale(8) * 2;
+        int searchH = Scale(BASE_FIELD_H);
         if (mouseY < searchH) return; // Clic dans la zone de recherche
 
         int rowCount = Math.Min(VISIBLE_RESULTS, _filteredResults.Count - _scrollOffset);
@@ -1136,315 +1164,284 @@ sealed class CharacterSearch : IDisposable
     // Rendu
     // ═══════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Maquette « Recherche B, partition du choix » : le champ et sa loupe ; cinq lignes au
+    /// plus, chacune avec son caractère et son geste abrégé ; sous la liste, le caractère
+    /// choisi en grand, sa portée et la phrase qui la lit ; le pied.
+    /// </summary>
     private void OnPaint(IntPtr hWnd)
     {
-        var hdc = Win32.BeginPaint(hWnd, out var ps);
-        Win32.GetClientRect(hWnd, out var clientRect);
+        using var paint = new PaintBuffer(hWnd);
+        var hdc = paint.Hdc;
+        int cw = paint.Client.right;
+        int ch = paint.Client.bottom;
 
-        int cw = clientRect.right - clientRect.left;
-        int ch = clientRect.bottom - clientRect.top;
+        PaperDraw.Fill(hdc, paint.Client, PaperTheme.Paper);
 
-        // Double buffering
-        var hdcMem = Win32.CreateCompatibleDC(hdc);
-        var hBitmap = Win32.CreateCompatibleBitmap(hdc, cw, ch);
-        var hOldBitmap = Win32.SelectObject(hdcMem, hBitmap);
+        // Champ : la loupe ; l'EDIT se dessine lui-même, sur le même papier.
+        int fieldH = Scale(BASE_FIELD_H);
+        DrawLoupe(hdc, Scale(BASE_FIELD_PAD_X), (fieldH - Scale(BASE_LOUPE)) / 2);
+        PaperDraw.Fill(hdc, 0, fieldH, cw, fieldH + 1, PaperTheme.Border);
+        int y = fieldH + 1;
 
-        // Fond blanc
-        var hBgBrush = Win32.CreateSolidBrush(CLR_BG);
-        Win32.FillRect(hdcMem, ref clientRect, hBgBrush);
-        Win32.DeleteObject(hBgBrush);
-
-        // Zone du champ de recherche : fond gris clair
-        int pad = Scale(8);
-        int searchAreaH = Scale(BASE_SEARCH_H) + pad * 2;
-        var searchBgRect = new Win32.RECT { left = 0, top = 0, right = cw, bottom = searchAreaH };
-        var hSearchBrush = Win32.CreateSolidBrush(CLR_SEARCH_BG);
-        Win32.FillRect(hdcMem, ref searchBgRect, hSearchBrush);
-        Win32.DeleteObject(hSearchBrush);
-
-        // Ligne séparatrice sous la recherche
-        var hSepBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
-        var sepRect = new Win32.RECT { left = 0, top = searchAreaH, right = cw, bottom = searchAreaH + 1 };
-        Win32.FillRect(hdcMem, ref sepRect, hSepBrush);
-        Win32.DeleteObject(hSepBrush);
-
-        // Polices (cachées en champs d'instance)
-        var hFontChar = _hFontChar;
-        var hFontName = _hFontName;
-        var hFontMethod = _hFontMethod;
-        var hFontFooter = _hFontFooter;
-
-        Win32.SetBkMode(hdcMem, Win32.TRANSPARENT);
-
-        // Dessiner les résultats
-        int y = searchAreaH + 1;
-        int charColW = Scale(BASE_CHAR_COL_W);
-        int nameColW = Scale(BASE_NAME_COL_W);
-        int methodColW = cw - charColW - nameColW - pad;
-        int rowPad = Scale(BASE_ROW_PAD);
-        int footerH = Scale(BASE_FOOTER_H);
-
-        if (_filteredResults.Count > 0)
+        if (_filteredResults.Count == 0)
         {
-            int drawnRows = 0;
-            for (int i = _scrollOffset; i < _filteredResults.Count && drawnRows < VISIBLE_RESULTS; i++)
+            // Champ vide : les raccourcis ; requête sans correspondance : « Aucun résultat ».
+            var band = new Win32.RECT
             {
-                var entry = _filteredResults[i];
-                bool isSelected = (i == _selectedIndex);
-
-                // Mesurer la hauteur de cette ligne
-                int rowH = MeasureRowHeight(hdcMem, entry, nameColW, methodColW, hFontName, hFontMethod, rowPad);
-
-                // Fond sélectionné
-                if (isSelected)
-                {
-                    var selRect = new Win32.RECT { left = 0, top = y, right = cw, bottom = y + rowH };
-                    var hSelBrush = Win32.CreateSolidBrush(CLR_SELECTED);
-                    Win32.FillRect(hdcMem, ref selRect, hSelBrush);
-                    Win32.DeleteObject(hSelBrush);
-                }
-
-                // Colonne 1 : caractère
-                Win32.SetTextColor(hdcMem, CLR_CHAR);
-                Win32.SelectObject(hdcMem, hFontChar);
-                var charRect = new Win32.RECT { left = 0, top = y, right = charColW, bottom = y + rowH };
-                Win32.DrawTextW(hdcMem, entry.Character, entry.Character.Length, ref charRect,
-                    Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-
-                // Colonne 2 : nom
-                Win32.SetTextColor(hdcMem, CLR_NAME);
-                Win32.SelectObject(hdcMem, hFontName);
-                var nameRect = new Win32.RECT
-                {
-                    left = charColW,
-                    top = y + rowPad,
-                    right = charColW + nameColW - pad,
-                    bottom = y + rowH - rowPad,
-                };
-                string displayName1 = GetDisplayName(entry);
-                Win32.DrawTextW(hdcMem, displayName1, displayName1.Length, ref nameRect,
-                    Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
-
-                // Colonne 3 : méthode (colorée)
-                Win32.SelectObject(hdcMem, hFontMethod);
-                DrawMethodColorized(hdcMem, entry.MethodDisplay,
-                    charColW + nameColW, y + rowPad, cw - pad, y + rowH - rowPad);
-
-                y += rowH;
-
-                // Séparateur
-                var hRowSep = Win32.CreateSolidBrush(CLR_SEPARATOR);
-                var rowSepRect = new Win32.RECT { left = pad, top = y, right = cw - pad, bottom = y + 1 };
-                Win32.FillRect(hdcMem, ref rowSepRect, hRowSep);
-                Win32.DeleteObject(hRowSep);
-                y += 1;
-
-                drawnRows++;
-            }
-
-            // Scrollbar si plus de résultats que visible
-            if (_filteredResults.Count > VISIBLE_RESULTS)
-            {
-                int sbW = Scale(4);
-                int sbX = cw - sbW - Scale(2);
-                int sbTop = searchAreaH + 1;
-                int sbH = y - sbTop;
-                if (sbH > 0)
-                {
-                    float ratio = (float)VISIBLE_RESULTS / _filteredResults.Count;
-                    int thumbH = Math.Max(Scale(16), (int)(sbH * ratio));
-                    float scrollRatio = _filteredResults.Count - VISIBLE_RESULTS > 0
-                        ? (float)_scrollOffset / (_filteredResults.Count - VISIBLE_RESULTS) : 0;
-                    int thumbY = sbTop + (int)((sbH - thumbH) * scrollRatio);
-
-                    // Track
-                    var hTrackBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
-                    var trackRect = new Win32.RECT { left = sbX, top = sbTop, right = sbX + sbW, bottom = sbTop + sbH };
-                    Win32.FillRect(hdcMem, ref trackRect, hTrackBrush);
-                    Win32.DeleteObject(hTrackBrush);
-
-                    // Thumb
-                    var hThumbBrush = Win32.CreateSolidBrush(CLR_HINT);
-                    var thumbRect = new Win32.RECT { left = sbX, top = thumbY, right = sbX + sbW, bottom = thumbY + thumbH };
-                    Win32.FillRect(hdcMem, ref thumbRect, hThumbBrush);
-                    Win32.DeleteObject(hThumbBrush);
-                }
-            }
-        }
-        else
-        {
-            string editText = GetEditText();
-            if (editText.Length > 0)
-            {
-                // Aucun résultat
-                Win32.SetTextColor(hdcMem, CLR_FOOTER);
-                Win32.SelectObject(hdcMem, hFontName);
-                var noResultRect = new Win32.RECT { left = 0, top = y + Scale(4), right = cw, bottom = ch };
-                var noResultText = L.Search_NoResults;
-                Win32.DrawTextW(hdcMem, noResultText, noResultText.Length, ref noResultRect,
-                    Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-            }
+                left = Scale(BASE_FIELD_PAD_X), top = y, right = cw - Scale(BASE_FIELD_PAD_X), bottom = ch,
+            };
+            if (GetEditTextLength() > 0)
+                PaperText.DrawLine(hdc, L.Search_NoResults, RowNameFont(false), band, PaperTheme.TextSecondary);
             else
-            {
-                // État d'accueil — raccourcis visibles (même style que footer)
-                Win32.SelectObject(hdcMem, hFontFooter);
-                Win32.SetTextColor(hdcMem, CLR_FOOTER);
-
-                int ty = y + Scale(8);
-                var tipText = L.Search_Tip;
-                var tipRect = new Win32.RECT { left = 0, top = ty, right = cw, bottom = ty + Scale(24) };
-                Win32.DrawTextW(hdcMem, tipText, tipText.Length, ref tipRect,
-                    Win32.DT_CENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-            }
+                PaperText.DrawLine(hdc, L.Search_Tip, FooterFont(false), band, PaperTheme.TextSecondary);
+            return;
         }
 
-        // Footer
-        Win32.SelectObject(hdcMem, hFontFooter);
-        var footerRect = new Win32.RECT { left = 0, top = ch - footerH, right = cw, bottom = ch };
+        // Liste : surface blanche, filet entre deux lignes.
+        int rows = Math.Min(VISIBLE_RESULTS, _filteredResults.Count - _scrollOffset);
+        int listBottom = y + ListHeight(rows);
+        PaperDraw.Fill(hdc, 0, y, cw, listBottom, PaperTheme.Surface);
+        for (int k = 0; k < rows; k++)
+        {
+            int index = _scrollOffset + k;
+            DrawRow(hdc, _filteredResults[index], index == _selectedIndex, y, cw);
+            y += Scale(BASE_ROW_H);
+            if (k < rows - 1)
+            {
+                PaperDraw.Fill(hdc, 0, y, cw, y + 1, PaperTheme.Border);
+                y += 1;
+            }
+        }
+        if (_filteredResults.Count > VISIBLE_RESULTS)
+            DrawScrollBar(hdc, fieldH + 1, listBottom, cw);
+
+        int footerTop = ch - Scale(BASE_FOOTER_H);
+        if (_selectedIndex >= 0 && _selectedIndex < _filteredResults.Count)
+            DrawPartition(hdc, _filteredResults[_selectedIndex], listBottom, cw);
+        DrawFooter(hdc, footerTop, ch, cw);
+    }
+
+    /// <summary>La loupe du champ (18 px à 96 DPI) : un cercle et son manche.</summary>
+    private void DrawLoupe(IntPtr hdc, int left, int top)
+    {
+        float s = _dpiScale;
+        int P(float v) => (int)Math.Round(v * s);
+        var pen = Win32.CreatePen(Win32.PS_SOLID, Math.Max(1, P(1.6f)), PaperTheme.TextSecondary);
+        var oldPen = Win32.SelectObject(hdc, pen);
+        var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
+        int cx = left + P(7.5f), cy = top + P(7.5f), r = P(5.75f);
+        Win32.Ellipse(hdc, cx - r, cy - r, cx + r + 1, cy + r + 1);
+        Win32.MoveToEx(hdc, left + P(11.8f), top + P(11.8f), IntPtr.Zero);
+        Win32.LineTo(hdc, left + P(16.5f), top + P(16.5f));
+        Win32.SelectObject(hdc, oldBrush);
+        Win32.SelectObject(hdc, oldPen);
+        Win32.DeleteObject(pen);
+    }
+
+    /// <summary>
+    /// Une ligne de résultat : le caractère (AG Titre 28), le nom, le geste abrégé à droite.
+    /// La ligne choisie est teintée, avec un filet bleu de 3 px à gauche, son caractère en
+    /// bleu et son nom en semi-gras. Un nom trop long finit par des points de suspension :
+    /// la partition, dessous, le donne en entier.
+    /// </summary>
+    private void DrawRow(IntPtr hdc, CharEntry entry, bool chosen, int top, int cw)
+    {
+        int h = Scale(BASE_ROW_H);
+        uint backdrop = PaperTheme.Surface;
+        if (chosen)
+        {
+            backdrop = PaperTheme.ActionTint;
+            PaperDraw.Fill(hdc, 0, top, cw, top + h, PaperTheme.ActionTint);
+            PaperDraw.Fill(hdc, 0, top, Scale(3), top + h, PaperTheme.Action);
+        }
+
+        int glyphLeft = Scale(BASE_ROW_GLYPH_LEFT);
+        int glyphRight = glyphLeft + Scale(BASE_ROW_GLYPH_W);
+        DrawCharacter(hdc, entry.Character, 28,
+            new Win32.RECT { left = glyphLeft, top = top, right = glyphRight, bottom = top + h },
+            chosen ? PaperTheme.Action : PaperTheme.Ink, backdrop);
+
+        var steps = StepsOf(entry);
+        int right = cw - Scale(BASE_ROW_PAD_RIGHT);
+        int gestureW = steps.Count > 0
+            ? TablatureRenderer.DrawShortGesture(hdc, steps, chosen, _dpiScale, right, top + h / 2)
+            : 0;
+
+        int nameLeft = glyphRight + Scale(BASE_ROW_GAP);
+        int nameRight = right - (gestureW > 0 ? gestureW + Scale(BASE_ROW_GAP) : 0);
+        var font = RowNameFont(chosen);
+        string name = Ellipsize(hdc, GetSentenceName(entry), font, nameRight - nameLeft);
+        PaperText.DrawLine(hdc, name, font,
+            new Win32.RECT { left = nameLeft, top = top, right = nameRight, bottom = top + h }, PaperTheme.Ink);
+    }
+
+    /// <summary>
+    /// La partition du choix : le caractère en grand (AG Titre 84, bleu) à gauche ; à droite
+    /// son nom, son geste en notation « Mots » et la phrase qui le lit, toujours visible :
+    /// c'est l'équivalent texte de la notation.
+    /// </summary>
+    private void DrawPartition(IntPtr hdc, CharEntry entry, int top, int cw)
+    {
+        PaperDraw.Fill(hdc, 0, top, cw, top + 1, PaperTheme.Border);
+        int contentTop = top + 1 + Scale(BASE_PART_PAD_TOP);
+        var (colLeft, colRight) = PartitionColumn(cw);
+        int contentH = PartitionContent(hdc, entry, StepsOf(entry), colLeft, colRight, contentTop, draw: true);
+
+        int glyphLeft = Scale(BASE_PART_PAD_LEFT);
+        DrawCharacter(hdc, entry.Character, 84,
+            new Win32.RECT
+            {
+                left = glyphLeft, top = contentTop,
+                right = glyphLeft + Scale(BASE_PART_GLYPH_W), bottom = contentTop + Math.Max(contentH, Scale(BASE_PART_MIN_H)),
+            },
+            PaperTheme.Action, PaperTheme.Paper);
+    }
+
+    /// <summary>Bords de la colonne de droite de la partition.</summary>
+    private (int Left, int Right) PartitionColumn(int cw)
+        => (Scale(BASE_PART_PAD_LEFT + BASE_PART_GLYPH_W + BASE_PART_GAP), cw - Scale(BASE_PART_PAD_RIGHT));
+
+    /// <summary>Nom, portée et phrase d'un caractère ; rend la hauteur occupée, sans rien
+    /// dessiner quand <paramref name="draw"/> est faux.</summary>
+    private int PartitionContent(IntPtr hdc, CharEntry entry, IReadOnlyList<GestureStep> steps,
+        int left, int right, int top, bool draw)
+    {
+        int lineH = TablatureStyle.Px(22, _dpiScale);
+        int y = top;
+        var title = PartTitleFont;
+        y += PaperText.DrawParagraph(hdc, new[] { new TextRun(GetSentenceName(entry), true) }, title, title,
+            new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
+            PaperTheme.Ink, PaperTheme.Ink, lineH, draw);
+        if (steps.Count == 0)
+            return y - top;
+
+        y += Scale(12);
+        // Notation « Mots » partout (QCM du 11/10) : pavés tenus au-dessus de la case frappée.
+        var style = KeyNotationStyle.Search(_dpiScale);
+        var (_, notationH) = KeyNotation.Measure(hdc, steps, style);
+        if (draw)
+            KeyNotation.Draw(hdc, steps, style, left, y, PaperTheme.Step1, caseFill: PaperTheme.Paper,
+                secondInk: PaperTheme.Step2);
+        y += notationH + Scale(12);
+        y += PaperText.DrawParagraph(hdc, Gesture.Sentence(steps), SentenceFont(false), SentenceFont(true),
+            new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
+            PaperTheme.TextSecondary, PaperTheme.Ink, lineH, draw);
+        return y - top;
+    }
+
+    /// <summary>
+    /// Hauteur de la partition, filet compris : celle du plus haut des résultats, pour que
+    /// la fenêtre ne bouge pas quand les flèches changent le choix.
+    /// </summary>
+    private int PartitionHeight(IntPtr hdc)
+    {
+        var (left, right) = PartitionColumn(Scale(BASE_WIN_W));
+        int content = Scale(BASE_PART_MIN_H);
+        foreach (var entry in _filteredResults)
+            content = Math.Max(content, PartitionContent(hdc, entry, StepsOf(entry), left, right, 0, draw: false));
+        return 1 + Scale(BASE_PART_PAD_TOP) + content + Scale(BASE_PART_PAD_BOTTOM);
+    }
+
+    /// <summary>Le pied : à gauche le nombre de résultats, à droite ce que fait Entrée, ou
+    /// « copié » quand l'insertion est retombée sur le presse-papiers.</summary>
+    private void DrawFooter(IntPtr hdc, int top, int bottom, int cw)
+    {
+        PaperDraw.Fill(hdc, 0, top, cw, top + 1, PaperTheme.Border);
+        var band = new Win32.RECT
+        {
+            left = Scale(BASE_FIELD_PAD_X), top = top + 1, right = cw - Scale(BASE_FIELD_PAD_X), bottom = bottom,
+        };
+        PaperText.DrawParagraph(hdc, FooterCountRuns(_filteredResults.Count, _totalMatches),
+            FooterFont(false), FooterFont(true), band, PaperTheme.TextSecondary, PaperTheme.Ink, band.bottom - band.top);
 
         if (_showCopiedFeedback)
-        {
-            Win32.SetTextColor(hdcMem, CLR_COPIED);
-            var copiedText = L.Search_CopiedFeedback(_copiedChar);
-            Win32.DrawTextW(hdcMem, copiedText, copiedText.Length, ref footerRect,
-                Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-        }
-        else if (_filteredResults.Count > 0)
-        {
-            Win32.SetTextColor(hdcMem, CLR_FOOTER);
-            var countText = FooterCountText(_filteredResults.Count, _totalMatches);
-            Win32.DrawTextW(hdcMem, countText, countText.Length, ref footerRect,
-                Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-        }
+            PaperText.DrawLine(hdc, L.Search_CopiedFeedback(_copiedChar), FooterFont(true), band, PaperTheme.Success, TextAlign.Right);
+        else if (_selectedIndex >= 0 && _selectedIndex < _filteredResults.Count)
+            PaperText.DrawLine(hdc, L.Search_FooterInsert(DisplayGlyph.ForStandaloneMark(_filteredResults[_selectedIndex].Character)),
+                FooterFont(false), band, PaperTheme.TextSecondary, TextAlign.Right);
+    }
 
-        // Blit
-        Win32.BitBlt(hdc, 0, 0, cw, ch, hdcMem, 0, 0, Win32.SRCCOPY);
-
-        // Cleanup (polices cachées → pas de DeleteObject ici)
-        Win32.SelectObject(hdcMem, hOldBitmap);
-        Win32.DeleteObject(hBitmap);
-        Win32.DeleteDC(hdcMem);
-
-        Win32.EndPaint(hWnd, ref ps);
+    /// <summary>Barre de défilement fine à droite de la liste, quand elle a plus de cinq lignes.</summary>
+    private void DrawScrollBar(IntPtr hdc, int top, int bottom, int cw)
+    {
+        int w = Scale(4);
+        int x = cw - w - Scale(2);
+        int h = bottom - top;
+        if (h <= 0) return;
+        float ratio = (float)VISIBLE_RESULTS / _filteredResults.Count;
+        int thumbH = Math.Max(Scale(16), (int)(h * ratio));
+        int range = _filteredResults.Count - VISIBLE_RESULTS;
+        float scrollRatio = range > 0 ? (float)_scrollOffset / range : 0;
+        int thumbY = top + (int)((h - thumbH) * scrollRatio);
+        PaperDraw.Fill(hdc, x, top, x + w, bottom, PaperTheme.Border);
+        PaperDraw.Fill(hdc, x, thumbY, x + w, thumbY + thumbH, PaperTheme.Pale);
     }
 
     /// <summary>
-    /// Texte du pied de la liste. Audit du 25/09 (V-08) : la liste est plafonnée à
-    /// <see cref="MAX_RESULTS"/> lignes, et le pied annonçait « 20 résultats » quand il y
-    /// en avait 98 ; il dit maintenant « 20 sur 98 ».
+    /// Un caractère centré dans <paramref name="rect"/>, en AG Titre de <paramref name="size"/>
+    /// px (96 DPI), réduit s'il déborde. Un accent seul reçoit son support (◌) ; une espace
+    /// est montrée par le repère de correcteur des Leçons.
     /// </summary>
-    internal static string FooterCountText(int shown, int total)
+    private void DrawCharacter(IntPtr hdc, string character, int size, Win32.RECT rect, uint color, uint backdrop)
     {
-        if (total > shown) return L.Search_ResultCountCapped(shown, total);
-        return shown == 1 ? L.Search_ResultCountSingular : L.Search_ResultCountPlural(shown);
+        string shown = DisplayGlyph.ForStandaloneMark(character);
+        var font = FontSpec.Of(AppFonts.Title, size, TypeRamp.Semibold, _dpiScale);
+        if (shown.Length == 1 && char.IsWhiteSpace(shown[0]))
+        {
+            var (ascent, descent) = PaperText.Metrics(hdc, font);
+            int baseline = rect.top + (rect.bottom - rect.top - (ascent + descent)) / 2 + ascent;
+            bool thin = shown[0] is ' ' or ' ' or ' ';
+            int markW = TablatureStyle.Px((thin ? 0.26f : 0.44f) * size, _dpiScale);
+            PaperDraw.SpaceMark(hdc, thin ? ' ' : ' ', rect.left + (rect.right - rect.left - markW) / 2, markW,
+                baseline, TablatureStyle.Px(0.3f * size, _dpiScale), size / 50f * _dpiScale,
+                PaperDraw.Blend(color, backdrop, 0.55f));
+            return;
+        }
+        int available = rect.right - rect.left;
+        int width = PaperText.Width(hdc, shown, font);
+        if (width > available && width > 0)
+            font = FontSpec.Of(AppFonts.Title, Math.Max(8, size * available / width), TypeRamp.Semibold, _dpiScale);
+        PaperText.DrawLine(hdc, shown, font, rect, color, TextAlign.Center);
     }
 
-    internal enum MethodToken { Key, AltGr, Shift, Separator }
+    /// <summary>Les temps du geste recommandé d'un résultat (vide sans méthode connue).</summary>
+    private static IReadOnlyList<GestureStep> StepsOf(CharEntry entry)
+        => entry.Method is { } method ? Gesture.Of(method) : Array.Empty<GestureStep>();
+
+    /// <summary><paramref name="text"/> coupé avec des points de suspension pour tenir dans
+    /// <paramref name="maxWidth"/> pixels.</summary>
+    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth)
+    {
+        if (maxWidth <= 0) return "";
+        if (PaperText.Width(hdc, text, font) <= maxWidth) return text;
+        const string Dots = "…";
+        int lo = 0, hi = text.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            if (PaperText.Width(hdc, text[..mid].TrimEnd() + Dots, font) <= maxWidth) lo = mid;
+            else hi = mid - 1;
+        }
+        if (lo > 0 && char.IsHighSurrogate(text[lo - 1])) lo--;
+        return lo == 0 ? Dots : text[..lo].TrimEnd() + Dots;
+    }
 
     /// <summary>
-    /// Genre d'un mot de la méthode de saisie, comparé aux libellés de la langue courante.
-    /// Audit du 25/09 (V-06) : les mots étaient comparés à « Maj » et « puis » en dur, et en
-    /// anglais « Shift » et « then » prenaient la couleur d'une touche. « Verr. Maj. » et
-    /// « Caps Lock » restent sans couleur propre dans les deux langues, comme avant.
+    /// Pied de la liste : le nombre en gras, puis le texte. Audit du 25/09 (V-08) : la liste
+    /// est plafonnée à <see cref="MAX_RESULTS"/> lignes ; au-delà, le pied dit « 20 résultats
+    /// affichés sur 98 ».
     /// </summary>
-    internal static MethodToken ClassifyMethodToken(string token)
+    internal static List<TextRun> FooterCountRuns(int shown, int total)
     {
-        if (token == "AltGr") return MethodToken.AltGr;
-        if (token == L.Settings_ShortcutModifier2) return MethodToken.Shift;
-        if (token == "+" || token == L.Search_ThenWord) return MethodToken.Separator;
-        return MethodToken.Key;
+        string rest = total > shown ? L.Search_FooterShownOf(total)
+            : shown == 1 ? L.Search_FooterResultSingular
+            : L.Search_FooterResultPlural;
+        return new List<TextRun> { new(shown.ToString(System.Globalization.CultureInfo.InvariantCulture), true), new(rest) };
     }
 
-    /// <summary>Dessine la méthode de saisie avec des couleurs par token.</summary>
-    private void DrawMethodColorized(IntPtr hdc, string method, int left, int top, int right, int bottom)
-    {
-        int x = left;
-        int lineY = top;
-        int lineH = Scale(21);
-
-        var displayLines = method.Split('\n');
-
-        foreach (var line in displayLines)
-        {
-            x = left;
-            // Tokeniser : séparer par espaces mais garder les tokens
-            var parts = line.Split(' ');
-            for (int p = 0; p < parts.Length; p++)
-            {
-                var token = parts[p];
-                if (p > 0)
-                {
-                    // Espace
-                    var spaceSize = new Win32.RECT { left = 0, top = 0, right = 999, bottom = 999 };
-                    Win32.DrawTextW(hdc, " ", 1, ref spaceSize, Win32.DT_CALCRECT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-                    x += spaceSize.right;
-                }
-
-                // Couleur selon le token
-                uint color = ClassifyMethodToken(token) switch
-                {
-                    MethodToken.AltGr => CLR_METHOD_ALTGR,
-                    MethodToken.Shift => CLR_METHOD_MAJ,
-                    MethodToken.Separator => CLR_METHOD_SEP,
-                    _ => CLR_METHOD_KEY,
-                };
-
-                Win32.SetTextColor(hdc, color);
-                var tokenRect = new Win32.RECT { left = x, top = lineY, right = right, bottom = bottom };
-                Win32.DrawTextW(hdc, token, token.Length, ref tokenRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-
-                // Avancer x
-                var measure = new Win32.RECT { left = 0, top = 0, right = 999, bottom = 999 };
-                Win32.DrawTextW(hdc, token, token.Length, ref measure, Win32.DT_CALCRECT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-                x += measure.right;
-            }
-            lineY += lineH;
-        }
-    }
-
-    /// <summary>Mesure la hauteur d'une ligne de résultat.</summary>
-    private int MeasureRowHeight(IntPtr hdc, CharEntry entry, int nameColW, int methodColW,
-        IntPtr hFontName, IntPtr hFontMethod, int rowPad)
-    {
-        int minH = Scale(44); // Hauteur minimale (1 ligne)
-        int pad = Scale(8);
-
-        // Mesurer le nom
-        Win32.SelectObject(hdc, hFontName);
-        var nameRect = new Win32.RECT { left = 0, top = 0, right = nameColW - pad, bottom = 9999 };
-        string displayName2 = GetDisplayName(entry);
-        int nameH = Win32.DrawTextW(hdc, displayName2, displayName2.Length, ref nameRect,
-            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_CALCRECT | Win32.DT_NOPREFIX);
-
-        // Mesurer la méthode
-        Win32.SelectObject(hdc, hFontMethod);
-        var methodRect = new Win32.RECT { left = 0, top = 0, right = methodColW - pad, bottom = 9999 };
-        int methodH = Win32.DrawTextW(hdc, entry.MethodDisplay, entry.MethodDisplay.Length, ref methodRect,
-            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_CALCRECT | Win32.DT_NOPREFIX);
-
-        int contentH = Math.Max(nameRect.bottom, methodRect.bottom) + rowPad * 2;
-        return Math.Max(minH, contentH);
-    }
-
-    /// <summary>Calcule la hauteur d'une ligne pour le hit testing (clic).</summary>
-    private int GetRowHeight(int index)
-    {
-        if (index < 0 || index >= _filteredResults.Count) return Scale(44);
-
-        // On a besoin d'un DC pour mesurer — utiliser le DC de la fenêtre
-        var hdc = Win32.GetDC(_hWnd);
-        int pad = Scale(8);
-        int charColW = Scale(BASE_CHAR_COL_W);
-        int nameColW = Scale(BASE_NAME_COL_W);
-        Win32.GetClientRect(_hWnd, out var cr);
-        int methodColW = (cr.right - cr.left) - charColW - nameColW - pad;
-        int rowPad = Scale(BASE_ROW_PAD);
-
-        int h = MeasureRowHeight(hdc, _filteredResults[index], nameColW, methodColW, _hFontName, _hFontMethod, rowPad);
-
-        Win32.ReleaseDC(_hWnd, hdc);
-        return h;
-    }
+    /// <summary>Hauteur d'une ligne de résultat pour le clic : fixe, comme au dessin.</summary>
+    private int GetRowHeight(int index) => Scale(BASE_ROW_H);
 
     // ═══════════════════════════════════════════════════════════════
     // Cleanup
@@ -1462,7 +1459,6 @@ sealed class CharacterSearch : IDisposable
             Win32.DeleteObject(_hEditBgBrush);
             _hEditBgBrush = IntPtr.Zero;
         }
-        DestroyFonts();
         if (_hWnd != IntPtr.Zero)
         {
             Win32.DestroyWindow(_hWnd);

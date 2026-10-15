@@ -87,6 +87,20 @@ internal sealed class MockWin32Api : IWin32Api
 
     public IntPtr GetKeyboardLayout(uint threadId) => CurrentHkl;
 
+    /// <summary>Position rendue par <see cref="GetCursorPos"/> : le banc de capture la veut hors
+    /// de toute fenêtre, la vraie souris n'est jamais lue ni déplacée.</summary>
+    public (int X, int Y) CursorPosition { get; set; } = (0, 0);
+
+    /// <summary>Nombre de lectures du curseur : un témoin vérifie que le produit passe bien par ici.</summary>
+    public int CursorReads { get; private set; }
+
+    public bool GetCursorPos(out int x, out int y)
+    {
+        CursorReads++;
+        (x, y) = CursorPosition;
+        return true;
+    }
+
     public uint? SendInputResult { get; set; }
 
     /// <summary>Code d'erreur Win32 rendu au moteur apres un SendInput a 0 (AG130-09).</summary>

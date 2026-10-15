@@ -11,28 +11,44 @@ namespace AZERTYGlobal;
 sealed class LearningModule : IDisposable
 {
     // ── Étapes ──────────────────────────────────────────────────────
-    // Textes et réglages des six exercices : TutorialSteps, partagé avec le module
+    // Textes et réglages des huit exercices : TutorialSteps, partagé avec le module
     // Initiation des Leçons. Ici, les titres et consignes propres au tutoriel.
+    // Index : rang fixe dans TutorialSteps.All. Skippable : bonus du parcours choisi.
     // KeepCapsHighlight : Verr. Maj. reste surlignée tant que l'exercice tourne.
-    private readonly record struct LearningStep(string Title, string Instruction, TutorialSteps.Step Content)
+    private readonly record struct LearningStep(string Title, string Instruction, TutorialSteps.Step Content,
+        int Index, bool Skippable)
     {
         public string Target => Content.Target;
-        public bool Skippable => Content.Skippable;
         public bool KeepCapsHighlight => Content.KeepCapsLock;
     }
 
-    // Propriété (pas un champ static readonly) : reconstruite à chaque accès pour refléter
-    // la langue courante — LearningModule est recréé à chaque lancement (pas un singleton),
-    // mais un tableau static readonly ne serait initialisé qu'une seule fois par processus.
-    private static LearningStep[] Steps => new LearningStep[]
+    // Titres et consignes, par rang fixe. Relus à chaque accès pour suivre la langue courante.
+    private static (string Title, string Instruction) StepTexts(int index) => index switch
     {
-        new(L.Learning_Step0Title, L.Learning_Step0Instruction, TutorialSteps.All[0]),
-        new(L.Learning_Step1Title, L.Learning_Step1Instruction, TutorialSteps.All[1]),
-        new(L.Learning_Step2Title, L.Learning_Step2Instruction, TutorialSteps.All[2]),
-        new(L.Learning_Step3Title, L.Learning_Step3Instruction, TutorialSteps.All[3]),
-        new(L.Learning_Step4Title, L.Learning_Step4Instruction, TutorialSteps.All[4]),
-        new(L.Learning_Step5Title, L.Learning_Step5Instruction, TutorialSteps.All[5]),
+        0 => (L.Learning_Step0Title, L.Learning_Step0Instruction),
+        1 => (L.Learning_Step1Title, L.Learning_Step1Instruction),
+        2 => (L.Learning_Step2Title, L.Learning_Step2Instruction),
+        3 => (L.Learning_Step3Title, L.Learning_Step3Instruction),
+        4 => (L.Learning_Step4Title, L.Learning_Step4Instruction),
+        5 => (L.Learning_Step5Title, L.Learning_Step5Instruction),
+        6 => (L.Learning_Step6Title, L.Learning_Step6Instruction),
+        7 => (L.Learning_Step7Title, L.Learning_Step7Instruction),
+        _ => throw new ArgumentOutOfRangeException(nameof(index)),
     };
+
+    // Parcours choisi sur l'écran des usages (choix du 06/10) : le tronc commun, puis les
+    // exercices des usages cochés. Tant que l'écran n'est pas validé, le parcours par défaut.
+    private TutorialSteps.RouteStep[] _route = TutorialSteps.BuildRoute(null);
+
+    // Propriété (pas un champ) : reconstruite à chaque accès pour refléter la langue courante.
+    // _currentStep est une position dans ce tableau, pas un rang de TutorialSteps.All.
+    private LearningStep[] Steps => _route
+        .Select(r =>
+        {
+            var (title, instruction) = StepTexts(r.Index);
+            return new LearningStep(title, instruction, TutorialSteps.All[r.Index], r.Index, r.Skippable);
+        })
+        .ToArray();
 
     // ── Window constants ────────────────────────────────────────────
     // Nom de classe Win32. Defini en const partagee entre CreateMainWindow et Dispose
@@ -61,6 +77,37 @@ sealed class LearningModule : IDisposable
     // Boutons affiches a la fin de chaque exercice (page de choix Reessayer / Suivant)
     private const int IDC_BTN_RETRY = 4004;
     private const int IDC_BTN_CONTINUE = 4005;
+    // Écran des usages : « Continuer », puis une case par usage (4010 + rang dans UsageIds).
+    private const int IDC_BTN_USAGES_CONTINUE = 4006;
+    private const int IDC_CHK_USAGE_FIRST = 4010;
+
+    // Usages de l'écran de choix, dans l'ordre affiché ; le dernier (Afrique) sous un filet.
+    private static readonly string[] UsageIds =
+    {
+        TutorialSteps.UsageDocuments, TutorialSteps.UsageMessages, TutorialSteps.UsageCode,
+        TutorialSteps.UsageLanguages, TutorialSteps.UsageAfrica,
+    };
+
+    private static string UsageLabel(int i) => i switch
+    {
+        0 => L.Learning_UsageDocuments,
+        1 => L.Learning_UsageMessages,
+        2 => L.Learning_UsageCode,
+        3 => L.Learning_UsageLanguages,
+        _ => L.Learning_UsageAfrica,
+    };
+
+    // Géométrie de l'écran des usages, à 96 DPI. Il occupe toute la fenêtre : le clavier
+    // n'y sert à rien et la question, l'aide et les cinq cases n'auraient pas tenu au-dessus.
+    private const int BASE_USAGES_COL_W = 560;
+    private const int BASE_USAGES_TOP = 28;
+    private const int BASE_USAGES_FIRST_CHECK = 104;
+    // Chaque usage est un grand bouton-bascule owner-draw, libellé dedans (une case thémée
+    // ignore SetTextColor et restait petite et noire sur le fond sombre).
+    private const int BASE_USAGE_CHECK_H = 44;
+    private const int BASE_USAGE_CHECK_GAP = 8;
+    private const int BASE_USAGES_RULE_GAP = 26;  // filet au milieu de cet écart, avant Afrique
+    private const int BASE_USAGES_BUTTON_GAP = 24;
 
     // ── Timer IDs ───────────────────────────────────────────────────
     private const uint TIMER_KEYPRESS = 8001;
@@ -104,8 +151,9 @@ sealed class LearningModule : IDisposable
     private const int FONT_CHAR_SMALL = 25;
     private const int FONT_CTX = 22;
 
-    // Exercice 6 : les aides des mots étrangers, que le clavier simplifié cache ailleurs.
-    private static readonly string[] LanguageExerciseCharacters = { "dk:stroke", "¿", "¡" };
+    // Caractères de l'exercice et leurs touches mortes, que le clavier simplifié cache parfois
+    // (’ sur AltGr + 4) : révélés comme dans les Leçons, une seule table pour tout le tutoriel.
+    private static readonly Lazy<LessonHintProvider> ExerciseCharacters = new(() => new LessonHintProvider());
 
     // ═══════════════════════════════════════════════════════════════
     // Champs d'instance
@@ -142,12 +190,19 @@ sealed class LearningModule : IDisposable
     // État
     private int _currentStep;
     private int _cursorPosition;
+    // Frappes de l'exercice en cours, par caractère attendu : versées à la progression
+    // par geste des Leçons quand l'exercice est réussi (décision d'Antoine du 07/10).
+    private LessonAttemptStats _stepGestures = new();
     private bool _currentCharError;
-    // Page affichée : l'exercice, le choix après un succès (Recommencer / Suivant, à la
-    // place de l'ancienne transition automatique), la page finale après le sixième. Une
-    // seule valeur au lieu de deux booléens croisés (audit du 25/09, L-09).
-    internal enum TutorialPage { Exercise, Choice, Final }
-    private TutorialPage _page = TutorialPage.Exercise;
+    // Faute en cours (valables tant que _currentCharError) : caractère tapé, touche frappée.
+    private char _lastWrongChar;
+    private uint _errorScancode;
+    // Page affichée : le choix des usages (première page, 06/10), l'exercice, le choix après
+    // un succès (Recommencer / Suivant, à la place de l'ancienne transition automatique), la
+    // page finale après le dernier exercice du parcours. Une seule valeur au lieu de deux
+    // booléens croisés (audit du 25/09, L-09).
+    internal enum TutorialPage { Usages, Exercise, Choice, Final }
+    private TutorialPage _page = TutorialPage.Usages;
     // Compteur de succes pour l'exercice courant. Reset a chaque AdvanceToNextStep.
     // Le titre « ✓ Bravo ! » et le sous-titre ne s'affichent qu'au 1er succes (=1).
     // Aux reussites suivantes (apres Recommencer), on n'affiche que les boutons.
@@ -175,6 +230,15 @@ sealed class LearningModule : IDisposable
     private IntPtr _hWndBtnFinish;
     private IntPtr _hWndBtnRetry;     // page de choix fin d'exercice
     private IntPtr _hWndBtnContinue;  // page de choix fin d'exercice (« Suivant » ou « Terminer »)
+    // Écran des usages : cases natives (rôle « case à cocher », Espace natif), couleurs du
+    // thème sombre par WM_CTLCOLORSTATIC comme dans les Paramètres, et « Continuer »
+    // owner-draw comme les autres boutons.
+    private readonly IntPtr[] _hWndUsages = new IntPtr[UsageIds.Length];
+    private IntPtr _hWndBtnUsagesContinue;
+    private Win32.SUBCLASSPROC? _usagesSubclassProc;
+    private IntPtr _usageLastFocused; // rendu par TakeFocus au retour sur la fenêtre
+    private readonly bool[] _usageSelected = new bool[UsageIds.Length];
+    private int _usageHovered = -1;
 
     // Abonnement à la bascule de langue en cours de tutoriel (retraduction live).
     private readonly Action<string>? _onAppLanguageChanged;
@@ -199,7 +263,7 @@ sealed class LearningModule : IDisposable
     private IntPtr _hFontCharDeadKey;
     private IntPtr _hFontCharSmall;
     private IntPtr _hFontCharTiny;
-    // « ◌ » et accent superposés (◌ barré de l'exercice 6) : Segoe UI, aux tailles des touches.
+    // « ◌ » et accent superposés (◌ barré de l'exercice Autres langues) : Segoe UI, aux tailles des touches.
     private IntPtr _hFontOverlayMain;
     private IntPtr _hFontOverlaySmall;
     private IntPtr _hFontCtx;
@@ -213,7 +277,7 @@ sealed class LearningModule : IDisposable
     // Callback de fermeture
     /// <summary>
     /// Callback invoqué à la fermeture du module. Le bool indique si l'utilisateur a
-    /// vraiment complété les 6 exercices (true → page « Bravo ! » + Terminer) ou s'il
+    /// vraiment complété son parcours (true → page « Bravo ! » + Terminer) ou s'il
     /// a fermé prématurément (false → croix, bouton « Quitter », Esc).
     /// </summary>
     public Action<bool>? OnClosed;
@@ -227,7 +291,7 @@ sealed class LearningModule : IDisposable
         ArgumentNullException.ThrowIfNull(mapper);
         ArgumentNullException.ThrowIfNull(hook);
         ArgumentNullException.ThrowIfNull(layout);
-        // Frappe non comptabilisée tant que ce module vit. Les 6 exercices produisent
+        // Frappe non comptabilisée tant que ce module vit. Les 6 exercices d'alors produisaient
         // à eux seuls 21 caractères enrichis, pour un seuil de sollicitation d'avis de 20
         // (UsageStats.EnrichedCharsReviewThreshold) : sans cette exclusion, terminer
         // l'onboarding déclenchait la demande de notation, constaté en VM le 2026-09-21.
@@ -419,7 +483,8 @@ sealed class LearningModule : IDisposable
         _hFontOverlaySmall = Win32.CreateFontW(S(FONT_CHAR_SMALL), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontCtx = Win32.CreateFontW(S(FONT_CTX), 0, 0, 0, 500, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
         _hFontTransition = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontBadge = Win32.CreateFontW(S(9), 0, 0, 0, 700, 0, 0, 0, 0, 0, 0, 4, 0, "Segoe UI");
+        // Audit UX 1.3.0, #5 : 9 px de cellule donnaient des chiffres de 6-7 px sans ClearType.
+        _hFontBadge = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
     }
 
     private void DestroyFonts()
@@ -447,6 +512,9 @@ sealed class LearningModule : IDisposable
         Win32.SendMessageW(_hWndBtnQuit, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnSkip, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnFinish, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnUsagesContinue, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        foreach (var chk in _hWndUsages)
+            Win32.SendMessageW(chk, Win32.WM_SETFONT, _hFontInstruction, (IntPtr)1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -472,7 +540,7 @@ sealed class LearningModule : IDisposable
         uint dwExStyle = Win32.WS_EX_TOPMOST;
 
         // Adapter aux petits écrans
-        Win32.GetCursorPos(out var cursorPt);
+        CursorSource.TryGet(out var cursorPt);
         var hMonitor = Win32.MonitorFromPoint(cursorPt, 0x00000001);
         var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         Win32.GetMonitorInfo(hMonitor, ref monInfo);
@@ -582,8 +650,49 @@ sealed class LearningModule : IDisposable
             _hWnd, (IntPtr)IDC_BTN_CONTINUE, hInstance, IntPtr.Zero);
         Win32.SendMessageW(_hWndBtnContinue, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
 
+        // Écran des usages. Aucun usage choisi par défaut, sauf le dernier choix enregistré.
+        _usagesSubclassProc = UsagesSubclassProc;
+        var saved = new HashSet<string>(ConfigManager.LearningUsages, StringComparer.Ordinal);
+        for (int i = 0; i < UsageIds.Length; i++)
+        {
+            _usageSelected[i] = saved.Contains(UsageIds[i]);
+            _hWndUsages[i] = Win32.CreateWindowExW(0, "BUTTON", UsageLabel(i),
+                Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
+                0, 0, S(BASE_USAGES_COL_W), S(BASE_USAGE_CHECK_H),
+                _hWnd, (IntPtr)(IDC_CHK_USAGE_FIRST + i), hInstance, IntPtr.Zero);
+            Win32.SendMessageW(_hWndUsages[i], Win32.WM_SETFONT, _hFontInstruction, (IntPtr)1);
+            Win32.SetWindowSubclass(_hWndUsages[i], _usagesSubclassProc, (UIntPtr)(10 + i), IntPtr.Zero);
+            AnnounceUsageState(i, focused: false, announce: false);
+        }
+
+        _hWndBtnUsagesContinue = Win32.CreateWindowExW(0, "BUTTON", L.Learning_BtnContinue,
+            Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.BS_OWNERDRAW,
+            0, 0, S(180), S(36),
+            _hWnd, (IntPtr)IDC_BTN_USAGES_CONTINUE, hInstance, IntPtr.Zero);
+        Win32.SendMessageW(_hWndBtnUsagesContinue, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SetWindowSubclass(_hWndBtnUsagesContinue, _usagesSubclassProc, (UIntPtr)20, IntPtr.Zero);
+
+        // Hors d'IsDialogMessageW, Windows cache le focus des contrôles tant qu'aucune touche
+        // n'a servi : l'écran des usages s'ouvre à la souris, son focus doit se voir quand même.
+        const uint WM_CHANGEUISTATE = 0x0127;
+        const int UIS_CLEAR = 2, UISF_HIDEFOCUS = 0x1;
+        Win32.SendMessageW(_hWnd, WM_CHANGEUISTATE, (IntPtr)((UISF_HIDEFOCUS << 16) | UIS_CLEAR), IntPtr.Zero);
+
         RepositionControls();
     }
+
+    /// <summary>Haut de la case <paramref name="i"/> de l'écran des usages ; la case Afrique
+    /// descend sous le filet.</summary>
+    private int UsageCheckTop(int i)
+    {
+        int top = BASE_USAGES_FIRST_CHECK + i * (BASE_USAGE_CHECK_H + BASE_USAGE_CHECK_GAP);
+        if (i == UsageIds.Length - 1)
+            top += BASE_USAGES_RULE_GAP - BASE_USAGE_CHECK_GAP;
+        return S(top);
+    }
+
+    /// <summary>Gauche de la colonne centrée de l'écran des usages.</summary>
+    private int UsagesColumnLeft(int clientWidth) => Math.Max(S(BASE_MARGIN), (clientWidth - S(BASE_USAGES_COL_W)) / 2);
 
     private void RepositionControls()
     {
@@ -639,13 +748,36 @@ sealed class LearningModule : IDisposable
         int finishY = kbTop - finishH - S(16);
         int finishX = cw - margin - finishW;
         Win32.MoveWindow(_hWndBtnFinish, finishX, finishY, finishW, finishH, true);
+
+        // Écran des usages : cases en colonne centrée, « Continuer » sous la dernière.
+        int colX = UsagesColumnLeft(cw);
+        int colW = Math.Min(S(BASE_USAGES_COL_W), cw - 2 * margin);
+        for (int i = 0; i < _hWndUsages.Length; i++)
+            Win32.MoveWindow(_hWndUsages[i], colX, UsageCheckTop(i), colW, S(BASE_USAGE_CHECK_H), true);
+        int usagesBtnW = S(180);
+        int usagesBtnY = UsageCheckTop(_hWndUsages.Length - 1) + S(BASE_USAGE_CHECK_H + BASE_USAGES_BUTTON_GAP);
+        Win32.MoveWindow(_hWndBtnUsagesContinue, colX, usagesBtnY, usagesBtnW, S(36), true);
     }
 
     private void UpdateControlVisibility()
     {
-        if (_page == TutorialPage.Final)
+        int usagesShown = _page == TutorialPage.Usages ? 1 : 0;
+        foreach (var chk in _hWndUsages)
+            Win32.ShowWindow(chk, usagesShown);
+        Win32.ShowWindow(_hWndBtnUsagesContinue, usagesShown);
+
+        if (_page == TutorialPage.Usages)
         {
-            // Page « Bravo ! » finale (apres les 6 exercices) : seul Terminer
+            // Écran des usages : les cases, « Continuer » et « Quitter les exercices ».
+            Win32.ShowWindow(_hWndBtnQuit, 1);
+            Win32.ShowWindow(_hWndBtnSkip, 0);
+            Win32.ShowWindow(_hWndBtnFinish, 0);
+            Win32.ShowWindow(_hWndBtnRetry, 0);
+            Win32.ShowWindow(_hWndBtnContinue, 0);
+        }
+        else if (_page == TutorialPage.Final)
+        {
+            // Page « Bravo ! » finale (apres le dernier exercice du parcours) : seul Terminer
             Win32.ShowWindow(_hWndBtnQuit, 0);
             Win32.ShowWindow(_hWndBtnSkip, 0);
             Win32.ShowWindow(_hWndBtnFinish, 1);
@@ -687,6 +819,9 @@ sealed class LearningModule : IDisposable
         Win32.SetWindowTextW(_hWndBtnFinish, L.Learning_BtnFinish);
         Win32.SetWindowTextW(_hWndBtnRetry, L.Learning_BtnRetry);
         Win32.SetWindowTextW(_hWndBtnContinue, L.Learning_BtnNext);
+        Win32.SetWindowTextW(_hWndBtnUsagesContinue, L.Learning_BtnContinue);
+        for (int i = 0; i < _hWndUsages.Length; i++)
+            Win32.SetWindowTextW(_hWndUsages[i], UsageLabel(i));
         UpdateControlVisibility(); // réapplique le libellé dynamique de « Suivant »/« Terminer »
         RepositionControls();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
@@ -758,7 +893,10 @@ sealed class LearningModule : IDisposable
         if (foreThread != curThread)
             Win32.AttachThreadInput(curThread, foreThread, true);
         Win32.SetForegroundWindow(_hWnd);
-        Win32.SetFocus(_hWnd);
+        // Écran des usages : le focus va aux cases (la première, ou celle qui l'avait déjà).
+        Win32.SetFocus(_page == TutorialPage.Usages
+            ? (_usageLastFocused != IntPtr.Zero ? _usageLastFocused : _hWndUsages[0])
+            : _hWnd);
         if (foreThread != curThread)
             Win32.AttachThreadInput(curThread, foreThread, false);
     }
@@ -919,6 +1057,8 @@ sealed class LearningModule : IDisposable
                          || nextFocus == _hWndBtnFinish
                          || nextFocus == _hWndBtnRetry
                          || nextFocus == _hWndBtnContinue
+                         || nextFocus == _hWndBtnUsagesContinue
+                         || Array.IndexOf(_hWndUsages, nextFocus) >= 0
                          || nextFocus == _hTooltip);
                     if (!focusGoingToOurChild)
                     {
@@ -974,6 +1114,17 @@ sealed class LearningModule : IDisposable
                         DrawHoverButton(in dis, false, L.Learning_BtnNext, primary: true);
                         return (IntPtr)1;
                     }
+                    if (dis.CtlID == IDC_BTN_USAGES_CONTINUE)
+                    {
+                        DrawHoverButton(in dis, false, L.Learning_BtnContinue, primary: true);
+                        return (IntPtr)1;
+                    }
+                    int usage = (int)dis.CtlID - IDC_CHK_USAGE_FIRST;
+                    if (usage >= 0 && usage < UsageIds.Length)
+                    {
+                        DrawUsageToggle(in dis, usage);
+                        return (IntPtr)1;
+                    }
                     break;
                 }
 
@@ -1013,6 +1164,18 @@ sealed class LearningModule : IDisposable
                 case Win32.WM_KEYDOWN:
                 {
                     int vk = wParam.ToInt32();
+                    if (_page == TutorialPage.Usages)
+                    {
+                        // Écran des usages, focus sur la fenêtre (clic sur le fond) : Tab rend
+                        // le focus aux cases, Entrée vaut « Continuer », Échap ferme.
+                        if (vk == 0x09) // VK_TAB
+                            CycleHeaderFocus(_hWnd);
+                        else if (vk == 0x0D) // VK_RETURN
+                            ConfirmUsages();
+                        else if (vk == 0x1B) // VK_ESCAPE
+                            Close();
+                        return IntPtr.Zero;
+                    }
                     if (_page == TutorialPage.Final)
                     {
                         // Page finale « Bravo ! » : flèches droite/bas ou Esc → Terminer (Close).
@@ -1056,6 +1219,10 @@ sealed class LearningModule : IDisposable
                         case IDC_BTN_FINISH: Close(); break;
                         case IDC_BTN_RETRY: RetryCurrentStep(); break;
                         case IDC_BTN_CONTINUE: ContinueAfterChoice(); break;
+                        case IDC_BTN_USAGES_CONTINUE: ConfirmUsages(); break;
+                        case int id when id >= IDC_CHK_USAGE_FIRST && id < IDC_CHK_USAGE_FIRST + UsageIds.Length:
+                            ToggleUsage(id - IDC_CHK_USAGE_FIRST); // clic ou Espace
+                            break;
                     }
                     return IntPtr.Zero;
 
@@ -1147,10 +1314,11 @@ sealed class LearningModule : IDisposable
         if (_cursorPosition >= target.Length) return;
 
         char typed = ResolveTypedCharacter(c);
+        _stepGestures.RecordChar(typed, target[_cursorPosition]);
         if (typed == target[_cursorPosition])
         {
             _cursorPosition++;
-            _currentCharError = false;
+            ClearCharError();
 
             if (_cursorPosition >= target.Length)
             {
@@ -1159,9 +1327,11 @@ sealed class LearningModule : IDisposable
                 // s'il refait l'exercice ou passe au suivant.
                 _page = TutorialPage.Choice;
                 _currentStepSuccessCount++;
-                // Persister la progression : exercice (_currentStep + 1) valide. Setter monotone,
-                // donc safe meme en cas de Recommencer puis nouveau succes (no-op si deja persiste).
-                ConfigManager.SetLearningMaxStepCompleted(_currentStep + 1);
+                // Persister la progression par rang fixe (le parcours varie avec les usages).
+                // Idempotent : un Recommencer puis un nouveau succès ne change rien.
+                ConfigManager.RecordLearningExerciseCompleted(Steps[_currentStep].Index);
+                LessonProgressStore.RecordTutorialGestures(_stepGestures);
+                _stepGestures = new LessonAttemptStats();
                 _mapper.RequestCapsLockOff(); // reinciter a appuyer sur Verr.Maj. au prochain exercice
                 ClearHighlight();
                 UpdateControlVisibility();
@@ -1176,9 +1346,42 @@ sealed class LearningModule : IDisposable
         }
         else
         {
+            // Audit UX 1.3.0, #6 : la faute se disait par la seule couleur. Le caractère tapé
+            // prend la place de l'attendu, la touche frappée est cerclée de rouge, une ligne dit
+            // quoi faire, et le lecteur d'écran l'annonce.
             _currentCharError = true;
+            _lastWrongChar = typed;
+            _errorScancode = _pressedScancode;
+            AnnounceTypingError(target[_cursorPosition]);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
         }
+    }
+
+    private string TypingErrorText(char expected) =>
+        L.Learning_TypingError(DescribeChar(_lastWrongChar), DescribeChar(expected));
+
+    private static string DescribeChar(char c) => c switch
+    {
+        ' ' => L.Learning_SpaceName,
+        '\u00A0' => L.Learning_NbspName,
+        '\u202F' => L.Learning_NarrowNbspName,
+        _ => L.Learning_QuotedChar(c)
+    };
+
+    /// <summary>Nom accessible de la zone d'exercice (la fenêtre, qui a le focus pendant la
+    /// frappe) remplacé par le message de faute, puis EVENT_OBJECT_NAMECHANGE : le lecteur
+    /// d'écran lit le nouveau nom de l'élément focalisé. Le titre revient à la correction.</summary>
+    private void AnnounceTypingError(char expected)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        AccessibleName.TrySetAndNotify(_hWnd, TypingErrorText(expected));
+    }
+
+    private void ClearCharError()
+    {
+        if (_currentCharError && _hWnd != IntPtr.Zero)
+            AccessibleName.TrySet(_hWnd, L.Learning_WindowTitle);
+        _currentCharError = false;
     }
 
     private char ResolveTypedCharacter(char received)
@@ -1192,7 +1395,7 @@ sealed class LearningModule : IDisposable
         // Backspace l'efface pour permettre de retaper immédiatement le caractère attendu.
         if (_currentCharError)
         {
-            _currentCharError = false;
+            ClearCharError();
             ClearPendingPhysicalText();
             if (_hWnd != IntPtr.Zero)
             {
@@ -1216,7 +1419,8 @@ sealed class LearningModule : IDisposable
     {
         _currentStep++;
         _cursorPosition = 0;
-        _currentCharError = false;
+        _stepGestures = new LessonAttemptStats();
+        ClearCharError();
         _page = TutorialPage.Exercise;
         _currentStepSuccessCount = 0; // reset pour le nouvel exercice (1er succes => « Bravo ! » s'affiche)
         ClearPendingPhysicalText();
@@ -1254,9 +1458,20 @@ sealed class LearningModule : IDisposable
     /// </summary>
     private void CycleHeaderFocus(IntPtr from)
     {
-        var stops = new List<IntPtr> { _hWnd };
-        if (Win32.IsWindowVisible(_hWndBtnQuit)) stops.Add(_hWndBtnQuit);
-        if (Win32.IsWindowVisible(_hWndBtnSkip)) stops.Add(_hWndBtnSkip);
+        var stops = new List<IntPtr>();
+        if (_page == TutorialPage.Usages)
+        {
+            // Écran des usages : les cases, « Continuer », « Quitter » ; pas la surface.
+            stops.AddRange(_hWndUsages);
+            stops.Add(_hWndBtnUsagesContinue);
+            stops.Add(_hWndBtnQuit);
+        }
+        else
+        {
+            stops.Add(_hWnd);
+            if (Win32.IsWindowVisible(_hWndBtnQuit)) stops.Add(_hWndBtnQuit);
+            if (Win32.IsWindowVisible(_hWndBtnSkip)) stops.Add(_hWndBtnSkip);
+        }
         bool backwards = (TypingEngine.Windows.Win32.GetKeyState(0x10) & 0x8000) != 0; // VK_SHIFT
         int next = DialogNavigation.NextFocusStop(stops.IndexOf(from), stops.Count, backwards);
         if (next >= 0) Win32.SetFocus(stops[next]);
@@ -1317,6 +1532,8 @@ sealed class LearningModule : IDisposable
             case HeaderKeyAction.Swallow:
                 return true;
             case HeaderKeyAction.ForwardToExercise:
+                // Écran des usages : pas d'exercice en cours, la frappe est ignorée.
+                if (_page == TutorialPage.Usages) return true;
                 // Le focus revient à la surface avant la frappe : les suivantes (et le
                 // WM_KEYUP de cette espace) y arrivent directement.
                 Win32.SetFocus(_hWnd);
@@ -1335,7 +1552,8 @@ sealed class LearningModule : IDisposable
     {
         _page = TutorialPage.Exercise;
         _cursorPosition = 0;
-        _currentCharError = false;
+        _stepGestures = new LessonAttemptStats();
+        ClearCharError();
         ClearPendingPhysicalText();
         _mapper.RequestCapsLockOff(); // forcer Verr.Maj. off au reset (re-incite a l'activation si KeepCapsHighlight)
         UpdateHighlight();
@@ -1353,6 +1571,208 @@ sealed class LearningModule : IDisposable
     private void ContinueAfterChoice()
     {
         AdvanceToNextStep();
+    }
+
+    /// <summary>
+    /// Écran des usages → « Continuer » : enregistre les cases cochées, puis ouvre le premier
+    /// exercice du parcours.
+    /// </summary>
+    private void ConfirmUsages()
+    {
+        if (_page != TutorialPage.Usages) return;
+        var usages = new List<string>();
+        for (int i = 0; i < UsageIds.Length; i++)
+        {
+            if (_usageSelected[i])
+                usages.Add(UsageIds[i]);
+        }
+        StartRoute(usages);
+        TakeFocus();
+    }
+
+    /// <summary>Bascule l'usage <paramref name="i"/> (clic ou Espace sur son bouton).</summary>
+    private void ToggleUsage(int i)
+    {
+        _usageSelected[i] = !_usageSelected[i];
+        Win32.InvalidateRect(_hWndUsages[i], IntPtr.Zero, false);
+        AnnounceUsageState(i, focused: Win32.GetFocus() == _hWndUsages[i], announce: true);
+    }
+
+    /// <summary>
+    /// Bouton d'usage présenté aux lecteurs d'écran comme une case à cocher, avec son état
+    /// (owner-draw, il s'annonçait « bouton » sans dire s'il était choisi).
+    /// </summary>
+    private void AnnounceUsageState(int i, bool focused, bool announce)
+    {
+        if (i < 0 || i >= _hWndUsages.Length || _hWndUsages[i] == IntPtr.Zero) return;
+        AccessibleName.TrySetCheckState(_hWndUsages[i], _usageSelected[i], focused, announce);
+    }
+
+    /// <summary>
+    /// Bouton-bascule d'un usage : libellé à gauche, pastille à droite. Choisi : fond
+    /// <see cref="DarkTheme.Selected"/>, cadre et pastille à l'accent, coche dedans ; sinon le
+    /// bouton sombre ordinaire et une pastille vide. Focus clavier : rectangle système.
+    /// </summary>
+    private void DrawUsageToggle(in Win32.DRAWITEMSTRUCT dis, int i)
+    {
+        const uint ODS_SELECTED = 0x0001;
+        bool on = _usageSelected[i];
+        bool hot = _usageHovered == i;
+        bool pressed = (dis.itemState & ODS_SELECTED) != 0;
+        var rc = dis.rcItem;
+        IntPtr hdc = dis.hDC;
+        GdiHelpers.FillSolidRect(hdc, rc, CLR_BG);
+
+        uint fill = on ? DarkTheme.Selected
+            : pressed ? DarkTheme.ControlPressed : hot ? DarkTheme.ControlHover : DarkTheme.ControlFill;
+        uint border = on ? DarkTheme.Accent : hot ? DarkTheme.TextSecondary : DarkTheme.ControlBorder;
+        int stroke = on ? Math.Max(2, S(2)) : 1;
+        int radius = S(6) * 2;
+        var brush = Win32.CreateSolidBrush(fill);
+        var pen = Win32.CreatePen(0, stroke, border);
+        var oldBrush = Win32.SelectObject(hdc, brush);
+        var oldPen = Win32.SelectObject(hdc, pen);
+        int half = stroke / 2;
+        Win32.RoundRect(hdc, rc.left + half, rc.top + half, rc.right - half, rc.bottom - half, radius, radius);
+
+        // Pastille à droite : cercle vide, ou plein à l'accent avec la coche.
+        int dot = S(20);
+        int dotX = rc.right - S(16) - dot;
+        int dotY = rc.top + (rc.bottom - rc.top - dot) / 2;
+        var dotBrush = Win32.CreateSolidBrush(on ? DarkTheme.Accent : fill);
+        var dotPen = Win32.CreatePen(0, Math.Max(1, S(1)) + (on ? 0 : 1), on ? DarkTheme.Accent : DarkTheme.TextSecondary);
+        Win32.SelectObject(hdc, dotBrush);
+        Win32.SelectObject(hdc, dotPen);
+        Win32.Ellipse(hdc, dotX, dotY, dotX + dot, dotY + dot);
+        Win32.SelectObject(hdc, oldPen);
+        Win32.SelectObject(hdc, oldBrush);
+        Win32.DeleteObject(dotPen);
+        Win32.DeleteObject(dotBrush);
+        Win32.DeleteObject(pen);
+        Win32.DeleteObject(brush);
+        if (on)
+        {
+            var checkPen = Win32.CreatePen(0, Math.Max(2, S(2)), DarkTheme.OnAccent);
+            var prevPen = Win32.SelectObject(hdc, checkPen);
+            Win32.MoveToEx(hdc, dotX + dot * 27 / 100, dotY + dot * 52 / 100, IntPtr.Zero);
+            Win32.LineTo(hdc, dotX + dot * 43 / 100, dotY + dot * 68 / 100);
+            Win32.LineTo(hdc, dotX + dot * 74 / 100, dotY + dot * 35 / 100);
+            Win32.SelectObject(hdc, prevPen);
+            Win32.DeleteObject(checkPen);
+        }
+
+        var oldFont = Win32.SelectObject(hdc, _hFontInstruction);
+        Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+        Win32.SetTextColor(hdc, DarkTheme.Text);
+        var textRect = new Win32.RECT { left = rc.left + S(16), top = rc.top, right = dotX - S(12), bottom = rc.bottom };
+        Win32.DrawTextW(hdc, UsageLabel(i), -1, ref textRect,
+            Win32.DT_LEFT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        Win32.SelectObject(hdc, oldFont);
+
+        if ((dis.itemState & Win32.ODS_FOCUS) != 0)
+        {
+            int inset = S(4);
+            var focus = new Win32.RECT { left = rc.left + inset, top = rc.top + inset, right = rc.right - inset, bottom = rc.bottom - inset };
+            Win32.DrawFocusRect(hdc, ref focus);
+        }
+    }
+
+    /// <summary>
+    /// Pose le parcours des <paramref name="usages"/> (enregistrés localement, jamais envoyés)
+    /// et ouvre son premier exercice. Sans prise de focus : les tests et le banc de captures
+    /// l'appellent sur une fenêtre jamais activée.
+    /// </summary>
+    internal void StartRoute(IEnumerable<string> usages)
+    {
+        var chosen = TutorialSteps.NormalizeUsages(usages);
+        ConfigManager.SetLearningUsages(chosen);
+        _route = TutorialSteps.BuildRoute(chosen);
+        _currentStep = 0;
+        _cursorPosition = 0;
+        _stepGestures = new LessonAttemptStats();
+        ClearCharError();
+        _currentStepSuccessCount = 0;
+        _page = TutorialPage.Exercise;
+        ClearPendingPhysicalText();
+        _mapper.RequestCapsLockOff(); // Verr. Maj. a pu être allumée sur l'écran des usages
+        UpdateHighlight();
+        UpdateControlVisibility();
+        RepositionControls();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    /// <summary>
+    /// Sous-classe des cases et de « Continuer » de l'écran des usages. La fenêtre reste hors
+    /// d'IsDialogMessageW (il mangerait les frappes des exercices) : Tab et Maj+Tab tournent le
+    /// focus, Haut et Bas passent d'une case à l'autre, Entrée vaut « Continuer », Échap ferme.
+    /// Espace reste au contrôle : elle coche la case ou clique « Continuer ».
+    /// </summary>
+    private IntPtr UsagesSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
+        UIntPtr uIdSubclass, IntPtr dwRefData)
+    {
+        if (_inputPaused && IsPausedInputMessage(msg)) return IntPtr.Zero;
+        switch (msg)
+        {
+            case Win32.WM_SETFOCUS:
+                _usageLastFocused = hWnd;
+                AnnounceUsageState(Array.IndexOf(_hWndUsages, hWnd), focused: true, announce: false);
+                break;
+            case Win32.WM_KILLFOCUS:
+                AnnounceUsageState(Array.IndexOf(_hWndUsages, hWnd), focused: false, announce: false);
+                break;
+            case Win32.WM_MOUSEMOVE:
+            {
+                int hover = Array.IndexOf(_hWndUsages, hWnd);
+                if (hover >= 0 && _usageHovered != hover)
+                {
+                    _usageHovered = hover;
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    var tme = new Win32.TRACKMOUSEEVENT
+                    {
+                        cbSize = (uint)Marshal.SizeOf<Win32.TRACKMOUSEEVENT>(),
+                        dwFlags = Win32.TME_LEAVE,
+                        hwndTrack = hWnd,
+                        dwHoverTime = 0
+                    };
+                    Win32.TrackMouseEvent(ref tme);
+                }
+                break;
+            }
+            case Win32.WM_MOUSELEAVE:
+                if (_usageHovered >= 0 && _hWndUsages[_usageHovered] == hWnd)
+                {
+                    _usageHovered = -1;
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                }
+                break;
+            case Win32.WM_KEYDOWN:
+            {
+                int vk = wParam.ToInt32();
+                int check = Array.IndexOf(_hWndUsages, hWnd);
+                switch (vk)
+                {
+                    case 0x09: // VK_TAB
+                        CycleHeaderFocus(hWnd);
+                        return IntPtr.Zero;
+                    case 0x0D: // VK_RETURN
+                        ConfirmUsages();
+                        return IntPtr.Zero;
+                    case 0x1B: // VK_ESCAPE
+                        Close();
+                        return IntPtr.Zero;
+                    case 0x26 or 0x28 when check >= 0: // VK_UP, VK_DOWN
+                        int next = DialogNavigation.NextFocusStop(check, _hWndUsages.Length, backwards: vk == 0x26);
+                        if (next >= 0) Win32.SetFocus(_hWndUsages[next]);
+                        return IntPtr.Zero;
+                }
+                break;
+            }
+            case Win32.WM_CHAR:
+                // Tab, Entrée et Échap sont traités au keydown : pas de bip du contrôle.
+                if (wParam.ToInt32() is 0x09 or 0x0D or 0x1B) return IntPtr.Zero;
+                break;
+        }
+        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1403,6 +1823,13 @@ sealed class LearningModule : IDisposable
         var nextChar = target[_cursorPosition].ToString();
         if (!Index.ByCharacter.TryGetValue(nextChar, out var indexEntry) || indexEntry.Preferred is not { } method) return;
 
+        // É, È, Ç, À devant une minuscule : touche morte circonflexe puis la minuscule
+        // (décision du 12/10), sauf Verr. Maj. déjà allumée. Avant les cas particuliers
+        // ci-dessous, qui priment.
+        char? following = _cursorPosition + 1 < target.Length ? target[_cursorPosition + 1] : null;
+        if (indexEntry.PreferredBefore(following, _mapper.CapsLockActive) is { } contextual)
+            method = contextual;
+
         // Si l'exercice demande de garder Verr.Maj activée et qu'une variante Caps existe
         // pour ce caractère, l'utiliser (= ne pas demander Maj redondant à l'utilisateur).
         if (Steps[_currentStep].KeepCapsHighlight
@@ -1411,7 +1838,8 @@ sealed class LearningModule : IDisposable
             method = capsAlt;
         }
 
-        if (_currentStep == Steps.Length - 1
+        // Exercice Autres langues, où que le parcours le place.
+        if (Steps[_currentStep].Index == TutorialSteps.Languages
             && GetLanguageExerciseMethod(nextChar) is { } languageMethod)
         {
             method = languageMethod;
@@ -1441,6 +1869,18 @@ sealed class LearningModule : IDisposable
 
         try
         {
+            if (_page == TutorialPage.Usages)
+            {
+                // Écran des usages : fond uni, ni clavier ni overlay ; les cases et
+                // « Continuer » sont des contrôles enfants peints par eux-mêmes.
+                var allRect = new Win32.RECT { left = 0, top = 0, right = cw, bottom = ch };
+                Win32.FillRect(hdc, ref allRect, _hBgBrush);
+                Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+                PaintUsagesScreen(hdc, cw);
+                Win32.BitBlt(hdcPaint, 0, 0, cw, ch, hdc, 0, 0, 0x00CC0020);
+                return;
+            }
+
             // Fond zones supérieures (clair)
             int kbTop = S(BASE_HEADER_H + BASE_INSTRUCTION_H + BASE_TARGET_H);
             var topRect = new Win32.RECT { left = 0, top = 0, right = cw, bottom = kbTop };
@@ -1478,9 +1918,35 @@ sealed class LearningModule : IDisposable
             Win32.SelectObject(hdc, hBmpOld);
             Win32.DeleteObject(hBmp);
             Win32.DeleteDC(hdc);
+            Win32.EndPaint(hWnd, ref ps); // aussi après le retour anticipé de l'écran des usages
         }
+    }
 
-        Win32.EndPaint(hWnd, ref ps);
+    /// <summary>
+    /// Question, aide et filet de l'écran des usages, alignés sur la colonne des cases.
+    /// </summary>
+    private void PaintUsagesScreen(IntPtr hdc, int cw)
+    {
+        int colX = UsagesColumnLeft(cw);
+        int colW = Math.Min(S(BASE_USAGES_COL_W), cw - 2 * S(BASE_MARGIN));
+
+        var hOldFont = Win32.SelectObject(hdc, _hFontTitle);
+        Win32.SetTextColor(hdc, CLR_HEADER_TITLE);
+        var questionRect = new Win32.RECT { left = colX, top = S(BASE_USAGES_TOP), right = colX + colW, bottom = S(BASE_USAGES_TOP + 36) };
+        Win32.DrawTextW(hdc, L.Learning_UsagesQuestion, -1, ref questionRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+
+        Win32.SelectObject(hdc, _hFontInstruction);
+        Win32.SetTextColor(hdc, CLR_INSTRUCTION);
+        var helpRect = new Win32.RECT { left = colX, top = S(BASE_USAGES_TOP + 40), right = colX + colW, bottom = S(BASE_USAGES_TOP + 70) };
+        Win32.DrawTextW(hdc, L.Learning_UsagesHelp, -1, ref helpRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        Win32.SelectObject(hdc, hOldFont);
+
+        // Filet entre les usages courants et la langue d'Afrique.
+        int ruleY = UsageCheckTop(_hWndUsages.Length - 1) - S(BASE_USAGES_RULE_GAP) / 2;
+        var ruleRect = new Win32.RECT { left = colX, top = ruleY, right = colX + colW, bottom = ruleY + Math.Max(1, S(1)) };
+        var hRule = Win32.CreateSolidBrush(CLR_KEY_BORDER);
+        Win32.FillRect(hdc, ref ruleRect, hRule);
+        Win32.DeleteObject(hRule);
     }
 
     private void PaintExercise(IntPtr hdc, int cw, int kbTop)
@@ -1545,39 +2011,58 @@ sealed class LearningModule : IDisposable
         int textX = margin;
         for (int i = 0; i < target.Length; i++)
         {
-            string ch = target[i].ToString();
-            // Mesurer la largeur du caractère
+            bool current = i == _cursorPosition;
+            bool error = current && _currentCharError;
+            // Audit UX 1.3.0, #6 : en faute, le caractère tapé prend la place de l'attendu ; la
+            // ligne sous le texte dit les deux. Une espace tapée à tort se voit en « · ».
+            char shown = error ? _lastWrongChar : target[i];
+            string ch = error && shown == ' ' ? "·" : shown.ToString();
+            // #1 : une espace insécable a une place visible, assez large pour son repère.
+            bool marked = KeyboardRenderer.IsMarkedSpace(shown);
             var measureRect = new Win32.RECT { left = 0, top = 0, right = 10000, bottom = 1000 };
             Win32.DrawTextW(hdc, ch, 1, ref measureRect, Win32.DT_CALCRECT);
             int charW = measureRect.right;
+            if (marked)
+                charW = Math.Max(charW, S(shown == '\u202F' ? 9 : 12));
 
-            if (i < _cursorPosition)
+            // Tapé correctement : vert ; en cours : blanc, ou rouge en faute ; à venir : gris.
+            uint color = i < _cursorPosition ? CLR_TARGET_CORRECT
+                : error ? CLR_TARGET_ERROR
+                : current ? CLR_TARGET_CURRENT
+                : CLR_TARGET_PENDING;
+            if (current)
             {
-                // Tapé correctement → vert
-                Win32.SetTextColor(hdc, CLR_TARGET_CORRECT);
-            }
-            else if (i == _cursorPosition)
-            {
-                // Caractère en cours
-                Win32.SetTextColor(hdc, _currentCharError ? CLR_TARGET_ERROR : CLR_TARGET_CURRENT);
-                // Souligné — décalé sous la base des lettres sans trop s'éloigner.
+                // Souligné — décalé sous la base des lettres sans trop s'éloigner ; plus épais
+                // en faute, pour qui ne distingue pas le rouge.
                 int underY = y + S(28);
-                var hPen = Win32.CreatePen(0, S(2), _currentCharError ? CLR_TARGET_ERROR : CLR_TARGET_CURRENT);
+                var hPen = Win32.CreatePen(0, error ? S(3) : S(2), color);
                 var hOldPen = Win32.SelectObject(hdc, hPen);
                 Win32.MoveToEx(hdc, textX, underY, IntPtr.Zero);
                 Win32.LineTo(hdc, textX + charW, underY);
                 Win32.SelectObject(hdc, hOldPen);
                 Win32.DeleteObject(hPen);
             }
+
+            if (marked)
+            {
+                KeyboardRenderer.DrawSpaceMarker(hdc, shown, textX + S(2), textX + charW - S(1), y + S(22), _dpiScale, color);
+            }
             else
             {
-                // Pas encore tapé → gris
-                Win32.SetTextColor(hdc, CLR_TARGET_PENDING);
+                Win32.SetTextColor(hdc, color);
+                var charRect = new Win32.RECT { left = textX, top = y, right = textX + charW + S(2), bottom = y + S(30) };
+                Win32.DrawTextW(hdc, ch, 1, ref charRect, 0);
             }
-
-            var charRect = new Win32.RECT { left = textX, top = y, right = textX + charW + S(2), bottom = y + S(30) };
-            Win32.DrawTextW(hdc, ch, 1, ref charRect, 0);
             textX += charW + S(1);
+        }
+
+        if (_currentCharError && _cursorPosition < target.Length)
+        {
+            Win32.SelectObject(hdc, _hFontStatus);
+            Win32.SetTextColor(hdc, CLR_TARGET_ERROR);
+            string message = TypingErrorText(target[_cursorPosition]);
+            var messageRect = new Win32.RECT { left = margin, top = y + S(34), right = cw - margin, bottom = y + S(54) };
+            Win32.DrawTextW(hdc, message, message.Length, ref messageRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
         }
 
         Win32.SelectObject(hdc, hOldFont);
@@ -1763,7 +2248,7 @@ sealed class LearningModule : IDisposable
     /// <summary>
     /// Ce que le clavier montre : modificateurs tenus (Ctrl et Alt ne s'allument pas sous
     /// AltGr, qui vaut Ctrl+Alt pour Windows), Verr. Maj., touche morte armée, touche enfoncée,
-    /// surlignage de l'exercice et, à l'exercice 6, les aides des mots étrangers.
+    /// surlignage de l'exercice et, à l'exercice Autres langues, les aides des mots étrangers.
     /// </summary>
     private KeyboardRenderState BuildKeyboardState()
     {
@@ -1777,6 +2262,7 @@ sealed class LearningModule : IDisposable
             CapsLock = _mapper.CapsLockActive,
             ActiveDeadKey = _mapper.ActiveDeadKey,
             PressedScancode = _pressedScancode,
+            ErrorScancode = _currentCharError ? _errorScancode : 0,
             ShowInvisibleMarkers = false,
             UiScale = _dpiScale,
             HighlightKind = _guidance.HighlightKind,
@@ -1785,8 +2271,8 @@ sealed class LearningModule : IDisposable
         state.HighlightedScancodes.UnionWith(_guidance.HighlightedScancodes);
         state.HighlightedLabels.UnionWith(_guidance.HighlightedLabels);
         state.HighlightedContextIds.UnionWith(_guidance.HighlightedContextIds);
-        if (_currentStep == Steps.Length - 1)
-            state.LessonVisibleCharacters.UnionWith(LanguageExerciseCharacters);
+        if (_currentStep < Steps.Length)
+            ExerciseCharacters.Value.AddRequiredCharacters(Steps[_currentStep].Target, state.LessonVisibleCharacters);
         return state;
     }
 
@@ -1819,14 +2305,23 @@ sealed class LearningModule : IDisposable
         Win32.DeleteObject(hBmp);
         Win32.DeleteDC(hdcMem);
 
-        // Texte « Cliquez pour reprendre » centré
+        // « Cliquez pour reprendre » sur une carte centrée : posé à même le voile, le texte
+        // chevauchait les libellés des touches assombries.
+        string msg = L.Learning_ClickToResume;
         var hOldFont = Win32.SelectObject(hdc, _hFontTitle);
+        int textW = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontTitle, msg);
+        int textH = GdiHelpers.MeasureSingleLineHeight(hdc, _hFontTitle);
+        int cardW = Math.Min(cw - S(16), textW + S(48));
+        int cardH = textH + S(32);
+        int cardX = (cw - cardW) / 2;
+        int cardY = top + (bottom - top - cardH) / 2;
+        var card = new Win32.RECT { left = cardX, top = cardY, right = cardX + cardW, bottom = cardY + cardH };
+        GdiHelpers.DrawPanel(hdc, card, DarkTheme.Surface, DarkTheme.Border, 0, 0);
+        Win32.SelectObject(hdc, _hFontTitle);
         Win32.SetTextColor(hdc, DarkTheme.Text);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-        var rc = new Win32.RECT { left = 0, top = top, right = cw, bottom = bottom };
-        string msg = L.Learning_ClickToResume;
-        Win32.DrawTextW(hdc, msg, msg.Length, ref rc,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE);
+        Win32.DrawTextW(hdc, msg, msg.Length, ref card,
+            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
         Win32.SelectObject(hdc, hOldFont);
     }
 
@@ -1945,6 +2440,14 @@ sealed class LearningModule : IDisposable
             Win32.RemoveWindowSubclass(_hWndBtnQuit, _quitSubclassProc, (UIntPtr)1);
         if (_skipSubclassProc != null && _hWndBtnSkip != IntPtr.Zero)
             Win32.RemoveWindowSubclass(_hWndBtnSkip, _skipSubclassProc, (UIntPtr)2);
+        if (_usagesSubclassProc != null)
+        {
+            for (int i = 0; i < _hWndUsages.Length; i++)
+                if (_hWndUsages[i] != IntPtr.Zero)
+                    Win32.RemoveWindowSubclass(_hWndUsages[i], _usagesSubclassProc, (UIntPtr)(10 + i));
+            if (_hWndBtnUsagesContinue != IntPtr.Zero)
+                Win32.RemoveWindowSubclass(_hWndBtnUsagesContinue, _usagesSubclassProc, (UIntPtr)20);
+        }
 
         if (_hTooltip != IntPtr.Zero)
         {

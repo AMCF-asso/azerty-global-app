@@ -43,6 +43,40 @@ internal sealed class CharacterIndex
 
         /// <summary>La méthode recommandée, sinon la première.</summary>
         public MethodData? Preferred => Recommended ?? (Methods.Count > 0 ? Methods[0] : null);
+
+        /// <summary>Capitales accentuées enseignées par la touche morte circonflexe quand une
+        /// minuscule les suit (décision d'Antoine du 12/10, comme le testeur du site).</summary>
+        private static readonly HashSet<string> CapitalsTaughtWithCircumflex = new(StringComparer.Ordinal)
+        {
+            "É", "È", "Ç", "À",
+        };
+
+        /// <summary>Une minuscule au sens du site (tester-search.js, isLowercaseLetter) : elle
+        /// change en capitale et ne change pas en minuscule.</summary>
+        internal static bool IsLowercaseLetter(char c)
+            => char.ToLowerInvariant(c) == c && char.ToUpperInvariant(c) != c;
+
+        /// <summary>
+        /// La méthode à enseigner pour taper ce caractère devant <paramref name="next"/>, le
+        /// caractère suivant du texte (null : fin de texte ou suite inconnue). Une capitale
+        /// accentuée (É È Ç À) qui commence un mot, donc suivie d'une minuscule, s'enseigne par
+        /// la touche morte circonflexe puis la minuscule ; sinon, la méthode recommandée
+        /// (Verr. Maj. + la touche). Les deux méthodes donnent la même capitale : seule la
+        /// consigne change, la reconnaissance de la frappe lit le caractère produit.
+        /// Verr. Maj. déjà allumée (<paramref name="capsLockActive"/>) : on garde la méthode
+        /// Verr. Maj., un temps de moins (décision du 12/10, comme forceCaps du site).
+        /// </summary>
+        public MethodData? PreferredBefore(char? next, bool capsLockActive = false)
+        {
+            if (!capsLockActive && next is char c && IsLowercaseLetter(c) && CapitalsTaughtWithCircumflex.Contains(Character))
+            {
+                var circumflex = Methods.FirstOrDefault(m =>
+                    m.IsDeadKey && string.Equals(m.DeadKey, "dk_circumflex", StringComparison.Ordinal));
+                if (circumflex != null)
+                    return circumflex;
+            }
+            return Preferred;
+        }
     }
 
     private static readonly Lazy<CharacterIndex> _shared = new(Load);

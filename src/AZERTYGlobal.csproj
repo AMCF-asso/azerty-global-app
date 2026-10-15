@@ -73,6 +73,9 @@
     <EmbeddedResource Include="AZERTY Global 2026.json" LogicalName="layout.json" />
     <EmbeddedResource Include="character-index.json" LogicalName="character-index.json" />
     <EmbeddedResource Include="lessons.json" LogicalName="lessons.json" />
+    <!-- Recherche par langue (1.3.0) : noms de langue et de ton → caractères. Générée par
+         scripts/build-language-search.py depuis le référentiel Afrique du site. -->
+    <EmbeddedResource Include="language-search.json" LogicalName="language-search.json" />
     <!-- Banque d'extraits « Défi du jour » (v1.2.0) — générée par build/gen-defi-corpus.mjs -->
     <EmbeddedResource Include="defi-corpus.json" LogicalName="defi-corpus.json" />
     <!-- Logo pour la fenêtre d'accueil -->
@@ -81,6 +84,9 @@
     <!-- Drapeaux du sélecteur de langue (mêmes assets que le site, lang-switch) -->
     <EmbeddedResource Include="flag-en.png" LogicalName="flag-en.png" />
     <EmbeddedResource Include="flag-fr.png" LogicalName="flag-fr.png" />
+    <!-- Refonte 1.3.0 (Tablature) : polices du site, renommées (OFL, Fonts/OFL-*.txt),
+         chargées en privé au démarrage par AppFonts. -->
+    <EmbeddedResource Include="Fonts\*.ttf" LogicalName="font.%(Filename).ttf" />
   </ItemGroup>
 
   <!-- Audit Store 2026-09-22, BinSkim BA2025 : CET (shadow stack) sur x64. Depuis .NET 10,
