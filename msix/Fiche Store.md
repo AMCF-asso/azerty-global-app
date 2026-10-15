@@ -38,7 +38,7 @@ Installez l’application, cliquez sur « Activer et essayer » dans l’accue
 Les majuscules accentuées É, È, Ç, À, Ù s’obtiennent avec le Verr. Maj., qui n’agit plus que sur les lettres. Guillemets « », apostrophe ’, œ et æ, points de suspension …, tirets — et –, espaces insécables normale et fine : tout est au clavier.
 
 CODER SANS SE TORDRE LES DOIGTS
-{ } \ | [ ] sont sur la rangée de repos, avec AltGr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement.
+{ } \ | [ ] sont sur la rangée de repos, avec AltGr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement. Sur un clavier sans touche AltGr, Ctrl droit + Alt gauche la remplace.
 
 ÉCRIRE D’AUTRES LANGUES
 La touche à droite du M porte les accents aigu, grave et tilde : l’espagnol, le portugais ou l’italien se tapent sans changer de clavier. Vous avez aussi l’allemand, de nombreuses langues d’Afrique francophone (wolof, bambara, yoruba, haoussa…), les alphabets grec et cyrillique et les signes mathématiques. Pour écrire plusieurs lettres grecques d’affilée, une couche se verrouille d’un double appui, en option. Pour écrire en arabe ou dans un autre alphabet avec une disposition de Windows, mettez d’abord AZERTY Global en pause (menu de l’icône) ou désactivez-le (Ctrl+Maj+Verr. Maj.).
@@ -165,7 +165,7 @@ WRITE CORRECT FRENCH
 Accented capitals É, È, Ç, À, Ù come from Caps Lock, which now only affects letters. Guillemets « », typographic apostrophe ’, œ and æ, ellipsis …, dashes — and –, regular and narrow non-breaking spaces: everything is on the keyboard.
 
 CODE WITHOUT TWISTING YOUR FINGERS
-{ } \ | [ ] are on the home row, with AltGr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access.
+{ } \ | [ ] are on the home row, with AltGr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access. On a keyboard without an AltGr key, Right Ctrl + Left Alt does the same.
 
 TYPE OTHER LANGUAGES
 The key to the right of M carries the acute, grave and tilde accents, so Spanish, Portuguese or Italian need no other keyboard. German is covered too, as are many francophone African languages (Wolof, Bambara, Yoruba, Hausa…), the Greek and Cyrillic alphabets and math symbols. To type several Greek letters in a row, an optional layer locks with a double press. To type Arabic or another script with a Windows layout, first pause AZERTY Global (icon menu) or turn it off (Ctrl+Shift+Caps Lock).
