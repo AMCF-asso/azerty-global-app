@@ -18,6 +18,17 @@ public interface IWin32Api
     int ToUnicode(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags);
     int ToUnicodeEx(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags, IntPtr hkl);
 
+    /// <summary>
+    /// Position du curseur, en pixels écran. Les fenêtres du produit la lisent par ici : le banc
+    /// de capture rend une position hors fenêtre sans toucher à la vraie souris. Membre par
+    /// défaut : une implémentation qui ne le renseigne pas rend faux.
+    /// </summary>
+    bool GetCursorPos(out int x, out int y)
+    {
+        x = y = 0;
+        return false;
+    }
+
     // Injection de frappes
     uint SendInput(Win32.INPUT[] inputs);
 

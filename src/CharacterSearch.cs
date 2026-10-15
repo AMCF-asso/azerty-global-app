@@ -672,7 +672,7 @@ sealed class CharacterSearch : IDisposable
     private void CaptureWorkArea()
     {
         // Trouver l'écran principal (ou celui où se trouve la souris)
-        Win32.GetCursorPos(out var pt);
+        CursorSource.TryGet(out var pt);
         var hMonitor = Win32.MonitorFromPoint(pt, 0x00000001); // MONITOR_DEFAULTTOPRIMARY
         var mi = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         Win32.GetMonitorInfo(hMonitor, ref mi);
