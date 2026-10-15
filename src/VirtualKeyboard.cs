@@ -657,7 +657,7 @@ sealed class VirtualKeyboard : IDisposable
             }
         }
         string? sign = string.IsNullOrEmpty(deadKey) ? null : DeadKeySign(deadKey);
-        if (armStep < 0 || sign == null || sign == steps[armStep].KeyLabel)
+        if (armStep < 0 || sign == null || sign == steps[armStep].SpokenLabel)
             armStep = -1;
 
         // Le caractère et son nom : l'entrée de l'index qui porte cette méthode ; une touche
