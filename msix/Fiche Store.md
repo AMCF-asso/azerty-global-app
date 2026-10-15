@@ -314,21 +314,23 @@ Les fichiers suivants sont dans `msix/Assets/` :
 > Screenshot1 est au format 16:9 standard ; Screenshot2, Screenshot3 et Screenshot4 ont des ratios non standards
 > susceptibles de générer des bandes noires en affichage Store — à éventuellement re-capturer.
 
-### Légendes 1.3.0 (à relire sur les captures finales)
+### Légendes 1.3.0 (relues sur les captures finales du 15/10)
 
-> À relire sur les captures finales : ces légendes décrivent cinq captures 1.3.0 qui ne sont pas encore faites. Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît sur aucune.
+> Relues le 15/10 sur les captures du bundle final (`30eee6f`, run `captures.yml` 38735844453), composées à 125 % sur un fond 1920×1080 : `operations/2026-10-14-sortie-v2-130/a1/captures-store-30eee6f/`. Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît sur aucune.
 
 Ordre proposé : clavier virtuel, recherche, Leçons, Paramètres, accueil. Le clavier virtuel vient en premier parce que le produit est une disposition, et c’est la seule capture qui la montre en entier dans la vignette. Avec l’icône, les captures sont le seul élément de la fiche qu’on peut tester en A/B dans le Store : le test utile est « clavier virtuel en premier » contre « accueil en premier ».
 
 #### 1. Clavier virtuel
 
+> Capture finale : clavier virtuel avec AltGr tenu (QCM d’Antoine du 15/10). La 1.3.0 montre un signe par touche ; une vue à quatre niveaux est proposée pour la 1.3.1.
+
 FR
 ```text
-Le clavier virtuel (Ctrl+Maj+Q) montre les quatre niveaux de chaque touche : vous voyez où se trouve un caractère sans rien apprendre par cœur.
+Le clavier virtuel (Ctrl+Maj+Q) montre ce que tape chaque touche. Tenez AltGr : €, { }, [ ], œ apparaissent, sans rien apprendre par cœur.
 ```
 EN
 ```text
-The virtual keyboard (Ctrl+Shift+Q) shows all four levels of each key, so you can see where a character is without memorizing anything.
+The virtual keyboard (Ctrl+Shift+Q) shows what each key types. Hold AltGr to see €, { }, [ ], œ, with nothing to memorize.
 ```
 
 #### 2. Recherche de caractères
@@ -355,15 +357,15 @@ Short exercises with hints and an on-screen keyboard, to get used to Caps Lock a
 
 #### 4. Paramètres
 
-> La légende couvre les trois onglets. Si la capture n’en montre qu’un, ne garder que ce que l’onglet affiché montre, sinon la légende promet plus que l’image.
+> La capture finale montre l’onglet Général seul : la légende ne dit que ce qu’il montre (QCM d’Antoine du 15/10).
 
 FR
 ```text
-Vous choisissez vos raccourcis, le lancement avec Windows, la langue de l’interface et les applications où AZERTY Global doit rester désactivé.
+Vous choisissez vos raccourcis, le lancement avec Windows et les notifications.
 ```
 EN
 ```text
-Choose your shortcuts, launch at Windows startup, the interface language and the apps where AZERTY Global should stay off.
+Choose your shortcuts, launch at Windows startup and notifications.
 ```
 
 #### 5. Accueil
