@@ -17,6 +17,14 @@ public sealed class RealWin32Api : IWin32Api
 
     public IntPtr GetKeyboardLayout(uint threadId) => Win32.GetKeyboardLayout(threadId);
 
+    public bool GetCursorPos(out int x, out int y)
+    {
+        bool ok = Win32.GetCursorPos(out var point);
+        x = point.x;
+        y = point.y;
+        return ok;
+    }
+
     public int ToUnicode(uint vk, uint scan, byte[] state, StringBuilder buffer, int capacity, uint flags) =>
         Win32.ToUnicode(vk, scan, state, buffer, capacity, flags);
 

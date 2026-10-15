@@ -1799,7 +1799,7 @@ sealed class TrayApplication : IDisposable
         Win32.AppendMenuW(hMenu, languageFlags, IDM_SWITCH_LANGUAGE, L.Tray_MenuSwitchLanguage);
         Win32.AppendMenuW(hMenu, MF_STRING, IDM_QUIT, L.Tray_MenuQuit);
 
-        Win32.GetCursorPos(out var pt);
+        CursorSource.TryGet(out var pt);
         _lastForegroundBeforeTrayMenu = Win32.GetForegroundWindow();
         if (_lastForegroundBeforeTrayMenu == _hWnd)
             _lastForegroundBeforeTrayMenu = IntPtr.Zero;

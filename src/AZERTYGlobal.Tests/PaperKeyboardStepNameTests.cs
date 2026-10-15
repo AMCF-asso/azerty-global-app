@@ -23,12 +23,15 @@ public class PaperKeyboardStepNameTests
 
         Assert.Equal(1, state.StepBadges[ScanQuote]);
         Assert.Equal(2, state.StepBadges[ScanW]);
-        Assert.Equal("ù", state.StepKeyNames[ScanQuote]);
+        // La touche à droite du M montre ce qu'elle tape avec AZERTY Global, l'accent, et la
+        // consigne la nomme par sa place (choix d'Antoine du 15/10, au lieu de la gravure « ù »).
+        Assert.Equal("´", state.StepKeyNames[ScanQuote]);
         Assert.Equal("Z", state.StepKeyNames[ScanW]);
 
-        // Chaque nom posé sur une touche est un mot en gras de la consigne.
+        // Chaque touche à pastille est nommée en gras dans la consigne.
         var strong = Gesture.Sentence(steps).Where(r => r.Strong).Select(r => r.Text).ToList();
-        Assert.All(state.StepKeyNames.Values, name => Assert.Contains(name, strong));
+        Assert.All(steps, step => Assert.Contains(step.SpokenLabel, strong));
+        Assert.Contains(L.Gesture_KeyRightOfM, strong);
         Assert.Equal(state.StepBadges.Keys.OrderBy(k => k), state.StepKeyNames.Keys.OrderBy(k => k));
     }
 

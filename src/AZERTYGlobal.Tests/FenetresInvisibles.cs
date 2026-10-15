@@ -9,12 +9,12 @@ namespace AZERTYGlobal.Tests;
 /// opacité 1/255 et clics qui les traversent. DWM les compose toujours : elles se peignent,
 /// et le DC comme PrintWindow les lisent comme avant. Les tests et les bancs n'affichent donc
 /// plus leurs fenêtres devant l'utilisateur (demande du 04/10). Les clics les traversent, mais
-/// une fenêtre qui lit GetCursorPos (les Leçons) voit toujours le curseur : le banc l'écarte
-/// avant chaque prise (<c>BancCapture.Capture</c>).
+/// une fenêtre qui lit GetCursorPos (les Leçons) voit toujours le curseur : elle le lit par
+/// <c>CursorSource</c>, que <c>BancCapture.Isolation</c> remplace par une position simulée hors
+/// fenêtre (15/10) ; la vraie souris ne bouge plus.
 ///
 /// Crochet WH_CALLWNDPROCRET local au fil, posé sans attendre le balayage de
-/// <see cref="MasqueFenetresProcessus"/> : aucune DLL, rien hors du processus de test, et aucun
-/// changement dans <c>src/</c>. La fenêtre que le produit rend lui-même translucide (la
+/// <see cref="MasqueFenetresProcessus"/> : aucune DLL, rien hors du processus de test. La fenêtre que le produit rend lui-même translucide (la
 /// notification de bascule) garde son réglage : son SetLayeredWindowAttributes passe après.
 ///
 /// <c>AZERTY_FENETRES_VISIBLES=1</c> désactive le crochet, pour regarder un test tourner.
