@@ -16,10 +16,12 @@ namespace AZERTYGlobal.Tests;
 /// Outillage commun des deux bancs de capture, <see cref="CaptureBench"/> (les fenêtres à
 /// contrôles) et <see cref="KeyboardContextBench"/> (les fenêtres qui portent un clavier).
 ///
-/// Principe (option A de la revue du 25/09) : rien n'est ajouté à <c>src/</c>. Les bancs
-/// ouvrent les fenêtres par leurs points d'entrée publics, et n'atteignent les membres privés
-/// que par réflexion. Le code du produit reste donc identique à l'octet près, et les mêmes
-/// fichiers de banc peuvent être déposés sur un commit « avant » pour une comparaison.
+/// Principe (option A de la revue du 25/09) : les bancs ouvrent les fenêtres par leurs points
+/// d'entrée publics, et n'atteignent les membres privés que par réflexion. Une seule exception,
+/// voulue par Antoine le 15/10 (« simuler le curseur ») : le produit lit le curseur par
+/// <c>CursorSource</c>, donc par la couche <c>IWin32Api</c>, que <see cref="Isolation"/>
+/// remplace par une position hors fenêtre. Le banc ne déplace plus la vraie souris. Conséquence :
+/// les fichiers de banc ne se déposent plus tels quels sur un commit antérieur à ce lot.
 ///
 /// Portes et réglages, tous par variable d'environnement :
 /// <list type="bullet">
@@ -192,6 +194,7 @@ internal static class BancCapture
         private readonly string _previousLanguage;
         private readonly IDisposable _policy;
         private readonly IDisposable _channel;
+        private readonly IDisposable _cursor;
         private readonly IntPtr _previousDpiContext;
         private readonly IntPtr _gdipToken;
         private readonly IntPtr _activationContext;
@@ -217,6 +220,7 @@ internal static class BancCapture
 
             _policy = PolicyManager.OverrideForTests((_, _) => null);
             _channel = AppChannel.OverrideForTests(DistributionChannel.Store);
+            _cursor = CursorSource.OverrideForTests(SimulatedCursor());
             _previousLanguage = L.Language;
             _previousDpiContext = Native.SetThreadDpiAwarenessContext(PerMonitorAwareV2);
 
@@ -234,6 +238,15 @@ internal static class BancCapture
             var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
             Win32.GdiplusStartup(out _gdipToken, ref input, IntPtr.Zero);
         }
+
+        /// <summary>
+        /// Le curseur que voient les fenêtres du produit pendant le banc : un faux Win32 qui rend
+        /// toujours (0, 0), coin de l'écran principal, comme l'ancien stationnement de la vraie
+        /// souris. Le placement des fenêtres (écran du curseur) reste donc celui des rendus
+        /// antérieurs, et la vraie souris d'Antoine n'est ni lue ni déplacée.
+        /// </summary>
+        private static TypingEngine.Windows.Testing.MockWin32Api SimulatedCursor() =>
+            new() { CursorPosition = (0, 0) };
 
         /// <summary>Langue de l'interface, dans la configuration et dans L : les Paramètres
         /// lisent la première pour cocher leur bouton radio, tout le reste lit la seconde.</summary>
@@ -289,7 +302,7 @@ internal static class BancCapture
             _channel.Dispose();
             _policy.Dispose();
             _invisibles.Dispose();
-            RestoreCursor();
+            _cursor.Dispose();
 
             if (_previousStatsPath is string statsPath)
                 UsageStats.OverrideStatsPathForTests(statsPath);
@@ -498,35 +511,17 @@ internal static class BancCapture
     /// L'image est recadrée sur le cadre visible (DWMWA_EXTENDED_FRAME_BOUNDS) : GetWindowRect
     /// compte les bordures invisibles de redimensionnement, qui sortiraient en noir.
     /// </summary>
-    /// <summary>Position du curseur avant la première prise du fil, rendue par <see cref="RestoreCursor"/>.</summary>
-    [ThreadStatic] private static Win32.POINT? t_cursorBeforeBench;
-
-    private static void ParkCursor()
-    {
-        if (t_cursorBeforeBench == null && Win32.GetCursorPos(out var cursor))
-            t_cursorBeforeBench = cursor;
-        Native.SetCursorPos(0, 0);
-    }
-
-    private static void RestoreCursor()
-    {
-        if (t_cursorBeforeBench is { } cursor)
-            Native.SetCursorPos(cursor.x, cursor.y);
-        t_cursorBeforeBench = null;
-    }
-
     internal static (int Width, int Height, string Source) Capture(IntPtr hwnd, string file)
     {
         if (hwnd == IntPtr.Zero)
             throw new InvalidOperationException($"{Path.GetFileName(file)} : handle nul");
 
         // Le curseur du runner ouvrait parfois l'infobulle de la touche qu'il survolait (Leçons
-        // du lot surface, 125 %, 01/10). En (0, 0), il est hors de la fenêtre ou sur sa barre de
-        // titre : aucune infobulle, et celle déjà ouverte se ferme par WM_MOUSELEAVE. Fenêtre
-        // invisible comprise : les Leçons lisent GetCursorPos, pas les messages de souris que la
-        // fenêtre laisse passer (infobulles revenues à 100 et 125 % sur la CI du 04/10).
-        // Isolation remet le curseur où il était.
-        ParkCursor();
+        // du lot surface, 125 %, 01/10 ; revenues le 04/10). Les fenêtres lisent désormais le
+        // curseur simulé d'Isolation (position hors fenêtre), et la vraie souris
+        // reste où elle est. L'ancien stationnement fermait aussi l'infobulle déjà ouverte par
+        // WM_MOUSELEAVE : le banc l'envoie lui-même.
+        Win32.SendMessageW(hwnd, Win32.WM_MOUSELEAVE, IntPtr.Zero, IntPtr.Zero);
         Pump(20);
         bool onScreen = KeepOnMonitor(hwnd);
 
@@ -753,9 +748,6 @@ internal static class BancCapture
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool PeekMessageW(out Win32.MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
-
-        [DllImport("user32.dll")]
-        internal static extern bool SetCursorPos(int x, int y);
 
         [DllImport("user32.dll")]
         internal static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);

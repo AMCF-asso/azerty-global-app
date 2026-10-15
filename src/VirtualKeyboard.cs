@@ -584,7 +584,7 @@ sealed class VirtualKeyboard : IDisposable
             ? Win32.MonitorFromWindow(referenceWindow, Win32.MONITOR_DEFAULTTONEAREST)
             : IntPtr.Zero;
 
-        if (monitor == IntPtr.Zero && Win32.GetCursorPos(out var cursorPt))
+        if (monitor == IntPtr.Zero && CursorSource.TryGet(out var cursorPt))
             monitor = Win32.MonitorFromPoint(cursorPt, Win32.MONITOR_DEFAULTTONEAREST);
 
         var mi = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };

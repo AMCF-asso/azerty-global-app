@@ -540,7 +540,7 @@ sealed class LearningModule : IDisposable
         uint dwExStyle = Win32.WS_EX_TOPMOST;
 
         // Adapter aux petits écrans
-        Win32.GetCursorPos(out var cursorPt);
+        CursorSource.TryGet(out var cursorPt);
         var hMonitor = Win32.MonitorFromPoint(cursorPt, 0x00000001);
         var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         Win32.GetMonitorInfo(hMonitor, ref monInfo);

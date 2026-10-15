@@ -409,7 +409,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         int winH = D(BASE_WIN_H);
         uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_THICKFRAME | Win32.WS_CLIPCHILDREN;
 
-        Win32.GetCursorPos(out var cursor);
+        CursorSource.TryGet(out var cursor);
         var monitor = Win32.MonitorFromPoint(cursor, Win32.MONITOR_DEFAULTTONEAREST);
         var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         Win32.GetMonitorInfo(monitor, ref monInfo);
@@ -458,7 +458,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         int winW = Math.Max(1, rect.right - rect.left);
         int winH = Math.Max(1, rect.bottom - rect.top);
-        Win32.GetCursorPos(out var cursor);
+        CursorSource.TryGet(out var cursor);
         var monitor = Win32.MonitorFromPoint(cursor, Win32.MONITOR_DEFAULTTONEAREST);
         var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         if (!Win32.GetMonitorInfo(monitor, ref monInfo))
@@ -925,7 +925,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     return IntPtr.Zero;
                 case Win32.WM_SETCURSOR:
                     // #10 : main sur une cible cliquable, comme un lien ou un bouton web.
-                    if ((lParam.ToInt64() & 0xFFFF) == HTCLIENT && Win32.GetCursorPos(out var cursor)
+                    if ((lParam.ToInt64() & 0xFFFF) == HTCLIENT && CursorSource.TryGet(out var cursor)
                         && Win32.ScreenToClient(_hWnd, ref cursor) && HitClickAction(cursor.x, cursor.y) >= 0)
                     {
                         Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)IDC_HAND));
