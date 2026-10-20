@@ -136,6 +136,20 @@ public sealed class ForegroundMonitor : IDisposable
         }
     }
 
+    /// <summary>
+    /// A20 : le snapshot décrit une autre fenêtre que le premier plan réel. Sans la relance
+    /// périodique du champ sécurisé d'<see cref="IsSnapshotStale"/>, qui couperait sinon nos
+    /// propres fenêtres une seconde après chaque sonde trompée.
+    /// </summary>
+    public bool IsWindowStale
+    {
+        get
+        {
+            var snap = _snapshot;
+            return snap != null && snap.Window != _api.GetForegroundWindow();
+        }
+    }
+
     /// <summary>Indique si le suivi des changements de fenêtre a pu être installé.</summary>
     public bool IsHookInstalled => _winEventHook != IntPtr.Zero;
     public bool IsTrackingAvailable => IsHookInstalled && _focusEventHook != IntPtr.Zero;

@@ -88,7 +88,7 @@ public sealed class KeyMapper
     /// ne coupe ni les Leçons ni le tutoriel.
     /// </summary>
     public bool KeyDisplaySuppressed => _foregroundMonitor is { } monitor &&
-        (monitor.IsSnapshotStale ||
+        (monitor.IsWindowStale ||
          (monitor.IsSecureInput && monitor.CurrentIdentity.ProcessId != (uint)Environment.ProcessId));
     public bool ShiftDown => IsShiftDown;
     public bool AltGrDown => IsAltGrDown;
