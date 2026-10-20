@@ -150,6 +150,7 @@ sealed class TrayApplication : IDisposable
     // Null si l'écriture a échoué : l'essai 1 est alors refusé pour cette session.
     private ConfigManager.VersionFirstRun? _versionFirstRun;
     private bool _activationConsent = ConfigManager.ActivationConsent;
+    private bool _startupFailed;
     private bool _enabled = ConfigManager.ActivationConsent;
     private DateTimeOffset? _pauseUntilUtc;
 
@@ -341,6 +342,7 @@ sealed class TrayApplication : IDisposable
             // le détail technique va dans error.log, l'utilisateur reçoit un message
             // clair avec un chemin d'action (support).
             ConfigManager.Log("TrayApplication ctor", ex);
+            _startupFailed = true; // A22 : Run() ne pose pas le hook, WM_QUIT est en file
             Win32.MessageBoxW(IntPtr.Zero,
                 L.Tray_StartupError,
                 L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
@@ -361,7 +363,9 @@ sealed class TrayApplication : IDisposable
         _hook.VirtualKeyboardRequested += () => Win32.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);
         _hook.LayoutMayHaveChanged += OnLayoutMayHaveChanged;
         ApplyHookState();
-        if (_activationConsent) _hook.Install();
+        // A22 (audit 1.3.0, PERF-1) : le hook n'est plus posé ici mais dans Run(), juste
+        // avant la boucle de messages. Posé ici, chaque frappe du système attendait la fin
+        // de la construction (fenêtres, premier plan, accueil) faute de pompe.
 
         // Synchroniser l'etat interne (CapsLock + modificateurs Shift/Ctrl/Alt) avec l'etat
         // reel du systeme. Cas critique : si l'utilisateur lance l'app pendant qu'un jeu
@@ -616,6 +620,14 @@ sealed class TrayApplication : IDisposable
         _onboarding?.SetInputPaused(_activationConsent && paused);
     }
 
+    /// <summary>
+    /// A22 : pose du hook à l'entrée de la boucle. Seulement avec l'accord, et une seule
+    /// fois : Install ne décroche pas un hook déjà posé, chaque frappe serait traitée deux fois.
+    /// </summary>
+    internal static bool ShouldInstallHookAtLoopStart(bool activationConsent, bool hookCreated, bool hookInstalled,
+        bool startupFailed) =>
+        activationConsent && hookCreated && !hookInstalled && !startupFailed;
+
     /// <summary>Boucle de messages principale.</summary>
     public void Run()
     {
@@ -647,6 +659,29 @@ sealed class TrayApplication : IDisposable
         // au-dessus du seuil n'aura jamais de transition : armer le signal pour que la
         // prochaine frappe suivie du silence décide. Le timer ci-dessus tourne déjà.
         ArmReviewSignalIfAlreadyAboveThreshold();
+
+        // A22 : hook posé en dernier, la pompe démarre aussitôt. Sans accord, il attend
+        // ActivateWithConsent ; un échec garde le message et la sortie du constructeur.
+        if (ShouldInstallHookAtLoopStart(_activationConsent, _hook != null, _hook?.IsInstalled == true, _startupFailed))
+        {
+            try
+            {
+                _hook!.Install();
+                // Relâchements manqués pendant la construction : resynchroniser après la pose.
+                _mapper?.SyncState();
+            }
+            catch (Exception ex)
+            {
+                ConfigManager.Log("TrayApplication Run hook", ex);
+                // La boîte pompe les messages : sans cela, une minuterie de reprise
+                // poserait le hook pendant qu'elle annonce l'échec.
+                foreach (var timer in new[] { TIMER_REHOOK, TIMER_REHOOK_2, TIMER_REHOOK_3,
+                             TIMER_HOOK_WATCHDOG, TIMER_HOOK_PROBE })
+                    Win32.KillTimer(_hWnd, (UIntPtr)timer);
+                Win32.MessageBoxW(IntPtr.Zero, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
+                return;
+            }
+        }
 
         int ret;
         while ((ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0)) != 0)
@@ -2126,13 +2161,17 @@ sealed class TrayApplication : IDisposable
     private void RefreshVirtualKeyboard()
     {
         if (_mapper == null || _virtualKeyboard == null) return;
+        // A20 : en saisie sécurisée, ni modificateur tenu ni touche morte en attente à
+        // l'écran (couche et accent d'un mot de passe). Verr. Maj, visible sur le clavier
+        // physique, reste affiché.
+        bool masque = _mapper.KeyDisplaySuppressed;
         _virtualKeyboard.UpdateState(
-            _mapper.ShiftDown,
-            _mapper.AltGrDown,
-            _mapper.CtrlDown,
-            _mapper.AltDown,
+            !masque && _mapper.ShiftDown,
+            !masque && _mapper.AltGrDown,
+            !masque && _mapper.CtrlDown,
+            !masque && _mapper.AltDown,
             _mapper.CapsLockActive,
-            _mapper.DisplayDeadKey);
+            masque ? null : _mapper.DisplayDeadKey);
     }
 
     private void OnReportBug() => OpenDiagnosticPage(ProductIdentity.BugReportPath, "app");
@@ -2424,7 +2463,8 @@ sealed class TrayApplication : IDisposable
             parts.Add(L.Tray_TooltipActive);
             if (_mapper?.CapsLockActive == true)
                 parts.Add(L.Tray_TooltipCapsLock);
-            if (_mapper?.ActiveDeadKey != null)
+            // A20 : pas d'accent en attente dans l'infobulle pendant un mot de passe.
+            if (_mapper?.ActiveDeadKey != null && !_mapper.KeyDisplaySuppressed)
                 parts.Add(L.Tray_TooltipDeadKey(GetDeadKeySymbol(_mapper.ActiveDeadKey)));
             var layerState = _mapper?.MaintainableLayerState ?? MaintainableLayerState.Inactive;
             if (layerState.Mode is MaintainableLayerMode.Locked)

@@ -128,6 +128,9 @@ public sealed class KeyboardHook : IDisposable
         if (_vkVirtualKeyboard == 0x14) _vkVirtualKeyboard = 0;
     }
 
+    /// <summary>Vrai une fois le hook Win32 posé (Install ou Reinstall réussi).</summary>
+    public bool IsInstalled => _hookId != IntPtr.Zero;
+
     public void Install()
     {
         // GetModuleHandle(null) retourne le handle du module principal — suffisant pour WH_KEYBOARD_LL
@@ -359,8 +362,10 @@ public sealed class KeyboardHook : IDisposable
                     return (IntPtr)1;
                 }
 
-                // Notifier le keydown pour animation du clavier virtuel (pas en pass-through)
-                if (isKeyDown && !_passThroughAll)
+                // Notifier le keydown pour animation du clavier virtuel (pas en pass-through).
+                // A20 (audit 1.3.0, SEC-1) : rien en saisie sécurisée. Clavier virtuel, Leçons
+                // et tutoriel surlignaient sinon les touches d'un mot de passe, à l'écran.
+                if (ShouldNotifyRawKeyDown(isKeyDown, _passThroughAll, _mapper.KeyDisplaySuppressed))
                     RawKeyDown?.Invoke(hookStruct.scanCode);
 
                 if (_enabled)
@@ -404,6 +409,10 @@ public sealed class KeyboardHook : IDisposable
     /// </summary>
     internal static bool ShortcutOpensWindow(bool advancedFeaturesSuppressed, uint configuredVk) =>
         !advancedFeaturesSuppressed && configuredVk != 0;
+
+    /// <summary>A20 : un appui n'est annoncé aux fenêtres qui le dessinent ni en passage total, ni en saisie sécurisée.</summary>
+    internal static bool ShouldNotifyRawKeyDown(bool isKeyDown, bool passThroughAll, bool keyDisplaySuppressed) =>
+        isKeyDown && !passThroughAll && !keyDisplaySuppressed;
 
     private static bool IsModifierKey(uint vkCode) => vkCode is
         0xA0 or 0xA1 or 0x10 or  // LShift, RShift, Shift

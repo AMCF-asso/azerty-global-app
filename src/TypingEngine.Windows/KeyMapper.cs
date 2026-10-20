@@ -79,6 +79,17 @@ public sealed class KeyMapper
         (_maintainableLayers.CurrentState.IsActive ? _maintainableLayers.CurrentState.LayerId : null);
     public MaintainableLayerState MaintainableLayerState => _maintainableLayers.CurrentState;
     public bool AdvancedFeaturesSuppressed => _foregroundMonitor?.IsSecureInput == true;
+
+    /// <summary>
+    /// A20 (audit 1.3.0) : rien de la frappe en cours ne se dessine (touche appuyée,
+    /// modificateurs tenus, touche morte) quand le champ est sécurisé, ou quand le snapshot
+    /// décrit une autre fenêtre que le premier plan réel (focus pas encore recalculé). Nos
+    /// propres fenêtres n'ont aucun champ mot de passe : une sonde qui s'y trompe (délai UIA)
+    /// ne coupe ni les Leçons ni le tutoriel.
+    /// </summary>
+    public bool KeyDisplaySuppressed => _foregroundMonitor is { } monitor &&
+        (monitor.IsSnapshotStale ||
+         (monitor.IsSecureInput && monitor.CurrentIdentity.ProcessId != (uint)Environment.ProcessId));
     public bool ShiftDown => IsShiftDown;
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
