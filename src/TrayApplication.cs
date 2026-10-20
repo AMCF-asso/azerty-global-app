@@ -1724,24 +1724,26 @@ sealed class TrayApplication : IDisposable
         var fgProc = _compatibilityMenuProcessName;
         bool fgIsOwnApp = !string.IsNullOrEmpty(fgProc) &&
             string.Equals(fgProc, ProductIdentity.ExecutableName, StringComparison.OrdinalIgnoreCase);
-        bool hasTarget = !string.IsNullOrEmpty(fgProc) && !fgIsOwnApp;
+        // target : le nom du process visé, nul sans cible, que le compilateur sait suivre.
+        string? target = !string.IsNullOrEmpty(fgProc) && !fgIsOwnApp ? fgProc : null;
+        bool hasTarget = target != null;
         var hSubMenu = Win32.CreatePopupMenu();
-        if (hasTarget)
+        if (target != null)
         {
-            Win32.AppendMenuW(hSubMenu, MF_STRING | MF_GRAYED, 0, L.Tray_MenuActiveApp(fgProc));
+            Win32.AppendMenuW(hSubMenu, MF_STRING | MF_GRAYED, 0, L.Tray_MenuActiveApp(target));
             Win32.AppendMenuW(hSubMenu, MF_SEPARATOR, 0, null);
         }
-        bool fgIsRemoteAccess = hasTarget && GameRegistry.IsRemoteAccessProcess(fgProc);
+        bool fgIsRemoteAccess = hasTarget && GameRegistry.IsRemoteAccessProcess(target);
         uint targetFlags = hasTarget ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hSubMenu, targetFlags, IDM_COMPAT_AUTO, L.Tray_MenuCompatAuto);
         Win32.AppendMenuW(hSubMenu,
             hasTarget && !fgIsRemoteAccess ? MF_STRING : MF_STRING | MF_GRAYED,
             IDM_COMPAT_FORCE_ON, L.Tray_MenuCompatForceOn);
         Win32.AppendMenuW(hSubMenu, targetFlags, IDM_COMPAT_FORCE_OFF, L.Tray_MenuCompatForceOff);
-        if (hasTarget)
+        if (target != null)
         {
             // Marquer la radio active
-            var ovr = fgIsRemoteAccess ? null : ConfigManager.GetCompatibilityOverride(fgProc);
+            var ovr = fgIsRemoteAccess ? null : ConfigManager.GetCompatibilityOverride(target);
             uint activeId = ovr switch
             {
                 "forceOn" => IDM_COMPAT_FORCE_ON,
