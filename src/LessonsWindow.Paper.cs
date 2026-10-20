@@ -644,14 +644,17 @@ internal sealed partial class LessonsWindow
     /// </summary>
     private void DrawPaperKeyboard(IntPtr hdc, KeyboardPlacement placement, bool lessons)
     {
+        // A20 (audit 1.3.0) : Leçons ouvertes à côté d'un champ mot de passe, ni
+        // modificateur tenu ni touche morte en attente ne se dessinent.
+        bool masque = _mapper.KeyDisplaySuppressed;
         var state = new KeyboardRenderState
         {
-            Shift = _mapper.ShiftDown,
-            AltGr = _mapper.AltGrDown,
-            Ctrl = _mapper.CtrlDown,
-            Alt = _mapper.AltDown,
+            Shift = !masque && _mapper.ShiftDown,
+            AltGr = !masque && _mapper.AltGrDown,
+            Ctrl = !masque && _mapper.CtrlDown,
+            Alt = !masque && _mapper.AltDown,
             CapsLock = _mapper.CapsLockActive,
-            ActiveDeadKey = _mapper.ActiveDeadKey,
+            ActiveDeadKey = masque ? null : _mapper.ActiveDeadKey,
             PressedScancode = _pressedScancode,
             ErrorScancode = lessons ? _errorScancode : 0,
             HintCharacter = _hintCharacter?.ToString(),

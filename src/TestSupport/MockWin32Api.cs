@@ -197,7 +197,14 @@ internal sealed class MockWin32Api : IWin32Api
         return pid != 0 && startTimeTicks != 0;
     }
 
-    public bool IsWindowPasswordField(IntPtr window) => ScriptedSecureInput;
+    /// <summary>Nombre de sondes du champ mot de passe (UIA côté réel) : témoin A21.</summary>
+    public int PasswordFieldProbeCount { get; private set; }
+
+    public bool IsWindowPasswordField(IntPtr window)
+    {
+        PasswordFieldProbeCount++;
+        return ScriptedSecureInput;
+    }
 
     public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb)
     {
