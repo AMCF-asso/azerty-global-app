@@ -12,6 +12,11 @@ namespace AZERTYGlobal.Tests;
 /// déplaçait donc sous les doigts d'Antoine à chaque rendu. Ces témoins ne sont pas derrière la
 /// porte AZERTY_CAPTURE : ils font un vrai cliché d'une vraie fenêtre.
 ///
+/// Les positions comparées sont lues sous le même contexte DPI : `before` après l'ouverture de
+/// l'isolation, qui passe le fil en « par écran » (testhost.exe ne déclare rien). Lu avant,
+/// GetCursorPos rendait des coordonnées mises à l'échelle : à 125 %, le rapport 1,25 entre les
+/// deux lectures faisait échouer le test sans que la souris ait bougé.
+///
 /// Limite : si l'utilisateur bouge la souris pendant le test, la comparaison peut échouer à
 /// tort ; elle ne peut pas réussir à tort, sauf souris déjà posée en (0, 0).
 /// </summary>
@@ -39,8 +44,8 @@ public class CurseurSimuleTests
     [Fact]
     public void UnClicheLaisseLaVraieSourisOuElleEtait()
     {
-        var before = RealCursor();
         using var isolation = new BancCapture.Isolation();
+        var before = RealCursor(); // sous le contexte DPI de l'isolation, comme during et after
         var window = OpenLessons();
         string dir = Path.Combine(Path.GetTempPath(), "AZGCurseur_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
@@ -70,8 +75,8 @@ public class CurseurSimuleTests
     [Fact]
     public void LesLeconsLisentLeCurseurParLaCoucheWin32()
     {
-        var before = RealCursor();
         using var isolation = new BancCapture.Isolation();
+        var before = RealCursor(); // sous le contexte DPI de l'isolation, comme after
         var spy = new MockWin32Api { CursorPosition = (-123, -456) };
         using (CursorSource.OverrideForTests(spy))
         {
