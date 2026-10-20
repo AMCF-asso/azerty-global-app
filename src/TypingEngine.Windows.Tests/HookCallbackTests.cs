@@ -168,9 +168,14 @@ public sealed class HookCallbackTests : IDisposable
     {
         _api.ScriptedSecureInput = true;
         _api.ScriptedPid = (uint)Environment.ProcessId;
-        using var monitor = new ForegroundMonitor(_api, IntPtr.Zero, _host);
+        long maintenant = 0;
+        using var monitor = new ForegroundMonitor(_api, IntPtr.Zero, _host, () => maintenant);
         _mapper.SetForegroundMonitor(monitor);
         Assert.True(_mapper.AdvancedFeaturesSuppressed); // raccourcis toujours coupés
+        // Au-delà de la relance du champ sécurisé (1 s) : l'exemption tient toujours.
+        maintenant = 5000;
+        Assert.True(monitor.IsSnapshotStale);
+        Assert.False(monitor.IsWindowStale);
         Assert.False(_mapper.KeyDisplaySuppressed);
         Rappel(VK_W, SC_W, WM_KEYDOWN);
         Assert.Equal(new[] { "appui 2C" }, _evenements);
