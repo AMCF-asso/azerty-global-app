@@ -18,8 +18,10 @@ public sealed class ForegroundWindowBindingTests
         var api = CreateApi(AntiCheatWindow);
         api.Race = race;
         using var monitor = new ForegroundMonitor(api, IntPtr.Zero);
-        Assert.Equal(new[] { AntiCheatWindow, AntiCheatWindow }, api.Inspections);
-        Assert.Equal(race ? new[] { NormalWindow, AntiCheatWindow } : Array.Empty<IntPtr>(), api.Transitions);
+        // A21 (audit 1.3.0) : le jeu anti-triche n'est plus sondé (champ mot de passe, UIA) ;
+        // seule l'inspection du processus reste, toujours sur le HWND capturé.
+        Assert.Equal(new[] { AntiCheatWindow }, api.Inspections);
+        Assert.Equal(race ? new[] { NormalWindow } : Array.Empty<IntPtr>(), api.Transitions);
         Assert.Equal("valorant.exe", monitor.CurrentProcessName);
         Assert.Equal(CompatibilitySuspendReason.AntiCheat, monitor.CurrentSuspendReason);
         Assert.Equal(CompatibilityMode.DisabledAntiCheat, monitor.GetEmitContext().Mode);
