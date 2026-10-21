@@ -7,11 +7,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Permissions minimales par job (audit 1.3.0, A33) : seul build reçoit l'écriture dont
+# l'attestation et l'envoi SARIF ont besoin ; provenance et actionlint ne font que lire.
+# Une clé `permissions` de job remplace celle du workflow, elle ne s'y ajoute pas.
+# Actions épinglées par SHA de commit complet, tag en commentaire, comme dans
+# store-analytics.yml : un tag déplacé ne change plus le code qui produit le bundle.
 permissions:
   contents: read
-  security-events: write
-  id-token: write     # pour attestation SLSA / sigstore
-  attestations: write
 
 # Une PR ne garde que son dernier run : un nouveau push annule le précédent.
 # Sur push, chaque run a son propre groupe (run_id) et va jusqu'au bout.
@@ -31,9 +33,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
@@ -50,7 +52,7 @@ jobs:
       ACTIONLINT_VERSION: 1.7.12
       ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Installer actionlint épinglé
         run: |
@@ -65,10 +67,15 @@ jobs:
 
   build:
     runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write  # envoi des SARIF BinSkim
+      id-token: write         # attestation SLSA / sigstore
+      attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
@@ -86,8 +93,10 @@ jobs:
       # Ces trois étapes bloquent le build, contrairement au job provenance : elles ne
       # dépendent que du dépôt, et empaqueter une disposition malformée livrerait une
       # application qui démarre sans touches mortes.
+      # Versions et empreintes verrouillées (scripts/requirements-ci.txt, régénéré depuis
+      # requirements-ci.in) : ce job produit le bundle attesté, puis signé par AMCF.
       - name: Installer jsonschema
-        run: python -m pip install "jsonschema>=4,<5"
+        run: python -m pip install --require-hashes --only-binary ":all:" -r scripts/requirements-ci.txt
 
       - name: La disposition est conforme à son schéma
         run: ./scripts/verify.ps1 -Etape schema
@@ -99,7 +108,7 @@ jobs:
         run: ./scripts/verify.ps1 -Etape store-analytics
 
       - name: Setup .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '10.0.x'
 
@@ -136,34 +145,34 @@ jobs:
           Get-ChildItem ./msix -Filter "AZERTYGlobal-*.msixbundle" | ForEach-Object { Get-FileHash -Algorithm SHA256 $_.FullName }
 
       - name: Upload msixbundle artefact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: msixbundle
           path: msix/AZERTYGlobal-*.msixbundle
           retention-days: 90
 
       - name: Attest provenance (SLSA L1)
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: 'msix/AZERTYGlobal-*.msixbundle'
 
       - name: Upload BinSkim SARIF x64
         if: always() && hashFiles('binskim-sarif/binskim-x64.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: binskim-sarif/binskim-x64.sarif
           category: binskim-x64
 
       - name: Upload BinSkim SARIF ARM64
         if: always() && hashFiles('binskim-sarif/binskim-arm64.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: binskim-sarif/binskim-arm64.sarif
           category: binskim-arm64
 
       - name: Conserver les preuves BinSkim même en cas d'échec
         if: always() && hashFiles('binskim-sarif/*') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: binskim-evidence
           path: binskim-sarif/
