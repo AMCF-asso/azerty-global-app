@@ -91,18 +91,25 @@ sealed class OnboardingWindow : IDisposable
     // État de la case « Lancer au démarrage » au dernier Show() : décocher la case cochée
     // par défaut est un choix, alors même que l'état réel ne change pas.
     private bool _autoStartShownChecked;
-    // Vrai des qu'on lance le LM une premiere fois. Distincte de _learningModuleDone (qui
-    // n'est mis a true qu'a la complete reussite des exercices du parcours). Etat B (essaye non complete)
-    // sert a afficher « Suivant » a cote de « Essayer maintenant » sur l'etape 1.
+    // Vrai des qu'on lance le parcours une premiere fois (gardé dans la config, audit 1.3.0, A1).
+    // Distincte de _learningModuleDone (qui n'est mis a true qu'a la complete reussite des
+    // exercices du parcours). Etat B (essaye non complete) sert a afficher « Suivant » a cote de
+    // « Essayer maintenant » sur l'etape 1.
     private bool _learningModuleAttempted;
     private bool _inputPaused;
-    private LearningModule? _learningModule;
+    // Parcours d'exercices ouvert dans les Leçons (audit 1.3.0, B2 voie (b)) : l'accueil ne se
+    // remet pas au premier plan par-dessus.
+    private bool _tutorialOpen;
 
-    // Références passées par TrayApplication pour le LearningModule
-    public KeyMapper? Mapper { get; set; }
-    public KeyboardHook? Hook { get; set; }
+    // Disposition de l'application, pour le clavier de l'étape 1.
     public Layout? AppLayout { get; set; }
     public Action? OpenLessonsRequested { get; set; }
+
+    /// <summary>
+    /// « Activer et essayer » : ouvre le parcours d'exercices dans Leçons › Initiation
+    /// (TrayApplication). Sa fin revient par <see cref="OnTutorialClosed"/>.
+    /// </summary>
+    public Action? TutorialRequested { get; set; }
 
     /// <summary>
     /// Appelé après chaque fermeture de la fenêtre. Permet à l'appelant de reprendre la
@@ -127,7 +134,6 @@ sealed class OnboardingWindow : IDisposable
     public void SetInputPaused(bool paused)
     {
         _inputPaused = paused;
-        _learningModule?.SetInputPaused(paused);
     }
 
     // Y du contenu (après le header) — recalculé à chaque OnPaint
@@ -526,10 +532,10 @@ sealed class OnboardingWindow : IDisposable
         // Topmost uniquement sur l'etape 1 (presentation des features). Etapes 2 et 3 :
         // laisser l'utilisateur consulter les ressources mentionnees (guide, Discord, feedback)
         // sans que le wizard ne masque le navigateur. Cf. plan UX 2026-05-02 Q3.
-        // Exception : quand le mini-tutoriel (LearningModule) est ouvert, ne pas se remettre
+        // Exception : quand le parcours d'exercices (Leçons) est ouvert, ne pas se remettre
         // topmost — sinon un rafraichissement (ex. bascule de langue depuis le tray) ferait
         // repasser l'onboarding devant le tutoriel actif (constat smoke test 2026-07-17).
-        IntPtr insertAfter = (_currentStep == 0 && _learningModule == null)
+        IntPtr insertAfter = (_currentStep == 0 && !_tutorialOpen)
             ? Win32.HWND_TOPMOST : Win32.HWND_NOTOPMOST;
         Win32.SetWindowPos(_hWnd, insertAfter, 0, 0, 0, 0,
             Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
@@ -682,7 +688,7 @@ sealed class OnboardingWindow : IDisposable
         //   - 1-2 exos            -> etat B (« Essayer maintenant » + « Suivant »)
         //   - 3+ exos             -> etat C (« Suivant » seul, l'utilisateur a fait l'essentiel)
         int completed = ConfigManager.LearningMaxStepCompleted;
-        _learningModuleAttempted = completed >= 1;
+        _learningModuleAttempted = completed >= 1 || ConfigManager.LearningTutorialOpened;
         _learningModuleDone = completed >= TutorialSteps.DoneThreshold;
         UpdateStepVisibility();
         Win32.ShowWindow(_hWnd, 1);
@@ -704,10 +710,6 @@ sealed class OnboardingWindow : IDisposable
         _learningModuleAttempted = false;
         _step3Reached = false;
         ConfigManager.SetShowOnboardingAtStartup(true);
-
-        // Si la fenetre des exercices est ouverte, la fermer proprement.
-        // Close() declenche le callback OnClosed qui Dispose et met _learningModule = null.
-        _learningModule?.Close();
     }
 
     /// <summary>
@@ -872,7 +874,7 @@ sealed class OnboardingWindow : IDisposable
                         // Etape 1 uniquement (visible seulement si !_learningModuleDone).
                         // L'utilisateur reste sur l'etape 1 a la fermeture du module ; les deux
                         // boutons restent presents tant qu'il n'a pas vraiment complete les exercices.
-                        if (RequestActivation()) LaunchLearningModule();
+                        if (RequestActivation()) LaunchTutorial();
                         break;
                     case IDC_BTN_PREV:
                         if (_currentStep > 0) { _currentStep--; UpdateStepVisibility(); }
@@ -971,7 +973,7 @@ sealed class OnboardingWindow : IDisposable
                 {
                     if (_currentStep == 0 && !_learningModuleDone)
                     {
-                        if (_activationAccepted) LaunchLearningModule();
+                        if (_activationAccepted) LaunchTutorial();
                         else Win32.SetFocus(_hWndBtnTry);
                     }
                     else if (_currentStep < OnboardingStep.Last)
@@ -1245,37 +1247,35 @@ sealed class OnboardingWindow : IDisposable
             Win32.SWP_NOSIZE | Win32.SWP_NOMOVE | Win32.SWP_SHOWWINDOW);
     }
 
-    private void LaunchLearningModule()
+    /// <summary>
+    /// Ouvre le parcours d'exercices dans Leçons › Initiation (audit 1.3.0, B2 voie (b) : la
+    /// fenêtre d'exercices sombre a disparu). L'accueil reste ouvert derrière, sans topmost.
+    /// </summary>
+    private void LaunchTutorial()
     {
-        ConfigManager.LogCrashTraceDebug($"LaunchLearningModule: enter (Mapper={Mapper != null}, Hook={Hook != null}, AppLayout={AppLayout != null}, _learningModule existing={_learningModule != null})");
-        if (Mapper == null || Hook == null || AppLayout == null)
-        {
-            ConfigManager.LogCrashTraceDebug("LaunchLearningModule: early return — null deps");
-            return;
-        }
-
-        _learningModule?.Dispose();
-        ConfigManager.LogCrashTraceDebug("LaunchLearningModule: about to create new LearningModule");
-        _learningModule = new LearningModule(_hWnd, Mapper, Hook, AppLayout);
-        _learningModule.SetInputPaused(_inputPaused);
+        if (TutorialRequested == null) return;
         _learningModuleAttempted = true; // declenche l'apparition du bouton « Suivant » sur l'etape 1
-        UpdateStepVisibility();          // rafraichit la disposition des boutons AVANT le Show du LM
+        ConfigManager.MarkLearningTutorialOpened(); // ... et la garde aux accueils suivants (A1)
+        _tutorialOpen = true;
+        UpdateStepVisibility();          // quitte le topmost AVANT que les Leçons passent devant
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-        ConfigManager.LogCrashTraceDebug("LaunchLearningModule: ctor returned, attaching OnClosed");
-        _learningModule.OnClosed = (completed) =>
-        {
-            // Ne marquer comme "done" que si l'utilisateur a vraiment terminé son parcours
-            // (page « Bravo ! » + bouton « Terminer »). Une fermeture précoce (croix X, bouton
-            // « Quitter les exercices », Esc) laisse le bouton à « Essayer maintenant ».
-            if (completed) _learningModuleDone = true;
-            _learningModule?.Dispose();
-            _learningModule = null;
-            UpdateStepVisibility();
-            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-        };
-        ConfigManager.LogCrashTraceDebug("LaunchLearningModule: about to call Show");
-        _learningModule.Show();
-        ConfigManager.LogCrashTraceDebug("LaunchLearningModule: Show returned, exiting");
+        TutorialRequested();
+    }
+
+    /// <summary>
+    /// Fin du parcours ouvert dans les Leçons (fenêtre fermée, « Passer pour l'instant » ou
+    /// « Terminer »). Seul l'écran final atteint, ou le tronc commun réussi, fait passer
+    /// l'étape 1 à « Suivant » seul ; sinon « Essayer maintenant » reste proposé.
+    /// </summary>
+    public void OnTutorialClosed(bool completed)
+    {
+        _tutorialOpen = false;
+        if (completed || ConfigManager.LearningMaxStepCompleted >= TutorialSteps.DoneThreshold)
+            _learningModuleDone = true;
+        if (_hWnd == IntPtr.Zero || !_visible) return;
+        UpdateStepVisibility();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        BringToFront();
     }
 
     // Sous-classe pour les boutons Next/Prev/Try : relaie les flèches et Esc au WndProc parent.
@@ -2185,9 +2185,6 @@ sealed class OnboardingWindow : IDisposable
     {
         if (_onAppLanguageChanged != null)
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
-
-        _learningModule?.Dispose();
-        _learningModule = null;
 
         _links.Detach();
         if (_hWndBtnNext != IntPtr.Zero) Win32.RemoveWindowSubclass(_hWndBtnNext, _buttonArrowSubclassProc, (UIntPtr)20);

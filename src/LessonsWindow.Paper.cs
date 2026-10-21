@@ -367,6 +367,7 @@ internal sealed partial class LessonsWindow
             DrawLessonTextLines(hdc, part, textTop);
         }
         int belowText = textTop + S(44);
+        belowText = DrawTutorialRouteBar(hdc, part.left, part.right, belowText); // parcours de l'accueil (LessonsWindow.Tutorial.cs)
 
         if (ConfigManager.LessonKeyboardVisible)
         {

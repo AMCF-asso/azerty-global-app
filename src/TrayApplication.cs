@@ -924,7 +924,6 @@ sealed class TrayApplication : IDisposable
                             {
                                 ConfigureOnboardingWindow(_onboarding);
                             }
-                            ConfigManager.LogCrashTraceDebug($"IDM_RESET_ONBOARDING: Mapper={(_onboarding.Mapper != null)}, Hook={(_onboarding.Hook != null)}, AppLayout={(_onboarding.AppLayout != null)}");
                             _onboarding.ResetState();
                             ApplyWindowInputState();
                             ConfigManager.LogCrashTraceDebug("IDM_RESET_ONBOARDING: ResetState done, calling Show");
@@ -1362,10 +1361,9 @@ sealed class TrayApplication : IDisposable
 
     private void ConfigureOnboardingWindow(OnboardingWindow onboarding)
     {
-        onboarding.Mapper = _mapper;
-        onboarding.Hook = _hook;
         onboarding.AppLayout = _layout;
         onboarding.OpenLessonsRequested = ShowLessonsWindow;
+        onboarding.TutorialRequested = ShowTutorialFromOnboarding;
         onboarding.OnClosed = OnOnboardingClosed;
         onboarding.ActivationRequested = ActivateWithConsent;
     }
@@ -1428,6 +1426,23 @@ sealed class TrayApplication : IDisposable
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
         _lessons!.Show();
+    }
+
+    /// <summary>
+    /// « Activer et essayer » de l'accueil : le parcours d'exercices s'ouvre dans Leçons ›
+    /// Initiation, déjà en papier (audit 1.3.0, B2 voie (b), décision d'Antoine du 20/10). Sa
+    /// fin est relayée à l'accueil, qui reprend la main.
+    /// </summary>
+    private void ShowTutorialFromOnboarding()
+    {
+        if (!_activationConsent || !EnsureLessonsWindow())
+        {
+            _onboarding?.OnTutorialClosed(completed: false);
+            return;
+        }
+        _lessons!.TutorialClosed = completed => _onboarding?.OnTutorialClosed(completed);
+        ApplyWindowInputState();
+        _lessons.ShowTutorial();
     }
 
     /// <summary>
