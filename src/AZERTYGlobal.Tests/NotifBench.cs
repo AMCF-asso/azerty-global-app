@@ -134,7 +134,7 @@ public sealed class NotifBench
     }
 
     private static IntPtr CreateTrayIcon(bool active, bool caps, bool suspended, int size)
-        => TrayApplication.CreateTextIcon("AG", active, caps, suspended, size);
+        => TrayIcon.Create(active, caps, suspended, size);
 
     private static void Render(string file, int width, int height, Action<IntPtr> paint)
     {
