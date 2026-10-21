@@ -73,6 +73,33 @@ public class FrenchTypographyTests : IDisposable
         Assert.True(violations.Count == 0, string.Join("\n", violations));
     }
 
+    /// <summary>
+    /// Audit 1.3.0, P2 (AG130-47) : les textes des exercices de l'accueil et de l'Initiation
+    /// gardent leur typographie à l'affichage. La saisie tolère l'espace ordinaire et
+    /// l'apostrophe droite (TypingTolerance) : sans ce test, une typographie perdue dans le
+    /// texte affiché passerait inaperçue. La ligne de code (rang 4) n'est pas du français.
+    /// </summary>
+    [Fact]
+    public void ExerciseTexts_KeepFrenchTypography()
+    {
+        var violations = new List<string>();
+        for (int step = 0; step < TutorialSteps.All.Length; step++)
+        {
+            if (step == TutorialSteps.Code) continue;
+            string text = TutorialSteps.All[step].Target;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (Array.IndexOf(DoublePunctuation, text[i]) >= 0 && (i == 0 || text[i - 1] is not (' ' or ' ')))
+                    violations.Add($"rang {step} : pas d'insécable avant '{text[i]}' dans \"{text}\"");
+                if (text[i] == '«' && (i + 1 >= text.Length || text[i + 1] is not (' ' or ' ')))
+                    violations.Add($"rang {step} : pas d'insécable après '«' dans \"{text}\"");
+                if (text[i] == '\'')
+                    violations.Add($"rang {step} : apostrophe droite dans \"{text}\"");
+            }
+        }
+        Assert.True(violations.Count == 0, string.Join("\n", violations));
+    }
+
     [Fact]
     public void FrenchStrings_UseTypographicApostrophe()
     {

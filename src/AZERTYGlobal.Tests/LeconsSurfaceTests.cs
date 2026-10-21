@@ -272,7 +272,7 @@ public class LeconsSurfaceTests
     [Fact]
     public void La_touche_de_la_faute_reste_cerclee_jusqu_a_sa_correction()
     {
-        const uint Space = 0x39;
+        const uint X = 0x2D;
         var window = OpenStrictExercise();
         try
         {
@@ -280,14 +280,15 @@ public class LeconsSurfaceTests
             foreach (char c in "« Un chef-d’œuvre")
                 BancCapture.Call(window, "OnChar", c);
 
-            // Espace ordinaire au lieu de l'espace fine : la frappe physique donne la touche.
-            BancCapture.Call(window, "OnRawKeyDown", Space);
-            BancCapture.Call(window, "OnChar", ' ');
-            Assert.Equal(Space, BancCapture.Field<uint>(window, "_errorScancode"));
+            // « x » au lieu de l'espace fine : la frappe physique donne la touche. Une espace
+            // ordinaire ne serait pas une faute, l'Initiation la tolère (audit 1.3.0, B1).
+            BancCapture.Call(window, "OnRawKeyDown", X);
+            BancCapture.Call(window, "OnChar", 'x');
+            Assert.Equal(X, BancCapture.Field<uint>(window, "_errorScancode"));
 
             // Le temps d'appui écoulé n'efface pas le cercle de la faute.
             BancCapture.SetField(window, "_pressedScancode", 0u);
-            Assert.Equal(Space, BancCapture.Field<uint>(window, "_errorScancode"));
+            Assert.Equal(X, BancCapture.Field<uint>(window, "_errorScancode"));
 
             BancCapture.Call(window, "OnChar", ' ');
             Assert.Equal(0u, BancCapture.Field<uint>(window, "_errorScancode"));
@@ -345,7 +346,8 @@ public class LeconsSurfaceTests
 
     /// <summary>
     /// A12-01 : l'attendu écrit au-dessus d'une faute ne doit jamais être blanc. Une espace
-    /// fine attendue, remplacée par une espace ordinaire, est la faute type des leçons : elle
+    /// fine attendue, remplacée par une espace ordinaire, est la faute type des leçons strictes
+    /// (l'Initiation, le Défi et « Votre texte » la tolèrent, audit 1.3.0, B1) : elle
     /// reprend le repère dessiné dans sa colonne (null), les autres caractères un texte visible.
     /// </summary>
     [Fact]

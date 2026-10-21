@@ -77,6 +77,9 @@ internal static partial class L
     public static string LessonsWin_StatusFlexible => T(
         "Retour arrière autorisé. Le collage est bloqué.",
         "Backspace is allowed. Pasting is blocked.");
+    public static string LessonsWin_StatusTolerated => T(
+        "Une espace ordinaire et l’apostrophe droite sont acceptées.",
+        "A regular space and the straight apostrophe are accepted.");
 
     /// <summary>Placeholders {ALTGR}/{SHIFT}/{CAPS} dans les instructions de lessons.json.</summary>
     public static string LessonsWin_PlaceholderShift => T("Maj", "Shift");
