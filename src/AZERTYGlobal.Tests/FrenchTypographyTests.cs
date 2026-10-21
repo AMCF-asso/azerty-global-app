@@ -100,6 +100,72 @@ public class FrenchTypographyTests : IDisposable
         Assert.True(violations.Count == 0, string.Join("\n", violations));
     }
 
+    /// <summary>
+    /// Fragments du corpus du Défi qui ne sont pas du français et gardent leur ponctuation :
+    /// un chemin Windows, un objet JSON, et l'espagnol de l'extrait 14 (marqué fr parce que
+    /// la phrase qui suit est française). Chaque fragment doit rester présent, sinon
+    /// l'exception ne protège plus rien et doit disparaître.
+    /// </summary>
+    private static readonly Dictionary<int, string> CorpusExceptions = new()
+    {
+        [4] = @"C:\Users\vous\Documents",
+        [5] = "{\"nom\": \"valeur\"}",
+        [14] = "¿Cómo estás? ¡Muy bien!",
+    };
+
+    /// <summary>
+    /// Audit 1.3.0, P2 (ONB-9) : les extraits français du Défi du jour (defi-corpus.json)
+    /// et leurs crédits, affichés dans la consigne « d’après … », suivent la même typographie
+    /// que les exercices. Les extraits de, pt (et l'espagnol) ne sont pas du français ; les
+    /// crédits sont vérifiés pour tous les extraits, car la consigne qui les cite est
+    /// toujours en français. Les leçons (lessons.json) suivront en 1.3.1.
+    /// </summary>
+    [Fact]
+    public void DefiCorpus_KeepsFrenchTypography()
+    {
+        using var stream = typeof(DailyChallenge).Assembly.GetManifestResourceStream("defi-corpus.json");
+        Assert.NotNull(stream);
+        using var doc = System.Text.Json.JsonDocument.Parse(stream);
+
+        var violations = new List<string>();
+        int frenchTexts = 0;
+        foreach (var e in doc.RootElement.GetProperty("extracts").EnumerateArray())
+        {
+            int id = e.GetProperty("id").GetInt32();
+            if (e.TryGetProperty("credit", out var credit) && credit.ValueKind == System.Text.Json.JsonValueKind.String)
+                CheckFrenchTypography($"crédit {id}", credit.GetString()!, violations);
+            if (e.GetProperty("lang").GetString() != "fr") continue;
+
+            string text = e.GetProperty("text").GetString()!;
+            if (CorpusExceptions.TryGetValue(id, out var fragment))
+            {
+                Assert.Contains(fragment, text);
+                text = text.Replace(fragment, "");
+            }
+            CheckFrenchTypography($"extrait {id}", text, violations);
+            frenchTexts++;
+        }
+
+        Assert.True(frenchTexts >= 340, $"Corpus incomplet : {frenchTexts} extraits fr lus");
+        Assert.True(violations.Count == 0,
+            $"{violations.Count} écarts typographiques dans defi-corpus.json :\n"
+            + string.Join("\n", violations.Take(40)));
+    }
+
+    /// <summary>Insécable (U+00A0 ou U+202F) avant : ; ? ! » et après «, aucune apostrophe droite.</summary>
+    private static void CheckFrenchTypography(string name, string text, List<string> violations)
+    {
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (Array.IndexOf(DoublePunctuation, text[i]) >= 0 && (i == 0 || text[i - 1] is not ('\u00A0' or '\u202F')))
+                violations.Add($"{name} : pas d'insécable avant '{text[i]}' dans \"{text}\"");
+            if (text[i] == '«' && (i + 1 >= text.Length || text[i + 1] is not ('\u00A0' or '\u202F')))
+                violations.Add($"{name} : pas d'insécable après '«' dans \"{text}\"");
+            if (text[i] == '\'')
+                violations.Add($"{name} : apostrophe droite dans \"{text}\"");
+        }
+    }
+
     [Fact]
     public void FrenchStrings_UseTypographicApostrophe()
     {
