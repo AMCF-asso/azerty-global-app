@@ -110,6 +110,9 @@ public partial class KeyboardContextBench
         KeyMapper mapper, KeyboardHook hook)
     {
         ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
+        // « Continuer » enregistre les usages cochés : chaque état repart sans usage, sinon
+        // l'état suivant (autre langue, autre échelle) hériterait des cases du précédent.
+        ConfigManager.SetLearningUsages(Array.Empty<string>());
         var window = new LessonsWindow(layout, mapper, hook);
         try
         {
