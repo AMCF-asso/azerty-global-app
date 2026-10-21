@@ -307,19 +307,9 @@ sealed class VirtualKeyboard : IDisposable
     /// <summary>« AZERTY Global, Clavier virtuel », comme sur la maquette.</summary>
     private static string WindowTitle => $"{ProductIdentity.DisplayName}, {L.VirtualKeyboardPaper_Title}";
 
-    private const uint DWMWA_CAPTION_COLOR = 35;
-    private const uint DWMWA_TEXT_COLOR = 36;
-
-    /// <summary>Barre de titre claire, couleur du papier (Windows 11 ; ignoré avant).</summary>
-    private static void ApplyPaperFrame(IntPtr hWnd)
-    {
-        NativeWindow.ApplyFrame(hWnd, dark: false);
-        if (hWnd == IntPtr.Zero) return;
-        int caption = (int)PaperTheme.Paper;
-        int text = (int)PaperTheme.TextSecondary;
-        Win32.DwmSetWindowAttribute(hWnd, DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
-        Win32.DwmSetWindowAttribute(hWnd, DWMWA_TEXT_COLOR, ref text, sizeof(int));
-    }
+    /// <summary>Barre de titre claire, couleur du papier (Windows 11 ; ignoré avant). Depuis
+    /// A12, c'est celle de toutes les fenêtres claires : <see cref="NativeWindow.ApplyFrame"/>.</summary>
+    private static void ApplyPaperFrame(IntPtr hWnd) => NativeWindow.ApplyFrame(hWnd, dark: false);
 
     public VirtualKeyboard(Layout layout)
     {

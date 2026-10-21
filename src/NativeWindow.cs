@@ -117,18 +117,31 @@ static class NativeWindow
     // ═══════════════════════════════════════════════════════════════
 
     private const uint WM_SETICON = 0x0080;
+    private const uint DWMWA_CAPTION_COLOR = 35;
+    private const uint DWMWA_TEXT_COLOR = 36;
+    /// <summary>DWMWA_COLOR_DEFAULT : la couleur que Windows choisit lui-même.</summary>
+    private const uint DWMWA_COLOR_DEFAULT = 0xFFFFFFFF;
     private static readonly Dictionary<int, IntPtr> LogoIcons = new();
 
     /// <summary>
     /// Lot visuel 1.3.0 : barre de titre de la palette de la fenêtre (claire ou sombre) et
     /// logo en icône, petite et grande, à la taille de l'écran de la fenêtre. Les fenêtres
     /// sans icône montraient celle, générique, de Windows.
+    ///
+    /// A12 (audit 1.3.0) : une fenêtre claire est une fenêtre papier, sa barre prend la couleur
+    /// du papier, comme celle du clavier virtuel ; la barre gris-bleu du système (#F0F4F7)
+    /// tranchait sur le fond #FAF8F1. En contraste élevé, la barre reste celle du système.
+    /// Windows 10 ignore ces attributs (HRESULT d'erreur, sans lever).
     /// </summary>
     internal static void ApplyFrame(IntPtr hwnd, bool dark)
     {
         if (hwnd == IntPtr.Zero)
             return;
         Win32.SetTitleBarTheme(hwnd, dark);
+        var (caption, text) = CaptionColors(dark, HighContrast.IsOn());
+        int captionValue = unchecked((int)caption), textValue = unchecked((int)text);
+        Win32.DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref captionValue, sizeof(int));
+        Win32.DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref textValue, sizeof(int));
         int dpi = DpiOf(hwnd);
         IntPtr small = LogoIcon(WindowSizing.ScaleForDpi(16, dpi));
         IntPtr big = LogoIcon(WindowSizing.ScaleForDpi(32, dpi));
@@ -137,6 +150,14 @@ static class NativeWindow
         if (big != IntPtr.Zero)
             Win32.SendMessageW(hwnd, WM_SETICON, (IntPtr)1, big);
     }
+
+    /// <summary>A12 : fond et texte de la barre de titre (COLORREF, ou
+    /// <see cref="DWMWA_COLOR_DEFAULT"/> pour laisser Windows décider). Papier pour une
+    /// fenêtre claire ; système pour une fenêtre sombre et en contraste élevé.</summary>
+    internal static (uint Caption, uint Text) CaptionColors(bool dark, bool highContrast) =>
+        dark || highContrast
+            ? (DWMWA_COLOR_DEFAULT, DWMWA_COLOR_DEFAULT)
+            : (PaperTheme.Paper, PaperTheme.TextSecondary);
 
     /// <summary>
     /// Le logo en icône carrée de <paramref name="size"/> px, rendue une fois par taille et

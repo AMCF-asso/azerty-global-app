@@ -43,6 +43,24 @@ internal static class PaperDraw
         Win32.DeleteObject(brush);
     }
 
+    /// <summary>
+    /// Contour de focus des écrans papier : trait plein aux coins arrondis, posé à
+    /// <paramref name="outset"/> px autour du cadre. Il remplace le rectangle pointillé de
+    /// DrawFocusRect (A13, audit 1.3.0), tracé en XOR, qui se brouillait sur un repeint partiel
+    /// et virait de teinte sur la couleur d'action. C'était le contour privé des Leçons ; les
+    /// valeurs sont en pixels déjà mis à l'échelle (Leçons : 2, 2 et 4 à 96 DPI).
+    /// </summary>
+    internal static void FocusOutline(IntPtr hdc, Win32.RECT rect, uint color, int outset, int stroke, int corner)
+    {
+        var pen = Win32.CreatePen(Win32.PS_SOLID, Math.Max(1, stroke), color);
+        var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
+        var oldPen = Win32.SelectObject(hdc, pen);
+        Win32.RoundRect(hdc, rect.left - outset, rect.top - outset, rect.right + outset, rect.bottom + outset, corner, corner);
+        Win32.SelectObject(hdc, oldPen);
+        Win32.SelectObject(hdc, oldBrush);
+        Win32.DeleteObject(pen);
+    }
+
     /// <summary>Mélange <paramref name="color"/> à <paramref name="opacity"/> sur
     /// <paramref name="backdrop"/> (COLORREF).</summary>
     internal static uint Blend(uint color, uint backdrop, float opacity)

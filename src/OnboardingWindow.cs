@@ -1351,8 +1351,9 @@ sealed class OnboardingWindow : IDisposable
         }
         if ((dis.itemState & Win32.ODS_FOCUS) != 0)
         {
+            // A13 : le contour plein des Leçons, plus le rectangle pointillé du système.
             var focus = new Win32.RECT { left = rc.left + 1, top = rc.top + 1, right = rc.right - 1, bottom = rc.bottom - 1 };
-            Win32.DrawFocusRect(dis.hDC, ref focus);
+            PaperDraw.FocusOutline(dis.hDC, focus, _pal.Action, 0, S(2), S(4));
         }
     }
 
