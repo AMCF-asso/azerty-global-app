@@ -114,14 +114,15 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 ```text
 Version 1.3.0 :
 • Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
+• Accueil refait, avec une étape pour le peul, le wolof et le bambara ; ses exercices passent dans les Leçons et acceptent l’espace ordinaire et l’apostrophe droite.
 • Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
 • La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
 • Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
 • Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet, Échap le libère.
 • Après la mise à jour, rouvrez AZERTY Global : votre clavier ne change qu’après votre accord, redemandé une fois.
-• Menu de l’icône plus court : « Apprendre » regroupe les Leçons, le Défi et l’accueil, « À propos et aide » le reste. Rien n’a été retiré.
+• Menu de l’icône plus court ; rien n’a été retiré.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
-• Les fenêtres se parcourent mieux au clavier et le Narrateur lit le nom des champs qui n’en avaient pas.
+• Fenêtres claires et plus faciles à parcourir au clavier ; le Narrateur lit le nom des champs qui n’en avaient pas.
 • Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
 
@@ -239,14 +240,15 @@ Free and open source (EUPL 1.2), no admin rights needed
 ```text
 Version 1.3.0:
 • Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
+• Redesigned welcome window, with a step for Fula, Wolof and Bambara; its exercises move to Lessons and accept a regular space and the straight apostrophe.
 • Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
 • Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
 • Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome window or in Settings.
 • Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet, Esc releases it.
 • After the update, reopen AZERTY Global: your keyboard only changes after you agree, and you're asked once more.
-• Shorter icon menu: “Learn” groups Lessons, the challenge and the welcome tour, “About and help” the rest. Nothing was removed.
+• Shorter icon menu; nothing was removed.
 • You can rate the app without leaving AZERTY Global.
-• Windows are easier to use with the keyboard, and Narrator reads the name of fields that had none.
+• Windows get a light look and are easier to use with the keyboard; Narrator reads the name of fields that had none.
 • Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
 ```
 
@@ -260,7 +262,7 @@ French keyboard; AZERTY; keyboard layout; accented capitals; clavier français; 
 
 ### URL de la politique de confidentialité
 
-https://azerty.global/mentions-legales
+https://azerty.global/confidentialite
 
 ### Site web
 
@@ -286,18 +288,18 @@ contact@azerty.global
 
 ### Notes pour l'équipe de certification Microsoft (à coller, en anglais)
 
-> Retirer les deux marqueurs entre crochets après vérification, avant de coller. Sans eux, le bloc fait 1 968 caractères (1 977 si chaque retour à la ligne compte double) : Microsoft Learn donne 2 000 au plus pour les apps MSI/EXE, et rien pour MSIX. Lire le compteur après collage.
+> Retirer les deux marqueurs entre crochets après vérification, avant de coller : ils dépendent du bundle final (relance R09, rapport WACK). Sans eux, le bloc fait 1 972 caractères (1 981 si chaque retour à la ligne compte double ; mesuré le 21/10) : Microsoft Learn donne 2 000 au plus pour les apps MSI/EXE, et rien pour MSIX. Lire le compteur après collage. Depuis le 21/10, les notes déclarent la réinstallation du hook toutes les 60 s et la sonde de 2 s (`TrayApplication.cs`, `HOOK_WATCHDOG_INTERVAL_MS` et `HOOK_PROBE_INTERVAL_MS` ; audit 1.3.0, A27 b).
 
-AZERTY Global 1.3.0 is a system-tray app that applies an improved French keyboard layout. After setup it has no main window.
-How to test: 1) Launch the app; the welcome window opens. Click "Turn on and try" (French UI: "Activer et essayer"). 2) The AG icon appears in the notification area (possibly in the ^ overflow); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock turns the layout off and on. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts the character). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z. Both are also in the icon menu.
-If the welcome window is closed without activating, relaunching from the Start menu reopens it. [à vérifier sur le bundle final : correctif de relance]
+AZERTY Global 1.3.0 is a system-tray app that applies an improved French keyboard layout. It has no main window.
+How to test: 1) Launch the app; the welcome window opens. Click "Turn on and try" (French UI: "Activer et essayer"); a short exercise opens in Lessons. 2) The AG icon appears in the notification area (maybe under ^); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock toggles the layout. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts it). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z, also in the icon menu.
+Closed without activating, the welcome window reopens on relaunch from Start. [à vérifier sur le bundle final : correctif de relance]
 Technical notes:
-• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Turn on. Output is sent with SendInput. No DLL or code is injected into other processes.
-• Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, and running process names every 5 s) is used to pause in anti-cheat games and remote-desktop clients and to detect remote-control hosts. Nothing is logged by name or transmitted.
+• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Turn on, and reinstalled every 60 s. Every 2 s, GetAsyncKeyState is read as one boolean (any key pressed; no key kept) to detect a hook Windows removed silently. Output uses SendInput; no DLL or code is injected into other processes.
+• Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, running process names every 5 s) pauses the app in anti-cheat games and remote-desktop clients and detects remote-control hosts. Nothing is logged by name or transmitted.
 • UI Automation IsPassword is read only to turn off advanced features in password fields.
-• The startup task is declared disabled; the last welcome step offers it pre-checked and registers it only on confirmation (X or Esc apply the checkbox only if changed). A refusal in Settings > Apps > Startup is respected.
-• No account, no telemetry, no automatic network traffic. Links open in the browser only when clicked; in-app rating uses StoreContext.RequestRateAndReviewAppAsync.
-• runFullTrust: Win32 desktop app (.NET 10 Native AOT). WACK: PASS. The optional "Blocked executables" test fails because of ShellExecuteW (used to open links), as in previously accepted versions. [à vérifier sur le rapport WACK du bundle final]
+• The startup task is declared disabled; the last welcome step offers it pre-checked and enables it only on confirmation. A refusal in Settings > Apps > Startup is respected.
+• No account, no telemetry, no automatic network traffic. Links open only when clicked; rating uses StoreContext.RequestRateAndReviewAppAsync.
+• runFullTrust: Win32 desktop app (.NET 10 Native AOT). WACK: PASS. The optional "Blocked executables" test fails on ShellExecuteW (opens links), as in accepted versions. [à vérifier sur le rapport WACK du bundle final]
 
 ---
 
@@ -713,4 +715,4 @@ Tous les tests `OPTIONAL` ne comptent pas dans le verdict global selon la docume
 
 ---
 
-*Dernière mise à jour : 2026-09-26 (v1.3.0 — fiche réécrite, variante B, non soumise)*
+*Dernière mise à jour : 2026-10-21 (v1.3.0, non soumise : URL de confidentialité, notes de certification et Nouveautés après l’audit du 20/10 ; fiche réécrite en variante B le 2026-09-26)*
