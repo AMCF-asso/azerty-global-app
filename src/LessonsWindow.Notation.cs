@@ -74,7 +74,7 @@ internal sealed partial class LessonsWindow
         {
             if (CurrentGestureHidden(current))
             {
-                DrawCenteredLine(hdc, L.KeyNotation_Mastered, F(AppFonts.Text, 13), top, S(20), center, minLeft, maxRight, PaperTheme.Pale);
+                DrawCenteredLine(hdc, L.KeyNotation_Mastered, F(AppFonts.Text, 13), top, S(20), center, minLeft, maxRight, PaperTheme.PaleText);
                 return;
             }
             if (CurrentGesture(current, following) is not { } g) return;
