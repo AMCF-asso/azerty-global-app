@@ -28,4 +28,16 @@ static class TypeRamp
     internal static IntPtr Create(int size, int weight, float scale, bool underline = false, bool italic = false)
         => Win32.CreateFontW(-(int)(size * scale), 0, 0, 0, weight, italic ? 1u : 0u, underline ? 1u : 0u,
             0, 0, 0, 0, 5, 0, Family);
+
+    /// <summary>
+    /// A9 : la même police dans une famille embarquée (<see cref="AppFonts.Text"/>…), pour ce
+    /// que <see cref="FontSpec"/> ne décrit pas (le soulignement d'un lien STATIC). La HFONT
+    /// appartient à l'appelant, qui la détruit.
+    /// </summary>
+    internal static IntPtr CreateIn(string family, int size, int weight, float scale, bool underline = false)
+    {
+        AppFonts.EnsureLoaded();
+        return Win32.CreateFontW(-(int)(size * scale), 0, 0, 0, weight, 0, underline ? 1u : 0u,
+            0, 0, 0, 0, 5, 0, family);
+    }
 }

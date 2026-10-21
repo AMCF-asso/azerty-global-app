@@ -30,6 +30,10 @@ static class PaperTheme
     internal const uint Step2 = Action;
     /// <summary>Ce qui reste à venir : caractères et gestes pas encore joués (--pale).</summary>
     internal const uint Pale = 0x0074848C; // #8C8474
+    /// <summary>Le même « à venir », en texte de corps : <see cref="Pale"/> ne donnait que
+    /// 3,49:1 sur le papier (A15, audit 1.3.0). Au moins 4,7:1 sur Paper, Surface,
+    /// FunctionKey et ActionTint ; <see cref="Pale"/> reste pour les traits et contours.</summary>
+    internal const uint PaleText = 0x005A686F; // #6F685A
     /// <summary>Touches de fonction (Tab, Maj, Entrée…).</summary>
     internal const uint FunctionKey = 0x00E2EDF1; // #F1EDE2
     /// <summary>Texte posé sur l'action.</summary>
