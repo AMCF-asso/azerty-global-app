@@ -86,32 +86,78 @@ internal static class PaperText
         Win32.RECT rect, uint color, uint strongColor, int lineHeight, bool draw = true)
     {
         var (ascent, descent) = Metrics(hdc, regular);
-        int maxWidth = rect.right - rect.left;
-        int x = 0, line = 0;
-        int spaceWidth = Width(hdc, " ", regular);
-        bool lineHasWord = false;
-
-        foreach (var (word, isStrong, precededBySpace) in Words(runs))
+        var placed = Layout(hdc, runs, regular, strong, rect.right - rect.left);
+        if (draw)
         {
-            var font = isStrong ? strong : regular;
-            int wordWidth = Width(hdc, word, font);
-            int gap = precededBySpace && lineHasWord ? spaceWidth : 0;
-            if (lineHasWord && x + gap + wordWidth > maxWidth)
+            foreach (var word in placed)
+            {
+                int baseline = rect.top + word.Line * lineHeight + (lineHeight - (ascent + descent)) / 2 + ascent;
+                Draw(hdc, word.Text, word.Strong ? strong : regular, rect.left + word.X, baseline,
+                    word.Strong ? strongColor : color);
+            }
+        }
+        return placed.Count == 0 ? 0 : (placed[^1].Line + 1) * lineHeight;
+    }
+
+    /// <summary>Un mot du paragraphe à sa place : ligne et abscisse dans le cadre.</summary>
+    internal readonly record struct PlacedWord(string Text, bool Strong, int Line, int X);
+
+    /// <summary>Les mots de <paramref name="runs"/> placés dans <paramref name="maxWidth"/>.</summary>
+    internal static List<PlacedWord> Layout(IntPtr hdc, IReadOnlyList<TextRun> runs, FontSpec regular, FontSpec strong,
+        int maxWidth)
+    {
+        var words = Words(runs).ToList();
+        var measured = words.Select(w => (Width(hdc, w.Word, w.Strong ? strong : regular), w.PrecededBySpace)).ToList();
+        var positions = BreakLines(measured, Width(hdc, " ", regular), maxWidth);
+        var placed = new List<PlacedWord>(words.Count);
+        for (int i = 0; i < words.Count; i++)
+            placed.Add(new PlacedWord(words[i].Word, words[i].Strong, positions[i].Line, positions[i].X));
+        return placed;
+    }
+
+    /// <summary>
+    /// Ligne et abscisse de chaque mot, de largeur et d'espace précédent donnés. La coupure
+    /// ne se fait qu'à une espace : un mot collé au précédent (« Espace » puis « . ») passe à
+    /// la ligne avec lui. Audit 1.3.0, A19 : le point final partait seul à la ligne. Un groupe
+    /// collé plus large que le cadre se coupe encore entre ses mots, faute de mieux. Fonction
+    /// pure : les tests l'éprouvent sans police.
+    /// </summary>
+    internal static (int Line, int X)[] BreakLines(IReadOnlyList<(int Width, bool PrecededBySpace)> words,
+        int spaceWidth, int maxWidth)
+    {
+        var result = new (int Line, int X)[words.Count];
+        int x = 0, line = 0;
+        bool lineHasWord = false;
+        int i = 0;
+        while (i < words.Count)
+        {
+            // Le groupe : ce mot et ceux qui le suivent sans espace.
+            int end = i + 1;
+            int groupWidth = words[i].Width;
+            while (end < words.Count && !words[end].PrecededBySpace)
+                groupWidth += words[end++].Width;
+            if (groupWidth > maxWidth)
+            {
+                end = i + 1;
+                groupWidth = words[i].Width;
+            }
+
+            int gap = words[i].PrecededBySpace && lineHasWord ? spaceWidth : 0;
+            if (lineHasWord && x + gap + groupWidth > maxWidth)
             {
                 line++;
                 x = 0;
                 gap = 0;
             }
             x += gap;
-            if (draw)
+            for (; i < end; i++)
             {
-                int baseline = rect.top + line * lineHeight + (lineHeight - (ascent + descent)) / 2 + ascent;
-                Draw(hdc, word, font, rect.left + x, baseline, isStrong ? strongColor : color);
+                result[i] = (line, x);
+                x += words[i].Width;
             }
-            x += wordWidth;
             lineHasWord = true;
         }
-        return lineHasWord ? (line + 1) * lineHeight : 0;
+        return result;
     }
 
     /// <summary>Les mots des morceaux, avec leur graisse et l'espace sécable qui les précède.
