@@ -3061,7 +3061,7 @@ sealed class TrayApplication : IDisposable
     /// Crée une icône 32x32 avec texte sur fond coloré.
     /// Bleu = actif, gris = inactif. Barre orange en bas si CapsLock.
     /// </summary>
-    private static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
+    internal static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
     {
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
