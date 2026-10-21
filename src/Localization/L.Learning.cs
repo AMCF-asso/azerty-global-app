@@ -13,7 +13,7 @@ internal static partial class L
     public static string Learning_UsageMessages => T("Des messages et des réseaux sociaux", "Messages and social media");
     public static string Learning_UsageCode => T("Du code", "Code");
     public static string Learning_UsageLanguages => T("D’autres langues que le français", "Languages other than French");
-    public static string Learning_UsageAfrica => T("Une langue d’Afrique : bambara, peul, wolof…", "An African language: Bambara, Fula, Wolof…");
+    public static string Learning_UsageAfrica => T("Une langue d’Afrique : bambara, peul, wolof…", "An African language: Bambara, Fula, Wolof…");
 
     // ── Boutons et ligne du parcours ───────────────────────────────────
     public static string Learning_BtnSkip => T("Passer cet exercice", "Skip this exercise");
@@ -21,7 +21,7 @@ internal static partial class L
     public static string Learning_BtnContinue => T("Continuer", "Continue");
     public static string Learning_SkipForNow => T("Passer pour l’instant", "Skip for now");
     public static string Learning_SkipForNowTooltip => T(
-        "Fermer les exercices : l’accueil les propose de nouveau, à reprendre où vous en étiez",
+        "Fermer les exercices : l’accueil les propose de nouveau, à reprendre où vous en étiez",
         "Close the exercises: the welcome screen offers them again, from where you left off");
     public static string Learning_RouteProgress(int current, int total, bool bonus) => bonus
         ? T($"Exercice {current} sur {total} (bonus)", $"Exercise {current} of {total} (bonus)")
@@ -35,6 +35,6 @@ internal static partial class L
     public static string Learning_DeadKeyConnector => T(" — touche morte ", " — dead key ");
 
     // ── Écran final ─────────────────────────────────────────────────────
-    public static string Learning_FinalTitle => T("Bravo !", "Well done!");
+    public static string Learning_FinalTitle => T("Bravo !", "Well done!");
     public static string Learning_FinalSubtitle => T($"Vous maîtrisez les bases d’{Product}.", $"You've mastered the basics of {Product}.");
 }
