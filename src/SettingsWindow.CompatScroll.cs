@@ -63,7 +63,12 @@ sealed partial class SettingsWindow
             Win32.RemoveWindowSubclass(hWnd, _compatListSubclassProc!, uIdSubclass);
 
         IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
-        int now = (int)Win32.SendMessageW(hWnd, LB_GETTOPINDEX, IntPtr.Zero, IntPtr.Zero);
+        // Une lecture ne fait pas défiler. Et la relecture passe par DefSubclassProc : par
+        // SendMessage, elle retraversait cette sous-classe, chaque relecture en appelant une
+        // autre (31 niveaux mesurés), et la plus profonde rendait 0 ; liste défilée, ce 0
+        // ré-invalidait la piste à chaque peinture, sans fin (régression du 21/10).
+        if (msg is LB_GETTOPINDEX or LB_GETCOUNT) return result;
+        int now = (int)Win32.DefSubclassProc(hWnd, LB_GETTOPINDEX, IntPtr.Zero, IntPtr.Zero);
         if (now != _compatTopDrawn)
             InvalidateCompatTrack();
         return result;
