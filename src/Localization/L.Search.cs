@@ -7,7 +7,7 @@ internal static partial class L
     public static string Search_Placeholder => T("Caractère, nom ou langue…", "Character, name or language…");
     public static string Search_NoResults => T("Aucun résultat", "No results");
     public static string Search_Tip => T("Entrée pour insérer · Échap pour fermer", "Enter to insert · Esc to close");
-    public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"\"{ch}\" copied!");
+    public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"“{ch}” copied!");
     public static string Search_ResultCountSingular => T("1 résultat — Entrée pour insérer", "1 result — Enter to insert");
     public static string Search_ResultCountPlural(int count) => T($"{count} résultats — Entrée pour insérer", $"{count} results — Enter to insert");
     public static string Search_ResultCountCapped(int shown, int total) => T($"{shown} sur {total} résultats — Entrée pour insérer", $"{shown} of {total} results — Enter to insert");

@@ -5,12 +5,12 @@ internal static partial class L
     // ── Erreurs de démarrage ─────────────────────────────────────────
     public static string Tray_WindowCreationError => T(
         $"Impossible de créer la fenêtre interne d’{Product}. L’application va se fermer.",
-        $"{Product} couldn't create its internal window. The app will close.");
+        $"{Product} couldn’t create its internal window. The app will close.");
     public static string Tray_StartupError => T(
         $"{Product} n’a pas pu démarrer correctement.\n\n" +
         "Le détail technique a été enregistré dans error.log. " +
         $"Si le problème persiste, écrivez à contact@{ProductIdentity.SiteDomain}.",
-        $"{Product} couldn't start properly.\n\n" +
+        $"{Product} couldn’t start properly.\n\n" +
         "Technical details were recorded in error.log. " +
         $"If the problem persists, email contact@{ProductIdentity.SiteDomain}.");
 
@@ -32,13 +32,13 @@ internal static partial class L
     public static string Tray_PauseStoppedTitle => T("Pause arrêtée", "Pause stopped");
     public static string Tray_PrecautionTitle => T("En pause par précaution", "Paused as a precaution");
     public static string Tray_ToggleRefusedTitle(string proc) =>
-        T($"Activation refusée dans {proc}", $"Can't turn on in {proc}");
+        T($"Activation refusée dans {proc}", $"Can’t turn on in {proc}");
     public static string Tray_SuspendedInTitle(string proc) =>
         T($"Suspendu dans {proc}", $"Suspended in {proc}");
     public static string Tray_SuspendedDuringTitle(string proc) =>
         T($"Suspendu pendant {proc}", $"Suspended during {proc}");
     public static string Tray_ForceRefusedTitle =>
-        T("Compatibilité forcée refusée", "Can't force compatibility");
+        T("Compatibilité forcée refusée", "Can’t force compatibility");
     public static string Tray_ActiveBalloonBody => T(
         $"Ctrl + Maj + Verr. Maj. pour activer ou désactiver {Product}.",
         $"Ctrl + Shift + Caps Lock turns {Product} on and off.");
@@ -148,7 +148,7 @@ internal static partial class L
     public static string Tray_MenuPrintableGuide => T("Aide-mémoire imprimable", "Printable cheat sheet");
     public static string Tray_MenuFiveChanges => T("Les 5 changements", "The 5 changes");
     public static string Tray_MenuKeyboardCards => T("Cartes du clavier", "Keyboard cards");
-    public static string Tray_MenuWhatsNew => T("Nouveautés de la version", "What's new in this version");
+    public static string Tray_MenuWhatsNew => T("Nouveautés de la version", "What’s new in this version");
     public static string Tray_MenuResources => T("Ressources", "Resources");
     public static string Tray_MenuRateStore => T("Noter sur le Microsoft Store", "Rate on the Microsoft Store");
     public static string Tray_MenuSupportProject => T("Soutenir le projet", "Support the project");
@@ -168,7 +168,7 @@ internal static partial class L
         $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
         "L’application ne démarre pas encore avec Windows.\nCliquez pour activer le lancement au démarrage.",
-        "The app doesn't start with Windows yet.\nClick to turn on launch at startup.");
+        "The app doesn’t start with Windows yet.\nClick to turn on launch at startup.");
     public static string Tray_AutoStartEnabledTitle => T(
         "Lancement au démarrage activé",
         "Launch at startup enabled");
@@ -180,11 +180,11 @@ internal static partial class L
     public static string Tray_SettingsResetTitle => T("Paramètres réinitialisés", "Settings reset");
     public static string Tray_SettingsResetBody => T(
         $"Le fichier des paramètres d’{Product} était illisible. Une copie en est gardée. Refaites vos choix dans l’accueil.",
-        $"{Product}'s settings file couldn't be read. A copy of it is kept. Make your choices again in the welcome tour.");
+        $"{Product}’s settings file couldn’t be read. A copy of it is kept. Make your choices again in the welcome tour.");
     public static string Tray_ProgressResetTitle => T("Progression des leçons réinitialisée", "Lesson progress reset");
     public static string Tray_ProgressResetBody => T(
         $"Le fichier de progression d’{Product} était illisible. Une copie en est gardée, les leçons repartent du début.",
-        $"{Product}'s lesson progress file couldn't be read. A copy of it is kept, and lessons start over.");
+        $"{Product}’s lesson progress file couldn’t be read. A copy of it is kept, and lessons start over.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active app: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Forcer la compatibilité jeu", "Force game compatibility");
@@ -197,13 +197,15 @@ internal static partial class L
         "Auto\nUtilise le mode normal, un mode spécial pour certains jeux, ou se suspend lorsque c’est nécessaire.\n\n" +
         "Forcer la compatibilité jeu\nTape les caractères avec les combinaisons de touches de Windows dans l’application sélectionnée, pour les jeux qui ignorent les caractères insérés directement.\n\n" +
         $"Forcer la désactivation\nSuspend {Product} uniquement dans l’application sélectionnée.\n\n" +
-        $"Connexions à distance\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer ou RustDesk est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant.\n\n" +
+        $"Connexions à distance et machines virtuelles\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer, RustDesk, une console de machine virtuelle (Hyper-V, Windows Sandbox, VMware, VirtualBox) ou Citrix est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant. Une machine virtuelle garde sa propre disposition de clavier.\n\n" +
+        $"Fenêtres lancées en administrateur\nDans une fenêtre lancée en administrateur (terminal, installeur…), {Product} ne peut pas agir : la disposition de Windows s’applique.\n\n" +
         "La détection reste entièrement locale. Aucun nom d’application n’est transmis.",
         $"{Product} automatically adapts its behavior to the active app.\n\n" +
         "Auto\nUses normal mode, a special mode for some games, or suspends itself when necessary.\n\n" +
         "Force game compatibility\nTypes characters with Windows key combinations in the selected app, for games that ignore directly inserted characters.\n\n" +
         $"Force off\nSuspends {Product} only in the selected app.\n\n" +
-        $"Remote connections\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, or RustDesk is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer.\n\n" +
+        $"Remote connections and virtual machines\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, RustDesk, a virtual machine console (Hyper-V, Windows Sandbox, VMware, VirtualBox), or Citrix is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer. A virtual machine keeps its own keyboard layout.\n\n" +
+        $"Windows run as administrator\nIn a window run as administrator (terminal, installer…), {Product} cannot act: the Windows layout applies.\n\n" +
         "Detection stays entirely local. No app names are transmitted.");
     public static string Tray_MenuAbout => T("À propos", "About");
     public static string Tray_MenuResetOnboardingDebug => T("🛠 [DEBUG] Réinitialiser onboarding", "🛠 [DEBUG] Reset onboarding");

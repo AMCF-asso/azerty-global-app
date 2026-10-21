@@ -60,7 +60,7 @@ VOTRE FRAPPE RESTE CHEZ VOUS
 Rien ne change sur votre clavier avant votre clic sur « Activer ». Aucune frappe n’est journalisée, stockée ni transmise, il n’y a ni télémétrie ni compte, et l’application n’envoie rien sur le réseau d’elle-même. Préférences, statistiques et progression restent sur votre appareil. Dans les champs de mot de passe, les couches et la recherche se mettent en pause. Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous cliquez dessus, et indiquent la version de l’app et de Windows.
 
 JEUX ET BUREAU À DISTANCE
-AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis.
+AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance, les consoles de machines virtuelles (Hyper-V, Windows Sandbox, VMware, VirtualBox) et Citrix quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis. Dans une fenêtre lancée en administrateur, AZERTY Global ne peut pas agir : la disposition de Windows s’applique.
 
 GRATUIT ET LIBRE
 AZERTY Global est publié sous licence EUPL 1.2 et son code source est sur GitHub. L’entrée « Soutenir le projet » ouvre la page de soutien du site dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
@@ -187,7 +187,7 @@ YOUR TYPING STAYS ON YOUR PC
 Nothing changes on your keyboard until you click “Turn on”. Keystrokes are never logged, stored or transmitted, there is no telemetry and no account, and the app sends nothing over the network on its own. Preferences, statistics and progress stay on your device. In password fields, layers and search pause. The “Report a bug” and “Give feedback” links open only when you click them, and include the app and Windows version.
 
 GAMES AND REMOTE DESKTOP
-AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software when it is in the foreground. Detection runs on your PC; no app name is transmitted.
+AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software, virtual machine consoles (Hyper-V, Windows Sandbox, VMware, VirtualBox) and Citrix when they are in the foreground. Detection runs on your PC; no app name is transmitted. In a window run as administrator, AZERTY Global cannot act: the Windows layout applies.
 
 FREE AND OPEN SOURCE
 AZERTY Global is licensed under EUPL 1.2 and its source code is on GitHub. The “Support the project” entry opens the project's support page in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
