@@ -30,18 +30,24 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private const int FREE_PREVIEW_MAX_CHARS = 220;
 
     // Refonte 1.3.0 (Tablature, maquette Leçons F du 07/10) : la fenêtre passe au papier.
-    private const uint CLR_BG = PaperTheme.Paper;
-    private const uint CLR_PANEL = PaperTheme.Surface;
-    private const uint CLR_PANEL_2 = PaperTheme.Surface;
-    private const uint CLR_BORDER = PaperTheme.Border;
-    private const uint CLR_TEXT = PaperTheme.Ink;
-    private const uint CLR_MUTED = PaperTheme.TextSecondary;
-    private const uint CLR_ACCENT = PaperTheme.Action;
-    private const uint CLR_OK = PaperTheme.Success;
-    private const uint CLR_BAD = PaperTheme.Error;
-    private const uint CLR_CURRENT = PaperTheme.Action;
-    private const uint CLR_PENDING = PaperTheme.Pale;
-    private const uint CLR_LESSON_ACCENT = PaperTheme.Error;
+    // A14 : en contraste élevé, le parcours d'exercice prend la palette de l'accueil des Leçons
+    // (HomePalette, « .contraste » des maquettes) au lieu du papier en dur. Réussite et erreur
+    // n'y ont pas de couleur propre : elles prennent l'encre, l'état se lit au message et au
+    // trait. Le clavier papier et la Tablature gardent leurs touches claires, comme à l'accueil.
+    private HomePalette _pal = HomePaletteNow();
+    private uint CLR_BG => _pal.Paper;
+    private uint CLR_PANEL => _pal.Surface;
+    private uint CLR_PANEL_2 => _pal.Surface;
+    private uint CLR_BORDER => _pal.Border;
+    private uint CLR_TEXT => _pal.Ink;
+    private uint CLR_MUTED => _pal.Muted;
+    private uint CLR_ACCENT => _pal.Action;
+    private uint CLR_OK => _pal.HighContrast ? _pal.Ink : PaperTheme.Success;
+    private uint CLR_BAD => _pal.HighContrast ? _pal.Ink : PaperTheme.Error;
+    private uint CLR_CURRENT => _pal.Action;
+    private uint CLR_PENDING => _pal.Pale;
+    private uint CLR_LESSON_ACCENT => _pal.HighContrast ? _pal.Ink : PaperTheme.Error;
+    private uint CLR_ON_ACCENT => _pal.OnAction;
 
     private const uint MB_YESNO = 0x00000004;
     private const uint MB_ICONWARNING = 0x00000030;
@@ -835,6 +841,20 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     return IntPtr.Zero;
                 // AG130-42 : les neuf autres fenetres traitaient deja ce message ; celle-ci
                 // gardait les polices du DPI de son ecran d'origine en changeant d'ecran.
+                // A14 : contraste élevé ou couleurs système changés, fenêtre ouverte.
+                case 0x0015: // WM_SYSCOLORCHANGE
+                case 0x001A: // WM_SETTINGCHANGE
+                {
+                    var palette = HomePaletteNow();
+                    if (palette != _pal)
+                    {
+                        _pal = palette;
+                        NativeWindow.ApplyClassBackground(hWnd, CLR_BG);
+                        Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                    break;
+                }
+
                 case Win32.WM_DPICHANGED:
                 {
                     int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
@@ -1602,21 +1622,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect, CLR_TEXT);
     }
 
-    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect, uint color = CLR_CURRENT)
-    {
-        rect.left -= S(2);
-        rect.top -= S(2);
-        rect.right += S(2);
-        rect.bottom += S(2);
-
-        var pen = Win32.CreatePen(0, Math.Max(1, S(2)), color);
-        var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
-        var oldPen = Win32.SelectObject(hdc, pen);
-        Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, S(4), S(4));
-        Win32.SelectObject(hdc, oldPen);
-        Win32.SelectObject(hdc, oldBrush);
-        Win32.DeleteObject(pen);
-    }
+    /// <summary>Le contour de focus commun (A13 : <see cref="PaperDraw.FocusOutline"/>).</summary>
+    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect, uint? color = null)
+        => PaperDraw.FocusOutline(hdc, rect, color ?? CLR_CURRENT, S(2), S(2), S(4));
 
     private void DrawRoundedBox(IntPtr hdc, Win32.RECT rect, uint fill, uint border, int radius)
     {
@@ -2376,7 +2384,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return value.HasValue ? L.LessonsWin_SpeedValue(value.Value) : FormatNullable(value);
     }
 
-    private static uint GetAccuracyColor(int? accuracy)
+    private uint GetAccuracyColor(int? accuracy)
     {
         if (!accuracy.HasValue) return CLR_TEXT;
         if (accuracy.Value >= 95) return CLR_OK;
@@ -2384,7 +2392,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return CLR_LESSON_ACCENT;
     }
 
-    private static uint GetErrorColor(int errorCount)
+    private uint GetErrorColor(int errorCount)
     {
         if (errorCount == 0) return CLR_OK;
         if (errorCount <= 3) return CLR_TEXT;

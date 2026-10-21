@@ -30,15 +30,11 @@ sealed class UsageStatsWindow : IDisposable
     private static int WinContentH
         => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0);
 
-    // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
-    private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Text;
-    private const uint CLR_TEXT = LightTheme.Text;
-    private const uint CLR_MUTED = LightTheme.TextSecondary;
-    private const uint CLR_ACCENT = LightTheme.Accent;
-    private const uint CLR_SEPARATOR = LightTheme.Border;
-    private const uint CLR_LINK = LightTheme.Accent;
-    private const uint CLR_LINK_HOVER = LightTheme.AccentHover;
+    // ── Couleurs ────────────────────────────────────────────────────
+    // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
+    // création, comme l'accueil).
+    private readonly PaperPalette _pal = PaperPalette.Now();
+    private uint LinkHover => _pal.HighContrast ? _pal.Action : PaperDraw.Blend(_pal.Ink, _pal.Action, 0.25f);
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnCopy;
@@ -58,11 +54,14 @@ sealed class UsageStatsWindow : IDisposable
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
 
-    private IntPtr _hFontTitle;
-    private IntPtr _hFontText;
-    private IntPtr _hFontMuted;
-    private IntPtr _hFontBold;
-    private IntPtr _hFontButton;
+    // A9 : polices du site (AG Titre, AG Texte), partagées par AppFonts : jamais détruites.
+    // Le texte peint passe par PaperText, qui complète un glyphe absent (le « ✓ » de
+    // « Terminée ✓ ») ; seul le soulignement des liens STATIC demande une police à soi.
+    // AG Texte n'a pas d'italique : la mention de confidentialité passe en romain.
+    private FontSpec FontTitle => FontSpec.Of(AppFonts.Title, TypeRamp.Title, TypeRamp.Semibold, _dpiScale);
+    private FontSpec FontText => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontMuted => FontSpec.Of(AppFonts.Text, TypeRamp.Caption, TypeRamp.Regular, _dpiScale);
+    private FontSpec FontBold => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Semibold, _dpiScale);
     private IntPtr _hFontLink;
 
     public bool IsVisible => _visible;
@@ -102,21 +101,11 @@ sealed class UsageStatsWindow : IDisposable
 
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontMuted = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 1, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontBold = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontLink = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 1, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontLink = TypeRamp.CreateIn(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale, underline: true);
     }
 
     private void DestroyFonts()
     {
-        Win32.DeleteObject(_hFontTitle);
-        Win32.DeleteObject(_hFontText);
-        Win32.DeleteObject(_hFontMuted);
-        Win32.DeleteObject(_hFontBold);
-        Win32.DeleteObject(_hFontButton);
         Win32.DeleteObject(_hFontLink);
     }
 
@@ -129,8 +118,8 @@ sealed class UsageStatsWindow : IDisposable
 
     private void ApplyFontsToControls()
     {
-        Win32.SendMessageW(_hWndBtnCopy, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
-        Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnCopy, Win32.WM_SETFONT, FontText.Handle, (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, FontText.Handle, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
     }
@@ -150,7 +139,7 @@ sealed class UsageStatsWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(0, className, L.Stats_WindowTitle,
             dwStyle, x, y, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd);
@@ -190,8 +179,12 @@ sealed class UsageStatsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
         // Audit UX 1.3.0, #3 : boutons clairs de Windows 11, « Fermer » porte l'accent.
-        LightButton.Attach(_hWndBtnCopy);
-        LightButton.Attach(_hWndBtnClose);
+        // A9 : boutons papier ; en contraste élevé, le dessin du système.
+        if (!_pal.HighContrast)
+        {
+            LightButton.Attach(_hWndBtnCopy, paper: true);
+            LightButton.Attach(_hWndBtnClose, paper: true);
+        }
 
         RepositionControls();
     }
@@ -329,13 +322,13 @@ sealed class UsageStatsWindow : IDisposable
                 {
                     IntPtr hdcStatic = wParam;
                     IntPtr hCtrl = lParam;
+                    Win32.SetBkMode(hdcStatic, 1);
+                    Win32.SetBkColor(hdcStatic, _pal.Paper);
                     if (_links.Contains(hCtrl))
-                    {
-                        Win32.SetBkMode(hdcStatic, 1);
-                        Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? CLR_LINK_HOVER : CLR_LINK);
-                        return _hBgBrush;
-                    }
-                    break;
+                        Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? LinkHover : _pal.Action);
+                    // A9 : les boutons papier lisent ici la couleur de leurs coins
+                    // (LightButton.Backdrop) ; sans réponse, Windows rendait son gris (#F0F0F0).
+                    return _hBgBrush;
                 }
 
                 case Win32.WM_SETCURSOR:
@@ -406,13 +399,9 @@ sealed class UsageStatsWindow : IDisposable
         int margin = S(20);
         int y = S(18);
 
-        Win32.SelectObject(hdc, _hFontTitle);
-        Win32.SetTextColor(hdc, CLR_TITLE);
         var titleRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + S(28) };
-        Win32.DrawTextW(hdc, L.Stats_Title, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        PaperText.DrawLine(hdc, L.Stats_Title, FontTitle, titleRect, _pal.Ink);
         y += S(40);
-
-        Win32.SetTextColor(hdc, CLR_TEXT);
 
         // Collecte éteinte : le dire, plutôt que d'afficher « vous n'avez pas encore tapé de
         // caractère spécial » à chaque ouverture. Rien n'étant relu, cette phrase serait vraie
@@ -425,13 +414,13 @@ sealed class UsageStatsWindow : IDisposable
             : first.HasValue
                 ? L.Stats_HeadlineWithDate(L.FormatDate(first.Value))
                 : L.Stats_HeadlineNoData;
-        y = DrawWrappedLine(hdc, _hFontText, headline, margin, y, cw - margin * 2, S(20));
+        y = DrawWrappedLine(hdc, FontText, headline, margin, y, cw - margin * 2, S(20), _pal.Ink);
 
         int activeDays = UsageStats.ActiveDaysCount;
         if (activeDays > 0)
         {
             string joursLine = L.Stats_DaysLine(activeDays, UsageStats.CurrentStreak, UsageStats.BestStreak);
-            y = DrawWrappedLine(hdc, _hFontText, joursLine, margin, y, cw - margin * 2, S(20));
+            y = DrawWrappedLine(hdc, FontText, joursLine, margin, y, cw - margin * 2, S(20), _pal.Ink);
 
             long activeMinutes = UsageStats.TotalActiveMinutes;
             if (activeMinutes > 0)
@@ -440,15 +429,12 @@ sealed class UsageStatsWindow : IDisposable
                 bool showAvg = avg >= 5 && activeDays > 1;
                 string tempsLine = L.Stats_ActiveTimeLine(UsageStats.FormatActiveTime(activeMinutes),
                     showAvg ? UsageStats.FormatActiveTime(avg) : null);
-                y = DrawWrappedLine(hdc, _hFontText, tempsLine, margin, y, cw - margin * 2, S(20));
+                y = DrawWrappedLine(hdc, FontText, tempsLine, margin, y, cw - margin * 2, S(20), _pal.Ink);
             }
         }
         y += S(8);
 
-        var sepBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
-        var sepRect = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + 1 };
-        Win32.FillRect(hdc, ref sepRect, sepBrush);
-        Win32.DeleteObject(sepBrush);
+        PaperDraw.Fill(hdc, margin, y, cw - margin, y + 1, _pal.Border);
         y += S(14);
 
         y = DrawStatLine(hdc, L.Stats_LabelAccented, UsageStats.AccentedUppercaseCount, margin, y, cw - margin);
@@ -469,34 +455,38 @@ sealed class UsageStatsWindow : IDisposable
             : collectionOff
                 ? L.Stats_CollectionOffPrivacy
                 : L.Stats_PrivacyReassurance;
-        Win32.SetTextColor(hdc, _showCopiedFeedback ? CLR_ACCENT : CLR_MUTED);
-        DrawWrappedLine(hdc, _hFontMuted, reassurance, margin, y, cw - margin * 2, S(16));
+        DrawWrappedLine(hdc, FontMuted, reassurance, margin, y, cw - margin * 2, S(16),
+            _showCopiedFeedback ? _pal.Action : _pal.Muted);
     }
 
-    private int DrawWrappedLine(IntPtr hdc, IntPtr font, string text, int x, int y, int width, int lineHeight)
+    /// <summary>Paragraphe coupé aux espaces dans <paramref name="width"/> ; rend le haut du
+    /// suivant.</summary>
+    private int DrawWrappedLine(IntPtr hdc, FontSpec font, string text, int x, int y, int width, int lineHeight, uint color)
     {
-        Win32.SelectObject(hdc, font);
-        var measureRect = new Win32.RECT { left = x, top = 0, right = x + width, bottom = lineHeight * 4 };
-        Win32.DrawTextW(hdc, text, -1, ref measureRect, Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
-        int height = Math.Max(lineHeight, measureRect.bottom - measureRect.top);
-
-        var paintRect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + height };
-        Win32.DrawTextW(hdc, text, -1, ref paintRect, Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX);
+        var rect = new Win32.RECT { left = x, top = y, right = x + width, bottom = y + lineHeight };
+        var runs = new[] { new TextRun(text) };
+        int height = Math.Max(lineHeight, PaperText.DrawParagraph(hdc, runs, font, font, rect, color, color, lineHeight));
         return y + height + S(6);
+    }
+
+    /// <summary>Une ligne coupée à son cadre, comme DT_SINGLELINE le faisait.</summary>
+    private static void DrawCell(IntPtr hdc, string text, FontSpec font, Win32.RECT rect, uint color, TextAlign align)
+    {
+        int save = Win32.SaveDC(hdc);
+        Win32.IntersectClipRect(hdc, rect.left, rect.top, rect.right, rect.bottom);
+        PaperText.DrawLine(hdc, text, font, rect, color, align);
+        Win32.RestoreDC(hdc, save);
     }
 
     private int DrawStatLine(IntPtr hdc, string label, long count, int left, int y, int right, bool bold = false)
     {
         int h = S(20);
-        Win32.SelectObject(hdc, bold ? _hFontBold : _hFontText);
-        Win32.SetTextColor(hdc, CLR_TEXT);
+        var font = bold ? FontBold : FontText;
         var labelRect = new Win32.RECT { left = left, top = y, right = right - S(70), bottom = y + h };
-        Win32.DrawTextW(hdc, label, -1, ref labelRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        DrawCell(hdc, label, font, labelRect, _pal.Ink, TextAlign.Left);
 
-        Win32.SetTextColor(hdc, bold ? CLR_ACCENT : CLR_TEXT);
         var valueRect = new Win32.RECT { left = right - S(70), top = y, right = right, bottom = y + h };
-        Win32.DrawTextW(hdc, count.ToString("N0", L.DisplayCulture), -1, ref valueRect,
-            Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        DrawCell(hdc, count.ToString("N0", L.DisplayCulture), font, valueRect, bold ? _pal.Action : _pal.Ink, TextAlign.Right);
 
         return y + h;
     }
@@ -508,16 +498,11 @@ sealed class UsageStatsWindow : IDisposable
     /// </summary>
     private int DrawChallengeSection(IntPtr hdc, int left, int y, int right)
     {
-        var sepBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
-        var sepRect = new Win32.RECT { left = left, top = y, right = right, bottom = y + 1 };
-        Win32.FillRect(hdc, ref sepRect, sepBrush);
-        Win32.DeleteObject(sepBrush);
+        PaperDraw.Fill(hdc, left, y, right, y + 1, _pal.Border);
         y += S(14);
 
-        Win32.SelectObject(hdc, _hFontBold);
-        Win32.SetTextColor(hdc, CLR_TEXT);
         var titleRect = new Win32.RECT { left = left, top = y, right = right, bottom = y + S(20) };
-        Win32.DrawTextW(hdc, L.Challenge_StatsSectionTitle, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        DrawCell(hdc, L.Challenge_StatsSectionTitle, FontBold, titleRect, _pal.Ink, TextAlign.Left);
         y += S(26);
 
         y = DrawStatLine(hdc, L.Challenge_StatsSessionsLabel, UsageStats.ChallengesCompletedCount, left, y, right);
@@ -540,14 +525,12 @@ sealed class UsageStatsWindow : IDisposable
     private int DrawStatLineText(IntPtr hdc, string label, string value, int left, int y, int right, bool bold = false)
     {
         int h = S(20);
-        Win32.SelectObject(hdc, bold ? _hFontBold : _hFontText);
-        Win32.SetTextColor(hdc, CLR_TEXT);
+        var font = bold ? FontBold : FontText;
         var labelRect = new Win32.RECT { left = left, top = y, right = right - S(160), bottom = y + h };
-        Win32.DrawTextW(hdc, label, -1, ref labelRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        DrawCell(hdc, label, font, labelRect, _pal.Ink, TextAlign.Left);
 
-        Win32.SetTextColor(hdc, bold ? CLR_ACCENT : CLR_TEXT);
         var valueRect = new Win32.RECT { left = right - S(160), top = y, right = right, bottom = y + h };
-        Win32.DrawTextW(hdc, value, -1, ref valueRect, Win32.DT_RIGHT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        DrawCell(hdc, value, font, valueRect, bold ? _pal.Action : _pal.Ink, TextAlign.Right);
 
         return y + h;
     }
