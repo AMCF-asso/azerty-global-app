@@ -215,7 +215,8 @@ sealed class TrayApplication : IDisposable
         // Icône tray
         // Couleur de l'état réel dès la première image : grise tant que l'accord d'activation
         // manque ou que l'application est désactivée (UpdateIcon suit ensuite).
-        _hIcon = CreateTextIcon("AG", ShouldProcessHook);
+        // Audit 1.3.0, A11 : le logo du produit, à la taille de la zone de notification.
+        _hIcon = TrayIcon.Create(ShouldProcessHook, capsLock: false, suspended: false);
         // L'icône balloon (logo produit) se crée à chaque émission, jamais ici :
         // NIIF_LARGE_ICON exige la taille SM_CXICON du moment, qui suit l'échelle
         // d'affichage (F6 du smoke v1.2.0 — 32 px codé en dur = bulle rejetée à 125 %).
@@ -2406,12 +2407,10 @@ sealed class TrayApplication : IDisposable
     {
         var oldIcon = _hIcon;
 
-        // Déterminer le texte et le style de l'icône selon l'état
+        // Déterminer le style de l'icône selon l'état
         bool active = ShouldProcessHook;
         bool capsLock = _mapper?.CapsLockActive == true && active;
-        string iconText = "AG";
-
-        _hIcon = CreateTextIcon(iconText, active, capsLock,
+        _hIcon = TrayIcon.Create(active, capsLock,
             ShouldShowCompatibilitySuspension(_suspendedForCompatibility, _activationConsent));
 
         _nid.hIcon = _hIcon;
@@ -3073,10 +3072,11 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// Crée une icône 32x32 avec texte sur fond coloré.
+    /// Crée une icône 32x32 avec texte sur fond coloré. Secours de <see cref="TrayIcon"/>
+    /// quand le logo ne se charge pas, et icône de la bulle sans logo.
     /// Bleu = actif, gris = inactif. Barre orange en bas si CapsLock.
     /// </summary>
-    private static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
+    internal static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
     {
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
