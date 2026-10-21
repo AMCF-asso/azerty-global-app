@@ -1041,8 +1041,10 @@ public sealed class KeyMapper
         uint sent = SendInputsWithRecovery(inputs.ToArray());
         var result = new TextEmissionResult(inputs.Count, sent);
         // Un retour positif ne prouve pas que le contrôle cible a accepté le texte.
-        // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué.
-        if (result.IsComplete) _host.RecordEmittedText(text);
+        // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué. Rien
+        // de ce qui est tapé dans un champ mot de passe ne va aux statistiques (audit 1.3.0,
+        // test SaisieSecuriseeStatsTests, choix d'Antoine du 21/10).
+        if (result.IsComplete && _foregroundMonitor?.IsSecureInput != true) _host.RecordEmittedText(text);
         return result;
     }
 
