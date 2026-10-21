@@ -80,17 +80,27 @@ L'onboarding actuel s'organise en deux niveaux :
 - [x] **Étape 1** : présentation des 5 améliorations + mention de confidentialité « Cette application améliore votre clavier. Aucune frappe n'est enregistrée ni transmise. » + bouton « Essayer maintenant ».
 - [x] **Étape 2** : « Comment utiliser AZERTY Global » — 4 cards : icône tray, activation/désactivation (`Ctrl+Maj+Verr.Maj`), clavier virtuel (`Ctrl+Maj+Q`), recherche de caractère (`Ctrl+Maj+W`).
 - [x] **Étape 3** : ressources & communauté — 3 liens (Guide, Donner son avis, Discord) + préférences (lancer au démarrage, ne plus afficher).
-- [x] **Bouton « Essayer maintenant »** dans l'étape 1 lance les exercices interactifs (sans avancer silencieusement à l'étape 2). À la sortie, le bouton se transforme en « Suivant ».
+- [x] **Bouton « Essayer maintenant »** (« Activer et essayer » avant l’accord) dans l’étape 1 : ouvre le parcours d’exercices dans les Leçons, sans avancer silencieusement à l’étape 2. Dès que le parcours a été ouvert une fois, « Suivant » apparaît à côté ; « Essayer maintenant » disparaît quand le tronc commun est réussi.
 - [x] **Esc + croix X** pour fermer.
 
-#### Module d'exercices intégré — 8 exercices
+#### Parcours d’exercices — 8 exercices, dans les Leçons
 
-- [x] Tronc commun de 3 exercices (premier É, ponctuation, e-mail), puis un exercice par usage coché (documents et typographie française, messages, code, autres langues, langues africaines) ; le premier usage selon l'ordre de priorité est obligatoire, les suivants facultatifs. Aucun usage coché : l'exercice documents.
-- [x] Exercices facultatifs (skippables) identifiés par une pill « Bonus » à côté du titre.
-- [x] Bouton « Passer cet exercice » disponible sur les bonus.
-- [x] Page de félicitations en fin de parcours : titre « Bravo ! » + sous-titre « Vous maîtrisez les bases d'AZERTY Global. » + bouton « Terminer ».
-- [x] Clavier virtuel intégré : caractère principal + AltGr discret en bas-droite pour les lettres ; grille 2×2 (Maj/Maj+AltGr/Base/AltGr) pour les symboles ; AltGr en accent bleu (cohérence avec le testeur du site).
-- [x] Légende footer : « Maj. — Verr. Maj. — AltGr — Touche morte » avec leurs codes couleur.
+- [x] **Pas de fenêtre à part.** Le parcours s’ouvre dans Leçons › Initiation, en papier clair : mêmes huit exercices, mêmes consignes et même clavier que les Leçons. L’ancienne fenêtre d’exercices sombre est supprimée (audit 1.3.0, B2 voie (b), décision d’Antoine du 20/10).
+- [x] **Écran des usages** : cinq usages à cocher (documents, messages, code, autres langues, langue d’Afrique), cochés comme au dernier passage, puis « Continuer ».
+- [x] **Parcours** : tronc commun de 3 exercices (« É », « ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN ! », « contact@exemple.com »), puis l’exercice de l’usage le plus particulier (obligatoire ; ordre : langue d’Afrique, code, autres langues, documents, messages), puis ceux des autres usages cochés, facultatifs (bonus). Aucun usage coché : l’exercice Documents.
+- [x] **Ligne du parcours** sous la consigne : « Exercice N sur M » (« (bonus) » pour un bonus) ; lien « Passer cet exercice » sur un bonus ; lien « Passer pour l’instant », qui ferme les exercices : l’accueil les repropose et le parcours reprend où l’on en était.
+- [x] **Reprise (A1)** : le parcours saute les exercices déjà réussis ; un exercice d’Initiation réussi dans les Leçons compte aussi pour l’accueil. Une fois le tronc commun réussi, l’accueil ne se rouvre plus au démarrage.
+- [x] **Écran final** : titre « Bravo ! », sous-titre « Vous maîtrisez les bases d’AZERTY Global. » et bouton « Terminer », qui ferme les Leçons et rend la main à l’accueil.
+- [x] **Hors statistiques** : la frappe du parcours ne compte pas dans les statistiques d’usage ; Verr. Maj. est éteinte à la fermeture des Leçons.
+
+#### Tolérance typographique des exercices de découverte
+
+- [x] **Périmètre** : Leçons › Initiation (donc le parcours de l’accueil), Défi du jour (échauffement compris) et « Votre texte ». Les autres modules, la Révision du jour et les séances composées restent stricts.
+- [x] **Règle** : là où le texte demande une espace insécable (U+00A0) ou fine insécable (U+202F), l’espace ordinaire, U+00A0 et U+202F s’acceptent l’une pour l’autre ; l’apostrophe droite (U+0027) est acceptée pour ’ (U+2019), pas l’inverse. Le texte affiché garde sa typographie.
+- [x] **Comptage** : une frappe tolérée compte juste pour la précision, mais comme une faute pour le geste attendu, qui revient dans la Révision du jour.
+- [x] **Annonce** : la ligne de statut de la frappe dit « Une espace ordinaire et l’apostrophe droite sont acceptées. » ; les textes et consignes des exercices ne changent pas (ils entrent dans l’empreinte qui garde les réussites).
+- [x] **« Votre texte »** retire en silence U+200B, U+00AD, U+2060 et U+FEFF du texte collé.
+- [x] **Raison** : un utilisateur sans AltGr+Espace ni ’ à portée n’est pas bloqué dès le 2e exercice (la 1.1.0 n’exigeait pas ces gestes) ; la typographie s’apprend dans les leçons du catalogue, qui restent strictes.
 
 ### 2.6 Clavier virtuel (visualiseur de disposition)
 
