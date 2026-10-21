@@ -13,14 +13,16 @@ internal sealed class ToggleNotification : IDisposable
     private const int BASE_W = 240;
     private const int BASE_H = 56;
 
-    private const uint CLR_BG = DarkTheme.Surface;
-    private const uint CLR_ACTIVATED = DarkTheme.Success;
-    private const uint CLR_DEACTIVATED = DarkTheme.TextSecondary;
+    // Audit 1.3.0, A10 (décision d'Antoine du 20/10) : la bulle passe en papier, comme les
+    // fenêtres refondues. Un filet la détache d'un document blanc ou d'un jeu clair.
+    private const uint CLR_BG = PaperTheme.Paper;
+    private const uint CLR_BORDER = PaperTheme.Border;
+    private const uint CLR_ACTIVATED = PaperTheme.Success;
+    private const uint CLR_DEACTIVATED = PaperTheme.TextSecondary;
 
     private IntPtr _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly IntPtr _hBgBrush;
-    private IntPtr _hFontText;
 
     private bool _currentActivated;
     private float _dpiScale;
@@ -36,14 +38,11 @@ internal sealed class ToggleNotification : IDisposable
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
         _dpiScale = dpi / 96f;
 
-        CreateFonts();
         CreateMainWindow();
     }
 
-    private void CreateFonts()
-    {
-        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-    }
+    /// <summary>Police du texte, au DPI : AppFonts garde la HFONT et la partage.</summary>
+    internal static FontSpec TextFont(float scale) => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Semibold, scale);
 
     private void CreateMainWindow()
     {
@@ -130,11 +129,7 @@ internal sealed class ToggleNotification : IDisposable
                     // différents) ou si l'utilisateur modifie l'échelle système.
                     int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
                     if (newDpi > 0)
-                    {
                         _dpiScale = newDpi / 96f;
-                        if (_hFontText != IntPtr.Zero) Win32.DeleteObject(_hFontText);
-                        CreateFonts();
-                    }
                     var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
                     Win32.MoveWindow(hWnd, suggested.left, suggested.top,
                         suggested.right - suggested.left, suggested.bottom - suggested.top, true);
@@ -161,20 +156,17 @@ internal sealed class ToggleNotification : IDisposable
         int ch = clientRect.bottom;
         var hdc = paint.Hdc;
 
-        Paint(hdc, clientRect, _currentActivated, _hBgBrush, _hFontText);
+        Paint(hdc, clientRect, _currentActivated, _hBgBrush, _dpiScale);
     }
 
     /// <summary>Dessin de la bulle, sans fenêtre : le banc de captures l'appelle aussi.</summary>
-    internal static void Paint(IntPtr hdc, Win32.RECT clientRect, bool activated, IntPtr bgBrush, IntPtr font)
+    internal static void Paint(IntPtr hdc, Win32.RECT clientRect, bool activated, IntPtr bgBrush, float scale)
     {
         Win32.FillRect(hdc, ref clientRect, bgBrush);
-        Win32.SetBkMode(hdc, 1);
-
-        Win32.SelectObject(hdc, font);
-        Win32.SetTextColor(hdc, activated ? CLR_ACTIVATED : CLR_DEACTIVATED);
+        PaperDraw.Frame(hdc, clientRect, CLR_BORDER, Math.Max(1, (int)scale));
         string text = activated ? L.Toggle_Activated : L.Toggle_Deactivated;
-        Win32.DrawTextW(hdc, text, -1, ref clientRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        PaperText.DrawLine(hdc, text, TextFont(scale), clientRect,
+            activated ? CLR_ACTIVATED : CLR_DEACTIVATED, TextAlign.Center);
     }
 
     public void Dispose()
@@ -183,11 +175,6 @@ internal sealed class ToggleNotification : IDisposable
         {
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
-        }
-        if (_hFontText != IntPtr.Zero)
-        {
-            Win32.DeleteObject(_hFontText);
-            _hFontText = IntPtr.Zero;
         }
         if (_hBgBrush != IntPtr.Zero)
         {

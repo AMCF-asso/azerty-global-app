@@ -105,32 +105,30 @@ public sealed class NotifBench
 
     private static void PaintBubble(IntPtr hdc, Win32.RECT rect, bool activated)
     {
-        IntPtr brush = Win32.CreateSolidBrush(DarkTheme.Surface);
-        IntPtr font = Win32.CreateFontW(-TypeRamp.Body, 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        AppFonts.EnsureLoaded();
+        IntPtr brush = Win32.CreateSolidBrush(PaperTheme.Paper);
         try
         {
             Win32.SetViewportOrgEx(hdc, rect.left, rect.top, IntPtr.Zero);
-            ToggleNotification.Paint(hdc, new Win32.RECT { right = rect.right - rect.left, bottom = rect.bottom - rect.top }, activated, brush, font);
+            ToggleNotification.Paint(hdc, new Win32.RECT { right = rect.right - rect.left, bottom = rect.bottom - rect.top }, activated, brush, 1f);
             Win32.SetViewportOrgEx(hdc, 0, 0, IntPtr.Zero);
         }
         finally
         {
-            Win32.DeleteObject(font);
             Win32.DeleteObject(brush);
         }
     }
 
     private static void PaintIndicator(IntPtr hdc, Win32.RECT rect, string label, MaintainableLayerMode mode)
     {
-        IntPtr brush = Win32.CreateSolidBrush(DarkTheme.Surface);
-        IntPtr font = Win32.CreateFontW(-TypeRamp.Body, 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        AppFonts.EnsureLoaded();
+        IntPtr brush = Win32.CreateSolidBrush(PaperTheme.Paper);
         try
         {
-            LayerIndicatorWindow.Paint(hdc, rect, label, mode, brush, font);
+            LayerIndicatorWindow.Paint(hdc, rect, label, mode, brush, 96);
         }
         finally
         {
-            Win32.DeleteObject(font);
             Win32.DeleteObject(brush);
         }
     }

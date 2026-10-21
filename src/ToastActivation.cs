@@ -181,22 +181,8 @@ internal static partial class ToastActivation
     {
         try
         {
-            string xml =
-                $"<toast launch=\"{EscapeXml(launchArgs)}\" activationType=\"foreground\">" +
-                "<visual><binding template=\"ToastGeneric\">" +
-                $"<text>{EscapeXml(title)}</text>" +
-                $"<text>{EscapeXml(ToastBody(body))}</text>" +
-                "</binding></visual>" +
-                "<actions>" +
-                $"<action content=\"{EscapeXml(buttonLabel)}\" activationType=\"foreground\"" +
-                $" arguments=\"{EscapeXml(launchArgs)}\" />" +
-                // content vide + activationType system : Windows met son propre libelle
-                // traduit, une chaine de moins a maintenir en deux langues.
-                "<action content=\"\" activationType=\"system\" arguments=\"dismiss\" />" +
-                "</actions></toast>";
-
             var doc = new Windows.Data.Xml.Dom.XmlDocument();
-            doc.LoadXml(xml);
+            doc.LoadXml(BuildToastXml(title, body, buttonLabel, launchArgs));
             var toast = new Windows.UI.Notifications.ToastNotification(doc);
             Windows.UI.Notifications.ToastNotificationManager.CreateToastNotifier().Show(toast);
             return true;
@@ -207,6 +193,30 @@ internal static partial class ToastActivation
             return false;
         }
     }
+
+    /// <summary>
+    /// Logo du toast. Audit 1.3.0, A10 (décision d'Antoine du 20/10) : le toast portait le
+    /// seul nom de l'app. Le fichier doit être l'un des visuels que Pack-MSIX.ps1 met dans le
+    /// package ; le nom exact, sans qualificatif d'échelle, car aucun resources.pri ne les
+    /// résout. Windows dessine lui-même la surface du toast : le logo est tout ce qu'on y règle.
+    /// </summary>
+    internal const string LogoAsset = "Square150x150Logo.png";
+
+    /// <summary>XML du toast ToastGeneric : logo, titre, première ligne du corps, bouton.</summary>
+    internal static string BuildToastXml(string title, string body, string buttonLabel, string launchArgs) =>
+        $"<toast launch=\"{EscapeXml(launchArgs)}\" activationType=\"foreground\">" +
+        "<visual><binding template=\"ToastGeneric\">" +
+        $"<text>{EscapeXml(title)}</text>" +
+        $"<text>{EscapeXml(ToastBody(body))}</text>" +
+        $"<image placement=\"appLogoOverride\" src=\"ms-appx:///Assets/{LogoAsset}\" />" +
+        "</binding></visual>" +
+        "<actions>" +
+        $"<action content=\"{EscapeXml(buttonLabel)}\" activationType=\"foreground\"" +
+        $" arguments=\"{EscapeXml(launchArgs)}\" />" +
+        // content vide + activationType system : Windows met son propre libelle
+        // traduit, une chaine de moins a maintenir en deux langues.
+        "<action content=\"\" activationType=\"system\" arguments=\"dismiss\" />" +
+        "</actions></toast>";
 
     internal static string EscapeXml(string value) => value
         .Replace("&", "&amp;")
