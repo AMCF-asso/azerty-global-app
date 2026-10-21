@@ -22,6 +22,10 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-24.04
+    # Secrets Partner Center et Azure lus dans l'environment store-analytics, réservé à
+    # main : un dispatch depuis une autre branche s'arrête avant de démarrer le job. Le
+    # jeton OIDC porte alors le sujet environment:store-analytics (audit 1.3.0, A34).
+    environment: store-analytics
     # Chaque requête peut attendre jusqu'à 4 x 120 s plus les pauses de backoff.
     timeout-minutes: 45
     # Aucun secret ici : un `env:` de job est visible de toutes ses étapes, actions

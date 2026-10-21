@@ -50,7 +50,9 @@ Dans Partner Center :
 4. lui attribuer le rôle **Manager** requis par l'API Analytics ;
 5. noter le Tenant ID et le Client ID, puis créer une clé.
 
-Ne jamais placer la clé dans le dépôt. Ajouter ces secrets GitHub :
+Ne jamais placer la clé dans le dépôt. Ajouter ces secrets à l'environment
+GitHub `store-analytics` (Settings › Environments), réservé à la branche `main`
+et sans relecteur obligatoire, pour que la collecte de 05:15 UTC parte seule :
 
 | Secret | Contenu |
 |---|---|
@@ -67,7 +69,12 @@ Entra utilisée par GitHub Actions, lui ajouter un identifiant fédéré GitHub
 pour le dépôt `AZERTYGlobal/app`, puis attribuer le rôle
 **Storage Blob Data Contributor** au compte de stockage ou au conteneur.
 
-Ajouter les secrets GitHub :
+Le job `collect` déclarant l'environment `store-analytics`, le sujet du jeton
+OIDC est `repo:<propriétaire>/<dépôt>:environment:store-analytics` (sous la forme
+immuable `repo:<propriétaire>@<id>/<dépôt>@<id>:environment:store-analytics` si le
+dépôt l'active) : l'identifiant fédéré doit porter ce sujet exact.
+
+Ajouter les secrets à l'environment `store-analytics` :
 
 | Secret | Contenu |
 |---|---|
@@ -96,9 +103,11 @@ microsoft-store/azerty-global/
         └── *.json
 ```
 
-L'identité fédérée n'autorise que la branche `main`. Un `workflow_dispatch`
-lancé depuis une autre branche collecte bien les données, puis échoue à l'étape
-de connexion à Azure par OIDC sans rien archiver. Constaté le 2026-08-03.
+L'environment n'accepte que la branche `main` : un `workflow_dispatch` lancé
+depuis une autre branche s'arrête au démarrage du job (« branch is not allowed
+to deploy to store-analytics »), avant toute lecture de secret. Les secrets ne
+doivent exister qu'au niveau de l'environment : un secret de dépôt de même nom
+resterait lisible par un workflow modifié sur une autre branche (audit 1.3.0, A34).
 
 ## 3. Premier lancement et backfill
 
