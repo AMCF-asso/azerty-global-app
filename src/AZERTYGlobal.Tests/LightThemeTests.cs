@@ -21,7 +21,7 @@ public class LightThemeTests
         "AboutWindow.cs", "LayoutConflictWindow.cs", "UsageStatsWindow.cs",
         "MaintainableLayersWindow.cs", "OnboardingWindow.cs", "SettingsWindow.cs",
         "PauseDurationDialog.cs", "CharacterSearch.cs", "KeyboardRenderer.cs",
-        "LearningModule.cs", "LessonsWindow.cs", "VirtualKeyboard.cs",
+        "LessonsWindow.cs", "LessonsWindow.Tutorial.cs", "VirtualKeyboard.cs",
         "ToggleNotification.cs", "LayerIndicatorWindow.cs",
     };
 

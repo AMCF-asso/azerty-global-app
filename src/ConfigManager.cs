@@ -255,6 +255,18 @@ static class ConfigManager
     public static void SetLearningUsages(IEnumerable<string> usages) =>
         SetStringList("learningUsages", TutorialSteps.NormalizeUsages(usages));
 
+    /// <summary>
+    /// Le parcours d'exercices de l'accueil a été ouvert au moins une fois (audit 1.3.0, A1) :
+    /// l'étape 1 de l'accueil garde alors « Suivant », même sans exercice réussi, et les étapes
+    /// suivantes (dont « Ne plus afficher ») restent atteignables d'un démarrage à l'autre.
+    /// </summary>
+    public static bool LearningTutorialOpened => GetBool("learningTutorialOpened");
+
+    public static void MarkLearningTutorialOpened()
+    {
+        if (!LearningTutorialOpened) SetBool("learningTutorialOpened", true);
+    }
+
     /// <summary>Cache de compatibilité du lancement automatique. L'UI doit utiliser AutoStart.IsRegistered.</summary>
     public static bool AutoStartEnabled => GetBool("autoStartEnabled");
 
