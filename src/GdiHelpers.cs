@@ -14,14 +14,16 @@ static class GdiHelpers
     /// <summary>
     /// K5 (accessibilité 1.3.0) — un lien STATIC ne signalait son focus que par la couleur
     /// (WCAG 1.4.1 et 2.4.7). À appeler depuis la sous-classe du lien sur <c>WM_PAINT</c> : le
-    /// contrôle se peint, puis le rectangle de focus système se pose autour de son texte.
+    /// contrôle se peint, puis le cadre de focus se pose autour de son texte. A13 (audit
+    /// 1.3.0) : un filet plein couleur d'action, comme le lien des Paramètres, au lieu du
+    /// rectangle pointillé de DrawFocusRect.
     /// </summary>
     internal static IntPtr PaintLinkWithFocusRect(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         // wParam non nul : peinture dans un DC fourni par l'appelant, pas à l'écran.
         bool focused = wParam == IntPtr.Zero && Win32.GetFocus() == hWnd;
-        // DrawFocusRect trace en XOR : sur un repeint partiel, il repasserait sur le cadre
-        // encore à l'écran et en effacerait une partie. Un lien focalisé se repeint en entier.
+        // Le cadre se pose par-dessus la peinture du contrôle, hors de sa région de repeint :
+        // un lien focalisé se repeint en entier, pour que le cadre ne reste pas à demi effacé.
         if (focused) Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
         IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
         if (!focused) return result;
@@ -40,7 +42,7 @@ static class GdiHelpers
             Win32.DrawTextW(hdc, text.ToString(), -1, ref bounds, Win32.DT_WORDBREAK | Win32.DT_CALCRECT);
             if (oldFont != IntPtr.Zero) Win32.SelectObject(hdc, oldFont);
             var focus = FocusRectForLink(bounds, client);
-            Win32.DrawFocusRect(hdc, ref focus);
+            PaperDraw.Frame(hdc, focus, PaperPalette.Now().Action, Math.Max(1, Win32.GetDpiForWindow(hWnd) / 96));
         }
         finally
         {
