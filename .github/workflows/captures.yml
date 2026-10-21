@@ -59,7 +59,7 @@ jobs:
       # Checkout complet de la branche du workflow : toutes les branches distantes et tous
       # les tags sont alors connus, et la ref demandée se résout localement.
       - name: Checkout complet
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -83,12 +83,12 @@ jobs:
           echo "sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
           echo "Ref « $REF » rendue au commit $sha"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
       - name: Setup .NET 10 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '10.0.x'
 
@@ -196,7 +196,7 @@ jobs:
 
       - name: Publier les captures
         if: ${{ !cancelled() && steps.cible.outcome == 'success' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: captures-${{ steps.cible.outputs.sha }}
           path: captures/

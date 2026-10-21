@@ -11,11 +11,11 @@ internal static partial class L
 
     public static string Stats_HeadlineNoData => T(
         $"Vous n’avez pas encore tapé de caractère spécial avec {Product}.",
-        $"You haven't typed a special character with {Product} yet.");
+        $"You haven’t typed a special character with {Product} yet.");
 
     public static string Stats_HeadlineWithDate(string dateText) => T(
         $"Vous utilisez {Product} depuis le {dateText}.",
-        $"You've been using {Product} since {dateText}.");
+        $"You’ve been using {Product} since {dateText}.");
 
     public static string Stats_DaysLine(int days, int streak, int best) => T(
         $"{days} {Stats_ShareDayWord(days)} d’utilisation — série actuelle : {streak} {Stats_ShareDayWord(streak)}, record : {best} {Stats_ShareDayWord(best)}.",
@@ -52,13 +52,13 @@ internal static partial class L
     // ── Export presse-papiers (UsageStats.BuildShareText) ────────────
     public static string Stats_ShareJustStarted => T(
         $"Je viens tout juste de commencer à utiliser {Product}.",
-        $"I've only just started using {Product}.");
+        $"I’ve only just started using {Product}.");
 
     public static string Stats_ShareDayWord(int count) => T(count > 1 ? "jours" : "jour", count == 1 ? "day" : "days");
 
     public static string Stats_ShareBase(string dateText, int days, string dayWord, string intensityText) => T(
         $"J’utilise {Product} depuis le {dateText} — {days} {dayWord} d’utilisation{intensityText}",
-        $"I've been using {Product} since {dateText} — {days} {dayWord} of use{intensityText}");
+        $"I’ve been using {Product} since {dateText} — {days} {dayWord} of use{intensityText}");
 
     public static string Stats_ShareIntensity(string activeTime, string? avgTime) => T(
         avgTime != null

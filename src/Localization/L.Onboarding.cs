@@ -9,20 +9,20 @@ internal static partial class L
     public static string Onboarding_ActivateAndTry => T("Activer et essayer", "Turn on and try");
     public static string Onboarding_Activate => T($"Activer {Product}", $"Turn on {Product}");
     public static string Onboarding_InactiveSubtitle => T("Activez votre AZERTY amélioré.", "Turn on your improved AZERTY.");
-    public static string Onboarding_LetsGo => T("C’est parti !", "Let's go!");
+    public static string Onboarding_LetsGo => T("C’est parti !", "Let’s go!");
 
     // ── Étape 3 — liens et préférences ────────────────────────────────
     public static string Onboarding_LinkLessons => T("Continuer avec les leçons", "Continue with the lessons");
     public static string Onboarding_LinkGuide => T("Guide de prise en main", "Getting started guide");
     public static string Onboarding_LinkDiscord => T("Échanger avec les autres utilisateurs", "Chat with other users");
     public static string Onboarding_ChkAutoStart => T("Lancer au démarrage de Windows (recommandé)", "Launch at Windows startup (recommended)");
-    public static string Onboarding_ChkDontShow => T("Ne plus afficher cet écran au démarrage", "Don't show this screen again at startup");
+    public static string Onboarding_ChkDontShow => T("Ne plus afficher cet écran au démarrage", "Don’t show this screen again at startup");
     // Opt-in Défi du jour (v1.2.0) — même préférence que IDC_CHK_TRAINING dans SettingsWindow.cs
     // (ConfigManager.TrainingEnabled), décochée par défaut, appliquée immédiatement au clic.
-    public static string Onboarding_ChkTraining => T("Rappels d’entraînement « Défi du jour »", "\"Daily challenge\" training reminders");
+    public static string Onboarding_ChkTraining => T("Rappels d’entraînement « Défi du jour »", "“Daily challenge” training reminders");
     public static string Onboarding_ChkTrainingDesc => T(
         "Une séance courte par jour, proposée par une notification discrète. S’arrête automatiquement si vous n’y répondez pas.",
-        "One short daily session, offered through a discreet notification. Stops automatically if you don't respond.");
+        "One short daily session, offered through a discreet notification. Stops automatically if you don’t respond.");
     public static string Onboarding_SectionResources => T("Ressources et communauté", "Resources & community");
 
     // ── En-tête ────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ internal static partial class L
     public static string Onboarding_Card4Title => T("Recherchez n’importe quel caractère", "Search for any character");
     public static string Onboarding_Card4Suffix => T(
         " puis tapez le nom d’un caractère : Entrée l’insère dans votre texte et le clavier virtuel montre comment le taper.",
-        " then type a character's name: Enter inserts it into your text and the virtual keyboard shows how to type it.");
+        " then type a character’s name: Enter inserts it into your text and the virtual keyboard shows how to type it.");
 
     // ── Progression (4 étapes depuis la direction C, 08/10) ──────────
     public static string Onboarding_StepOf(int step, int count) => T($"Étape {step} sur {count}", $"Step {step} of {count}");

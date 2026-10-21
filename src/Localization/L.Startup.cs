@@ -24,8 +24,8 @@ internal static partial class L
         $"{Product} — Launch at startup");
     public static string AutoStart_FailureMessagePackaged => T(
         "Impossible d’enregistrer le lancement automatique.\nVérifiez l’autorisation dans Paramètres Windows → Applications → Démarrage.",
-        "Couldn't register startup launch.\nCheck the permission in Windows Settings → Apps → Startup.");
+        "Couldn’t register startup launch.\nCheck the permission in Windows Settings → Apps → Startup.");
     public static string AutoStart_FailureMessageUnpackaged => T(
         "Impossible d’enregistrer le lancement automatique.\nVérifiez les autorisations du dossier Démarrage.",
-        "Couldn't register startup launch.\nCheck the permissions of the Startup folder.");
+        "Couldn’t register startup launch.\nCheck the permissions of the Startup folder.");
 }
