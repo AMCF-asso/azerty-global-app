@@ -196,7 +196,8 @@ public class NativeWindowTests
         IntPtr fond = GetClassLongPtrW(hwnd, Win32.GCLP_HBRBACKGROUND);
         Assert.Equal(OBJ_BRUSH, GetObjectType(fond));
         Assert.Equal(Marshal.SizeOf<LOGBRUSH>(), GetObjectW(fond, Marshal.SizeOf<LOGBRUSH>(), out var pinceau));
-        Assert.Equal(LightTheme.Background, pinceau.lbColor);
+        // A9 : le papier des Leçons (ou le fond du système en contraste élevé).
+        Assert.Equal(PaperPalette.Now().Paper, pinceau.lbColor);
 
         // Les étiquettes se posent sur ce fond, et non sur le gris du système.
         IntPtr étiquette = typeof(PauseDurationDialog).GetField("_hLabel", BindingFlags.Instance | BindingFlags.NonPublic)!
