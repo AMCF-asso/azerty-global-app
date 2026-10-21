@@ -33,8 +33,9 @@ public partial class KeyboardContextBench
     private static readonly SurfaceState[] SurfaceStates =
     {
         new("saisie", StrictModule, StrictLesson, StrictExercise, StrictTyped, Focus: true),
-        // Espace ordinaire au lieu de l'espace fine attendue avant « ! ».
-        new("faute-stricte", StrictModule, StrictLesson, StrictExercise, StrictTyped + " ", Focus: true, ErrorScancode: 0x39),
+        // « x » au lieu de l'espace fine attendue avant « ! ». Une espace ordinaire passerait :
+        // l'Initiation la tolère (audit 1.3.0, B1).
+        new("faute-stricte", StrictModule, StrictLesson, StrictExercise, StrictTyped + "x", Focus: true, ErrorScancode: 0x2D),
         new("faute-souple", FlexibleModule, FlexibleLesson, 0, FlexibleTyped, Focus: true),
         // L'apostrophe est la lettre à taper : son soulignement garde sa largeur minimale.
         new("etroite", StrictModule, StrictLesson, StrictExercise, "« Un chef-d", Focus: true),

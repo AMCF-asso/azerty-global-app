@@ -2292,9 +2292,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private string BuildTypingStatus()
     {
-        return CurrentExercise.TypingMode == LessonTypingMode.Strict
+        string status = CurrentExercise.TypingMode == LessonTypingMode.Strict
             ? L.LessonsWin_StatusStrict
             : L.LessonsWin_StatusFlexible;
+        // Audit 1.3.0, A2 : la tolérance se dit ici, hors de la consigne, qui entre dans
+        // l'empreinte de l'exercice (changer Lessons_Init* effacerait les réussites).
+        return _session.IsTolerant ? status + " " + L.LessonsWin_StatusTolerated : status;
     }
 
     private string FormatHintButtonText()
