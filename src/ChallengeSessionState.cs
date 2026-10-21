@@ -5,6 +5,13 @@ namespace AZERTYGlobal;
 internal sealed class ChallengeSessionState
 {
     private string? _lessonKey;
+    // Étape de la séquence dont le module affiché a été construit : la séance jouée, même
+    // si la séquence a avancé depuis (rejeu par « Recommencer », audit 1.3.0, A23).
+    private uint _moduleSequenceIndex;
+    private DateOnly _moduleDate = DateOnly.FromDateTime(DateTime.Now);
+    // Défi demandé (menu, annonce, rappel) : offert pour cette ouverture même sans l'opt-in
+    // d'entraînement, qui ne garde que sa place permanente dans le catalogue (A23).
+    private bool _requested;
 
     /// <summary>Texte à copier : non null seulement quand la séance qui vient de s'achever
     /// est le défi commun. Les séances de prise en main dépendent de la progression
@@ -15,15 +22,22 @@ internal sealed class ChallengeSessionState
     /// <summary>Un résultat a été copié pendant cette ouverture de la fenêtre.</summary>
     public bool SharedThisSession { get; private set; }
 
+    /// <summary>Le module du Défi entre-t-il dans le catalogue ? Opt-in d'entraînement, ou
+    /// Défi demandé pour cette ouverture : sans cela, le menu « Défi du jour » et l'annonce,
+    /// faite justement à qui n'a pas l'opt-in, ouvraient les Leçons ordinaires (A23).</summary>
+    private bool Offered =>
+        DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled) ||
+        (_requested && DailyChallenge.Enabled);
+
     /// <summary>Catalogue des leçons, plus le module « Défi du jour » quand il est offert
-    /// (Défi activé, rappels activés, banque d'extraits chargée).</summary>
-    public static LessonCatalog LoadCatalog()
+    /// (Défi activé, rappels activés ou Défi demandé, banque d'extraits chargée).</summary>
+    public LessonCatalog LoadCatalog()
     {
         var catalog = LessonCatalogLoader.LoadFromResource();
-        if (!DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled))
-            return catalog;
-        var challenge = DailyChallenge.BuildModule(
-            DateOnly.FromDateTime(DateTime.Now), ConfigManager.TrainingSequenceIndex);
+        if (!Offered) return catalog;
+        _moduleSequenceIndex = ConfigManager.TrainingSequenceIndex;
+        _moduleDate = DateOnly.FromDateTime(DateTime.Now);
+        var challenge = DailyChallenge.BuildModule(_moduleDate, _moduleSequenceIndex);
         if (challenge == null) return catalog;
         return new LessonCatalog(catalog.Modules.Append(challenge).ToArray());
     }
@@ -32,7 +46,7 @@ internal sealed class ChallengeSessionState
     /// langue : fenêtre restée ouverte à cheval sur minuit, séance terminée.</summary>
     public bool IsStale()
     {
-        string key = DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled)
+        string key = Offered
             ? $"{DateOnly.FromDateTime(DateTime.Now):yyyyMMdd}/{ConfigManager.TrainingSequenceIndex}/{L.Language}"
             : "off";
         if (_lessonKey == key) return false;
@@ -43,6 +57,17 @@ internal sealed class ChallengeSessionState
     /// <summary>Force la reconstruction au prochain <see cref="IsStale"/>.</summary>
     public void Invalidate() => _lessonKey = null;
 
+    /// <summary>Le Défi est demandé (menu, annonce, rappel) : offert jusqu'à la fermeture.</summary>
+    public void Request()
+    {
+        _requested = true;
+        Invalidate();
+    }
+
+    /// <summary>Fenêtre fermée : sans opt-in, le module quitte le catalogue à la prochaine
+    /// ouverture.</summary>
+    public void EndRequest() => _requested = false;
+
     public void ClearShare()
     {
         ShareText = null;
@@ -50,14 +75,15 @@ internal sealed class ChallengeSessionState
     }
 
     /// <summary>
-    /// Clôt la séance du jour : prépare le texte partageable, puis date la séance et fait
-    /// avancer la séquence. Dans cet ordre : <see cref="TrainingReminders.MarkSessionCompleted"/>
-    /// change la phase lue par le partage.
+    /// Clôt la séance jouée : prépare le texte partageable, puis date la séance et fait
+    /// avancer la séquence, une seule fois par séance (un rejeu ne compte pas, A23). Les deux
+    /// lisent l'étape dont le module a été construit, pas celle de la config, déjà avancée
+    /// après une première fin.
     /// </summary>
     public void Complete(LessonAttemptStats stats, int? previousBestWpm)
     {
         PrepareShare(stats, previousBestWpm);
-        try { TrainingReminders.MarkSessionCompleted(DateOnly.FromDateTime(DateTime.Now)); }
+        try { TrainingReminders.MarkSessionCompleted(DateOnly.FromDateTime(DateTime.Now), _moduleSequenceIndex); }
         catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeCompleted", ex); }
     }
 
@@ -66,8 +92,9 @@ internal sealed class ChallengeSessionState
         ClearShare();
         try
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var session = DailyChallenge.SessionFor(today, ConfigManager.TrainingSequenceIndex);
+            // L'extrait joué : celui du jour où le module a été construit.
+            var today = _moduleDate;
+            var session = DailyChallenge.SessionFor(today, _moduleSequenceIndex);
             if (session == null || session.IsSequencePhase) return;
 
             // Un premier résultat n'est pas un record : sans meilleur score antérieur,
