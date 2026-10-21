@@ -11892,8 +11892,14 @@
     },
     "ɳ": {
       "codePoint": "U+0273",
-      "unicodeName": "U+0273",
-      "unicodeNameFr": "U+0273",
+      "unicodeName": "LATIN SMALL LETTER N WITH RETROFLEX HOOK",
+      "unicodeNameFr": "LETTRE MINUSCULE LATINE N HAMEÇON RÉTROFLEXE",
+      "frenchAliases": [
+        "n rétroflexe"
+      ],
+      "englishAliases": [
+        "n retroflex"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -12322,8 +12328,16 @@
     },
     "ʕ": {
       "codePoint": "U+0295",
-      "unicodeName": "U+0295",
-      "unicodeNameFr": "U+0295",
+      "unicodeName": "LATIN LETTER PHARYNGEAL VOICED FRICATIVE",
+      "unicodeNameFr": "LETTRE LATINE FRICATIVE PHARYNGALE SONORE",
+      "frenchAliases": [
+        "aïn",
+        "coup de glotte renversé"
+      ],
+      "englishAliases": [
+        "ain",
+        "ayin"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -17338,8 +17352,8 @@
     },
     "᷆": {
       "codePoint": "U+1DC6",
-      "unicodeName": "U+1DC6",
-      "unicodeNameFr": "U+1DC6",
+      "unicodeName": "COMBINING MACRON-GRAVE",
+      "unicodeNameFr": "MACRON-ACCENT GRAVE COMBINANT",
       "methods": [
         {
           "type": "deadkey",
@@ -17370,8 +17384,8 @@
     },
     "᷇": {
       "codePoint": "U+1DC7",
-      "unicodeName": "U+1DC7",
-      "unicodeNameFr": "U+1DC7",
+      "unicodeName": "COMBINING ACUTE-MACRON",
+      "unicodeNameFr": "ACCENT AIGU-MACRON COMBINANT",
       "methods": [
         {
           "type": "deadkey",
@@ -21515,8 +21529,8 @@
     },
     "₤": {
       "codePoint": "U+20A4",
-      "unicodeName": "U+20A4",
-      "unicodeNameFr": "U+20A4",
+      "unicodeName": "LIRA SIGN",
+      "unicodeNameFr": "SYMBOLE LIRE",
       "methods": [
         {
           "type": "deadkey",
@@ -25331,8 +25345,14 @@
     },
     "ĸ": {
       "codePoint": "U+0138",
-      "unicodeName": "U+0138",
-      "unicodeNameFr": "U+0138",
+      "unicodeName": "LATIN SMALL LETTER KRA",
+      "unicodeNameFr": "LETTRE MINUSCULE LATINE KRA",
+      "frenchAliases": [
+        "kra groenlandais"
+      ],
+      "englishAliases": [
+        "greenlandic kra"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25363,8 +25383,8 @@
     },
     "Ɂ": {
       "codePoint": "U+0241",
-      "unicodeName": "U+0241",
-      "unicodeNameFr": "U+0241",
+      "unicodeName": "LATIN CAPITAL LETTER GLOTTAL STOP",
+      "unicodeNameFr": "LETTRE MAJUSCULE LATINE COUP DE GLOTTE",
       "methods": [
         {
           "type": "deadkey",
@@ -25383,8 +25403,8 @@
     },
     "ɂ": {
       "codePoint": "U+0242",
-      "unicodeName": "U+0242",
-      "unicodeNameFr": "U+0242",
+      "unicodeName": "LATIN SMALL LETTER GLOTTAL STOP",
+      "unicodeNameFr": "LETTRE MINUSCULE LATINE COUP DE GLOTTE",
       "methods": [
         {
           "type": "deadkey",
@@ -25403,8 +25423,8 @@
     },
     "ʣ": {
       "codePoint": "U+02A3",
-      "unicodeName": "U+02A3",
-      "unicodeNameFr": "U+02A3",
+      "unicodeName": "LATIN SMALL LETTER DZ DIGRAPH",
+      "unicodeNameFr": "LETTRE MINUSCULE LATINE DIGRAMME DZ",
       "methods": [
         {
           "type": "deadkey",
@@ -25423,8 +25443,8 @@
     },
     "ʦ": {
       "codePoint": "U+02A6",
-      "unicodeName": "U+02A6",
-      "unicodeNameFr": "U+02A6",
+      "unicodeName": "LATIN SMALL LETTER TS DIGRAPH",
+      "unicodeNameFr": "LETTRE MINUSCULE LATINE DIGRAMME TS",
       "methods": [
         {
           "type": "deadkey",
@@ -25443,8 +25463,15 @@
     },
     "ʾ": {
       "codePoint": "U+02BE",
-      "unicodeName": "U+02BE",
-      "unicodeNameFr": "U+02BE",
+      "unicodeName": "MODIFIER LETTER RIGHT HALF RING",
+      "unicodeNameFr": "LETTRE MODIFICATIVE DEMI-ROND DROIT",
+      "frenchAliases": [
+        "hamza"
+      ],
+      "englishAliases": [
+        "hamza",
+        "alef"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25463,8 +25490,15 @@
     },
     "ʿ": {
       "codePoint": "U+02BF",
-      "unicodeName": "U+02BF",
-      "unicodeNameFr": "U+02BF",
+      "unicodeName": "MODIFIER LETTER LEFT HALF RING",
+      "unicodeNameFr": "LETTRE MODIFICATIVE DEMI-ROND GAUCHE",
+      "frenchAliases": [
+        "aïn"
+      ],
+      "englishAliases": [
+        "ain",
+        "ayin"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25483,8 +25517,8 @@
     },
     "Ѡ": {
       "codePoint": "U+0460",
-      "unicodeName": "U+0460",
-      "unicodeNameFr": "U+0460",
+      "unicodeName": "CYRILLIC CAPITAL LETTER OMEGA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE OMÉGA",
       "methods": [
         {
           "type": "deadkey",
@@ -25503,8 +25537,8 @@
     },
     "ѡ": {
       "codePoint": "U+0461",
-      "unicodeName": "U+0461",
-      "unicodeNameFr": "U+0461",
+      "unicodeName": "CYRILLIC SMALL LETTER OMEGA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE OMÉGA",
       "methods": [
         {
           "type": "deadkey",
@@ -25517,8 +25551,8 @@
     },
     "Ѣ": {
       "codePoint": "U+0462",
-      "unicodeName": "U+0462",
-      "unicodeNameFr": "U+0462",
+      "unicodeName": "CYRILLIC CAPITAL LETTER YAT",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE IAT",
       "methods": [
         {
           "type": "deadkey",
@@ -25537,8 +25571,8 @@
     },
     "ѣ": {
       "codePoint": "U+0463",
-      "unicodeName": "U+0463",
-      "unicodeNameFr": "U+0463",
+      "unicodeName": "CYRILLIC SMALL LETTER YAT",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE IAT",
       "methods": [
         {
           "type": "deadkey",
@@ -25557,8 +25591,11 @@
     },
     "Ѫ": {
       "codePoint": "U+046A",
-      "unicodeName": "U+046A",
-      "unicodeNameFr": "U+046A",
+      "unicodeName": "CYRILLIC CAPITAL LETTER BIG YUS",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE GRAND IOUSSE",
+      "frenchAliases": [
+        "grand yus"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25577,8 +25614,11 @@
     },
     "ѫ": {
       "codePoint": "U+046B",
-      "unicodeName": "U+046B",
-      "unicodeNameFr": "U+046B",
+      "unicodeName": "CYRILLIC SMALL LETTER BIG YUS",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE GRAND IOUSSE",
+      "frenchAliases": [
+        "grand yus"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25597,8 +25637,8 @@
     },
     "Ѳ": {
       "codePoint": "U+0472",
-      "unicodeName": "U+0472",
-      "unicodeNameFr": "U+0472",
+      "unicodeName": "CYRILLIC CAPITAL LETTER FITA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE FITA",
       "methods": [
         {
           "type": "deadkey",
@@ -25617,8 +25657,8 @@
     },
     "ѳ": {
       "codePoint": "U+0473",
-      "unicodeName": "U+0473",
-      "unicodeNameFr": "U+0473",
+      "unicodeName": "CYRILLIC SMALL LETTER FITA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE FITA",
       "methods": [
         {
           "type": "deadkey",
@@ -25637,8 +25677,8 @@
     },
     "Ѵ": {
       "codePoint": "U+0474",
-      "unicodeName": "U+0474",
-      "unicodeNameFr": "U+0474",
+      "unicodeName": "CYRILLIC CAPITAL LETTER IZHITSA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE IJITSA",
       "methods": [
         {
           "type": "deadkey",
@@ -25657,8 +25697,8 @@
     },
     "ѵ": {
       "codePoint": "U+0475",
-      "unicodeName": "U+0475",
-      "unicodeNameFr": "U+0475",
+      "unicodeName": "CYRILLIC SMALL LETTER IZHITSA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE IJITSA",
       "methods": [
         {
           "type": "deadkey",
@@ -25677,8 +25717,8 @@
     },
     "Ѷ": {
       "codePoint": "U+0476",
-      "unicodeName": "U+0476",
-      "unicodeNameFr": "U+0476",
+      "unicodeName": "CYRILLIC CAPITAL LETTER IZHITSA WITH DOUBLE GRAVE ACCENT",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE IJITSA DOUBLE ACCENT GRAVE",
       "methods": [
         {
           "type": "deadkey",
@@ -25709,8 +25749,8 @@
     },
     "ѷ": {
       "codePoint": "U+0477",
-      "unicodeName": "U+0477",
-      "unicodeNameFr": "U+0477",
+      "unicodeName": "CYRILLIC SMALL LETTER IZHITSA WITH DOUBLE GRAVE ACCENT",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE IJITSA DOUBLE ACCENT GRAVE",
       "methods": [
         {
           "type": "deadkey",
@@ -25741,8 +25781,11 @@
     },
     "Ғ": {
       "codePoint": "U+0492",
-      "unicodeName": "U+0492",
-      "unicodeNameFr": "U+0492",
+      "unicodeName": "CYRILLIC CAPITAL LETTER GHE WITH STROKE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE GUÉ BARRÉ",
+      "frenchAliases": [
+        "ghé barré"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25761,8 +25804,11 @@
     },
     "ғ": {
       "codePoint": "U+0493",
-      "unicodeName": "U+0493",
-      "unicodeNameFr": "U+0493",
+      "unicodeName": "CYRILLIC SMALL LETTER GHE WITH STROKE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE GUÉ BARRÉ",
+      "frenchAliases": [
+        "ghé barré"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25781,8 +25827,11 @@
     },
     "Ҕ": {
       "codePoint": "U+0494",
-      "unicodeName": "U+0494",
-      "unicodeNameFr": "U+0494",
+      "unicodeName": "CYRILLIC CAPITAL LETTER GHE WITH MIDDLE HOOK",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE GUÉ CROCHET MÉDIAN",
+      "frenchAliases": [
+        "ghé crochet médian"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25801,8 +25850,11 @@
     },
     "ҕ": {
       "codePoint": "U+0495",
-      "unicodeName": "U+0495",
-      "unicodeNameFr": "U+0495",
+      "unicodeName": "CYRILLIC SMALL LETTER GHE WITH MIDDLE HOOK",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE GUÉ CROCHET MÉDIAN",
+      "frenchAliases": [
+        "ghé crochet médian"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -25821,8 +25873,8 @@
     },
     "Җ": {
       "codePoint": "U+0496",
-      "unicodeName": "U+0496",
-      "unicodeNameFr": "U+0496",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ZHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE JÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -25841,8 +25893,8 @@
     },
     "җ": {
       "codePoint": "U+0497",
-      "unicodeName": "U+0497",
-      "unicodeNameFr": "U+0497",
+      "unicodeName": "CYRILLIC SMALL LETTER ZHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE JÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -25861,8 +25913,8 @@
     },
     "Ҙ": {
       "codePoint": "U+0498",
-      "unicodeName": "U+0498",
-      "unicodeNameFr": "U+0498",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ZE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE ZÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -25881,8 +25933,8 @@
     },
     "ҙ": {
       "codePoint": "U+0499",
-      "unicodeName": "U+0499",
-      "unicodeNameFr": "U+0499",
+      "unicodeName": "CYRILLIC SMALL LETTER ZE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE ZÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -25901,8 +25953,8 @@
     },
     "Қ": {
       "codePoint": "U+049A",
-      "unicodeName": "U+049A",
-      "unicodeNameFr": "U+049A",
+      "unicodeName": "CYRILLIC CAPITAL LETTER KA WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE KA CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -25921,8 +25973,8 @@
     },
     "қ": {
       "codePoint": "U+049B",
-      "unicodeName": "U+049B",
-      "unicodeNameFr": "U+049B",
+      "unicodeName": "CYRILLIC SMALL LETTER KA WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE KA CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -25941,8 +25993,8 @@
     },
     "Ҝ": {
       "codePoint": "U+049C",
-      "unicodeName": "U+049C",
-      "unicodeNameFr": "U+049C",
+      "unicodeName": "CYRILLIC CAPITAL LETTER KA WITH VERTICAL STROKE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE KA BARRE VERTICALE",
       "methods": [
         {
           "type": "deadkey",
@@ -25961,8 +26013,8 @@
     },
     "ҝ": {
       "codePoint": "U+049D",
-      "unicodeName": "U+049D",
-      "unicodeNameFr": "U+049D",
+      "unicodeName": "CYRILLIC SMALL LETTER KA WITH VERTICAL STROKE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE KA BARRE VERTICALE",
       "methods": [
         {
           "type": "deadkey",
@@ -25975,8 +26027,8 @@
     },
     "Ҟ": {
       "codePoint": "U+049E",
-      "unicodeName": "U+049E",
-      "unicodeNameFr": "U+049E",
+      "unicodeName": "CYRILLIC CAPITAL LETTER KA WITH STROKE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE KA BARRÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -25995,8 +26047,8 @@
     },
     "ҟ": {
       "codePoint": "U+049F",
-      "unicodeName": "U+049F",
-      "unicodeNameFr": "U+049F",
+      "unicodeName": "CYRILLIC SMALL LETTER KA WITH STROKE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE KA BARRÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26015,8 +26067,8 @@
     },
     "Ҡ": {
       "codePoint": "U+04A0",
-      "unicodeName": "U+04A0",
-      "unicodeNameFr": "U+04A0",
+      "unicodeName": "CYRILLIC CAPITAL LETTER BASHKIR KA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE KA BACHKIR",
       "methods": [
         {
           "type": "deadkey",
@@ -26035,8 +26087,8 @@
     },
     "ҡ": {
       "codePoint": "U+04A1",
-      "unicodeName": "U+04A1",
-      "unicodeNameFr": "U+04A1",
+      "unicodeName": "CYRILLIC SMALL LETTER BASHKIR KA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE KA BACHKIR",
       "methods": [
         {
           "type": "deadkey",
@@ -26055,8 +26107,8 @@
     },
     "Ң": {
       "codePoint": "U+04A2",
-      "unicodeName": "U+04A2",
-      "unicodeNameFr": "U+04A2",
+      "unicodeName": "CYRILLIC CAPITAL LETTER EN WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE ENNE CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26075,8 +26127,8 @@
     },
     "ң": {
       "codePoint": "U+04A3",
-      "unicodeName": "U+04A3",
-      "unicodeNameFr": "U+04A3",
+      "unicodeName": "CYRILLIC SMALL LETTER EN WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE ENNE CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26095,8 +26147,11 @@
     },
     "Ҥ": {
       "codePoint": "U+04A4",
-      "unicodeName": "U+04A4",
-      "unicodeNameFr": "U+04A4",
+      "unicodeName": "CYRILLIC CAPITAL LIGATURE EN GHE",
+      "unicodeNameFr": "LIGATURE CYRILLIQUE MAJUSCULE ENG",
+      "frenchAliases": [
+        "en ghé"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26115,8 +26170,11 @@
     },
     "ҥ": {
       "codePoint": "U+04A5",
-      "unicodeName": "U+04A5",
-      "unicodeNameFr": "U+04A5",
+      "unicodeName": "CYRILLIC SMALL LIGATURE EN GHE",
+      "unicodeNameFr": "LIGATURE CYRILLIQUE MINUSCULE ENG",
+      "frenchAliases": [
+        "en ghé"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26135,8 +26193,8 @@
     },
     "Ҧ": {
       "codePoint": "U+04A6",
-      "unicodeName": "U+04A6",
-      "unicodeNameFr": "U+04A6",
+      "unicodeName": "CYRILLIC CAPITAL LETTER PE WITH MIDDLE HOOK",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE PÉ CROCHET MÉDIAN",
       "methods": [
         {
           "type": "deadkey",
@@ -26155,8 +26213,8 @@
     },
     "ҧ": {
       "codePoint": "U+04A7",
-      "unicodeName": "U+04A7",
-      "unicodeNameFr": "U+04A7",
+      "unicodeName": "CYRILLIC SMALL LETTER PE WITH MIDDLE HOOK",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE PÉ CROCHET MÉDIAN",
       "methods": [
         {
           "type": "deadkey",
@@ -26175,8 +26233,8 @@
     },
     "Ҩ": {
       "codePoint": "U+04A8",
-      "unicodeName": "U+04A8",
-      "unicodeNameFr": "U+04A8",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ABKHASIAN HA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE KHA ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26195,8 +26253,8 @@
     },
     "ҩ": {
       "codePoint": "U+04A9",
-      "unicodeName": "U+04A9",
-      "unicodeNameFr": "U+04A9",
+      "unicodeName": "CYRILLIC SMALL LETTER ABKHASIAN HA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE KHA ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26215,8 +26273,8 @@
     },
     "Ҫ": {
       "codePoint": "U+04AA",
-      "unicodeName": "U+04AA",
-      "unicodeNameFr": "U+04AA",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ES WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE ESSE CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26235,8 +26293,8 @@
     },
     "ҫ": {
       "codePoint": "U+04AB",
-      "unicodeName": "U+04AB",
-      "unicodeNameFr": "U+04AB",
+      "unicodeName": "CYRILLIC SMALL LETTER ES WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE ESSE CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26255,8 +26313,8 @@
     },
     "Ҭ": {
       "codePoint": "U+04AC",
-      "unicodeName": "U+04AC",
-      "unicodeNameFr": "U+04AC",
+      "unicodeName": "CYRILLIC CAPITAL LETTER TE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE TÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26275,8 +26333,8 @@
     },
     "ҭ": {
       "codePoint": "U+04AD",
-      "unicodeName": "U+04AD",
-      "unicodeNameFr": "U+04AD",
+      "unicodeName": "CYRILLIC SMALL LETTER TE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE TÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26295,8 +26353,11 @@
     },
     "Ү": {
       "codePoint": "U+04AE",
-      "unicodeName": "U+04AE",
-      "unicodeNameFr": "U+04AE",
+      "unicodeName": "CYRILLIC CAPITAL LETTER STRAIGHT U",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE OU DROIT",
+      "frenchAliases": [
+        "u droit"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26315,8 +26376,11 @@
     },
     "ү": {
       "codePoint": "U+04AF",
-      "unicodeName": "U+04AF",
-      "unicodeNameFr": "U+04AF",
+      "unicodeName": "CYRILLIC SMALL LETTER STRAIGHT U",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE OU DROIT",
+      "frenchAliases": [
+        "u droit"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26335,8 +26399,11 @@
     },
     "Ұ": {
       "codePoint": "U+04B0",
-      "unicodeName": "U+04B0",
-      "unicodeNameFr": "U+04B0",
+      "unicodeName": "CYRILLIC CAPITAL LETTER STRAIGHT U WITH STROKE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE OU DROIT BARRÉ",
+      "frenchAliases": [
+        "u droit barré"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26355,8 +26422,11 @@
     },
     "ұ": {
       "codePoint": "U+04B1",
-      "unicodeName": "U+04B1",
-      "unicodeNameFr": "U+04B1",
+      "unicodeName": "CYRILLIC SMALL LETTER STRAIGHT U WITH STROKE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE OU DROIT BARRÉ",
+      "frenchAliases": [
+        "u droit barré"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26375,8 +26445,8 @@
     },
     "Ҳ": {
       "codePoint": "U+04B2",
-      "unicodeName": "U+04B2",
-      "unicodeNameFr": "U+04B2",
+      "unicodeName": "CYRILLIC CAPITAL LETTER HA WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE KHA CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26395,8 +26465,8 @@
     },
     "ҳ": {
       "codePoint": "U+04B3",
-      "unicodeName": "U+04B3",
-      "unicodeNameFr": "U+04B3",
+      "unicodeName": "CYRILLIC SMALL LETTER HA WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE KHA CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26415,8 +26485,8 @@
     },
     "Ҵ": {
       "codePoint": "U+04B4",
-      "unicodeName": "U+04B4",
-      "unicodeNameFr": "U+04B4",
+      "unicodeName": "CYRILLIC CAPITAL LIGATURE TE TSE",
+      "unicodeNameFr": "LIGATURE CYRILLIQUE MAJUSCULE TÉ TSÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26435,8 +26505,8 @@
     },
     "ҵ": {
       "codePoint": "U+04B5",
-      "unicodeName": "U+04B5",
-      "unicodeNameFr": "U+04B5",
+      "unicodeName": "CYRILLIC SMALL LIGATURE TE TSE",
+      "unicodeNameFr": "LIGATURE CYRILLIQUE MINUSCULE TÉ TSÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26455,8 +26525,8 @@
     },
     "Ҷ": {
       "codePoint": "U+04B6",
-      "unicodeName": "U+04B6",
-      "unicodeNameFr": "U+04B6",
+      "unicodeName": "CYRILLIC CAPITAL LETTER CHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE TCHÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26475,8 +26545,8 @@
     },
     "ҷ": {
       "codePoint": "U+04B7",
-      "unicodeName": "U+04B7",
-      "unicodeNameFr": "U+04B7",
+      "unicodeName": "CYRILLIC SMALL LETTER CHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE TCHÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -26495,8 +26565,8 @@
     },
     "Ҹ": {
       "codePoint": "U+04B8",
-      "unicodeName": "U+04B8",
-      "unicodeNameFr": "U+04B8",
+      "unicodeName": "CYRILLIC CAPITAL LETTER CHE WITH VERTICAL STROKE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE TCHÉ BARRE VERTICALE",
       "methods": [
         {
           "type": "deadkey",
@@ -26515,8 +26585,8 @@
     },
     "ҹ": {
       "codePoint": "U+04B9",
-      "unicodeName": "U+04B9",
-      "unicodeNameFr": "U+04B9",
+      "unicodeName": "CYRILLIC SMALL LETTER CHE WITH VERTICAL STROKE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE TCHÉ BARRE VERTICALE",
       "methods": [
         {
           "type": "deadkey",
@@ -26535,8 +26605,8 @@
     },
     "Һ": {
       "codePoint": "U+04BA",
-      "unicodeName": "U+04BA",
-      "unicodeNameFr": "U+04BA",
+      "unicodeName": "CYRILLIC CAPITAL LETTER SHHA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE HÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26555,8 +26625,8 @@
     },
     "һ": {
       "codePoint": "U+04BB",
-      "unicodeName": "U+04BB",
-      "unicodeNameFr": "U+04BB",
+      "unicodeName": "CYRILLIC SMALL LETTER SHHA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE HÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26575,8 +26645,8 @@
     },
     "Ҽ": {
       "codePoint": "U+04BC",
-      "unicodeName": "U+04BC",
-      "unicodeNameFr": "U+04BC",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ABKHASIAN CHE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE TCHÉ ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26595,8 +26665,8 @@
     },
     "ҽ": {
       "codePoint": "U+04BD",
-      "unicodeName": "U+04BD",
-      "unicodeNameFr": "U+04BD",
+      "unicodeName": "CYRILLIC SMALL LETTER ABKHASIAN CHE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE TCHÉ ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26609,8 +26679,8 @@
     },
     "Ҿ": {
       "codePoint": "U+04BE",
-      "unicodeName": "U+04BE",
-      "unicodeNameFr": "U+04BE",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ABKHASIAN CHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE TCHÉ CRAMPON ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26629,8 +26699,8 @@
     },
     "ҿ": {
       "codePoint": "U+04BF",
-      "unicodeName": "U+04BF",
-      "unicodeNameFr": "U+04BF",
+      "unicodeName": "CYRILLIC SMALL LETTER ABKHASIAN CHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE TCHÉ CRAMPON ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26643,8 +26713,8 @@
     },
     "Ӏ": {
       "codePoint": "U+04C0",
-      "unicodeName": "U+04C0",
-      "unicodeNameFr": "U+04C0",
+      "unicodeName": "CYRILLIC LETTER PALOCHKA",
+      "unicodeNameFr": "LETTRE CYRILLIQUE PALOTCHKA",
       "methods": [
         {
           "type": "deadkey",
@@ -26663,8 +26733,8 @@
     },
     "Ӊ": {
       "codePoint": "U+04C9",
-      "unicodeName": "U+04C9",
-      "unicodeNameFr": "U+04C9",
+      "unicodeName": "CYRILLIC CAPITAL LETTER EN WITH TAIL",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE ENNE À QUEUE",
       "methods": [
         {
           "type": "deadkey",
@@ -26683,8 +26753,8 @@
     },
     "ӊ": {
       "codePoint": "U+04CA",
-      "unicodeName": "U+04CA",
-      "unicodeNameFr": "U+04CA",
+      "unicodeName": "CYRILLIC SMALL LETTER EN WITH TAIL",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE ENNE À QUEUE",
       "methods": [
         {
           "type": "deadkey",
@@ -26715,8 +26785,8 @@
     },
     "ӏ": {
       "codePoint": "U+04CF",
-      "unicodeName": "U+04CF",
-      "unicodeNameFr": "U+04CF",
+      "unicodeName": "CYRILLIC SMALL LETTER PALOCHKA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE PALOTCHKA",
       "methods": [
         {
           "type": "deadkey",
@@ -26735,8 +26805,8 @@
     },
     "Ӕ": {
       "codePoint": "U+04D4",
-      "unicodeName": "U+04D4",
-      "unicodeNameFr": "U+04D4",
+      "unicodeName": "CYRILLIC CAPITAL LIGATURE A IE",
+      "unicodeNameFr": "LIGATURE CYRILLIQUE MAJUSCULE A IÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26755,8 +26825,8 @@
     },
     "ӕ": {
       "codePoint": "U+04D5",
-      "unicodeName": "U+04D5",
-      "unicodeNameFr": "U+04D5",
+      "unicodeName": "CYRILLIC SMALL LIGATURE A IE",
+      "unicodeNameFr": "LIGATURE CYRILLIQUE MINUSCULE A IÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26775,8 +26845,8 @@
     },
     "Ә": {
       "codePoint": "U+04D8",
-      "unicodeName": "U+04D8",
-      "unicodeNameFr": "U+04D8",
+      "unicodeName": "CYRILLIC CAPITAL LETTER SCHWA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE SCHWA",
       "methods": [
         {
           "type": "deadkey",
@@ -26795,8 +26865,8 @@
     },
     "ә": {
       "codePoint": "U+04D9",
-      "unicodeName": "U+04D9",
-      "unicodeNameFr": "U+04D9",
+      "unicodeName": "CYRILLIC SMALL LETTER SCHWA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE SCHWA",
       "methods": [
         {
           "type": "deadkey",
@@ -26815,8 +26885,8 @@
     },
     "Ӡ": {
       "codePoint": "U+04E0",
-      "unicodeName": "U+04E0",
-      "unicodeNameFr": "U+04E0",
+      "unicodeName": "CYRILLIC CAPITAL LETTER ABKHASIAN DZE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE DZÉ ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26835,8 +26905,8 @@
     },
     "ӡ": {
       "codePoint": "U+04E1",
-      "unicodeName": "U+04E1",
-      "unicodeNameFr": "U+04E1",
+      "unicodeName": "CYRILLIC SMALL LETTER ABKHASIAN DZE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE DZÉ ABKHAZE",
       "methods": [
         {
           "type": "deadkey",
@@ -26855,8 +26925,8 @@
     },
     "Ө": {
       "codePoint": "U+04E8",
-      "unicodeName": "U+04E8",
-      "unicodeNameFr": "U+04E8",
+      "unicodeName": "CYRILLIC CAPITAL LETTER BARRED O",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE O BARRÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26875,8 +26945,8 @@
     },
     "ө": {
       "codePoint": "U+04E9",
-      "unicodeName": "U+04E9",
-      "unicodeNameFr": "U+04E9",
+      "unicodeName": "CYRILLIC SMALL LETTER BARRED O",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE O BARRÉ",
       "methods": [
         {
           "type": "deadkey",
@@ -26895,8 +26965,11 @@
     },
     "Ӷ": {
       "codePoint": "U+04F6",
-      "unicodeName": "U+04F6",
-      "unicodeNameFr": "U+04F6",
+      "unicodeName": "CYRILLIC CAPITAL LETTER GHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE GUÉ CRAMPON",
+      "frenchAliases": [
+        "ghé crampon"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26915,8 +26988,11 @@
     },
     "ӷ": {
       "codePoint": "U+04F7",
-      "unicodeName": "U+04F7",
-      "unicodeNameFr": "U+04F7",
+      "unicodeName": "CYRILLIC SMALL LETTER GHE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE GUÉ CRAMPON",
+      "frenchAliases": [
+        "ghé crampon"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -26935,8 +27011,8 @@
     },
     "Ԕ": {
       "codePoint": "U+0514",
-      "unicodeName": "U+0514",
-      "unicodeNameFr": "U+0514",
+      "unicodeName": "CYRILLIC CAPITAL LETTER LHA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE LHA",
       "methods": [
         {
           "type": "deadkey",
@@ -26955,8 +27031,8 @@
     },
     "ԕ": {
       "codePoint": "U+0515",
-      "unicodeName": "U+0515",
-      "unicodeNameFr": "U+0515",
+      "unicodeName": "CYRILLIC SMALL LETTER LHA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE LHA",
       "methods": [
         {
           "type": "deadkey",
@@ -26975,8 +27051,8 @@
     },
     "Ԗ": {
       "codePoint": "U+0516",
-      "unicodeName": "U+0516",
-      "unicodeNameFr": "U+0516",
+      "unicodeName": "CYRILLIC CAPITAL LETTER RHA",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE RHA",
       "methods": [
         {
           "type": "deadkey",
@@ -26995,8 +27071,8 @@
     },
     "ԗ": {
       "codePoint": "U+0517",
-      "unicodeName": "U+0517",
-      "unicodeNameFr": "U+0517",
+      "unicodeName": "CYRILLIC SMALL LETTER RHA",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE RHA",
       "methods": [
         {
           "type": "deadkey",
@@ -27015,8 +27091,8 @@
     },
     "Ԙ": {
       "codePoint": "U+0518",
-      "unicodeName": "U+0518",
-      "unicodeNameFr": "U+0518",
+      "unicodeName": "CYRILLIC CAPITAL LETTER YAE",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE YÈ",
       "methods": [
         {
           "type": "deadkey",
@@ -27035,8 +27111,8 @@
     },
     "ԙ": {
       "codePoint": "U+0519",
-      "unicodeName": "U+0519",
-      "unicodeNameFr": "U+0519",
+      "unicodeName": "CYRILLIC SMALL LETTER YAE",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE YÈ",
       "methods": [
         {
           "type": "deadkey",
@@ -27055,8 +27131,8 @@
     },
     "Ԥ": {
       "codePoint": "U+0524",
-      "unicodeName": "U+0524",
-      "unicodeNameFr": "U+0524",
+      "unicodeName": "CYRILLIC CAPITAL LETTER PE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MAJUSCULE PÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -27075,8 +27151,8 @@
     },
     "ԥ": {
       "codePoint": "U+0525",
-      "unicodeName": "U+0525",
-      "unicodeNameFr": "U+0525",
+      "unicodeName": "CYRILLIC SMALL LETTER PE WITH DESCENDER",
+      "unicodeNameFr": "CYRILLIQUE MINUSCULE PÉ CRAMPON",
       "methods": [
         {
           "type": "deadkey",
@@ -27095,8 +27171,8 @@
     },
     " ": {
       "codePoint": "U+2002",
-      "unicodeName": "U+2002",
-      "unicodeNameFr": "U+2002",
+      "unicodeName": "EN SPACE",
+      "unicodeNameFr": "ESPACE DEMI-CADRATIN",
       "methods": [
         {
           "type": "deadkey",
@@ -27127,8 +27203,8 @@
     },
     " ": {
       "codePoint": "U+2003",
-      "unicodeName": "U+2003",
-      "unicodeNameFr": "U+2003",
+      "unicodeName": "EM SPACE",
+      "unicodeNameFr": "ESPACE CADRATIN",
       "methods": [
         {
           "type": "deadkey",
@@ -27159,8 +27235,11 @@
     },
     " ": {
       "codePoint": "U+2007",
-      "unicodeName": "U+2007",
-      "unicodeNameFr": "U+2007",
+      "unicodeName": "FIGURE SPACE",
+      "unicodeNameFr": "ESPACE TABULAIRE",
+      "frenchAliases": [
+        "espace numérique"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -27185,8 +27264,11 @@
     },
     " ": {
       "codePoint": "U+2009",
-      "unicodeName": "U+2009",
-      "unicodeNameFr": "U+2009",
+      "unicodeName": "THIN SPACE",
+      "unicodeNameFr": "ESPACE FINE",
+      "frenchAliases": [
+        "espace mince"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -27217,8 +27299,8 @@
     },
     " ": {
       "codePoint": "U+200A",
-      "unicodeName": "U+200A",
-      "unicodeNameFr": "U+200A",
+      "unicodeName": "HAIR SPACE",
+      "unicodeNameFr": "ESPACE ULTRAFINE",
       "methods": [
         {
           "type": "deadkey",
@@ -27249,8 +27331,14 @@
     },
     "​": {
       "codePoint": "U+200B",
-      "unicodeName": "U+200B",
-      "unicodeNameFr": "U+200B",
+      "unicodeName": "ZERO WIDTH SPACE",
+      "unicodeNameFr": "ESPACE SANS CHASSE",
+      "frenchAliases": [
+        "espace de largeur nulle"
+      ],
+      "englishAliases": [
+        "zwsp"
+      ],
       "methods": [
         {
           "type": "deadkey",
@@ -27281,8 +27369,8 @@
     },
     "Ꞌ": {
       "codePoint": "U+A78B",
-      "unicodeName": "U+A78B",
-      "unicodeNameFr": "U+A78B",
+      "unicodeName": "LATIN CAPITAL LETTER SALTILLO",
+      "unicodeNameFr": "LETTRE MAJUSCULE LATINE SALTILLO",
       "methods": [
         {
           "type": "deadkey",
@@ -27301,8 +27389,8 @@
     },
     "ꞌ": {
       "codePoint": "U+A78C",
-      "unicodeName": "U+A78C",
-      "unicodeNameFr": "U+A78C",
+      "unicodeName": "LATIN SMALL LETTER SALTILLO",
+      "unicodeNameFr": "LETTRE MINUSCULE LATINE SALTILLO",
       "methods": [
         {
           "type": "deadkey",
