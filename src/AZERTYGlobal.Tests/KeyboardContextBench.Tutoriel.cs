@@ -7,67 +7,42 @@ using Xunit;
 namespace AZERTYGlobal.Tests;
 
 /// <summary>
-/// Le tutoriel dans les états qui changent son clavier : chaque exercice, les trois genres de
-/// surlignage (direct, étape 1, étape 2 avec pastille), Verr. Maj. gardée des exercices 1 et 2,
-/// modificateurs tenus, touche enfoncée, touche morte active, Retour arrière demandé, erreur,
-/// pages de choix et finale, voile « Cliquez pour reprendre ». Et, pour les Leçons, l'indice
-/// quand la touche morte est armée, la bonne ou une autre. Préalable du lot 9 (audit du 25/09,
-/// L-01) : le tutoriel passe sur <see cref="KeyboardRenderer"/>, et ces images en sont la
-/// référence au pixel.
+/// Le parcours de l'accueil, ouvert dans Leçons › Initiation (audit 1.3.0, B2 voie (b) : la
+/// fenêtre d'exercices sombre a disparu) : écran des usages, premier exercice avec sa ligne de
+/// parcours, exercice bonus avec « Passer cet exercice », écran final. Et, pour les Leçons,
+/// l'indice quand la touche morte est armée, la bonne ou une autre.
 ///
 /// Même porte que le reste du banc (<c>AZERTY_CONTEXTE</c>), même isolation, même mapper sur
-/// <see cref="MockWin32Api"/>. Les états sont posés comme la fenêtre les pose : frappes par
-/// <c>OnChar</c>, touches mortes et Verr. Maj. par le mapper. Seuls l'exercice courant, la page
-/// finale, le voile et la touche enfoncée sont écrits par réflexion : les atteindre par la
-/// fenêtre prendrait le premier plan (<c>TakeFocus</c>) ou une minuterie.
+/// <see cref="MockWin32Api"/>. Le parcours est posé par ses méthodes (<c>BeginTutorial</c>,
+/// « Continuer », « Suivant ») sans <c>Show()</c>, qui prendrait le premier plan.
 /// </summary>
 public partial class KeyboardContextBench
 {
     private const int VK_CAPITAL = 0x14;
     private static readonly short PressedBit = unchecked((short)0x8000);
 
-    private sealed record TutorialState(string Slug, Action<LearningModule, MockWin32Api, KeyMapper> Setup);
+    private sealed record TutorialState(string Slug, Action<LessonsWindow> Setup);
 
     private static readonly TutorialState[] TutorialStates =
     {
         // 1re page : le choix des usages, une case cochée.
-        new("tuto-usages", (m, api, mapper) => CheckUsage(m, 1)),
-        // Exercice 1 : Verr. Maj. activée, pleine en vert, et la touche É en contour.
-        new("tuto-ex1-verrmaj", (m, api, mapper) => { Route(m); CapsLockOn(api, mapper); }),
-        // Exercice 2 : Verr. Maj. gardée ; l'espace est dans la couche Caps.
-        new("tuto-ex2-espace", (m, api, mapper) => { Route(m); GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA"); }),
-        // Exercice 2 : l'espace fine avant « ! », AltGr + Espace ; Verr. Maj. reste « direct ».
-        // Les majuscules accentuées y sont directes : l'étape 1 et sa pastille sont en ex. 6.
-        new("tuto-ex2-fine", (m, api, mapper) => { Route(m); GoTo(m, 1); CapsLockOn(api, mapper); Type(m, "ÇA GÈLE À MONTRÉAL, PAS À ABIDJAN"); }),
-        // Exercice 3 : premier caractère, et la même page avec Maj tenue.
-        new("tuto-ex3", (m, api, mapper) => { Route(m); GoTo(m, 2); }),
-        new("tuto-ex3-maj-tenue", (m, api, mapper) => { Route(m); GoTo(m, 2); Hold(api, mapper, VK_LSHIFT, 0x2A, 0); }),
-        // Exercice 3 : une faute ; « x » tapé (touche 0x2D) à la place de l'attendu, en rouge,
-        // la touche cerclée, le message sous la ligne.
-        new("tuto-ex3-erreur", (m, api, mapper) => { Route(m); GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Du); Type(m, "x"); }),
-        // Exercice 3 : la touche surlignée enfoncée.
-        new("tuto-ex3-enfoncee", (m, api, mapper) => { Route(m); GoTo(m, 2); BancCapture.SetField(m, "_pressedScancode", 0x2Eu); }),
-        // Exercice 4 (Documents) : « demande AltGr, puis AltGr tenue (pleine en vert) ; U demande Maj.
-        new("tuto-ex4-maj", (m, api, mapper) => { Route(m, TutorialSteps.UsageDocuments); GoTo(m, 3); Type(m, "« "); }),
-        new("tuto-ex4-altgr", (m, api, mapper) => { Route(m, TutorialSteps.UsageDocuments); GoTo(m, 3); }),
-        new("tuto-ex4-altgr-tenue", (m, api, mapper) => { Route(m, TutorialSteps.UsageDocuments); GoTo(m, 3); Hold(api, mapper, VK_RMENU, 0x38, LLKHF_EXTENDED); }),
-        // Exercice 5 (Code), en bonus derrière Afrique : titre « (Bonus) », bouton « Passer », accolade par AltGr.
-        new("tuto-ex5", (m, api, mapper) => { Route(m, TutorialSteps.UsageAfrica, TutorialSteps.UsageCode); GoTo(m, 4); Type(m, "if (a || b) "); }),
-        // Exercice 6 (Langues) : í par touche morte, étape 1.
-        new("tuto-ex6-etape1", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "Mar"); }),
-        // Exercice 6 : í, la bonne touche morte armée : étape 2 et clavier des résultats.
-        new("tuto-ex6-etape2", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "Mar"); ActivateDeadKey(api, mapper, "dk_acute"); }),
-        // Exercice 6 : ò attendu, une autre touche morte armée : Retour arrière demandé.
-        new("tuto-ex6-retour", (m, api, mapper) => { Route(m, TutorialSteps.UsageLanguages); GoTo(m, 3); Type(m, "María et Niccol"); ActivateDeadKey(api, mapper, "dk_acute"); }),
-        // Exercice Messages : la consigne, À par Verr. Maj. ; puis « Ça » par ^ et ç (règle du 12/10).
-        new("tuto-messages", (m, api, mapper) => { Route(m, TutorialSteps.UsageMessages); GoTo(m, 3); }),
-        new("tuto-messages-ca", (m, api, mapper) => { Route(m, TutorialSteps.UsageMessages); GoTo(m, 3); Type(m, "À table ! "); }),
-        // Exercice 8 (Afrique) : ɛ par AltGr + 6, étape 1.
-        new("tuto-afrique-etape1", (m, api, mapper) => { Route(m, TutorialSteps.UsageAfrica); GoTo(m, 3); }),
-        // Page de choix après le premier succès, page finale, voile de perte du focus.
-        new("tuto-choix", (m, api, mapper) => { Route(m); Type(m, "É"); }),
-        new("tuto-final", (m, api, mapper) => { Route(m); ShowFinalPage(m); }),
-        new("tuto-pause", (m, api, mapper) => { Route(m); BancCapture.SetField(m, "_focusLostConfirmed", true); }),
+        new("tuto-usages", w => BancCapture.Call(w, "ToggleTutorialUsage", 1)),
+        // Exercice 1 du parcours Documents : « É », la ligne du parcours sous la consigne.
+        new("tuto-parcours", w => BancCapture.Call(w, "StartTutorialRoute")),
+        // Afrique puis Code : l'exercice Code arrive en bonus, avec « Passer cet exercice ».
+        new("tuto-bonus", w =>
+        {
+            BancCapture.Call(w, "ToggleTutorialUsage", 2);
+            BancCapture.Call(w, "ToggleTutorialUsage", 4);
+            BancCapture.Call(w, "StartTutorialRoute");
+            for (int i = 0; i < 4; i++) BancCapture.Call(w, "AdvanceTutorialRoute");
+        }),
+        // Écran final.
+        new("tuto-final", w =>
+        {
+            BancCapture.Call(w, "StartTutorialRoute");
+            for (int i = 0; i < 4; i++) BancCapture.Call(w, "AdvanceTutorialRoute");
+        }),
     };
 
     [Fact]
@@ -96,7 +71,7 @@ public partial class KeyboardContextBench
                     var target = new BancCapture.Target(outDir, language, dpi, journal);
                     var attempts = new List<(string Name, Action Run)>();
                     foreach (var state in TutorialStates)
-                        attempts.Add((state.Slug, () => CaptureTutorialState(target, state, layout, api, mapper, hook)));
+                        attempts.Add((state.Slug, () => CaptureTutorialState(target, state, layout, mapper, hook)));
                     attempts.Add(("lecons-indice-etape2", () => CaptureLessonsDeadKeyHint(target, "lecons-indice-etape2", layout, api, mapper, hook, sameDeadKey: true)));
                     attempts.Add(("lecons-indice-autre-touche-morte", () => CaptureLessonsDeadKeyHint(target, "lecons-indice-autre-touche-morte", layout, api, mapper, hook, sameDeadKey: false)));
 
@@ -129,25 +104,29 @@ public partial class KeyboardContextBench
             Environment.NewLine + string.Join(Environment.NewLine, failures));
     }
 
-    /// <summary>Même ouverture que <see cref="CaptureLearningModule"/> ; l'état est posé après
-    /// la mise à l'échelle, comme en cours d'exercice.</summary>
+    /// <summary>Leçons ouvertes sur le parcours de l'accueil, l'état posé après la mise à
+    /// l'échelle, comme en cours de parcours.</summary>
     private static void CaptureTutorialState(BancCapture.Target target, TutorialState state, Layout layout,
-        MockWin32Api api, KeyMapper mapper, KeyboardHook hook)
+        KeyMapper mapper, KeyboardHook hook)
     {
-        var module = new LearningModule(IntPtr.Zero, mapper, hook, layout);
+        ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
+        var window = new LessonsWindow(layout, mapper, hook);
         try
         {
-            IntPtr hwnd = BancCapture.Handle(module);
+            window.BeginTutorial();
+            BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
+            IntPtr hwnd = window.Handle;
             Win32.ShowWindow(hwnd, 4); // SW_SHOWNOACTIVATE
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
-            state.Setup(module, api, mapper);
+            BancCapture.SetField(window, "_visible", true);
+            state.Setup(window);
             Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, state.Slug, windowDpi);
         }
         finally
         {
-            BancCapture.Teardown(module);
+            BancCapture.Teardown(window);
         }
     }
 
@@ -188,51 +167,6 @@ public partial class KeyboardContextBench
         {
             BancCapture.Teardown(window);
         }
-    }
-
-    /// <summary>« Continuer » sur l'écran des usages avec ces <paramref name="usages"/> (aucun :
-    /// le parcours Documents), sans reprendre le premier plan.</summary>
-    private static void Route(LearningModule module, params string[] usages) => module.StartRoute(usages);
-
-    /// <summary>Choisit l'usage <paramref name="index"/> de l'écran des usages, comme un clic.</summary>
-    private static void CheckUsage(LearningModule module, int index) =>
-        BancCapture.Call(module, "ToggleUsage", index);
-
-    /// <summary>Position <paramref name="step"/> du parcours, curseur au début, comme après
-    /// « Exercice suivant », sans reprendre le premier plan.</summary>
-    private static void GoTo(LearningModule module, int step)
-    {
-        BancCapture.SetField(module, "_currentStep", step);
-        BancCapture.Call(module, "UpdateHighlight");
-        BancCapture.Call(module, "UpdateControlVisibility");
-        BancCapture.Call(module, "RepositionControls");
-    }
-
-    private static void ShowFinalPage(LearningModule module)
-    {
-        var route = BancCapture.Field<Array>(module, "_route")
-            ?? throw new MissingFieldException(nameof(LearningModule), "_route");
-        BancCapture.SetField(module, "_currentStep", route.Length);
-        var page = typeof(LearningModule).GetField("_page", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-            ?? throw new MissingFieldException(nameof(LearningModule), "_page");
-        page.SetValue(module, Enum.Parse(page.FieldType, "Final"));
-        BancCapture.Call(module, "ClearHighlight");
-        BancCapture.Call(module, "UpdateControlVisibility");
-        BancCapture.Call(module, "RepositionControls");
-    }
-
-    /// <summary>Frappes reçues par la fenêtre, telles que WM_CHAR les livre.</summary>
-    private static void Type(LearningModule module, string text)
-    {
-        foreach (char c in text)
-            BancCapture.Call(module, "OnChar", c);
-    }
-
-    /// <summary>Verr. Maj. allumée côté Windows, puis relue par le mapper.</summary>
-    private static void CapsLockOn(MockWin32Api api, KeyMapper mapper)
-    {
-        api.KeyStateScript[VK_CAPITAL] = 1;
-        mapper.SyncState();
     }
 
     /// <summary>Modificateur tenu : enfoncé pour Windows et suivi par le mapper.</summary>

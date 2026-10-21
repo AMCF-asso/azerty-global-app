@@ -1066,7 +1066,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             if (_settingsOpen)
                 DrawPaperSettings(hdc, body);
             else if (_mode == WindowMode.Lessons)
-                DrawPaperLesson(hdc, rc, body);
+            {
+                if (!DrawTutorialPage(hdc, body)) // parcours de l'accueil : usages, fin (LessonsWindow.Tutorial.cs)
+                    DrawPaperLesson(hdc, rc, body);
+            }
             else
                 DrawPaperFree(hdc, rc, body);
             if (_pickerOpen)
@@ -1837,7 +1840,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// <summary>La page affiche-t-elle une surface où l'on tape (ligne d'exercice, aperçu du
     /// mode Libre) ? Elle prend alors place dans le cycle de Tab, à l'index -1.</summary>
     private bool HasTypingSurface =>
-        !_settingsOpen && !_pickerOpen && (HomeShown ? HomePageHasSurface : _mode == WindowMode.Free || !_showSummary);
+        !_settingsOpen && !_pickerOpen && !TutorialPageShown &&
+        (HomeShown ? HomePageHasSurface : _mode == WindowMode.Free || !_showSummary);
 
     /// <summary>
     /// Cible suivante de Tab (Maj+Tab : <paramref name="direction"/> = -1) parmi
@@ -1900,7 +1904,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
-        if (vk == 0x0D || ((_settingsOpen || HomeShown) && vk == 0x20))
+        if (vk == 0x0D || ((_settingsOpen || HomeShown || TutorialPageShown) && vk == 0x20))
         {
             if (ActivateFocusedAction())
                 return;
@@ -1934,6 +1938,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (_settingsOpen) return;
         c = ResolveTypedCharacter(c);
         if (HomeHandleChar(c)) return; // accueil : après la résolution de la frappe physique, rien n'atteint la séance cachée
+        if (TutorialPageShown) return; // écran des usages ou final du parcours : rien à taper
         if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
         ReturnFocusToSurface();
         if (_mode == WindowMode.Free)
@@ -2011,6 +2016,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         _lastCompletedStats = _session.Stats;
         _progress.RecordSuccess(CurrentExercise, _session.Stats);
+        // Audit 1.3.0, B2 voie (b) : l'Initiation est le tutoriel de l'accueil. Sa réussite va
+        // au compteur de la config, que lisent l'accueil (« Essayer maintenant », retour au
+        // démarrage tant que 3 exercices ne sont pas faits) et l'import vers les Leçons.
+        if (_homeComposed == null && CurrentModule.Id == LessonCatalogLoader.InitiationModuleId)
+            ConfigManager.RecordLearningExerciseCompleted(CurrentExercise.ExerciseIndex);
         // Métrique « Record » (QW-4) : relue APRÈS RecordSuccess pour inclure la
         // tentative courante ; « nouveau » seulement si un score antérieur est battu.
         _summaryBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
@@ -2259,6 +2269,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void NextExercise()
     {
+        if (TutorialNext()) return; // parcours de l'accueil : son étape suivante (LessonsWindow.Tutorial.cs)
         if (HomeFinishComposed()) return; // séance composée : retour à « Aujourd'hui »
         if (_exerciseIndex < CurrentLesson.Exercises.Count - 1)
         {
@@ -2434,7 +2445,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         // Accueil : le récapitulatif et la fin de la séance cachée ne concernent pas le champ de
         // « Votre texte », qui reçoit la frappe telle qu'AZERTY Global la produit.
-        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary && !HomeShown)) return;
+        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, (_showSummary && !HomeShown) || TutorialPageShown)) return;
         if (HomeShown && !HomePageHasSurface) return; // accueil : pas de champ où le texte attendu irait
         if (_mode == WindowMode.Lessons && !HomeShown && _session.IsExerciseComplete) return;
         _pendingPhysicalText.CaptureKey(_layout, scancode, _mapper);
@@ -2452,6 +2463,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void Hide()
     {
+        // Parcours de l'accueil : fermer la fenêtre le clôt ; l'écran final atteint vaut réussite.
+        EndTutorial(completed: _tutorialPage == TutorialPage.Final);
+        // Audit 1.3.0, A3 : les exercices font allumer Verr. Maj. ; la fenêtre ne la laisse pas
+        // allumée derrière elle (Show l'éteint déjà à l'ouverture).
+        _mapper.RequestCapsLockOff();
         SaveWindowBounds();
         _visible = false;
         // Avant ChallengeShared ci-dessous : la fin de séance est datée quand le partage
@@ -2481,6 +2497,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     public void Dispose()
     {
+        EndTutorial(completed: false); // referme la plage de frappe exclue du parcours
         LearningSessionTracker.Closed(this);
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
         if (_onAppLanguageChanged != null)
