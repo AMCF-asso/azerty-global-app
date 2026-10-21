@@ -22,14 +22,11 @@ sealed class AboutWindow : IDisposable
     private const int BASE_WIN_W = 550;
     private const int BASE_WIN_H = 230;
 
-    // ── Colors (COLORREF = 0x00BBGGRR) ──────────────────────────────
-    private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Text;
-    private const uint CLR_TEXT = LightTheme.Text;
-    private const uint CLR_VERSION = LightTheme.TextSecondary;
-    private const uint CLR_LINK = LightTheme.Accent;
-    private const uint CLR_LINK_HOVER = LightTheme.AccentHover;
-    private const uint CLR_SEPARATOR = LightTheme.Border;
+    // ── Couleurs ────────────────────────────────────────────────────
+    // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
+    // création, comme l'accueil).
+    private readonly PaperPalette _pal = PaperPalette.Now();
+    private uint LinkHover => _pal.HighContrast ? _pal.Action : PaperDraw.Blend(_pal.Ink, _pal.Action, 0.25f);
 
     private IntPtr _hWnd;
     private IntPtr _hWndLinkSite;
@@ -54,11 +51,13 @@ sealed class AboutWindow : IDisposable
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
 
-    private IntPtr _hFontTitle;
-    private IntPtr _hFontVersion;
-    private IntPtr _hFontText;
+    // A9 : polices du site (AG Titre, AG Texte), partagées par AppFonts : jamais détruites.
+    // Seul le soulignement des liens STATIC demande une police à soi.
+    private IntPtr FontTitle => FontSpec.Of(AppFonts.Title, TypeRamp.Title, TypeRamp.Semibold, _dpiScale).Handle;
+    private IntPtr FontVersion => FontSpec.Of(AppFonts.Text, TypeRamp.Caption, TypeRamp.Regular, _dpiScale).Handle;
+    private IntPtr FontText => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale).Handle;
+    private IntPtr FontButton => FontText;
     private IntPtr _hFontLink;
-    private IntPtr _hFontButton;
 
     public bool IsVisible => _visible;
 
@@ -101,20 +100,12 @@ sealed class AboutWindow : IDisposable
 
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontVersion = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontLink = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 1, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontLink = TypeRamp.CreateIn(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale, underline: true);
     }
 
     private void DestroyFonts()
     {
-        Win32.DeleteObject(_hFontTitle);
-        Win32.DeleteObject(_hFontVersion);
-        Win32.DeleteObject(_hFontText);
         Win32.DeleteObject(_hFontLink);
-        Win32.DeleteObject(_hFontButton);
     }
 
     private void RecreateFonts()
@@ -130,7 +121,7 @@ sealed class AboutWindow : IDisposable
         Win32.SendMessageW(_hWndLinkGithub, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkLicense, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkAmcf, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
-        Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, FontButton, (IntPtr)1);
     }
 
     private void CreateMainWindow()
@@ -148,7 +139,7 @@ sealed class AboutWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(0, className, L.About_WindowTitle,
             dwStyle, x, y, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         DialogNavigation.Register(_hWnd);
@@ -188,7 +179,9 @@ sealed class AboutWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
-        LightButton.Attach(_hWndBtnClose); // audit UX 1.3.0, #3
+        // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système.
+        if (!_pal.HighContrast)
+            LightButton.Attach(_hWndBtnClose, paper: true);
 
         RepositionControls();
     }
@@ -294,13 +287,13 @@ sealed class AboutWindow : IDisposable
                 {
                     IntPtr hdcStatic = wParam;
                     IntPtr hCtrl = lParam;
+                    Win32.SetBkMode(hdcStatic, 1);
+                    Win32.SetBkColor(hdcStatic, _pal.Paper);
                     if (_links.Contains(hCtrl))
-                    {
-                        Win32.SetBkMode(hdcStatic, 1);
-                        Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? CLR_LINK_HOVER : CLR_LINK);
-                        return _hBgBrush;
-                    }
-                    break;
+                        Win32.SetTextColor(hdcStatic, _links.IsActive(hCtrl) ? LinkHover : _pal.Action);
+                    // A9 : le bouton papier lit ici la couleur de ses coins (LightButton.Backdrop) ;
+                    // sans réponse, Windows rendait son gris (#F0F0F0).
+                    return _hBgBrush;
                 }
 
                 case Win32.WM_SETCURSOR:
@@ -364,21 +357,21 @@ sealed class AboutWindow : IDisposable
 
         int textX = logoX + logoSize + S(14);
         int titleY = logoY + S(2);
-        Win32.SelectObject(hdc, _hFontTitle);
-        Win32.SetTextColor(hdc, CLR_TITLE);
+        Win32.SelectObject(hdc, FontTitle);
+        Win32.SetTextColor(hdc, _pal.Ink);
         var titleRect = new Win32.RECT { left = textX, top = titleY, right = cw - margin, bottom = titleY + S(28) };
         Win32.DrawTextW(hdc, ProductIdentity.DisplayName, -1, ref titleRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         int versionY = titleY + S(28);
-        Win32.SelectObject(hdc, _hFontVersion);
-        Win32.SetTextColor(hdc, CLR_VERSION);
+        Win32.SelectObject(hdc, FontVersion);
+        Win32.SetTextColor(hdc, _pal.Muted);
         var versionRect = new Win32.RECT { left = textX, top = versionY, right = cw - margin, bottom = versionY + S(20) };
         Win32.DrawTextW(hdc, "v" + Program.Version, -1, ref versionRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         // Description
         int descY = logoY + logoSize + S(14);
-        Win32.SelectObject(hdc, _hFontText);
-        Win32.SetTextColor(hdc, CLR_TEXT);
+        Win32.SelectObject(hdc, FontText);
+        Win32.SetTextColor(hdc, _pal.Ink);
         var descRect = new Win32.RECT { left = margin, top = descY, right = cw - margin, bottom = descY + S(22) };
         Win32.DrawTextW(hdc, L.About_Description, -1, ref descRect,
             Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
@@ -386,8 +379,8 @@ sealed class AboutWindow : IDisposable
         // Ligne AMCF : « Édité par l' » (GDI) + lien STATIC + « (AMCF) » (GDI)
         int amcfY = descY + S(26);
         int amcfH = S(20);
-        Win32.SelectObject(hdc, _hFontText);
-        Win32.SetTextColor(hdc, CLR_TEXT);
+        Win32.SelectObject(hdc, FontText);
+        Win32.SetTextColor(hdc, _pal.Ink);
         string amcfPrefix = L.About_AmcfPrefix;
         string amcfLinkText = L.About_LinkAmcf;
         string amcfSuffix = L.About_AmcfSuffix;
@@ -399,7 +392,7 @@ sealed class AboutWindow : IDisposable
         var measureLink = new Win32.RECT { left = 0, top = 0, right = 9999, bottom = 9999 };
         Win32.DrawTextW(hdc, amcfLinkText, -1, ref measureLink, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
         int linkW = measureLink.right;
-        Win32.SelectObject(hdc, _hFontText);
+        Win32.SelectObject(hdc, FontText);
         var measureSuffix = new Win32.RECT { left = 0, top = 0, right = 9999, bottom = 9999 };
         Win32.DrawTextW(hdc, amcfSuffix, -1, ref measureSuffix, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
         int suffixW = measureSuffix.right;
@@ -417,10 +410,7 @@ sealed class AboutWindow : IDisposable
 
         // Separateur juste au-dessus des liens
         int sepY = S(BASE_WIN_H - 100);
-        var sepBrush = Win32.CreateSolidBrush(CLR_SEPARATOR);
-        var sepRect = new Win32.RECT { left = margin, top = sepY, right = cw - margin, bottom = sepY + 1 };
-        Win32.FillRect(hdc, ref sepRect, sepBrush);
-        Win32.DeleteObject(sepBrush);
+        PaperDraw.Fill(hdc, margin, sepY, cw - margin, sepY + 1, _pal.Border);
 
         if (gfx != IntPtr.Zero)
             Win32.GdipDeleteGraphics(gfx);
