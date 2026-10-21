@@ -28,8 +28,6 @@ sealed partial class SettingsWindow
     private const uint TCM_SETPADDING = 0x1300 + 43;
     private const uint ODS_SELECTED = 0x0001;
     private const uint ODS_FOCUS = 0x0010;
-    private const uint SPI_GETHIGHCONTRAST = 0x0042;
-    private const uint HCF_HIGHCONTRASTON = 0x0001;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NMCUSTOMDRAW
@@ -54,53 +52,8 @@ sealed partial class SettingsWindow
         public IntPtr itemData;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct HIGHCONTRAST
-    {
-        public uint cbSize;
-        public uint dwFlags;
-        public IntPtr lpszDefaultScheme;
-    }
-
     [DllImport("user32.dll")]
     private static extern bool HideCaret(IntPtr hWnd);
-
-    [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW")]
-    private static extern bool SystemParametersInfoHighContrast(uint action, uint param, ref HIGHCONTRAST value, uint winIni);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipCreateSolidFill(uint argb, out IntPtr brush);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipDeleteBrush(IntPtr brush);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipCreatePen1(uint argb, float width, int unit, out IntPtr pen);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipDeletePen(IntPtr pen);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipSetPenLineCap197819(IntPtr pen, int startCap, int endCap, int dashCap);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipSetPenLineJoin(IntPtr pen, int lineJoin);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipFillEllipse(IntPtr graphics, IntPtr brush, float x, float y, float width, float height);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipDrawEllipse(IntPtr graphics, IntPtr pen, float x, float y, float width, float height);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipDrawLine(IntPtr graphics, IntPtr pen, float x1, float y1, float x2, float y2);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipSetPixelOffsetMode(IntPtr graphics, int mode);
-
-    private const int UnitPixel = 2;
-    private const int LineCapRound = 2;
-    private const int LineJoinRound = 2;
 
     /// <summary>
     /// <see cref="PaperDraw.RoundBox"/> sur un rectangle à bords exclusifs, comme tous ceux de
@@ -115,63 +68,35 @@ sealed partial class SettingsWindow
         PaperDraw.RoundBox(hdc, r, fill, border, radius, borderWidth, penStyle);
     }
 
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipCreatePath(int fillMode, out IntPtr path);
+    /// <summary>Contraste élevé : la fenêtre rend le dessin au système (onglets, boutons).
+    /// A14 : celui de la palette, relue avec elle.</summary>
+    private bool HighContrastOn() => _pal.HighContrast;
 
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipDeletePath(IntPtr path);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipAddPathArc(IntPtr path, float x, float y, float width, float height, float startAngle, float sweepAngle);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipClosePathFigure(IntPtr path);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipFillPath(IntPtr graphics, IntPtr brush, IntPtr path);
-
-    [DllImport("gdiplus.dll")]
-    private static extern int GdipDrawPath(IntPtr graphics, IntPtr pen, IntPtr path);
-
-    /// <summary>Carré arrondi lissé (indicateur de case) : fond puis trait de
-    /// <paramref name="stroke"/> px, posé à l'intérieur du cadre.</summary>
-    private static void SmoothRoundBox(IntPtr gfx, float x, float y, float size, float radius, uint fill, uint border, float stroke)
+    /// <summary>
+    /// A14 : le réglage de contraste ou les couleurs système ont changé, fenêtre ouverte.
+    /// Palette, fond de classe et fond de liste sont relus, puis tout se repeint, enfants
+    /// compris (onglets et boutons passent du dessin papier à celui du système).
+    /// </summary>
+    private void RefreshPalette()
     {
-        if (gfx == IntPtr.Zero || GdipCreatePath(0, out IntPtr path) != 0) return;
-        try
-        {
-            float half = stroke / 2;
-            float left = x + half, top = y + half, side = size - stroke, d = radius * 2;
-            GdipAddPathArc(path, left, top, d, d, 180, 90);
-            GdipAddPathArc(path, left + side - d, top, d, d, 270, 90);
-            GdipAddPathArc(path, left + side - d, top + side - d, d, d, 0, 90);
-            GdipAddPathArc(path, left, top + side - d, d, d, 90, 90);
-            GdipClosePathFigure(path);
-            if (GdipCreateSolidFill(Argb(fill), out IntPtr brush) == 0)
-            {
-                GdipFillPath(gfx, brush, path);
-                GdipDeleteBrush(brush);
-            }
-            if (GdipCreatePen1(Argb(border), stroke, UnitPixel, out IntPtr pen) == 0)
-            {
-                GdipDrawPath(gfx, pen, path);
-                GdipDeletePen(pen);
-            }
-        }
-        finally { GdipDeletePath(path); }
+        var palette = PaperPalette.Now();
+        if (palette == _pal) return;
+        _pal = palette;
+        if (_hWnd == IntPtr.Zero) return;
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+        IntPtr oldSurface = _hSurfaceBrush;
+        _hSurfaceBrush = Win32.CreateSolidBrush(CLR_SURFACE);
+        if (oldSurface != IntPtr.Zero) Win32.DeleteObject(oldSurface);
+        RedrawWindow(_hWnd, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_FRAME);
     }
 
-    /// <summary>COLORREF (0x00BBGGRR) → ARGB opaque de GDI+.</summary>
-    private static uint Argb(uint colorRef)
-        => 0xFF000000u | ((colorRef & 0xFF) << 16) | (colorRef & 0xFF00) | ((colorRef >> 16) & 0xFF);
+    private const uint RDW_INVALIDATE = 0x0001;
+    private const uint RDW_ERASE = 0x0004;
+    private const uint RDW_ALLCHILDREN = 0x0080;
+    private const uint RDW_FRAME = 0x0400;
 
-    /// <summary>Contraste élevé : la fenêtre rend le dessin au système (onglets, boutons).</summary>
-    private static bool HighContrastOn()
-    {
-        var hc = new HIGHCONTRAST { cbSize = (uint)Marshal.SizeOf<HIGHCONTRAST>() };
-        return SystemParametersInfoHighContrast(SPI_GETHIGHCONTRAST, hc.cbSize, ref hc, 0)
-            && (hc.dwFlags & HCF_HIGHCONTRASTON) != 0;
-    }
+    [DllImport("user32.dll")]
+    private static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
 
     private static string WindowText(IntPtr hWnd)
     {
@@ -298,6 +223,7 @@ sealed partial class SettingsWindow
         {
             DrawTitle(hdc, layout.CompatTitleRect, L.Settings_SectionCompat);
             PaperDraw.Frame(hdc, layout.CompatListFrame, CLR_BORDER);
+            DrawCompatScroll(hdc, layout);
             string? process = SelectedCompatProcess();
             string modeLabel = process != null ? L.SettingsPaper_CompatModeFor(process) : L.SettingsPaper_CompatModeNone;
             PaperText.DrawLine(hdc, modeLabel, FontSmall, layout.CompatModeLabelRect, CLR_MUTED);
@@ -383,7 +309,7 @@ sealed partial class SettingsWindow
             else if (place == MessagePlace.Compat)
             {
                 PaperText.DrawParagraph(hdc, new[] { new TextRun(text) }, FontSmall, FontSmall, r,
-                    ValidationTextColor(true), ValidationTextColor(true), MessageLineHeight);
+                    ValidationTextColor(true, _pal), ValidationTextColor(true, _pal), MessageLineHeight);
             }
         }
         finally
@@ -421,7 +347,7 @@ sealed partial class SettingsWindow
         var line = Rect(r.left + S(20), r.top + S(1), r.right - r.left - S(40), r.bottom - r.top - S(1));
         int save = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, line.left, line.top, line.right, line.bottom);
-        int width = PaperText.DrawLine(hdc, body, FontSmall, line, ValidationTextColor(false));
+        int width = PaperText.DrawLine(hdc, body, FontSmall, line, ValidationTextColor(false, _pal));
         if (tick)
         {
             var tickRect = line;
@@ -446,7 +372,7 @@ sealed partial class SettingsWindow
             int index = unchecked((int)dis.itemID);
             bool valid = index >= 0 && index < _compatProcesses.Count;
             bool selected = valid && (dis.itemState & ODS_SELECTED) != 0;
-            PaperDraw.Fill(hdc, r, selected ? PaperTheme.ActionTint : CLR_SURFACE);
+            PaperDraw.Fill(hdc, r, selected ? (_pal.HighContrast ? _pal.ActionFill : _pal.ActionTint) : CLR_SURFACE);
             if (!valid) return;
 
             int count = (int)Win32.SendMessageW(_hWndCompatList, LB_GETCOUNT, IntPtr.Zero, IntPtr.Zero);
@@ -457,12 +383,15 @@ sealed partial class SettingsWindow
 
             string mode = CompatListLabel(_compatModes[index]);
             var modeRect = Rect(r.left, r.top, w - S(12), h - S(1));
-            int modeWidth = PaperText.DrawLine(hdc, mode, FontSmall, modeRect, CLR_MUTED, TextAlign.Right);
+            // A14 : en contraste élevé, la ligne choisie prend les couleurs de sélection du système.
+            bool onHighlight = selected && _pal.HighContrast;
+            int modeWidth = PaperText.DrawLine(hdc, mode, FontSmall, modeRect, onHighlight ? _pal.OnAction : CLR_MUTED, TextAlign.Right);
 
             var nameRect = Rect(r.left + S(12), r.top, Math.Max(0, w - S(12) - modeWidth - S(24)), h - S(1));
             int save = Win32.SaveDC(hdc);
             Win32.IntersectClipRect(hdc, nameRect.left, nameRect.top, nameRect.right, nameRect.bottom);
-            PaperText.DrawLine(hdc, _compatProcesses[index], selected ? FontListNameChosen : FontListName, nameRect, CLR_TEXT);
+            PaperText.DrawLine(hdc, _compatProcesses[index], selected ? FontListNameChosen : FontListName, nameRect,
+                onHighlight ? _pal.OnAction : CLR_TEXT);
             Win32.RestoreDC(hdc, save);
 
             if ((dis.itemState & ODS_FOCUS) != 0 && FocusCuesShown(_hWndCompatList))
@@ -508,8 +437,9 @@ sealed partial class SettingsWindow
         {
             RoundBox(hdc, client, CLR_BG, CLR_ACTION, radius + S(3), Math.Max(2, S(2)));
             PaperDraw.Fill(hdc, Inflate(client, -Math.Max(2, S(2))), CLR_BG);
-            RoundBox(hdc, box, PaperTheme.ActionTintOnPaper, CLR_ACTION, radius, 1, Win32.PS_DASH);
-            RoundBox(hdc, Inflate(box, -1), PaperTheme.ActionTintOnPaper, CLR_ACTION, Math.Max(1, radius - 1), 1, Win32.PS_DASH);
+            uint tint = _pal.HighContrast ? CLR_BG : PaperTheme.ActionTintOnPaper;
+            RoundBox(hdc, box, tint, CLR_ACTION, radius, 1, Win32.PS_DASH);
+            RoundBox(hdc, Inflate(box, -1), tint, CLR_ACTION, Math.Max(1, radius - 1), 1, Win32.PS_DASH);
             textColor = CLR_ACTION;
         }
         else
@@ -661,7 +591,7 @@ sealed partial class SettingsWindow
     /// <summary>Bouton secondaire : blanc, cerné d'encre, 32 px de haut.</summary>
     private void DrawPushButton(IntPtr hdc, Win32.RECT r, string text, bool enabled, bool focused, bool hot)
     {
-        uint fill = enabled && hot ? PaperTheme.FunctionKey : CLR_SURFACE;
+        uint fill = enabled && hot ? _pal.FunctionKey : CLR_SURFACE;
         uint border = !enabled ? CLR_BORDER : focused ? CLR_ACTION : CLR_TEXT;
         int borderWidth = enabled && focused ? Math.Max(2, S(2)) : Math.Max(1, S(1));
         RoundBox(hdc, r, fill, border, S(3), borderWidth);
@@ -670,100 +600,5 @@ sealed partial class SettingsWindow
 
     /// <summary>Case à cocher ou bouton radio : indicateur de 18 px, libellé à 10 px.</summary>
     private void DrawChoice(IntPtr hdc, Win32.RECT r, string text, bool radio, bool isChecked, bool enabled, bool focused)
-    {
-        int size = S(18);
-        int left = r.left + S(4);
-        int top = r.top + (r.bottom - r.top - size) / 2;
-        var indicator = Rect(left, top, size, size);
-        uint ink = enabled ? CLR_TEXT : CLR_PALE;
-        uint action = enabled ? CLR_ACTION : CLR_PALE;
-        float stroke = 1.5f * _dpiScale;
-
-        IntPtr gfx = IntPtr.Zero;
-        Win32.GdipCreateFromHDC(hdc, out gfx);
-        try
-        {
-            if (gfx != IntPtr.Zero)
-            {
-                Win32.GdipSetSmoothingMode(gfx, 4);
-                GdipSetPixelOffsetMode(gfx, 4);
-            }
-
-            if (focused)
-            {
-                float ring = 2f * _dpiScale;
-                if (radio)
-                    StrokeEllipse(gfx, indicator.left - 3f * _dpiScale + ring / 2, indicator.top - 3f * _dpiScale + ring / 2,
-                        size + 6f * _dpiScale - ring, CLR_ACTION, ring);
-                else
-                    SmoothRoundBox(gfx, indicator.left - 3f * _dpiScale, indicator.top - 3f * _dpiScale,
-                        size + 6f * _dpiScale, 5f * _dpiScale, CLR_BG, CLR_ACTION, ring);
-            }
-
-            if (radio)
-            {
-                float x = indicator.left + stroke / 2, y = indicator.top + stroke / 2, d = size - stroke;
-                FillEllipse(gfx, indicator.left, indicator.top, size, CLR_SURFACE);
-                StrokeEllipse(gfx, x, y, d, isChecked ? action : ink, stroke);
-                if (isChecked)
-                {
-                    float inset = stroke + 3f * _dpiScale;
-                    FillEllipse(gfx, indicator.left + inset, indicator.top + inset, size - 2 * inset, action);
-                }
-            }
-            else
-            {
-                float radius = 3f * _dpiScale;
-                if (isChecked)
-                {
-                    SmoothRoundBox(gfx, indicator.left, indicator.top, size, radius, action, action, stroke);
-                    DrawTick(gfx, indicator);
-                }
-                else
-                {
-                    SmoothRoundBox(gfx, indicator.left, indicator.top, size, radius, CLR_SURFACE, ink, stroke);
-                }
-            }
-        }
-        finally
-        {
-            if (gfx != IntPtr.Zero) Win32.GdipDeleteGraphics(gfx);
-        }
-
-        var textRect = Rect(indicator.right + S(10), r.top, Math.Max(0, r.right - indicator.right - S(10)), r.bottom - r.top);
-        int save = Win32.SaveDC(hdc);
-        Win32.IntersectClipRect(hdc, textRect.left, textRect.top, textRect.right, textRect.bottom);
-        PaperText.DrawLine(hdc, text, FontBody, textRect, enabled ? CLR_TEXT : CLR_PALE);
-        Win32.RestoreDC(hdc, save);
-    }
-
-    private static void FillEllipse(IntPtr gfx, float x, float y, float d, uint color)
-    {
-        if (gfx == IntPtr.Zero) return;
-        if (GdipCreateSolidFill(Argb(color), out IntPtr brush) != 0) return;
-        GdipFillEllipse(gfx, brush, x, y, d, d);
-        GdipDeleteBrush(brush);
-    }
-
-    private static void StrokeEllipse(IntPtr gfx, float x, float y, float d, uint color, float width)
-    {
-        if (gfx == IntPtr.Zero) return;
-        if (GdipCreatePen1(Argb(color), width, UnitPixel, out IntPtr pen) != 0) return;
-        GdipDrawEllipse(gfx, pen, x, y, d, d);
-        GdipDeletePen(pen);
-    }
-
-    /// <summary>La coche blanche d'une case cochée, trait arrondi de 2 px.</summary>
-    private void DrawTick(IntPtr gfx, Win32.RECT box)
-    {
-        if (gfx == IntPtr.Zero) return;
-        if (GdipCreatePen1(Argb(PaperTheme.OnAction), 2f * _dpiScale, UnitPixel, out IntPtr pen) != 0) return;
-        GdipSetPenLineCap197819(pen, LineCapRound, LineCapRound, 0);
-        GdipSetPenLineJoin(pen, LineJoinRound);
-        float u = _dpiScale;
-        float x = box.left, y = box.top;
-        GdipDrawLine(gfx, pen, x + 4.5f * u, y + 9.5f * u, x + 7.5f * u, y + 12.5f * u);
-        GdipDrawLine(gfx, pen, x + 7.5f * u, y + 12.5f * u, x + 13.5f * u, y + 5.5f * u);
-        GdipDeletePen(pen);
-    }
+        => PaperChoice.Draw(hdc, r, text, FontBody, radio, isChecked, enabled, focused, _dpiScale, _pal);
 }

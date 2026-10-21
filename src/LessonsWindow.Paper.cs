@@ -90,11 +90,11 @@ internal sealed partial class LessonsWindow
     private void DrawOutlineButton(IntPtr hdc, Win32.RECT rect, string text, Action action, bool primary = false)
     {
         bool hot = IsHot(rect);
-        uint fill = primary ? CLR_ACCENT : hot ? PaperDraw.Blend(PaperTheme.Action, PaperTheme.Surface, 0.07f) : CLR_PANEL;
+        uint fill = primary ? CLR_ACCENT : hot ? PaperDraw.Blend(CLR_ACCENT, CLR_PANEL, 0.07f) : CLR_PANEL;
         uint border = primary ? CLR_ACCENT : hot ? CLR_ACCENT : CLR_BORDER;
         PaperDraw.RoundBox(hdc, rect, fill, border, S(3));
         PaperText.DrawLine(hdc, text, F(AppFonts.Text, 15, primary ? TypeRamp.Semibold : TypeRamp.Regular), rect,
-            primary ? PaperTheme.OnAction : CLR_TEXT, TextAlign.Center);
+            primary ? CLR_ON_ACCENT : CLR_TEXT, TextAlign.Center);
         AddClick(rect, action, text);
     }
 
@@ -102,15 +102,15 @@ internal sealed partial class LessonsWindow
     private void DrawCheckRow(IntPtr hdc, Win32.RECT row, string label, bool enabled, Action toggle)
     {
         if (IsHot(row))
-            PaperDraw.Fill(hdc, row, PaperDraw.Blend(PaperTheme.Action, PaperTheme.Surface, 0.05f));
+            PaperDraw.Fill(hdc, row, PaperDraw.Blend(CLR_ACCENT, CLR_PANEL, 0.05f));
         int box = S(18);
         int top = row.top + (row.bottom - row.top - box) / 2;
         var square = new Win32.RECT { left = row.left + S(8), top = top, right = row.left + S(8) + box, bottom = top + box };
-        PaperDraw.RoundBox(hdc, square, enabled ? CLR_ACCENT : CLR_PANEL, enabled ? CLR_ACCENT : PaperTheme.Pale, S(3));
+        PaperDraw.RoundBox(hdc, square, enabled ? CLR_ACCENT : CLR_PANEL, enabled ? CLR_ACCENT : CLR_PENDING, S(3));
         if (enabled)
         {
             // Coche en deux traits.
-            var pen = Win32.CreatePen(0, Math.Max(2, S(2)), PaperTheme.OnAction);
+            var pen = Win32.CreatePen(0, Math.Max(2, S(2)), CLR_ON_ACCENT);
             var old = Win32.SelectObject(hdc, pen);
             Win32.MoveToEx(hdc, square.left + box * 4 / 18, square.top + box * 9 / 18, IntPtr.Zero);
             Win32.LineTo(hdc, square.left + box * 8 / 18, square.top + box * 13 / 18);
@@ -293,7 +293,7 @@ internal sealed partial class LessonsWindow
         var panel = new Win32.RECT { left = left, top = top, right = right, bottom = bottom };
         // Ombre légère, puis le panneau.
         PaperDraw.Fill(hdc, panel.left + S(2), panel.top + S(3), panel.right + S(2), panel.bottom + S(3),
-            PaperDraw.Blend(PaperTheme.Ink, PaperTheme.Paper, 0.08f));
+            PaperDraw.Blend(CLR_TEXT, CLR_BG, 0.08f));
         PaperDraw.RoundBox(hdc, panel, CLR_PANEL, CLR_BORDER, S(3));
 
         int saved = Win32.SaveDC(hdc);
@@ -338,7 +338,7 @@ internal sealed partial class LessonsWindow
         uint color, bool selected, int indent)
     {
         if (IsHot(row))
-            PaperDraw.Fill(hdc, row, PaperDraw.Blend(PaperTheme.Action, PaperTheme.Surface, 0.07f));
+            PaperDraw.Fill(hdc, row, PaperDraw.Blend(CLR_ACCENT, CLR_PANEL, 0.07f));
         if (selected)
             PaperDraw.Fill(hdc, row.left, row.top + S(4), row.left + Math.Max(2, S(2)), row.bottom - S(4), CLR_ACCENT);
         int countW = PaperText.Width(hdc, count, countFont);
@@ -404,7 +404,7 @@ internal sealed partial class LessonsWindow
         PaperText.DrawLine(hdc, Ellipsize(hdc, instruction, font, instrRect.right - instrRect.left), font, instrRect, CLR_MUTED, TextAlign.Left);
         var statusRect = new Win32.RECT { left = part.left, top = top + S(22), right = part.right, bottom = top + S(42) };
         PaperText.DrawLine(hdc, Ellipsize(hdc, BuildTypingStatus(), small, statusRect.right - statusRect.left), small, statusRect,
-            PaperTheme.Pale, TextAlign.Left);
+            _pal.HighContrast ? _pal.Pale : PaperTheme.PaleText, TextAlign.Left);
     }
 
     /// <summary>Le caractère tapé tel qu'il se repeint dans la colonne fautive : une espace, quelle
