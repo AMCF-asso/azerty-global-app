@@ -129,13 +129,7 @@ internal sealed class LayerIndicatorWindow : IDisposable
         {
             IntPtr hdc = Win32.BeginPaint(hWnd, out var ps);
             Win32.GetClientRect(hWnd, out var rect);
-            Win32.FillRect(hdc, ref rect, _hBrush);
-            IntPtr oldFont = Win32.SelectObject(hdc, _hFont);
-            Win32.SetBkMode(hdc, 1);
-            uint color = _mode == MaintainableLayerMode.Locked ? DarkTheme.Warning : DarkTheme.Text;
-            Win32.SetTextColor(hdc, color);
-            Win32.DrawTextW(hdc, _label, -1, ref rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-            Win32.SelectObject(hdc, oldFont);
+            Paint(hdc, rect, _label, _mode, _hBrush, _hFont);
             Win32.EndPaint(hWnd, ref ps);
             return IntPtr.Zero;
         }
@@ -156,6 +150,18 @@ internal sealed class LayerIndicatorWindow : IDisposable
             return IntPtr.Zero;
         }
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
+    }
+
+    /// <summary>Dessin de l'indicateur, sans fenêtre : le banc de captures l'appelle aussi.</summary>
+    internal static void Paint(IntPtr hdc, Win32.RECT rect, string label, MaintainableLayerMode mode, IntPtr brush, IntPtr font)
+    {
+        Win32.FillRect(hdc, ref rect, brush);
+        IntPtr oldFont = Win32.SelectObject(hdc, font);
+        Win32.SetBkMode(hdc, 1);
+        uint color = mode == MaintainableLayerMode.Locked ? DarkTheme.Warning : DarkTheme.Text;
+        Win32.SetTextColor(hdc, color);
+        Win32.DrawTextW(hdc, label, -1, ref rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        Win32.SelectObject(hdc, oldFont);
     }
 
     public void Dispose()

@@ -161,12 +161,18 @@ internal sealed class ToggleNotification : IDisposable
         int ch = clientRect.bottom;
         var hdc = paint.Hdc;
 
-        Win32.FillRect(hdc, ref clientRect, _hBgBrush);
+        Paint(hdc, clientRect, _currentActivated, _hBgBrush, _hFontText);
+    }
+
+    /// <summary>Dessin de la bulle, sans fenêtre : le banc de captures l'appelle aussi.</summary>
+    internal static void Paint(IntPtr hdc, Win32.RECT clientRect, bool activated, IntPtr bgBrush, IntPtr font)
+    {
+        Win32.FillRect(hdc, ref clientRect, bgBrush);
         Win32.SetBkMode(hdc, 1);
 
-        Win32.SelectObject(hdc, _hFontText);
-        Win32.SetTextColor(hdc, _currentActivated ? CLR_ACTIVATED : CLR_DEACTIVATED);
-        string text = _currentActivated ? L.Toggle_Activated : L.Toggle_Deactivated;
+        Win32.SelectObject(hdc, font);
+        Win32.SetTextColor(hdc, activated ? CLR_ACTIVATED : CLR_DEACTIVATED);
+        string text = activated ? L.Toggle_Activated : L.Toggle_Deactivated;
         Win32.DrawTextW(hdc, text, -1, ref clientRect,
             Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
     }
