@@ -75,11 +75,12 @@ L'utilisateur grand public qui double-clique sur l'exe doit comprendre immédiat
 
 L'onboarding actuel s'organise en deux niveaux :
 
-#### Wizard d'accueil — 3 étapes
+#### Wizard d'accueil — 4 étapes
 
-- [x] **Étape 1** : présentation des 5 améliorations + mention de confidentialité « Cette application améliore votre clavier. Aucune frappe n'est enregistrée ni transmise. » + bouton « Essayer maintenant ».
-- [x] **Étape 2** : « Comment utiliser AZERTY Global » — 4 cards : icône tray, activation/désactivation (`Ctrl+Maj+Verr.Maj`), clavier virtuel (`Ctrl+Maj+Q`), recherche de caractère (`Ctrl+Maj+W`).
-- [x] **Étape 3** : ressources & communauté — 3 liens (Guide, Donner son avis, Discord) + préférences (lancer au démarrage, ne plus afficher).
+- [x] **Étape 1** : « 5 changements, 99 % des frappes préservées » sur le clavier papier, nouveautés en bleu et cinq notes au trait, mention de confidentialité « Tout se passe sur votre ordinateur : ce que vous tapez n’est ni enregistré ni envoyé. », puis « Vous pouvez le désactiver à tout moment. » et le bouton « Activer et essayer » (« Essayer maintenant » après l’accord). Refonte du 15/10 (`b9dd1d7`).
+- [x] **Étape 2** : « Écrire le peul, le wolof, le bambara » : les lettres de trois langues et un geste pour chacune, un champ d’essai (ù puis b donne ɓ, « C’est bien ɓ. ») et l’astuce Ctrl + Maj + W (`cadab2c`, 08/10).
+- [x] **Étape 3** : « Comment utiliser AZERTY Global » — 4 cards : icône tray, activation/désactivation (`Ctrl+Maj+Verr.Maj`), clavier virtuel (`Ctrl+Maj+Q`), recherche de caractère (`Ctrl+Maj+W`).
+- [x] **Étape 4** : ressources & communauté — 4 liens (Continuer avec les leçons, Guide de prise en main, Donner mon avis, Échanger avec les autres utilisateurs) + préférences (lancer au démarrage, ne plus afficher, rappels d’entraînement « Défi du jour »).
 - [x] **Bouton « Essayer maintenant »** (« Activer et essayer » avant l’accord) dans l’étape 1 : ouvre le parcours d’exercices dans les Leçons, sans avancer silencieusement à l’étape 2. Dès que le parcours a été ouvert une fois, « Suivant » apparaît à côté ; « Essayer maintenant » disparaît quand le tronc commun est réussi.
 - [x] **Esc + croix X** pour fermer.
 
@@ -106,7 +107,7 @@ L'onboarding actuel s'organise en deux niveaux :
 
 Fenêtre affichant la disposition AZERTY Global de manière interactive, similaire au testeur du site azerty.global.
 
-- [x] **Affichage des 48 touches** avec tous les caractères visibles par couche
+- [x] **Affichage des 49 touches** avec tous les caractères visibles par couche
 - [x] **Réactif aux modificateurs** : l'affichage change en temps réel selon les touches enfoncées :
   - État normal → caractères base
   - Shift enfoncé → caractères shift

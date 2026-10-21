@@ -24,7 +24,7 @@ L'application Windows permet d'utiliser AZERTY Global **sans installation systè
 
 ### Fonctionnalités
 
-- **Remapping clavier complet** — 48 touches, 8 couches par touche, 30 touches mortes
+- **Remapping clavier complet** — 49 touches, jusqu’à 8 couches par touche, 30 touches mortes
 - **Verrouillage Majuscule Intelligent** — N'affecte que les lettres : `É`, `È`, `Ç`, `À` en un appui
 - **Clavier virtuel** — Visualisation interactive de la disposition
 - **Recherche de caractères** — Trouvez n'importe quel caractère parmi les 1 000+ disponibles, avec insertion directe dans l'application d'origine
@@ -75,7 +75,7 @@ dotnet test src/TypingEngine.Core.Tests
 git config core.hooksPath .githooks
 ```
 
-La suite comprend des tests applicatifs, Windows et portables. Les effectifs et résultats du candidat courant sont consignés dans [`docs/audit-2026-09-22-v1.3.0/corrections/README.md`](docs/audit-2026-09-22-v1.3.0/corrections/README.md). L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
+La suite comprend des tests applicatifs, Windows et portables. Les effectifs et résultats se lisent dans la sortie de `scripts/verify.ps1` et dans le journal du job CI qui l’appelle ; ils changent à chaque lot, ce README n’en recopie aucun. L'architecture cible et sa séquence d'extraction sont décrites dans [`docs/keyboard-platform.md`](docs/keyboard-platform.md).
 
 ## Structure du projet
 
