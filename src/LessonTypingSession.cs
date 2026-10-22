@@ -39,7 +39,10 @@ internal sealed class LessonAttemptStats
     public int HintCount { get; private set; }
     public DateTimeOffset? StartedAt => _startedAt;
 
-    public void RecordChar(char actual, char? expected)
+    /// <param name="tolerated">Frappe acceptée par <see cref="TypingTolerance"/> à la place du
+    /// caractère attendu : juste pour la précision, mais comptée en faute pour le caractère
+    /// attendu, que la progression par geste ramène alors dans la Révision du jour.</param>
+    public void RecordChar(char actual, char? expected, bool tolerated = false)
     {
         _startedAt ??= _clock();
         ProductiveKeystrokes++;
@@ -54,7 +57,10 @@ internal sealed class LessonAttemptStats
             return;
         }
 
-        ErrorCount++;
+        if (tolerated && expected.HasValue)
+            CorrectKeystrokes++;
+        else
+            ErrorCount++;
         if (expected.HasValue)
         {
             _errorCountsByExpected[expected.Value] =
@@ -138,6 +144,7 @@ internal sealed class LessonTypingSession
     {
         Exercise = exercise;
         Mode = exercise.TypingMode;
+        IsTolerant = TypingTolerance.AppliesTo(exercise);
         _lines = exercise.Lines;
         _clock = clock;
         Stats = new LessonAttemptStats(_clock);
@@ -146,6 +153,8 @@ internal sealed class LessonTypingSession
 
     public LessonExercise Exercise { get; }
     public LessonTypingMode Mode { get; }
+    /// <summary>Exercice de découverte : espaces et apostrophe tolérées (<see cref="TypingTolerance"/>).</summary>
+    public bool IsTolerant { get; }
     public LessonAttemptStats Stats { get; private set; }
     public int LineIndex { get; private set; }
     public int CursorPosition { get; private set; }
@@ -293,8 +302,8 @@ internal sealed class LessonTypingSession
         string line = CurrentLine;
         if (CursorPosition >= line.Length) return IgnoredResult();
         char expected = line[CursorPosition];
-        bool ok = c == expected;
-        Stats.RecordChar(c, expected);
+        bool ok = Matches(c, expected);
+        Stats.RecordChar(c, expected, tolerated: ok && c != expected);
 
         if (ok)
         {
@@ -316,9 +325,11 @@ internal sealed class LessonTypingSession
         string line = CurrentLine;
         int pos = _typedLine.Length;
         char? expected = pos < line.Length ? line[pos] : null;
-        bool ok = expected.HasValue && c == expected.Value;
-        Stats.RecordChar(c, expected);
-        _typedLine += c;
+        bool ok = expected.HasValue && Matches(c, expected.Value);
+        Stats.RecordChar(c, expected, tolerated: ok && c != expected);
+        // Une frappe tolérée s'inscrit comme le caractère attendu : la ligne se termine, et
+        // un retour arrière ne la repasse pas en faute.
+        _typedLine += ok ? expected!.Value : c;
         _flexibleCorrectStates.Add(ok);
         CursorPosition = _typedLine.Length;
 
@@ -359,6 +370,9 @@ internal sealed class LessonTypingSession
         for (int i = 0; i < _typedLine.Length; i++)
             _flexibleCorrectStates.Add(i < line.Length && _typedLine[i] == line[i]);
     }
+
+    private bool Matches(char typed, char expected) =>
+        IsTolerant ? TypingTolerance.Accepts(typed, expected) : typed == expected;
 
     private static LessonInputResult IgnoredResult() => new(false, false, null, null, false, false);
 }

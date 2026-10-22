@@ -1,0 +1,5 @@
+# Dépendances Python du job build de ci.yml (validation de schéma, scripts/validate-layout.py).
+# Fichier verrouillé : scripts/requirements-ci.txt, régénéré par
+#   uv pip compile --generate-hashes --python-version 3.12 --python-platform x86_64-pc-windows-msvc scripts/requirements-ci.in -o scripts/requirements-ci.txt
+# puis installé en CI avec pip install --require-hashes --only-binary=:all: (audit 1.3.0, A33).
+jsonschema>=4,<5

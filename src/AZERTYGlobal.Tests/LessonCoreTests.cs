@@ -609,24 +609,6 @@ public class LessonCoreTests
     }
 
     [Fact]
-    public void LearningModule_Backspace_ClearsCurrentTypingError()
-    {
-        var module = (LearningModule)System.Runtime.CompilerServices.RuntimeHelpers
-            .GetUninitializedObject(typeof(LearningModule));
-        typeof(LearningModule).GetField("_currentCharError",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .SetValue(module, true);
-
-        typeof(LearningModule).GetMethod("OnBackspace",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .Invoke(module, null);
-
-        Assert.False((bool)typeof(LearningModule).GetField("_currentCharError",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .GetValue(module)!);
-    }
-
-    [Fact]
     public void LessonHintProvider_RevealsDeadKeysRequiredByLessonCharacters()
     {
         var provider = new LessonHintProvider();

@@ -243,6 +243,7 @@ sealed class CharacterSearch : IDisposable
         {
             ResizeToFitResults();
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            AnnounceSelection(notify: false);
             return;
         }
 
@@ -254,8 +255,44 @@ sealed class CharacterSearch : IDisposable
         ResizeToFitResults();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         // Ne PAS appeler NotifySelectionChanged ici : le highlight ne doit
-        // se déclencher que sur Entrée, clic ou navigation flèches.
+        // se déclencher que sur Entrée, clic ou navigation flèches. Le lecteur d'écran, lui,
+        // entend le premier résultat de la nouvelle liste (A18).
+        AnnounceSelection(notify: true);
     }
+
+    /// <summary>
+    /// A18 (audit 1.3.0) : la liste est peinte en GDI, sans élément accessible ; le champ,
+    /// qui garde le focus, porte donc le choix dans son nom, et le lecteur d'écran relit ce
+    /// nom quand il change (EVENT_OBJECT_NAMECHANGE). <paramref name="notify"/> faux pose le
+    /// nom sans l'annoncer (champ vidé, fin du « Copié »).
+    /// </summary>
+    private void AnnounceSelection(bool notify)
+    {
+        if (_hEdit == IntPtr.Zero) return;
+        string? result = null;
+        if (_selectedIndex >= 0 && _selectedIndex < _filteredResults.Count)
+        {
+            var entry = _filteredResults[_selectedIndex];
+            result = L.Search_AccessibleResult(_selectedIndex + 1, _filteredResults.Count,
+                DisplayGlyph.ForStandaloneMark(entry.Character), GetSentenceName(entry),
+                Gesture.PlainSentence(StepsOf(entry)));
+        }
+        else if (GetEditTextLength() > 0)
+            result = L.Search_NoResults;
+        Announce(result, notify);
+    }
+
+    private void Announce(string? message, bool notify)
+    {
+        string name = AccessibleFieldName(message);
+        if (notify) AccessibleName.TrySetAndNotify(_hEdit, name);
+        else AccessibleName.TrySet(_hEdit, name);
+    }
+
+    /// <summary>A18 : le nom du champ, suivi de ce qu'il faut entendre ; le nom seul quand il
+    /// n'y a rien à dire (celui du STATIC qui le nomme, N8).</summary>
+    internal static string AccessibleFieldName(string? message) =>
+        string.IsNullOrEmpty(message) ? L.Search_WindowTitle : $"{L.Search_WindowTitle}. {message}";
 
     /// <summary>
     /// Correspondances d'une requête non vide, triées par score décroissant. Séparé de
@@ -590,7 +627,9 @@ sealed class CharacterSearch : IDisposable
             Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW,
             className,
             L.Search_WindowTitle,
-            Win32.WS_POPUP | Win32.WS_BORDER | Win32.WS_CLIPCHILDREN,
+            // A17 (audit 1.3.0) : pas de WS_BORDER, dont le trait système #646464 cernait le
+            // papier ; le contour est peint par OnPaint, comme dans les Paramètres.
+            Win32.WS_POPUP | Win32.WS_CLIPCHILDREN,
             x, y, BASE_WIN_W, baseH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         NativeWindow.ApplyClassBackground(_hWnd, PaperTheme.Paper);
@@ -711,7 +750,7 @@ sealed class CharacterSearch : IDisposable
             clientH += Scale(BASE_FOOTER_H);
         }
 
-        // Le cadre (WS_BORDER) en plus de la zone cliente.
+        // Le cadre non client en plus de la zone cliente (aucun depuis A17 : il est peint).
         Win32.GetWindowRect(_hWnd, out var wr);
         Win32.GetClientRect(_hWnd, out var cr);
         int frameW = (wr.right - wr.left) - (cr.right - cr.left);
@@ -889,6 +928,7 @@ sealed class CharacterSearch : IDisposable
                         Win32.KillTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK);
                         _showCopiedFeedback = false;
                         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                        AnnounceSelection(notify: false);
                     }
                     return IntPtr.Zero;
 
@@ -949,6 +989,7 @@ sealed class CharacterSearch : IDisposable
                         EnsureVisible(_selectedIndex);
                         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                         NotifySelectionChanged();
+                        AnnounceSelection(notify: true);
                     }
                     return IntPtr.Zero;
 
@@ -959,6 +1000,7 @@ sealed class CharacterSearch : IDisposable
                         EnsureVisible(_selectedIndex);
                         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                         NotifySelectionChanged();
+                        AnnounceSelection(notify: true);
                     }
                     return IntPtr.Zero;
             }
@@ -1090,6 +1132,8 @@ sealed class CharacterSearch : IDisposable
         _copiedChar = entry.Character;
         FallbackCopied?.Invoke(entry.Character);
         Win32.SetTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK, 1500, IntPtr.Zero);
+        // A18 : « Copié » s'entend aussi, pas seulement dans le pied peint.
+        Announce(L.Search_CopiedFeedback(entry.Character), notify: true);
     }
 
     // La séquence de copie elle-même vit dans ClipboardText.TrySet depuis la v1.2.0 :
@@ -1172,11 +1216,14 @@ sealed class CharacterSearch : IDisposable
     private void OnPaint(IntPtr hWnd)
     {
         using var paint = new PaintBuffer(hWnd);
-        var hdc = paint.Hdc;
-        int cw = paint.Client.right;
-        int ch = paint.Client.bottom;
+        PaintContent(paint.Hdc, paint.Client.right, paint.Client.bottom);
+        // Contour papier d'un pixel, posé en dernier sur les bords de la zone cliente.
+        PaperDraw.Frame(paint.Hdc, paint.Client, PaperTheme.Border);
+    }
 
-        PaperDraw.Fill(hdc, paint.Client, PaperTheme.Paper);
+    private void PaintContent(IntPtr hdc, int cw, int ch)
+    {
+        PaperDraw.Fill(hdc, 0, 0, cw, ch, PaperTheme.Paper);
 
         // Champ : la loupe ; l'EDIT se dessine lui-même, sur le même papier.
         int fieldH = Scale(BASE_FIELD_H);

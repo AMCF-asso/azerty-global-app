@@ -120,14 +120,25 @@ static class TrainingReminders
     public static void MarkReminderIgnored() =>
         ConfigManager.SetTrainingIgnoredCount(ConfigManager.TrainingIgnoredCount + 1);
 
-    /// <summary>Séance du jour terminée : date + avancement de la séquence.</summary>
-    public static void MarkSessionCompleted(DateOnly today)
+    /// <summary>
+    /// Séance terminée : date, avancement de la séquence et compteur « Défis terminés », une
+    /// fois par séance (audit 1.3.0, A23). <paramref name="playedIndex"/> est l'étape jouée :
+    /// si la séquence a déjà avancé au-delà, c'est un rejeu (« Recommencer »), qui ne compte
+    /// pas ; une fois la séquence finie, le défi commun compte une fois par jour. Faux si
+    /// rien n'a été compté.
+    /// </summary>
+    public static bool MarkSessionCompleted(DateOnly today, uint playedIndex)
     {
-        ConfigManager.SetTrainingLastSessionDate(today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         uint seq = ConfigManager.TrainingSequenceIndex;
+        bool counted = seq < DailyChallenge.SequenceLength
+            ? playedIndex == seq
+            : playedIndex >= DailyChallenge.SequenceLength && ParseDate(ConfigManager.TrainingLastSessionDate) != today;
+        if (!counted) return false;
+        ConfigManager.SetTrainingLastSessionDate(today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         if (seq < DailyChallenge.SequenceLength)
             ConfigManager.SetTrainingSequenceIndex(seq + 1);
         UsageStats.RecordChallengeCompleted();
+        return true;
     }
 
     private static DateOnly? ParseDate(string? s) =>

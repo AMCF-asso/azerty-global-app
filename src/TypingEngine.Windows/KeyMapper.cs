@@ -79,6 +79,17 @@ public sealed class KeyMapper
         (_maintainableLayers.CurrentState.IsActive ? _maintainableLayers.CurrentState.LayerId : null);
     public MaintainableLayerState MaintainableLayerState => _maintainableLayers.CurrentState;
     public bool AdvancedFeaturesSuppressed => _foregroundMonitor?.IsSecureInput == true;
+
+    /// <summary>
+    /// A20 (audit 1.3.0) : rien de la frappe en cours ne se dessine (touche appuyée,
+    /// modificateurs tenus, touche morte) quand le champ est sécurisé, ou quand le snapshot
+    /// décrit une autre fenêtre que le premier plan réel (focus pas encore recalculé). Nos
+    /// propres fenêtres n'ont aucun champ mot de passe : une sonde qui s'y trompe (délai UIA)
+    /// ne coupe ni les Leçons ni le tutoriel.
+    /// </summary>
+    public bool KeyDisplaySuppressed => _foregroundMonitor is { } monitor &&
+        (monitor.IsWindowStale ||
+         (monitor.IsSecureInput && monitor.CurrentIdentity.ProcessId != (uint)Environment.ProcessId));
     public bool ShiftDown => IsShiftDown;
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
@@ -1030,8 +1041,10 @@ public sealed class KeyMapper
         uint sent = SendInputsWithRecovery(inputs.ToArray());
         var result = new TextEmissionResult(inputs.Count, sent);
         // Un retour positif ne prouve pas que le contrôle cible a accepté le texte.
-        // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué.
-        if (result.IsComplete) _host.RecordEmittedText(text);
+        // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué. Rien
+        // de ce qui est tapé dans un champ mot de passe ne va aux statistiques (audit 1.3.0,
+        // test SaisieSecuriseeStatsTests, choix d'Antoine du 21/10).
+        if (result.IsComplete && _foregroundMonitor?.IsSecureInput != true) _host.RecordEmittedText(text);
         return result;
     }
 

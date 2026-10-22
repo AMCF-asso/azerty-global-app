@@ -8,8 +8,9 @@ namespace AZERTYGlobal;
 /// </summary>
 internal sealed class MaintainableLayersWindow : IDisposable
 {
-    // Même fond que SettingsWindow et UsageStatsWindow.
-    private const uint CLR_BG = LightTheme.Background;
+    // A9 : palette papier des Leçons et des Paramètres, ou celle du système en contraste
+    // élevé (lue à la création, comme l'accueil).
+    private readonly PaperPalette _pal = PaperPalette.Now();
 
     private const int IDC_MASTER = 5201;
     private const int IDC_GREEK = 5202;
@@ -44,6 +45,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const int BASE_CLIENT_W = 520;
     private const int BASE_CLIENT_H = 408;
     private IntPtr _hBgBrush;
+    private IntPtr _hFieldBrush;
+    private IntPtr[] _checkboxes = Array.Empty<IntPtr>();
     private bool _visible;
 
     public event Action? SettingsChanged;
@@ -97,7 +100,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
         // Sans fond de classe, le fond n'est jamais effacé : au-dessus d'un jeu plein
         // écran, la fenêtre laissait voir la scène et ses contrôles en double (constaté
         // au smoke v1.2.0 du 2026-08-24, sous Trackmania).
-        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
         NativeWindow.ApplyFrame(_hWnd, dark: false);
 
         // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
@@ -134,7 +138,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
         Track(save, 350, 357, 140, 34);
-        LightButton.Attach(save); // audit UX 1.3.0, #3
+        // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système.
+        if (!_pal.HighContrast)
+            LightButton.Attach(save, paper: true);
+        _checkboxes = new[] { _hMaster, _hGreek, _hCyrillic, _hScientific, _hVisual };
     }
 
     private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)
@@ -159,12 +166,17 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
     private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
 
+    // A9 : AG Texte et AG Titre, les polices du papier.
     private void CreateFonts()
     {
-        _hFont = Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        AppFonts.EnsureLoaded();
+        _hFont = Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Text);
         // -18 : le titre complet tient sur une seule ligne dans 470 px.
-        _hFontTitle = Win32.CreateFontW(S(-TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontTitle = Win32.CreateFontW(S(-TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Title);
     }
+
+    /// <summary>A9 : police des libellés de case, dessinés par <see cref="PaperChoice"/>.</summary>
+    private FontSpec ChoiceFont => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpi / 96f);
 
     /// <summary>D1 : retient la géométrie de référence du contrôle et l'applique au DPI courant.</summary>
     private void Track(IntPtr control, int x, int y, int w, int h, bool title = false)
@@ -287,7 +299,24 @@ internal sealed class MaintainableLayersWindow : IDisposable
                 case Win32.WM_CTLCOLORBTN:
                     // Statics et cases posent leur texte directement sur le fond de classe.
                     Win32.SetBkMode(wParam, 1);
+                    Win32.SetBkColor(wParam, _pal.Paper);
+                    Win32.SetTextColor(wParam, _pal.Ink);
                     return _hBgBrush;
+                case Win32.WM_CTLCOLOREDIT:
+                    // A9 : le délai, encre sur la surface du papier.
+                    Win32.SetTextColor(wParam, _pal.Ink);
+                    Win32.SetBkColor(wParam, _pal.Surface);
+                    return _hFieldBrush;
+                case Win32.WM_NOTIFY:
+                {
+                    // A9 : les cases natives se remplissaient de l'accent de Windows ; elles
+                    // prennent le dessin papier des Paramètres. En contraste élevé, le système.
+                    var nm = System.Runtime.InteropServices.Marshal.PtrToStructure<Win32.NMHDR>(lParam);
+                    if (nm.code == PaperChoice.NM_CUSTOMDRAW && !_pal.HighContrast
+                        && Array.IndexOf(_checkboxes, nm.hwndFrom) >= 0)
+                        return PaperChoice.CustomDraw(lParam, ChoiceFont, _dpi / 96f, _pal);
+                    break;
+                }
                 case Win32.WM_DPICHANGED:
                     // D1 : fenêtre au rectangle suggéré, polices et contrôles au nouveau DPI.
                     _dpi = NativeWindow.ApplyDpiChange(_hWnd, wParam, lParam);
@@ -322,6 +351,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
         }
         if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
         if (_hFontTitle != IntPtr.Zero) Win32.DeleteObject(_hFontTitle);
+        if (_hFieldBrush != IntPtr.Zero) Win32.DeleteObject(_hFieldBrush);
+        _hFieldBrush = IntPtr.Zero;
         // Le fond est celui de la classe : Windows le détruit ici.
         NativeWindow.UnregisterClass(ClassName);
     }

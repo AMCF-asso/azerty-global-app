@@ -30,18 +30,24 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private const int FREE_PREVIEW_MAX_CHARS = 220;
 
     // Refonte 1.3.0 (Tablature, maquette Leçons F du 07/10) : la fenêtre passe au papier.
-    private const uint CLR_BG = PaperTheme.Paper;
-    private const uint CLR_PANEL = PaperTheme.Surface;
-    private const uint CLR_PANEL_2 = PaperTheme.Surface;
-    private const uint CLR_BORDER = PaperTheme.Border;
-    private const uint CLR_TEXT = PaperTheme.Ink;
-    private const uint CLR_MUTED = PaperTheme.TextSecondary;
-    private const uint CLR_ACCENT = PaperTheme.Action;
-    private const uint CLR_OK = PaperTheme.Success;
-    private const uint CLR_BAD = PaperTheme.Error;
-    private const uint CLR_CURRENT = PaperTheme.Action;
-    private const uint CLR_PENDING = PaperTheme.Pale;
-    private const uint CLR_LESSON_ACCENT = PaperTheme.Error;
+    // A14 : en contraste élevé, le parcours d'exercice prend la palette de l'accueil des Leçons
+    // (HomePalette, « .contraste » des maquettes) au lieu du papier en dur. Réussite et erreur
+    // n'y ont pas de couleur propre : elles prennent l'encre, l'état se lit au message et au
+    // trait. Le clavier papier et la Tablature gardent leurs touches claires, comme à l'accueil.
+    private HomePalette _pal = HomePaletteNow();
+    private uint CLR_BG => _pal.Paper;
+    private uint CLR_PANEL => _pal.Surface;
+    private uint CLR_PANEL_2 => _pal.Surface;
+    private uint CLR_BORDER => _pal.Border;
+    private uint CLR_TEXT => _pal.Ink;
+    private uint CLR_MUTED => _pal.Muted;
+    private uint CLR_ACCENT => _pal.Action;
+    private uint CLR_OK => _pal.HighContrast ? _pal.Ink : PaperTheme.Success;
+    private uint CLR_BAD => _pal.HighContrast ? _pal.Ink : PaperTheme.Error;
+    private uint CLR_CURRENT => _pal.Action;
+    private uint CLR_PENDING => _pal.Pale;
+    private uint CLR_LESSON_ACCENT => _pal.HighContrast ? _pal.Ink : PaperTheme.Error;
+    private uint CLR_ON_ACCENT => _pal.OnAction;
 
     private const uint MB_YESNO = 0x00000004;
     private const uint MB_ICONWARNING = 0x00000030;
@@ -119,7 +125,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private IntPtr _hFontKeyboardSmall;
     private IntPtr _hFontKeyboardTiny;
     private IntPtr _hFontKeyboardContext;
-    private IntPtr _hFontLessonLine;
 
     private WindowMode _mode = WindowMode.Lessons;
     private bool _settingsOpen;
@@ -165,7 +170,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _layout = layout;
         _mapper = mapper;
         _hook = hook;
-        _catalog = ChallengeSessionState.LoadCatalog();
+        _catalog = _challenge.LoadCatalog();
         _progress = new LessonProgressStore();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         _hints = new LessonHintProvider();
@@ -220,7 +225,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void RefreshLanguage()
     {
         if (CatalogLanguage == L.Language) return;
-        _catalog = ChallengeSessionState.LoadCatalog();
+        _catalog = _challenge.LoadCatalog();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         CatalogLanguage = L.Language;
         // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
@@ -246,7 +251,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (!_challenge.IsStale()) return;
         bool wasOnChallenge = _catalog.Modules[_moduleIndex].Id == DailyChallenge.ModuleId;
-        _catalog = ChallengeSessionState.LoadCatalog();
+        _catalog = _challenge.LoadCatalog();
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
         _lessonIndex = Math.Clamp(_lessonIndex, 0, _catalog.Modules[_moduleIndex].Lessons.Count - 1); // le catalogue, pas la séance composée de l'accueil
         _exerciseIndex = Math.Clamp(_exerciseIndex, 0, _catalog.Modules[_moduleIndex].Lessons[_lessonIndex].Exercises.Count - 1);
@@ -265,7 +270,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     public bool ShowChallenge()
     {
         if (!DailyChallenge.Enabled) return false; // 1.3.0 : Défi masqué
-        _challenge.Invalidate(); // forcer la reconstruction (date/étape du moment)
+        _challenge.Request(); // offert même sans opt-in, reconstruit à la date et à l'étape du moment (A23)
         RefreshChallengeModuleIfStale();
         for (int m = 0; m < _catalog.Modules.Count; m++)
         {
@@ -314,34 +319,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         CreateScaledFonts();
     }
 
-    internal const string LessonLineFace = "Segoe UI Variable Text";
-    internal const string LessonLineFallbackFace = TypeRamp.Family;
-
-    /// <summary>
-    /// Police de la ligne à taper (choix d'Antoine du 29/09, sur maquette) : Segoe UI Variable
-    /// demi-gras, en espacement naturel. Windows 10 ne l'a pas : GDI y substituerait une autre
-    /// police sans le dire, d'où la lecture du nom obtenu et le repli sur Segoe UI demi-gras.
-    /// </summary>
-    internal static IntPtr CreateLessonLineFont(int height)
-    {
-        IntPtr font = Win32.CreateFontW(height, 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, LessonLineFace);
-        if (FontFace(font) == LessonLineFace)
-            return font;
-        Win32.DeleteObject(font);
-        return Win32.CreateFontW(height, 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, LessonLineFallbackFace);
-    }
-
-    internal static string FontFace(IntPtr font)
-    {
-        IntPtr hdc = Win32.CreateCompatibleDC(IntPtr.Zero);
-        IntPtr previous = Win32.SelectObject(hdc, font);
-        var name = new char[64];
-        int length = Win32.GetTextFaceW(hdc, name.Length, name);
-        Win32.SelectObject(hdc, previous);
-        Win32.DeleteDC(hdc);
-        return length > 1 ? new string(name, 0, length - 1) : "";
-    }
-
     private void CreateScaledFonts()
     {
         _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
@@ -350,7 +327,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _hFontSmall = Win32.CreateFontW(-S(TypeRamp.Caption), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontSidebarModule = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontSidebarLesson = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontLessonLine = CreateLessonLineFont(-S(17));
         _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
         _hFontIcon = Win32.CreateFontW(-S(18), 0, 0, 0, 600, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Symbol");
         _hFontEmoji = Win32.CreateFontW(-S(17), 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Segoe UI Emoji");
@@ -380,7 +356,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         DeleteObject(ref _hFontSmall);
         DeleteObject(ref _hFontSidebarModule);
         DeleteObject(ref _hFontSidebarLesson);
-        DeleteObject(ref _hFontLessonLine);
         DeleteObject(ref _hFontButton);
         DeleteObject(ref _hFontIcon);
         DeleteObject(ref _hFontEmoji);
@@ -866,6 +841,20 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     return IntPtr.Zero;
                 // AG130-42 : les neuf autres fenetres traitaient deja ce message ; celle-ci
                 // gardait les polices du DPI de son ecran d'origine en changeant d'ecran.
+                // A14 : contraste élevé ou couleurs système changés, fenêtre ouverte.
+                case 0x0015: // WM_SYSCOLORCHANGE
+                case 0x001A: // WM_SETTINGCHANGE
+                {
+                    var palette = HomePaletteNow();
+                    if (palette != _pal)
+                    {
+                        _pal = palette;
+                        NativeWindow.ApplyClassBackground(hWnd, CLR_BG);
+                        Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
+                    }
+                    break;
+                }
+
                 case Win32.WM_DPICHANGED:
                 {
                     int newDpi = (wParam.ToInt32() >> 16) & 0xFFFF;
@@ -1066,7 +1055,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             if (_settingsOpen)
                 DrawPaperSettings(hdc, body);
             else if (_mode == WindowMode.Lessons)
-                DrawPaperLesson(hdc, rc, body);
+            {
+                if (!DrawTutorialPage(hdc, body)) // parcours de l'accueil : usages, fin (LessonsWindow.Tutorial.cs)
+                    DrawPaperLesson(hdc, rc, body);
+            }
             else
                 DrawPaperFree(hdc, rc, body);
             if (_pickerOpen)
@@ -1220,8 +1212,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         if (_freePreview.Length == 0)
         {
-            DrawText(hdc, _hFontLessonLine, "...", new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
-                CLR_MUTED, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+            PaperText.DrawLine(hdc, "...", FreeLineFont, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
+                CLR_MUTED);
         }
         else
         {
@@ -1232,8 +1224,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
                 var line = lines[i];
                 string text = _freePreview.Substring(line.Start, line.Length);
-                DrawText(hdc, _hFontLessonLine, text, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
-                    CLR_TEXT, Win32.DT_LEFT | Win32.DT_SINGLELINE);
+                PaperText.DrawLine(hdc, text, FreeLineFont, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
+                    CLR_TEXT);
                 y += lineH;
             }
         }
@@ -1248,7 +1240,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         var line = lines[lineIndex];
         int offset = Math.Clamp(_freeCursorIndex - line.Start, 0, line.Length);
         string prefix = offset == 0 ? "" : _freePreview.Substring(line.Start, offset);
-        int x = FreeTextLeft(preview) + GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, prefix);
+        int x = FreeTextLeft(preview) + PaperText.Width(hdc, prefix, FreeLineFont);
         int top = FreeTextTop(preview) + (lineIndex - firstVisibleLine) * FreeLineHeight() + S(4);
         int width = Math.Max(1, S(1));
         var caret = new Win32.RECT { left = x, top = top, right = x + width, bottom = top + S(18) };
@@ -1380,7 +1372,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             var currentLine = lines[currentLineIndex];
             int offset = Math.Clamp(_freeCursorIndex - currentLine.Start, 0, currentLine.Length);
             string prefix = offset == 0 ? "" : _freePreview.Substring(currentLine.Start, offset);
-            int x = GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, prefix);
+            int x = PaperText.Width(hdc, prefix, FreeLineFont);
             _freeCursorIndex = FindFreeIndexAtX(hdc, lines[targetLineIndex], x);
             EnsureFreeCursorInRange();
         }
@@ -1394,7 +1386,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     }
 
     private int MeasureFreeCharWidth(IntPtr hdc, char ch)
-        => GdiHelpers.MeasureSingleLineWidth(hdc, _hFontLessonLine, ch.ToString());
+        => PaperText.Width(hdc, ch.ToString(), FreeLineFont);
+
+    /// <summary>Texte de l'Écriture libre : AG Texte demi-gras, comme le reste des Leçons
+    /// (audit 1.3.0, P5, décision d'Antoine du 20/10) ; <see cref="PaperText"/> complète un
+    /// caractère absent de la police (cyrillique, API…) par les polices de secours.</summary>
+    private FontSpec FreeLineFont => F(AppFonts.Text, 17, TypeRamp.Semibold);
 
     private int FreeTextLeft(Win32.RECT preview) => preview.left + S(12);
     private int FreeTextTop(Win32.RECT preview) => preview.top + S(12);
@@ -1625,21 +1622,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect, CLR_TEXT);
     }
 
-    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect, uint color = CLR_CURRENT)
-    {
-        rect.left -= S(2);
-        rect.top -= S(2);
-        rect.right += S(2);
-        rect.bottom += S(2);
-
-        var pen = Win32.CreatePen(0, Math.Max(1, S(2)), color);
-        var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
-        var oldPen = Win32.SelectObject(hdc, pen);
-        Win32.RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, S(4), S(4));
-        Win32.SelectObject(hdc, oldPen);
-        Win32.SelectObject(hdc, oldBrush);
-        Win32.DeleteObject(pen);
-    }
+    /// <summary>Le contour de focus commun (A13 : <see cref="PaperDraw.FocusOutline"/>).</summary>
+    private void DrawFocusOutline(IntPtr hdc, Win32.RECT rect, uint? color = null)
+        => PaperDraw.FocusOutline(hdc, rect, color ?? CLR_CURRENT, S(2), S(2), S(4));
 
     private void DrawRoundedBox(IntPtr hdc, Win32.RECT rect, uint fill, uint border, int radius)
     {
@@ -1837,7 +1822,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// <summary>La page affiche-t-elle une surface où l'on tape (ligne d'exercice, aperçu du
     /// mode Libre) ? Elle prend alors place dans le cycle de Tab, à l'index -1.</summary>
     private bool HasTypingSurface =>
-        !_settingsOpen && !_pickerOpen && (HomeShown ? HomePageHasSurface : _mode == WindowMode.Free || !_showSummary);
+        !_settingsOpen && !_pickerOpen && !TutorialPageShown &&
+        (HomeShown ? HomePageHasSurface : _mode == WindowMode.Free || !_showSummary);
 
     /// <summary>
     /// Cible suivante de Tab (Maj+Tab : <paramref name="direction"/> = -1) parmi
@@ -1900,7 +1886,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
-        if (vk == 0x0D || ((_settingsOpen || HomeShown) && vk == 0x20))
+        if (vk == 0x0D || ((_settingsOpen || HomeShown || TutorialPageShown) && vk == 0x20))
         {
             if (ActivateFocusedAction())
                 return;
@@ -1934,6 +1920,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (_settingsOpen) return;
         c = ResolveTypedCharacter(c);
         if (HomeHandleChar(c)) return; // accueil : après la résolution de la frappe physique, rien n'atteint la séance cachée
+        if (TutorialPageShown) return; // écran des usages ou final du parcours : rien à taper
         if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
         ReturnFocusToSurface();
         if (_mode == WindowMode.Free)
@@ -2011,6 +1998,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         _lastCompletedStats = _session.Stats;
         _progress.RecordSuccess(CurrentExercise, _session.Stats);
+        // Audit 1.3.0, B2 voie (b) : l'Initiation est le tutoriel de l'accueil. Sa réussite va
+        // au compteur de la config, que lisent l'accueil (« Essayer maintenant », retour au
+        // démarrage tant que 3 exercices ne sont pas faits) et l'import vers les Leçons.
+        if (_homeComposed == null && CurrentModule.Id == LessonCatalogLoader.InitiationModuleId)
+            ConfigManager.RecordLearningExerciseCompleted(CurrentExercise.ExerciseIndex);
         // Métrique « Record » (QW-4) : relue APRÈS RecordSuccess pour inclure la
         // tentative courante ; « nouveau » seulement si un score antérieur est battu.
         _summaryBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
@@ -2259,6 +2251,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void NextExercise()
     {
+        if (TutorialNext()) return; // parcours de l'accueil : son étape suivante (LessonsWindow.Tutorial.cs)
         if (HomeFinishComposed()) return; // séance composée : retour à « Aujourd'hui »
         if (_exerciseIndex < CurrentLesson.Exercises.Count - 1)
         {
@@ -2292,9 +2285,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private string BuildTypingStatus()
     {
-        return CurrentExercise.TypingMode == LessonTypingMode.Strict
+        string status = CurrentExercise.TypingMode == LessonTypingMode.Strict
             ? L.LessonsWin_StatusStrict
             : L.LessonsWin_StatusFlexible;
+        // Audit 1.3.0, A2 : la tolérance se dit ici, hors de la consigne, qui entre dans
+        // l'empreinte de l'exercice (changer Lessons_Init* effacerait les réussites).
+        return _session.IsTolerant ? status + " " + L.LessonsWin_StatusTolerated : status;
     }
 
     private string FormatHintButtonText()
@@ -2388,7 +2384,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return value.HasValue ? L.LessonsWin_SpeedValue(value.Value) : FormatNullable(value);
     }
 
-    private static uint GetAccuracyColor(int? accuracy)
+    private uint GetAccuracyColor(int? accuracy)
     {
         if (!accuracy.HasValue) return CLR_TEXT;
         if (accuracy.Value >= 95) return CLR_OK;
@@ -2396,7 +2392,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return CLR_LESSON_ACCENT;
     }
 
-    private static uint GetErrorColor(int errorCount)
+    private uint GetErrorColor(int errorCount)
     {
         if (errorCount == 0) return CLR_OK;
         if (errorCount <= 3) return CLR_TEXT;
@@ -2431,7 +2427,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         // Accueil : le récapitulatif et la fin de la séance cachée ne concernent pas le champ de
         // « Votre texte », qui reçoit la frappe telle qu'AZERTY Global la produit.
-        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, _showSummary && !HomeShown)) return;
+        if (!ShouldCaptureExpectedText(_visible, _hasFocus, _settingsOpen, (_showSummary && !HomeShown) || TutorialPageShown)) return;
         if (HomeShown && !HomePageHasSurface) return; // accueil : pas de champ où le texte attendu irait
         if (_mode == WindowMode.Lessons && !HomeShown && _session.IsExerciseComplete) return;
         _pendingPhysicalText.CaptureKey(_layout, scancode, _mapper);
@@ -2449,8 +2445,14 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void Hide()
     {
+        // Parcours de l'accueil : fermer la fenêtre le clôt ; l'écran final atteint vaut réussite.
+        EndTutorial(completed: _tutorialPage == TutorialPage.Final);
+        // Audit 1.3.0, A3 : les exercices font allumer Verr. Maj. ; la fenêtre ne la laisse pas
+        // allumée derrière elle (Show l'éteint déjà à l'ouverture).
+        _mapper.RequestCapsLockOff();
         SaveWindowBounds();
         _visible = false;
+        _challenge.EndRequest();
         // Avant ChallengeShared ci-dessous : la fin de séance est datée quand le partage
         // se présente, et les dix minutes sans avis s'appliquent aussi à lui.
         LearningSessionTracker.Closed(this);
@@ -2478,6 +2480,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     public void Dispose()
     {
+        EndTutorial(completed: false); // referme la plage de frappe exclue du parcours
         LearningSessionTracker.Closed(this);
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
         if (_onAppLanguageChanged != null)

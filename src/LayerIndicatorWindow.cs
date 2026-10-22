@@ -5,14 +5,9 @@ namespace AZERTYGlobal;
 /// <summary>Indicateur non interactif placé près du caret, avec le tray en secours.</summary>
 internal sealed class LayerIndicatorWindow : IDisposable
 {
-    private const uint DT_CENTER = 0x00000001;
-    private const uint DT_VCENTER = 0x00000004;
-    private const uint DT_SINGLELINE = 0x00000020;
-
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
     private IntPtr _hBrush;
-    private IntPtr _hFont;
     private string _label = string.Empty;
     private MaintainableLayerMode _mode;
     private bool _visible;
@@ -31,14 +26,14 @@ internal sealed class LayerIndicatorWindow : IDisposable
         _hWnd = Win32.CreateWindowExW(exStyle, ProductIdentity.WindowClass("LayerIndicator"), string.Empty,
             Win32.WS_POPUP, 0, 0, 112, 32,
             IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
-        // Fond de la classe : Windows le détruit au désenregistrement.
-        _hBrush = NativeWindow.ApplyClassBackground(_hWnd, DarkTheme.Surface);
+        // Fond de la classe : Windows le détruit au désenregistrement. Audit 1.3.0, A10
+        // (décision d'Antoine du 20/10) : papier, comme les fenêtres refondues.
+        _hBrush = NativeWindow.ApplyClassBackground(_hWnd, PaperTheme.Paper);
 
         // D1 (accessibilité 1.3.0) : police au DPI de l'écran de la fenêtre, et non plus
         // 15 px fixes ; la taille suit dans RefreshPosition, WM_DPICHANGED suit le caret
         // d'un écran à l'autre.
         _dpi = NativeWindow.DpiOf(_hWnd);
-        RecreateFont();
     }
 
     /// <summary>
@@ -53,11 +48,8 @@ internal sealed class LayerIndicatorWindow : IDisposable
         return (WindowSizing.ScaleForDpi(baseWidth, dpi), WindowSizing.ScaleForDpi(32, dpi));
     }
 
-    private void RecreateFont()
-    {
-        if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
-        _hFont = Win32.CreateFontW(WindowSizing.ScaleForDpi(-TypeRamp.Body, _dpi), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-    }
+    /// <summary>Police du libellé au DPI de l'écran : AppFonts garde la HFONT et la partage.</summary>
+    internal static FontSpec LabelFont(int dpi) => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Semibold, dpi / 96f);
 
     public void Update(MaintainableLayerState state, bool secureInput)
     {
@@ -129,13 +121,7 @@ internal sealed class LayerIndicatorWindow : IDisposable
         {
             IntPtr hdc = Win32.BeginPaint(hWnd, out var ps);
             Win32.GetClientRect(hWnd, out var rect);
-            Win32.FillRect(hdc, ref rect, _hBrush);
-            IntPtr oldFont = Win32.SelectObject(hdc, _hFont);
-            Win32.SetBkMode(hdc, 1);
-            uint color = _mode == MaintainableLayerMode.Locked ? DarkTheme.Warning : DarkTheme.Text;
-            Win32.SetTextColor(hdc, color);
-            Win32.DrawTextW(hdc, _label, -1, ref rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-            Win32.SelectObject(hdc, oldFont);
+            Paint(hdc, rect, _label, _mode, _hBrush, _dpi);
             Win32.EndPaint(hWnd, ref ps);
             return IntPtr.Zero;
         }
@@ -147,7 +133,6 @@ internal sealed class LayerIndicatorWindow : IDisposable
             if (newDpi > 0 && newDpi != _dpi)
             {
                 _dpi = newDpi;
-                RecreateFont();
                 var (width, height) = IndicatorSize(_label.Length, _dpi);
                 Win32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, width, height,
                     Win32.SWP_NOMOVE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
@@ -158,6 +143,18 @@ internal sealed class LayerIndicatorWindow : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
+    /// <summary>Dessin de l'indicateur, sans fenêtre : le banc de captures l'appelle aussi.</summary>
+    internal static void Paint(IntPtr hdc, Win32.RECT rect, string label, MaintainableLayerMode mode, IntPtr brush, int dpi)
+    {
+        Win32.FillRect(hdc, ref rect, brush);
+        // Un filet détache le papier d'un document blanc.
+        PaperDraw.Frame(hdc, rect, PaperTheme.Border, Math.Max(1, dpi / 96));
+        // Couche verrouillée : l'action (6,6:1 sur le papier) plutôt que l'ambre de l'étape 1,
+        // trop juste (4,6:1) pour un libellé de 14 px.
+        uint color = mode == MaintainableLayerMode.Locked ? PaperTheme.Action : PaperTheme.Ink;
+        PaperText.DrawLine(hdc, label, LabelFont(dpi), rect, color, TextAlign.Center);
+    }
+
     public void Dispose()
     {
         if (_hWnd != IntPtr.Zero)
@@ -165,7 +162,6 @@ internal sealed class LayerIndicatorWindow : IDisposable
             Win32.DestroyWindow(_hWnd);
             _hWnd = IntPtr.Zero;
         }
-        if (_hFont != IntPtr.Zero) Win32.DeleteObject(_hFont);
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("LayerIndicator"));
     }
 }

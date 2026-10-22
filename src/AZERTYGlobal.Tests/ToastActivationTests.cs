@@ -96,6 +96,28 @@ public class ToastActivationTests
     }
 
     /// <summary>
+    /// Audit 1.3.0, A10 : le toast porte le logo, et ce logo est livré. Un fichier hors de la
+    /// liste blanche de Pack-MSIX.ps1 n'entrerait pas dans le package : Windows afficherait
+    /// le toast sans image, sans erreur.
+    /// </summary>
+    [Fact]
+    public void Toast_PorteLeLogo_LivréDansLePackage()
+    {
+        var toast = XDocument.Parse(ToastActivation.BuildToastXml("Titre", "Corps\nSuite", "Ouvrir", "action=x"));
+        var logo = toast.Descendants("image").Single();
+        Assert.Equal("appLogoOverride", (string?)logo.Attribute("placement"));
+        Assert.Equal("ms-appx:///Assets/" + ToastActivation.LogoAsset, (string?)logo.Attribute("src"));
+        Assert.Equal(new[] { "Titre", "Corps" }, toast.Descendants("text").Select(t => t.Value));
+
+        string msix = Path.GetDirectoryName(FindAppxManifest())!;
+        Assert.True(File.Exists(Path.Combine(msix, "Assets", ToastActivation.LogoAsset)));
+        string pack = File.ReadAllText(Path.Combine(msix, "..", "scripts", "Pack-MSIX.ps1"));
+        var list = System.Text.RegularExpressions.Regex.Match(pack, @"\$packagedAssets = @\((?<l>[^)]*)\)");
+        Assert.True(list.Success, "liste $packagedAssets introuvable dans Pack-MSIX.ps1");
+        Assert.Contains("'" + ToastActivation.LogoAsset + "'", list.Groups["l"].Value);
+    }
+
+    /// <summary>
     /// Témoin : un manifeste sans extension `com:` — l'état réel du dépôt avant la
     /// correction de B2 — rend des listes vides, donc fait échouer le test ci-dessus.
     /// Sans ce témoin, un lecteur muet passerait pour un garde-fou.

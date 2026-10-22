@@ -52,9 +52,9 @@ internal static partial class L
     // Libellés courts affichés dans la liste, à côté du nom du process
     public static string Settings_CompatListForceOn => T("compatibilité jeu", "game compatibility");
     public static string Settings_CompatListForceOff => T("désactivée", "disabled");
-    public static string Settings_CompatAdded(string process) => T($"« {process} » ajoutée ✓", $"\"{process}\" added ✓");
-    public static string Settings_CompatRemoved(string process) => T($"« {process} » retirée ✓", $"\"{process}\" removed ✓");
-    public static string Settings_CompatUpdated(string process) => T($"« {process} » mise à jour ✓", $"\"{process}\" updated ✓");
+    public static string Settings_CompatAdded(string process) => T($"« {process} » ajoutée ✓", $"“{process}” added ✓");
+    public static string Settings_CompatRemoved(string process) => T($"« {process} » retirée ✓", $"“{process}” removed ✓");
+    public static string Settings_CompatUpdated(string process) => T($"« {process} » mise à jour ✓", $"“{process}” updated ✓");
     public static string Settings_CompatFilterExe => T("Applications (*.exe)", "Applications (*.exe)");
     public static string Settings_CompatPickerTitle => T("Choisir une application", "Choose an app");
 }

@@ -15,7 +15,8 @@ internal static class LessonCustomText
 
     /// <summary>
     /// Prépare le texte : forme composée (NFC), tabulations et espaces multiples ramenés à
-    /// une espace, caractères absents de l'index retirés et listés, lignes coupées aux mots
+    /// une espace, invisibles retirés en silence, caractères absents de l'index retirés et
+    /// listés, lignes coupées aux mots
     /// vers <see cref="LessonReviewBuilder.TargetLineLength"/> caractères, au plus
     /// <see cref="MaxLines"/> lignes.
     /// </summary>
@@ -33,6 +34,10 @@ internal static class LessonCustomText
                 kept.Append(element == "\n" ? '\n' : ' ');
                 continue;
             }
+            // Invisibles d'un texte collé (audit 1.3.0, A25) : rien ne les montre à l'écran,
+            // ils ne sont donc ni exigés à la frappe ni listés parmi les caractères retirés.
+            if (element is "​" or "­" or "⁠" or "﻿")
+                continue;
             // Un élément peut être une lettre suivie de diacritiques combinants (« ɛ̀ ») :
             // tapable si chacun de ses caractères l'est. Les paires de substitution (émojis)
             // ne le sont jamais : la séance compare caractère UTF-16 par caractère.
