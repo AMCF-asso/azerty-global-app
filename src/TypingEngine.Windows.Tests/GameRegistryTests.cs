@@ -112,7 +112,7 @@ public class GameRegistryTests
 
     [Theory]
     [InlineData("GTA5.exe")]                          // GTA V Legacy
-    [InlineData("GTA5_Enhanced.exe")]                 // GTA V Enhanced, FiveM Enhanced
+    [InlineData("GTA5_Enhanced.exe")]                 // GTA V Enhanced (et FiveM Enhanced, même nom)
     [InlineData("GTA5_BE.exe")]                       // installeur BattlEye de GTA V
     [InlineData("PioneerGame.exe")]                   // ARC Raiders
     [InlineData("DayZ_x64.exe")]
@@ -182,7 +182,7 @@ public class GameRegistryTests
     [InlineData("MechaBreak.exe")]
     [InlineData("ONCE_HUMAN.exe")]
     [InlineData("HottaGame.exe")]                     // Tower of Fantasy
-    [InlineData("ArkAscended.exe")]
+    [InlineData("ArkAscended_BE.exe")]                // ARK: Survival Ascended, seul nom attesté
     [InlineData("SparkingZero-Win64-Shipping.exe")]
     public void IsAntiCheatProcess_Ajouts131_Niveau2_Returns_True(string processName)
     {

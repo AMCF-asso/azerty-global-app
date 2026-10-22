@@ -113,7 +113,8 @@ public static class GameRegistry
 
         // Ajouts 1.3.1 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
         "gta5",             // GTA V Legacy et Enhanced (GTA5.exe, GTA5_Enhanced.exe) — BattlEye
-                            // depuis le 17/09/2024 ; couvre aussi FiveM Enhanced (GTA5_Enhanced.exe)
+                            // depuis le 17/09/2024. Limite connue : FiveM Enhanced lance le même
+                            // GTA5_Enhanced.exe, sans BattlEye, et l'app s'y suspend aussi.
         "pioneergame",      // ARC Raiders — Denuvo Anti-Cheat depuis le patch 1.29.0 (19/05/2026)
         "dayz",             // DayZ — BattlEye
         "arma3",            // Arma 3 — BattlEye
