@@ -69,14 +69,18 @@ sealed partial class SettingsWindow : IDisposable
     private const int BASE_WIN_H = 480;
 
     // Jetons de la maquette (PaperTheme), un rôle par constante.
-    private const uint CLR_BG = PaperTheme.Paper;
-    private const uint CLR_SURFACE = PaperTheme.Surface;
-    private const uint CLR_TEXT = PaperTheme.Ink;
-    private const uint CLR_MUTED = PaperTheme.TextSecondary;
-    private const uint CLR_BORDER = PaperTheme.Border;
-    private const uint CLR_ACTION = PaperTheme.Action;
-    private const uint CLR_PALE = PaperTheme.Pale;
-    private const uint CLR_INVALID = PaperTheme.Error;
+    // A14 : les couleurs viennent de la palette du moment : papier, ou système en contraste
+    // élevé. Elles étaient papier en dur, sous des onglets et des boutons rendus au système :
+    // un texte sombre sur un bouton noir était possible. Relue sur WM_SYSCOLORCHANGE.
+    private PaperPalette _pal = PaperPalette.Now();
+    private uint CLR_BG => _pal.Paper;
+    private uint CLR_SURFACE => _pal.Surface;
+    private uint CLR_TEXT => _pal.Ink;
+    private uint CLR_MUTED => _pal.Muted;
+    private uint CLR_BORDER => _pal.Border;
+    private uint CLR_ACTION => _pal.Action;
+    private uint CLR_PALE => _pal.Pale;
+    private uint CLR_INVALID => _pal.Error;
 
     /// <summary>Où s'écrit le message du dernier geste. Chaque nature a sa place dans la
     /// maquette : l'invite de capture et un refus de raccourci sous les raccourcis, un refus de
@@ -220,7 +224,7 @@ sealed partial class SettingsWindow : IDisposable
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
     // Fond blanc de la liste des applications (WM_CTLCOLORLISTBOX).
-    private readonly IntPtr _hSurfaceBrush;
+    private IntPtr _hSurfaceBrush;
 
     // GDI+ : cercles des boutons radio et coche des cases, lissés.
     private IntPtr _gdipToken;
@@ -553,9 +557,12 @@ sealed partial class SettingsWindow : IDisposable
         _hWndLabelCompat = CreateHiddenLabel(hInstance, L.Settings_SectionCompat);
         _hWndCompatList = Win32.CreateWindowExW(0, "LISTBOX", "",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP |
-            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_VSCROLL,
+            LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LIST_COMPAT, hInstance, IntPtr.Zero);
+        // A16 : sans WS_VSCROLL, dont la barre grise du système ; piste papier peinte par la
+        // fenêtre (SettingsWindow.CompatScroll.cs).
+        AttachCompatListScroll();
 
         _hWndCompatAdd = Win32.CreateWindowExW(0, "BUTTON", L.Settings_CompatAdd,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP,
@@ -1233,6 +1240,8 @@ sealed partial class SettingsWindow : IDisposable
             // Trois lignes visibles, cadre d'un pixel peint par la fenêtre.
             layout.CompatListFrame = Rect(margin, y, inner, 3 * CompatRowHeight + 2);
             layout.CompatListRect = Inflate(layout.CompatListFrame, -1);
+            // A16 : la piste de défilement papier prend la droite du cadre.
+            layout.CompatListRect.right -= CompatTrackWidth;
             y = layout.CompatListFrame.bottom + S(8);
             layout.CompatAddRect = Rect(margin, y, ButtonWidth(m.AddText), buttonH);
             layout.CompatRemoveRect = Rect(layout.CompatAddRect.right + S(8), y, ButtonWidth(m.RemoveText), buttonH);
@@ -1481,6 +1490,20 @@ sealed partial class SettingsWindow : IDisposable
                 ScrollTo(target);
                 return IntPtr.Zero;
             }
+
+            // A14 : contraste élevé ou couleurs système changés, fenêtre ouverte.
+            case 0x0015: // WM_SYSCOLORCHANGE
+            case 0x001A: // WM_SETTINGCHANGE
+                RefreshPalette();
+                break;
+
+            // A16 : clic et glisser sur la piste de la liste des applications.
+            case Win32.WM_LBUTTONDOWN:
+            case Win32.WM_MOUSEMOVE:
+            case Win32.WM_LBUTTONUP:
+            case WM_CAPTURECHANGED:
+                if (OnCompatTrackMouse(msg, lParam)) return IntPtr.Zero;
+                break;
 
             case Win32.WM_MOUSEWHEEL:
             {
@@ -1732,7 +1755,12 @@ sealed partial class SettingsWindow : IDisposable
     /// confirmation (le ✓ du pied prend la couleur de l'action). Elle ne dépend que du message
     /// affiché : un raccourci resté invalide ne teint plus en rouge le message d'un autre
     /// geste, et un refus ne s'affiche plus comme une confirmation.</summary>
-    internal static uint ValidationTextColor(bool refused) => refused ? CLR_INVALID : CLR_MUTED;
+    /// A14 : dans la palette donnée, papier par défaut.
+    internal static uint ValidationTextColor(bool refused, PaperPalette? palette = null)
+    {
+        var p = palette ?? PaperPalette.Default;
+        return refused ? p.Error : p.Muted;
+    }
 
     private void SetRefusalMessage(string text) => ShowValidationMessage(text, false, true);
 

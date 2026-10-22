@@ -60,7 +60,7 @@ VOTRE FRAPPE RESTE CHEZ VOUS
 Rien ne change sur votre clavier avant votre clic sur « Activer ». Aucune frappe n’est journalisée, stockée ni transmise, il n’y a ni télémétrie ni compte, et l’application n’envoie rien sur le réseau d’elle-même. Préférences, statistiques et progression restent sur votre appareil. Dans les champs de mot de passe, les couches et la recherche se mettent en pause. Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous cliquez dessus, et indiquent la version de l’app et de Windows.
 
 JEUX ET BUREAU À DISTANCE
-AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis.
+AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance, les consoles de machines virtuelles (Hyper-V, Windows Sandbox, VMware, VirtualBox) et Citrix quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis. Dans une fenêtre lancée en administrateur, AZERTY Global ne peut pas agir : la disposition de Windows s’applique.
 
 GRATUIT ET LIBRE
 AZERTY Global est publié sous licence EUPL 1.2 et son code source est sur GitHub. L’entrée « Soutenir le projet » ouvre la page de soutien du site dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
@@ -114,14 +114,15 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 ```text
 Version 1.3.0 :
 • Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
+• Accueil refait, avec une étape pour le peul, le wolof et le bambara ; ses exercices passent dans les Leçons et acceptent l’espace ordinaire et l’apostrophe droite.
 • Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
 • La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
 • Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
 • Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet, Échap le libère.
 • Après la mise à jour, rouvrez AZERTY Global : votre clavier ne change qu’après votre accord, redemandé une fois.
-• Menu de l’icône plus court : « Apprendre » regroupe les Leçons, le Défi et l’accueil, « À propos et aide » le reste. Rien n’a été retiré.
+• Menu de l’icône plus court ; rien n’a été retiré.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
-• Les fenêtres se parcourent mieux au clavier et le Narrateur lit le nom des champs qui n’en avaient pas.
+• Fenêtres claires et plus faciles à parcourir au clavier ; le Narrateur lit le nom des champs qui n’en avaient pas.
 • Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
 
@@ -187,7 +188,7 @@ YOUR TYPING STAYS ON YOUR PC
 Nothing changes on your keyboard until you click “Turn on”. Keystrokes are never logged, stored or transmitted, there is no telemetry and no account, and the app sends nothing over the network on its own. Preferences, statistics and progress stay on your device. In password fields, layers and search pause. The “Report a bug” and “Give feedback” links open only when you click them, and include the app and Windows version.
 
 GAMES AND REMOTE DESKTOP
-AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software when it is in the foreground. Detection runs on your PC; no app name is transmitted.
+AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software, virtual machine consoles (Hyper-V, Windows Sandbox, VMware, VirtualBox) and Citrix when they are in the foreground. Detection runs on your PC; no app name is transmitted. In a window run as administrator, AZERTY Global cannot act: the Windows layout applies.
 
 FREE AND OPEN SOURCE
 AZERTY Global is licensed under EUPL 1.2 and its source code is on GitHub. The “Support the project” entry opens the project's support page in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
@@ -239,14 +240,15 @@ Free and open source (EUPL 1.2), no admin rights needed
 ```text
 Version 1.3.0:
 • Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
+• Redesigned welcome window, with a step for Fula, Wolof and Bambara; its exercises move to Lessons and accept a regular space and the straight apostrophe.
 • Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
 • Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
 • Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome window or in Settings.
 • Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet, Esc releases it.
 • After the update, reopen AZERTY Global: your keyboard only changes after you agree, and you're asked once more.
-• Shorter icon menu: “Learn” groups Lessons, the challenge and the welcome tour, “About and help” the rest. Nothing was removed.
+• Shorter icon menu; nothing was removed.
 • You can rate the app without leaving AZERTY Global.
-• Windows are easier to use with the keyboard, and Narrator reads the name of fields that had none.
+• Windows get a light look and are easier to use with the keyboard; Narrator reads the name of fields that had none.
 • Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
 ```
 
@@ -260,7 +262,7 @@ French keyboard; AZERTY; keyboard layout; accented capitals; clavier français; 
 
 ### URL de la politique de confidentialité
 
-https://azerty.global/mentions-legales
+https://azerty.global/confidentialite
 
 ### Site web
 
@@ -286,18 +288,18 @@ contact@azerty.global
 
 ### Notes pour l'équipe de certification Microsoft (à coller, en anglais)
 
-> Retirer les deux marqueurs entre crochets après vérification, avant de coller. Sans eux, le bloc fait 1 968 caractères (1 977 si chaque retour à la ligne compte double) : Microsoft Learn donne 2 000 au plus pour les apps MSI/EXE, et rien pour MSIX. Lire le compteur après collage.
+> Retirer les deux marqueurs entre crochets après vérification, avant de coller : ils dépendent du bundle final (relance R09, rapport WACK). Sans eux, le bloc fait 1 972 caractères (1 981 si chaque retour à la ligne compte double ; mesuré le 21/10) : Microsoft Learn donne 2 000 au plus pour les apps MSI/EXE, et rien pour MSIX. Lire le compteur après collage. Depuis le 21/10, les notes déclarent la réinstallation du hook toutes les 60 s et la sonde de 2 s (`TrayApplication.cs`, `HOOK_WATCHDOG_INTERVAL_MS` et `HOOK_PROBE_INTERVAL_MS` ; audit 1.3.0, A27 b).
 
-AZERTY Global 1.3.0 is a system-tray app that applies an improved French keyboard layout. After setup it has no main window.
-How to test: 1) Launch the app; the welcome window opens. Click "Turn on and try" (French UI: "Activer et essayer"). 2) The AG icon appears in the notification area (possibly in the ^ overflow); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock turns the layout off and on. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts the character). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z. Both are also in the icon menu.
-If the welcome window is closed without activating, relaunching from the Start menu reopens it. [à vérifier sur le bundle final : correctif de relance]
+AZERTY Global 1.3.0 is a system-tray app that applies an improved French keyboard layout. It has no main window.
+How to test: 1) Launch the app; the welcome window opens. Click "Turn on and try" (French UI: "Activer et essayer"); a short exercise opens in Lessons. 2) The AG icon appears in the notification area (maybe under ^); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock toggles the layout. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts it). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z, also in the icon menu.
+Closed without activating, the welcome window reopens on relaunch from Start. [à vérifier sur le bundle final : correctif de relance]
 Technical notes:
-• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Turn on. Output is sent with SendInput. No DLL or code is injected into other processes.
-• Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, and running process names every 5 s) is used to pause in anti-cheat games and remote-desktop clients and to detect remote-control hosts. Nothing is logged by name or transmitted.
+• Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Turn on, and reinstalled every 60 s. Every 2 s, GetAsyncKeyState is read as one boolean (any key pressed; no key kept) to detect a hook Windows removed silently. Output uses SendInput; no DLL or code is injected into other processes.
+• Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, running process names every 5 s) pauses the app in anti-cheat games and remote-desktop clients and detects remote-control hosts. Nothing is logged by name or transmitted.
 • UI Automation IsPassword is read only to turn off advanced features in password fields.
-• The startup task is declared disabled; the last welcome step offers it pre-checked and registers it only on confirmation (X or Esc apply the checkbox only if changed). A refusal in Settings > Apps > Startup is respected.
-• No account, no telemetry, no automatic network traffic. Links open in the browser only when clicked; in-app rating uses StoreContext.RequestRateAndReviewAppAsync.
-• runFullTrust: Win32 desktop app (.NET 10 Native AOT). WACK: PASS. The optional "Blocked executables" test fails because of ShellExecuteW (used to open links), as in previously accepted versions. [à vérifier sur le rapport WACK du bundle final]
+• The startup task is declared disabled; the last welcome step offers it pre-checked and enables it only on confirmation. A refusal in Settings > Apps > Startup is respected.
+• No account, no telemetry, no automatic network traffic. Links open only when clicked; rating uses StoreContext.RequestRateAndReviewAppAsync.
+• runFullTrust: Win32 desktop app (.NET 10 Native AOT). WACK: PASS. The optional "Blocked executables" test fails on ShellExecuteW (opens links), as in accepted versions. [à vérifier sur le rapport WACK du bundle final]
 
 ---
 
@@ -314,21 +316,23 @@ Les fichiers suivants sont dans `msix/Assets/` :
 > Screenshot1 est au format 16:9 standard ; Screenshot2, Screenshot3 et Screenshot4 ont des ratios non standards
 > susceptibles de générer des bandes noires en affichage Store — à éventuellement re-capturer.
 
-### Légendes 1.3.0 (à relire sur les captures finales)
+### Légendes 1.3.0 (relues sur les captures finales du 15/10)
 
-> À relire sur les captures finales : ces légendes décrivent cinq captures 1.3.0 qui ne sont pas encore faites. Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît sur aucune.
+> Relues le 15/10 sur les captures du bundle final (`30eee6f`, run `captures.yml` 38735844453), composées à 125 % sur un fond 1920×1080 : `operations/2026-10-14-sortie-v2-130/a1/captures-store-30eee6f/`. Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît sur aucune.
 
 Ordre proposé : clavier virtuel, recherche, Leçons, Paramètres, accueil. Le clavier virtuel vient en premier parce que le produit est une disposition, et c’est la seule capture qui la montre en entier dans la vignette. Avec l’icône, les captures sont le seul élément de la fiche qu’on peut tester en A/B dans le Store : le test utile est « clavier virtuel en premier » contre « accueil en premier ».
 
 #### 1. Clavier virtuel
 
+> Capture finale : clavier virtuel avec AltGr tenu (QCM d’Antoine du 15/10). La 1.3.0 montre un signe par touche ; une vue à quatre niveaux est proposée pour la 1.3.1.
+
 FR
 ```text
-Le clavier virtuel (Ctrl+Maj+Q) montre les quatre niveaux de chaque touche : vous voyez où se trouve un caractère sans rien apprendre par cœur.
+Le clavier virtuel (Ctrl+Maj+Q) montre ce que tape chaque touche. Tenez AltGr : €, { }, [ ], œ apparaissent, sans rien apprendre par cœur.
 ```
 EN
 ```text
-The virtual keyboard (Ctrl+Shift+Q) shows all four levels of each key, so you can see where a character is without memorizing anything.
+The virtual keyboard (Ctrl+Shift+Q) shows what each key types. Hold AltGr to see €, { }, [ ], œ, with nothing to memorize.
 ```
 
 #### 2. Recherche de caractères
@@ -355,15 +359,15 @@ Short exercises with hints and an on-screen keyboard, to get used to Caps Lock a
 
 #### 4. Paramètres
 
-> La légende couvre les trois onglets. Si la capture n’en montre qu’un, ne garder que ce que l’onglet affiché montre, sinon la légende promet plus que l’image.
+> La capture finale montre l’onglet Général seul : la légende ne dit que ce qu’il montre (QCM d’Antoine du 15/10).
 
 FR
 ```text
-Vous choisissez vos raccourcis, le lancement avec Windows, la langue de l’interface et les applications où AZERTY Global doit rester désactivé.
+Vous choisissez vos raccourcis, le lancement avec Windows et les notifications.
 ```
 EN
 ```text
-Choose your shortcuts, launch at Windows startup, the interface language and the apps where AZERTY Global should stay off.
+Choose your shortcuts, launch at Windows startup and notifications.
 ```
 
 #### 5. Accueil
@@ -711,4 +715,4 @@ Tous les tests `OPTIONAL` ne comptent pas dans le verdict global selon la docume
 
 ---
 
-*Dernière mise à jour : 2026-09-26 (v1.3.0 — fiche réécrite, variante B, non soumise)*
+*Dernière mise à jour : 2026-10-21 (v1.3.0, non soumise : URL de confidentialité, notes de certification et Nouveautés après l’audit du 20/10 ; fiche réécrite en variante B le 2026-09-26)*

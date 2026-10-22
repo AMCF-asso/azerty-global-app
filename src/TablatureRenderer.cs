@@ -360,7 +360,8 @@ internal static class TablatureRenderer
     private static (uint Ink, uint OnCase, uint CaseFill) Colors(TabState state) => state switch
     {
         TabState.Done => (PaperTheme.Ink, PaperTheme.Ink, PaperTheme.Surface),
-        TabState.Upcoming => (PaperTheme.Pale, PaperTheme.Pale, PaperTheme.Surface),
+        // A15 : les traits gardent Pale ; le texte de la case, lu, prend PaleText.
+        TabState.Upcoming => (PaperTheme.Pale, PaperTheme.PaleText, PaperTheme.Surface),
         _ => (PaperTheme.Action, PaperTheme.OnAction, PaperTheme.Action),
     };
 

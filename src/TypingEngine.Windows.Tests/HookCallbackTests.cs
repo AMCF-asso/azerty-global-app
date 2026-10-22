@@ -136,6 +136,73 @@ public sealed class HookCallbackTests : IDisposable
         Assert.DoesNotContain("clavier", _evenements);
     }
 
+    /// <summary>
+    /// A20 (audit 1.3.0, SEC-1) : en saisie sécurisée, aucun appui n'est annoncé. Le clavier
+    /// virtuel, les Leçons et le tutoriel, abonnés à RawKeyDown, ne surlignent plus les touches
+    /// d'un mot de passe. Témoin positif : SansCtrlMaj_LaToucheSuitLeCheminOrdinaire.
+    /// </summary>
+    [Fact]
+    public void EnSaisieSecurisee_AucunAppuiAnnonce()
+    {
+        _api.ScriptedSecureInput = true;
+        using var monitor = new ForegroundMonitor(_api, IntPtr.Zero, _host);
+        _mapper.SetForegroundMonitor(monitor);
+        Assert.True(_mapper.AdvancedFeaturesSuppressed);
+        Assert.Equal(0, Rappel(VK_W, SC_W, WM_KEYDOWN));
+        Rappel(VK_W, SC_W, WM_KEYUP);
+        Assert.Empty(_evenements);
+
+        // Sortie du champ : l'animation reprend.
+        _api.ScriptedSecureInput = false;
+        monitor.Recompute();
+        Rappel(VK_W, SC_W, WM_KEYDOWN);
+        Assert.Equal(new[] { "appui 2C" }, _evenements);
+    }
+
+    /// <summary>
+    /// Nos fenêtres (Leçons, tutoriel) n'ont pas de champ mot de passe : une sonde qui s'y
+    /// trompe (délai UIA dépassé, réponse « sécurisé » par défaut) ne coupe pas leur animation.
+    /// </summary>
+    [Fact]
+    public void NotreProcessusSonde_Securise_AppuiToujoursAnnonce()
+    {
+        _api.ScriptedSecureInput = true;
+        _api.ScriptedPid = (uint)Environment.ProcessId;
+        long maintenant = 0;
+        using var monitor = new ForegroundMonitor(_api, IntPtr.Zero, _host, () => maintenant);
+        _mapper.SetForegroundMonitor(monitor);
+        Assert.True(_mapper.AdvancedFeaturesSuppressed); // raccourcis toujours coupés
+        // Au-delà de la relance du champ sécurisé (1 s) : l'exemption tient toujours.
+        maintenant = 5000;
+        Assert.True(monitor.IsSnapshotStale);
+        Assert.False(monitor.IsWindowStale);
+        Assert.False(_mapper.KeyDisplaySuppressed);
+        Rappel(VK_W, SC_W, WM_KEYDOWN);
+        Assert.Equal(new[] { "appui 2C" }, _evenements);
+    }
+
+    /// <summary>Snapshot périmé (focus pas encore recalculé) : rien ne se dessine, fail-closed.</summary>
+    [Fact]
+    public void SnapshotPerime_AucunAppuiAnnonce()
+    {
+        using var monitor = new ForegroundMonitor(_api, IntPtr.Zero, _host);
+        _mapper.SetForegroundMonitor(monitor);
+        _api.ForegroundWindow = (IntPtr)0x7777;
+        Assert.True(monitor.IsSnapshotStale);
+        Rappel(VK_W, SC_W, WM_KEYDOWN);
+        Assert.Empty(_evenements);
+    }
+
+    [Theory]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, false, false, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, false)]
+    public void ShouldNotifyRawKeyDown_Table(bool appui, bool passageTotal, bool securise, bool attendu)
+    {
+        Assert.Equal(attendu, KeyboardHook.ShouldNotifyRawKeyDown(appui, passageTotal, securise));
+    }
+
     [Fact]
     public void NosInjectionsEtCellesDUnTiersNeSontPasTraitees()
     {

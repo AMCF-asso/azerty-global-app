@@ -136,6 +136,20 @@ public sealed class ForegroundMonitor : IDisposable
         }
     }
 
+    /// <summary>
+    /// A20 : le snapshot décrit une autre fenêtre que le premier plan réel. Sans la relance
+    /// périodique du champ sécurisé d'<see cref="IsSnapshotStale"/>, qui couperait sinon nos
+    /// propres fenêtres une seconde après chaque sonde trompée.
+    /// </summary>
+    public bool IsWindowStale
+    {
+        get
+        {
+            var snap = _snapshot;
+            return snap != null && snap.Window != _api.GetForegroundWindow();
+        }
+    }
+
     /// <summary>Indique si le suivi des changements de fenêtre a pu être installé.</summary>
     public bool IsHookInstalled => _winEventHook != IntPtr.Zero;
     public bool IsTrackingAvailable => IsHookInstalled && _focusEventHook != IntPtr.Zero;
@@ -207,8 +221,6 @@ public sealed class ForegroundMonitor : IDisposable
             if (hasFg && pid != 0)
                 _api.TryGetProcessStartTime(pid, out startTimeTicks);
             var identity = new ForegroundProcessIdentity(pid, startTimeTicks);
-            bool secureInput = !hasFg || _api.IsWindowPasswordField(window);
-            _secureRetryAfter = _clock() + 1000;
 
             // Le menu conserve la dernière application utile ; la frappe suit toujours
             // la vraie cible, y compris Explorer, la recherche Windows et nos fenêtres.
@@ -226,6 +238,14 @@ public sealed class ForegroundMonitor : IDisposable
                 ? ResolveState(processName, fullPath, pid, hasFg)
                 : (Mode: CompatibilityMode.DisabledAntiCheat, Reason: CompatibilitySuspendReason.UnknownForeground);
             CompatibilityMode mode = resolved.Mode;
+            // A21 (audit 1.3.0, CMP-2) : la suspension se décide d'abord par le processus
+            // et la liste. Un jeu anti-triche ou un client distant ne reçoit aucune requête
+            // UIA : l'émission y est déjà coupée, le champ mot de passe ne change rien, et
+            // false évite que IsSnapshotStale relance un Recompute chaque seconde en jeu.
+            // Sans suivi des fenêtres, tout est suspendu (UnknownForeground) : pas de sonde non plus.
+            bool secureInput = !hasFg || (IsTrackingAvailable && !SkipsPasswordProbe(resolved.Reason)
+                && _api.IsWindowPasswordField(window));
+            _secureRetryAfter = _clock() + 1000;
 
             // Snapshot atomique : une seule écriture de référence (atomique CLR sur ref types).
             var oldSnapshot = _snapshot;
@@ -265,6 +285,13 @@ public sealed class ForegroundMonitor : IDisposable
             ForegroundChanged?.Invoke();
         }
     }
+
+    /// <summary>
+    /// Suspensions imposées où la sonde du champ mot de passe ne part pas (A21). Pas
+    /// l'override utilisateur : la recherche y reste servie (R3), la sonde protège l'insertion.
+    /// </summary>
+    internal static bool SkipsPasswordProbe(CompatibilitySuspendReason reason) =>
+        reason is CompatibilitySuspendReason.AntiCheat or CompatibilitySuspendReason.RemoteAccess;
 
     private (CompatibilityMode Mode, CompatibilitySuspendReason Reason) ResolveState(
         string? processName, string? fullPath, uint pid, bool hasFg)

@@ -8,9 +8,9 @@ namespace AZERTYGlobal.Tests;
 
 /// <summary>
 /// Banc des fenêtres qui portent un clavier : Leçons (trois états de modifieur et les deux cas
-/// d'indice), clavier virtuel, mini-tutoriel de l'accueil, et une nappe du moteur de rendu
+/// d'indice), clavier virtuel, et une nappe du moteur de rendu
 /// seul ; plus la Recherche, l'autre fenêtre sombre (lot visuel 1.3.0). Une image par sujet,
-/// par langue et par échelle. Les états du tutoriel et les indices
+/// par langue et par échelle. Le parcours de l'accueil (dans les Leçons) et les indices
 /// de touche morte armée sont dans <c>KeyboardContextBench.Tutoriel.cs</c>.
 ///
 /// Le mapper repose sur <see cref="MockWin32Api"/> : toute injection y est absorbée, et
@@ -71,7 +71,6 @@ public partial class KeyboardContextBench
                     var attempts = new List<(string Name, Action Run)>
                     {
                         ("clavier-virtuel", () => CaptureVirtualKeyboard(target, layout)),
-                        ("tutoriel", () => CaptureLearningModule(target, layout, mapper, hook)),
                         ("clavier-nappe", () => RenderPlank(target, layout)),
                         ("recherche", () => CaptureSearch(target)),
                     };
@@ -258,30 +257,6 @@ public partial class KeyboardContextBench
         finally
         {
             BancCapture.Teardown(keyboard);
-        }
-    }
-
-    /// <summary>
-    /// Mini-tutoriel de l'accueil, sans propriétaire. <c>Show()</c> n'est pas appelé : il
-    /// arracherait le premier plan au poste (AttachThreadInput, relances par minuterie), et
-    /// une perte de focus affiche « Cliquez pour reprendre » au hasard du poste. La fenêtre est
-    /// affichée sans activation, dans l'état « focus présent » où elle naît : sa 1re page, le
-    /// choix des usages, aucune case cochée.
-    /// </summary>
-    private static void CaptureLearningModule(BancCapture.Target target, Layout layout, KeyMapper mapper, KeyboardHook hook)
-    {
-        var module = new LearningModule(IntPtr.Zero, mapper, hook, layout);
-        try
-        {
-            IntPtr hwnd = BancCapture.Handle(module);
-            Win32.ShowWindow(hwnd, 4); // SW_SHOWNOACTIVATE
-            int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
-            BancCapture.MarkActive(hwnd);
-            target.Shoot(hwnd, "tutoriel", windowDpi);
-        }
-        finally
-        {
-            BancCapture.Teardown(module);
         }
     }
 

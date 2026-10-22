@@ -150,6 +150,7 @@ sealed class TrayApplication : IDisposable
     // Null si l'écriture a échoué : l'essai 1 est alors refusé pour cette session.
     private ConfigManager.VersionFirstRun? _versionFirstRun;
     private bool _activationConsent = ConfigManager.ActivationConsent;
+    private bool _startupFailed;
     private bool _enabled = ConfigManager.ActivationConsent;
     private DateTimeOffset? _pauseUntilUtc;
 
@@ -214,7 +215,8 @@ sealed class TrayApplication : IDisposable
         // Icône tray
         // Couleur de l'état réel dès la première image : grise tant que l'accord d'activation
         // manque ou que l'application est désactivée (UpdateIcon suit ensuite).
-        _hIcon = CreateTextIcon("AG", ShouldProcessHook);
+        // Audit 1.3.0, A11 : le logo du produit, à la taille de la zone de notification.
+        _hIcon = TrayIcon.Create(ShouldProcessHook, capsLock: false, suspended: false);
         // L'icône balloon (logo produit) se crée à chaque émission, jamais ici :
         // NIIF_LARGE_ICON exige la taille SM_CXICON du moment, qui suit l'échelle
         // d'affichage (F6 du smoke v1.2.0 — 32 px codé en dur = bulle rejetée à 125 %).
@@ -341,6 +343,7 @@ sealed class TrayApplication : IDisposable
             // le détail technique va dans error.log, l'utilisateur reçoit un message
             // clair avec un chemin d'action (support).
             ConfigManager.Log("TrayApplication ctor", ex);
+            _startupFailed = true; // A22 : Run() ne pose pas le hook, WM_QUIT est en file
             Win32.MessageBoxW(IntPtr.Zero,
                 L.Tray_StartupError,
                 L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
@@ -361,7 +364,9 @@ sealed class TrayApplication : IDisposable
         _hook.VirtualKeyboardRequested += () => Win32.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);
         _hook.LayoutMayHaveChanged += OnLayoutMayHaveChanged;
         ApplyHookState();
-        if (_activationConsent) _hook.Install();
+        // A22 (audit 1.3.0, PERF-1) : le hook n'est plus posé ici mais dans Run(), juste
+        // avant la boucle de messages. Posé ici, chaque frappe du système attendait la fin
+        // de la construction (fenêtres, premier plan, accueil) faute de pompe.
 
         // Synchroniser l'etat interne (CapsLock + modificateurs Shift/Ctrl/Alt) avec l'etat
         // reel du systeme. Cas critique : si l'utilisateur lance l'app pendant qu'un jeu
@@ -616,6 +621,14 @@ sealed class TrayApplication : IDisposable
         _onboarding?.SetInputPaused(_activationConsent && paused);
     }
 
+    /// <summary>
+    /// A22 : pose du hook à l'entrée de la boucle. Seulement avec l'accord, et une seule
+    /// fois : Install ne décroche pas un hook déjà posé, chaque frappe serait traitée deux fois.
+    /// </summary>
+    internal static bool ShouldInstallHookAtLoopStart(bool activationConsent, bool hookCreated, bool hookInstalled,
+        bool startupFailed) =>
+        activationConsent && hookCreated && !hookInstalled && !startupFailed;
+
     /// <summary>Boucle de messages principale.</summary>
     public void Run()
     {
@@ -647,6 +660,29 @@ sealed class TrayApplication : IDisposable
         // au-dessus du seuil n'aura jamais de transition : armer le signal pour que la
         // prochaine frappe suivie du silence décide. Le timer ci-dessus tourne déjà.
         ArmReviewSignalIfAlreadyAboveThreshold();
+
+        // A22 : hook posé en dernier, la pompe démarre aussitôt. Sans accord, il attend
+        // ActivateWithConsent ; un échec garde le message et la sortie du constructeur.
+        if (ShouldInstallHookAtLoopStart(_activationConsent, _hook != null, _hook?.IsInstalled == true, _startupFailed))
+        {
+            try
+            {
+                _hook!.Install();
+                // Relâchements manqués pendant la construction : resynchroniser après la pose.
+                _mapper?.SyncState();
+            }
+            catch (Exception ex)
+            {
+                ConfigManager.Log("TrayApplication Run hook", ex);
+                // La boîte pompe les messages : sans cela, une minuterie de reprise
+                // poserait le hook pendant qu'elle annonce l'échec.
+                foreach (var timer in new[] { TIMER_REHOOK, TIMER_REHOOK_2, TIMER_REHOOK_3,
+                             TIMER_HOOK_WATCHDOG, TIMER_HOOK_PROBE })
+                    Win32.KillTimer(_hWnd, (UIntPtr)timer);
+                Win32.MessageBoxW(IntPtr.Zero, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
+                return;
+            }
+        }
 
         int ret;
         while ((ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0)) != 0)
@@ -807,7 +843,7 @@ sealed class TrayApplication : IDisposable
                         case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
                         case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath), null, null, 1); break;
                         case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.KeyboardCardsPath), null, null, 1); break;
-                        case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/mentions-legales#confidentialite-securite"), null, null, 1); break;
+                        case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/confidentialite#application"), null, null, 1); break;
                         case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
                         case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
                         case IDM_FEEDBACK: OpenFeedback("tray-menu"); break;
@@ -889,7 +925,6 @@ sealed class TrayApplication : IDisposable
                             {
                                 ConfigureOnboardingWindow(_onboarding);
                             }
-                            ConfigManager.LogCrashTraceDebug($"IDM_RESET_ONBOARDING: Mapper={(_onboarding.Mapper != null)}, Hook={(_onboarding.Hook != null)}, AppLayout={(_onboarding.AppLayout != null)}");
                             _onboarding.ResetState();
                             ApplyWindowInputState();
                             ConfigManager.LogCrashTraceDebug("IDM_RESET_ONBOARDING: ResetState done, calling Show");
@@ -1327,10 +1362,9 @@ sealed class TrayApplication : IDisposable
 
     private void ConfigureOnboardingWindow(OnboardingWindow onboarding)
     {
-        onboarding.Mapper = _mapper;
-        onboarding.Hook = _hook;
         onboarding.AppLayout = _layout;
         onboarding.OpenLessonsRequested = ShowLessonsWindow;
+        onboarding.TutorialRequested = ShowTutorialFromOnboarding;
         onboarding.OnClosed = OnOnboardingClosed;
         onboarding.ActivationRequested = ActivateWithConsent;
     }
@@ -1393,6 +1427,23 @@ sealed class TrayApplication : IDisposable
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
         _lessons!.Show();
+    }
+
+    /// <summary>
+    /// « Activer et essayer » de l'accueil : le parcours d'exercices s'ouvre dans Leçons ›
+    /// Initiation, déjà en papier (audit 1.3.0, B2 voie (b), décision d'Antoine du 20/10). Sa
+    /// fin est relayée à l'accueil, qui reprend la main.
+    /// </summary>
+    private void ShowTutorialFromOnboarding()
+    {
+        if (!_activationConsent || !EnsureLessonsWindow())
+        {
+            _onboarding?.OnTutorialClosed(completed: false);
+            return;
+        }
+        _lessons!.TutorialClosed = completed => _onboarding?.OnTutorialClosed(completed);
+        ApplyWindowInputState();
+        _lessons.ShowTutorial();
     }
 
     /// <summary>
@@ -1724,24 +1775,26 @@ sealed class TrayApplication : IDisposable
         var fgProc = _compatibilityMenuProcessName;
         bool fgIsOwnApp = !string.IsNullOrEmpty(fgProc) &&
             string.Equals(fgProc, ProductIdentity.ExecutableName, StringComparison.OrdinalIgnoreCase);
-        bool hasTarget = !string.IsNullOrEmpty(fgProc) && !fgIsOwnApp;
+        // target : le nom du process visé, nul sans cible, que le compilateur sait suivre.
+        string? target = !string.IsNullOrEmpty(fgProc) && !fgIsOwnApp ? fgProc : null;
+        bool hasTarget = target != null;
         var hSubMenu = Win32.CreatePopupMenu();
-        if (hasTarget)
+        if (target != null)
         {
-            Win32.AppendMenuW(hSubMenu, MF_STRING | MF_GRAYED, 0, L.Tray_MenuActiveApp(fgProc));
+            Win32.AppendMenuW(hSubMenu, MF_STRING | MF_GRAYED, 0, L.Tray_MenuActiveApp(target));
             Win32.AppendMenuW(hSubMenu, MF_SEPARATOR, 0, null);
         }
-        bool fgIsRemoteAccess = hasTarget && GameRegistry.IsRemoteAccessProcess(fgProc);
+        bool fgIsRemoteAccess = hasTarget && GameRegistry.IsRemoteAccessProcess(target);
         uint targetFlags = hasTarget ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hSubMenu, targetFlags, IDM_COMPAT_AUTO, L.Tray_MenuCompatAuto);
         Win32.AppendMenuW(hSubMenu,
             hasTarget && !fgIsRemoteAccess ? MF_STRING : MF_STRING | MF_GRAYED,
             IDM_COMPAT_FORCE_ON, L.Tray_MenuCompatForceOn);
         Win32.AppendMenuW(hSubMenu, targetFlags, IDM_COMPAT_FORCE_OFF, L.Tray_MenuCompatForceOff);
-        if (hasTarget)
+        if (target != null)
         {
             // Marquer la radio active
-            var ovr = fgIsRemoteAccess ? null : ConfigManager.GetCompatibilityOverride(fgProc);
+            var ovr = fgIsRemoteAccess ? null : ConfigManager.GetCompatibilityOverride(target);
             uint activeId = ovr switch
             {
                 "forceOn" => IDM_COMPAT_FORCE_ON,
@@ -2126,13 +2179,17 @@ sealed class TrayApplication : IDisposable
     private void RefreshVirtualKeyboard()
     {
         if (_mapper == null || _virtualKeyboard == null) return;
+        // A20 : en saisie sécurisée, ni modificateur tenu ni touche morte en attente à
+        // l'écran (couche et accent d'un mot de passe). Verr. Maj, visible sur le clavier
+        // physique, reste affiché.
+        bool masque = _mapper.KeyDisplaySuppressed;
         _virtualKeyboard.UpdateState(
-            _mapper.ShiftDown,
-            _mapper.AltGrDown,
-            _mapper.CtrlDown,
-            _mapper.AltDown,
+            !masque && _mapper.ShiftDown,
+            !masque && _mapper.AltGrDown,
+            !masque && _mapper.CtrlDown,
+            !masque && _mapper.AltDown,
             _mapper.CapsLockActive,
-            _mapper.DisplayDeadKey);
+            masque ? null : _mapper.DisplayDeadKey);
     }
 
     private void OnReportBug() => OpenDiagnosticPage(ProductIdentity.BugReportPath, "app");
@@ -2350,12 +2407,10 @@ sealed class TrayApplication : IDisposable
     {
         var oldIcon = _hIcon;
 
-        // Déterminer le texte et le style de l'icône selon l'état
+        // Déterminer le style de l'icône selon l'état
         bool active = ShouldProcessHook;
         bool capsLock = _mapper?.CapsLockActive == true && active;
-        string iconText = "AG";
-
-        _hIcon = CreateTextIcon(iconText, active, capsLock,
+        _hIcon = TrayIcon.Create(active, capsLock,
             ShouldShowCompatibilitySuspension(_suspendedForCompatibility, _activationConsent));
 
         _nid.hIcon = _hIcon;
@@ -2424,7 +2479,8 @@ sealed class TrayApplication : IDisposable
             parts.Add(L.Tray_TooltipActive);
             if (_mapper?.CapsLockActive == true)
                 parts.Add(L.Tray_TooltipCapsLock);
-            if (_mapper?.ActiveDeadKey != null)
+            // A20 : pas d'accent en attente dans l'infobulle pendant un mot de passe.
+            if (_mapper?.ActiveDeadKey != null && !_mapper.KeyDisplaySuppressed)
                 parts.Add(L.Tray_TooltipDeadKey(GetDeadKeySymbol(_mapper.ActiveDeadKey)));
             var layerState = _mapper?.MaintainableLayerState ?? MaintainableLayerState.Inactive;
             if (layerState.Mode is MaintainableLayerMode.Locked)
@@ -3016,10 +3072,11 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// Crée une icône 32x32 avec texte sur fond coloré.
+    /// Crée une icône 32x32 avec texte sur fond coloré. Secours de <see cref="TrayIcon"/>
+    /// quand le logo ne se charge pas, et icône de la bulle sans logo.
     /// Bleu = actif, gris = inactif. Barre orange en bas si CapsLock.
     /// </summary>
-    private static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
+    internal static IntPtr CreateTextIcon(string text, bool active, bool capsLock = false, bool autoDisabled = false, int size = 32)
     {
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);

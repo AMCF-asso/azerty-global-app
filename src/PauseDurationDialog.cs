@@ -45,6 +45,10 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hFont;
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
+    // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
+    // création, comme l'accueil). Les champs prennent la surface blanche du papier.
+    private readonly PaperPalette _pal = PaperPalette.Now();
+    private IntPtr _hFieldBrush;
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
     private int _dpi = 96;
@@ -127,7 +131,8 @@ sealed class PauseDurationDialog : IDisposable
         // La classe n'avait aucun fond : rien n'effaçait la fenêtre, que DWM montrait en
         // noir sous des étiquettes grises (vu par Antoine le 26/09). Même fond que les
         // autres fenêtres à contrôles.
-        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, LightTheme.Background);
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
 
         // D1 (accessibilité 1.3.0) : la fenêtre existe, son DPI est celui de l'écran qui
         // l'accueille. Taille, positions et police en découlent. Invisible jusqu'à
@@ -165,8 +170,12 @@ sealed class PauseDurationDialog : IDisposable
 
     private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
 
-    private IntPtr CreateScaledFont() =>
-        Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+    // A9 : AG Texte, la police d'interface du papier.
+    private IntPtr CreateScaledFont()
+    {
+        AppFonts.EnsureLoaded();
+        return Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Text);
+    }
 
     /// <summary>D1 : police et géométrie des contrôles au nouveau DPI (WM_DPICHANGED).</summary>
     private void ApplyDpiToControls()
@@ -288,7 +297,10 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
-        LightButton.Attach(hwnd); // audit UX 1.3.0, #3 : « Confirmer » porte l'accent
+        // Audit UX 1.3.0, #3 : « Confirmer » porte l'accent. A9 : boutons papier ; en
+        // contraste élevé, le dessin du système.
+        if (!_pal.HighContrast)
+            LightButton.Attach(hwnd, paper: true);
         return hwnd;
     }
 
@@ -337,9 +349,14 @@ sealed class PauseDurationDialog : IDisposable
                     // Les étiquettes posent leur texte sur le fond de la fenêtre ; la ligne
                     // de reprise passe au rouge quand la durée est hors bornes.
                     Win32.SetBkMode(wParam, 1);
-                    if (lParam == _hResume)
-                        Win32.SetTextColor(wParam, ResumeLineColor(_durationValid));
+                    Win32.SetBkColor(wParam, _pal.Paper);
+                    Win32.SetTextColor(wParam, lParam == _hResume ? ResumeLineColor(_durationValid, _pal) : _pal.Ink);
                     return _hBgBrush;
+                case Win32.WM_CTLCOLOREDIT:
+                    // A9 : les champs d'heures et de minutes, encre sur la surface du papier.
+                    Win32.SetTextColor(wParam, _pal.Ink);
+                    Win32.SetBkColor(wParam, _pal.Surface);
+                    return _hFieldBrush;
                 case Win32.WM_KEYDOWN:
                     if (wParam == (IntPtr)0x1B)
                     {
@@ -390,8 +407,9 @@ sealed class PauseDurationDialog : IDisposable
             : TimeSpan.FromMinutes(total);
     }
 
-    // Même rouge que les refus des Paramètres.
-    internal static uint ResumeLineColor(bool valid) => valid ? LightTheme.Text : LightTheme.Error;
+    // Même rouge que les refus des Paramètres (A9 : celui du papier). En contraste élevé,
+    // l'erreur prend le texte du système : le message dit seul que la durée est refusée.
+    internal static uint ResumeLineColor(bool valid, PaperPalette palette) => valid ? palette.Ink : palette.Error;
 
     // Heure de la ligne de reprise. Le banc de captures la fige : l'heure réelle rendait
     // la fenêtre différente d'une passe à l'autre (16 captures instables, run 36427331772).
@@ -459,6 +477,11 @@ sealed class PauseDurationDialog : IDisposable
         {
             Win32.DeleteObject(_hFont);
             _hFont = IntPtr.Zero;
+        }
+        if (_hFieldBrush != IntPtr.Zero)
+        {
+            Win32.DeleteObject(_hFieldBrush);
+            _hFieldBrush = IntPtr.Zero;
         }
         NativeWindow.UnregisterClass(ClassName);
     }

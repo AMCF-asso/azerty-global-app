@@ -28,12 +28,16 @@ sealed class LayoutConflictWindow : IDisposable
     // Hauteur de départ seulement : RepositionControls la recalcule sous les deux liens.
     private const int BASE_WIN_H = 440;
 
-    // Couleurs alignees sur AboutWindow / SettingsWindow
-    private const uint CLR_BG = LightTheme.Background;
-    private const uint CLR_TITLE = LightTheme.Text;
-    // Audit UX 1.3.0, #8 : l'intro passe en texte secondaire, la question garde le texte plein.
-    private const uint CLR_TEXT = LightTheme.TextSecondary;
+    // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
+    // création, comme l'accueil). Audit UX 1.3.0, #8 : l'intro passe en texte secondaire,
+    // la question garde le texte plein.
+    private readonly PaperPalette _pal = PaperPalette.Now();
     private const uint SS_NOPREFIX = 0x0080;
+    private const int BS_TYPEMASK = 0x000F;
+    private const int GWL_STYLE = -16;
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLongW(IntPtr hWnd, int nIndex);
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnQuit;
@@ -60,6 +64,13 @@ sealed class LayoutConflictWindow : IDisposable
     private IntPtr _hFontBold;
     private IntPtr _hFontButton;
 
+    // A9 : les liens de commande se dessinent en cartes papier (NM_CUSTOMDRAW) ; leur note,
+    // posée par BCM_SETNOTE pour le Narrateur, est gardée ici pour le dessin.
+    private string _keepNote = "";
+    private string _quitNote = "";
+    private FontSpec LinkTitleFont => FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, _dpiScale);
+    private FontSpec LinkNoteFont => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale);
+
     /// <param name="isAtStartup">
     /// true : detection au demarrage de l'app (« est deja installee »).
     /// false : detection apres switch Ctrl+Shift (« vient d'etre activee »).
@@ -69,7 +80,7 @@ sealed class LayoutConflictWindow : IDisposable
     public LayoutConflictWindow(bool isAtStartup, Action onQuit, Action onKeep)
     {
         _wndProcDelegate = WndProc;
-        _hBgBrush = Win32.CreateSolidBrush(CLR_BG);
+        _hBgBrush = Win32.CreateSolidBrush(_pal.Paper);
         _isAtStartup = isAtStartup;
         _onQuit = onQuit;
         _onKeep = onKeep;
@@ -101,12 +112,13 @@ sealed class LayoutConflictWindow : IDisposable
         }
     }
 
+    // A9 : AG Titre et AG Texte, les polices du papier.
     private void CreateFonts()
     {
-        _hFontTitle = Win32.CreateFontW(-S(TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontText = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontBold = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
-        _hFontButton = Win32.CreateFontW(-S(TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, TypeRamp.Family);
+        _hFontTitle = TypeRamp.CreateIn(AppFonts.Title, TypeRamp.Title, TypeRamp.Semibold, _dpiScale);
+        _hFontText = TypeRamp.CreateIn(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale);
+        _hFontBold = TypeRamp.CreateIn(AppFonts.Text, TypeRamp.Body, TypeRamp.Semibold, _dpiScale);
+        _hFontButton = TypeRamp.CreateIn(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpiScale);
     }
 
     private void DestroyFonts()
@@ -182,8 +194,94 @@ sealed class LayoutConflictWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_QUIT, hInstance, IntPtr.Zero);
 
-        SetNote(_hWndBtnKeep, L.LayoutConflict_KeepNote);
-        SetNote(_hWndBtnQuit, L.LayoutConflict_QuitNote);
+        _keepNote = L.LayoutConflict_KeepNote;
+        _quitNote = L.LayoutConflict_QuitNote;
+        SetNote(_hWndBtnKeep, _keepNote);
+        SetNote(_hWndBtnQuit, _quitNote);
+    }
+
+    // ── A9 : liens de commande en cartes papier ─────────────────────
+
+    private int LinkPadding => S(12);
+    private int LinkTextLeft => S(40);
+    private int LinkTitleHeight => S(24);
+    private int LinkNoteLineHeight => S(20);
+
+    /// <summary>Hauteur de la carte dessinée à la largeur donnée : titre, note repliée et
+    /// marges. En contraste élevé, celle du lien natif.</summary>
+    private int LinkHeight(IntPtr button, string note, int width, IntPtr hdc)
+    {
+        if (_pal.HighContrast)
+            return IdealHeight(button, width, S(72));
+        var noteRect = new Win32.RECT { left = 0, top = 0, right = Math.Max(1, width - LinkTextLeft - LinkPadding), bottom = 0 };
+        int noteH = PaperText.DrawParagraph(hdc, new[] { new TextRun(note) }, LinkNoteFont, LinkNoteFont,
+            noteRect, _pal.Muted, _pal.Muted, LinkNoteLineHeight, draw: false);
+        return LinkPadding + LinkTitleHeight + noteH + LinkPadding;
+    }
+
+    /// <summary>
+    /// Le lien de commande à l'étape PREPAINT : carte blanche cernée (le choix par défaut
+    /// cerné d'action), flèche d'action, titre en encre semi-grasse, note en texte secondaire,
+    /// contour de focus au clavier. Remplace le bleu #0078D7 du thème (audit 1.3.0, A9).
+    /// </summary>
+    private IntPtr OnCommandLinkCustomDraw(IntPtr lParam)
+    {
+        var cd = System.Runtime.InteropServices.Marshal.PtrToStructure<PaperChoice.NMCUSTOMDRAW>(lParam);
+        if (cd.dwDrawStage != PaperChoice.CDDS_PREPAINT)
+            return (IntPtr)PaperChoice.CDRF_DODEFAULT;
+
+        IntPtr hWnd = cd.hdr.hwndFrom;
+        var rc = cd.rc;
+        int w = rc.right - rc.left, h = rc.bottom - rc.top;
+        if (w <= 0 || h <= 0) return (IntPtr)PaperChoice.CDRF_SKIPDEFAULT;
+
+        var (dc, bitmap, previous) = PaintBuffer.CreateSurface(w, h);
+        IntPtr hdc = dc != IntPtr.Zero ? dc : cd.hdc;
+        int ox = dc != IntPtr.Zero ? 0 : rc.left, oy = dc != IntPtr.Zero ? 0 : rc.top;
+        try
+        {
+            bool primary = (GetWindowLongW(hWnd, GWL_STYLE) & BS_TYPEMASK) == (int)Win32.BS_DEFCOMMANDLINK;
+            bool hot = (cd.uItemState & (PaperChoice.CDIS_HOT | PaperChoice.CDIS_SELECTED)) != 0;
+            bool focused = (cd.uItemState & PaperChoice.CDIS_FOCUS) != 0 && PaperChoice.FocusCuesShown(hWnd);
+            var card = new Win32.RECT { left = ox, top = oy, right = ox + w, bottom = oy + h };
+
+            PaperDraw.Fill(hdc, card, _pal.Paper);
+            var box = card;
+            box.right -= 1;
+            box.bottom -= 1;
+            PaperDraw.RoundBox(hdc, box, hot ? _pal.FunctionKey : _pal.Surface, primary ? _pal.Action : _pal.Border,
+                S(4), primary ? Math.Max(2, S(2)) : Math.Max(1, S(1)));
+            if (focused)
+            {
+                var ring = new Win32.RECT { left = card.left + S(4), top = card.top + S(4), right = card.right - S(4), bottom = card.bottom - S(4) };
+                PaperDraw.FocusOutline(hdc, ring, _pal.Action, 0, Math.Max(2, S(2)), S(6));
+            }
+
+            var titleRect = new Win32.RECT
+            {
+                left = card.left + LinkTextLeft, top = card.top + LinkPadding,
+                right = card.right - LinkPadding, bottom = card.top + LinkPadding + LinkTitleHeight,
+            };
+            var arrowRect = new Win32.RECT { left = card.left + S(14), top = titleRect.top, right = titleRect.left, bottom = titleRect.bottom };
+            PaperText.DrawLine(hdc, "→", LinkTitleFont, arrowRect, _pal.Action);
+            var text = new System.Text.StringBuilder(256);
+            Win32.GetWindowTextW(hWnd, text, text.Capacity);
+            PaperText.DrawLine(hdc, text.ToString(), LinkTitleFont, titleRect, _pal.Ink);
+
+            string note = hWnd == _hWndBtnKeep ? _keepNote : _quitNote;
+            var noteRect = new Win32.RECT { left = titleRect.left, top = titleRect.bottom, right = titleRect.right, bottom = card.bottom - LinkPadding };
+            PaperText.DrawParagraph(hdc, new[] { new TextRun(note) }, LinkNoteFont, LinkNoteFont,
+                noteRect, _pal.Muted, _pal.Muted, LinkNoteLineHeight);
+        }
+        finally
+        {
+            if (dc != IntPtr.Zero)
+            {
+                Win32.BitBlt(cd.hdc, rc.left, rc.top, w, h, dc, 0, 0, Win32.SRCCOPY);
+                PaintBuffer.ReleaseSurface(dc, bitmap, previous);
+            }
+        }
+        return (IntPtr)PaperChoice.CDRF_SKIPDEFAULT;
     }
 
     private static void SetNote(IntPtr button, string note)
@@ -222,12 +320,15 @@ sealed class LayoutConflictWindow : IDisposable
         int gap = S(8);
 
         IntPtr hdc = Win32.GetDC(_hWnd);
-        int y;
-        try { y = LayoutText(hdc, contentW) + S(4); }
+        int y, keepH, quitH;
+        try
+        {
+            y = LayoutText(hdc, contentW) + S(4);
+            keepH = LinkHeight(_hWndBtnKeep, _keepNote, contentW, hdc);
+            quitH = LinkHeight(_hWndBtnQuit, _quitNote, contentW, hdc);
+        }
         finally { Win32.ReleaseDC(_hWnd, hdc); }
 
-        int keepH = IdealHeight(_hWndBtnKeep, contentW, S(72));
-        int quitH = IdealHeight(_hWndBtnQuit, contentW, S(72));
         Win32.MoveWindow(_hWndBtnKeep, margin, y, contentW, keepH, true);
         y += keepH + gap;
         Win32.MoveWindow(_hWndBtnQuit, margin, y, contentW, quitH, true);
@@ -311,9 +412,19 @@ sealed class LayoutConflictWindow : IDisposable
                 }
 
                 case Win32.WM_CTLCOLORSTATIC:
-                    Win32.SetTextColor(wParam, lParam == _hIntro ? CLR_TEXT : CLR_TITLE);
-                    Win32.SetBkColor(wParam, CLR_BG);
+                    Win32.SetTextColor(wParam, lParam == _hIntro ? _pal.Muted : _pal.Ink);
+                    Win32.SetBkColor(wParam, _pal.Paper);
                     return _hBgBrush;
+
+                case Win32.WM_NOTIFY:
+                {
+                    // A9 : cartes papier ; en contraste élevé, le lien natif du système.
+                    var nm = Marshal.PtrToStructure<Win32.NMHDR>(lParam);
+                    if (nm.code == PaperChoice.NM_CUSTOMDRAW && !_pal.HighContrast
+                        && (nm.hwndFrom == _hWndBtnKeep || nm.hwndFrom == _hWndBtnQuit))
+                        return OnCommandLinkCustomDraw(lParam);
+                    break;
+                }
 
                 case Win32.WM_CLOSE:
                     Close(false); // croix X = garder l'app

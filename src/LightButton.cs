@@ -102,14 +102,18 @@ static class LightButton
         IntPtr font = Win32.SendMessageW(hWnd, WM_GETFONT, IntPtr.Zero, IntPtr.Zero);
 
         GdiHelpers.DrawLightButton(hdc, rect, text.ToString(), font, primary,
-            hot: (state & BST_HOT) != 0, pressed: (state & BST_PUSHED) != 0, enabled, S(4), Backdrop(hWnd, hdc), paper);
+            hot: (state & BST_HOT) != 0, pressed: (state & BST_PUSHED) != 0, enabled, S(4), Backdrop(hWnd, hdc, paper), paper);
 
         bool hideFocus = ((int)Win32.SendMessageW(hWnd, WM_QUERYUISTATE, IntPtr.Zero, IntPtr.Zero) & UISF_HIDEFOCUS) != 0;
         if ((state & BST_FOCUS) != 0 && !hideFocus)
         {
             // Anneau intérieur arrondi : le rectangle pointillé en XOR virait à l'orange sur l'accent.
             int inset = S(3);
-            var pen = Win32.CreatePen(0, Math.Max(1, S(1)), primary && enabled ? LightTheme.OnAccent : LightTheme.Text);
+            // A13 : en papier, l'anneau prend l'encre du papier, plus celle de la palette Ardoise.
+            uint ring = primary && enabled
+                ? (paper ? PaperTheme.OnAction : LightTheme.OnAccent)
+                : (paper ? PaperTheme.Ink : LightTheme.Text);
+            var pen = Win32.CreatePen(0, Math.Max(1, S(1)), ring);
             var oldPen = Win32.SelectObject(hdc, pen);
             var oldBrush = Win32.SelectObject(hdc, Win32.GetStockObject(Win32.NULL_BRUSH));
             Win32.RoundRect(hdc, rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset, S(4), S(4));
@@ -123,14 +127,14 @@ static class LightButton
     /// Couleur des coins arrondis : le fond que la fenêtre donne à ses étiquettes
     /// (WM_CTLCOLORSTATIC), sinon le fond clair commun.
     /// </summary>
-    private static uint Backdrop(IntPtr hWnd, IntPtr hdc)
+    private static uint Backdrop(IntPtr hWnd, IntPtr hdc, bool paper)
     {
         IntPtr parent = GetParent(hWnd);
         IntPtr brush = parent == IntPtr.Zero ? IntPtr.Zero
             : Win32.SendMessageW(parent, WM_CTLCOLORSTATIC, hdc, hWnd);
         return brush != IntPtr.Zero && GetObjectW(brush, Marshal.SizeOf<LOGBRUSH>(), out var lb) != 0 && lb.lbStyle == 0
             ? lb.lbColor
-            : LightTheme.Background;
+            : paper ? PaperTheme.Paper : LightTheme.Background;
     }
 
     [StructLayout(LayoutKind.Sequential)]

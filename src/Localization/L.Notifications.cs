@@ -51,7 +51,7 @@ internal static partial class L
     // Notes des deux liens de commande, sous leur titre (BtnKeep, BtnQuit).
     public static string LayoutConflict_KeepNote => T(
         $"Pour le clavier virtuel et la recherche de caractère. Retirez ensuite {Product} des dispositions chargées : Paramètres Windows → Heure et langue → Langue et région → Options de la langue concernée. Cochez aussi « Lancer au démarrage de Windows » dans l’application.",
-        $"For the virtual keyboard and character search. Then remove {Product} from the loaded layouts: Windows Settings → Time & language → Language & region → Options for the relevant language. Also check \"Launch at Windows startup\" in the app.");
+        $"For the virtual keyboard and character search. Then remove {Product} from the loaded layouts: Windows Settings → Time & language → Language & region → Options for the relevant language. Also check “Launch at Windows startup” in the app.");
     public static string LayoutConflict_QuitNote => T(
         $"Pour taper avec {Product} avant l’ouverture de session (mot de passe Windows, écran de verrouillage, UAC, BitLocker). La disposition système suffit : l’application ferait double emploi.",
         $"To type with {Product} before sign-in (Windows password, lock screen, UAC, BitLocker). The system layout is enough: the app would be redundant.");
