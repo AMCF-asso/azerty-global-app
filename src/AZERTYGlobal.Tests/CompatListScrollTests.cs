@@ -23,29 +23,15 @@ public sealed class CompatListScrollTests
     private static extern bool GetUpdateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
 
     private const uint LB_GETTOPINDEX = 0x018E;
+    private const uint LB_SETTOPINDEX = 0x0197;
 
     [Fact]
     public void ListeDéfilée_LaPeintureNeRéinvalidePasLaFenêtre()
     {
         using var isolation = new BancCapture.Isolation();
-        isolation.SetLanguage("fr");
-        // Quatre entrées pour trois lignes visibles : valorant.exe, la dernière, fait défiler.
-        ConfigManager.SetCompatibilityOverride("Code.exe", "forceOff");
-        ConfigManager.SetCompatibilityOverride("eldenring.exe", "forceOn");
-        ConfigManager.SetCompatibilityOverride("mstsc.exe", "forceOff");
-        ConfigManager.SetCompatibilityOverride("valorant.exe", "forceOff");
-        var window = new SettingsWindow();
+        var window = OuvrirListeDéfilée(isolation, out IntPtr hwnd, out _);
         try
         {
-            window.Show();
-            IntPtr hwnd = BancCapture.Handle(window);
-            var tabType = typeof(SettingsWindow).GetNestedType("SettingsTab", BindingFlags.NonPublic)!;
-            Win32.SendMessageW(BancCapture.Field<IntPtr>(window, "_hWndTabStrip"), Win32.TCM_SETCURSEL, (IntPtr)1, IntPtr.Zero);
-            BancCapture.Call(window, "SetActiveTab", Enum.ToObject(tabType, 1));
-            BancCapture.Call(window, "RefreshCompatList", "valorant.exe");
-            IntPtr list = BancCapture.Field<IntPtr>(window, "_hWndCompatList");
-            Assert.Equal(1, (int)Win32.SendMessageW(list, LB_GETTOPINDEX, IntPtr.Zero, IntPtr.Zero));
-
             // Pas de pompe : avec la régression, la file ne se vide jamais. UpdateWindow peint
             // une fois, de façon synchrone, ce qui reste à peindre ; après quelques passes, plus
             // rien ne doit l'être.
@@ -58,6 +44,69 @@ public sealed class CompatListScrollTests
         finally
         {
             BancCapture.Teardown(window);
+        }
+    }
+
+    /// <summary>
+    /// Pendant positif du test précédent : le correctif ne doit pas avoir coupé le suivi. Quand
+    /// la liste remonte en haut, la piste est à repeindre ; une peinture suffit, et le curseur
+    /// est alors dessiné pour la première ligne.
+    /// </summary>
+    [Fact]
+    public void ListeRemontée_LaPisteSuitLeDéfilement()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = OuvrirListeDéfilée(isolation, out IntPtr hwnd, out IntPtr list);
+        try
+        {
+            for (int i = 0; i < 5; i++)
+                UpdateWindow(hwnd);
+            Assert.False(GetUpdateRect(hwnd, IntPtr.Zero, false), "précondition : rien à repeindre");
+            Assert.Equal(1, BancCapture.Field<int>(window, "_compatTopDrawn"));
+
+            // Par SendMessage, donc à travers la sous-classe, comme le clavier ou la molette.
+            Win32.SendMessageW(list, LB_SETTOPINDEX, IntPtr.Zero, IntPtr.Zero);
+            Assert.Equal(0, (int)Win32.SendMessageW(list, LB_GETTOPINDEX, IntPtr.Zero, IntPtr.Zero));
+            Assert.True(GetUpdateRect(hwnd, IntPtr.Zero, false),
+                "la liste a défilé sans que la piste soit à repeindre : le curseur resterait en bas");
+
+            UpdateWindow(hwnd);
+            Assert.False(GetUpdateRect(hwnd, IntPtr.Zero, false),
+                "la fenêtre reste à repeindre après une peinture : la piste se ré-invalide");
+            Assert.Equal(0, BancCapture.Field<int>(window, "_compatTopDrawn"));
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    /// <summary>Onglet Applications, quatre entrées pour trois lignes visibles, liste défilée d'une ligne.</summary>
+    private static SettingsWindow OuvrirListeDéfilée(BancCapture.Isolation isolation, out IntPtr hwnd, out IntPtr list)
+    {
+        isolation.SetLanguage("fr");
+        // valorant.exe, la dernière, fait défiler.
+        ConfigManager.SetCompatibilityOverride("Code.exe", "forceOff");
+        ConfigManager.SetCompatibilityOverride("eldenring.exe", "forceOn");
+        ConfigManager.SetCompatibilityOverride("mstsc.exe", "forceOff");
+        ConfigManager.SetCompatibilityOverride("valorant.exe", "forceOff");
+        var window = new SettingsWindow();
+        try
+        {
+            window.Show();
+            hwnd = BancCapture.Handle(window);
+            var tabType = typeof(SettingsWindow).GetNestedType("SettingsTab", BindingFlags.NonPublic)!;
+            Win32.SendMessageW(BancCapture.Field<IntPtr>(window, "_hWndTabStrip"), Win32.TCM_SETCURSEL, (IntPtr)1, IntPtr.Zero);
+            BancCapture.Call(window, "SetActiveTab", Enum.ToObject(tabType, 1));
+            BancCapture.Call(window, "RefreshCompatList", "valorant.exe");
+            list = BancCapture.Field<IntPtr>(window, "_hWndCompatList");
+            Assert.Equal(1, (int)Win32.SendMessageW(list, LB_GETTOPINDEX, IntPtr.Zero, IntPtr.Zero));
+            return window;
+        }
+        catch
+        {
+            BancCapture.Teardown(window);
+            throw;
         }
     }
 }
