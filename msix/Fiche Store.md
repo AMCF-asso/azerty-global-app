@@ -305,20 +305,13 @@ Technical notes:
 
 ## Captures d'écran
 
-Les fichiers suivants sont dans `msix/Assets/` :
-1. `Screenshot1.png` — Icône dans la zone de notification (tray)
-2. `Screenshot2.png` — Clavier virtuel avec GUI
-3. `Screenshot3.png` — Recherche de caractère
-4. `Screenshot4.png` — Onboarding / aperçu fonctionnalités
+> 1.3.0 : 10 captures 1920×1080 (16:9, au-dessus du minimum Store de 1366×768), app à 125 %, les cinq en français puis les cinq mêmes en anglais. Fichiers, dans l’ordre de dépôt : `operations/2026-10-14-sortie-v2-130/captures-store-5d731fb/composees/`, de `1-clavier-virtuel-fr.png` à `5-accueil-en.png`.
+> Sources : run `captures.yml` 39789708704 sur le candidat `5d731fb` (captures 1, 2, 4 et 5, scènes `clavier-virtuel-altgr`, `recherche-choix`, `parametres-general`, `accueil-etape1`) et run 39792411955 sur `b5c58b8`, soit `5d731fb` plus la scène de banc `lecons-store-texte` (capture 3 ; aucun fichier de `src/` changé). Composition : `composer.py` du même dossier, fenêtre posée à 1:1 au centre du fond dégradé du 15/10, avec ombre ; le script vérifie que la fenêtre reste identique, pixel pour pixel, à la source.
+> Caducs : `msix/Assets/Screenshot1.png` à `Screenshot4.png` (juin 2026) et le jeu du 15/10 sur `30eee6f` (`a1/captures-store-30eee6f/`).
 
-> ⚠️ Le Store demande des captures d'écran d'au moins 1366×768 px.
-> Dimensions vérifiées le 2026-06-28 : Screenshot1 (1600×900), Screenshot2 (1902×1194), Screenshot3 (1707×960), Screenshot4 (1500×1057).
-> Screenshot1 est au format 16:9 standard ; Screenshot2, Screenshot3 et Screenshot4 ont des ratios non standards
-> susceptibles de générer des bandes noires en affichage Store — à éventuellement re-capturer.
+### Légendes 1.3.0 (relues sur les captures du candidat 5d731fb, 22/10)
 
-### Légendes 1.3.0 (relues sur les captures finales du 15/10)
-
-> Relues le 15/10 sur les captures du bundle final (`30eee6f`, run `captures.yml` 38735844453), composées à 125 % sur un fond 1920×1080 : `operations/2026-10-14-sortie-v2-130/a1/captures-store-30eee6f/`. Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît sur aucune.
+> Relues le 22/10 sur les captures composées ci-dessus : la 1 à l’image, les 2 à 5 par OCR du rendu (Windows.Media.Ocr) et comparaison au pixel avec le 15/10. Les scènes 1, 2, 4 et 5 sont celles du 15/10, au même pixel ; seule la lettre choisie dans la recherche change (Ĺ en français, ź en anglais). Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît que comme intitulé d’une case dans les Paramètres, comme le 15/10.
 
 Ordre proposé : clavier virtuel, recherche, Leçons, Paramètres, accueil. Le clavier virtuel vient en premier parce que le produit est une disposition, et c’est la seule capture qui la montre en entier dans la vignette. Avec l’icône, les captures sont le seul élément de la fiche qu’on peut tester en A/B dans le Store : le test utile est « clavier virtuel en premier » contre « accueil en premier ».
 
@@ -348,13 +341,15 @@ Type a character's name (Ctrl+Shift+W): Enter inserts it into your text, and the
 
 #### 3. Leçons
 
+> Capture finale : la page « Votre texte » avec une phrase qui mêle capitales accentuées, ligature, wolof, éwé et portugais (QCM d’Antoine du 22/10 ; scène de banc `lecons-store-texte`). Aucune scène ne montre le Verr. Maj., d’où la légende changée (audit 1.3.0, A27 c).
+
 FR
 ```text
-Des exercices courts, avec indices et clavier affiché, pour prendre en main le Verr. Maj. et les nouveaux accès. Votre progression reste sur votre appareil.
+Collez votre propre texte, même en wolof ou en éwé : la leçon souligne chaque caractère à geste et montre ce que font les doigts. Votre progression reste sur votre appareil.
 ```
 EN
 ```text
-Short exercises with hints and an on-screen keyboard, to get used to Caps Lock and the new shortcuts. Your progress stays on your device.
+Paste your own text, even in Wolof or Ewe: the lesson underlines every character that needs a gesture and shows what your fingers do. Your progress stays on your device.
 ```
 
 #### 4. Paramètres
