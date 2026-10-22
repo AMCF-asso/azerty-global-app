@@ -305,75 +305,124 @@ Technical notes:
 
 ## Captures d'écran
 
-> 1.3.0 : 10 captures 1920×1080 (16:9, au-dessus du minimum Store de 1366×768), app à 125 %, les cinq en français puis les cinq mêmes en anglais. Fichiers, dans l’ordre de dépôt : `operations/2026-10-14-sortie-v2-130/captures-store-5d731fb/composees/`, de `1-clavier-virtuel-fr.png` à `5-accueil-en.png`.
-> Sources : run `captures.yml` 39789708704 sur le candidat `5d731fb` (captures 1, 2, 4 et 5, scènes `clavier-virtuel-altgr`, `recherche-choix`, `parametres-general`, `accueil-etape1`) et run 39792411955 sur `b5c58b8`, soit `5d731fb` plus la scène de banc `lecons-store-texte` (capture 3 ; aucun fichier de `src/` changé). Composition : `composer.py` du même dossier, fenêtre posée à 1:1 au centre du fond dégradé du 15/10, avec ombre ; le script vérifie que la fenêtre reste identique, pixel pour pixel, à la source.
-> Caducs : `msix/Assets/Screenshot1.png` à `Screenshot4.png` (juin 2026) et le jeu du 15/10 sur `30eee6f` (`a1/captures-store-30eee6f/`).
+> 1.3.0 : 10 images 1920×1080 par langue (Partner Center : 10 captures desktop au plus, PNG de 1366×768 au moins, 50 Mo au plus, légende de 200 caractères au plus ; [doc Microsoft](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images), lue le 22/10). Jeu FR validé par Antoine le 22/10 à 17:54, jeu EN le 22/10 à 18:06 (`operations/2026-10-14-sortie-v2-130/captures-store-5d731fb/visuels/DECISIONS.md`).
+> Fichiers, dans l’ordre de dépôt : `operations/2026-10-14-sortie-v2-130/captures-store-5d731fb/visuels/final/fr/png/` pour la fiche française, `final/en/png/` pour l’anglaise (mêmes noms de fichiers, de `01-azerty-corrige.png` à `10-rien-ne-sort.png`). Régénérer : `bash visuels/shoot-final.sh fr` (ou `en`), qui lance `final.py` puis capture chaque page.
+> Captures d’app reprises dans les images 2, 4 et 8 : run `captures.yml` 39792411955 sur `b5c58b8` (`5d731fb` plus la scène de banc `lecons-store-texte` ; aucun fichier de `src/` changé), à leur taille native, jamais agrandies.
+> Caducs : le jeu de 5 captures composées du 22/10 matin (`captures-store-5d731fb/composees/`), `msix/Assets/Screenshot1.png` à `Screenshot4.png` (juin 2026) et le jeu du 15/10 sur `30eee6f`.
+> ⚠️ Les recommandations Microsoft déconseillent d’ajouter « logos, icônes ou messages marketing » aux captures (recommandation, pas une règle de certification). Le jeu est un choix d’Antoine du 22/10 (« on va pas mettre que des captures de l’application ») ; si la certification le refuse, les captures d’app seules du run 39792411955 servent de repli.
 
-### Légendes 1.3.0 (relues sur les captures du candidat 5d731fb, 22/10)
+### Légendes 1.3.0
 
-> Relues le 22/10 sur les captures composées ci-dessus : la 1 à l’image, les 2 à 5 par OCR du rendu (Windows.Media.Ocr) et comparaison au pixel avec le 15/10. Les scènes 1, 2, 4 et 5 sont celles du 15/10, au même pixel ; seule la lettre choisie dans la recherche change (Ĺ en français, ź en anglais). Une légende par capture, 200 caractères au plus, jeux FR et EN. Le Défi du jour n’apparaît que comme intitulé d’une case dans les Paramètres, comme le 15/10.
+> Validées par Antoine le 22/10 (QCM de 18:12, les 20 telles quelles). Une légende par image, 200 caractères au plus, FR et EN. Elles complètent le titre déjà écrit sur l’image au lieu de le répéter. Chiffres : `knowledge/claims/chiffres-publics.md`.
 
-Ordre proposé : clavier virtuel, recherche, Leçons, Paramètres, accueil. Le clavier virtuel vient en premier parce que le produit est une disposition, et c’est la seule capture qui la montre en entier dans la vignette. Avec l’icône, les captures sont le seul élément de la fiche qu’on peut tester en A/B dans le Store : le test utile est « clavier virtuel en premier » contre « accueil en premier ».
-
-#### 1. Clavier virtuel
-
-> Capture finale : clavier virtuel avec AltGr tenu (QCM d’Antoine du 15/10). La 1.3.0 montre un signe par touche ; une vue à quatre niveaux est proposée pour la 1.3.1.
+#### 1. L’AZERTY corrigé (`01-azerty-corrige.png`)
 
 FR
 ```text
-Le clavier virtuel (Ctrl+Maj+Q) montre ce que tape chaque touche. Tenez AltGr : €, { }, [ ], œ apparaissent, sans rien apprendre par cœur.
+AZERTY Global garde toutes les lettres de l’AZERTY traditionnel de Windows à leur place et ajoute ce qui manquait : É, Ç, « », œ et les symboles de programmation.
+```
+EN
+```text
+AZERTY Global keeps every letter of the traditional Windows AZERTY where it was and adds what was missing: É, Ç, « », œ and programming symbols.
+```
+
+#### 2. Clavier virtuel, AltGr tenu (`02-altgr.png`)
+
+FR
+```text
+Le clavier virtuel (Ctrl+Maj+Q) montre ce que tape chaque touche. Tenez AltGr : €, { }, [ ], œ apparaissent, sans rien apprendre par cœur.
 ```
 EN
 ```text
 The virtual keyboard (Ctrl+Shift+Q) shows what each key types. Hold AltGr to see €, { }, [ ], œ, with nothing to memorize.
 ```
 
-#### 2. Recherche de caractères
+#### 3. Avant / après (`03-avant-apres.png`)
 
 FR
 ```text
-Tapez le nom d’un caractère (Ctrl+Maj+W) : Entrée l’insère dans votre texte, et la recherche vous montre comment le taper.
+Avec l’AZERTY traditionnel de Windows, É demande Alt + 0201 sur le pavé numérique. Avec AZERTY Global : Verr. Maj + é. Même chose pour Ç, et « » sont sur AltGr + W et X.
 ```
 EN
 ```text
-Type a character's name (Ctrl+Shift+W): Enter inserts it into your text, and the search shows you how to type it.
+With the traditional Windows AZERTY, É takes Alt + 0201 on the numeric keypad. With AZERTY Global: Caps Lock + é. Same for Ç, and « » are on AltGr + W and X.
 ```
 
-#### 3. Leçons
-
-> Capture finale : la page « Votre texte » avec une phrase qui mêle capitales accentuées, ligature, wolof, éwé et portugais (QCM d’Antoine du 22/10 ; scène de banc `lecons-store-texte`). Aucune scène ne montre le Verr. Maj., d’où la légende changée (audit 1.3.0, A27 c).
+#### 4. Recherche et Leçons (`04-recherche-lecons.png`)
 
 FR
 ```text
-Collez votre propre texte, même en wolof ou en éwé : la leçon souligne chaque caractère à geste et montre ce que font les doigts. Votre progression reste sur votre appareil.
+Tapez le nom d’un caractère (Ctrl+Maj+W) : Entrée l’insère et la recherche montre comment le taper. Les leçons vous entraînent sur votre propre texte, même en wolof ou en éwé.
 ```
 EN
 ```text
-Paste your own text, even in Wolof or Ewe: the lesson underlines every character that needs a gesture and shows what your fingers do. Your progress stays on your device.
+Type a character’s name (Ctrl+Shift+W): Enter inserts it and the search shows how to type it. Lessons train you on your own text, even in Wolof or Ewe.
 ```
 
-#### 4. Paramètres
-
-> La capture finale montre l’onglet Général seul : la légende ne dit que ce qu’il montre (QCM d’Antoine du 15/10).
+#### 5. Les 5 changements (`05-cinq-changements.png`)
 
 FR
 ```text
-Vous choisissez vos raccourcis, le lancement avec Windows et les notifications.
+Verrouillage majuscule intelligent, point sans Majuscule, @ et # en haut à gauche, symboles de programmation sur la rangée de repos, accents internationaux sur la touche ù.
 ```
 EN
 ```text
-Choose your shortcuts, launch at Windows startup and notifications.
+Smart Caps Lock, the period without Shift, @ and # at the top left, programming symbols on the home row, international accents on the ù key.
 ```
 
-#### 5. Accueil
+#### 6. Langues (`06-langues.png`)
 
 FR
 ```text
-L’accueil présente les cinq changements. Votre clavier ne change qu’après votre clic sur « Activer et essayer ».
+Łódź, Dvořák, São Paulo, Ọkọnkwọ : les touches mortes donnent les lettres de près de 300 langues, sans copier-coller ni logiciel en plus.
 ```
 EN
 ```text
-The welcome window shows the five changes. Your keyboard only changes after you click “Turn on and try”.
+Łódź, Dvořák, São Paulo, Ọkọnkwọ: dead keys give you the letters of nearly 300 languages, with no copy-paste and no extra software.
+```
+
+#### 7. Typographie française (`07-typographie.png`)
+
+FR
+```text
+Guillemets « » sur AltGr + W et X, espace fine insécable sur AltGr + Espace, apostrophe ’ sur AltGr + 4, œ sur AltGr + O, tiret long sur AltGr + Maj + T.
+```
+EN
+```text
+French quotation marks « » on AltGr + W and X, narrow no-break space on AltGr + Space, apostrophe ’ on AltGr + 4, œ on AltGr + O, em dash on AltGr + Shift + T.
+```
+
+#### 8. Pause automatique (`08-vous-gardez-la-main.png`)
+
+FR
+```text
+AZERTY Global se met en pause tout seul dans les jeux protégés et le bureau à distance. Ctrl + Maj + Verr. Maj le suspend ou le réactive à tout moment, sans redémarrage.
+```
+EN
+```text
+AZERTY Global pauses automatically in protected games and remote desktop. Ctrl + Shift + Caps Lock pauses or resumes it at any time, with no restart.
+```
+
+#### 9. Développeurs (`09-developpeurs.png`)
+
+FR
+```text
+{ } \ | [ ] ` ~ sont sous vos doigts avec AltGr, de D à L et sur N : plus besoin d’étirer la main droite pour coder.
+```
+EN
+```text
+{ } \ | [ ] ` ~ sit under your fingers with AltGr, from D to L and on N: no more stretching your right hand to code.
+```
+
+#### 10. Rien ne sort (`10-rien-ne-sort.png`)
+
+FR
+```text
+Aucun compte, aucune télémétrie, aucun envoi réseau automatique : ce que vous tapez n’est pas envoyé. Gratuit et libre (licence EUPL 1.2), installable sans droits administrateur.
+```
+EN
+```text
+No account, no telemetry, no automatic network traffic: what you type is never sent. Free and open source (EUPL 1.2 license), installs without admin rights.
 ```
 
 ---
