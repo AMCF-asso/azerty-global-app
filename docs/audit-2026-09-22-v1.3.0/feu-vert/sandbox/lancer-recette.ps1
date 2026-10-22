@@ -10,7 +10,9 @@
 # Avec -Auto, le Sandbox s'eteint seul une fois done.txt ecrit (R04), sauf avec -Garder ; ce
 # script attend done.txt au plus -Minutes minutes, puis juge resultats.json par
 # lire-resultats.ps1 (R06, R07) et rend son code de retour (0 : tout au niveau attendu).
-param([Parameter(Mandatory = $true)][string]$Bundle, [string]$AxeDir, [switch]$Auto, [switch]$Garder, [int]$Minutes = 45)
+# Option -P1 : comme -Auto, mais joue recette-p1.ps1 (part machine des lignes P1), resultats
+# dans ...\p1\ ; rend 1 si une ligne est en ECHEC. -Auto et -P1 s'excluent.
+param([Parameter(Mandatory = $true)][string]$Bundle, [string]$AxeDir, [switch]$Auto, [switch]$P1, [switch]$Garder, [int]$Minutes = 45)
 $ErrorActionPreference = 'Stop'
 
 $bundle = (Resolve-Path $Bundle).Path
@@ -41,10 +43,13 @@ if ($AxeDir) {
 if (Get-Process -Name 'WindowsSandbox', 'WindowsSandboxClient', 'WindowsSandboxRemoteSession' -ErrorAction SilentlyContinue) {
     throw 'Un Windows Sandbox est deja ouvert : le fermer, puis relancer.'
 }
-$autoDir = Join-Path $results 'auto'
-if ($Auto) {
-    $steps += $(if ($Garder) { 'recette-auto.ps1' } else { 'recette-auto.ps1 -Fermer' })
-    if (Test-Path $autoDir) { Rename-Item $autoDir ('auto-' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
+if ($Auto -and $P1) { throw '-Auto et -P1 s''excluent : un passage chacun.' }
+$name = if ($P1) { 'p1' } else { 'auto' }
+$autoDir = Join-Path $results $name
+if ($Auto -or $P1) {
+    $script = 'recette-' + $name + '.ps1'
+    $steps += $(if ($Garder) { $script } else { $script + ' -Fermer' })
+    if (Test-Path $autoDir) { Rename-Item $autoDir ($name + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
 }
 $steps = @($steps | ForEach-Object { 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\kit\' + $_ })
 $command = if ($steps.Count -eq 1) { $steps[0] } else { 'cmd.exe /c "' + ($steps -join ' &amp; ') + '"' }
@@ -66,7 +71,7 @@ Set-Content -Path $wsbPath -Value $wsb -Encoding UTF8
 "Journal : $results\installation.txt"
 $launched = Get-Date
 Start-Process $wsbPath
-if ($Auto) {
+if ($Auto -or $P1) {
     $done = Join-Path $autoDir 'done.txt'
     $end = (Get-Date).AddMinutes($Minutes)
     "Attente de $done (au plus $Minutes min)"
@@ -80,6 +85,13 @@ if ($Auto) {
             [void]$c.CloseMainWindow(); Start-Sleep -Seconds 5
             if (-not $c.HasExited) { Stop-Process -Id $c.Id -Force }
         }
+    }
+    if ($P1) {
+        # PowerShell 5.1 : ConvertFrom-Json rend le tableau comme un seul objet ; le deplier.
+        $parsed = Get-Content (Join-Path $autoDir 'resultats.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $lines = @($parsed | ForEach-Object { $_ })
+        $lines | ForEach-Object { '{0} : {1}' -f $_.ligne, $_.verdict }
+        exit $(if (@($lines | Where-Object { $_.verdict -eq 'ECHEC' }).Count) { 1 } else { 0 })
     }
     & (Join-Path $kit 'lire-resultats.ps1') -Dossier $autoDir
     exit $LASTEXITCODE
