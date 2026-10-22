@@ -103,6 +103,8 @@ public partial class KeyboardContextBench
                     // « Votre texte » : l'exemple wolof de la maquette, ë déjà tapé et ŋ à revoir.
                     attempts.Add(("lecons-texte", () => CaptureLessonsHome(target, "lecons-texte", layout, mapper, hook, "ŋ", seen: "ë—",
                         page: "Text", text: "Jërëjëf, Ndey Ñaŋ — Ndar 🙏")));
+                    // Capture 3 de la fiche Store : phrases candidates dans « Votre texte ».
+                    AddStoreStates(attempts, target, layout, mapper, hook);
 
                     foreach (var (name, run) in attempts)
                     {
