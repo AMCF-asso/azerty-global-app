@@ -25,6 +25,22 @@ try {
     Export-Certificate -Cert $cert -FilePath 'C:\work\test.cer' | Out-Null
     Import-Certificate -FilePath 'C:\work\test.cer' -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople' | Out-Null
 
+    # Le Sandbox a Smart App Control actif : il a bloque l'app signee par le certificat
+    # jetable le 22/10 (candidat 260e104f). On le coupe dans le Sandbox seulement, sans
+    # bloquer l'installation si la coupure echoue ; la ligne de lancement dit si elle a pris.
+    try {
+        $ci = 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy'
+        $before = if (Test-Path $ci) { (Get-ItemProperty $ci -ErrorAction SilentlyContinue).VerifiedAndReputablePolicyState } else { 'cle absente' }
+        if (-not (Test-Path $ci)) { New-Item -Path $ci -Force | Out-Null }
+        Set-ItemProperty -Path $ci -Name 'VerifiedAndReputablePolicyState' -Value 0 -Type DWord
+        & "$env:windir\System32\CiTool.exe" -r | Out-Null
+        $ciExit = $LASTEXITCODE
+        $after = (Get-ItemProperty $ci).VerifiedAndReputablePolicyState
+        Say ("Smart App Control : avant $before ; apres $after ; CiTool -r exit $ciExit")
+    } catch {
+        Say ('Smart App Control : coupure en echec : ' + $_.Exception.Message)
+    }
+
     Add-AppxPackage -Path $signed
     $package = Get-AppxPackage -Name 'AZERTYGlobal.AZERTYGlobal'
     Say ('Installe : ' + $package.PackageFullName)
