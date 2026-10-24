@@ -11,6 +11,7 @@ Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 
 **Paramètres et canaux de distribution (recette du 22 octobre, décisions d’Antoine du 24 octobre)**
 
 - **Un refus se montre en entier (R64c).** Sur un écran court (vu au banc de captures : 1024×768 à 125 %), la fenêtre Paramètres est plafonnée à la zone de travail : le refus « Compatibilité jeu » sur le Bureau à distance perdait sa dernière ligne, « Windows prend le relais. », sous le bord de la fenêtre. Un refus ou l’invite de raccourci fait maintenant défiler la fenêtre juste assez pour les montrer, le bouton qui les a produits restant en vue. Le pied de confirmation ne défile pas, pour ne pas sortir de la vue le contrôle qui a le focus. Témoin : `SettingsMessageRevealTests` (zone de travail réduite, rouge sans le correctif).
+- **À propos selon le canal (décisions S1-1 et S1-2 du 2 septembre).** Le lien vers la page HelloAsso de l’association suit les liens externes : absent du paquet AMCF, et de toute installation où la politique `ExternalLinksEnabled` vaut 0 ; le nom de l’association reste écrit, sans lien ni arrêt de tabulation. Site, code source et licence restent partout. Le canal suit la version : « Version 1.3.0 · Microsoft Store », « · AMCF » ou « · hors paquet » (« · unpackaged » en anglais). Témoin : `AboutChannelTests` (liste des liens par canal et politique, fenêtre réelle, ligne de version).
 
 **Accueil et exercices (audit du 20 octobre, décisions d’Antoine du 20 octobre)**
 
