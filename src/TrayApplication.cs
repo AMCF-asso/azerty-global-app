@@ -2635,10 +2635,10 @@ sealed class TrayApplication : IDisposable
     /// essais), puis affichage. Deux chemins y mènent : le démarrage, relayé par la fermeture
     /// de l'accueil, et <see cref="MaybeShowReviewAfterQuietTyping"/>.
     ///
-    /// En packagé la cible est toujours la fiche Store — le tirage 50/50 de la v1.1
+    /// Sur le canal Store la cible est toujours la fiche Store — le tirage 50/50 de la v1.1
     /// envoyait une sollicitation sur deux vers un canal privé, alors que la note publique
-    /// est le seul levier qui manque. Hors package, toujours la page feedback, faute de
-    /// fiche à noter.
+    /// est le seul levier qui manque. Ailleurs, toujours la page feedback, faute de fiche à
+    /// noter : le paquet AMCF est packagé, mais sans fiche (F6, <see cref="StoreReview.RatesOnStore"/>).
     ///
     /// Marquée comme faite dès l'affichage : une notification manquée consomme l'essai,
     /// mais il en reste un second, ce que la v1.1 n'offrait pas.
@@ -2655,7 +2655,7 @@ sealed class TrayApplication : IDisposable
             // La date persistée ici est aussi ce qui fait primer l'avis sur le rappel
             // Défi du jour : TrainingReminders la relit dans ses signaux.
             ConfigManager.RecordReviewPromptShown(signals.Today);
-            bool toStore = ConfigManager.IsPackaged;
+            bool toStore = StoreReview.RatesOnStore(AppChannel.Current);
             string title = L.Tray_ReviewPromptTitle(attempt);
             string body = toStore ? L.Tray_ReviewPromptBodyStore(attempt) : L.Tray_ReviewPromptBodyFeedback(attempt);
 

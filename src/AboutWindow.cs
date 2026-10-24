@@ -13,11 +13,11 @@ sealed class AboutWindow : IDisposable
     // ── Window constants ────────────────────────────────────────────
 
     // ── Control IDs ─────────────────────────────────────────────────
-    private const int IDC_LINK_SITE = 4101;
-    private const int IDC_LINK_GITHUB = 4102;
-    private const int IDC_LINK_LICENSE = 4103;
+    internal const int IDC_LINK_SITE = 4101;
+    internal const int IDC_LINK_GITHUB = 4102;
+    internal const int IDC_LINK_LICENSE = 4103;
     private const int IDC_BTN_CLOSE = 4104;
-    private const int IDC_LINK_AMCF = 4105;
+    internal const int IDC_LINK_AMCF = 4105;
 
     private const int BASE_WIN_W = 550;
     private const int BASE_WIN_H = 230;
@@ -34,6 +34,11 @@ sealed class AboutWindow : IDisposable
     private IntPtr _hWndLinkLicense;
     private IntPtr _hWndLinkAmcf;
     private IntPtr _hWndBtnClose;
+
+    // S1-1 : le lien HelloAsso n'existe que là où les liens externes sont permis. Ailleurs, le
+    // nom de l'association s'écrit en texte simple, à la même place.
+    private readonly bool _supportLink =
+        LinkEntries(AppChannel.Current, PolicyManager.Current.ExternalLinks).Contains(IDC_LINK_AMCF);
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     // F-10 : survol, Entrée, Échap et Tab des quatre liens.
@@ -64,6 +69,18 @@ sealed class AboutWindow : IDisposable
     /// <summary>Langue de l'UI à la création : titre, liens et bouton sont figés au
     /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
     public string UiLanguage { get; } = L.Language;
+
+    /// <summary>
+    /// Liens de la fenêtre, dans l'ordre de tabulation. Site, code source et licence sont des
+    /// cartes d'identité et restent sur les trois canaux ; le lien vers la page HelloAsso de
+    /// l'association est une sollicitation, éteinte avec les liens externes (décision S1-1 du
+    /// 2026-09-02 : canal sobre, ou politique <c>ExternalLinksEnabled</c> à 0). Liste pure pour
+    /// la même raison que <see cref="TrayApplication.FeedbackMenuEntries"/>.
+    /// </summary>
+    internal static int[] LinkEntries(DistributionChannel channel, bool? externalLinksPolicy = null) =>
+        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+            ? new[] { IDC_LINK_SITE, IDC_LINK_GITHUB, IDC_LINK_LICENSE, IDC_LINK_AMCF }
+            : new[] { IDC_LINK_SITE, IDC_LINK_GITHUB, IDC_LINK_LICENSE };
 
     public AboutWindow()
     {
@@ -120,7 +137,8 @@ sealed class AboutWindow : IDisposable
         Win32.SendMessageW(_hWndLinkSite, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkGithub, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkLicense, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
-        Win32.SendMessageW(_hWndLinkAmcf, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
+        if (_hWndLinkAmcf != IntPtr.Zero)
+            Win32.SendMessageW(_hWndLinkAmcf, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, FontButton, (IntPtr)1);
     }
 
@@ -168,12 +186,16 @@ sealed class AboutWindow : IDisposable
             _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkLicense, 3);
 
-        // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure)
-        _hWndLinkAmcf = Win32.CreateWindowExW(0, "STATIC", L.About_LinkAmcf,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_AMCF, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkAmcf, 4);
+        // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure). Sans lien
+        // (S1-1), aucun contrôle : rien à atteindre par Tab, rien à cliquer.
+        if (_supportLink)
+        {
+            _hWndLinkAmcf = Win32.CreateWindowExW(0, "STATIC", L.About_LinkAmcf,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_AMCF, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkAmcf, 4);
+        }
 
         _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", L.About_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
@@ -270,7 +292,7 @@ sealed class AboutWindow : IDisposable
                             if (code == 0) OpenLink("https://eupl.eu/1.2/fr/");
                             break;
                         case IDC_LINK_AMCF:
-                            if (code == 0) OpenLink("https://www.helloasso.com/associations/association-pour-la-modernisation-du-clavier-francais");
+                            if (code == 0 && _supportLink) OpenLink("https://www.helloasso.com/associations/association-pour-la-modernisation-du-clavier-francais");
                             break;
                         case IDC_BTN_CLOSE:
                         // Revue du 2026-09-21, R5 : IsDialogMessageW traduit Entrée en IDOK et
@@ -366,7 +388,8 @@ sealed class AboutWindow : IDisposable
         Win32.SelectObject(hdc, FontVersion);
         Win32.SetTextColor(hdc, _pal.Muted);
         var versionRect = new Win32.RECT { left = textX, top = versionY, right = cw - margin, bottom = versionY + S(20) };
-        Win32.DrawTextW(hdc, "v" + Program.Version, -1, ref versionRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        Win32.DrawTextW(hdc, L.About_VersionLine(Program.Version, L.About_Channel(AppChannel.Current)), -1,
+            ref versionRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
 
         // Description
         int descY = logoY + logoSize + S(14);
@@ -388,7 +411,8 @@ sealed class AboutWindow : IDisposable
         var measurePrefix = new Win32.RECT { left = 0, top = 0, right = 9999, bottom = 9999 };
         Win32.DrawTextW(hdc, amcfPrefix, -1, ref measurePrefix, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
         int prefixW = measurePrefix.right;
-        Win32.SelectObject(hdc, _hFontLink);
+        // Sans lien (S1-1), le nom se mesure et s'écrit dans la police du texte.
+        Win32.SelectObject(hdc, _supportLink ? _hFontLink : FontText);
         var measureLink = new Win32.RECT { left = 0, top = 0, right = 9999, bottom = 9999 };
         Win32.DrawTextW(hdc, amcfLinkText, -1, ref measureLink, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
         int linkW = measureLink.right;
@@ -399,10 +423,18 @@ sealed class AboutWindow : IDisposable
         // Dessiner préfixe à margin
         var prefixRect = new Win32.RECT { left = margin, top = amcfY, right = margin + prefixW, bottom = amcfY + amcfH };
         Win32.DrawTextW(hdc, amcfPrefix, -1, ref prefixRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
-        // Repositionner le STATIC du lien
-        Win32.SetWindowPos(_hWndLinkAmcf, IntPtr.Zero,
-            margin + prefixW, amcfY, linkW, amcfH,
-            Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+        // Repositionner le STATIC du lien, ou écrire le nom à sa place
+        if (_hWndLinkAmcf != IntPtr.Zero)
+        {
+            Win32.SetWindowPos(_hWndLinkAmcf, IntPtr.Zero,
+                margin + prefixW, amcfY, linkW, amcfH,
+                Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+        }
+        else
+        {
+            var nameRect = new Win32.RECT { left = margin + prefixW, top = amcfY, right = margin + prefixW + linkW, bottom = amcfY + amcfH };
+            Win32.DrawTextW(hdc, amcfLinkText, -1, ref nameRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+        }
         // Dessiner suffixe après le lien
         int suffixX = margin + prefixW + linkW;
         var suffixRect = new Win32.RECT { left = suffixX, top = amcfY, right = suffixX + suffixW, bottom = amcfY + amcfH };

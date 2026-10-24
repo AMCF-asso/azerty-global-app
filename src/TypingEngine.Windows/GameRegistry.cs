@@ -11,6 +11,12 @@
 // Cette liste vit dans le code source — sa mise à jour nécessite une nouvelle
 // release. À l'horizon v1.0+, envisager de la charger depuis un fichier embarqué
 // ou téléchargé périodiquement (cf. plan v0.9.7 § Évolutions futures).
+//
+// Ajouts 1.3.0 (2026-10-23) : fiches Steam « Uses Kernel Level Anti-Cheat » (déclaration de
+// l'éditeur), pages éditeurs datées, PCGamingWiki, AreWeAntiCheatYet ; noms d'exe relevés
+// dans la liste des exécutables détectables de Discord, la configuration de lancement Steam
+// et des journaux de plantage. Tableau jeu par jeu, avec sources et exclusions motivées :
+// operations/2026-10-23-anti-triche-131/tableau.md du dossier projet (hors dépôt).
 
 namespace TypingEngine.Windows;
 
@@ -103,7 +109,26 @@ public static class GameRegistry
         "marvel-win64",     // Marvel Rivals — NetEase AC
         "helldivers2",      // Helldivers 2 — nProtect GameGuard
         "cs2",              // Counter-Strike 2 — VAC + VACnet (Valve laisse passer la plupart des
-                            // outils de remapping mais inclus en precaution sur jeu compe esport)
+                            // outils de remapping, mais inclus par précaution : jeu compétitif e-sport)
+
+        // Ajouts 1.3.0 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
+        "gta5",             // GTA V Legacy et Enhanced (GTA5.exe, GTA5_Enhanced.exe) — BattlEye
+                            // depuis le 17/09/2024. Limite connue : FiveM Enhanced lance le même
+                            // GTA5_Enhanced.exe, sans BattlEye, et l'app s'y suspend aussi.
+        "pioneergame",      // ARC Raiders — Denuvo Anti-Cheat depuis le patch 1.29.0 (19/05/2026)
+        "dayz",             // DayZ — BattlEye
+        "arma3",            // Arma 3 — BattlEye
+        "armareforger",     // Arma Reforger — BattlEye
+        "dunesandbox",      // Dune: Awakening — BattlEye
+        "nightreign",       // Elden Ring Nightreign — EAC
+        "brawlhalla",       // Brawlhalla — EAC
+        "lostark",          // Lost Ark — EAC
+        "newworld",         // New World: Aeternum — EAC
+        "maplestory",       // MapleStory — Nexon Game Security
+        "bpsr",             // Blue Protocol: Star Resonance (BPSR_STEAM.exe) — ACE
+        "blue protocol star resonance",
+        "zenlesszonezero",  // Zenless Zone Zero — HoYoKProtect
+        "x6game",           // Infinity Nikki (X6Game-Win64-Shipping.exe) — ACE
     };
 
     /// <summary>
@@ -113,6 +138,9 @@ public static class GameRegistry
     /// `Discovery-d.exe` / `Discovery-e.exe` = The Finals (Embark Studios) post-patch 8.0.0.
     /// `Discovery.exe` = The Finals avant patch 8.0.0 OU n'importe quel autre exe ; on exige
     /// donc le path contient `\Embark\` ou `\TheFinals\`.
+    /// Ajouts 1.3.0 : noms courts (`bf1.exe`, `aces.exe`, `TL.exe`…) en match exact, pour qu'une
+    /// sous-chaîne ne prenne pas un exe sans rapport ; `Client-Win64-Shipping.exe`, nom générique
+    /// d'Unreal Engine, n'est retenu que dans le dossier de Wuthering Waves.
     /// </summary>
     public static readonly (string Exact, string? PathContains)[] AntiCheatExactWithPath =
     {
@@ -121,6 +149,17 @@ public static class GameRegistry
         ("Discovery-d.exe", null),
         ("Discovery-e.exe", null),
         ("Discovery.exe", @"\Embark\"),
+
+        // Ajouts 1.3.0 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
+        ("bf6.exe", null),          // Battlefield 6 — EA Javelin (noyau, Secure Boot exigé)
+        ("bfv.exe", null),          // Battlefield V — EA Javelin depuis avril 2024
+        ("bf1.exe", null),          // Battlefield 1 — EA Javelin depuis octobre 2024
+        ("aces.exe", null),         // War Thunder — BattlEye depuis décembre 2024
+        ("BH3.exe", null),          // Honkai Impact 3rd — HoYoKProtect
+        ("UAGame.exe", null),       // Arena Breakout: Infinite — ACE
+        ("Hemingway-Win64-Shipping.exe", null), // SMITE 2 — EAC
+        ("TL.exe", @"\TL\Binaries\Win64\"),     // Throne and Liberty — EAC
+        ("Client-Win64-Shipping.exe", @"\Wuthering Waves Game\"), // Wuthering Waves — ACE
     };
 
     /// <summary>
@@ -136,6 +175,30 @@ public static class GameRegistry
         "fc26",              // EA Sports FC 26 — EA AC
         "haloinfinite",      // EAC
         "fallguys_client",   // EAC
+
+        // Ajouts 1.3.0 (2026-10-23) — anti-triche nommé, niveau noyau non sourcé
+        "eldenring",         // Elden Ring — EAC
+        "armoredcore6",      // Armored Core VI — EAC
+        "blackdesert",       // Black Desert — XIGNCODE3
+        "predecessorclient", // Predecessor — EAC
+        "paladins",          // Paladins — EAC
+        "deadbydaylight",    // Dead by Daylight — EAC
+        "huntgame",          // Hunt: Showdown 1896 — EAC + Anybrain (analyse clavier et souris)
+        "squadgame",         // Squad — EAC
+        "hll-win64-shipping",// Hell Let Loose — EAC
+        "hellletloose",      // Hell Let Loose — EAC
+        "insurgencyclient",  // Insurgency: Sandstorm — EAC
+        "sotgame",           // Sea of Thieves — EAC
+        "rocketleague",      // Rocket League — EAC depuis le 28/04/2026
+        "gzwclient",         // Gray Zone Warfare — EAC + Anybrain
+        "mcc-win64-shipping",// Halo: The Master Chief Collection — EAC
+        "thedivision2",      // The Division 2 — EAC
+        "forhonor",          // For Honor — EAC
+        "mechabreak",        // Mecha BREAK — ACE
+        "once_human",        // Once Human — NetEase Anti-Cheat
+        "hottagame",         // Tower of Fantasy — KSophon
+        "arkascended",       // ARK: Survival Ascended — BattlEye
+        "sparkingzero",      // Dragon Ball: Sparking! ZERO — EAC
     };
 
     /// <summary>
