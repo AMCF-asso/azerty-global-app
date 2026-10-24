@@ -102,7 +102,15 @@ public class CaptureBench
             Environment.NewLine + string.Join(Environment.NewLine, failures));
     }
 
+    /// <summary>Canal Store, puis canal AMCF (S1-1 et S1-2) : le nom de l'association sans lien
+    /// HelloAsso, et le canal après la version.</summary>
     private static void CaptureAbout(BancCapture.Target target)
+    {
+        CaptureOnChannel(DistributionChannel.Store, () => CaptureAboutOnce(target, "a-propos"));
+        CaptureOnChannel(DistributionChannel.Amcf, () => CaptureAboutOnce(target, "a-propos-amcf"));
+    }
+
+    private static void CaptureAboutOnce(BancCapture.Target target, string slug)
     {
         var window = new AboutWindow();
         try
@@ -111,12 +119,19 @@ public class CaptureBench
             IntPtr hwnd = BancCapture.Handle(window);
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             BancCapture.MarkActive(hwnd);
-            target.Shoot(hwnd, "a-propos", windowDpi);
+            target.Shoot(hwnd, slug, windowDpi);
         }
         finally
         {
             BancCapture.Teardown(window);
         }
+    }
+
+    /// <summary>Le canal de l'isolation (Store) ou un autre, le temps d'une capture.</summary>
+    private static void CaptureOnChannel(DistributionChannel channel, Action capture)
+    {
+        using (AppChannel.OverrideForTests(channel))
+            capture();
     }
 
     /// <summary>
@@ -186,8 +201,16 @@ public class CaptureBench
         }
     }
 
-    /// <summary>Statistiques d'un poste neuf : le fichier est vide, dans le dossier temporaire.</summary>
+    /// <summary>Statistiques d'un poste neuf : le fichier est vide, dans le dossier temporaire.
+    /// Puis sur le canal AMCF, collecte éteinte sans politique (S1-3) : la ligne qui dit qu'une
+    /// stratégie de groupe peut la rallumer.</summary>
     private static void CaptureStats(BancCapture.Target target)
+    {
+        CaptureOnChannel(DistributionChannel.Store, () => CaptureStatsOnce(target, "statistiques"));
+        CaptureOnChannel(DistributionChannel.Amcf, () => CaptureStatsOnce(target, "statistiques-amcf"));
+    }
+
+    private static void CaptureStatsOnce(BancCapture.Target target, string slug)
     {
         var window = new UsageStatsWindow();
         try
@@ -196,7 +219,7 @@ public class CaptureBench
             IntPtr hwnd = BancCapture.Handle(window);
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             BancCapture.MarkActive(hwnd);
-            target.Shoot(hwnd, "statistiques", windowDpi);
+            target.Shoot(hwnd, slug, windowDpi);
         }
         finally
         {

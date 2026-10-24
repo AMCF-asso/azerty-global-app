@@ -260,6 +260,18 @@ static class PolicyManager
     internal static bool ExternalLinksEnabledNow =>
         ExternalLinksEnabled(Current.ExternalLinks, AppChannel.Current);
 
+    /// <summary>
+    /// S1-3 (décision du 2026-09-02) : les Statistiques disent qu'une stratégie de groupe peut
+    /// rallumer la collecte quand elle n'est éteinte que par le défaut du canal sobre. Pas quand
+    /// une politique l'a éteinte : la structure a déjà tranché.
+    /// </summary>
+    internal static bool ShowsCollectionPolicyHint(bool? policy, DistributionChannel channel) =>
+        !IsManaged(policy) && !UsageStatsEnabled(policy, channel);
+
+    /// <summary>La ligne S1-3 pour cette instance.</summary>
+    internal static bool CollectionPolicyHintNow =>
+        ShowsCollectionPolicyHint(Current.UsageStats, AppChannel.Current);
+
     /// <summary>La langue de cette instance est-elle imposée par une politique ?</summary>
     internal static bool LanguageIsManagedNow => IsLanguageManaged(Current.Language);
 
