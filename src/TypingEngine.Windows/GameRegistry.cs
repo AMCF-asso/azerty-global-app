@@ -12,7 +12,7 @@
 // release. À l'horizon v1.0+, envisager de la charger depuis un fichier embarqué
 // ou téléchargé périodiquement (cf. plan v0.9.7 § Évolutions futures).
 //
-// Ajouts 1.3.1 (2026-10-23) : fiches Steam « Uses Kernel Level Anti-Cheat » (déclaration de
+// Ajouts 1.3.0 (2026-10-23) : fiches Steam « Uses Kernel Level Anti-Cheat » (déclaration de
 // l'éditeur), pages éditeurs datées, PCGamingWiki, AreWeAntiCheatYet ; noms d'exe relevés
 // dans la liste des exécutables détectables de Discord, la configuration de lancement Steam
 // et des journaux de plantage. Tableau jeu par jeu, avec sources et exclusions motivées :
@@ -111,7 +111,7 @@ public static class GameRegistry
         "cs2",              // Counter-Strike 2 — VAC + VACnet (Valve laisse passer la plupart des
                             // outils de remapping, mais inclus par précaution : jeu compétitif e-sport)
 
-        // Ajouts 1.3.1 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
+        // Ajouts 1.3.0 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
         "gta5",             // GTA V Legacy et Enhanced (GTA5.exe, GTA5_Enhanced.exe) — BattlEye
                             // depuis le 17/09/2024. Limite connue : FiveM Enhanced lance le même
                             // GTA5_Enhanced.exe, sans BattlEye, et l'app s'y suspend aussi.
@@ -138,7 +138,7 @@ public static class GameRegistry
     /// `Discovery-d.exe` / `Discovery-e.exe` = The Finals (Embark Studios) post-patch 8.0.0.
     /// `Discovery.exe` = The Finals avant patch 8.0.0 OU n'importe quel autre exe ; on exige
     /// donc le path contient `\Embark\` ou `\TheFinals\`.
-    /// Ajouts 1.3.1 : noms courts (`bf1.exe`, `aces.exe`, `TL.exe`…) en match exact, pour qu'une
+    /// Ajouts 1.3.0 : noms courts (`bf1.exe`, `aces.exe`, `TL.exe`…) en match exact, pour qu'une
     /// sous-chaîne ne prenne pas un exe sans rapport ; `Client-Win64-Shipping.exe`, nom générique
     /// d'Unreal Engine, n'est retenu que dans le dossier de Wuthering Waves.
     /// </summary>
@@ -150,7 +150,7 @@ public static class GameRegistry
         ("Discovery-e.exe", null),
         ("Discovery.exe", @"\Embark\"),
 
-        // Ajouts 1.3.1 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
+        // Ajouts 1.3.0 (2026-10-23) — anti-triche noyau déclaré par l'éditeur
         ("bf6.exe", null),          // Battlefield 6 — EA Javelin (noyau, Secure Boot exigé)
         ("bfv.exe", null),          // Battlefield V — EA Javelin depuis avril 2024
         ("bf1.exe", null),          // Battlefield 1 — EA Javelin depuis octobre 2024
@@ -176,7 +176,7 @@ public static class GameRegistry
         "haloinfinite",      // EAC
         "fallguys_client",   // EAC
 
-        // Ajouts 1.3.1 (2026-10-23) — anti-triche nommé, niveau noyau non sourcé
+        // Ajouts 1.3.0 (2026-10-23) — anti-triche nommé, niveau noyau non sourcé
         "eldenring",         // Elden Ring — EAC
         "armoredcore6",      // Armored Core VI — EAC
         "blackdesert",       // Black Desert — XIGNCODE3

@@ -4,6 +4,10 @@
 
 Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 octobre a été suspendue le 20 octobre, après l’audit de l’application ; la date de cette version sera fixée au gel du nouveau candidat. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, Défi du jour compris : masqué le 24 septembre, il est réactivé le 7 octobre (voir « Défi du jour et Leçons »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Jeux protégés par un anti-triche (décision d’Antoine du 24 octobre)**
+
+- **44 jeux de plus suspendent l’application, dont GTA V.** 23 parce que l’éditeur y déclare un anti-triche noyau (fiches Steam, pages des éditeurs), 21 par précaution (anti-triche nommé, niveau noyau non sourcé). Les noms courts (`bf1.exe`, `aces.exe`, `TL.exe`…) se comparent en entier ; `TL.exe` et `Client-Win64-Shipping.exe` ne comptent que dans le dossier de leur jeu. Limite connue : FiveM Enhanced lance le même `GTA5_Enhanced.exe`, sans BattlEye, et l’app s’y suspend aussi. Prévus pour la 1.3.1, avancés en 1.3.0. Témoins : `GameRegistryTests` (`Ajouts130`, faux positifs compris).
+
 **Accueil et exercices (audit du 20 octobre, décisions d’Antoine du 20 octobre)**
 
 - **« Activer et essayer » ouvre les Leçons, en papier (B2, voie b).** La fenêtre d’exercices sombre (`LearningModule`) est supprimée : le parcours se joue dans Leçons › Initiation, avec les mêmes huit exercices, les consignes et le clavier des Leçons. Disparus avec elle : sa palette sombre, son clavier à part, ses consignes et messages de faute, le bouton « Quitter les exercices ».
