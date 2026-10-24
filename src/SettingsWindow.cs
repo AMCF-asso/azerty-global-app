@@ -807,7 +807,7 @@ sealed partial class SettingsWindow : IDisposable
         var hMonitor = Win32.MonitorFromWindow(_hWnd, 0x00000002);
         var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
         Win32.GetMonitorInfo(hMonitor, ref monInfo);
-        int workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        int workH = WorkAreaHeight(monInfo.rcWork);
         int workW = monInfo.rcWork.right - monInfo.rcWork.left;
 
         // Hauteur de client maximale : la zone de travail moins les bordures et le
@@ -1818,8 +1818,26 @@ sealed partial class SettingsWindow : IDisposable
             RepositionControls();
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         }
+        RevealValidationMessage();
         if (_hWndValidation != IntPtr.Zero)
             Win32.InvalidateRect(_hWndValidation, IntPtr.Zero, false);
+    }
+
+    /// <summary>
+    /// R64c (banc du 22/10, écran 1024×768 à 125 %) : un refus s'écrit sous le contrôle qui
+    /// l'a produit, au bas de l'onglet. La fenêtre plafonnée à la zone de travail, sa dernière
+    /// ligne tombait sous le bord, et rien ne défilait pour la montrer. Le défilement minimal la
+    /// ramène, le même texte réaffiché compris : l'utilisateur a pu défiler entre-temps.
+    /// Pas le pied : ancré au bas du contenu, l'atteindre après chaque confirmation pourrait
+    /// sortir de la vue le contrôle qui a le focus.
+    /// </summary>
+    private void RevealValidationMessage()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        if (CurrentMessagePlace() is not (MessagePlace.Shortcuts or MessagePlace.Compat)) return;
+        var rect = GetLayout(S(BASE_WIN_W)).ValidationRect;
+        ScrollTo(SettingsScrollState.EnsureVisible(_scrollY, rect.top - _scrollY, rect.bottom - _scrollY,
+            _viewportHeight, S(8)));
     }
 
     private void ClearCaptureHintIfVisible()
@@ -2107,6 +2125,10 @@ sealed partial class SettingsWindow : IDisposable
     /// <summary>Boîte modale de Windows. Les témoins la remplacent : aucun test n'ouvre de
     /// vraie boîte sur le poste.</summary>
     internal static Func<IntPtr, string, string, uint, int> ShowMessageBox = Win32.MessageBoxW;
+
+    /// <summary>Hauteur de la zone de travail de l'écran. Les témoins la réduisent (R64c) : la
+    /// fenêtre plafonnée doit s'y éprouver quel que soit l'écran du poste.</summary>
+    internal static Func<Win32.RECT, int> WorkAreaHeight = work => work.bottom - work.top;
 
     private void ShowAutoStartError()
     {
