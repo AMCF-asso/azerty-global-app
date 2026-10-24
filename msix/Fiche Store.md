@@ -120,8 +120,7 @@ Version 1.3.0 :
 • Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
 • Couches grecque, cyrillique et scientifique verrouillables, en option : un double appui garde l’alphabet, Échap le libère.
 • Après la mise à jour, rouvrez AZERTY Global : votre clavier ne change qu’après votre accord, redemandé une fois.
-• Menu de l’icône plus court ; rien n’a été retiré.
-• Vous pouvez noter l’application sans quitter AZERTY Global.
+• Pause automatique dans 44 jeux de plus protégés par un anti-triche, dont GTA V.
 • Fenêtres claires et plus faciles à parcourir au clavier ; le Narrateur lit le nom des champs qui n’en avaient pas.
 • Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
@@ -246,8 +245,7 @@ Version 1.3.0:
 • Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome window or in Settings.
 • Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet, Esc releases it.
 • After the update, reopen AZERTY Global: your keyboard only changes after you agree, and you're asked once more.
-• Shorter icon menu; nothing was removed.
-• You can rate the app without leaving AZERTY Global.
+• Automatic pause in 44 more games protected by anti-cheat, including GTA V.
 • Windows get a light look and are easier to use with the keyboard; Narrator reads the name of fields that had none.
 • Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
 ```
