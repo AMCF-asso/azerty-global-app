@@ -41,9 +41,12 @@ try {
     $process = Get-Process -Name 'AZERTY Global' -ErrorAction SilentlyContinue | Select-Object -First 1
     Check 'S5' ([bool]$process) $(if ($process) { 'app lancee, pid ' + $process.Id } else { "l'app ne tourne pas 8 s apres son lancement" })
 
-    Start-Process notepad.exe
+    # Le Bloc-notes manque au Sandbox de Windows 11 24H2 (26100) : le 24/10, Start-Process
+    # notepad.exe a arrete le smoke apres S5. Zone de saisie dans un autre processus, pour
+    # laisser la question S6 dans cette console.
+    Start-Process powershell.exe -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', 'C:\kit\zone-frappe.ps1'
     Write-Host ''
-    Write-Host 'S6, dans le Bloc-notes (fermer l''accueil de l''app s''il s''ouvre) :'
+    Write-Host 'S6, dans la fenetre "S6 - frappe AZERTY Global" (fermer l''accueil de l''app s''il s''ouvre) :'
     Write-Host '  a) AltGr+O -> oe lie (U+0153)'
     Write-Host '  b) AltGr+Maj+* (touche a droite de u accent grave), puis o -> petit o barre cyrillique (U+04E9, 2026.1)'
     $answer = Read-Host 'Les deux caracteres sont-ils justes ? (o/n)'
