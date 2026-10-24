@@ -23,7 +23,7 @@ internal sealed class PaperKeyboardState
     public uint PressedScancode { get; init; }
     /// <summary>Touche de la dernière faute (Leçons), cerclée jusqu'à la correction.</summary>
     public uint ErrorScancode { get; init; }
-    /// <summary>Touches à frapper ou tenir (remplies en bleu). Les touches de contexte sans
+    /// <summary>Touches à frapper ou tenir (cernées). Les touches de contexte sans
     /// scancode (Maj, AltGr, Alt) se donnent par <see cref="TargetContextLabels"/>.</summary>
     public HashSet<uint> TargetScancodes { get; } = new();
     public HashSet<string> TargetContextLabels { get; } = new(StringComparer.Ordinal);
@@ -148,10 +148,11 @@ internal static class PaperKeyboard
         int penStyle = Win32.PS_SOLID;
         bool onAction = false;
         int stateWidth = Math.Max(2, (int)Math.Round(2 * k));
-        if (mode == PaperKeyboardMode.ActiveLayer && !held && (target || step > 0))
+        if (!held && (target || step > 0))
         {
-            // Couche active : le plein bleu dit « tenu en ce moment » ; un geste à faire est
-            // cerné et numéroté (revue du 07/10, P1 du clavier A), de la couleur de son étape.
+            // Le plein bleu dit « tenu ou allumé en ce moment » ; un geste à faire est cerné et
+            // numéroté (revue du 07/10, P1 du clavier A), de la couleur de son étape. Les Leçons
+            // aussi depuis le 24/10 : une cible pleine cachait l'appui et Verr. Maj. allumée.
             border = StepColor(step);
             borderWidth = stateWidth;
             if (step == 1 && PaperTheme.Step1Fill != PaperTheme.Surface)
@@ -160,9 +161,9 @@ internal static class PaperKeyboard
                 onAction = PaperTheme.Step1Fill == PaperTheme.Step1;
             }
         }
-        else if (held || target || step > 0)
+        else if (held)
         {
-            fill = border = held ? PaperTheme.Action : StepColor(step);
+            fill = border = PaperTheme.Action;
             onAction = true;
         }
         else if (armed)
