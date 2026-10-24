@@ -106,7 +106,7 @@ public class GameRegistryTests
     }
 
     // ────────────────────────────────────────────────────────────────
-    // IsAntiCheatProcess — ajouts 1.3.1 (2026-10-23), un exe réel par jeu
+    // IsAntiCheatProcess — ajouts 1.3.0 (2026-10-23), un exe réel par jeu
     // (sources : operations/2026-10-23-anti-triche-131/tableau.md du dossier projet)
     // ────────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ public class GameRegistryTests
     [InlineData("Blue Protocol Star Resonance.exe")]
     [InlineData("ZenlessZoneZero.exe")]
     [InlineData("X6Game-Win64-Shipping.exe")]         // Infinity Nikki
-    public void IsAntiCheatProcess_Ajouts131_Niveau1_Returns_True(string processName)
+    public void IsAntiCheatProcess_Ajouts130_Niveau1_Returns_True(string processName)
     {
         Assert.True(GameRegistry.IsAntiCheatProcess(processName, null));
     }
@@ -143,7 +143,7 @@ public class GameRegistryTests
     [InlineData("Hemingway-Win64-Shipping.exe", null)] // SMITE 2
     [InlineData("TL.exe", @"C:\Program Files (x86)\Steam\steamapps\common\Throne and Liberty\TL\Binaries\Win64\TL.exe")]
     [InlineData("Client-Win64-Shipping.exe", @"D:\Wuthering Waves\Wuthering Waves Game\Client\Binaries\Win64\Client-Win64-Shipping.exe")]
-    public void IsAntiCheatProcess_Ajouts131_MatchExact_Returns_True(string proc, string? path)
+    public void IsAntiCheatProcess_Ajouts130_MatchExact_Returns_True(string proc, string? path)
     {
         Assert.True(GameRegistry.IsAntiCheatProcess(proc, path));
     }
@@ -155,7 +155,7 @@ public class GameRegistryTests
     [InlineData("Client-Win64-Shipping.exe", @"C:\Games\AutreJeu\Client\Binaries\Win64\Client-Win64-Shipping.exe")]
     [InlineData("a1bf6c.exe", null)]                  // nom hexadécimal : bf6 n'est pas une sous-chaîne
     [InlineData("Hemingway Editor.exe", null)]        // éditeur de texte, pas SMITE 2
-    public void IsAntiCheatProcess_Ajouts131_FauxPositifs_Returns_False(string proc, string? path)
+    public void IsAntiCheatProcess_Ajouts130_FauxPositifs_Returns_False(string proc, string? path)
     {
         Assert.False(GameRegistry.IsAntiCheatProcess(proc, path));
     }
@@ -184,7 +184,7 @@ public class GameRegistryTests
     [InlineData("HottaGame.exe")]                     // Tower of Fantasy
     [InlineData("ArkAscended_BE.exe")]                // ARK: Survival Ascended, seul nom attesté
     [InlineData("SparkingZero-Win64-Shipping.exe")]
-    public void IsAntiCheatProcess_Ajouts131_Niveau2_Returns_True(string processName)
+    public void IsAntiCheatProcess_Ajouts130_Niveau2_Returns_True(string processName)
     {
         Assert.True(GameRegistry.IsAntiCheatProcess(processName, null));
     }
