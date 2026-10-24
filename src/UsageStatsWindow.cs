@@ -27,8 +27,11 @@ sealed class UsageStatsWindow : IDisposable
     private static bool ChallengeSectionVisible
         => DailyChallenge.Enabled
            && (ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0);
+    // S1-3 : deux lignes discrètes sous la phrase de confidentialité, réservées comme le Défi.
+    private const int POLICY_HINT_H = 40;
     private static int WinContentH
-        => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0);
+        => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0)
+           + (PolicyManager.CollectionPolicyHintNow ? POLICY_HINT_H : 0);
 
     // ── Couleurs ────────────────────────────────────────────────────
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
@@ -455,8 +458,11 @@ sealed class UsageStatsWindow : IDisposable
             : collectionOff
                 ? L.Stats_CollectionOffPrivacy
                 : L.Stats_PrivacyReassurance;
-        DrawWrappedLine(hdc, FontMuted, reassurance, margin, y, cw - margin * 2, S(16),
+        y = DrawWrappedLine(hdc, FontMuted, reassurance, margin, y, cw - margin * 2, S(16),
             _showCopiedFeedback ? _pal.Action : _pal.Muted);
+
+        if (PolicyManager.CollectionPolicyHintNow)
+            DrawWrappedLine(hdc, FontMuted, L.Stats_CollectionOffPolicyHint, margin, y, cw - margin * 2, S(16), _pal.Muted);
     }
 
     /// <summary>Paragraphe coupé aux espaces dans <paramref name="width"/> ; rend le haut du
