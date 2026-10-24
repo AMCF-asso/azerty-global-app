@@ -665,8 +665,7 @@ internal sealed partial class LessonsWindow
         var stepBadges = new Dictionary<uint, int>();
         if (lessons)
         {
-            if (CurrentLesson.Characters.Count > 0)
-                profile = KeyboardRenderProfile.Lesson;
+            profile = KeyboardProfile(CurrentModule, CurrentLesson);
             _hints.AddRequiredCharacters(CurrentLesson.Characters, state.LessonVisibleCharacters);
             _hints.AddRequiredCharacters(CurrentExercise.Content, state.LessonVisibleCharacters);
             if (_hintCharacter.HasValue)
@@ -727,6 +726,15 @@ internal sealed partial class LessonsWindow
         PaperKeyboard.Draw(hdc, placement, _layout, PaperKeyboardMode.Map, paper);
         _keyboardHover = (placement, profile, state);
     }
+
+    /// <summary>Clavier simplifié (<see cref="KeyboardRenderProfile.Lesson"/> : celui du tutoriel, plus
+    /// les caractères de la leçon, de l'exercice et de l'indice) pour une leçon qui déclare ses caractères et pour
+    /// toute l'Initiation, qui n'en déclare pas ; carte complète ailleurs. Antoine, 24/10 : la carte
+    /// complète dès l'Initiation « surcharge l'utilisateur ».</summary>
+    internal static KeyboardRenderProfile KeyboardProfile(LessonModule module, LessonLesson lesson) =>
+        lesson.Characters.Count > 0 || module.Id == LessonCatalogLoader.InitiationModuleId
+            ? KeyboardRenderProfile.Lesson
+            : KeyboardRenderProfile.Full;
 
     // ── Récapitulatif ────────────────────────────────────────────────
 
