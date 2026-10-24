@@ -165,6 +165,22 @@ public class SollicitationAvisCaracterisationTests : IDisposable
         Assert.True(disque.RootElement.GetProperty("reviewPromptDone").GetBoolean());
     }
 
+    /// <summary>F6 (décision S1 du 2026-09-02) : la cible suit le canal Store. Le processus de
+    /// test n'est pas packagé : l'ancien critère « packagé » envoyait cette bulle vers la page
+    /// feedback.</summary>
+    [Fact]
+    public void Essai1_sur_le_canal_Store_la_bulle_vise_la_fiche_Store()
+    {
+        Config();
+        Stats();
+        var tray = Tray();
+
+        using (AppChannel.OverrideForTests(DistributionChannel.Store))
+            Assert.True(AuFilDeLaFrappe(tray));
+        Assert.Equal("Review", BullePendante(tray));
+        Assert.True(CibleStore(tray));
+    }
+
     [Fact]
     public void Essai1_jamais_depuis_le_demarrage_ni_le_relais_de_l_accueil()
     {
