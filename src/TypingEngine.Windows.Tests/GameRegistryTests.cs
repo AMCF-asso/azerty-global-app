@@ -106,6 +106,90 @@ public class GameRegistryTests
     }
 
     // ────────────────────────────────────────────────────────────────
+    // IsAntiCheatProcess — ajouts 1.3.0 (2026-10-23), un exe réel par jeu
+    // (sources : operations/2026-10-23-anti-triche-131/tableau.md du dossier projet)
+    // ────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("GTA5.exe")]                          // GTA V Legacy
+    [InlineData("GTA5_Enhanced.exe")]                 // GTA V Enhanced (et FiveM Enhanced, même nom)
+    [InlineData("GTA5_BE.exe")]                       // installeur BattlEye de GTA V
+    [InlineData("PioneerGame.exe")]                   // ARC Raiders
+    [InlineData("DayZ_x64.exe")]
+    [InlineData("arma3_x64.exe")]
+    [InlineData("ArmaReforgerSteam.exe")]
+    [InlineData("DuneSandbox-Win64-Shipping.exe")]    // Dune: Awakening
+    [InlineData("nightreign.exe")]                    // Elden Ring Nightreign
+    [InlineData("Brawlhalla.exe")]
+    [InlineData("LOSTARK.exe")]
+    [InlineData("NewWorld.exe")]
+    [InlineData("MapleStory.exe")]
+    [InlineData("BPSR_STEAM.exe")]                    // Blue Protocol: Star Resonance
+    [InlineData("Blue Protocol Star Resonance.exe")]
+    [InlineData("ZenlessZoneZero.exe")]
+    [InlineData("X6Game-Win64-Shipping.exe")]         // Infinity Nikki
+    public void IsAntiCheatProcess_Ajouts130_Niveau1_Returns_True(string processName)
+    {
+        Assert.True(GameRegistry.IsAntiCheatProcess(processName, null));
+    }
+
+    [Theory]
+    [InlineData("bf6.exe", null)]                     // Battlefield 6
+    [InlineData("BFV.exe", null)]                     // Battlefield V, casse différente
+    [InlineData("bf1.exe", null)]                     // Battlefield 1
+    [InlineData("aces.exe", null)]                    // War Thunder
+    [InlineData("BH3.exe", null)]                     // Honkai Impact 3rd
+    [InlineData("UAGame.exe", null)]                  // Arena Breakout: Infinite
+    [InlineData("Hemingway-Win64-Shipping.exe", null)] // SMITE 2
+    [InlineData("TL.exe", @"C:\Program Files (x86)\Steam\steamapps\common\Throne and Liberty\TL\Binaries\Win64\TL.exe")]
+    [InlineData("Client-Win64-Shipping.exe", @"D:\Wuthering Waves\Wuthering Waves Game\Client\Binaries\Win64\Client-Win64-Shipping.exe")]
+    public void IsAntiCheatProcess_Ajouts130_MatchExact_Returns_True(string proc, string? path)
+    {
+        Assert.True(GameRegistry.IsAntiCheatProcess(proc, path));
+    }
+
+    [Theory]
+    [InlineData("TL.exe", null)]                      // sans chemin, rien ne prouve Throne and Liberty
+    [InlineData("TL.exe", @"C:\Tools\TL.exe")]
+    [InlineData("Client-Win64-Shipping.exe", null)]   // nom générique d'Unreal Engine
+    [InlineData("Client-Win64-Shipping.exe", @"C:\Games\AutreJeu\Client\Binaries\Win64\Client-Win64-Shipping.exe")]
+    [InlineData("a1bf6c.exe", null)]                  // nom hexadécimal : bf6 n'est pas une sous-chaîne
+    [InlineData("Hemingway Editor.exe", null)]        // éditeur de texte, pas SMITE 2
+    public void IsAntiCheatProcess_Ajouts130_FauxPositifs_Returns_False(string proc, string? path)
+    {
+        Assert.False(GameRegistry.IsAntiCheatProcess(proc, path));
+    }
+
+    [Theory]
+    [InlineData("eldenring.exe")]
+    [InlineData("armoredcore6.exe")]
+    [InlineData("BlackDesert64.exe")]
+    [InlineData("PredecessorClient-Win64-Shipping.exe")]
+    [InlineData("Paladins.exe")]
+    [InlineData("DeadByDaylight-Win64-Shipping.exe")]
+    [InlineData("HuntGame.exe")]                      // Hunt: Showdown 1896
+    [InlineData("SquadGame.exe")]
+    [InlineData("HLL-Win64-Shipping.exe")]            // Hell Let Loose
+    [InlineData("HellLetLoose.exe")]
+    [InlineData("InsurgencyClient-Win64-Shipping.exe")]
+    [InlineData("SoTGame.exe")]                       // Sea of Thieves
+    [InlineData("RocketLeague.exe")]
+    [InlineData("RocketLeague_EAC.exe")]
+    [InlineData("GZWClientSteam-Win64-Shipping.exe")] // Gray Zone Warfare
+    [InlineData("mcc-win64-shipping.exe")]            // Halo: MCC
+    [InlineData("TheDivision2.exe")]
+    [InlineData("forhonor.exe")]
+    [InlineData("MechaBreak.exe")]
+    [InlineData("ONCE_HUMAN.exe")]
+    [InlineData("HottaGame.exe")]                     // Tower of Fantasy
+    [InlineData("ArkAscended_BE.exe")]                // ARK: Survival Ascended, seul nom attesté
+    [InlineData("SparkingZero-Win64-Shipping.exe")]
+    public void IsAntiCheatProcess_Ajouts130_Niveau2_Returns_True(string processName)
+    {
+        Assert.True(GameRegistry.IsAntiCheatProcess(processName, null));
+    }
+
+    // ────────────────────────────────────────────────────────────────
     // IsAntiCheatProcess — faux positifs à éviter
     // ────────────────────────────────────────────────────────────────
 
@@ -115,6 +199,13 @@ public class GameRegistryTests
     [InlineData("Code.exe")]
     [InlineData("explorer.exe")]
     [InlineData("Discord.exe")]
+    [InlineData("steam.exe")]
+    [InlineData("EpicGamesLauncher.exe")]
+    [InlineData("Battle.net.exe")]
+    [InlineData("WINWORD.EXE")]
+    [InlineData("ms-teams.exe")]
+    [InlineData("obs64.exe")]
+    [InlineData("Spotify.exe")]
     [InlineData("")]
     public void IsAntiCheatProcess_Common_Apps_Returns_False(string processName)
     {

@@ -22,6 +22,15 @@ namespace AZERTYGlobal;
 static class StoreReview
 {
     /// <summary>
+    /// F6 (décision S1 du 2026-09-02, § 3) : seule une installation Store a une fiche à noter.
+    /// Le paquet AMCF est un paquet lui aussi : « packagé » ne veut pas dire « Store ». Sans
+    /// effet visible aujourd'hui, les sollicitations étant éteintes sur le canal sobre, mais
+    /// certain le jour où une politique ou la décision D8 rallume un de leurs chemins.
+    /// </summary>
+    internal static bool RatesOnStore(DistributionChannel channel) =>
+        channel == DistributionChannel.Store;
+
+    /// <summary>
     /// Affiche la boîte de notation intégrée. Retourne false si elle ne peut pas être
     /// affichée — l'appelant doit alors ouvrir <c>StoreReviewUrl</c> lui-même.
     ///
@@ -36,7 +45,7 @@ static class StoreReview
     /// </summary>
     public static bool TryShow(IntPtr owner, string fallbackUrl)
     {
-        if (!ConfigManager.IsPackaged) return false;
+        if (!RatesOnStore(AppChannel.Current)) return false;
         if (owner == IntPtr.Zero) return false;
 
         try
