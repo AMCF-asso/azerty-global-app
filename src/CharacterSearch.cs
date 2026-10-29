@@ -41,7 +41,8 @@ sealed class CharacterSearch : IDisposable
     private const int BASE_ROW_NAME_TOP = 6;    // Ligne du nom : 20 px, puis le geste centré 11 px plus bas
     private const int BASE_ROW_NAME_H = 20;
     private const int BASE_ROW_GESTURE_MID = 38;
-    private const int BASE_BAND_H = 36;         // Bande sous la liste : la phrase du geste, filet en plus
+    private const int BASE_BAND_PAD_Y = 8;      // Bande sous la liste : la phrase du geste en entier,
+    private const int BASE_BAND_LINE_H = 20;    // une ligne de 20 px ou davantage, filet en plus
     private const int BASE_FOOTER_H = 38;       // Pied, filet compris
     private const int BASE_EMPTY_H = 38;        // Bande d'aide sous le champ vide
     private const int BASE_NO_RESULT_H = 52;
@@ -99,6 +100,9 @@ sealed class CharacterSearch : IDisposable
     // Lignes montrées en même temps : cinq au plus, moins quand la zone de travail ne laisse
     // pas la place (150 % sur un petit écran). Recalculé par ResizeToFitResults.
     private int _visibleRows = MAX_VISIBLE_ROWS;
+    // Lignes de la bande sous la liste : celles de la plus longue phrase des résultats, pour que
+    // la fenêtre ne bouge pas quand les flèches changent le choix.
+    private int _bandLines = 1;
     private float _dpiScale = 1.0f;
     private bool _showCopiedFeedback;
     private string _copiedChar = "";
@@ -751,7 +755,10 @@ sealed class CharacterSearch : IDisposable
         {
             // Jamais plus haute que l'écran retenu, à 10 px du bord.
             int workH = _workArea.bottom - _workArea.top;
-            var layout = LayoutResults(_filteredResults.Count, _dpiScale, workH > 0 ? workH - 20 - frameH : 0);
+            var hdc = Win32.GetDC(_hWnd);
+            _bandLines = BandLinesNeeded(hdc);
+            Win32.ReleaseDC(_hWnd, hdc);
+            var layout = LayoutResults(_filteredResults.Count, _dpiScale, workH > 0 ? workH - 20 - frameH : 0, _bandLines);
             _visibleRows = layout.Rows;
             // Le choix et le défilement restent valables si le nombre de lignes a changé.
             _scrollOffset = Math.Clamp(_scrollOffset, 0, Math.Max(0, _filteredResults.Count - _visibleRows));
@@ -765,6 +772,10 @@ sealed class CharacterSearch : IDisposable
         Win32.MoveWindow(_hWnd, x, y, w, h, true);
     }
 
+    /// <summary>Hauteur de la bande de <paramref name="lines"/> lignes, filet compris.</summary>
+    internal static int BandHeight(int lines, float scale)
+        => 1 + 2 * (int)(BASE_BAND_PAD_Y * scale) + Math.Max(1, lines) * (int)(BASE_BAND_LINE_H * scale);
+
     /// <summary>Découpage vertical de la zone cliente quand il y a des résultats.</summary>
     internal readonly record struct ResultsLayout(int Rows, int ListTop, int ListBottom, int BandTop, int FooterTop, int ClientH);
 
@@ -774,12 +785,12 @@ sealed class CharacterSearch : IDisposable
     /// (zone cliente la plus haute permise, 0 = sans plafond) ne laisse pas la place ; une
     /// ligne au moins reste visible. Fonction pure : testée à tous les zooms.
     /// </summary>
-    internal static ResultsLayout LayoutResults(int resultCount, float scale, int maxClientH)
+    internal static ResultsLayout LayoutResults(int resultCount, float scale, int maxClientH, int bandLines = 1)
     {
         int S(int value) => (int)(value * scale);
         int listTop = S(BASE_FIELD_H) + 1;
         int rowStep = S(BASE_ROW_H) + 1;
-        int bandH = 1 + S(BASE_BAND_H);
+        int bandH = BandHeight(bandLines, scale);
         int footerH = S(BASE_FOOTER_H);
 
         int rows = Math.Min(resultCount, MAX_VISIBLE_ROWS);
@@ -1291,9 +1302,9 @@ sealed class CharacterSearch : IDisposable
 
         // Bande puis pied, posés depuis le bas de la liste : jamais depuis le bas de la fenêtre,
         // sinon un plafond de hauteur les ferait recouvrir les lignes.
-        int bandH = 1 + Scale(BASE_BAND_H);
+        int bandH = BandHeight(_bandLines, _dpiScale);
         DrawBand(hdc, _selectedIndex >= 0 && _selectedIndex < _filteredResults.Count ? _filteredResults[_selectedIndex] : null,
-            listBottom, bandH, cw);
+            listBottom, cw);
         int footerTop = listBottom + bandH;
         DrawFooter(hdc, footerTop, footerTop + Scale(BASE_FOOTER_H), cw);
     }
@@ -1362,29 +1373,57 @@ sealed class CharacterSearch : IDisposable
     /// <summary>
     /// La bande sous la liste, une ligne : la phrase qui lit le geste du résultat choisi
     /// (« Frappez é. »), toujours visible, car c'est l'équivalent texte des touches de la
-    /// ligne. Sans geste connu, elle donne le nom en entier. Une phrase trop longue finit par
-    /// des points de suspension : les touches de la ligne choisie la disent aussi.
+    /// ligne. Sans geste connu, elle donne le nom en entier. Jamais coupée : une phrase longue
+    /// (touche morte) passe à la ligne, et la bande a la hauteur de la plus longue des phrases.
     /// </summary>
-    private void DrawBand(IntPtr hdc, CharEntry? entry, int top, int height, int cw)
+    private void DrawBand(IntPtr hdc, CharEntry? entry, int top, int cw)
     {
         PaperDraw.Fill(hdc, 0, top, cw, top + 1, PaperTheme.Border);
         if (entry == null)
             return;
 
+        var rect = BandTextRect(top + 1, cw);
+        PaperText.DrawParagraph(hdc, BandRuns(entry), SentenceFont(false), SentenceFont(true), rect,
+            PaperTheme.TextSecondary, PaperTheme.Ink, Scale(BASE_BAND_LINE_H));
+    }
+
+    /// <summary>Cadre du texte de la bande, sous son filet : marges du champ à gauche et à droite.</summary>
+    private Win32.RECT BandTextRect(int top, int cw) => new()
+    {
+        left = Scale(BASE_FIELD_PAD_X), top = top + Scale(BASE_BAND_PAD_Y),
+        right = cw - Scale(BASE_FIELD_PAD_X), bottom = top + Scale(BASE_BAND_PAD_Y) + Scale(BASE_BAND_LINE_H) * 8,
+    };
+
+    /// <summary>
+    /// La phrase de la bande. Celle du socle (<see cref="Gesture.Sentence"/>) prévient, après
+    /// une touche morte, que « rien ne s'affiche encore » : utile aux Leçons, pas ici, où la
+    /// ligne montre déjà les touches. La mention est retirée, le point reste.
+    /// </summary>
+    private List<TextRun> BandRuns(CharEntry entry)
+    {
         var steps = StepsOf(entry);
-        var runs = steps.Count > 0 ? Gesture.Sentence(steps) : new List<TextRun> { new(GetSentenceName(entry), true) };
-        int left = Scale(BASE_FIELD_PAD_X);
-        int right = cw - Scale(BASE_FIELD_PAD_X);
-        var band = new Win32.RECT { left = left, top = top + 1, right = right, bottom = top + height };
-        var weak = SentenceFont(false);
-        var strong = SentenceFont(true);
-        // Une ligne : mesurée toute en gras (le pire cas), la phrase qui dépasse est coupée
-        // en police ordinaire plutôt que renvoyée à la ligne.
-        string plain = string.Concat(runs.Select(r => r.Text));
-        if (PaperText.Width(hdc, plain, strong) <= right - left)
-            PaperText.DrawParagraph(hdc, runs, weak, strong, band, PaperTheme.TextSecondary, PaperTheme.Ink, band.bottom - band.top);
-        else
-            PaperText.DrawLine(hdc, Ellipsize(hdc, plain, weak, right - left), weak, band, PaperTheme.TextSecondary);
+        if (steps.Count == 0)
+            return new List<TextRun> { new(GetSentenceName(entry), true) };
+        var runs = Gesture.Sentence(steps);
+        for (int i = 0; i < runs.Count; i++)
+            if (runs[i].Text == L.Gesture_NothingYet)
+                runs[i] = new TextRun(".");
+        return runs;
+    }
+
+    /// <summary>Nombre de lignes de la plus longue phrase de la bande sur les résultats.</summary>
+    private int BandLinesNeeded(IntPtr hdc)
+    {
+        int lineH = Scale(BASE_BAND_LINE_H);
+        var rect = BandTextRect(0, Scale(BASE_WIN_W));
+        int lines = 1;
+        foreach (var entry in _filteredResults)
+        {
+            int h = PaperText.DrawParagraph(hdc, BandRuns(entry), SentenceFont(false), SentenceFont(true), rect,
+                PaperTheme.TextSecondary, PaperTheme.Ink, lineH, draw: false);
+            lines = Math.Max(lines, h / lineH);
+        }
+        return lines;
     }
 
     /// <summary>Le pied : à gauche le nombre de résultats, à droite ce que fait Entrée, ou
