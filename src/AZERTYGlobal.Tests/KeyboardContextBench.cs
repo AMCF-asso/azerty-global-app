@@ -276,6 +276,11 @@ public partial class KeyboardContextBench
                 throw new InvalidOperationException("la Recherche n'a pas créé de fenêtre");
             Win32.ShowWindow(hwnd, 4); // SW_SHOWNOACTIVATE
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
+            // AZERTY_CAPTURE_ZONE=LxH : zone de travail simulée (« 1024x720 » : l'écran 1024x768 de
+            // la CI, où la hauteur de la fenêtre est plafonnée dès 150 %). Sans elle, celle du poste.
+            if (Environment.GetEnvironmentVariable("AZERTY_CAPTURE_ZONE")?.Split('x') is [var zoneW, var zoneH]
+                && int.TryParse(zoneW, out int workW) && int.TryParse(zoneH, out int workH))
+                BancCapture.SetField(search, "_workArea", new Win32.RECT { left = 0, top = 0, right = workW, bottom = workH });
             BancCapture.Call(search, "ResizeToFitResults");
             target.Shoot(hwnd, "recherche-vide", windowDpi);
 
