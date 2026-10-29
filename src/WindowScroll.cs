@@ -60,6 +60,15 @@ internal sealed class WindowScroll
         UpdateBar(hwnd);
     }
 
+    /// <summary>WM_VSCROLL et WM_MOUSEWHEEL, que les deux fenêtres traitent de la même façon.
+    /// Rend vrai quand le message est traité ; tout autre message rend faux.</summary>
+    public bool TryHandle(IntPtr hwnd, uint msg, IntPtr wParam, int line) => msg switch
+    {
+        Win32.WM_VSCROLL => OnVScroll(hwnd, wParam, line),
+        Win32.WM_MOUSEWHEEL => OnMouseWheel(hwnd, wParam, line),
+        _ => false,
+    };
+
     /// <summary>WM_VSCROLL. Rend vrai quand le message est traité.</summary>
     public bool OnVScroll(IntPtr hwnd, IntPtr wParam, int line)
     {
