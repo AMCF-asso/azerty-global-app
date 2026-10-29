@@ -34,6 +34,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hScientific;
     private IntPtr _hVisual;
     private IntPtr _hDelay;
+    private IntPtr _hClose;
     // Libellés liés à l'interrupteur général : grisés avec leurs contrôles.
     private IntPtr _hAvailableLabel;
     private IntPtr _hDelayLabel;
@@ -72,6 +73,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
     public void Show()
     {
         LoadFromConfig();
+        // La fenêtre se rouvre en haut : l'instance est gardée d'une ouverture à l'autre, et
+        // le défilement de la fermeture précédente masquerait le titre et la case générale.
+        _scroll.ScrollTo(_hWnd, 0);
         // K1 (accessibilité 1.3.0) : Tab, Maj+Tab, Entrée et Échap entre les contrôles, comme
         // les autres fenêtres à contrôles. Inscrite le temps d'être visible, comme l'accueil :
         // inscrite en permanence, elle ferait passer chaque message du processus par
@@ -83,6 +87,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         // Focus initial sur le premier contrôle : sans lui, le focus restait sur la fenêtre
         // elle-même, et rien n'était annoncé avant la première tabulation.
         Win32.SetFocus(_hMaster);
+        _scroll.EnsureVisible(_hWnd, _hMaster, S(8));
         _visible = true;
     }
 
@@ -144,7 +149,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
         // « Fermer » : la fenêtre enregistre à toute fermeture (croix, Échap, Entrée) et n'a
         // pas d'annulation ; « Enregistrer » laissait croire que les autres sorties perdaient.
-        IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
+        IntPtr save = _hClose = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_DEFPUSHBUTTON,
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
@@ -207,12 +212,12 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private void FitWindow()
     {
         var work = NativeWindow.WorkArea(_hWnd);
-        var (frameW, frameH) = NativeWindow.NonClientSize(Style);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, Style);
+        // La dernière mise en page de FitScrollable est celle de fit.LayoutWidth : les contrôles
+        // sont déjà à leur place.
         var fit = WindowSizing.FitScrollable(S(BASE_CLIENT_W), PlaceControls, frameW, frameH,
             work.right - work.left, work.bottom - work.top, NativeWindow.ScrollBarWidth(_hWnd));
 
-        // La dernière mesure de FitScrollable n'est pas forcément celle retenue.
-        PlaceControls(fit.LayoutWidth);
         NativeWindow.ResizeAroundCenter(_hWnd, fit.ClientWidth, fit.ClientHeight, Style);
         NativeWindow.KeepInWorkArea(_hWnd);
         _scroll.Reset(_hWnd, fit.ContentHeight, fit.ClientHeight);
@@ -241,7 +246,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
                 if (role is Role.Title or Role.Wrapped)
                 {
-                    var text = new StringBuilder(512);
+                    // La taille se lit sur le contrôle : un texte plus long ne se tronque pas.
+                    var text = new StringBuilder(Win32.GetWindowTextLengthW(control) + 1);
                     Win32.GetWindowTextW(control, text, text.Capacity);
                     int wanted = NativeWindow.MeasureWrapped(hdc, role == Role.Title ? _hFontTitle : _hFont, text.ToString(), w);
                     if (wanted > h)
@@ -397,11 +403,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     ApplyDpiToControls();
                     return IntPtr.Zero;
                 case Win32.WM_VSCROLL:
-                    if (_scroll.OnVScroll(_hWnd, wParam, S(24)))
-                        return IntPtr.Zero;
-                    break;
                 case Win32.WM_MOUSEWHEEL:
-                    if (_scroll.OnMouseWheel(_hWnd, wParam, S(24)))
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
                         return IntPtr.Zero;
                     break;
                 case Win32.WM_CLOSE:

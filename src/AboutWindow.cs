@@ -100,6 +100,9 @@ sealed class AboutWindow : IDisposable
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
+        // Plafonnée dès la création : sans cela, seule une fenêtre qui change d'échelle l'était.
+        ResizeWindow();
+        RepositionControls();
 
         if (NativeWindow.CorrectedScale(Win32.GetDpiForWindow(_hWnd), _dpiScale) is float windowScale)
         {
@@ -209,17 +212,19 @@ sealed class AboutWindow : IDisposable
     }
 
     /// <summary>
-    /// Lot 130 C : la fenêtre à sa largeur de référence, plafonnée à la zone de travail de son
+    /// Lot 130 C : la fenêtre à sa taille de référence, plafonnée à la zone de travail de son
     /// écran. À 200 % sur 1024×768, la référence (1100 px) dépasse l'écran, que Windows plafonne
     /// à 1030 px : le bouton « Fermer », placé sur la largeur de référence, se collait au bord.
+    /// La hauteur est plafonnée de même : « Fermer » reste dans la zone cliente sur un écran bas.
     /// </summary>
     private void ResizeWindow()
     {
         const uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
         var work = NativeWindow.WorkArea(_hWnd);
-        var (frameW, _) = NativeWindow.NonClientSize(style);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, style);
         int clientW = Math.Min(S(BASE_WIN_W), Math.Max(1, work.right - work.left - frameW));
-        NativeWindow.ResizeAroundCenter(_hWnd, clientW, S(BASE_WIN_H), style);
+        int clientH = Math.Min(S(BASE_WIN_H), Math.Max(1, work.bottom - work.top - frameH));
+        NativeWindow.ResizeAroundCenter(_hWnd, clientW, clientH, style);
         NativeWindow.KeepInWorkArea(_hWnd);
     }
 

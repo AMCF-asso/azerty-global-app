@@ -112,8 +112,11 @@ static class WindowSizing
     /// La largeur d'abord : elle est bornée à la zone de travail, puis le contenu est mesuré à
     /// cette largeur (<paramref name="contentHeightAt"/>). S'il ne tient pas en hauteur, la
     /// barre de défilement prend sa place à droite et le contenu est mesuré de nouveau, à la
-    /// largeur qui reste. Une fenêtre qui tient ressort à sa taille de référence : 100 à 175 %
-    /// ne changent pas.
+    /// largeur qui reste (seulement si elle diffère : sinon la mesure est déjà la bonne). Un
+    /// texte plus étroit n'est jamais plus court : ce qui ne tenait pas ne tient pas mieux, la
+    /// fenêtre défile. Une fenêtre qui tient ressort à sa taille de référence : 100 à 175 % ne
+    /// changent pas. La dernière mesure demandée à <paramref name="contentHeightAt"/> est
+    /// toujours celle de <see cref="ScrollableFit.LayoutWidth"/>.
     /// </summary>
     /// <param name="wantedClientW">Zone cliente voulue, barre exclue, à l'échelle courante.</param>
     /// <param name="contentHeightAt">Hauteur du contenu mis en page à une largeur donnée.</param>
@@ -135,9 +138,8 @@ static class WindowSizing
         scrollBarW = Math.Max(0, scrollBarW);
         int barred = Math.Min(wantedClientW + scrollBarW, maxW);
         int layout = Math.Max(1, barred - scrollBarW);
-        content = Math.Max(1, contentHeightAt(layout));
-        if (content <= maxH)
-            return new ScrollableFit(layout, layout, content, content, false);
+        if (layout != width)
+            content = Math.Max(1, contentHeightAt(layout));
         return new ScrollableFit(layout, layout + scrollBarW, maxH, content, true);
     }
 

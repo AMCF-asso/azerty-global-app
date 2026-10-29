@@ -321,12 +321,12 @@ sealed class LayoutConflictWindow : IDisposable
     private void FitWindow()
     {
         var work = NativeWindow.WorkArea(_hWnd);
-        var (frameW, frameH) = NativeWindow.NonClientSize(WindowStyle, WindowExStyle);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, WindowStyle, WindowExStyle);
+        // La dernière mise en page de FitScrollable est celle de fit.LayoutWidth : les contrôles
+        // sont déjà à leur place.
         var fit = WindowSizing.FitScrollable(S(BASE_WIN_W), PlaceControls, frameW, frameH,
             work.right - work.left, work.bottom - work.top, NativeWindow.ScrollBarWidth(_hWnd));
 
-        // La dernière mesure de FitScrollable n'est pas forcément celle retenue.
-        PlaceControls(fit.LayoutWidth);
         _clientH = fit.ClientHeight;
         NativeWindow.ResizeAroundCenter(_hWnd, fit.ClientWidth, fit.ClientHeight, WindowStyle, WindowExStyle);
         NativeWindow.KeepInWorkArea(_hWnd);
@@ -359,9 +359,14 @@ sealed class LayoutConflictWindow : IDisposable
 
     public void Show()
     {
+        // Tray crée une fenêtre neuve à chaque conflit : la remise à zéro ne sert qu'à une
+        // instance rouverte. Le focus, lui, est posé par programme, hors de Tab : sans
+        // EnsureVisible, « Garder » restait sous le pli quand le texte occupe la hauteur.
+        _scroll.ScrollTo(_hWnd, 0);
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
         Win32.SetFocus(_hWndBtnKeep);
+        _scroll.EnsureVisible(_hWnd, _hWndBtnKeep, S(8));
     }
 
     private void Close(bool quit)
@@ -409,12 +414,8 @@ sealed class LayoutConflictWindow : IDisposable
                 }
 
                 case Win32.WM_VSCROLL:
-                    if (_scroll.OnVScroll(_hWnd, wParam, S(24)))
-                        return IntPtr.Zero;
-                    break;
-
                 case Win32.WM_MOUSEWHEEL:
-                    if (_scroll.OnMouseWheel(_hWnd, wParam, S(24)))
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
                         return IntPtr.Zero;
                     break;
 

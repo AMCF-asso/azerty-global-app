@@ -95,6 +95,210 @@ public class FenetresDefilantesTests
     }
 
     [Fact]
+    public void QuandIlDefile_SansChangerDeLargeur_LeContenuEstMesureUneSeuleFois()
+    {
+        // La barre tient à droite de la largeur voulue : la mise en page ne change pas, une
+        // seconde mesure rendrait la même hauteur.
+        var widths = new List<int>();
+        var fit = WindowSizing.FitScrollable(600, w => { widths.Add(w); return 900; }, FrameW, FrameH, WorkW, WorkH, Bar);
+
+        Assert.Equal(new[] { 600 }, widths);
+        Assert.Equal(new WindowSizing.ScrollableFit(600, 600 + Bar, WorkH - FrameH, 900, true), fit);
+    }
+
+    [Theory]
+    [InlineData(1120)] // plus large que l'écran : la barre rogne la mise en page
+    [InlineData(1000)] // entre les deux : la barre ne tient pas à droite
+    [InlineData(560)]
+    public void LaDerniereMesure_EstCelleDeLaLargeurDeMiseEnPage(int wanted)
+    {
+        // FitWindow ne repose pas les contrôles après FitScrollable : ils sont à la dernière
+        // largeur mesurée, qui doit donc être celle que la fenêtre retient.
+        int last = 0;
+        var fit = WindowSizing.FitScrollable(wanted, w => { last = w; return Wrapping(w); }, FrameW, FrameH, WorkW, WorkH, Bar);
+
+        Assert.Equal(fit.LayoutWidth, last);
+        Assert.Equal(Wrapping(last), fit.ContentHeight);
+    }
+
+    [Fact]
+    public void CadreAuDpiDeLEcran_PlusGrandQueCeluiDeQuatreVingtSeizeDpi()
+    {
+        // 200 % : AdjustWindowRectEx mesure au DPI du système, AdjustWindowRectExForDpi à celui
+        // de l'écran de la fenêtre, que la fenêtre porte réellement.
+        const uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var at96 = NativeWindow.OuterSize(100, 100, style, 0, 96);
+        var at192 = NativeWindow.OuterSize(100, 100, style, 0, 192);
+
+        Assert.True(at192.Width > at96.Width && at192.Height > at96.Height, $"{at96} puis {at192}");
+        Assert.Equal(NativeWindow.OuterSize(100, 100, style), NativeWindow.OuterSize(100, 100, style, 0, 0));
+    }
+
+    [Fact]
+    public void TryHandle_IgnoreLesAutresMessages()
+    {
+        var scroll = new WindowScroll();
+        scroll.Reset(IntPtr.Zero, contentHeight: 900, viewHeight: 600);
+
+        Assert.False(scroll.TryHandle(IntPtr.Zero, 0x000F /* WM_PAINT */, IntPtr.Zero, 24));
+    }
+
+    // ── Fenêtres réelles, à 200 % sur l'écran de la CI (1024×728 de zone de travail) ──
+
+    private static Win32.RECT Ecran() => new() { left = 0, top = 0, right = WorkW, bottom = WorkH };
+
+    private static void AssertDansLEcran(IntPtr hwnd, string nom)
+    {
+        Win32.GetWindowRect(hwnd, out var w);
+        Assert.True(w.left >= 0 && w.top >= 0 && w.right <= WorkW && w.bottom <= WorkH,
+            $"{nom} : ({w.left}, {w.top}) - ({w.right}, {w.bottom}) hors de {WorkW}x{WorkH}");
+    }
+
+    private static bool DansLaZoneCliente(IntPtr hwnd, IntPtr control)
+    {
+        Win32.GetClientRect(hwnd, out var client);
+        Win32.GetWindowRect(control, out var r);
+        var topLeft = new Win32.POINT { x = r.left, y = r.top };
+        var bottomRight = new Win32.POINT { x = r.right, y = r.bottom };
+        Win32.ScreenToClient(hwnd, ref topLeft);
+        Win32.ScreenToClient(hwnd, ref bottomRight);
+        return topLeft.x >= 0 && topLeft.y >= 0 && bottomRight.x <= client.right && bottomRight.y <= client.bottom;
+    }
+
+    [Fact]
+    public void Couches_A200Pour100_TientDansLEcranEtFermerSeVoit()
+    {
+        using var isolation = new BancCapture.Isolation();
+        using var ecran = NativeWindow.OverrideWorkAreaForTests(Ecran());
+        var window = new MaintainableLayersWindow();
+        try
+        {
+            window.Show();
+            IntPtr hwnd = BancCapture.Handle(window);
+            BancCapture.ApplyDpi(hwnd, 192);
+
+            AssertDansLEcran(hwnd, "Couches");
+            var scroll = BancCapture.Field<WindowScroll>(window, "_scroll");
+            Assert.True(scroll.Needed, "à 200 % sur 1024×728, la fenêtre des couches défile");
+            scroll.ScrollTo(hwnd, int.MaxValue);
+            Assert.True(DansLaZoneCliente(hwnd, BancCapture.Field<IntPtr>(window, "_hClose")),
+                "« Fermer » reste hors de la zone cliente, même défilé jusqu'au bout");
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    [Fact]
+    public void Couches_Rouverte_RepartEnHautEtLeFocusSeVoit()
+    {
+        using var isolation = new BancCapture.Isolation();
+        using var ecran = NativeWindow.OverrideWorkAreaForTests(Ecran());
+        var window = new MaintainableLayersWindow();
+        try
+        {
+            window.Show();
+            IntPtr hwnd = BancCapture.Handle(window);
+            BancCapture.ApplyDpi(hwnd, 192);
+            var scroll = BancCapture.Field<WindowScroll>(window, "_scroll");
+            scroll.ScrollTo(hwnd, int.MaxValue);
+            Assert.True(scroll.Position > 0, "précondition : la fenêtre est défilée");
+
+            window.Hide();
+            window.Show();
+
+            Assert.Equal(0, scroll.Position);
+            Assert.True(DansLaZoneCliente(hwnd, BancCapture.Field<IntPtr>(window, "_hMaster")),
+                "la case générale, premier contrôle, est sous le pli à la réouverture");
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    [Fact]
+    public void Conflit_A200Pour100_TientDansLEcranEtLesDeuxChoixSeVoient()
+    {
+        using var isolation = new BancCapture.Isolation();
+        using var ecran = NativeWindow.OverrideWorkAreaForTests(Ecran());
+        foreach (bool atStartup in new[] { true, false })
+        {
+            var window = new LayoutConflictWindow(atStartup, () => { }, () => { });
+            try
+            {
+                window.Show();
+                IntPtr hwnd = BancCapture.Handle(window);
+                BancCapture.ApplyDpi(hwnd, 192);
+
+                AssertDansLEcran(hwnd, "Conflit");
+                var scroll = BancCapture.Field<WindowScroll>(window, "_scroll");
+                scroll.ScrollTo(hwnd, int.MaxValue);
+                // Cette fenêtre n'a pas de bouton « Fermer » : ses deux choix sont ses sorties.
+                Assert.True(DansLaZoneCliente(hwnd, BancCapture.Field<IntPtr>(window, "_hWndBtnQuit")),
+                    $"« Quitter » hors de la zone cliente (démarrage : {atStartup})");
+
+                window.Show();
+                Assert.Equal(0, scroll.Position);
+                Assert.True(DansLaZoneCliente(hwnd, BancCapture.Field<IntPtr>(window, "_hWndBtnKeep")),
+                    $"« Garder », qui a le focus, hors de la zone cliente (démarrage : {atStartup})");
+            }
+            finally
+            {
+                BancCapture.Teardown(window);
+            }
+        }
+    }
+
+    [Fact]
+    public void APropos_A200Pour100_TientDansLEcranEtFermerSeVoit()
+    {
+        using var isolation = new BancCapture.Isolation();
+        using var ecran = NativeWindow.OverrideWorkAreaForTests(Ecran());
+        var window = new AboutWindow();
+        try
+        {
+            window.Show();
+            IntPtr hwnd = BancCapture.Handle(window);
+            BancCapture.ApplyDpi(hwnd, 192);
+
+            AssertDansLEcran(hwnd, "À propos");
+            Assert.True(DansLaZoneCliente(hwnd, BancCapture.Field<IntPtr>(window, "_hWndBtnClose")),
+                "« Fermer » hors de la zone cliente");
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    [Fact]
+    public void APropos_SurUnEcranPlusPetitQueSaReference_EstPlafonneeSansChangerDEchelle()
+    {
+        // Largeur et hauteur : la fenêtre naît au DPI de l'écran, que ni CorrectedScale ni
+        // WM_DPICHANGED ne viennent corriger. 480×240 est plus petit que la référence même à 100 %.
+        using var isolation = new BancCapture.Isolation();
+        using var ecran = NativeWindow.OverrideWorkAreaForTests(new Win32.RECT { left = 0, top = 0, right = 480, bottom = 240 });
+        var window = new AboutWindow();
+        try
+        {
+            window.Show();
+            IntPtr hwnd = BancCapture.Handle(window);
+
+            Win32.GetWindowRect(hwnd, out var w);
+            Assert.True(w.left >= 0 && w.top >= 0 && w.right <= 480 && w.bottom <= 240,
+                $"({w.left}, {w.top}) - ({w.right}, {w.bottom}) hors de 480x240");
+            Assert.True(DansLaZoneCliente(hwnd, BancCapture.Field<IntPtr>(window, "_hWndBtnClose")),
+                "« Fermer » hors de la zone cliente");
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    [Fact]
     public void Defilement_PositionBorneAuContenu()
     {
         var scroll = new WindowScroll();
