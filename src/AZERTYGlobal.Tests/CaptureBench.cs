@@ -193,6 +193,7 @@ public class CaptureBench
                 int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, slug, windowDpi);
+                ShootScrolledToEnd(target, window, hwnd, slug, windowDpi);
             }
             finally
             {
@@ -356,10 +357,27 @@ public class CaptureBench
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, "couches", windowDpi);
+            ShootScrolledToEnd(target, window, hwnd, "couches", windowDpi);
         }
         finally
         {
             BancCapture.Teardown(window);
         }
+    }
+
+    /// <summary>
+    /// Lot 130 A : une fenêtre qui défile cache son bas sur la première image. Quand elle défile,
+    /// une image de plus la montre défilée jusqu'au bout (<c>{sujet}-bas</c>) : le bouton ou la
+    /// carte du bas s'y voient entiers. Rien n'est ajouté quand tout tient.
+    /// </summary>
+    private static void ShootScrolledToEnd(BancCapture.Target target, object window, IntPtr hwnd, string slug, int windowDpi)
+    {
+        var scroll = BancCapture.Field<WindowScroll>(window, "_scroll");
+        if (!scroll.Needed)
+            return;
+
+        scroll.ScrollTo(hwnd, int.MaxValue);
+        BancCapture.MarkActive(hwnd);
+        target.Shoot(hwnd, slug + "-bas", windowDpi);
     }
 }

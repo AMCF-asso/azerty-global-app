@@ -247,12 +247,45 @@ static class NativeWindow
     // Placement
     // ═══════════════════════════════════════════════════════════════
 
+    [ThreadStatic] private static Win32.RECT? t_workAreaOverride;
+
+    /// <summary>
+    /// Lot 130 A — zone de travail simulée pour le fil courant, jusqu'au Dispose. Réservé au
+    /// banc de capture : les troncatures de la CI viennent d'un écran 1024×768, que le poste
+    /// d'Antoine n'a pas. Même principe que <see cref="CursorSource.OverrideForTests"/>.
+    /// </summary>
+    internal static IDisposable OverrideWorkAreaForTests(Win32.RECT work)
+    {
+        var previous = t_workAreaOverride;
+        t_workAreaOverride = work;
+        return new WorkAreaScope(previous);
+    }
+
+    private sealed class WorkAreaScope : IDisposable
+    {
+        private readonly Win32.RECT? _previous;
+        private bool _disposed;
+
+        internal WorkAreaScope(Win32.RECT? previous) => _previous = previous;
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+            t_workAreaOverride = _previous;
+        }
+    }
+
     /// <summary>
     /// Zone de travail de l'écran du propriétaire, à défaut de celui du curseur, où
     /// l'utilisateur vient de cliquer ; 1024×768 quand aucun écran ne répond.
     /// </summary>
     internal static Win32.RECT WorkArea(IntPtr owner = default)
     {
+        if (t_workAreaOverride is { } simulated)
+            return simulated;
+
         IntPtr monitor = owner != IntPtr.Zero
             ? Win32.MonitorFromWindow(owner, Win32.MONITOR_DEFAULTTONEAREST)
             : IntPtr.Zero;
@@ -265,6 +298,36 @@ static class NativeWindow
             return info.rcWork;
 
         return new Win32.RECT { left = 0, top = 0, right = 1024, bottom = 768 };
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+    /// <summary>Largeur de la barre de défilement verticale au DPI de la fenêtre : au DPI réel de
+    /// l'écran, comme le cadre, que la fenêtre en défile ou non.</summary>
+    internal static int ScrollBarWidth(IntPtr hwnd)
+    {
+        int width = GetSystemMetricsForDpi(Win32.SM_CXVSCROLL, (uint)DpiOf(hwnd));
+        return width > 0 ? width : Win32.GetSystemMetrics(Win32.SM_CXVSCROLL);
+    }
+
+    /// <summary>Cadre et barre de titre d'une fenêtre : largeur et hauteur à ajouter à sa zone cliente.</summary>
+    internal static (int Width, int Height) NonClientSize(uint style, uint exStyle = 0)
+    {
+        var (width, height) = OuterSize(100, 100, style, exStyle);
+        return (width - 100, height - 100);
+    }
+
+    /// <summary>Hauteur d'un texte qui revient à la ligne dans <paramref name="width"/> px, dans
+    /// la police donnée (DT_CALCRECT).</summary>
+    internal static int MeasureWrapped(IntPtr hdc, IntPtr hFont, string text, int width)
+    {
+        IntPtr previous = Win32.SelectObject(hdc, hFont);
+        var rect = new Win32.RECT { left = 0, top = 0, right = Math.Max(1, width), bottom = 9999 };
+        Win32.DrawTextW(hdc, text, -1, ref rect,
+            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
+        Win32.SelectObject(hdc, previous);
+        return rect.bottom - rect.top;
     }
 
     /// <summary>Taille extérieure d'une fenêtre pour une zone cliente donnée.</summary>
