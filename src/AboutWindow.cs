@@ -208,14 +208,27 @@ sealed class AboutWindow : IDisposable
         RepositionControls();
     }
 
-    private void ResizeWindow() =>
-        NativeWindow.ResizeAroundCenter(_hWnd, S(BASE_WIN_W), S(BASE_WIN_H),
-            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU);
+    /// <summary>
+    /// Lot 130 C : la fenêtre à sa largeur de référence, plafonnée à la zone de travail de son
+    /// écran. À 200 % sur 1024×768, la référence (1100 px) dépasse l'écran, que Windows plafonne
+    /// à 1030 px : le bouton « Fermer », placé sur la largeur de référence, se collait au bord.
+    /// </summary>
+    private void ResizeWindow()
+    {
+        const uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        var work = NativeWindow.WorkArea(_hWnd);
+        var (frameW, _) = NativeWindow.NonClientSize(style);
+        int clientW = Math.Min(S(BASE_WIN_W), Math.Max(1, work.right - work.left - frameW));
+        NativeWindow.ResizeAroundCenter(_hWnd, clientW, S(BASE_WIN_H), style);
+        NativeWindow.KeepInWorkArea(_hWnd);
+    }
 
     private void RepositionControls()
     {
-        int winW = S(BASE_WIN_W);
-        int winH = S(BASE_WIN_H);
+        // La zone cliente réelle, pas la référence : plafonnée à l'écran, elle est plus étroite.
+        Win32.GetClientRect(_hWnd, out var client);
+        int winW = client.right > 0 ? client.right : S(BASE_WIN_W);
+        int winH = client.bottom > 0 ? client.bottom : S(BASE_WIN_H);
         int margin = S(20);
 
         // Liens : ligne horizontale en bas du panel info — largeurs adaptées au texte
@@ -271,6 +284,8 @@ sealed class AboutWindow : IDisposable
                     _dpiScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
                     RecreateFonts();
                     NativeWindow.MoveToSuggestedRect(_hWnd, lParam);
+                    // Le rectangle suggéré peut dépasser l'écran : plafonné avant la mise en page.
+                    ResizeWindow();
                     RepositionControls();
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
