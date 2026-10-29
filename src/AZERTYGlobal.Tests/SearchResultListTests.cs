@@ -92,6 +92,14 @@ public class SearchResultListTests : IDisposable
         Assert.Equal(400, layout.ClientH);
     }
 
+    [Fact]
+    public void ChaqueLigneDeLaBandeAjouteVingtPxACentPourCent()
+    {
+        Assert.Equal(37, CharacterSearch.BandHeight(1, 1f));
+        Assert.Equal(57, CharacterSearch.BandHeight(2, 1f));
+        Assert.Equal(420, CharacterSearch.LayoutResults(20, 1f, 0, 2).ClientH);
+    }
+
     [Theory]
     [InlineData(1.0f)]
     [InlineData(1.25f)]
@@ -103,10 +111,11 @@ public class SearchResultListTests : IDisposable
     {
         // Les zones de travail de 720 px (CI en 1024 × 768) et de 1400 px (écran 1440 p), plafond
         // à 20 px du bord, comme ResizeToFitResults.
-        foreach (int workH in new[] { 720, 1400 })
+        // La bande a une, deux ou trois lignes (phrase de touche morte, jamais coupée).
+        foreach (var (workH, bandLines) in new[] { (720, 1), (1400, 1), (720, 2), (1400, 3), (720, 3) })
         {
             int max = workH - 20;
-            var layout = CharacterSearch.LayoutResults(20, scale, max);
+            var layout = CharacterSearch.LayoutResults(20, scale, max, bandLines);
 
             Assert.InRange(layout.Rows, 1, 5);
             Assert.True(layout.ListTop < layout.ListBottom);
