@@ -36,5 +36,6 @@ internal static partial class L
 
     // ── Écran final ─────────────────────────────────────────────────────
     public static string Learning_FinalTitle => T("Bravo !", "Well done!");
+    public static string Learning_FinalRecap => T("Ce que vous avez tapé", "What you typed");
     public static string Learning_FinalSubtitle => T($"Vous maîtrisez les bases d’{Product}.", $"You’ve mastered the basics of {Product}.");
 }

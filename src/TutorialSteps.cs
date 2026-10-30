@@ -86,6 +86,14 @@ internal static class TutorialSteps
         return route.ToArray();
     }
 
+    /// <summary>Les textes tapés de <paramref name="route"/> pour l'écran final : ceux des
+    /// exercices réussis (<paramref name="isDone"/>), dans l'ordre du parcours. Un bonus passé
+    /// n'y figure pas.</summary>
+    public static string[] RecapTargets(IEnumerable<RouteStep> route, Func<int, bool> isDone) =>
+        route.Where(step => step.Index >= 0 && step.Index < All.Length && isDone(step.Index))
+            .Select(step => All[step.Index].Target)
+            .ToArray();
+
     /// <summary>Les usages connus parmi <paramref name="usages"/>, sans doublon, dans l'ordre
     /// de l'écran de choix ; tout le reste est ignoré (config modifiée à la main).</summary>
     public static string[] NormalizeUsages(IEnumerable<string>? usages)

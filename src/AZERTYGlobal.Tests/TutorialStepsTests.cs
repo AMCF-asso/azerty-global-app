@@ -106,6 +106,20 @@ public class TutorialStepsTests : IDisposable
     }
 
     [Fact]
+    public void L_ecran_final_recapitule_les_textes_reussis_dans_l_ordre_du_parcours()
+    {
+        var parcours = TutorialSteps.BuildRoute(new[] { TutorialSteps.UsageCode, TutorialSteps.UsageAfrica });
+        var reussis = new HashSet<int> { 0, 1, 2, TutorialSteps.Africa };
+
+        // Le bonus Code est passé : il ne figure pas dans la liste.
+        Assert.Equal(
+            new[] { TutorialSteps.All[0].Target, TutorialSteps.All[1].Target, TutorialSteps.All[2].Target,
+                    TutorialSteps.All[TutorialSteps.Africa].Target },
+            TutorialSteps.RecapTargets(parcours, reussis.Contains));
+        Assert.Empty(TutorialSteps.RecapTargets(parcours, _ => false));
+    }
+
+    [Fact]
     public void Un_seul_usage_coche_n_est_jamais_facultatif()
     {
         foreach (var (usage, step) in TutorialSteps.UsagesByPriority)
