@@ -95,6 +95,54 @@ static class WindowSizing
         return ClampToWorkArea(w, h, availW, availH, 1f);
     }
 
+    /// <summary>Taille d'une fenêtre à contenu défilant (<see cref="FitScrollable"/>).</summary>
+    /// <param name="LayoutWidth">Largeur de mise en page : celle du contenu, barre exclue.</param>
+    /// <param name="ClientWidth">Zone cliente de la fenêtre, barre de défilement comprise.</param>
+    /// <param name="ClientHeight">Hauteur visible.</param>
+    /// <param name="ContentHeight">Hauteur du contenu mis en page à <paramref name="LayoutWidth"/>.</param>
+    public readonly record struct ScrollableFit(
+        int LayoutWidth, int ClientWidth, int ClientHeight, int ContentHeight, bool Scrolls);
+
+    /// <summary>
+    /// Lot 130 A (D1 d'Antoine, 29/10) — fenêtre à contenu qui défile : jamais plus grande que
+    /// la zone de travail, texte qui passe à la ligne, barre de défilement seulement quand le
+    /// contenu ne tient pas. À 200 % sur 1024×768, la largeur de référence (1100 px) dépasse la
+    /// zone cliente et la fenêtre était coupée à droite et en bas.
+    ///
+    /// La largeur d'abord : elle est bornée à la zone de travail, puis le contenu est mesuré à
+    /// cette largeur (<paramref name="contentHeightAt"/>). S'il ne tient pas en hauteur, la
+    /// barre de défilement prend sa place à droite et le contenu est mesuré de nouveau, à la
+    /// largeur qui reste (seulement si elle diffère : sinon la mesure est déjà la bonne). Un
+    /// texte plus étroit n'est jamais plus court : ce qui ne tenait pas ne tient pas mieux, la
+    /// fenêtre défile. Une fenêtre qui tient ressort à sa taille de référence : 100 à 175 % ne
+    /// changent pas. La dernière mesure demandée à <paramref name="contentHeightAt"/> est
+    /// toujours celle de <see cref="ScrollableFit.LayoutWidth"/>.
+    /// </summary>
+    /// <param name="wantedClientW">Zone cliente voulue, barre exclue, à l'échelle courante.</param>
+    /// <param name="contentHeightAt">Hauteur du contenu mis en page à une largeur donnée.</param>
+    /// <param name="nonClientW">Cadre et barre de titre, au DPI réel de l'écran.</param>
+    /// <param name="scrollBarW">Largeur de la barre de défilement verticale.</param>
+    public static ScrollableFit FitScrollable(int wantedClientW, Func<int, int> contentHeightAt,
+        int nonClientW, int nonClientH, int workW, int workH, int scrollBarW)
+    {
+        wantedClientW = Math.Max(1, wantedClientW);
+        // Mesure échouée (zone de travail nulle) : la taille voulue, sans plafond.
+        int maxW = workW > 0 ? Math.Max(1, workW - Math.Max(0, nonClientW)) : int.MaxValue;
+        int maxH = workH > 0 ? Math.Max(1, workH - Math.Max(0, nonClientH)) : int.MaxValue;
+
+        int width = Math.Min(wantedClientW, maxW);
+        int content = Math.Max(1, contentHeightAt(width));
+        if (content <= maxH)
+            return new ScrollableFit(width, width, content, content, false);
+
+        scrollBarW = Math.Max(0, scrollBarW);
+        int barred = Math.Min(wantedClientW + scrollBarW, maxW);
+        int layout = Math.Max(1, barred - scrollBarW);
+        if (layout != width)
+            content = Math.Max(1, contentHeightAt(layout));
+        return new ScrollableFit(layout, layout + scrollBarW, maxH, content, true);
+    }
+
     /// <summary>Plus petite échelle que <see cref="FitScale"/> puisse rendre : en deçà, le
     /// texte ne se lit plus, et mieux vaut une fenêtre qui déborde.</summary>
     public const float MinFitScale = 0.5f;
