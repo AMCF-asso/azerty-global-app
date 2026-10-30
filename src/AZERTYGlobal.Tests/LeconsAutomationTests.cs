@@ -447,6 +447,7 @@ public class LeconsAutomationTests
         public void FocusSurface() { Note(0); inner.FocusSurface(); }
         public void FocusControl(int index) { Note(0); inner.FocusControl(index); }
         public void InvokeControl(int index, string name) { Note(0); inner.InvokeControl(index, name); }
+        public Win32.POINT ScrollOffset => Note(inner.ScrollOffset);
     }
 
     private sealed record ClientReading(int ControlType, string Name, string Text, double[] CaretBounds, string? Error);

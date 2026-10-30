@@ -106,6 +106,20 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int _baseClientH;
     private int _nonClientW;
     private int _nonClientH;
+    // Audit du 30/10, M2 : surface dessinée et défilement (WindowSizing.FitCanvas). Tout se
+    // dessine et se teste en coordonnées de la surface ; seuls la souris, le caret système et
+    // l'UI Automation passent par _scrollX et _scrollY.
+    private int _canvasW;
+    private int _canvasH;
+    private int _scrollX;
+    private int _scrollY;
+    private bool _scrollsX;
+    private bool _scrollsY;
+    private bool _applyingCanvas;
+    private int _lastShownFocus = int.MinValue;
+    private Win32.RECT? _lastShownCaret;
+    private readonly SettingsScrollState _wheel = new();
+    private readonly SettingsScrollState _hWheel = new();
     private bool _liveResizing;
     private IntPtr _resizeSnapshotBitmap;
     private int _resizeSnapshotW;
@@ -384,19 +398,19 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         int winH = D(BASE_WIN_H);
         uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_THICKFRAME | Win32.WS_CLIPCHILDREN;
 
-        CursorSource.TryGet(out var cursor);
-        var monitor = Win32.MonitorFromPoint(cursor, Win32.MONITOR_DEFAULTTONEAREST);
-        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        Win32.GetMonitorInfo(monitor, ref monInfo);
-        int screenW = monInfo.rcWork.right - monInfo.rcWork.left;
-        int screenH = monInfo.rcWork.bottom - monInfo.rcWork.top;
+        // Écran du curseur ; la zone simulée du banc de capture quand elle est posée.
+        var work = NativeWindow.WorkArea();
+        int screenW = work.right - work.left;
+        int screenH = work.bottom - work.top;
         // AG130-42 : borner avant de creer. A 175 % sur 1920x1080, D(1120)xD(760) vaut
         // 1960x1330 pour une zone de travail de 1920x1032 : la fenetre naissait hors ecran,
         // commandes du bas inatteignables, sans que rien n'echoue.
-        (winW, winH) = WindowSizing.ClampToWorkArea(winW, winH, screenW, screenH);
+        // Audit du 30/10, M2 : chaque dimension pour elle-même, le contenu défile au lieu de
+        // rapetisser (WindowSizing.FitCanvas), et la fenêtre prend la place de ses barres.
+        (winW, winH) = ScrollingWindowSize(winW, winH, screenW, screenH);
 
-        int x = monInfo.rcWork.left + Math.Max(0, (screenW - winW) / 2);
-        int y = monInfo.rcWork.top + Math.Max(0, (screenH - winH) / 2);
+        int x = work.left + Math.Max(0, (screenW - winW) / 2);
+        int y = work.top + Math.Max(0, (screenH - winH) / 2);
 
         _hWnd = Win32.CreateWindowExW(0, WND_CLASS_NAME, L.LessonsWin_WindowTitle,
             style, x, y, winW, winH, IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
@@ -515,22 +529,31 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (_hWnd == IntPtr.Zero) return;
         if (!Win32.GetWindowRect(_hWnd, out var window)) return;
 
-        var monitor = Win32.MonitorFromWindow(_hWnd, Win32.MONITOR_DEFAULTTONEAREST);
-        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        if (!Win32.GetMonitorInfo(monitor, ref monInfo)) return;
-
-        int workW = monInfo.rcWork.right - monInfo.rcWork.left;
-        int workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
-        var (winW, winH) = WindowSizing.ClampToWorkArea(
-            Math.Max(1, window.right - window.left),
-            Math.Max(1, window.bottom - window.top),
-            workW, workH);
+        var work = NativeWindow.WorkArea(_hWnd);
+        int workW = work.right - work.left;
+        int workH = work.bottom - work.top;
+        int winW = Math.Max(1, window.right - window.left);
+        int winH = Math.Max(1, window.bottom - window.top);
+        // Audit du 30/10, M2 : une taille suggérée qui ne tient pas repart de la taille prévue au
+        // nouveau DPI, bornée comme à la création ; celle qui tient reste celle de l'utilisateur.
+        int maxW = (int)(workW * WindowSizing.MaxWorkAreaFraction);
+        int maxH = (int)(workH * WindowSizing.MaxWorkAreaFraction);
+        if (workW > 0 && workH > 0 && (winW > maxW || winH > maxH))
+            (winW, winH) = ScrollingWindowSize(D(BASE_WIN_W), D(BASE_WIN_H), workW, workH);
 
         // Recentrer plutot que garder le coin : une fenetre retrecie qui garde son coin
         // superieur gauche laisse tout le retrecissement du meme cote.
-        int x = monInfo.rcWork.left + Math.Max(0, (workW - winW) / 2);
-        int y = monInfo.rcWork.top + Math.Max(0, (workH - winH) / 2);
+        int x = work.left + Math.Max(0, (workW - winW) / 2);
+        int y = work.top + Math.Max(0, (workH - winH) / 2);
         Win32.MoveWindow(_hWnd, x, y, winW, winH, true);
+    }
+
+    /// <summary><see cref="WindowSizing.ScrollingWindowSize"/> avec les barres au DPI de rendu,
+    /// qui peut devancer celui de la fenêtre (création, WM_DPICHANGED).</summary>
+    private (int Width, int Height) ScrollingWindowSize(int wantedW, int wantedH, int workW, int workH)
+    {
+        var (vBar, hBar) = NativeWindow.ScrollBarsForDpi((int)MathF.Round(_dpiScale * 96f));
+        return WindowSizing.ScrollingWindowSize(wantedW, wantedH, workW, workH, vBar, hBar);
     }
 
     private void CaptureBaseWindowMetrics()
@@ -538,8 +561,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Le cadre non client se mesure toujours sur la fenêtre réelle.
         if (Win32.GetClientRect(_hWnd, out var client) && Win32.GetWindowRect(_hWnd, out var window))
         {
-            int clientW = Math.Max(1, client.right - client.left);
-            int clientH = Math.Max(1, client.bottom - client.top);
+            // Les barres de défilement affichées sont de la zone cliente, pas du cadre (M2).
+            int clientW = Math.Max(1, client.right - client.left) + (_scrollsY ? NativeWindow.ScrollBarWidth(_hWnd) : 0);
+            int clientH = Math.Max(1, client.bottom - client.top) + (_scrollsX ? NativeWindow.ScrollBarHeight(_hWnd) : 0);
             _nonClientW = Math.Max(0, Math.Max(1, window.right - window.left) - clientW);
             _nonClientH = Math.Max(0, Math.Max(1, window.bottom - window.top) - clientH);
         }
@@ -559,23 +583,200 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     internal static (int Width, int Height) ReferenceClientSize(int designOuterW, int designOuterH, int nonClientW, int nonClientH)
         => (Math.Max(1, designOuterW - Math.Max(0, nonClientW)), Math.Max(1, designOuterH - Math.Max(0, nonClientH)));
 
-    /// <summary>Échelle de rendu : le plus petit des deux rapports zone client / référence.</summary>
+    /// <summary>Échelle de rendu : le plus petit des deux rapports zone client / référence, jamais
+    /// sous 1 (audit du 30/10, M2) : une fenêtre plus petite que la référence défile
+    /// (<see cref="WindowSizing.FitCanvas"/>) au lieu de rendre le texte sous l'échelle de l'écran.</summary>
     internal static float RenderScale(int clientW, int clientH, int baseClientW, int baseClientH)
-        => MathF.Max(0.1f, MathF.Min(clientW / (float)baseClientW, clientH / (float)baseClientH));
+        => WindowSizing.FitCanvas(clientW, clientH, baseClientW, baseClientH, 0, 0).Scale;
+
+    /// <summary>Le rapport de forme ne se tient qu'au-delà de la référence, là où le rendu grandit
+    /// avec la fenêtre ; en deçà, la fenêtre défile (audit du 30/10, M2).</summary>
+    internal static bool LocksAspect(int clientW, int clientH, int baseClientW, int baseClientH)
+        => clientW >= baseClientW && clientH >= baseClientH;
 
     private void UpdateRenderScaleFromCurrentClient(bool force = false)
     {
         if (_baseClientW <= 0 || _baseClientH <= 0) return;
         if (!Win32.GetClientRect(_hWnd, out var client)) return;
 
-        int clientW = Math.Max(1, client.right - client.left);
-        int clientH = Math.Max(1, client.bottom - client.top);
-        float nextScale = RenderScale(clientW, clientH, _baseClientW, _baseClientH);
-        if (!force && MathF.Abs(nextScale - _windowScale) < 0.01f) return;
+        // GetClientRect retire les barres déjà affichées : FitCanvas veut la zone entière.
+        int vBar = NativeWindow.ScrollBarWidth(_hWnd);
+        int hBar = NativeWindow.ScrollBarHeight(_hWnd);
+        int clientW = Math.Max(1, client.right - client.left) + (_scrollsY ? vBar : 0);
+        int clientH = Math.Max(1, client.bottom - client.top) + (_scrollsX ? hBar : 0);
+        var fit = WindowSizing.FitCanvas(clientW, clientH, _baseClientW, _baseClientH, vBar, hBar);
+        ApplyCanvas(fit);
+        if (!force && MathF.Abs(fit.Scale - _windowScale) < 0.01f) return;
 
-        _windowScale = nextScale;
+        _windowScale = fit.Scale;
         RecreateScaledFonts();
     }
+
+    /// <summary>Surface, barres et positions de défilement d'après <paramref name="fit"/>.
+    /// Afficher une barre change la zone cliente et renvoie WM_SIZE : le drapeau l'ignore, le
+    /// calcul tenant déjà compte des barres.</summary>
+    private void ApplyCanvas(WindowSizing.ScrolledCanvas fit)
+    {
+        _canvasW = fit.CanvasWidth;
+        _canvasH = fit.CanvasHeight;
+        _applyingCanvas = true;
+        try
+        {
+            if (_scrollsX != fit.ScrollsX) Win32.ShowScrollBar(_hWnd, Win32.SB_HORZ, fit.ScrollsX);
+            if (_scrollsY != fit.ScrollsY) Win32.ShowScrollBar(_hWnd, Win32.SB_VERT, fit.ScrollsY);
+            _scrollsX = fit.ScrollsX;
+            _scrollsY = fit.ScrollsY;
+        }
+        finally
+        {
+            _applyingCanvas = false;
+        }
+        _scrollX = WindowSizing.ClampScroll(_scrollX, _canvasW, fit.ViewWidth);
+        _scrollY = WindowSizing.ClampScroll(_scrollY, _canvasH, fit.ViewHeight);
+        UpdateScrollBars();
+    }
+
+    /// <summary>Zone visible, en pixels clients (barres exclues).</summary>
+    private (int Width, int Height) ViewSize()
+    {
+        if (!Win32.GetClientRect(_hWnd, out var rc)) return (Math.Max(1, _canvasW), Math.Max(1, _canvasH));
+        return (Math.Max(1, rc.right - rc.left), Math.Max(1, rc.bottom - rc.top));
+    }
+
+    private void UpdateScrollBars()
+    {
+        var (viewW, viewH) = ViewSize();
+        if (_scrollsX) SetScrollBar(Win32.SB_HORZ, _canvasW, viewW, _scrollX);
+        if (_scrollsY) SetScrollBar(Win32.SB_VERT, _canvasH, viewH, _scrollY);
+    }
+
+    private void SetScrollBar(int bar, int canvas, int view, int position)
+    {
+        var si = new Win32.SCROLLINFO
+        {
+            cbSize = (uint)Marshal.SizeOf<Win32.SCROLLINFO>(),
+            fMask = Win32.SIF_RANGE | Win32.SIF_PAGE | Win32.SIF_POS,
+            nMin = 0,
+            nMax = Math.Max(0, canvas - 1),
+            nPage = (uint)Math.Max(1, view),
+            nPos = position
+        };
+        Win32.SetScrollInfo(_hWnd, bar, ref si, true);
+    }
+
+    /// <summary>Défile jusqu'à (<paramref name="x"/>, <paramref name="y"/>), bornés ; rend vrai
+    /// quand la vue a bougé.</summary>
+    private bool ScrollTo(int x, int y)
+    {
+        var (viewW, viewH) = ViewSize();
+        x = _scrollsX ? WindowSizing.ClampScroll(x, _canvasW, viewW) : 0;
+        y = _scrollsY ? WindowSizing.ClampScroll(y, _canvasH, viewH) : 0;
+        if (x == _scrollX && y == _scrollY) return false;
+        _scrollX = x;
+        _scrollY = y;
+        UpdateScrollBars();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        return true;
+    }
+
+    /// <summary>WM_VSCROLL et WM_HSCROLL : flèches de la barre, page, glissé du curseur.</summary>
+    private void OnScrollBar(int bar, IntPtr wParam)
+    {
+        bool vertical = bar == Win32.SB_VERT;
+        var (viewW, viewH) = ViewSize();
+        int view = vertical ? viewH : viewW;
+        int position = vertical ? _scrollY : _scrollX;
+        int line = S(40);
+        int page = Math.Max(line, view - line);
+        int target = position;
+        switch (wParam.ToInt32() & 0xFFFF)
+        {
+            case Win32.SB_LINEUP: target -= line; break;
+            case Win32.SB_LINEDOWN: target += line; break;
+            case Win32.SB_PAGEUP: target -= page; break;
+            case Win32.SB_PAGEDOWN: target += page; break;
+            case Win32.SB_TOP: target = 0; break;
+            case Win32.SB_BOTTOM: target = int.MaxValue / 2; break;
+            case Win32.SB_THUMBTRACK:
+            {
+                // Position sur 32 bits dans SCROLLINFO, jamais le mot haut de wParam (16 bits).
+                var si = new Win32.SCROLLINFO
+                {
+                    cbSize = (uint)Marshal.SizeOf<Win32.SCROLLINFO>(),
+                    fMask = Win32.SIF_TRACKPOS
+                };
+                if (Win32.GetScrollInfo(_hWnd, bar, ref si))
+                    target = si.nTrackPos;
+                break;
+            }
+        }
+        if (vertical) ScrollTo(_scrollX, target);
+        else ScrollTo(target, _scrollY);
+    }
+
+    /// <summary>Molette : trois lignes par cran ; Maj + molette, ou la molette horizontale,
+    /// défilent en largeur. Rend faux quand rien ne défile sur cet axe.</summary>
+    private bool OnWheel(IntPtr wParam, bool horizontal)
+    {
+        int delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
+        bool shift = (wParam.ToInt64() & 0x0004) != 0; // MK_SHIFT
+        if (!horizontal && shift) { horizontal = true; delta = -delta; }
+        int line = S(40);
+        if (horizontal)
+        {
+            if (!_scrollsX) return false;
+            // WM_MOUSEHWHEEL : positif vers la droite, à l'inverse de la molette verticale.
+            ScrollTo(_scrollX + _hWheel.ConsumeWheel(delta) * line * 3, _scrollY);
+            return true;
+        }
+        if (!_scrollsY) return false;
+        ScrollTo(_scrollX, _scrollY - _wheel.ConsumeWheel(delta) * line * 3);
+        return true;
+    }
+
+    /// <summary>Point client (souris) vers la surface dessinée.</summary>
+    private (int X, int Y) ClientToCanvas(IntPtr lParam)
+    {
+        int x = unchecked((short)((long)lParam & 0xFFFF));
+        int y = unchecked((short)(((long)lParam >> 16) & 0xFFFF));
+        return (x + _scrollX, y + _scrollY);
+    }
+
+    /// <summary>
+    /// Ce qui vient de prendre le focus au clavier, ou le caret qui vient de bouger, doit se
+    /// voir (WCAG 2.4.7) : Tab vers un bouton sous le pli, frappe en bas de la surface. Seulement
+    /// sur un changement, sinon chaque repeint ramènerait la vue que la molette vient de quitter.
+    /// </summary>
+    private void KeepFocusVisible(int viewW, int viewH)
+    {
+        if (!_scrollsX && !_scrollsY) return;
+        Win32.RECT? target = null;
+        if (_focusedActionIndex >= 0 && _focusedActionIndex < _clickActions.Count)
+        {
+            if (_focusedActionIndex != _lastShownFocus)
+                target = _clickActions[_focusedActionIndex].Rect;
+        }
+        else if (_systemCaretRect is { } caret && !SameRect(_lastShownCaret, caret))
+        {
+            target = caret;
+        }
+        _lastShownFocus = _focusedActionIndex;
+        _lastShownCaret = _systemCaretRect;
+        if (target is not { } r) return;
+
+        int margin = S(16);
+        int x = _scrollsX ? WindowSizing.ScrollToShow(_scrollX, r.left, r.right, viewW, _canvasW, margin) : 0;
+        int y = _scrollsY ? WindowSizing.ScrollToShow(_scrollY, r.top, r.bottom, viewH, _canvasH, margin) : 0;
+        if (x != _scrollX || y != _scrollY)
+        {
+            _scrollX = x;
+            _scrollY = y;
+            UpdateScrollBars();
+        }
+    }
+
+    private static bool SameRect(Win32.RECT? a, Win32.RECT b)
+        => a is { } r && r.left == b.left && r.top == b.top && r.right == b.right && r.bottom == b.bottom;
 
     private void ConstrainSizingRect(int edge, ref Win32.RECT rect)
     {
@@ -584,6 +785,23 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         double ratio = _baseClientW / (double)_baseClientH;
         int clientW = Math.Max(1, rect.right - rect.left - _nonClientW);
         int clientH = Math.Max(1, rect.bottom - rect.top - _nonClientH);
+        if (!LocksAspect(clientW, clientH, _baseClientW, _baseClientH))
+        {
+            // Audit du 30/10, M2 : sous la référence, le contenu défile à l'échelle de l'écran ;
+            // tenir le rapport rétrécirait aussi la dimension qui tient. Seul le minimum reste.
+            var (minW, minH) = MinimumClientSize(_hWnd, ratio);
+            if (clientW < minW)
+            {
+                if (edge is WMSZ_LEFT or WMSZ_TOPLEFT or WMSZ_BOTTOMLEFT) rect.left = rect.right - minW - _nonClientW;
+                else rect.right = rect.left + minW + _nonClientW;
+            }
+            if (clientH < minH)
+            {
+                if (edge is WMSZ_TOP or WMSZ_TOPLEFT or WMSZ_TOPRIGHT) rect.top = rect.bottom - minH - _nonClientH;
+                else rect.bottom = rect.top + minH + _nonClientH;
+            }
+            return;
+        }
         bool widthDriven = edge switch
         {
             WMSZ_LEFT or WMSZ_RIGHT => true,
@@ -625,15 +843,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// </summary>
     private (int Width, int Height) MinimumClientSize(IntPtr hwnd, double ratio)
     {
-        int workW = 0;
-        int workH = 0;
-        var monitor = Win32.MonitorFromWindow(hwnd, Win32.MONITOR_DEFAULTTONEAREST);
-        var monInfo = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        if (monitor != IntPtr.Zero && Win32.GetMonitorInfo(monitor, ref monInfo))
-        {
-            workW = monInfo.rcWork.right - monInfo.rcWork.left;
-            workH = monInfo.rcWork.bottom - monInfo.rcWork.top;
-        }
+        // Même zone que la création (simulée au banc de capture) : sinon le minimum d'un vrai
+        // écran plus grand annulerait la taille de l'écran simulé.
+        var work = NativeWindow.WorkArea(hwnd);
+        int workW = work.right - work.left;
+        int workH = work.bottom - work.top;
         return WindowSizing.MinimumClientSize(D(BASE_MIN_W), D(BASE_MIN_H), ratio,
             _nonClientW, _nonClientH, workW, workH);
     }
@@ -693,7 +907,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             }
 
             oldBitmap = Win32.SelectObject(memDc, _resizeSnapshotBitmap);
-            DrawWindowContents(memDc, rc);
+            RenderView(memDc, width, height, keepFocusVisible: false);
             _resizeSnapshotW = width;
             _resizeSnapshotH = height;
         }
@@ -830,7 +1044,22 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     ConstrainSizingRect(wParam.ToInt32(), ref sizingRect);
                     Marshal.StructureToPtr(sizingRect, lParam, false);
                     return (IntPtr)1;
+                case Win32.WM_VSCROLL:
+                    OnScrollBar(Win32.SB_VERT, wParam);
+                    return IntPtr.Zero;
+                case Win32.WM_HSCROLL:
+                    OnScrollBar(Win32.SB_HORZ, wParam);
+                    return IntPtr.Zero;
+                case Win32.WM_MOUSEWHEEL:
+                    if (OnWheel(wParam, horizontal: false)) return IntPtr.Zero;
+                    break;
+                case Win32.WM_MOUSEHWHEEL:
+                    if (OnWheel(wParam, horizontal: true)) return IntPtr.Zero;
+                    break;
                 case Win32.WM_SIZE:
+                    // Une barre de défilement qui apparaît ou disparaît (ApplyCanvas) : déjà comptée.
+                    if (_applyingCanvas)
+                        return IntPtr.Zero;
                     if (!_liveResizing)
                     {
                         UpdateRenderScaleFromCurrentClient();
@@ -915,7 +1144,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 case Win32.WM_SETCURSOR:
                     // #10 : main sur une cible cliquable, comme un lien ou un bouton web.
                     if ((lParam.ToInt64() & 0xFFFF) == HTCLIENT && CursorSource.TryGet(out var cursor)
-                        && Win32.ScreenToClient(_hWnd, ref cursor) && HitClickAction(cursor.x, cursor.y) >= 0)
+                        && Win32.ScreenToClient(_hWnd, ref cursor)
+                        && HitClickAction(cursor.x + _scrollX, cursor.y + _scrollY) >= 0)
                     {
                         Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)IDC_HAND));
                         return (IntPtr)1;
@@ -985,9 +1215,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void OnPaint()
     {
         var hdc = Win32.BeginPaint(_hWnd, out var ps);
-        IntPtr memDc = IntPtr.Zero;
-        IntPtr memBitmap = IntPtr.Zero;
-        IntPtr oldBitmap = IntPtr.Zero;
         try
         {
             Win32.GetClientRect(_hWnd, out var rc);
@@ -996,29 +1223,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             if (_liveResizing && DrawLiveResizeSnapshot(hdc, rc))
                 return;
 
-            memDc = Win32.CreateCompatibleDC(hdc);
-            if (memDc != IntPtr.Zero)
-                memBitmap = Win32.CreateCompatibleBitmap(hdc, width, height);
-
-            if (memDc != IntPtr.Zero && memBitmap != IntPtr.Zero)
-            {
-                oldBitmap = Win32.SelectObject(memDc, memBitmap);
-                DrawWindowContents(memDc, rc);
-                Win32.BitBlt(hdc, 0, 0, width, height, memDc, 0, 0, Win32.SRCCOPY);
-            }
-            else
-            {
-                DrawWindowContents(hdc, rc);
-            }
+            RenderView(hdc, width, height, keepFocusVisible: true);
         }
         finally
         {
-            if (oldBitmap != IntPtr.Zero && memDc != IntPtr.Zero)
-                Win32.SelectObject(memDc, oldBitmap);
-            if (memBitmap != IntPtr.Zero)
-                Win32.DeleteObject(memBitmap);
-            if (memDc != IntPtr.Zero)
-                Win32.DeleteDC(memDc);
             Win32.EndPaint(_hWnd, ref ps);
         }
         // Après EndPaint : il rappelle ShowCaret pour le caret que BeginPaint a caché, et
@@ -1027,6 +1235,68 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _automation?.OnPainted();
         RequestAutomationEvents();
     }
+
+    /// <summary>
+    /// Audit du 30/10, M2 — la page entière se dessine sur une surface de la taille de la
+    /// référence (<see cref="WindowSizing.FitCanvas"/>), puis la partie visible est copiée dans
+    /// <paramref name="target"/>. La mise en page, les zones cliquables et l'UI Automation
+    /// restent en coordonnées de la surface ; seule la copie tient compte du défilement.
+    /// </summary>
+    private void RenderView(IntPtr target, int width, int height, bool keepFocusVisible)
+    {
+        int canvasW = Math.Max(width, _canvasW);
+        int canvasH = Math.Max(height, _canvasH);
+        _scrollX = _scrollsX ? WindowSizing.ClampScroll(_scrollX, canvasW, width) : 0;
+        _scrollY = _scrollsY ? WindowSizing.ClampScroll(_scrollY, canvasH, height) : 0;
+        var canvas = new Win32.RECT { left = 0, top = 0, right = canvasW, bottom = canvasH };
+
+        IntPtr memDc = Win32.CreateCompatibleDC(target);
+        IntPtr memBitmap = memDc != IntPtr.Zero ? Win32.CreateCompatibleBitmap(target, canvasW, canvasH) : IntPtr.Zero;
+        IntPtr oldBitmap = IntPtr.Zero;
+        try
+        {
+            if (memDc == IntPtr.Zero || memBitmap == IntPtr.Zero)
+            {
+                // Mémoire refusée : directement à l'écran, origine décalée du défilement.
+                SetVisibleCanvas(width, height);
+                Win32.SetViewportOrgEx(target, -_scrollX, -_scrollY, IntPtr.Zero);
+                DrawWindowContents(target, canvas);
+                Win32.SetViewportOrgEx(target, 0, 0, IntPtr.Zero);
+                return;
+            }
+
+            oldBitmap = Win32.SelectObject(memDc, memBitmap);
+            SetVisibleCanvas(width, height);
+            DrawWindowContents(memDc, canvas);
+            if (keepFocusVisible)
+            {
+                int beforeX = _scrollX, beforeY = _scrollY;
+                KeepFocusVisible(width, height);
+                if (beforeX != _scrollX || beforeY != _scrollY)
+                {
+                    // Les infobulles se bornent à la vue : la redessiner à sa nouvelle place.
+                    SetVisibleCanvas(width, height);
+                    DrawWindowContents(memDc, canvas);
+                }
+            }
+            Win32.BitBlt(target, 0, 0, width, height, memDc, _scrollX, _scrollY, Win32.SRCCOPY);
+        }
+        finally
+        {
+            if (oldBitmap != IntPtr.Zero)
+                Win32.SelectObject(memDc, oldBitmap);
+            if (memBitmap != IntPtr.Zero)
+                Win32.DeleteObject(memBitmap);
+            if (memDc != IntPtr.Zero)
+                Win32.DeleteDC(memDc);
+        }
+    }
+
+    /// <summary>Partie visible de la surface : les infobulles s'y bornent.</summary>
+    private Win32.RECT _visibleCanvas;
+
+    private void SetVisibleCanvas(int width, int height)
+        => _visibleCanvas = new Win32.RECT { left = _scrollX, top = _scrollY, right = _scrollX + width, bottom = _scrollY + height };
 
     private void DrawWindowContents(IntPtr hdc, Win32.RECT rc)
     {
@@ -1069,10 +1339,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             DrawFocusRing(hdc);
         // K4 (accessibilité 1.3.0) : l'infobulle de survol garde la priorité ; à défaut, celle
         // de la cible focalisée au clavier.
+        // Bornées à la partie visible, pas à toute la surface (audit du 30/10, M2).
+        var tooltipBounds = _visibleCanvas.right > _visibleCanvas.left ? _visibleCanvas : rc;
         if (string.IsNullOrEmpty(_hoverTooltip))
-            DrawFocusedTooltip(hdc, rc);
+            DrawFocusedTooltip(hdc, tooltipBounds);
         else
-            DrawHoverTooltip(hdc, rc);
+            DrawHoverTooltip(hdc, tooltipBounds);
     }
 
     // Hors du repeint : un client UIA du même processus pourrait sinon y rentrer.
@@ -1093,6 +1365,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     IReadOnlyList<LessonControlView> ILessonsAutomationHost.Controls => _controlViews;
 
     int ILessonsAutomationHost.FocusedControl => _focusedActionIndex;
+
+    Win32.POINT ILessonsAutomationHost.ScrollOffset => new() { x = _scrollX, y = _scrollY };
 
     void ILessonsAutomationHost.FocusSurface() => FocusFromAutomation(-1);
 
@@ -1136,7 +1410,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.CreateCaret(_hWnd, IntPtr.Zero, size.Item1, size.Item2);
             _systemCaretSize = size;
         }
-        Win32.SetCaretPos(caret.left, caret.top);
+        // Le caret est en coordonnées de la surface ; la loupe suit la position cliente.
+        Win32.SetCaretPos(caret.left - _scrollX, caret.top - _scrollY);
     }
 
     private void DestroySystemCaret()
@@ -1666,8 +1941,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnClick(IntPtr lParam)
     {
-        int x = unchecked((short)((long)lParam & 0xFFFF));
-        int y = unchecked((short)(((long)lParam >> 16) & 0xFFFF));
+        var (x, y) = ClientToCanvas(lParam);
         ReturnFocusToSurface();
         HomeNoteClick(x, y); // accueil : le point sert à la carte (une zone, plusieurs touches)
         foreach (var (rect, action) in _clickActions)
@@ -1696,8 +1970,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnDoubleClick(IntPtr lParam)
     {
-        int x = unchecked((short)((long)lParam & 0xFFFF));
-        int y = unchecked((short)(((long)lParam >> 16) & 0xFFFF));
+        var (x, y) = ClientToCanvas(lParam);
         foreach (var (rect, action) in _doubleClickActions)
         {
             if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
@@ -1725,8 +1998,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnMouseMove(IntPtr lParam)
     {
-        int x = unchecked((short)((long)lParam & 0xFFFF));
-        int y = unchecked((short)(((long)lParam >> 16) & 0xFFFF));
+        var (x, y) = ClientToCanvas(lParam);
 
         if (!_trackingMouseLeave)
         {
