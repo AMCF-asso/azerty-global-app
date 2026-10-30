@@ -13,6 +13,10 @@ internal static partial class L
         "An improved AZERTY, free and open source.");
     public static string About_AmcfPrefix => T("Édité par l’", "Published by the ");
     public static string About_AmcfSuffix => " (AMCF)";
+    // Audit 1.3.0, M9 : polices embarquées, textes OFL dans le paquet (Licences/OFL-*.txt).
+    public static string About_FontCredit => T(
+        "Polices : Source (Adobe), Literata, Noto, licence SIL OFL 1.1.",
+        "Fonts: Source (Adobe), Literata, Noto, SIL OFL 1.1 license.");
 
     // S1-2 (décision S1 du 2026-09-02, textes validés fr + en) : le canal suit la version, sur
     // les trois canaux, séparé par le point médian.
