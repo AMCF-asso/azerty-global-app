@@ -282,6 +282,7 @@ public class CaptureBench
                 BancCapture.Call(window, "SetValidationMessage", SettingsMessages[tab](), false);
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}-message", windowDpi);
+                RecordMessagePosition(target, window, $"parametres-{SettingsTabs[tab]}-message");
 
                 // Un refus, « Compatibilité jeu » sur la connexion à distance choisie (mstsc),
                 // puis sur un jeu à anti-triche : en rouge, avec la raison et ce qui se passe à
@@ -315,6 +316,32 @@ public class CaptureBench
     /// rend, comme le bouton Suivant, sans armer <c>_step3Reached</c> : la fermeture ne peut
     /// donc rien enregistrer, ni l'affichage au démarrage ni le lancement automatique.
     /// </summary>
+    /// <summary>Position du message de validation dans la zone cliente, en pixels : le haut et le
+    /// bas du contrôle tel qu'il est placé, contre la hauteur de la zone visible. Le
+    /// message se voit sans défilement quand son bas ne dépasse pas la zone. Écrit
+    /// <c>position-message.tsv</c> à côté des images.</summary>
+    private static void RecordMessagePosition(BancCapture.Target target, SettingsWindow window, string slug)
+    {
+        int viewport = BancCapture.Field<int>(window, "_viewportHeight");
+        int content = BancCapture.Field<int>(window, "_contentHeight");
+        int scroll = BancCapture.Field<int>(window, "_scrollY");
+        // Position réelle du contrôle dans la zone cliente, après défilement.
+        IntPtr control = BancCapture.Field<IntPtr>(window, "_hWndValidation");
+        Win32.GetWindowRect(control, out var screen);
+        var topLeft = new Win32.POINT { x = screen.left, y = screen.top };
+        var bottomRight = new Win32.POINT { x = screen.right, y = screen.bottom };
+        IntPtr hwnd = BancCapture.Handle(window);
+        Win32.ScreenToClient(hwnd, ref topLeft);
+        Win32.ScreenToClient(hwnd, ref bottomRight);
+        var rect = new Win32.RECT { top = topLeft.y + scroll, bottom = bottomRight.y + scroll };
+        string path = Path.Combine(target.OutDir, "position-message.tsv");
+        if (!File.Exists(path))
+            File.WriteAllText(path, "capture\tdpi\tmessage_haut\tmessage_bas\thauteur_visible\thauteur_contenu\tdefilement\tvisible\n");
+        File.AppendAllText(path, string.Join('\t', $"{slug}-{target.Language}-{BancCapture.Percent(target.Dpi)}", target.Dpi,
+            rect.top - scroll, rect.bottom - scroll, viewport, content, scroll,
+            rect.bottom - scroll <= viewport ? "oui" : "NON") + "\n");
+    }
+
     private static void CaptureOnboarding(BancCapture.Target target)
     {
         var window = new OnboardingWindow();

@@ -27,29 +27,27 @@ sealed class CharacterSearch : IDisposable
 
     // ── Mesures de la maquette « Recherche B, partition du choix » (px à 96 DPI) ──
     // Couleurs : PaperTheme (jetons de la refonte 1.3.0).
-    private const int BASE_WIN_W = 560;
+    private const int BASE_WIN_W = 400;
     private const int BASE_FIELD_H = 60;        // Champ : loupe, saisie
     private const int BASE_FIELD_PAD_X = 20;
     private const int BASE_LOUPE = 18;
     private const int BASE_LOUPE_GAP = 12;
     private const int BASE_EDIT_FONT = 19;
-    private const int BASE_ROW_H = 49;          // Ligne de résultat, filet de 1 px en plus
-    private const int BASE_ROW_GLYPH_LEFT = 10; // Colonne du caractère : 52 px
-    private const int BASE_ROW_GLYPH_W = 52;
-    private const int BASE_ROW_GAP = 12;
+    private const int BASE_ROW_H = 52;          // Ligne de résultat : le nom, puis les touches ; filet de 1 px en plus
+    private const int BASE_ROW_GLYPH_LEFT = 8;  // Colonne du caractère : 36 px
+    private const int BASE_ROW_GLYPH_W = 36;
+    private const int BASE_ROW_GAP = 10;
     private const int BASE_ROW_PAD_RIGHT = 16;
-    private const int BASE_PART_PAD_TOP = 18;   // Partition du choix
-    private const int BASE_PART_PAD_BOTTOM = 20;
-    private const int BASE_PART_PAD_LEFT = 4;
-    private const int BASE_PART_GLYPH_W = 116;
-    private const int BASE_PART_GAP = 8;
-    private const int BASE_PART_PAD_RIGHT = 20;
-    private const int BASE_PART_MIN_H = 100;    // Le grand caractère tient toujours
+    private const int BASE_ROW_NAME_TOP = 6;    // Ligne du nom : 20 px, puis le geste centré 11 px plus bas
+    private const int BASE_ROW_NAME_H = 20;
+    private const int BASE_ROW_GESTURE_MID = 38;
+    private const int BASE_BAND_PAD_Y = 8;      // Bande sous la liste : la phrase du geste en entier,
+    private const int BASE_BAND_LINE_H = 20;    // une ligne de 20 px ou davantage, filet en plus
     private const int BASE_FOOTER_H = 38;       // Pied, filet compris
     private const int BASE_EMPTY_H = 38;        // Bande d'aide sous le champ vide
     private const int BASE_NO_RESULT_H = 52;
     private const int MAX_RESULTS = 20;
-    private const int VISIBLE_RESULTS = 5;
+    private const int MAX_VISIBLE_ROWS = 5;
 
     private const uint CF_UNICODETEXT = 13;
     private const uint GMEM_MOVEABLE = 0x0002;
@@ -99,6 +97,12 @@ sealed class CharacterSearch : IDisposable
     private int _totalMatches; // correspondances avant le plafond MAX_RESULTS (audit du 25/09, V-08)
     private int _selectedIndex;
     private int _scrollOffset;
+    // Lignes montrées en même temps : cinq au plus, moins quand la zone de travail ne laisse
+    // pas la place (150 % sur un petit écran). Recalculé par ResizeToFitResults.
+    private int _visibleRows = MAX_VISIBLE_ROWS;
+    // Lignes de la bande sous la liste : celles de la plus longue phrase des résultats, pour que
+    // la fenêtre ne bouge pas quand les flèches changent le choix.
+    private int _bandLines = 1;
     private float _dpiScale = 1.0f;
     private bool _showCopiedFeedback;
     private string _copiedChar = "";
@@ -675,7 +679,6 @@ sealed class CharacterSearch : IDisposable
     private FontSpec EditFont => FontSpec.Of(AppFonts.Text, BASE_EDIT_FONT, TypeRamp.Regular, _dpiScale);
     private FontSpec RowGlyphFont => FontSpec.Of(AppFonts.Title, 28, TypeRamp.Semibold, _dpiScale);
     private FontSpec RowNameFont(bool chosen) => FontSpec.Of(AppFonts.Text, 15, chosen ? TypeRamp.Semibold : TypeRamp.Regular, _dpiScale);
-    private FontSpec PartTitleFont => FontSpec.Of(AppFonts.Text, 17, TypeRamp.Semibold, _dpiScale);
     private FontSpec SentenceFont(bool strong) => FontSpec.Of(AppFonts.Text, 15, strong ? TypeRamp.Semibold : TypeRamp.Regular, _dpiScale);
     private FontSpec FooterFont(bool strong) => FontSpec.Of(AppFonts.Text, 13, strong ? TypeRamp.Semibold : TypeRamp.Regular, _dpiScale);
 
@@ -731,43 +734,77 @@ sealed class CharacterSearch : IDisposable
 
     /// <summary>
     /// Redimensionne la fenêtre selon l'état : champ seul et son aide (vide), « Aucun
-    /// résultat », ou champ, cinq lignes au plus, partition du choix et pied. La zone cliente
-    /// fait 560 px de large (96 DPI), le cadre s'y ajoute.
+    /// résultat », ou champ, lignes, bande de la phrase et pied. La zone cliente fait 400 px
+    /// de large (96 DPI), le cadre s'y ajoute. Quand la zone de travail est trop basse, la
+    /// liste montre moins de lignes (<see cref="LayoutResults"/>) : le pied ne recouvre rien.
     /// </summary>
     private void ResizeToFitResults()
     {
-        int clientH = Scale(BASE_FIELD_H) + 1;
-        if (_filteredResults.Count == 0)
-        {
-            clientH += Scale(GetEditTextLength() > 0 ? BASE_NO_RESULT_H : BASE_EMPTY_H);
-        }
-        else
-        {
-            clientH += ListHeight(Math.Min(_filteredResults.Count, VISIBLE_RESULTS));
-            var hdc = Win32.GetDC(_hWnd);
-            clientH += PartitionHeight(hdc);
-            Win32.ReleaseDC(_hWnd, hdc);
-            clientH += Scale(BASE_FOOTER_H);
-        }
-
         // Le cadre non client en plus de la zone cliente (aucun depuis A17 : il est peint).
         Win32.GetWindowRect(_hWnd, out var wr);
         Win32.GetClientRect(_hWnd, out var cr);
         int frameW = (wr.right - wr.left) - (cr.right - cr.left);
         int frameH = (wr.bottom - wr.top) - (cr.bottom - cr.top);
+
+        int clientH;
+        if (_filteredResults.Count == 0)
+        {
+            clientH = Scale(BASE_FIELD_H) + 1 + Scale(GetEditTextLength() > 0 ? BASE_NO_RESULT_H : BASE_EMPTY_H);
+        }
+        else
+        {
+            // Jamais plus haute que l'écran retenu, à 10 px du bord.
+            int workH = _workArea.bottom - _workArea.top;
+            var hdc = Win32.GetDC(_hWnd);
+            _bandLines = BandLinesNeeded(hdc);
+            Win32.ReleaseDC(_hWnd, hdc);
+            var layout = LayoutResults(_filteredResults.Count, _dpiScale, workH > 0 ? workH - 20 - frameH : 0, _bandLines);
+            _visibleRows = layout.Rows;
+            // Le choix et le défilement restent valables si le nombre de lignes a changé.
+            _scrollOffset = Math.Clamp(_scrollOffset, 0, Math.Max(0, _filteredResults.Count - _visibleRows));
+            EnsureVisible(_selectedIndex);
+            clientH = layout.ClientH;
+        }
+
         int w = Scale(BASE_WIN_W) + frameW;
         int h = clientH + frameH;
-        // Jamais plus haute que l'écran retenu : à 150 % sur un petit écran, le pied reste visible.
-        int workH = _workArea.bottom - _workArea.top;
-        if (workH > 0)
-            h = Math.Min(h, workH - 20);
-
         var (x, y) = GetBottomRightPosition(w, h);
         Win32.MoveWindow(_hWnd, x, y, w, h, true);
     }
 
-    /// <summary>Hauteur de <paramref name="rows"/> lignes et des filets qui les séparent.</summary>
-    private int ListHeight(int rows) => rows <= 0 ? 0 : rows * Scale(BASE_ROW_H) + (rows - 1);
+    /// <summary>Hauteur de la bande de <paramref name="lines"/> lignes, filet compris.</summary>
+    internal static int BandHeight(int lines, float scale)
+        => 1 + 2 * (int)(BASE_BAND_PAD_Y * scale) + Math.Max(1, lines) * (int)(BASE_BAND_LINE_H * scale);
+
+    /// <summary>Découpage vertical de la zone cliente quand il y a des résultats.</summary>
+    internal readonly record struct ResultsLayout(int Rows, int ListTop, int ListBottom, int BandTop, int FooterTop, int ClientH);
+
+    /// <summary>
+    /// Place le champ, la liste, la bande de la phrase et le pied du haut vers le bas, sans que
+    /// rien ne se recouvre. La liste montre au plus cinq lignes, moins si <paramref name="maxClientH"/>
+    /// (zone cliente la plus haute permise, 0 = sans plafond) ne laisse pas la place ; une
+    /// ligne au moins reste visible. Fonction pure : testée à tous les zooms.
+    /// </summary>
+    internal static ResultsLayout LayoutResults(int resultCount, float scale, int maxClientH, int bandLines = 1)
+    {
+        int S(int value) => (int)(value * scale);
+        int listTop = S(BASE_FIELD_H) + 1;
+        int rowStep = S(BASE_ROW_H) + 1;
+        int bandH = BandHeight(bandLines, scale);
+        int footerH = S(BASE_FOOTER_H);
+
+        int rows = Math.Min(resultCount, MAX_VISIBLE_ROWS);
+        if (maxClientH > 0)
+        {
+            int room = maxClientH - listTop - bandH - footerH; // n lignes tiennent dans n * rowStep - 1
+            rows = Math.Min(rows, (room + 1) / rowStep);
+        }
+        rows = Math.Max(rows, Math.Min(1, resultCount));
+
+        int listBottom = listTop + (rows > 0 ? rows * rowStep - 1 : 0);
+        int footerTop = listBottom + bandH;
+        return new ResultsLayout(rows, listTop, listBottom, listBottom, footerTop, footerTop + footerH);
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // Affichage / Masquage
@@ -910,7 +947,7 @@ sealed class CharacterSearch : IDisposable
                     int delta = (short)((wParam.ToInt64() >> 16) & 0xFFFF);
                     if (delta > 0 && _scrollOffset > 0)
                         _scrollOffset--;
-                    else if (delta < 0 && _scrollOffset < _filteredResults.Count - VISIBLE_RESULTS)
+                    else if (delta < 0 && _scrollOffset < _filteredResults.Count - _visibleRows)
                         _scrollOffset++;
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
@@ -1043,8 +1080,8 @@ sealed class CharacterSearch : IDisposable
     {
         if (index < _scrollOffset)
             _scrollOffset = index;
-        else if (index >= _scrollOffset + VISIBLE_RESULTS)
-            _scrollOffset = index - VISIBLE_RESULTS + 1;
+        else if (index >= _scrollOffset + _visibleRows)
+            _scrollOffset = index - _visibleRows + 1;
     }
 
     private int GetEditTextLength()
@@ -1073,7 +1110,7 @@ sealed class CharacterSearch : IDisposable
         int searchH = Scale(BASE_FIELD_H);
         if (mouseY < searchH) return; // Clic dans la zone de recherche
 
-        int rowCount = Math.Min(VISIBLE_RESULTS, _filteredResults.Count - _scrollOffset);
+        int rowCount = Math.Min(_visibleRows, _filteredResults.Count - _scrollOffset);
         int i = RowIndexAt(mouseY, searchH, _scrollOffset, rowCount, GetRowHeight);
         if (i < 0) return;
 
@@ -1246,7 +1283,7 @@ sealed class CharacterSearch : IDisposable
         }
 
         // Liste : surface blanche, filet entre deux lignes.
-        int rows = Math.Min(VISIBLE_RESULTS, _filteredResults.Count - _scrollOffset);
+        int rows = Math.Min(_visibleRows, _filteredResults.Count - _scrollOffset);
         int listBottom = y + ListHeight(rows);
         PaperDraw.Fill(hdc, 0, y, cw, listBottom, PaperTheme.Surface);
         for (int k = 0; k < rows; k++)
@@ -1260,14 +1297,20 @@ sealed class CharacterSearch : IDisposable
                 y += 1;
             }
         }
-        if (_filteredResults.Count > VISIBLE_RESULTS)
+        if (_filteredResults.Count > _visibleRows)
             DrawScrollBar(hdc, fieldH + 1, listBottom, cw);
 
-        int footerTop = ch - Scale(BASE_FOOTER_H);
-        if (_selectedIndex >= 0 && _selectedIndex < _filteredResults.Count)
-            DrawPartition(hdc, _filteredResults[_selectedIndex], listBottom, cw);
-        DrawFooter(hdc, footerTop, ch, cw);
+        // Bande puis pied, posés depuis le bas de la liste : jamais depuis le bas de la fenêtre,
+        // sinon un plafond de hauteur les ferait recouvrir les lignes.
+        int bandH = BandHeight(_bandLines, _dpiScale);
+        DrawBand(hdc, _selectedIndex >= 0 && _selectedIndex < _filteredResults.Count ? _filteredResults[_selectedIndex] : null,
+            listBottom, cw);
+        int footerTop = listBottom + bandH;
+        DrawFooter(hdc, footerTop, footerTop + Scale(BASE_FOOTER_H), cw);
     }
+
+    /// <summary>Hauteur de <paramref name="rows"/> lignes et des filets qui les séparent.</summary>
+    private int ListHeight(int rows) => rows <= 0 ? 0 : rows * Scale(BASE_ROW_H) + (rows - 1);
 
     /// <summary>La loupe du champ (18 px à 96 DPI) : un cercle et son manche.</summary>
     private void DrawLoupe(IntPtr hdc, int left, int top)
@@ -1287,10 +1330,10 @@ sealed class CharacterSearch : IDisposable
     }
 
     /// <summary>
-    /// Une ligne de résultat : le caractère (AG Titre 28), le nom, le geste abrégé à droite.
-    /// La ligne choisie est teintée, avec un filet bleu de 3 px à gauche, son caractère en
-    /// bleu et son nom en semi-gras. Un nom trop long finit par des points de suspension :
-    /// la partition, dessous, le donne en entier.
+    /// Une ligne de résultat sur deux lignes : le caractère (AG Titre 28) à gauche, le nom,
+    /// puis dessous le geste abrégé. La ligne choisie est teintée, avec un filet bleu de 3 px
+    /// à gauche, son caractère en bleu et son nom en semi-gras. Un nom trop long finit par
+    /// des points de suspension.
     /// </summary>
     private void DrawRow(IntPtr hdc, CharEntry entry, bool chosen, int top, int cw)
     {
@@ -1309,85 +1352,78 @@ sealed class CharacterSearch : IDisposable
             new Win32.RECT { left = glyphLeft, top = top, right = glyphRight, bottom = top + h },
             chosen ? PaperTheme.Action : PaperTheme.Ink, backdrop);
 
-        var steps = StepsOf(entry);
+        // Deux lignes à droite du caractère : le nom, puis les touches alignées à gauche.
+        int left = glyphRight + Scale(BASE_ROW_GAP);
         int right = cw - Scale(BASE_ROW_PAD_RIGHT);
-        int gestureW = steps.Count > 0
-            ? TablatureRenderer.DrawShortGesture(hdc, steps, chosen, _dpiScale, right, top + h / 2)
-            : 0;
-
-        int nameLeft = glyphRight + Scale(BASE_ROW_GAP);
-        int nameRight = right - (gestureW > 0 ? gestureW + Scale(BASE_ROW_GAP) : 0);
+        int nameTop = top + Scale(BASE_ROW_NAME_TOP);
         var font = RowNameFont(chosen);
-        string name = Ellipsize(hdc, GetSentenceName(entry), font, nameRight - nameLeft);
+        string name = Ellipsize(hdc, GetSentenceName(entry), font, right - left);
         PaperText.DrawLine(hdc, name, font,
-            new Win32.RECT { left = nameLeft, top = top, right = nameRight, bottom = top + h }, PaperTheme.Ink);
+            new Win32.RECT { left = left, top = nameTop, right = right, bottom = nameTop + Scale(BASE_ROW_NAME_H) }, PaperTheme.Ink);
+
+        var steps = StepsOf(entry);
+        if (steps.Count > 0)
+        {
+            int midY = top + Scale(BASE_ROW_GESTURE_MID);
+            int gestureW = TablatureRenderer.DrawShortGesture(hdc, steps, chosen, _dpiScale, 0, midY, draw: false);
+            TablatureRenderer.DrawShortGesture(hdc, steps, chosen, _dpiScale, left + gestureW, midY);
+        }
     }
 
     /// <summary>
-    /// La partition du choix : le caractère en grand (AG Titre 84, bleu) à gauche ; à droite
-    /// son nom, son geste en notation « Mots » et la phrase qui le lit, toujours visible :
-    /// c'est l'équivalent texte de la notation.
+    /// La bande sous la liste, une ligne : la phrase qui lit le geste du résultat choisi
+    /// (« Frappez é. »), toujours visible, car c'est l'équivalent texte des touches de la
+    /// ligne. Sans geste connu, elle donne le nom en entier. Jamais coupée : une phrase longue
+    /// (touche morte) passe à la ligne, et la bande a la hauteur de la plus longue des phrases.
     /// </summary>
-    private void DrawPartition(IntPtr hdc, CharEntry entry, int top, int cw)
+    private void DrawBand(IntPtr hdc, CharEntry? entry, int top, int cw)
     {
         PaperDraw.Fill(hdc, 0, top, cw, top + 1, PaperTheme.Border);
-        int contentTop = top + 1 + Scale(BASE_PART_PAD_TOP);
-        var (colLeft, colRight) = PartitionColumn(cw);
-        int contentH = PartitionContent(hdc, entry, StepsOf(entry), colLeft, colRight, contentTop, draw: true);
+        if (entry == null)
+            return;
 
-        int glyphLeft = Scale(BASE_PART_PAD_LEFT);
-        DrawCharacter(hdc, entry.Character, 84,
-            new Win32.RECT
-            {
-                left = glyphLeft, top = contentTop,
-                right = glyphLeft + Scale(BASE_PART_GLYPH_W), bottom = contentTop + Math.Max(contentH, Scale(BASE_PART_MIN_H)),
-            },
-            PaperTheme.Action, PaperTheme.Paper);
+        var rect = BandTextRect(top + 1, cw);
+        PaperText.DrawParagraph(hdc, BandRuns(entry), SentenceFont(false), SentenceFont(true), rect,
+            PaperTheme.TextSecondary, PaperTheme.Ink, Scale(BASE_BAND_LINE_H));
     }
 
-    /// <summary>Bords de la colonne de droite de la partition.</summary>
-    private (int Left, int Right) PartitionColumn(int cw)
-        => (Scale(BASE_PART_PAD_LEFT + BASE_PART_GLYPH_W + BASE_PART_GAP), cw - Scale(BASE_PART_PAD_RIGHT));
-
-    /// <summary>Nom, portée et phrase d'un caractère ; rend la hauteur occupée, sans rien
-    /// dessiner quand <paramref name="draw"/> est faux.</summary>
-    private int PartitionContent(IntPtr hdc, CharEntry entry, IReadOnlyList<GestureStep> steps,
-        int left, int right, int top, bool draw)
+    /// <summary>Cadre du texte de la bande, sous son filet : marges du champ à gauche et à droite.</summary>
+    private Win32.RECT BandTextRect(int top, int cw) => new()
     {
-        int lineH = TablatureStyle.Px(22, _dpiScale);
-        int y = top;
-        var title = PartTitleFont;
-        y += PaperText.DrawParagraph(hdc, new[] { new TextRun(GetSentenceName(entry), true) }, title, title,
-            new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
-            PaperTheme.Ink, PaperTheme.Ink, lineH, draw);
-        if (steps.Count == 0)
-            return y - top;
-
-        y += Scale(12);
-        // Notation « Mots » partout (QCM du 11/10) : pavés tenus au-dessus de la case frappée.
-        var style = KeyNotationStyle.Search(_dpiScale);
-        var (_, notationH) = KeyNotation.Measure(hdc, steps, style);
-        if (draw)
-            KeyNotation.Draw(hdc, steps, style, left, y, PaperTheme.Step1, caseFill: PaperTheme.Paper,
-                secondInk: PaperTheme.Step2);
-        y += notationH + Scale(12);
-        y += PaperText.DrawParagraph(hdc, Gesture.Sentence(steps), SentenceFont(false), SentenceFont(true),
-            new Win32.RECT { left = left, top = y, right = right, bottom = y + lineH * 4 },
-            PaperTheme.TextSecondary, PaperTheme.Ink, lineH, draw);
-        return y - top;
-    }
+        left = Scale(BASE_FIELD_PAD_X), top = top + Scale(BASE_BAND_PAD_Y),
+        right = cw - Scale(BASE_FIELD_PAD_X), bottom = top + Scale(BASE_BAND_PAD_Y) + Scale(BASE_BAND_LINE_H) * 8,
+    };
 
     /// <summary>
-    /// Hauteur de la partition, filet compris : celle du plus haut des résultats, pour que
-    /// la fenêtre ne bouge pas quand les flèches changent le choix.
+    /// La phrase de la bande. Celle du socle (<see cref="Gesture.Sentence"/>) prévient, après
+    /// une touche morte, que « rien ne s'affiche encore » : utile aux Leçons, pas ici, où la
+    /// ligne montre déjà les touches. La mention est retirée, le point reste.
     /// </summary>
-    private int PartitionHeight(IntPtr hdc)
+    private List<TextRun> BandRuns(CharEntry entry)
     {
-        var (left, right) = PartitionColumn(Scale(BASE_WIN_W));
-        int content = Scale(BASE_PART_MIN_H);
+        var steps = StepsOf(entry);
+        if (steps.Count == 0)
+            return new List<TextRun> { new(GetSentenceName(entry), true) };
+        var runs = Gesture.Sentence(steps);
+        for (int i = 0; i < runs.Count; i++)
+            if (runs[i].Text == L.Gesture_NothingYet)
+                runs[i] = new TextRun(".");
+        return runs;
+    }
+
+    /// <summary>Nombre de lignes de la plus longue phrase de la bande sur les résultats.</summary>
+    private int BandLinesNeeded(IntPtr hdc)
+    {
+        int lineH = Scale(BASE_BAND_LINE_H);
+        var rect = BandTextRect(0, Scale(BASE_WIN_W));
+        int lines = 1;
         foreach (var entry in _filteredResults)
-            content = Math.Max(content, PartitionContent(hdc, entry, StepsOf(entry), left, right, 0, draw: false));
-        return 1 + Scale(BASE_PART_PAD_TOP) + content + Scale(BASE_PART_PAD_BOTTOM);
+        {
+            int h = PaperText.DrawParagraph(hdc, BandRuns(entry), SentenceFont(false), SentenceFont(true), rect,
+                PaperTheme.TextSecondary, PaperTheme.Ink, lineH, draw: false);
+            lines = Math.Max(lines, h / lineH);
+        }
+        return lines;
     }
 
     /// <summary>Le pied : à gauche le nombre de résultats, à droite ce que fait Entrée, ou
@@ -1409,16 +1445,16 @@ sealed class CharacterSearch : IDisposable
                 FooterFont(false), band, PaperTheme.TextSecondary, TextAlign.Right);
     }
 
-    /// <summary>Barre de défilement fine à droite de la liste, quand elle a plus de cinq lignes.</summary>
+    /// <summary>Barre de défilement fine à droite de la liste, quand elle a plus de lignes qu'elle n'en montre.</summary>
     private void DrawScrollBar(IntPtr hdc, int top, int bottom, int cw)
     {
         int w = Scale(4);
         int x = cw - w - Scale(2);
         int h = bottom - top;
         if (h <= 0) return;
-        float ratio = (float)VISIBLE_RESULTS / _filteredResults.Count;
+        float ratio = (float)_visibleRows / _filteredResults.Count;
         int thumbH = Math.Max(Scale(16), (int)(h * ratio));
-        int range = _filteredResults.Count - VISIBLE_RESULTS;
+        int range = _filteredResults.Count - _visibleRows;
         float scrollRatio = range > 0 ? (float)_scrollOffset / range : 0;
         int thumbY = top + (int)((h - thumbH) * scrollRatio);
         PaperDraw.Fill(hdc, x, top, x + w, bottom, PaperTheme.Border);

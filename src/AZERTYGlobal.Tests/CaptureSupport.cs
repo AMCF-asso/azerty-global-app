@@ -35,6 +35,9 @@ namespace AZERTYGlobal.Tests;
 /// <item><c>AZERTY_CAPTURE_ONLY</c> : sujets à rendre, séparés par des virgules ; un sujet est
 /// retenu quand son nom commence par l'un d'eux (« lecons » prend tous les états des Leçons).
 /// Obligatoire hors CI : sans lui, le banc échoue au lieu de tout rendre.</item>
+/// <item><c>AZERTY_CAPTURE_ZONE</c> : zone de travail simulée de la recherche de caractère,
+/// « LxH » en pixels (« 1024x720 » reproduit l'écran de 1024 × 768 de la CI, barre des tâches
+/// comprise). Sans elle, la zone de l'écran réel : un grand écran cache le plafond de hauteur.</item>
 /// <item><c>AZERTY_CAPTURE_ALL=1</c> : banc entier sur un poste, seulement sur demande explicite.</item>
 /// <item><c>AZERTY_FENETRES_VISIBLES=1</c> : montre les fenêtres, que <see cref="Isolation"/>
 /// rend sinon invisibles (<see cref="FenetresInvisibles"/>).</item>
