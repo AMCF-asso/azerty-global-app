@@ -609,6 +609,7 @@ sealed partial class SettingsWindow : IDisposable
 
         RefreshCompatList(selectProcess: null);
         _controls = DescribeControls();
+        ClipControlsBySiblings();
         PreparePaperButtons();
         SetCompatDescriptions();
         SetSettingDescriptions();
@@ -719,6 +720,28 @@ sealed partial class SettingsWindow : IDisposable
         bool PushButton = false);
 
     private ControlSlot[] _controls = Array.Empty<ControlSlot>();
+
+    private const int GWL_STYLE = -16;
+    private const long WS_CLIPSIBLINGS = 0x04000000;
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    /// <summary>Lot G : le pied de confirmation, collé au bas de la zone visible, recouvre le bas
+    /// du contenu défilé. Sans WS_CLIPSIBLINGS, une case recouverte se repeint par-dessus lui et
+    /// rogne son trait de séparation.</summary>
+    private void ClipControlsBySiblings()
+    {
+        foreach (var control in _controls)
+        {
+            if (control.Handle == IntPtr.Zero) continue;
+            long style = GetWindowLongPtr(control.Handle, GWL_STYLE).ToInt64();
+            SetWindowLongPtr(control.Handle, GWL_STYLE, (IntPtr)(style | WS_CLIPSIBLINGS));
+        }
+    }
 
     private ControlSlot[] DescribeControls()
     {
@@ -931,8 +954,13 @@ sealed partial class SettingsWindow : IDisposable
         var top = new Win32.POINT { x = rect.left, y = rect.top };
         var bottom = new Win32.POINT { x = rect.right, y = rect.bottom };
         if (!Win32.ScreenToClient(_hWnd, ref top) || !Win32.ScreenToClient(_hWnd, ref bottom)) return;
-        ScrollTo(SettingsScrollState.EnsureVisible(_scrollY, top.y, bottom.y, _viewportHeight, S(8)));
+        ScrollTo(SettingsScrollState.EnsureVisible(_scrollY, top.y, bottom.y, _viewportHeight - PinnedFooterHeight, S(8)));
     }
+
+    /// <summary>Hauteur que le pied collé retire à la zone où le contenu se voit : zéro sans
+    /// message en pied, ou quand l'onglet tient sans défiler (le pied est alors dans sa place).</summary>
+    private int PinnedFooterHeight =>
+        CurrentMessagePlace() == MessagePlace.Footer && _contentHeight > _viewportHeight ? FooterHeight : 0;
 
     private void ScrollTo(int newScroll)
     {
@@ -1020,6 +1048,18 @@ sealed partial class SettingsWindow : IDisposable
         foreach (var control in _controls)
             if (control.Bounds != null)
                 Place(control.Handle, control.Bounds(layout));
+        // Lot G : le pied de confirmation reste collé au bas de la zone visible, il ne défile
+        // pas. Ancré au bas du contenu, il tombait 200 px sous le pli à 200 % sur un écran 1080p.
+        if (layout.MessagePlace == MessagePlace.Footer && _hWndValidation != IntPtr.Zero)
+        {
+            var footer = layout.ValidationRect;
+            int pinnedTop = Math.Min(footer.top, _scrollY + _viewportHeight - FooterHeight);
+            Place(_hWndValidation, Rect(footer.left, pinnedTop, footer.right - footer.left, FooterHeight));
+            // Au premier plan (HWND_TOP) : sinon la case voisine, plus récente, rogne son trait.
+            // Un STATIC n'est pas un arrêt de tabulation : l'ordre du clavier ne change pas.
+            Win32.SetWindowPos(_hWndValidation, IntPtr.Zero, 0, 0, 0, 0,
+                Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
+        }
         ApplyTabVisibility();
         if (_hWndValidation != IntPtr.Zero)
             Win32.InvalidateRect(_hWndValidation, IntPtr.Zero, false);
