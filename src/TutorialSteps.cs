@@ -94,6 +94,27 @@ internal static class TutorialSteps
             .Select(step => All[step.Index].Target)
             .ToArray();
 
+    /// <summary>Le geste d'une ligne de l'écran final : celui du premier caractère de
+    /// <paramref name="target"/> qui ne se tape pas sur sa propre touche gravée (« É : Verr. Maj.,
+    /// puis é »). Null si tout le texte se tape touche pour touche.</summary>
+    public static string? RecapGesture(string target)
+    {
+        for (int i = 0; i < target.Length; i++)
+        {
+            char c = target[i];
+            if (char.IsWhiteSpace(c)) continue;
+            char? next = i + 1 < target.Length ? target[i + 1] : null;
+            string text = c.ToString();
+            var steps = Gesture.Of(text, next);
+            if (steps.Count == 0 || Gesture.StrikesItsOwnKey(text, steps)) continue;
+            var (shown, notes, _) = KeyNotation.ForLesson(steps, next, capsLockActive: false, deadKeyArmed: false);
+            // « la touche en haut à gauche » plutôt que sa gravure : « @ : @ » ne dit rien.
+            var spoken = shown.Select(s => s.SpokenLabel != s.KeyLabel ? s with { KeyLabel = s.SpokenLabel } : s).ToList();
+            return L.Learning_FinalGesture(text, KeyNotation.PlainRecipe(spoken, notes));
+        }
+        return null;
+    }
+
     /// <summary>Les usages connus parmi <paramref name="usages"/>, sans doublon, dans l'ordre
     /// de l'écran de choix ; tout le reste est ignoré (config modifiée à la main).</summary>
     public static string[] NormalizeUsages(IEnumerable<string>? usages)
