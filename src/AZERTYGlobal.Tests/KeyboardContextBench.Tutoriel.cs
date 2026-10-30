@@ -37,11 +37,15 @@ public partial class KeyboardContextBench
             BancCapture.Call(w, "StartTutorialRoute");
             for (int i = 0; i < 4; i++) BancCapture.Call(w, "AdvanceTutorialRoute");
         }),
-        // Écran final.
+        // Écran final, après les quatre exercices communs réussis : sa liste de ce qui a été tapé.
         new("tuto-final", w =>
         {
             BancCapture.Call(w, "StartTutorialRoute");
-            for (int i = 0; i < 4; i++) BancCapture.Call(w, "AdvanceTutorialRoute");
+            for (int i = 0; i < 4; i++)
+            {
+                ConfigManager.RecordLearningExerciseCompleted(i);
+                BancCapture.Call(w, "AdvanceTutorialRoute");
+            }
         }),
     };
 

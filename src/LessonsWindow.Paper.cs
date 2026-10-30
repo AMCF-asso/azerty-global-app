@@ -108,20 +108,24 @@ internal sealed partial class LessonsWindow
         var square = new Win32.RECT { left = row.left + S(8), top = top, right = row.left + S(8) + box, bottom = top + box };
         PaperDraw.RoundBox(hdc, square, enabled ? CLR_ACCENT : CLR_PANEL, enabled ? CLR_ACCENT : CLR_PENDING, S(3));
         if (enabled)
-        {
-            // Coche en deux traits.
-            var pen = Win32.CreatePen(0, Math.Max(2, S(2)), CLR_ON_ACCENT);
-            var old = Win32.SelectObject(hdc, pen);
-            Win32.MoveToEx(hdc, square.left + box * 4 / 18, square.top + box * 9 / 18, IntPtr.Zero);
-            Win32.LineTo(hdc, square.left + box * 8 / 18, square.top + box * 13 / 18);
-            Win32.LineTo(hdc, square.left + box * 14 / 18, square.top + box * 5 / 18);
-            Win32.SelectObject(hdc, old);
-            Win32.DeleteObject(pen);
-        }
+            DrawTick(hdc, square);
         var font = F(AppFonts.Text, 15);
         var labelRect = new Win32.RECT { left = square.right + S(12), top = row.top, right = row.right - S(8), bottom = row.bottom };
         PaperText.DrawLine(hdc, Ellipsize(hdc, label, font, labelRect.right - labelRect.left), font, labelRect, CLR_TEXT, TextAlign.Left);
         AddClick(row, toggle, label, LessonControlKind.CheckBox, toggled: enabled);
+    }
+
+    /// <summary>Coche en deux traits, dans une case déjà remplie.</summary>
+    private void DrawTick(IntPtr hdc, Win32.RECT square)
+    {
+        int box = square.right - square.left;
+        var pen = Win32.CreatePen(0, Math.Max(2, S(2)), CLR_ON_ACCENT);
+        var old = Win32.SelectObject(hdc, pen);
+        Win32.MoveToEx(hdc, square.left + box * 4 / 18, square.top + box * 9 / 18, IntPtr.Zero);
+        Win32.LineTo(hdc, square.left + box * 8 / 18, square.top + box * 13 / 18);
+        Win32.LineTo(hdc, square.left + box * 14 / 18, square.top + box * 5 / 18);
+        Win32.SelectObject(hdc, old);
+        Win32.DeleteObject(pen);
     }
 
     // ── En-tête ──────────────────────────────────────────────────────

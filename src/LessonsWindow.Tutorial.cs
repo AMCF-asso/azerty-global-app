@@ -207,6 +207,7 @@ internal sealed partial class LessonsWindow
             var sub = new Win32.RECT { left = x, top = titleRect.bottom + S(8), right = right, bottom = titleRect.bottom + S(32) };
             PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalSubtitle, textFont, right - x), textFont, sub,
                 CLR_MUTED, TextAlign.Left);
+            DrawTutorialRecap(hdc, body, x, right, sub.bottom);
             DrawTutorialPrimaryButton(hdc, body, right, L.Learning_BtnFinish, FinishTutorial);
         }
         if (_tutorialFocusPending)
@@ -215,6 +216,38 @@ internal sealed partial class LessonsWindow
             _tutorialFocusPending = false;
         }
         return true;
+    }
+
+    /// <summary>Écran final : les textes réussis du parcours, une ligne cochée chacun. Les
+    /// lignes qui ne tiennent pas au-dessus du bouton sont omises.</summary>
+    private void DrawTutorialRecap(IntPtr hdc, Win32.RECT body, int x, int right, int top)
+    {
+        if (_tutorialRoute == null) return;
+        var done = ConfigManager.LearningCompletedExercises;
+        var targets = TutorialSteps.RecapTargets(_tutorialRoute, done.Contains);
+        if (targets.Length == 0) return;
+
+        var headFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
+        var rowFont = F(AppFonts.Text, 18);
+        int limit = body.bottom - S(22) - S(36) - S(16);
+        int y = top + S(28);
+        var head = new Win32.RECT { left = x, top = y, right = right, bottom = y + S(24) };
+        PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalRecap, headFont, right - x), headFont, head,
+            CLR_TEXT, TextAlign.Left);
+        y = head.bottom + S(8);
+
+        int box = S(18);
+        foreach (var target in targets)
+        {
+            if (y + S(36) > limit) break;
+            var square = new Win32.RECT { left = x, top = y + (S(36) - box) / 2, right = x + box, bottom = y + (S(36) - box) / 2 + box };
+            PaperDraw.RoundBox(hdc, square, CLR_ACCENT, CLR_ACCENT, S(3));
+            DrawTick(hdc, square);
+            var text = new Win32.RECT { left = square.right + S(12), top = y, right = right, bottom = y + S(36) };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, target, rowFont, text.right - text.left), rowFont, text,
+                CLR_TEXT, TextAlign.Left);
+            y += S(36);
+        }
     }
 
     private void DrawTutorialPrimaryButton(IntPtr hdc, Win32.RECT body, int right, string text, Action action)
