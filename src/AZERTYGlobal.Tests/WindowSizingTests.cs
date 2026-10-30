@@ -249,4 +249,32 @@ public class WindowSizingTests
         // Avant la création, aucun rapport n'est mesuré : le minimum brut, rien d'autre.
         Assert.Equal((940, 600), WindowSizing.MinimumClientSize(940, 600, 0, 0, 0, WorkW, WorkH));
     }
+
+    // Lot 130 D : clavier virtuel, zone cliente 854×368 à 96 DPI, cadre de 16×39 px à 200 %.
+
+    [Fact]
+    public void LotD_Clavier200PourcentSur1024x768_GardeLeRapportDeLaMaquette()
+    {
+        // Le cas mesuré : 1708×736 de zone cliente (+ cadre) sur 1024×768. Avant, Windows
+        // rognait à 1030×768 (rapport 1,34 au lieu de 2,32) et le clavier flottait entre deux vides.
+        var (w, h) = WindowSizing.FitOuterKeepingRatio(1708 + 16, 736 + 39, 16, 39, 1024, 728);
+
+        Assert.True(w <= 1024 && h <= 728, $"{w}x{h} dépasse la zone de travail");
+        Assert.Equal(1024, w);
+        double rapport = (w - 16) / (double)(h - 39);
+        Assert.True(Math.Abs(rapport - 1708 / 736.0) < 0.01, $"rapport {rapport:F3}");
+    }
+
+    [Fact]
+    public void LotD_ClavierQuiTientDéjà_RessortIntact()
+    {
+        Assert.Equal((854 + 16, 368 + 39),
+            WindowSizing.FitOuterKeepingRatio(854 + 16, 368 + 39, 16, 39, 1920, 1032));
+    }
+
+    [Fact]
+    public void LotD_ZoneInconnue_LaTailleVoulue()
+    {
+        Assert.Equal((1724, 775), WindowSizing.FitOuterKeepingRatio(1724, 775, 16, 39, 0, 0));
+    }
 }
