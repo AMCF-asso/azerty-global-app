@@ -70,14 +70,99 @@ public class SearchResultListTests : IDisposable
     }
 
     [Fact]
-    public void LaMaquetteDeCinqLignesDe49PxSuitLeDessin()
+    public void LaMaquetteDeCinqLignesDe52PxSuitLeDessin()
     {
-        // Champ de 60 px, filet en 60 ; lignes de 49 px séparées d'un filet : 61-109, 111-159…
-        static int Hauteur49(int index) => 49;
-        Assert.Equal(0, CharacterSearch.RowIndexAt(109, 60, 0, 5, Hauteur49));
-        Assert.Equal(-1, CharacterSearch.RowIndexAt(110, 60, 0, 5, Hauteur49));
-        Assert.Equal(4, CharacterSearch.RowIndexAt(309, 60, 0, 5, Hauteur49));  // 5e ligne : 261-309
-        Assert.Equal(-1, CharacterSearch.RowIndexAt(310, 60, 0, 5, Hauteur49)); // filet sur la partition
+        // Champ de 60 px, filet en 60 ; lignes de 52 px séparées d'un filet : 61-112, 114-165…
+        static int Hauteur52(int index) => 52;
+        Assert.Equal(0, CharacterSearch.RowIndexAt(112, 60, 0, 5, Hauteur52));
+        Assert.Equal(-1, CharacterSearch.RowIndexAt(113, 60, 0, 5, Hauteur52));
+        Assert.Equal(4, CharacterSearch.RowIndexAt(324, 60, 0, 5, Hauteur52));  // 5e ligne : 272-324
+        Assert.Equal(-1, CharacterSearch.RowIndexAt(325, 60, 0, 5, Hauteur52)); // filet sur la bande
+    }
+
+    // ── Mise en page verticale : champ, lignes, bande, pied, du haut vers le bas ──
+
+    [Fact]
+    public void ACentPourCentLaFenetreDeCinqLignesFaitQuatreCents()
+    {
+        var layout = CharacterSearch.LayoutResults(20, 1f, 0);
+        Assert.Equal(5, layout.Rows);
+        Assert.Equal(61, layout.ListTop);       // champ de 60 px et son filet
+        Assert.Equal(325, layout.ListBottom);   // cinq lignes de 52 px et quatre filets
+        Assert.Equal(400, layout.ClientH);
+    }
+
+    [Fact]
+    public void ChaqueLigneDeLaBandeAjouteVingtPxACentPourCent()
+    {
+        Assert.Equal(37, CharacterSearch.BandHeight(1, 1f));
+        Assert.Equal(57, CharacterSearch.BandHeight(2, 1f));
+        Assert.Equal(420, CharacterSearch.LayoutResults(20, 1f, 0, 2).ClientH);
+    }
+
+    [Theory]
+    [InlineData(1.0f)]
+    [InlineData(1.25f)]
+    [InlineData(1.5f)]
+    [InlineData(1.75f)]
+    [InlineData(2.0f)]
+    [InlineData(2.5f)]
+    public void LePiedNeRecouvreJamaisLaListeNiLaBande(float scale)
+    {
+        // Les zones de travail de 720 px (CI en 1024 × 768) et de 1400 px (écran 1440 p), plafond
+        // à 20 px du bord, comme ResizeToFitResults.
+        // La bande a une, deux ou trois lignes (phrase de touche morte, jamais coupée).
+        foreach (var (workH, bandLines) in new[] { (720, 1), (1400, 1), (720, 2), (1400, 3), (720, 3) })
+        {
+            int max = workH - 20;
+            var layout = CharacterSearch.LayoutResults(20, scale, max, bandLines);
+
+            Assert.InRange(layout.Rows, 1, 5);
+            Assert.True(layout.ListTop < layout.ListBottom);
+            Assert.True(layout.ListBottom <= layout.BandTop);
+            Assert.True(layout.BandTop < layout.FooterTop);
+            Assert.True(layout.FooterTop < layout.ClientH);
+            Assert.True(layout.ClientH <= max, $"{scale} × {workH} : {layout.ClientH} > {max}");
+
+            // Au plus de lignes qui tiennent : une de plus dépasserait le plafond.
+            int rowStep = (layout.ListBottom - layout.ListTop + 1) / layout.Rows;
+            Assert.True(layout.Rows == 5 || layout.ClientH + rowStep > max,
+                $"{scale} × {workH} : {layout.Rows} lignes, de la place pour une de plus");
+        }
+    }
+
+    [Fact]
+    public void AdeuxCentPourCentSurUnePetiteZoneLaListeMontreMoinsDeLignes()
+    {
+        // Le défaut des captures 1.3.0 : 560 × 543 à 100 %, fenêtre plafonnée à 700 px dès 150 %
+        // (zone de 720 px), pied par-dessus la liste. À 200 %, cinq lignes demandent 794 px :
+        // quatre tiennent (689 px).
+        var layout = CharacterSearch.LayoutResults(20, 2f, 720 - 20);
+        Assert.Equal(4, layout.Rows);
+        Assert.Equal(689, layout.ClientH);
+    }
+
+    [Fact]
+    public void UneZoneMinusculeGardeAuMoinsUneLigne()
+    {
+        var layout = CharacterSearch.LayoutResults(20, 2.5f, 200);
+        Assert.Equal(1, layout.Rows);
+    }
+
+    [Fact]
+    public void PeuDeResultatsPeuDeLignes()
+    {
+        Assert.Equal(2, CharacterSearch.LayoutResults(2, 1f, 0).Rows);
+        Assert.Equal(1, CharacterSearch.LayoutResults(1, 2f, 680).Rows);
+    }
+
+    [Fact]
+    public void LaListeCommenceUnPixelSousLeFiletDuChampEtSArreteAvantLaBande()
+    {
+        var layout = CharacterSearch.LayoutResults(20, 1.5f, 0);
+        int fieldH = layout.ListTop - 1;
+        Assert.Equal(0, CharacterSearch.RowIndexAt(layout.ListTop, fieldH, 0, layout.Rows, _ => (layout.ListBottom - layout.ListTop + 1 - (layout.Rows - 1)) / layout.Rows));
+        Assert.Equal(-1, CharacterSearch.RowIndexAt(layout.ListBottom + 1, fieldH, 0, layout.Rows, _ => (layout.ListBottom - layout.ListTop + 1 - (layout.Rows - 1)) / layout.Rows));
     }
 
     private static string Texte(List<TextRun> runs) => string.Concat(runs.Select(r => r.Text));
