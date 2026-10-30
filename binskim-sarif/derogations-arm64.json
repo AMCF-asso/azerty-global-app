@@ -1,0 +1,24 @@
+{
+  "binskim": "4.4.9.11",
+  "vc_feature": {
+    "pre_vc11": 1,
+    "cxx": 127,
+    "gs": 127,
+    "sdl": 0,
+    "guard_n": 127
+  },
+  "accepted": [
+    {
+      "rule": "BA2024",
+      "justification": "Spectre : les seuls objets sans /Qspectre sont ceux, précompilés, du runtime NativeAOT et du CRT Microsoft ; le dépôt ne compile aucun C/C++."
+    },
+    {
+      "rule": "BA2026",
+      "justification": "SDL : chaque objet C/C++ compté par l'éditeur de liens appartient au runtime NativeAOT ou au CRT Microsoft ; le dépôt ne compile aucun C/C++."
+    },
+    {
+      "rule": "BA6006",
+      "justification": "LTCG : recommandation d'optimisation ; les bibliothèques précompilées du runtime ne sont pas en /GL."
+    }
+  ]
+}
