@@ -168,6 +168,10 @@ public partial class KeyboardContextBench
             if (scrollToEnd)
             {
                 // Comme un glissé des barres jusqu'au bout : le chemin de WM_VSCROLL/WM_HSCROLL.
+                // Une première peinture d'abord, comme à l'écran : sinon elle prend le caret pour
+                // un caret qui vient de bouger et ramène la vue sur lui (KeepFocusVisible).
+                Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
+                Win32.SendMessageW(hwnd, Win32.WM_PAINT, IntPtr.Zero, IntPtr.Zero);
                 Win32.SendMessageW(hwnd, Win32.WM_VSCROLL, (IntPtr)Win32.SB_BOTTOM, IntPtr.Zero);
                 Win32.SendMessageW(hwnd, Win32.WM_HSCROLL, (IntPtr)Win32.SB_BOTTOM, IntPtr.Zero);
             }
