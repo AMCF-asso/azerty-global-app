@@ -120,6 +120,26 @@ public class TutorialStepsTests : IDisposable
     }
 
     [Fact]
+    public void Chaque_ligne_de_l_ecran_final_donne_le_geste_de_son_premier_caractere_particulier()
+    {
+        // « É » seul : Verr. Maj. puis la touche é ; la suite de la ligne n'est pas lue.
+        string? e = TutorialSteps.RecapGesture(TutorialSteps.All[0].Target);
+        Assert.NotNull(e);
+        Assert.StartsWith("É", e);
+        Assert.Contains("é", e);
+
+        // « contact@exemple.com » : les lettres se tapent sur leur touche, l'arobase non.
+        string? mail = TutorialSteps.RecapGesture("contact@exemple.com");
+        Assert.NotNull(mail);
+        Assert.StartsWith("@", mail);
+        Assert.Contains(L.Gesture_KeyTopLeft, mail); // la place de la touche, pas sa gravure
+
+        // Un texte entièrement sur ses touches gravées (espaces compris) n'a pas de geste à dire.
+        Assert.Null(TutorialSteps.RecapGesture("abc def"));
+        Assert.Null(TutorialSteps.RecapGesture(""));
+    }
+
+    [Fact]
     public void Un_seul_usage_coche_n_est_jamais_facultatif()
     {
         foreach (var (usage, step) in TutorialSteps.UsagesByPriority)
