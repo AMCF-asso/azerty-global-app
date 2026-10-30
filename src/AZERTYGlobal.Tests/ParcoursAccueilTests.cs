@@ -242,6 +242,48 @@ public class ParcoursAccueilTests
         Assert.True(ConfigManager.LearningTutorialOpened);
     }
 
+    /// <summary>Audit 1.3.0, D5 : l'en-tête comptait les huit exercices de l'Initiation (« 5 sur 8 »)
+    /// quand la ligne du parcours en comptait cinq (« 5 sur 5 (bonus) »), et l'écran final
+    /// affichait « 4 sur 8 ». L'en-tête suit la longueur du parcours, comme cette ligne.</summary>
+    [Fact]
+    public void L_en_tete_compte_le_parcours_et_non_les_huit_exercices_de_l_Initiation()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            Assert.Null(HeaderRoute(window)); // hors parcours : la leçon entière
+
+            window.BeginTutorial();
+            BancCapture.Call(window, "ToggleTutorialUsage", 2); // Code
+            BancCapture.Call(window, "ToggleTutorialUsage", 4); // Afrique
+            BancCapture.Call(window, "StartTutorialRoute");
+            Assert.Equal(5, HeaderRoute(window)!.Length);
+            Assert.Equal(0, BancCapture.Field<int>(window, "_tutorialRoutePos"));
+
+            for (int i = 0; i < 4; i++) BancCapture.Call(window, "AdvanceTutorialRoute");
+            Assert.Equal(5, HeaderRoute(window)!.Length); // le bonus : 5 sur 5
+            Assert.Equal(4, BancCapture.Field<int>(window, "_tutorialRoutePos"));
+
+            // Hors de l'étape (« ‹ » ramène à un autre exercice) : la leçon entière reprend.
+            BancCapture.Call(window, "PreviousExercise");
+            Assert.Null(HeaderRoute(window));
+
+            BancCapture.Call(window, "AdvanceTutorialRoute"); // l'écran final
+            Assert.Equal("Final", Page(window));
+            Assert.Equal(5, HeaderRoute(window)!.Length);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    private static TutorialSteps.RouteStep[]? HeaderRoute(LessonsWindow window) =>
+        (TutorialSteps.RouteStep[]?)typeof(LessonsWindow)
+            .GetProperty("TutorialRouteForHeader", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .GetValue(window);
+
     private static LessonsWindow Open()
     {
         var layout = LayoutLoader.LoadFromResource();
