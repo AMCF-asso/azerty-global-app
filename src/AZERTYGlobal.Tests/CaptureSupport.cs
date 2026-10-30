@@ -60,6 +60,31 @@ internal static class BancCapture
     internal const string LangVariable = "AZERTY_CAPTURE_LANG";
     internal const string OnlyVariable = "AZERTY_CAPTURE_ONLY";
     internal const string AllVariable = "AZERTY_CAPTURE_ALL";
+    internal const string ScreenVariable = "AZERTY_CAPTURE_ECRAN";
+
+    /// <summary>
+    /// Zone de travail simulée, <c>AZERTY_CAPTURE_ECRAN=LARGEURxHAUTEUR</c> (« 1024x728 »), ou null
+    /// sans réglage. Les troncatures de la CI viennent d'un écran 1024×768 que le poste d'Antoine
+    /// n'a pas : sans ce réglage, un banc local à 200 % rend des fenêtres qui tiennent. Les
+    /// fenêtres qui plafonnent leur taille lisent <see cref="NativeWindow.WorkArea"/>.
+    /// </summary>
+    internal static Win32.RECT? SimulatedWorkArea()
+    {
+        string? raw = Environment.GetEnvironmentVariable(ScreenVariable);
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        string[] parts = raw.Split('x', 'X', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 2
+            && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int width)
+            && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int height)
+            && width >= 320 && height >= 240)
+        {
+            return new Win32.RECT { left = 0, top = 0, right = width, bottom = height };
+        }
+
+        throw new InvalidOperationException($"{ScreenVariable} doit valoir LARGEURxHAUTEUR (« 1024x728 »), pas « {raw} ».");
+    }
 
     /// <summary>GitHub Actions pose GITHUB_ACTIONS=true : la CI garde le banc complet.</summary>
     internal static bool OnCi =>
@@ -198,6 +223,7 @@ internal static class BancCapture
         private readonly IDisposable _policy;
         private readonly IDisposable _channel;
         private readonly IDisposable _cursor;
+        private readonly IDisposable? _screen;
         private readonly IntPtr _previousDpiContext;
         private readonly IntPtr _gdipToken;
         private readonly IntPtr _activationContext;
@@ -224,6 +250,8 @@ internal static class BancCapture
             _policy = PolicyManager.OverrideForTests((_, _) => null);
             _channel = AppChannel.OverrideForTests(DistributionChannel.Store);
             _cursor = CursorSource.OverrideForTests(SimulatedCursor());
+            if (SimulatedWorkArea() is { } work)
+                _screen = NativeWindow.OverrideWorkAreaForTests(work);
             _previousLanguage = L.Language;
             _previousDpiContext = Native.SetThreadDpiAwarenessContext(PerMonitorAwareV2);
 
@@ -306,6 +334,7 @@ internal static class BancCapture
             _policy.Dispose();
             _invisibles.Dispose();
             _cursor.Dispose();
+            _screen?.Dispose();
 
             if (_previousStatsPath is string statsPath)
                 UsageStats.OverrideStatsPathForTests(statsPath);

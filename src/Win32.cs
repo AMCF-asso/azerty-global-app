@@ -950,6 +950,9 @@ static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetWindowTextW(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetWindowTextLengthW(IntPtr hWnd);
+
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — Menu radio items (sous-menu compatibilité)
     // ═══════════════════════════════════════════════════════════════

@@ -16,6 +16,10 @@ internal sealed partial class LessonsWindow
         TutorialSteps.UsageLanguages, TutorialSteps.UsageAfrica,
     };
 
+    // « Un tour d'Afrique » de l'écran final : une leçon de l'édition spéciale du catalogue.
+    private const string TutorialAfricaModuleId = "vingt-millions";
+    private const string TutorialAfricaLessonId = "course-20-millions-afrique";
+
     private TutorialPage _tutorialPage;
     // Exercices du parcours, null hors parcours ou avant l'écran des usages validé.
     private TutorialSteps.RouteStep[]? _tutorialRoute;
@@ -45,6 +49,13 @@ internal sealed partial class LessonsWindow
         _tutorialRoutePos >= 0 && _tutorialRoutePos < _tutorialRoute.Length &&
         CurrentModule.Id == LessonCatalogLoader.InitiationModuleId &&
         _exerciseIndex == _tutorialRoute[_tutorialRoutePos].Index;
+
+    /// <summary>Le parcours que l'en-tête compte à la place de la leçon : ses exercices (les
+    /// quatre communs et les bonus choisis), pas les huit de l'Initiation, comme la ligne du
+    /// parcours sous la consigne. Null hors parcours, ou sur un exercice qui n'en est pas
+    /// l'étape.</summary>
+    private TutorialSteps.RouteStep[]? TutorialRouteForHeader =>
+        TutorialOnRouteStep || (_tutorialPage == TutorialPage.Final && _tutorialRoute != null) ? _tutorialRoute : null;
 
     /// <summary>Ouvre le parcours de l'accueil sur l'écran des usages, cochés comme au dernier
     /// passage.</summary>
@@ -165,6 +176,7 @@ internal sealed partial class LessonsWindow
     {
         if (!TutorialPageShown) return false;
         int firstControl = _clickActions.Count;
+        int focusAt = firstControl;
         PaperDraw.RoundBox(hdc, body, CLR_PANEL, CLR_BORDER, 0);
         int pad = S(28);
         int x = body.left + pad;
@@ -195,19 +207,178 @@ internal sealed partial class LessonsWindow
         }
         else
         {
-            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalTitle, titleFont, right - x), titleFont, titleRect,
+            // Deux colonnes dans une fenêtre assez large : à gauche le bravo et ce qui a été
+            // tapé, à droite les cartes. Sinon une colonne, les cartes sous la liste si elles tiennent.
+            bool twoColumns = right - x >= S(700);
+            int leftRight = twoColumns ? x + (right - x) * 11 / 20 : right;
+            int buttonsTop = body.bottom - S(22) - S(36);
+            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalTitle, titleFont, leftRight - x), titleFont, titleRect,
                 CLR_TEXT, TextAlign.Left);
-            var sub = new Win32.RECT { left = x, top = titleRect.bottom + S(8), right = right, bottom = titleRect.bottom + S(32) };
-            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalSubtitle, textFont, right - x), textFont, sub,
+            var sub = new Win32.RECT { left = x, top = titleRect.bottom + S(8), right = leftRight, bottom = titleRect.bottom + S(32) };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalSubtitle, textFont, leftRight - x), textFont, sub,
                 CLR_MUTED, TextAlign.Left);
-            DrawTutorialPrimaryButton(hdc, body, right, L.Learning_BtnFinish, FinishTutorial);
+            int listBottom = DrawTutorialRecap(hdc, body, x, leftRight, sub.bottom);
+            if (twoColumns)
+                DrawTutorialFinalCards(hdc, leftRight + S(32), right, titleRect.top, buttonsTop - S(16));
+            else
+                DrawTutorialFinalCards(hdc, x, right, listBottom + S(16), buttonsTop - S(16));
+
+            // « Terminer » à droite, « Continuer les leçons » (le bouton principal, qui a le
+            // focus à l'ouverture) à sa gauche.
+            int finishW = Math.Max(S(140), OutlineButtonWidth(hdc, L.Learning_BtnFinish));
+            int continueW = Math.Max(S(140), OutlineButtonWidth(hdc, L.Learning_BtnContinueLessons));
+            var finish = new Win32.RECT { left = right - finishW, top = buttonsTop, right = right, bottom = buttonsTop + S(36) };
+            var more = new Win32.RECT { left = finish.left - S(12) - continueW, top = buttonsTop, right = finish.left - S(12), bottom = buttonsTop + S(36) };
+            focusAt = _clickActions.Count;
+            DrawOutlineButton(hdc, more, L.Learning_BtnContinueLessons, () => ContinueAfterTutorial(HomeShowToday), primary: true);
+            DrawOutlineButton(hdc, finish, L.Learning_BtnFinish, FinishTutorial);
         }
         if (_tutorialFocusPending)
         {
-            _focusedActionIndex = firstControl;
+            _focusedActionIndex = focusAt;
             _tutorialFocusPending = false;
         }
         return true;
+    }
+
+    /// <summary>« Continuer les leçons » et les liens des cartes : le parcours est terminé (l'accueil
+    /// est prévenu), la fenêtre reste ouverte et ouvre <paramref name="open"/>.</summary>
+    private void ContinueAfterTutorial(Action open)
+    {
+        EndTutorial(completed: true);
+        open();
+        Win32.SetForegroundWindow(_hWnd);
+    }
+
+    /// <summary>La leçon « Un tour d'Afrique » du catalogue, null si le catalogue ne la porte pas.</summary>
+    private LessonLesson? TutorialAfricaLesson()
+    {
+        foreach (var module in _catalog.Modules)
+            if (StringComparer.Ordinal.Equals(module.Id, TutorialAfricaModuleId))
+                foreach (var lesson in module.Lessons)
+                    if (StringComparer.Ordinal.Equals(lesson.Id, TutorialAfricaLessonId))
+                        return lesson;
+        return null;
+    }
+
+    private void OpenTutorialAfrica()
+    {
+        if (!SelectExercise(TutorialAfricaModuleId, TutorialAfricaLessonId, 0, savePosition: false))
+            HomeShowToday();
+    }
+
+    /// <summary>Colonne de droite de l'écran final : « Prochaines étapes » puis « Raccourcis à
+    /// retenir », chacune dans sa carte. Une carte qui ne tient pas avant <paramref name="limit"/>
+    /// est omise.</summary>
+    private void DrawTutorialFinalCards(IntPtr hdc, int left, int right, int top, int limit)
+    {
+        int pad = S(18);
+        var headFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
+        var small = F(AppFonts.Text, 13);
+        uint fill = PaperDraw.Blend(CLR_ACCENT, CLR_PANEL, 0.04f);
+
+        var steps = new List<(string Label, string Help, Action Open)>
+        {
+            (L.LessonsHome_Today, L.Learning_FinalNextTodayHelp, () => ContinueAfterTutorial(HomeShowToday)),
+            (L.LessonsHome_YourMap, L.Learning_FinalNextMapHelp, () => ContinueAfterTutorial(() => HomeShowMap())),
+        };
+        if (TutorialAfricaLesson() is { } africa)
+            steps.Add((africa.Title, L.Learning_FinalNextAfricaHelp, () => ContinueAfterTutorial(OpenTutorialAfrica)));
+
+        int rowH = S(50);
+        int nextH = pad + S(26) + steps.Count * rowH + S(4);
+        if (top + nextH <= limit)
+        {
+            var card = new Win32.RECT { left = left, top = top, right = right, bottom = top + nextH };
+            PaperDraw.RoundBox(hdc, card, fill, CLR_BORDER, S(3));
+            var head = new Win32.RECT { left = left + pad, top = top + S(14), right = right - pad, bottom = top + S(38) };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalNextTitle, headFont, head.right - head.left), headFont, head,
+                CLR_TEXT, TextAlign.Left);
+            int y = head.bottom + S(6);
+            foreach (var (label, help, open) in steps)
+            {
+                DrawLink(hdc, left + pad, y + S(12), label, false, open);
+                var helpRect = new Win32.RECT { left = left + pad, top = y + S(24), right = right - pad, bottom = y + S(46) };
+                PaperText.DrawLine(hdc, Ellipsize(hdc, help, small, helpRect.right - helpRect.left), small, helpRect,
+                    CLR_MUTED, TextAlign.Left);
+                y += rowH;
+            }
+            top = card.bottom + S(16);
+        }
+
+        var shortcuts = new (string Combo, string Label)[]
+        {
+            (L.SettingsClarity_Combo(ShortcutKeyName(ConfigManager.ShortcutVirtualKeyboardVk)), L.Settings_ShortcutLabelKeyboard),
+            (L.SettingsClarity_Combo(ShortcutKeyName(ConfigManager.ShortcutCharacterSearchVk)), L.Search_WindowTitle),
+        };
+        int shortcutRowH = S(32);
+        int shortcutsH = pad + S(26) + shortcuts.Length * shortcutRowH + S(4);
+        if (top + shortcutsH > limit) return;
+        var box = new Win32.RECT { left = left, top = top, right = right, bottom = top + shortcutsH };
+        PaperDraw.RoundBox(hdc, box, fill, CLR_BORDER, S(3));
+        var title = new Win32.RECT { left = left + pad, top = top + S(14), right = right - pad, bottom = top + S(38) };
+        PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalShortcutsTitle, headFont, title.right - title.left), headFont, title,
+            CLR_TEXT, TextAlign.Left);
+        int row = title.bottom + S(6);
+        var comboFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
+        int comboW = shortcuts.Max(s => PaperText.Width(hdc, s.Combo, comboFont));
+        foreach (var (combo, label) in shortcuts)
+        {
+            var comboRect = new Win32.RECT { left = left + pad, top = row, right = left + pad + comboW, bottom = row + shortcutRowH };
+            PaperText.DrawLine(hdc, combo, comboFont, comboRect, CLR_TEXT, TextAlign.Left);
+            var labelRect = new Win32.RECT { left = comboRect.right + S(16), top = row, right = right - pad, bottom = row + shortcutRowH };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, label, F(AppFonts.Text, 15), labelRect.right - labelRect.left),
+                F(AppFonts.Text, 15), labelRect, CLR_MUTED, TextAlign.Left);
+            row += shortcutRowH;
+        }
+    }
+
+    private static string ShortcutKeyName(uint vk) => ConfigManager.GetShortcutDisplayName(vk);
+
+    /// <summary>Écran final : les textes réussis du parcours, une ligne cochée chacun, avec sous
+    /// chaque ligne le geste de son premier caractère particulier tant que la hauteur le permet.
+    /// Les lignes qui ne tiennent pas au-dessus du bouton sont omises. Rend le bas de la liste.</summary>
+    private int DrawTutorialRecap(IntPtr hdc, Win32.RECT body, int x, int right, int top)
+    {
+        if (_tutorialRoute == null) return top;
+        var done = ConfigManager.LearningCompletedExercises;
+        var targets = TutorialSteps.RecapTargets(_tutorialRoute, done.Contains);
+        if (targets.Length == 0) return top;
+
+        var headFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
+        var rowFont = F(AppFonts.Text, 18);
+        var gestureFont = F(AppFonts.Text, 13);
+        int limit = body.bottom - S(22) - S(36) - S(16);
+        int y = top + S(28);
+        var head = new Win32.RECT { left = x, top = y, right = right, bottom = y + S(24) };
+        PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_FinalRecap, headFont, right - x), headFont, head,
+            CLR_TEXT, TextAlign.Left);
+        y = head.bottom + S(8);
+
+        var gestures = targets.Select(TutorialSteps.RecapGesture).ToArray();
+        bool withGestures = gestures.Any(g => g != null) && y + S(56) * targets.Length <= limit;
+        int mainH = withGestures ? S(30) : S(36);
+        int rowH = withGestures ? S(56) : S(36);
+
+        int box = S(18);
+        for (int i = 0; i < targets.Length; i++)
+        {
+            if (y + rowH > limit) break;
+            var square = new Win32.RECT { left = x, top = y + (mainH - box) / 2, right = x + box, bottom = y + (mainH - box) / 2 + box };
+            PaperDraw.RoundBox(hdc, square, CLR_ACCENT, CLR_ACCENT, S(3));
+            DrawTick(hdc, square);
+            var text = new Win32.RECT { left = square.right + S(12), top = y, right = right, bottom = y + mainH };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, targets[i], rowFont, text.right - text.left), rowFont, text,
+                CLR_TEXT, TextAlign.Left);
+            if (withGestures && gestures[i] is { } gesture)
+            {
+                var line = new Win32.RECT { left = text.left, top = y + mainH - S(4), right = right, bottom = y + mainH + S(18) };
+                PaperText.DrawLine(hdc, Ellipsize(hdc, gesture, gestureFont, line.right - line.left), gestureFont, line,
+                    CLR_MUTED, TextAlign.Left);
+            }
+            y += rowH;
+        }
+        return y;
     }
 
     private void DrawTutorialPrimaryButton(IntPtr hdc, Win32.RECT body, int right, string text, Action action)

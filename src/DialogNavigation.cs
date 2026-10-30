@@ -26,16 +26,21 @@ static class DialogNavigation
 {
     private static readonly HashSet<IntPtr> _dialogs = new();
     private static readonly Dictionary<IntPtr, Action<IntPtr>> _focusHandlers = new();
+    private static readonly Dictionary<IntPtr, KeyFilter> _keyFilters = new();
+
+    /// <summary>Touche d'un contrôle que la fenêtre traite avant la navigation de dialogue ; vrai = consommée.</summary>
+    public delegate bool KeyFilter(in Win32.MSG msg);
 
     /// <summary>
     /// À appeler juste après <c>CreateWindowExW</c> de la fenêtre racine — jamais pour un
     /// contrôle enfant, que <c>GetAncestor</c> ramène de toute façon à sa racine.
     /// </summary>
-    public static void Register(IntPtr hwnd, Action<IntPtr>? ensureFocusVisible = null)
+    public static void Register(IntPtr hwnd, Action<IntPtr>? ensureFocusVisible = null, KeyFilter? beforeDialog = null)
     {
         if (hwnd == IntPtr.Zero) return;
         _dialogs.Add(hwnd);
         if (ensureFocusVisible != null) _focusHandlers[hwnd] = ensureFocusVisible;
+        if (beforeDialog != null) _keyFilters[hwnd] = beforeDialog;
     }
 
     /// <summary>
@@ -46,12 +51,13 @@ static class DialogNavigation
     {
         _dialogs.Remove(hwnd);
         _focusHandlers.Remove(hwnd);
+        _keyFilters.Remove(hwnd);
     }
 
     /// <summary>Fenêtres inscrites — pour les témoins, et pour vérifier qu'on désinscrit.</summary>
     public static int RegisteredCount => _dialogs.Count;
 
-    internal static void ResetForTests() { _dialogs.Clear(); _focusHandlers.Clear(); }
+    internal static void ResetForTests() { _dialogs.Clear(); _focusHandlers.Clear(); _keyFilters.Clear(); }
 
     /// <summary>Identifiant que <c>IsDialogMessageW</c> envoie en <c>WM_COMMAND</c> sur Entrée.</summary>
     public const int IDOK = 1;
@@ -145,6 +151,9 @@ static class DialogNavigation
 
         IntPtr root = Win32.GetAncestor(msg.hwnd, Win32.GA_ROOT);
         if (!ShouldRouteAsDialog(root, _dialogs)) return false;
+
+        if (msg.message == Win32.WM_KEYDOWN && _keyFilters.TryGetValue(root, out var filter) && filter(msg))
+            return true;
 
         bool consumed = Win32.IsDialogMessageW(root, ref msg);
         if (consumed && _focusHandlers.TryGetValue(root, out var ensureVisible))
