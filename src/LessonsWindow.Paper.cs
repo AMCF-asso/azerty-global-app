@@ -108,20 +108,24 @@ internal sealed partial class LessonsWindow
         var square = new Win32.RECT { left = row.left + S(8), top = top, right = row.left + S(8) + box, bottom = top + box };
         PaperDraw.RoundBox(hdc, square, enabled ? CLR_ACCENT : CLR_PANEL, enabled ? CLR_ACCENT : CLR_PENDING, S(3));
         if (enabled)
-        {
-            // Coche en deux traits.
-            var pen = Win32.CreatePen(0, Math.Max(2, S(2)), CLR_ON_ACCENT);
-            var old = Win32.SelectObject(hdc, pen);
-            Win32.MoveToEx(hdc, square.left + box * 4 / 18, square.top + box * 9 / 18, IntPtr.Zero);
-            Win32.LineTo(hdc, square.left + box * 8 / 18, square.top + box * 13 / 18);
-            Win32.LineTo(hdc, square.left + box * 14 / 18, square.top + box * 5 / 18);
-            Win32.SelectObject(hdc, old);
-            Win32.DeleteObject(pen);
-        }
+            DrawTick(hdc, square);
         var font = F(AppFonts.Text, 15);
         var labelRect = new Win32.RECT { left = square.right + S(12), top = row.top, right = row.right - S(8), bottom = row.bottom };
         PaperText.DrawLine(hdc, Ellipsize(hdc, label, font, labelRect.right - labelRect.left), font, labelRect, CLR_TEXT, TextAlign.Left);
         AddClick(row, toggle, label, LessonControlKind.CheckBox, toggled: enabled);
+    }
+
+    /// <summary>Coche en deux traits, dans une case déjà remplie.</summary>
+    private void DrawTick(IntPtr hdc, Win32.RECT square)
+    {
+        int box = square.right - square.left;
+        var pen = Win32.CreatePen(0, Math.Max(2, S(2)), CLR_ON_ACCENT);
+        var old = Win32.SelectObject(hdc, pen);
+        Win32.MoveToEx(hdc, square.left + box * 4 / 18, square.top + box * 9 / 18, IntPtr.Zero);
+        Win32.LineTo(hdc, square.left + box * 8 / 18, square.top + box * 13 / 18);
+        Win32.LineTo(hdc, square.left + box * 14 / 18, square.top + box * 5 / 18);
+        Win32.SelectObject(hdc, old);
+        Win32.DeleteObject(pen);
     }
 
     // ── En-tête ──────────────────────────────────────────────────────
@@ -188,14 +192,16 @@ internal sealed partial class LessonsWindow
         var arrowFont = F(AppFonts.Text, 11);
         var countFont = F(AppFonts.Text, 14);
 
-        int exercises = CurrentLesson.Exercises.Count;
+        var route = TutorialRouteForHeader;
+        int exercises = route?.Length ?? CurrentLesson.Exercises.Count;
+        int current = route != null ? _tutorialRoutePos : _exerciseIndex; // écran final : après le dernier
         int segment = S(18), segGap = S(3), chevron = S(22);
         int jalonsMax = S(220);
         if (exercises * (segment + segGap) > jalonsMax)
             segment = Math.Max(S(4), jalonsMax / Math.Max(1, exercises) - segGap);
         int jalonsW = exercises * (segment + segGap) - segGap;
         int stepperW = chevron + S(6) + jalonsW + S(6) + chevron;
-        string countText = L.LessonsPaper_ExerciseOf(_exerciseIndex + 1, exercises);
+        string countText = L.LessonsPaper_ExerciseOf(Math.Min(current + 1, exercises), exercises);
         int countW = PaperText.Width(hdc, countText, countFont);
 
         string module = CurrentModule.Title;
@@ -245,8 +251,8 @@ internal sealed partial class LessonsWindow
         int jx = prev.right + S(6);
         for (int i = 0; i < exercises; i++)
         {
-            var ex = CurrentLesson.Exercises[i];
-            uint color = i == _exerciseIndex ? CLR_ACCENT : _progress.IsCompleted(ex) ? CLR_TEXT : CLR_BORDER;
+            var ex = CurrentLesson.Exercises[route?[i].Index ?? i];
+            uint color = i == current ? CLR_ACCENT : _progress.IsCompleted(ex) ? CLR_TEXT : CLR_BORDER;
             PaperDraw.Fill(hdc, jx, mid - S(1), jx + segment, mid - S(1) + Math.Max(1, S(3)), color);
             jx += segment + segGap;
         }
