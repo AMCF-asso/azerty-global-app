@@ -51,7 +51,7 @@ public sealed class KeyboardHook : IDisposable
     private bool _passThroughAll;
     // C5 : un hote de prise en main a distance tourne dans la session. Ecrit par une
     // sonde hors du rappel (toutes les 5 s), lu seul par le rappel : volatile suffit.
-    private volatile bool _remoteHostPresent;
+    private volatile bool _remoteSessionActive;
 
     // VK codes des raccourcis configurables (lus depuis config.json)
     private uint _vkSearch;
@@ -79,14 +79,16 @@ public sealed class KeyboardHook : IDisposable
     }
 
     /// <summary>
-    /// C5 : vrai quand un logiciel hote de prise en main a distance tourne dans la session
-    /// (GameRegistry.RemoteAccessHostProcesses). Les injections etrangeres sont alors
-    /// traitees comme des frappes physiques. Mis a jour par l'hote, jamais dans le rappel.
+    /// Vrai quand une session de prise en main a distance est ouverte dans notre session
+    /// Windows (GameRegistry.RemoteSessionMarkers ; decision du 2026-10-30, audit M1). Un
+    /// service installe qui tourne sans session ne suffit plus. Les injections etrangeres
+    /// sont alors traitees comme des frappes physiques. Mis a jour par l'hote, jamais
+    /// dans le rappel.
     /// </summary>
-    public bool RemoteHostPresent
+    public bool RemoteSessionActive
     {
-        get => _remoteHostPresent;
-        set => _remoteHostPresent = value;
+        get => _remoteSessionActive;
+        set => _remoteSessionActive = value;
     }
 
     public bool PassThroughAll
@@ -235,14 +237,17 @@ public sealed class KeyboardHook : IDisposable
     ///
     /// Mesure sur un hote Parsec : toutes les frappes distantes arrivent LLKHF_INJECTED,
     /// dwExtraInfo a 0, avec les scan codes physiques du poste client. AG130-07 les
-    /// ecartait toutes : plus aucun remappage, exercices muets. Quand un hote distant
-    /// tourne, une injection etrangere est donc traitee comme physique ; sinon AG130-07
-    /// est inchange. Nos propres injections (marqueur) restent exclues dans tous les cas.
+    /// ecartait toutes : plus aucun remappage, exercices muets. Pendant une session
+    /// distante active (revu le 2026-10-30, audit M1 : plus des qu'un hote tourne), une
+    /// injection etrangere est donc traitee comme physique ; sinon AG130-07 est inchange
+    /// et l'auto-saisie de KeePass ou Bitwarden passe telle quelle. Limites (Parsec sans
+    /// signal de session, AnyDesk, RustDesk) : GameRegistry.RemoteSessionMarkers.
+    /// Nos propres injections (marqueur) restent exclues dans tous les cas.
     /// </summary>
-    internal static bool ShouldTreatAsPhysical(IntPtr dwExtraInfo, uint flags, IntPtr ourMarker, bool remoteHostPresent)
+    internal static bool ShouldTreatAsPhysical(IntPtr dwExtraInfo, uint flags, IntPtr ourMarker, bool remoteSessionActive)
     {
         if (dwExtraInfo == ourMarker) return false;
-        return !IsForeignInjection(dwExtraInfo, flags, ourMarker) || remoteHostPresent;
+        return !IsForeignInjection(dwExtraInfo, flags, ourMarker) || remoteSessionActive;
     }
 
     /// <summary>
@@ -255,10 +260,10 @@ public sealed class KeyboardHook : IDisposable
     /// physique : « . » (U+002E) devenait la touche C (SC 0x2E), « (3) » donnait « ´.@ ».
     /// Pour toute autre touche, <see cref="ShouldTreatAsPhysical"/> decide.
     /// </summary>
-    internal static bool ShouldProcessKeystroke(uint vkCode, IntPtr dwExtraInfo, uint flags, IntPtr ourMarker, bool remoteHostPresent)
+    internal static bool ShouldProcessKeystroke(uint vkCode, IntPtr dwExtraInfo, uint flags, IntPtr ourMarker, bool remoteSessionActive)
     {
         if (vkCode == VK_PACKET) return false;
-        return ShouldTreatAsPhysical(dwExtraInfo, flags, ourMarker, remoteHostPresent);
+        return ShouldTreatAsPhysical(dwExtraInfo, flags, ourMarker, remoteSessionActive);
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -290,7 +295,7 @@ public sealed class KeyboardHook : IDisposable
             // injections SONT les frappes de l'utilisateur (lecture d'un booleen).
             // Audit 24/09 B1 : jamais un VK_PACKET, hote distant ou non - son scanCode est
             // un caractere, ni a remapper ni a faire entrer dans TrackModifiers.
-            if (!ShouldProcessKeystroke(hookStruct.vkCode, hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, _remoteHostPresent))
+            if (!ShouldProcessKeystroke(hookStruct.vkCode, hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, _remoteSessionActive))
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();
