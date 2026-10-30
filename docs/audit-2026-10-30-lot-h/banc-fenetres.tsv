@@ -1,0 +1,13 @@
+# os	Microsoft Windows NT 10.0.26200.0
+# ecran principal	1920x1080, DPI systeme 96
+# moniteurs	1920x1080 en (0, 0) a 96 DPI
+# sensibilite DPI du fil	2 (2 = par ecran)
+# comctl32	C:\Windows\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9711_none_3e07b8b0e334e825\comctl32.dll
+# canal	Store
+fichier	largeur	hauteur	dpi_fenetre	dpi_cible	voie	sha256
+conflit-demarrage-fr-200.png	1010	721	96	192	dc	a510e6679afcd1e0285493fbb5c4d8e1ab2eb9fbf8b40f8080d189d9f15623e7
+conflit-demarrage-bas-fr-200.png	1010	721	96	192	dc	5849636b7158ec8bc997b52e82dc56b3bf66ce08becb6133c07914d23e592c7f
+conflit-bascule-fr-200.png	1010	721	96	192	dc	2f9cf8b130f977033d1f5979a48bd0129be6b1869f2edcf65061d2e3b5ab69f5
+conflit-bascule-bas-fr-200.png	1010	721	96	192	dc	183c5bd8801a68890f55ae6723170721048009cff45f5e7b6fb019b1db30a112
+couches-fr-200.png	1010	721	96	192	dc	eae9d7497182ec9acb59db53593c8757774a2cff142691f3067039b2ac5257e0
+couches-bas-fr-200.png	1010	721	96	192	dc	cbea74cb1b82dbbe4483bea9559f52c2e3f4c9db6ca8eb91431da725d8d1fa43

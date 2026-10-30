@@ -370,7 +370,7 @@ static class NativeWindow
         uint exStyle, Win32.RECT work)
     {
         var (width, height) = OuterSize(WindowSizing.ScaleForDpi(clientW96, dpi),
-            WindowSizing.ScaleForDpi(clientH96, dpi), style, exStyle);
+            WindowSizing.ScaleForDpi(clientH96, dpi), style, exStyle, dpi);
         var (x, y) = CenterIn(work, width, height);
         Win32.MoveWindow(hwnd, x, y, width, height, false);
     }
