@@ -45,6 +45,9 @@ internal interface ILessonsAutomationHost
     /// <summary>Active le contrôle plus tard, hors de l'appel UIA (une action peut ouvrir une
     /// boîte de dialogue) ; rien si le repeint a changé le contrôle de cet index.</summary>
     void InvokeControl(int index, string name);
+    /// <summary>Défilement de la vue (audit du 30/10, M2) : les rectangles sont en coordonnées
+    /// de la surface dessinée, la zone cliente en montre la partie qui commence ici.</summary>
+    Win32.POINT ScrollOffset => default;
 }
 
 internal enum ProviderOptions
@@ -387,7 +390,8 @@ internal sealed partial class LessonsAutomation : IDisposable
 
     internal UiaRect ToScreen(Win32.RECT rect)
     {
-        var origin = new Win32.POINT { x = rect.left, y = rect.top };
+        var scroll = Host.ScrollOffset;
+        var origin = new Win32.POINT { x = rect.left - scroll.x, y = rect.top - scroll.y };
         Win32.ClientToScreen(Host.Handle, ref origin);
         return new UiaRect { Left = origin.x, Top = origin.y, Width = rect.right - rect.left, Height = rect.bottom - rect.top };
     }
@@ -396,7 +400,8 @@ internal sealed partial class LessonsAutomation : IDisposable
     {
         var point = new Win32.POINT { x = (int)Math.Floor(x), y = (int)Math.Floor(y) };
         Win32.ScreenToClient(Host.Handle, ref point);
-        return point;
+        var scroll = Host.ScrollOffset;
+        return new Win32.POINT { x = point.x + scroll.x, y = point.y + scroll.y };
     }
 
     /// <summary>Pointeur d'interface d'un objet géré, référence comptée pour l'appelant.</summary>
