@@ -1,0 +1,43 @@
+# os	Microsoft Windows NT 10.0.26200.0
+# ecran principal	1920x1080, DPI systeme 96
+# moniteurs	1920x1080 en (0, 0) a 96 DPI
+# sensibilite DPI du fil	2 (2 = par ecran)
+# comctl32	C:\Windows\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9711_none_3e07b8b0e334e825\comctl32.dll
+# canal	Store
+fichier	largeur	hauteur	dpi_fenetre	dpi_cible	voie	sha256
+parametres-general-fr-100.png	382	633	96	96	dc	43d5d45546d850d01d35dcdba1af2235ba2248dbe2486d530558fc83823824fd
+parametres-general-capture-fr-100.png	382	633	96	96	dc	e066f804f8eaeb61bba9cbb7ddf351577bfe6128d85434822092d088af54a4aa
+parametres-general-refus-fr-100.png	382	633	96	96	dc	ce34be104bb2fada8ab99bc489f049dcdc43bf6de3a4a0a847b6f4e0ffe2dcc9
+parametres-general-message-fr-100.png	382	633	96	96	dc	e54b2be094c163d804181265d64ee1804cf197f0893abba0c25f5b1eb1048b37
+parametres-applications-fr-100.png	382	633	96	96	dc	9b16d639a2ae7f07346e2c10aa613aed747e0c1a0a2bea56aa06651de1d075b3
+parametres-applications-message-fr-100.png	382	633	96	96	dc	28a42f5f0731c60491b1fe53eefc8b655b0ba0f3a355cadec2824d7bf15b631e
+parametres-applications-refus-fr-100.png	382	633	96	96	dc	f84e19871306eefcabe8352f5e20289367f0913decc8341f250b06d5949652f0
+parametres-applications-refus-jeu-fr-100.png	382	633	96	96	dc	39a122058d79953f103cbb9c74998a882aa680e47e68f71895be620d490f67f9
+parametres-langue-maintenance-fr-100.png	382	633	96	96	dc	fb0910038ee355683631590d8f82616d226a9389888296117415c814ada10587
+parametres-langue-maintenance-message-fr-100.png	382	633	96	96	dc	5c5421a25ea6cf0370f87020c98aa6756e5f0f17084b074b44597c0a787210f2
+parametres-lecons-fr-100.png	382	633	96	96	dc	d9bb4ea5e64cd969efc13fd8af8412c7dda8cf12da1084887fdf6e390bb51e1a
+parametres-lecons-message-fr-100.png	382	633	96	96	dc	8ed4ee9c89216ae825f5d316fc2f07f8157a6d21d88372678b9a13090152c4bc
+parametres-general-fr-150.png	572	934	96	144	dc	3bea4bd2dd26d1a1f8110a45dac594c521033f091d7c9fe1235bbaee9ec5b970
+parametres-general-capture-fr-150.png	572	934	96	144	dc	3abcdd90ae8f68652e9ee7392cc64b38ef0dafdf5363fe57ef7ffefbeb5003d0
+parametres-general-refus-fr-150.png	572	934	96	144	dc	1c666203133951f5a7292495675cdad950ef5c6962f1a3cce78d3fd6a6798aaa
+parametres-general-message-fr-150.png	572	934	96	144	dc	48640ae20ce80bc2ed8ebf69872d6d11292b050b75c16a7541c566cfac73abea
+parametres-applications-fr-150.png	572	934	96	144	dc	7e8253bea50c71926ae01041c5bc7faec3fbd0b3b59eafc9034ece25a4bf699f
+parametres-applications-message-fr-150.png	572	934	96	144	dc	3508a92d485f5c2ffe48ad2753f390159189b74443b179c224f51cae3ed50179
+parametres-applications-refus-fr-150.png	572	934	96	144	dc	0a5e017f11cd539ccd0dd7bd8caa34214800a1b760b6e1083da66080d8703e70
+parametres-applications-refus-jeu-fr-150.png	572	934	96	144	dc	289a5287890e6fdee71d961e77332d46ed56b53c83b079c92f01115a2ff3b730
+parametres-langue-maintenance-fr-150.png	572	934	96	144	dc	23172379ac0cc3815c770fdb3a70742f392ebb0f4e05c754dc31c61728dc0235
+parametres-langue-maintenance-message-fr-150.png	572	934	96	144	dc	e68313db8a79822b589adf6851ed02a376dfe55096032328196a1de5b22a632c
+parametres-lecons-fr-150.png	572	934	96	144	dc	69766db74e91112150e047c2448e7bf22931440c2a8c4ed0cbc9b60d69f8e707
+parametres-lecons-message-fr-150.png	572	934	96	144	dc	ca549f95e28d1fa2a4ca055bd4bfe246a2b29662d37eb67928f46ca7025a4765
+parametres-general-fr-200.png	779	1025	96	192	dc	a66f1e80e1c8f438a5198494dc983eea2a586089899b877dca4ca0b83700ca11
+parametres-general-capture-fr-200.png	779	1025	96	192	dc	342cbdf030c89db3f972a53d00595c216a20735f215fc840d42a697367b9360c
+parametres-general-refus-fr-200.png	779	1025	96	192	dc	e7d9c911fea9df5f865b5bb527ad5040929d160a2bb9792ef0ec7b894f47d0ab
+parametres-general-message-fr-200.png	779	1025	96	192	dc	63167c951636caabf6e33dbb1313a0f919688793617afbb61377899296facd66
+parametres-applications-fr-200.png	779	1025	96	192	dc	711339902bdfb066165de6bf08a9c44421b9bb54d9811a252e94e4d177e7ea8b
+parametres-applications-message-fr-200.png	779	1025	96	192	dc	863d146624a985f1a98813c33ec02cb2e6d93740bc900b1cd2fa63a5b3f7a517
+parametres-applications-refus-fr-200.png	779	1025	96	192	dc	b67e57124b965f1664a5ddd9af146dad0655d04c04db9851882bf3acb54eddf9
+parametres-applications-refus-jeu-fr-200.png	779	1025	96	192	dc	ced8c2c3247ed563c8beab4d95442530cd7a5770d0835ee09bd9a5658003ed06
+parametres-langue-maintenance-fr-200.png	779	1025	96	192	dc	8dedaf3bf1b0ca3f7344ac105cee76cbb1a7e18753bccbd11cc0ddbeaa92c703
+parametres-langue-maintenance-message-fr-200.png	779	1025	96	192	dc	ab4e3e71e01ddfa73fce5dab0bbce5dab5a0e4b930e88ea1d16af6e1c97e6186
+parametres-lecons-fr-200.png	779	1025	96	192	dc	29e71768449682755727b5b601cb6a111c2b4a55ce5150a4077e392a5a86ad61
+parametres-lecons-message-fr-200.png	779	1025	96	192	dc	0625cdf7371853e0b3655f7c20855447b5f5e2353bec0a22f26c0f78eefdf001

@@ -1,0 +1,13 @@
+capture	dpi	message_haut	message_bas	hauteur_visible	hauteur_contenu	defilement	visible
+parametres-general-message-fr-100	96	563	601	601	601	0	oui
+parametres-applications-message-fr-100	96	563	601	601	601	0	oui
+parametres-langue-maintenance-message-fr-100	96	563	601	601	601	0	oui
+parametres-lecons-message-fr-100	96	563	601	601	601	0	oui
+parametres-general-message-fr-150	144	845	902	902	902	0	oui
+parametres-applications-message-fr-150	144	845	902	902	902	0	oui
+parametres-langue-maintenance-message-fr-150	144	845	902	902	902	0	oui
+parametres-lecons-message-fr-150	144	845	902	902	902	0	oui
+parametres-general-message-fr-200	192	917	993	993	1196	0	oui
+parametres-applications-message-fr-200	192	917	993	993	1102	0	oui
+parametres-langue-maintenance-message-fr-200	192	917	993	993	993	0	oui
+parametres-lecons-message-fr-200	192	917	993	993	999	0	oui
