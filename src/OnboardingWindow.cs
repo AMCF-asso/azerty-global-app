@@ -354,13 +354,21 @@ sealed class OnboardingWindow : IDisposable
     /// </summary>
     private float FittedScale(float screenScale)
     {
+        var work = NativeWindow.WorkArea(_hWnd);
+        return FittedScaleFor(screenScale, work.right - work.left, work.bottom - work.top);
+    }
+
+    internal static float FittedScaleFor(float screenScale, int workW, int workH)
+    {
         int clientW = (int)(BASE_WIN_W * screenScale * ONBOARDING_UI_SCALE);
         int clientH = (int)(BASE_WIN_H * screenScale * ONBOARDING_UI_SCALE);
+        // Cadre au DPI réel de l'écran (celui de screenScale), pas à celui du système : sur un
+        // écran d'une autre échelle, la hauteur du cadre était sous-estimée de jusqu'à 32 px.
+        int dpi = (int)Math.Round(screenScale * 96f);
         var (outerW, outerH) = NativeWindow.OuterSize(clientW, clientH,
-            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST);
-        var work = NativeWindow.WorkArea(_hWnd);
+            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST, dpi);
         return WindowSizing.FitScale(screenScale, clientW, clientH, outerW - clientW, outerH - clientH,
-            work.right - work.left, work.bottom - work.top);
+            workW, workH);
     }
 
     // ═══════════════════════════════════════════════════════════════
