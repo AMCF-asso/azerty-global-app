@@ -140,6 +140,36 @@ public class ParcoursAccueilTests
     }
 
     [Fact]
+    public void Continuer_les_lecons_clot_le_parcours_comme_reussi_et_ouvre_Aujourd_hui()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        bool? closed = null;
+        window.TutorialClosed = completed => closed = completed;
+        try
+        {
+            window.BeginTutorial();
+            BancCapture.Call(window, "StartTutorialRoute");
+            for (int i = 0; i < 4; i++)
+            {
+                ConfigManager.RecordLearningExerciseCompleted(i);
+                BancCapture.Call(window, "AdvanceTutorialRoute");
+            }
+            Assert.Equal("Final", Page(window));
+
+            BancCapture.Call(window, "ContinueAfterTutorial", (Action)(() => BancCapture.Call(window, "HomeShowToday")));
+
+            Assert.True(closed);
+            Assert.False(window.IsTutorialActive);
+            Assert.Equal("Today", BancCapture.Field<object>(window, "_homePage")!.ToString());
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    [Fact]
     public void Un_exercice_bonus_se_passe()
     {
         using var isolation = new BancCapture.Isolation();
