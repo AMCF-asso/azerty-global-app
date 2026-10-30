@@ -38,4 +38,16 @@ internal static partial class L
     public static string Learning_FinalTitle => T("Bravo !", "Well done!");
     public static string Learning_FinalRecap => T("Ce que vous avez tapé", "What you typed");
     public static string Learning_FinalSubtitle => T($"Vous maîtrisez les bases d’{Product}.", $"You’ve mastered the basics of {Product}.");
+    public static string Learning_BtnContinueLessons => T("Continuer les leçons", "Continue the lessons");
+
+    /// <summary>Sous une ligne tapée : le geste de son premier caractère qui n’a pas sa propre
+    /// touche (« É : Verr. Maj., puis é »).</summary>
+    public static string Learning_FinalGesture(string character, string recipe) =>
+        T($"{character} : {recipe}", $"{character}: {recipe}");
+
+    public static string Learning_FinalNextTitle => T("Prochaines étapes", "Next steps");
+    public static string Learning_FinalNextTodayHelp => T("Les caractères à revoir aujourd’hui", "The characters to review today");
+    public static string Learning_FinalNextMapHelp => T("Les touches que vous avez travaillées", "The keys you have practised");
+    public static string Learning_FinalNextAfricaHelp => T("€ ɓ ŋ ɔ, sans chronomètre", "€ ɓ ŋ ɔ, no timer");
+    public static string Learning_FinalShortcutsTitle => T("Raccourcis à retenir", "Shortcuts to remember");
 }
