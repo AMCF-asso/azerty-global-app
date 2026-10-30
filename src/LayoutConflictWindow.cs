@@ -25,8 +25,14 @@ sealed class LayoutConflictWindow : IDisposable
     private static readonly string WND_CLASS_NAME = ProductIdentity.WindowClass("LayoutConflict");
 
     private const int BASE_WIN_W = 560;
-    // Hauteur de départ seulement : RepositionControls la recalcule sous les deux liens.
+    // Hauteur de départ seulement : PlaceControls la recalcule sous les deux liens.
     private const int BASE_WIN_H = 440;
+
+    // Lot 130 A : WS_VSCROLL dès la création (la barre existe, FitWindow la masque quand tout
+    // tient), comme les Paramètres.
+    private const uint WindowStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_VSCROLL;
+    private const uint WindowExStyle = Win32.WS_EX_TOPMOST;
+    private readonly WindowScroll _scroll = new();
 
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
     // création, comme l'accueil). Audit UX 1.3.0, #8 : l'intro passe en texte secondaire,
@@ -95,8 +101,7 @@ sealed class LayoutConflictWindow : IDisposable
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
-        RepositionControls();
-        ResizeWindow();
+        FitWindow();
 
         if (NativeWindow.CorrectedScale(Win32.GetDpiForWindow(_hWnd), _dpiScale) is float windowScale)
         {
@@ -105,8 +110,7 @@ sealed class LayoutConflictWindow : IDisposable
             try
             {
                 RecreateFonts();
-                RepositionControls();
-                ResizeWindow();
+                FitWindow();
             }
             catch { }
         }
@@ -153,8 +157,8 @@ sealed class LayoutConflictWindow : IDisposable
         if (!NativeWindow.RegisterClass(WND_CLASS_NAME, _wndProcDelegate))
             return;
 
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        uint dwExStyle = Win32.WS_EX_TOPMOST;
+        uint dwStyle = WindowStyle;
+        uint dwExStyle = WindowExStyle;
         var (windowW, windowH) = NativeWindow.OuterSize(S(BASE_WIN_W), _clientH, dwStyle, dwExStyle);
         var (x, y) = NativeWindow.CenterIn(NativeWindow.WorkArea(), windowW, windowH);
 
@@ -164,7 +168,9 @@ sealed class LayoutConflictWindow : IDisposable
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
-        DialogNavigation.Register(_hWnd);
+        // Lot 130 A : Tab vers un lien sous le pli le fait défiler jusqu'à lui.
+        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
         NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
@@ -307,16 +313,33 @@ sealed class LayoutConflictWindow : IDisposable
         finally { Marshal.FreeHGlobal(pSize); }
     }
 
-    private void ResizeWindow() =>
-        NativeWindow.ResizeAroundCenter(_hWnd, S(BASE_WIN_W), _clientH,
-            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST);
+    /// <summary>
+    /// Lot 130 A (D1) : la fenêtre à sa largeur de référence, plafonnée à la zone de travail de
+    /// son écran, et à la hauteur de son contenu, plafonnée de même ; au-delà, le contenu défile.
+    /// À 200 % sur 1024×768, la référence (1120 px) dépassait l'écran : les cartes étaient
+    /// coupées à droite et en bas. Le texte revient à la ligne à la largeur obtenue.
+    /// </summary>
+    private void FitWindow()
+    {
+        var work = NativeWindow.WorkArea(_hWnd);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, WindowStyle, WindowExStyle);
+        // La dernière mise en page de FitScrollable est celle de fit.LayoutWidth : les contrôles
+        // sont déjà à leur place.
+        var fit = WindowSizing.FitScrollable(S(BASE_WIN_W), PlaceControls, frameW, frameH,
+            work.right - work.left, work.bottom - work.top, NativeWindow.ScrollBarWidth(_hWnd));
 
-    /// <summary>Les deux liens sous la question, pleine largeur, et la hauteur de la fenêtre
-    /// qui en découle.</summary>
-    private void RepositionControls()
+        _clientH = fit.ClientHeight;
+        NativeWindow.ResizeAroundCenter(_hWnd, fit.ClientWidth, fit.ClientHeight, WindowStyle, WindowExStyle);
+        NativeWindow.KeepInWorkArea(_hWnd);
+        _scroll.Reset(_hWnd, fit.ContentHeight, fit.ClientHeight);
+    }
+
+    /// <summary>Les deux liens sous la question, pleine largeur, posés à l'origine (sans
+    /// défilement) ; rend la hauteur du contenu qui en découle.</summary>
+    private int PlaceControls(int layoutW)
     {
         int margin = S(24);
-        int contentW = S(BASE_WIN_W) - margin * 2;
+        int contentW = Math.Max(S(120), layoutW - margin * 2);
         int gap = S(8);
 
         IntPtr hdc = Win32.GetDC(_hWnd);
@@ -332,14 +355,19 @@ sealed class LayoutConflictWindow : IDisposable
         Win32.MoveWindow(_hWndBtnKeep, margin, y, contentW, keepH, true);
         y += keepH + gap;
         Win32.MoveWindow(_hWndBtnQuit, margin, y, contentW, quitH, true);
-        _clientH = y + quitH + S(20);
+        return y + quitH + S(20);
     }
 
     public void Show()
     {
+        // Tray crée une fenêtre neuve à chaque conflit : la remise à zéro ne sert qu'à une
+        // instance rouverte. Le focus, lui, est posé par programme, hors de Tab : sans
+        // EnsureVisible, « Garder » restait sous le pli quand le texte occupe la hauteur.
+        _scroll.ScrollTo(_hWnd, 0);
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
         Win32.SetFocus(_hWndBtnKeep);
+        _scroll.EnsureVisible(_hWnd, _hWndBtnKeep, S(8));
     }
 
     private void Close(bool quit)
@@ -379,11 +407,19 @@ sealed class LayoutConflictWindow : IDisposable
                     _dpiScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
                     RecreateFonts();
                     NativeWindow.MoveToSuggestedRect(_hWnd, lParam);
-                    RepositionControls();
-                    ResizeWindow();
+                    // Le rectangle suggéré applique l'échelle à l'ancienne taille : il peut
+                    // dépasser l'écran. La fenêtre se remesure et se plafonne derrière.
+                    FitWindow();
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
                 }
+
+                case Win32.WM_VSCROLL:
+                case Win32.WM_MOUSEWHEEL:
+                case Win32.WM_KEYDOWN:
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
+                    break;
 
                 case Win32.WM_COMMAND:
                 {
@@ -476,14 +512,8 @@ sealed class LayoutConflictWindow : IDisposable
         return y + qH + S(8);
     }
 
-    private static int MeasureWrapped(IntPtr hdc, IntPtr hFont, string text, int width)
-    {
-        Win32.SelectObject(hdc, hFont);
-        var rect = new Win32.RECT { left = 0, top = 0, right = width, bottom = 9999 };
-        Win32.DrawTextW(hdc, text, -1, ref rect,
-            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
-        return rect.bottom - rect.top;
-    }
+    private static int MeasureWrapped(IntPtr hdc, IntPtr hFont, string text, int width) =>
+        NativeWindow.MeasureWrapped(hdc, hFont, text, width);
 
     public void Dispose()
     {

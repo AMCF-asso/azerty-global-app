@@ -86,4 +86,91 @@ public class PaperTextWrapTests
         }
         finally { Win32.ReleaseDC(IntPtr.Zero, hdc); }
     }
+
+    // Lot F (1.3.0) : texte anglais à 200 % dans une fenêtre étroite. La césure gloutonne ne
+    // connaissait que l'espace : un mot à tiret sautait en bloc à la ligne (ligne mal remplie)
+    // et un mot plus large que le cadre débordait.
+    private static (FontSpec Regular, FontSpec Strong) Fonts200()
+    {
+        AppFonts.EnsureLoaded();
+        return (FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, 2f),
+            FontSpec.Of(AppFonts.Text, 15, TypeRamp.Semibold, 2f));
+    }
+
+    [Fact]
+    public void Anglais200_MotÀTiret_CoupeAprèsLeTiret()
+    {
+        var (regular, strong) = Fonts200();
+        var runs = new[] { new TextRun("Use the well-known shortcut") };
+        IntPtr hdc = Win32.GetDC(IntPtr.Zero);
+        try
+        {
+            // Le cadre tient « Use the well- » mais pas « Use the well-known ».
+            int width = PaperText.Width(hdc, "Use the well-", regular) + 2;
+            var placed = PaperText.Layout(hdc, runs, regular, strong, width);
+
+            Assert.Equal(0, placed.Single(p => p.Text == "well-").Line);
+            Assert.Equal(1, placed.Single(p => p.Text == "known").Line);
+        }
+        finally { Win32.ReleaseDC(IntPtr.Zero, hdc); }
+    }
+
+    [Fact]
+    public void Anglais200_MotPlusLargeQueLaLigne_SeCoupeSeulementLui()
+    {
+        var (regular, strong) = Fonts200();
+        const string Long = "internationalization";
+        var runs = new[] { new TextRun("Keyboard " + Long + " now") };
+        IntPtr hdc = Win32.GetDC(IntPtr.Zero);
+        try
+        {
+            int width = PaperText.Width(hdc, Long, regular) / 2;
+            var placed = PaperText.Layout(hdc, runs, regular, strong, width);
+
+            Assert.All(placed, p => Assert.True(PaperText.Width(hdc, p.Text, regular) + p.X <= width, p.Text));
+            Assert.Equal("Keyboard" + Long + "now", string.Concat(placed.Select(p => p.Text)));
+            Assert.Equal(1, placed.Count(p => p.Text == "Keyboard"));
+            Assert.Equal(1, placed.Count(p => p.Text == "now"));
+        }
+        finally { Win32.ReleaseDC(IntPtr.Zero, hdc); }
+    }
+
+    [Fact]
+    public void Anglais200_MotQuiTient_NeSeCoupeJamais()
+    {
+        var (regular, strong) = Fonts200();
+        var runs = new[] { new TextRun("Press Control and Shift together") };
+        IntPtr hdc = Win32.GetDC(IntPtr.Zero);
+        try
+        {
+            int width = PaperText.Width(hdc, "Control and", regular) + 3;
+            var placed = PaperText.Layout(hdc, runs, regular, strong, width);
+
+            Assert.Equal(new[] { "Press", "Control", "and", "Shift", "together" }, placed.Select(p => p.Text));
+            Assert.Equal(0, placed[0].Line);
+            Assert.Equal(1, placed[1].Line);
+            Assert.Equal(1, placed[2].Line);
+        }
+        finally { Win32.ReleaseDC(IntPtr.Zero, hdc); }
+    }
+
+    // Règle du tiret : coupure après lui seulement si les deux côtés ont ≥ 3 alphanumériques.
+    [Theory]
+    [InlineData("peut-être", "peut-|être")]
+    [InlineData("well-known", "well-|known")]
+    [InlineData("va-t-il", "va-t-il")]
+    [InlineData("dis-le", "dis-le")]
+    [InlineData("est-ce", "est-ce")]
+    [InlineData("state-of-the-art", "state-of-the-|art")]
+    public void Tiret_CoupeSeulementSiLesDeuxCôtésOntTroisCaractères(string text, string expected)
+    {
+        var (regular, strong) = Fonts200();
+        IntPtr hdc = Win32.GetDC(IntPtr.Zero);
+        try
+        {
+            var placed = PaperText.Layout(hdc, new[] { new TextRun(text) }, regular, strong, int.MaxValue);
+            Assert.Equal(expected, string.Join("|", placed.Select(p => p.Text)));
+        }
+        finally { Win32.ReleaseDC(IntPtr.Zero, hdc); }
+    }
 }

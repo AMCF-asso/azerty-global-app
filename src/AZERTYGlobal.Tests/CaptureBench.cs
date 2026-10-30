@@ -193,6 +193,7 @@ public class CaptureBench
                 int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, slug, windowDpi);
+                ShootScrolledToEnd(target, window, hwnd, slug, windowDpi);
             }
             finally
             {
@@ -281,6 +282,7 @@ public class CaptureBench
                 BancCapture.Call(window, "SetValidationMessage", SettingsMessages[tab](), false);
                 BancCapture.MarkActive(hwnd);
                 target.Shoot(hwnd, $"parametres-{SettingsTabs[tab]}-message", windowDpi);
+                RecordMessagePosition(target, window, $"parametres-{SettingsTabs[tab]}-message");
 
                 // Un refus, « Compatibilité jeu » sur la connexion à distance choisie (mstsc),
                 // puis sur un jeu à anti-triche : en rouge, avec la raison et ce qui se passe à
@@ -314,6 +316,32 @@ public class CaptureBench
     /// rend, comme le bouton Suivant, sans armer <c>_step3Reached</c> : la fermeture ne peut
     /// donc rien enregistrer, ni l'affichage au démarrage ni le lancement automatique.
     /// </summary>
+    /// <summary>Position du message de validation dans la zone cliente, en pixels : le haut et le
+    /// bas du contrôle tel qu'il est placé, contre la hauteur de la zone visible. Le
+    /// message se voit sans défilement quand son bas ne dépasse pas la zone. Écrit
+    /// <c>position-message.tsv</c> à côté des images.</summary>
+    private static void RecordMessagePosition(BancCapture.Target target, SettingsWindow window, string slug)
+    {
+        int viewport = BancCapture.Field<int>(window, "_viewportHeight");
+        int content = BancCapture.Field<int>(window, "_contentHeight");
+        int scroll = BancCapture.Field<int>(window, "_scrollY");
+        // Position réelle du contrôle dans la zone cliente, après défilement.
+        IntPtr control = BancCapture.Field<IntPtr>(window, "_hWndValidation");
+        Win32.GetWindowRect(control, out var screen);
+        var topLeft = new Win32.POINT { x = screen.left, y = screen.top };
+        var bottomRight = new Win32.POINT { x = screen.right, y = screen.bottom };
+        IntPtr hwnd = BancCapture.Handle(window);
+        Win32.ScreenToClient(hwnd, ref topLeft);
+        Win32.ScreenToClient(hwnd, ref bottomRight);
+        var rect = new Win32.RECT { top = topLeft.y + scroll, bottom = bottomRight.y + scroll };
+        string path = Path.Combine(target.OutDir, "position-message.tsv");
+        if (!File.Exists(path))
+            File.WriteAllText(path, "capture\tdpi\tmessage_haut\tmessage_bas\thauteur_visible\thauteur_contenu\tdefilement\tvisible\n");
+        File.AppendAllText(path, string.Join('\t', $"{slug}-{target.Language}-{BancCapture.Percent(target.Dpi)}", target.Dpi,
+            rect.top - scroll, rect.bottom - scroll, viewport, content, scroll,
+            rect.bottom - scroll <= viewport ? "oui" : "NON") + "\n");
+    }
+
     private static void CaptureOnboarding(BancCapture.Target target)
     {
         var window = new OnboardingWindow();
@@ -356,10 +384,30 @@ public class CaptureBench
             int windowDpi = BancCapture.ApplyDpi(hwnd, target.Dpi);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, "couches", windowDpi);
+            ShootScrolledToEnd(target, window, hwnd, "couches", windowDpi);
         }
         finally
         {
             BancCapture.Teardown(window);
         }
+    }
+
+    /// <summary>
+    /// Lot 130 A : une fenêtre qui défile cache son bas sur la première image. Quand elle défile,
+    /// une image de plus la montre défilée jusqu'au bout (<c>{sujet}-bas</c>) : le bouton ou la
+    /// carte du bas s'y voient entiers. Rien n'est ajouté quand tout tient.
+    /// </summary>
+    private static void ShootScrolledToEnd(BancCapture.Target target, object window, IntPtr hwnd, string slug, int windowDpi)
+    {
+        var scroll = BancCapture.Field<WindowScroll>(window, "_scroll");
+        if (!scroll.Needed)
+            return;
+
+        // La touche Fin, par la voie du clavier (lot H) : le défilement direct ne l'éprouvait pas.
+        Win32.SendMessageW(hwnd, Win32.WM_KEYDOWN, (IntPtr)0x23 /* VK_END */, IntPtr.Zero);
+        if (scroll.Position != scroll.Clamp(int.MaxValue))
+            throw new InvalidOperationException("la touche Fin n'a pas défilé jusqu'en bas");
+        BancCapture.MarkActive(hwnd);
+        target.Shoot(hwnd, slug + "-bas", windowDpi);
     }
 }

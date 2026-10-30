@@ -247,12 +247,45 @@ static class NativeWindow
     // Placement
     // ═══════════════════════════════════════════════════════════════
 
+    [ThreadStatic] private static Win32.RECT? t_workAreaOverride;
+
+    /// <summary>
+    /// Lot 130 A — zone de travail simulée pour le fil courant, jusqu'au Dispose. Réservé au
+    /// banc de capture : les troncatures de la CI viennent d'un écran 1024×768, que le poste
+    /// d'Antoine n'a pas. Même principe que <see cref="CursorSource.OverrideForTests"/>.
+    /// </summary>
+    internal static IDisposable OverrideWorkAreaForTests(Win32.RECT work)
+    {
+        var previous = t_workAreaOverride;
+        t_workAreaOverride = work;
+        return new WorkAreaScope(previous);
+    }
+
+    private sealed class WorkAreaScope : IDisposable
+    {
+        private readonly Win32.RECT? _previous;
+        private bool _disposed;
+
+        internal WorkAreaScope(Win32.RECT? previous) => _previous = previous;
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+            t_workAreaOverride = _previous;
+        }
+    }
+
     /// <summary>
     /// Zone de travail de l'écran du propriétaire, à défaut de celui du curseur, où
     /// l'utilisateur vient de cliquer ; 1024×768 quand aucun écran ne répond.
     /// </summary>
     internal static Win32.RECT WorkArea(IntPtr owner = default)
     {
+        if (t_workAreaOverride is { } simulated)
+            return simulated;
+
         IntPtr monitor = owner != IntPtr.Zero
             ? Win32.MonitorFromWindow(owner, Win32.MONITOR_DEFAULTTONEAREST)
             : IntPtr.Zero;
@@ -267,11 +300,59 @@ static class NativeWindow
         return new Win32.RECT { left = 0, top = 0, right = 1024, bottom = 768 };
     }
 
-    /// <summary>Taille extérieure d'une fenêtre pour une zone cliente donnée.</summary>
-    internal static (int Width, int Height) OuterSize(int clientW, int clientH, uint style, uint exStyle = 0)
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetricsForDpi(int index, uint dpi);
+
+    /// <summary>Largeur de la barre de défilement verticale au DPI de la fenêtre : au DPI réel de
+    /// l'écran, comme le cadre, que la fenêtre en défile ou non.</summary>
+    internal static int ScrollBarWidth(IntPtr hwnd)
+    {
+        int width = GetSystemMetricsForDpi(Win32.SM_CXVSCROLL, (uint)DpiOf(hwnd));
+        return width > 0 ? width : Win32.GetSystemMetrics(Win32.SM_CXVSCROLL);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool AdjustWindowRectExForDpi(ref Win32.RECT rect, uint style, bool menu, uint exStyle, uint dpi);
+
+    /// <summary>DPI du cadre de la fenêtre, 0 (celui du système) quand la mesure échoue ou que la
+    /// fenêtre n'existe pas encore.</summary>
+    private static int FrameDpi(IntPtr hwnd) => hwnd != IntPtr.Zero ? Math.Max(0, Win32.GetDpiForWindow(hwnd)) : 0;
+
+    /// <summary>Cadre et barre de titre d'une fenêtre : largeur et hauteur à ajouter à sa zone
+    /// cliente, au DPI réel de l'écran de <paramref name="hwnd"/> (voir <see cref="OuterSize"/>).</summary>
+    internal static (int Width, int Height) NonClientSize(IntPtr hwnd, uint style, uint exStyle = 0)
+    {
+        var (width, height) = OuterSize(100, 100, style, exStyle, FrameDpi(hwnd));
+        return (width - 100, height - 100);
+    }
+
+    /// <summary>Hauteur d'un texte qui revient à la ligne dans <paramref name="width"/> px, dans
+    /// la police donnée (DT_CALCRECT).</summary>
+    internal static int MeasureWrapped(IntPtr hdc, IntPtr hFont, string text, int width)
+    {
+        IntPtr previous = Win32.SelectObject(hdc, hFont);
+        var rect = new Win32.RECT { left = 0, top = 0, right = Math.Max(1, width), bottom = 9999 };
+        Win32.DrawTextW(hdc, text, -1, ref rect,
+            Win32.DT_LEFT | Win32.DT_WORDBREAK | Win32.DT_NOPREFIX | Win32.DT_CALCRECT);
+        Win32.SelectObject(hdc, previous);
+        return rect.bottom - rect.top;
+    }
+
+    /// <summary>
+    /// Taille extérieure d'une fenêtre pour une zone cliente donnée. <paramref name="dpi"/> à 0 :
+    /// le cadre du DPI du système (AdjustWindowRectEx), seul connu avant la création de la
+    /// fenêtre. Le processus est par écran (PerMonitorV2) : sur un écran d'un autre DPI que le
+    /// système, le cadre que Windows dessine est celui de l'écran, et la taille voulue se mesure
+    /// avec lui (AdjustWindowRectExForDpi).
+    /// </summary>
+    internal static (int Width, int Height) OuterSize(int clientW, int clientH, uint style, uint exStyle = 0, int dpi = 0)
     {
         var rect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
-        Win32.AdjustWindowRectEx(ref rect, style, false, exStyle);
+        if (dpi <= 0 || !AdjustWindowRectExForDpi(ref rect, style, false, exStyle, (uint)dpi))
+        {
+            rect = new Win32.RECT { left = 0, top = 0, right = clientW, bottom = clientH };
+            Win32.AdjustWindowRectEx(ref rect, style, false, exStyle);
+        }
         return (rect.right - rect.left, rect.bottom - rect.top);
     }
 
@@ -289,7 +370,7 @@ static class NativeWindow
         uint exStyle, Win32.RECT work)
     {
         var (width, height) = OuterSize(WindowSizing.ScaleForDpi(clientW96, dpi),
-            WindowSizing.ScaleForDpi(clientH96, dpi), style, exStyle);
+            WindowSizing.ScaleForDpi(clientH96, dpi), style, exStyle, dpi);
         var (x, y) = CenterIn(work, width, height);
         Win32.MoveWindow(hwnd, x, y, width, height, false);
     }
@@ -311,10 +392,12 @@ static class NativeWindow
             Win32.MoveWindow(hwnd, x, y, width, height, true);
     }
 
-    /// <summary>Nouvelle zone cliente, même centre : la fenêtre grandit ou rétrécit sur place.</summary>
+    /// <summary>Nouvelle zone cliente, même centre : la fenêtre grandit ou rétrécit sur place.
+    /// Le cadre est celui du DPI de la fenêtre, comme <see cref="NonClientSize"/> qui a servi
+    /// au plafond.</summary>
     internal static void ResizeAroundCenter(IntPtr hwnd, int clientW, int clientH, uint style, uint exStyle = 0)
     {
-        var (width, height) = OuterSize(clientW, clientH, style, exStyle);
+        var (width, height) = OuterSize(clientW, clientH, style, exStyle, FrameDpi(hwnd));
         Win32.GetWindowRect(hwnd, out var current);
         int cx = (current.left + current.right) / 2;
         int cy = (current.top + current.bottom) / 2;

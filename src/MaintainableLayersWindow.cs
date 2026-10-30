@@ -21,7 +21,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const int IDC_SAVE = 5208;
 
     private static readonly string ClassName = ProductIdentity.WindowClass("MaintainableLayers");
-    private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+    // Lot 130 A : WS_VSCROLL dès la création (la barre existe, FitWindow la masque quand tout
+    // tient), comme les Paramètres.
+    private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_VSCROLL;
+    private readonly WindowScroll _scroll = new();
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
@@ -31,6 +34,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hScientific;
     private IntPtr _hVisual;
     private IntPtr _hDelay;
+    private IntPtr _hClose;
     // Libellés liés à l'interrupteur général : grisés avec leurs contrôles.
     private IntPtr _hAvailableLabel;
     private IntPtr _hDelayLabel;
@@ -40,8 +44,15 @@ internal sealed class MaintainableLayersWindow : IDisposable
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
     private int _dpi = 96;
-    // Polices du _layout : 0 = texte, 1 = titre.
-    private readonly ControlLayout _layout = new();
+
+    /// <summary>Ce que la mise en page fait d'un contrôle quand la largeur manque (lot 130 A) :
+    /// les textes à retour à la ligne grandissent et poussent ce qui est dessous, le bouton
+    /// reste ancré à droite.</summary>
+    private enum Role { Plain, Title, Wrapped, Anchored }
+
+    // Géométrie de référence à 96 DPI, dans l'ordre vertical : un texte qui grandit pousse
+    // seulement les contrôles qui le suivent.
+    private readonly List<(IntPtr Control, int X, int Y, int W, int H, Role Role)> _items = new();
     private const int BASE_CLIENT_W = 520;
     private const int BASE_CLIENT_H = 408;
     private IntPtr _hBgBrush;
@@ -62,16 +73,22 @@ internal sealed class MaintainableLayersWindow : IDisposable
     public void Show()
     {
         LoadFromConfig();
+        // La fenêtre se rouvre en haut : l'instance est gardée d'une ouverture à l'autre, et
+        // le défilement de la fermeture précédente masquerait le titre et la case générale.
+        _scroll.ScrollTo(_hWnd, 0);
         // K1 (accessibilité 1.3.0) : Tab, Maj+Tab, Entrée et Échap entre les contrôles, comme
         // les autres fenêtres à contrôles. Inscrite le temps d'être visible, comme l'accueil :
         // inscrite en permanence, elle ferait passer chaque message du processus par
         // GetAncestor (voir DialogNavigation.TryRoute).
-        DialogNavigation.Register(_hWnd);
+        // Lot 130 A : Tab vers un contrôle sous le pli le fait défiler jusqu'à lui.
+        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
         Win32.ShowWindow(_hWnd, 5);
         Win32.SetForegroundWindow(_hWnd);
         // Focus initial sur le premier contrôle : sans lui, le focus restait sur la fenêtre
         // elle-même, et rien n'était annoncé avant la première tabulation.
         Win32.SetFocus(_hMaster);
+        _scroll.EnsureVisible(_hWnd, _hMaster, S(8));
         _visible = true;
     }
 
@@ -108,13 +125,13 @@ internal sealed class MaintainableLayersWindow : IDisposable
         // l'accueille. Taille, positions et polices en découlent : elles étaient fixes en
         // pixels, et la fenêtre gardait sa taille 100 % à 200 %.
         _dpi = NativeWindow.DpiOf(_hWnd);
-        NativeWindow.FitToDpi(_hWnd, BASE_CLIENT_W, BASE_CLIENT_H, _dpi, Style, 0, work);
         CreateFonts();
 
-        CreateStatic(instance, L.Layers_Title, 24, 18, 480, 30, _hFontTitle);
+        // Le titre et l'explication reviennent à la ligne quand la largeur manque (lot 130 A).
+        CreateStatic(instance, L.Layers_Title, 24, 18, 480, 30, _hFontTitle, Role.Title);
         // Le second groupe de phrases wrappe sur deux lignes dans 470 px :
         // réserver trois lignes pleines pour ne rien tronquer.
-        CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 66, _hFont);
+        CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 66, _hFont, Role.Wrapped);
 
         _hMaster = CreateCheckbox(instance, IDC_MASTER, L.Layers_MasterCheckbox, 24, 134, 455, 28);
         _hAvailableLabel = CreateStatic(instance, L.Layers_AvailableLabel, 45, 175, 250, 24, _hFont);
@@ -128,20 +145,23 @@ internal sealed class MaintainableLayersWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | Win32.ES_NUMBER | Win32.ES_CENTER,
             210, 317, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
         SetFont(_hDelay, _hFont);
-        Track(_hDelay, 210, 317, 70, 28);
+        Track(_hDelay, 210, 317, 70, 28, Role.Plain);
         _hDelayUnit = CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
 
         // « Fermer » : la fenêtre enregistre à toute fermeture (croix, Échap, Entrée) et n'a
         // pas d'annulation ; « Enregistrer » laissait croire que les autres sorties perdaient.
-        IntPtr save = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
+        IntPtr save = _hClose = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_DEFPUSHBUTTON,
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
-        Track(save, 350, 357, 140, 34);
+        // Lot 130 A et C : « Fermer » reste à 30 px du bord droit de ce qui est affiché.
+        Track(save, 350, 357, 140, 34, Role.Anchored);
         // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système.
         if (!_pal.HighContrast)
             LightButton.Attach(save, paper: true);
         _checkboxes = new[] { _hMaster, _hGreek, _hCyrillic, _hScientific, _hVisual };
+
+        FitWindow();
     }
 
     private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)
@@ -150,17 +170,18 @@ internal sealed class MaintainableLayersWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_AUTOCHECKBOX,
             x, y, w, h, _hWnd, (IntPtr)id, instance, IntPtr.Zero);
         SetFont(control, _hFont);
-        Track(control, x, y, w, h);
+        Track(control, x, y, w, h, Role.Plain);
         return control;
     }
 
-    private IntPtr CreateStatic(IntPtr instance, string text, int x, int y, int w, int h, IntPtr font)
+    private IntPtr CreateStatic(IntPtr instance, string text, int x, int y, int w, int h, IntPtr font,
+        Role role = Role.Plain)
     {
         IntPtr control = Win32.CreateWindowExW(0, "STATIC", text,
             Win32.WS_CHILD | Win32.WS_VISIBLE,
             x, y, w, h, _hWnd, IntPtr.Zero, instance, IntPtr.Zero);
         SetFont(control, font);
-        Track(control, x, y, w, h, font == _hFontTitle);
+        Track(control, x, y, w, h, role);
         return control;
     }
 
@@ -178,11 +199,69 @@ internal sealed class MaintainableLayersWindow : IDisposable
     /// <summary>A9 : police des libellés de case, dessinés par <see cref="PaperChoice"/>.</summary>
     private FontSpec ChoiceFont => FontSpec.Of(AppFonts.Text, TypeRamp.Body, TypeRamp.Regular, _dpi / 96f);
 
-    /// <summary>D1 : retient la géométrie de référence du contrôle et l'applique au DPI courant.</summary>
-    private void Track(IntPtr control, int x, int y, int w, int h, bool title = false)
+    /// <summary>D1 : retient la géométrie de référence du contrôle ; <see cref="FitWindow"/> la
+    /// pose au DPI et à la largeur courants.</summary>
+    private void Track(IntPtr control, int x, int y, int w, int h, Role role) =>
+        _items.Add((control, x, y, w, h, role));
+
+    /// <summary>
+    /// Lot 130 A (D1) : la fenêtre à sa largeur de référence, plafonnée à la zone de travail de
+    /// son écran, et à la hauteur de son contenu, plafonnée de même ; au-delà, le contenu défile.
+    /// À 200 % sur 1024×768, la référence (1040 px de zone cliente) dépassait l'écran : le bouton
+    /// « Fermer » était coupé en bas. À 100 % comme à 175 %, la fenêtre garde sa taille.
+    /// </summary>
+    private void FitWindow()
     {
-        _layout.Track(control, x, y, w, h, title ? 1 : 0);
-        Win32.MoveWindow(control, S(x), S(y), S(w), S(h), false);
+        var work = NativeWindow.WorkArea(_hWnd);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, Style);
+        // La dernière mise en page de FitScrollable est celle de fit.LayoutWidth : les contrôles
+        // sont déjà à leur place.
+        var fit = WindowSizing.FitScrollable(S(BASE_CLIENT_W), PlaceControls, frameW, frameH,
+            work.right - work.left, work.bottom - work.top, NativeWindow.ScrollBarWidth(_hWnd));
+
+        NativeWindow.ResizeAroundCenter(_hWnd, fit.ClientWidth, fit.ClientHeight, Style);
+        NativeWindow.KeepInWorkArea(_hWnd);
+        _scroll.Reset(_hWnd, fit.ContentHeight, fit.ClientHeight);
+    }
+
+    /// <summary>
+    /// Les contrôles à la largeur de mise en page donnée, posés à l'origine (sans défilement) ;
+    /// rend la hauteur du contenu. Aucun ne dépasse la marge de droite de la référence (16 px) ;
+    /// le titre et l'explication, qui reviennent à la ligne, grandissent au besoin et poussent
+    /// les contrôles suivants ; « Fermer » suit le bord droit.
+    /// </summary>
+    private int PlaceControls(int layoutW)
+    {
+        int rightLimit = layoutW - S(BASE_CLIENT_W - 504);
+        int extra = 0;
+        IntPtr hdc = Win32.GetDC(_hWnd);
+        try
+        {
+            foreach (var (control, refX, refY, refW, refH, role) in _items)
+            {
+                int x = S(refX), y = S(refY) + extra, w = S(refW), h = S(refH);
+                if (role == Role.Anchored)
+                    x += layoutW - S(BASE_CLIENT_W);
+                else
+                    w = Math.Max(S(40), Math.Min(w, rightLimit - x));
+
+                if (role is Role.Title or Role.Wrapped)
+                {
+                    // La taille se lit sur le contrôle : un texte plus long ne se tronque pas.
+                    var text = new StringBuilder(Win32.GetWindowTextLengthW(control) + 1);
+                    Win32.GetWindowTextW(control, text, text.Capacity);
+                    int wanted = NativeWindow.MeasureWrapped(hdc, role == Role.Title ? _hFontTitle : _hFont, text.ToString(), w);
+                    if (wanted > h)
+                    {
+                        extra += wanted - h;
+                        h = wanted;
+                    }
+                }
+                Win32.MoveWindow(control, x, y, w, h, true);
+            }
+        }
+        finally { Win32.ReleaseDC(_hWnd, hdc); }
+        return S(BASE_CLIENT_H) + extra;
     }
 
     /// <summary>D1 : polices et contrôles au nouveau DPI (WM_DPICHANGED).</summary>
@@ -191,7 +270,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
         IntPtr oldFont = _hFont;
         IntPtr oldTitle = _hFontTitle;
         CreateFonts();
-        _layout.Apply(_dpi, _hFont, _hFontTitle);
+        foreach (var (control, _, _, _, _, role) in _items)
+            Win32.SendMessageW(control, Win32.WM_SETFONT, role == Role.Title ? _hFontTitle : _hFont, (IntPtr)1);
+        FitWindow();
         if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
         if (oldTitle != IntPtr.Zero) Win32.DeleteObject(oldTitle);
     }
@@ -289,6 +370,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     }
                     break;
                 case Win32.WM_KEYDOWN:
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
                     if (wParam == (IntPtr)0x1B)
                     {
                         Hide();
@@ -322,6 +405,11 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     _dpi = NativeWindow.ApplyDpiChange(_hWnd, wParam, lParam);
                     ApplyDpiToControls();
                     return IntPtr.Zero;
+                case Win32.WM_VSCROLL:
+                case Win32.WM_MOUSEWHEEL:
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
+                    break;
                 case Win32.WM_CLOSE:
                     Hide();
                     return IntPtr.Zero;
