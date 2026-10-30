@@ -106,13 +106,52 @@ internal static class PaperText
     internal static List<PlacedWord> Layout(IntPtr hdc, IReadOnlyList<TextRun> runs, FontSpec regular, FontSpec strong,
         int maxWidth)
     {
-        var words = Words(runs).ToList();
-        var measured = words.Select(w => (Width(hdc, w.Word, w.Strong ? strong : regular), w.PrecededBySpace)).ToList();
+        var words = new List<(string Word, bool Strong, bool PrecededBySpace, bool CanBreakBefore)>();
+        foreach (var w in Words(runs))
+        {
+            var font = w.Strong ? strong : regular;
+            if (Width(hdc, w.Word, font) <= maxWidth)
+            {
+                words.Add(w);
+                continue;
+            }
+            // Mot seul plus large que le cadre : seul cas où l'on coupe au milieu d'un mot.
+            bool first = true;
+            foreach (var chunk in ChunksThatFit(hdc, w.Word, font, maxWidth))
+            {
+                words.Add((chunk, w.Strong, first && w.PrecededBySpace, !first || w.CanBreakBefore));
+                first = false;
+            }
+        }
+        var measured = words.Select(w => (Width(hdc, w.Word, w.Strong ? strong : regular), w.PrecededBySpace,
+            w.CanBreakBefore)).ToList();
         var positions = BreakLines(measured, Width(hdc, " ", regular), maxWidth);
         var placed = new List<PlacedWord>(words.Count);
         for (int i = 0; i < words.Count; i++)
             placed.Add(new PlacedWord(words[i].Word, words[i].Strong, positions[i].Line, positions[i].X));
         return placed;
+    }
+
+    /// <summary>Découpe <paramref name="word"/> en tronçons de grappes entières, chacun aussi
+    /// large que possible sans dépasser <paramref name="maxWidth"/> (une grappe seule peut le
+    /// dépasser : on ne la coupe pas).</summary>
+    private static IEnumerable<string> ChunksThatFit(IntPtr hdc, string word, FontSpec font, int maxWidth)
+    {
+        int start = 0, end = 0;
+        while (end < word.Length)
+        {
+            int next = end + (char.IsHighSurrogate(word[end]) && end + 1 < word.Length ? 2 : 1);
+            while (next < word.Length && KeyboardRenderer.IsCombiningMark(word[next]))
+                next++;
+            if (end > start && Width(hdc, word[start..next], font) > maxWidth)
+            {
+                yield return word[start..end];
+                start = end;
+            }
+            end = next;
+        }
+        if (end > start)
+            yield return word[start..end];
     }
 
     /// <summary>
@@ -124,6 +163,15 @@ internal static class PaperText
     /// </summary>
     internal static (int Line, int X)[] BreakLines(IReadOnlyList<(int Width, bool PrecededBySpace)> words,
         int spaceWidth, int maxWidth)
+        => BreakLines(words.Select(w => (w.Width, w.PrecededBySpace, false)).ToList(), spaceWidth, maxWidth);
+
+    /// <summary>
+    /// Idem, avec <c>CanBreakBefore</c> : le mot peut commencer une ligne sans espace avant
+    /// lui (après un tiret, ou tronçon d'un mot plus large que le cadre). Il ouvre alors un
+    /// nouveau groupe collé.
+    /// </summary>
+    internal static (int Line, int X)[] BreakLines(
+        IReadOnlyList<(int Width, bool PrecededBySpace, bool CanBreakBefore)> words, int spaceWidth, int maxWidth)
     {
         var result = new (int Line, int X)[words.Count];
         int x = 0, line = 0;
@@ -134,7 +182,7 @@ internal static class PaperText
             // Le groupe : ce mot et ceux qui le suivent sans espace.
             int end = i + 1;
             int groupWidth = words[i].Width;
-            while (end < words.Count && !words[end].PrecededBySpace)
+            while (end < words.Count && !words[end].PrecededBySpace && !words[end].CanBreakBefore)
                 groupWidth += words[end++].Width;
             if (groupWidth > maxWidth)
             {
@@ -161,8 +209,39 @@ internal static class PaperText
     }
 
     /// <summary>Les mots des morceaux, avec leur graisse et l'espace sécable qui les précède.
-    /// Une ponctuation collée à un mot gras (« Espace. ») reste son voisin sans espace.</summary>
-    private static IEnumerable<(string Word, bool Strong, bool PrecededBySpace)> Words(IReadOnlyList<TextRun> runs)
+    /// Une ponctuation collée à un mot gras (« Espace. ») reste son voisin sans espace.
+    /// Un mot à tiret se coupe après le tiret quand les deux côtés ont au moins
+    /// <see cref="MinHyphenSide"/> caractères alphanumériques (« peut-être », « well-known » ;
+    /// pas « va-t-il », « dis-le », « est-ce »).</summary>
+    private static IEnumerable<(string Word, bool Strong, bool PrecededBySpace, bool CanBreakBefore)> Words(
+        IReadOnlyList<TextRun> runs)
+    {
+        foreach (var w in WordsBySpace(runs))
+        {
+            int start = 0;
+            for (int i = 0; i < w.Word.Length; i++)
+            {
+                if (w.Word[i] != '-' || !HyphenBreaks(w.Word, i)) continue;
+                yield return (w.Word[start..(i + 1)], w.Strong, start == 0 && w.PrecededBySpace, start > 0);
+                start = i + 1;
+            }
+            yield return start == 0 ? (w.Word, w.Strong, w.PrecededBySpace, false)
+                : (w.Word[start..], w.Strong, false, true);
+        }
+    }
+
+    private const int MinHyphenSide = 3;
+
+    private static bool HyphenBreaks(string word, int hyphen)
+    {
+        int left = 0, right = 0;
+        for (int i = hyphen - 1; i >= 0 && char.IsLetterOrDigit(word[i]); i--) left++;
+        for (int i = hyphen + 1; i < word.Length && char.IsLetterOrDigit(word[i]); i++) right++;
+        return left >= MinHyphenSide && right >= MinHyphenSide;
+    }
+
+    private static IEnumerable<(string Word, bool Strong, bool PrecededBySpace)> WordsBySpace(
+        IReadOnlyList<TextRun> runs)
     {
         bool pendingSpace = false;
         foreach (var run in runs)
