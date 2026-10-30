@@ -1,0 +1,137 @@
+﻿[
+    {
+        "ligne":  "A1",
+        "verdict":  "ECHEC",
+        "observation":  "empreinte c601af2ee820, paquet 1.3.0.0 x64, shadow stack et CFG lus dans installation.txt"
+    },
+    {
+        "ligne":  "A2",
+        "verdict":  "ECHEC",
+        "observation":  "accueil absent au lancement"
+    },
+    {
+        "ligne":  "A3",
+        "verdict":  "ECHEC",
+        "observation":  "accueil non rouvert"
+    },
+    {
+        "ligne":  "A10",
+        "verdict":  "ECHEC",
+        "observation":  "menu releve en ? puis ? : bascule FR/EN ou ouverture du menu en defaut"
+    },
+    {
+        "ligne":  "B12",
+        "verdict":  "A VOIR",
+        "observation":  "noms MSAA de Pause, Parametres, Recherche. Absents FR : ^Heures$, ^Minutes$, Clavier virtuel, ^Recherche$, Compatibilit. des applications, Rechercher un caract ; absents EN : ^Hours$, ^Minutes$, Virtual keyboard, ^Search$, App compatibility, Find a character. Lecture par le Narrateur non jugee. Releves msaa-*.txt."
+    },
+    {
+        "ligne":  "R37",
+        "verdict":  "ECHEC",
+        "observation":  "releves menu-fr.txt ou menu-en.txt absents (voir A10)"
+    },
+    {
+        "ligne":  "R40",
+        "verdict":  "ECHEC",
+        "observation":  "case Rappels d\u0027entrainement visible : 0, presente mais masquee : 0 (FR et EN) ; releve absent : fr, en. Absence de trou : image parametres-general du banc."
+    },
+    {
+        "ligne":  "A5",
+        "verdict":  "ECHEC",
+        "observation":  "sortie par Quitter=True ; relance=False ; accord conserve=False ; accueil reaffiche=False. Clavier systeme a la sortie et remappage revenu non juges (frappe simulee)."
+    },
+    {
+        "ligne":  "R57b",
+        "verdict":  "ECHEC",
+        "observation":  "sous-menu releves menu absents (voir A10) ; apres 15 minutes : aucun Reprendre maintenant, sous-menu retire=True ; apres reprise : sous-menu revenu=False ; application desactivee : sous-menu grise=False. Bulle En pause pour ... non jugee."
+    },
+    {
+        "ligne":  "R57",
+        "verdict":  "ECHEC",
+        "observation":  "fenetre Personnaliser absente"
+    },
+    {
+        "ligne":  "R45/R47/R49",
+        "verdict":  "ECHEC",
+        "observation":  "Parametres absents"
+    },
+    {
+        "ligne":  "R58",
+        "verdict":  "ECHEC",
+        "observation":  "fenetre Couches absente"
+    },
+    {
+        "ligne":  "R60",
+        "verdict":  "ECHEC",
+        "observation":  "trois ouvertures : A propos absente, absente, absente ; Mes statistiques absente, absente, absente ; Parametres absente, absente, absente ; Accueil absente, absente, absente ; Couches absente, absente, absente ; Pause absente, absente, absente ; defauts : A propos #1 absente, A propos #2 absente, A propos #3 absente, Mes statistiques #1 absente, Mes statistiques #2 absente, Mes statistiques #3 absente, Parametres #1 absente, Parametres #2 absente, Parametres #3 absente, Accueil #1 absente, Accueil #2 absente, Accueil #3 absente, Couches #1 absente, Couches #2 absente, Couches #3 absente, Pause #1 absente, Pause #2 absente, Pause #3 absente ; RegisterClass dans error.log : 0. Conflit non ouvrable dans le Sandbox (pas de disposition systeme)."
+    },
+    {
+        "ligne":  "R20/R22",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R23",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R24",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R25",
+        "verdict":  "ECHEC",
+        "observation":  "accueil non rouvert"
+    },
+    {
+        "ligne":  "R26",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R39",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R41",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R70/R71",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R72",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R73",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\config.json\u0027.\""
+    },
+    {
+        "ligne":  "R74",
+        "verdict":  "ECHEC",
+        "observation":  "Exception calling \"WriteAllText\" with \"2\" argument(s): \"Could not find a part of the path \u0027C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global\\lessons-progress.json\u0027.\""
+    },
+    {
+        "ligne":  "A11",
+        "verdict":  "ECHEC",
+        "observation":  "config.json introuvable dans C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\Packages\\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\\LocalCache\\Local\\AZERTY Global ; C:\\Users\\WDAGUtilityAccount\\AppData\\Local\\AZERTY Global"
+    },
+    {
+        "ligne":  "R75",
+        "verdict":  "ECHEC",
+        "observation":  "apres [1] : accueil ouvert=False, accord=False, menu non releve (inactive=False) ; accord par clic (identifiant 2011, \u0027accueil absent\u0027) : accord=False, tutoriel=False ; relance : accord=False, menu non releve (active=False). Bulle unique : QuarantaineTests (config corrompue, message une seule fois)."
+    },
+    {
+        "ligne":  "A12",
+        "verdict":  "OK",
+        "observation":  "processus arrete=True ; paquet retire=True. Clavier systeme utilisable non juge (frappe simulee)."
+    }
+]

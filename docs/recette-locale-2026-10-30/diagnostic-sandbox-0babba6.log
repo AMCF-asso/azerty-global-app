@@ -1,0 +1,146 @@
+  Determining projects to restore...
+  Restored C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Core\TypingEngine.Core.csproj (in 94 ms).
+  Restored C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Windows\TypingEngine.Windows.csproj (in 174 ms).
+  Restored C:\Users\antoi\AppData\Local\Temp\agbase\src\AZERTYGlobal.csproj (in 4.82 sec).
+  TypingEngine.Core -> C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+  TypingEngine.Windows -> C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+C:\Users\antoi\AppData\Local\Temp\agbase\src\TrayApplication.cs(1553,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [C:\Users\antoi\AppData\Local\Temp\agbase\src\AZERTYGlobal.csproj]
+C:\Users\antoi\AppData\Local\Temp\agbase\src\TrayApplication.cs(1566,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [C:\Users\antoi\AppData\Local\Temp\agbase\src\AZERTYGlobal.csproj]
+  AZERTYGlobal -> C:\Users\antoi\AppData\Local\Temp\agbase\src\bin\Release\net8.0-windows10.0.17763.0\win-x64\AZERTY Global.dll
+  Generating native code
+  AZERTYGlobal -> C:\Users\antoi\AppData\Local\Temp\agbase\src\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\
+  Determining projects to restore...
+  Restored C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Core\TypingEngine.Core.csproj (in 79 ms).
+  Restored C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Windows\TypingEngine.Windows.csproj (in 150 ms).
+  Restored C:\Users\antoi\AppData\Local\Temp\agbase\src\AZERTYGlobal.csproj (in 160 ms).
+  TypingEngine.Core -> C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Core\bin\Release\net8.0\TypingEngine.Core.dll
+  TypingEngine.Windows -> C:\Users\antoi\AppData\Local\Temp\agbase\src\TypingEngine.Windows\bin\Release\net8.0-windows10.0.17763.0\TypingEngine.Windows.dll
+C:\Users\antoi\AppData\Local\Temp\agbase\src\TrayApplication.cs(1553,88): warning CS8604: Possible null reference argument for parameter 'procName' in 'string L.Tray_MenuActiveApp(string procName)'. [C:\Users\antoi\AppData\Local\Temp\agbase\src\AZERTYGlobal.csproj]
+C:\Users\antoi\AppData\Local\Temp\agbase\src\TrayApplication.cs(1566,88): warning CS8604: Possible null reference argument for parameter 'processName' in 'string? ConfigManager.GetCompatibilityOverride(string processName)'. [C:\Users\antoi\AppData\Local\Temp\agbase\src\AZERTYGlobal.csproj]
+  AZERTYGlobal -> C:\Users\antoi\AppData\Local\Temp\agbase\src\bin\Release\net8.0-windows10.0.17763.0\win-arm64\AZERTY Global.dll
+  Generating native code
+  AZERTYGlobal -> C:\Users\antoi\AppData\Local\Temp\agbase\src\bin\Release\net8.0-windows10.0.17763.0\win-arm64\publish\
+publish exit 0
+--- Construction x64 ---
+Microsoft (R) MakeAppx Tool
+Copyright (C) 2013 Microsoft.  All rights reserved.
+
+The path (/p) parameter is: "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\AZERTYGlobal-1.3.0.0-x64.msix"
+The content directory (/d) parameter is: "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64"
+Enumerating files from directory "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64"
+Packing 8 file(s) in "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64" (content directory) to "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\AZERTYGlobal-1.3.0.0-x64.msix" (output file name).
+Memory limit defaulting to 34223888384 bytes.
+Using "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\AppxManifest.xml" as the manifest for the package.
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\Assets\Square150x150Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.scale-200.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\Assets\Square44x44Logo.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\Assets\Square44x44Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.scale-200.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\Assets\Square150x150Logo.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\Assets\StoreLogo.png" as a payload file.  Its path in the package will be "Assets\StoreLogo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\Assets\Wide310x150Logo.png" as a payload file.  Its path in the package will be "Assets\Wide310x150Logo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-x64\AZERTY Global.exe" as a payload file.  Its path in the package will be "AZERTY Global.exe".
+Package creation succeeded.
+--- Construction arm64 ---
+Microsoft (R) MakeAppx Tool
+Copyright (C) 2013 Microsoft.  All rights reserved.
+
+The path (/p) parameter is: "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\AZERTYGlobal-1.3.0.0-arm64.msix"
+The content directory (/d) parameter is: "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64"
+Enumerating files from directory "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64"
+Packing 8 file(s) in "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64" (content directory) to "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\AZERTYGlobal-1.3.0.0-arm64.msix" (output file name).
+Memory limit defaulting to 34223888384 bytes.
+Using "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\AppxManifest.xml" as the manifest for the package.
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\Assets\Square150x150Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.scale-200.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\Assets\Square44x44Logo.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\Assets\Square44x44Logo.scale-200.png" as a payload file.  Its path in the package will be "Assets\Square44x44Logo.scale-200.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\Assets\Square150x150Logo.png" as a payload file.  Its path in the package will be "Assets\Square150x150Logo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\Assets\StoreLogo.png" as a payload file.  Its path in the package will be "Assets\StoreLogo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\Assets\Wide310x150Logo.png" as a payload file.  Its path in the package will be "Assets\Wide310x150Logo.png".
+Processing "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-staging-arm64\AZERTY Global.exe" as a payload file.  Its path in the package will be "AZERTY Global.exe".
+Package creation succeeded.
+--- Construction du bundle ---
+Microsoft (R) MakeAppx Tool
+Copyright (C) 2013 Microsoft.  All rights reserved.
+
+The path (/p) parameter is: "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\msix\AZERTYGlobal-1.3.0.0.msixbundle"
+The content directory (/d) parameter is: "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-bundle-staging"
+Enumerating files from directory "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-bundle-staging"
+Packing 2 file(s) in "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-bundle-staging" (content directory) to "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\msix\AZERTYGlobal-1.3.0.0.msixbundle" (output file name).
+Adding "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-bundle-staging\AZERTYGlobal-1.3.0.0-x64.msix" to the bundle as a payload package.  Its path in the bundle is "AZERTYGlobal-1.3.0.0-x64.msix".
+Adding "\\?\C:\Users\antoi\AppData\Local\Temp\agbase\.msix-bundle-staging\AZERTYGlobal-1.3.0.0-arm64.msix" to the bundle as a payload package.  Its path in the bundle is "AZERTYGlobal-1.3.0.0-arm64.msix".
+Bundle creation succeeded.
+
+MSIX bundle reconstruit:
+ - Versioned : C:\Users\antoi\AppData\Local\Temp\agbase\msix\AZERTYGlobal-1.3.0.0.msixbundle
+ - Stable    : C:\Users\antoi\AppData\Local\Temp\agbase\msix\AZERTYGlobal.msixbundle
+ - Archs     : x64, arm64
+pack exit 0
+Candidat SHA-256 : c601af2ee82029fcfdc7103895bce7ff7c6ac23d8d706191cbf83395c3cdecbd
+Journal : D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.claude\worktrees\lot130-integration-locale-f81958\docs\audit-2026-09-22-v1.3.0\feu-vert\evidence\recette-c601af2ee820\installation.txt
+Attente de D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.claude\worktrees\lot130-integration-locale-f81958\docs\audit-2026-09-22-v1.3.0\feu-vert\evidence\recette-c601af2ee820\auto\done.txt (au plus 30 min)
+Recette automatique : D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.claude\worktrees\lot130-integration-locale-f81958\docs\audit-2026-09-22-v1.3.0\feu-vert\evidence\recette-c601af2ee820\auto\resultats.json
+31 lignes attendues ; conformes : 1 ; A VOIR : 1 ; ECHEC : 32
+
+A1     ECHEC     attendu OK            rendu ECHEC
+       empreinte c601af2ee820, paquet 1.3.0.0 x64, shadow stack et CFG lus dans installation.txt
+A2     ECHEC     attendu OK            rendu ECHEC
+       accueil absent au lancement
+A3     ECHEC     attendu OK            rendu ECHEC
+       accueil non rouvert
+A10    ECHEC     attendu OK            rendu ECHEC
+       menu releve en ? puis ? : bascule FR/EN ou ouverture du menu en defaut
+B12    A VOIR    attendu OK            rendu A VOIR
+       noms MSAA de Pause, Parametres, Recherche. Absents FR : ^Heures$, ^Minutes$, Clavier virtuel, ^Recherche$, Compatibilit. des applications, Rechercher un caract ; absents EN : ^Hours$, ^Minutes$, Virtual keyboard, ^Search$, App compatibility, Find a character. Lecture par le Narrateur non jugee. Releves msaa-*.txt.
+R37    ECHEC     attendu OK (partiel)  rendu ECHEC
+       releves menu-fr.txt ou menu-en.txt absents (voir A10)
+R40    ECHEC     attendu OK (partiel)  rendu ECHEC
+       case Rappels d'entrainement visible : 0, presente mais masquee : 0 (FR et EN) ; releve absent : fr, en. Absence de trou : image parametres-general du banc.
+A5     ECHEC     attendu OK (partiel)  rendu ECHEC
+       sortie par Quitter=True ; relance=False ; accord conserve=False ; accueil reaffiche=False. Clavier systeme a la sortie et remappage revenu non juges (frappe simulee).
+R57b   ECHEC     attendu OK (partiel)  rendu ECHEC
+       sous-menu releves menu absents (voir A10) ; apres 15 minutes : aucun Reprendre maintenant, sous-menu retire=True ; apres reprise : sous-menu revenu=False ; application desactivee : sous-menu grise=False. Bulle En pause pour ... non jugee.
+R57    ECHEC     attendu OK (partiel)  rendu ECHEC
+       fenetre Personnaliser absente
+R47    ECHEC     attendu OK            rendu ABSENTE
+R45    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R49    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R58    ECHEC     attendu OK            rendu ECHEC
+       fenetre Couches absente
+R60    ECHEC     attendu OK (partiel)  rendu ECHEC
+       trois ouvertures : A propos absente, absente, absente ; Mes statistiques absente, absente, absente ; Parametres absente, absente, absente ; Accueil absente, absente, absente ; Couches absente, absente, absente ; Pause absente, absente, absente ; defauts : A propos #1 absente, A propos #2 absente, A propos #3 absente, Mes statistiques #1 absente, Mes statistiques #2 absente, Mes statistiques #3 absente, Parametres #1 absente, Parametres #2 absente, Parametres #3 absente, Accueil #1 absente, Accueil #2 absente, Accueil #3 absente, Couches #1 absente, Couches #2 absente, Couches #3 absente, Pause #1 absente, Pause #2 absente, Pause #3 absente ; RegisterClass dans error.log : 0. Conflit non ouvrable dans le Sandbox (pas de disposition systeme).
+R20    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R22    ECHEC     attendu OK            rendu ABSENTE
+R23    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R24    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R25    ECHEC     attendu OK            rendu ECHEC
+       accueil non rouvert
+R26    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R39    ECHEC     attendu OK (partiel)  rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R41    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R71    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R70    ECHEC     attendu OK            rendu ABSENTE
+R72    ECHEC     attendu OK (partiel)  rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R73    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R74    ECHEC     attendu OK (partiel)  rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\lessons-progress.json'."
+A11    ECHEC     attendu OK (partiel)  rendu ECHEC
+       config.json introuvable dans C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global ; C:\Users\WDAGUtilityAccount\AppData\Local\AZERTY Global
+R75    ECHEC     attendu OK (partiel)  rendu ECHEC
+       apres [1] : accueil ouvert=False, accord=False, menu non releve (inactive=False) ; accord par clic (identifiant 2011, 'accueil absent') : accord=False, tutoriel=False ; relance : accord=False, menu non releve (active=False). Bulle unique : QuarantaineTests (config corrompue, message une seule fois).
+A12    conforme  attendu OK            rendu OK
+R45/R47/R49 ECHEC     attendu -             rendu ECHEC
+       Parametres absents
+R20/R22 ECHEC     attendu -             rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R70/R71 ECHEC     attendu -             rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+
+Verdict global : ECHEC
+sandbox exit 1
+FIN

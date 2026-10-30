@@ -1,0 +1,13 @@
+# os	Microsoft Windows NT 10.0.26200.0
+# ecran principal	1920x1080, DPI systeme 96
+# moniteurs	1920x1080 en (0, 0) a 96 DPI
+# sensibilite DPI du fil	2 (2 = par ecran)
+# comctl32	non charge
+# canal	Store
+fichier	largeur	hauteur	dpi_fenetre	dpi_cible	voie	sha256
+tuto-final-fr-100.png	1106	753	96	96	dc	7270dc5d4f963819c0baa4187536b6a8ebef6d20ef125bdbe59edd148f1e31e0
+tuto-final-fr-150.png	1396	921	96	144	dc	059c31f5ded2711258c9f15c356e80946bf2a544090577f49f3f6c40c6dffc9b
+tuto-final-fr-200.png	1622	921	96	192	dc	56bff071969225e4c9b4cf3b6ef8f71b928a76d27243ee9af48fbe526d68d247
+tuto-final-en-100.png	1106	753	96	96	dc	10379f0a68779ce78974bca2cf93af2ece6c44cf9d4c0043dd96d52ebac90607
+tuto-final-en-150.png	1396	921	96	144	dc	f89f9247c01898dd2e9854aeaa905809c54e2c675a98514a7e3806a79ae4f3aa
+tuto-final-en-200.png	1622	921	96	192	dc	0088a99913979ca1c83a22054d5ef78fbb4c0980042dc465d6ef8054c9fcc9ed

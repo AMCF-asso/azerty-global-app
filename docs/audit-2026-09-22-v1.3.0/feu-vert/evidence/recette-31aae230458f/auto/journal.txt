@@ -1,0 +1,33 @@
+﻿[15:06:28] A1 : ECHEC - empreinte 31aae230458f, paquet 1.3.0.0 x64, shadow stack et CFG lus dans installation.txt
+[15:06:36] A2 : ECHEC - accueil absent au lancement
+[15:06:41] A3 : ECHEC - accueil non rouvert
+[15:06:54] A10 : ECHEC - menu releve en ? puis ? : bascule FR/EN ou ouverture du menu en defaut
+[15:06:54] B12 : A VOIR - noms MSAA de Pause, Parametres, Recherche. Absents FR : ^Heures$, ^Minutes$, Clavier virtuel, ^Recherche$, Compatibilit. des applications, Rechercher un caract ; absents EN : ^Hours$, ^Minutes$, Virtual keyboard, ^Search$, App compatibility, Find a character. Lecture par le Narrateur non jugee. Releves msaa-*.txt.
+[15:06:54] R37 : ECHEC - releves menu-fr.txt ou menu-en.txt absents (voir A10)
+[15:06:54] R40 : ECHEC - case Rappels d'entrainement visible : 0, presente mais masquee : 0 (FR et EN) ; releve absent : fr, en. Absence de trou : image parametres-general du banc.
+[15:07:08] A5 : ECHEC - sortie par Quitter=True ; relance=False ; accord conserve=False ; accueil reaffiche=False. Clavier systeme a la sortie et remappage revenu non juges (frappe simulee).
+[15:07:38] R57b : ECHEC - sous-menu releves menu absents (voir A10) ; apres 15 minutes : aucun Reprendre maintenant, sous-menu retire=True ; apres reprise : sous-menu revenu=False ; application desactivee : sous-menu grise=False. Bulle En pause pour ... non jugee.
+[15:07:54] R57 : ECHEC - fenetre Personnaliser absente
+[15:08:11] premier plan refuse a CabinetWClass ; premier plan : Shell_SystemDialog
+[15:08:18] premier plan refuse a CabinetWClass ; premier plan : Shell_SystemDialog
+[15:08:19] R45-R49 : suspendu avant=?, premier plan neutre=False, suspendu apres=?
+[15:08:27] R45/R47/R49 : ECHEC - Parametres absents
+[15:08:39] premier plan refuse a CabinetWClass ; premier plan : Shell_SystemDialog
+[15:08:46] R58 : ECHEC - fenetre Couches absente
+[15:11:23] R60 : ECHEC - trois ouvertures : A propos absente, absente, absente ; Mes statistiques absente, absente, absente ; Parametres absente, absente, absente ; Accueil absente, absente, absente ; Couches absente, absente, absente ; Pause absente, absente, absente ; defauts : A propos #1 absente, A propos #2 absente, A propos #3 absente, Mes statistiques #1 absente, Mes statistiques #2 absente, Mes statistiques #3 absente, Parametres #1 absente, Parametres #2 absente, Parametres #3 absente, Accueil #1 absente, Accueil #2 absente, Accueil #3 absente, Couches #1 absente, Couches #2 absente, Couches #3 absente, Pause #1 absente, Pause #2 absente, Pause #3 absente ; RegisterClass dans error.log : 0. Conflit non ouvrable dans le Sandbox (pas de disposition systeme).
+[15:11:25] R20-R26 : etat de depart tache=Disabled, State=0, autoStartEnabled=
+[15:11:25] R20/R22 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:25] R23 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:25] R24 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:42] R25 : ECHEC - accueil non rouvert
+[15:11:45] R26 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:45] R39 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:45] R41 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:45] R70/R71 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:45] R72 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:45] R73 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+[15:11:45] R74 : ECHEC - Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\lessons-progress.json'."
+[15:11:45] A11 : ECHEC - config.json introuvable dans C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global ; C:\Users\WDAGUtilityAccount\AppData\Local\AZERTY Global
+[15:12:15] R75 : ECHEC - apres [1] : accueil ouvert=False, accord=False, menu non releve (inactive=False) ; accord par clic (identifiant 2011, 'accueil absent') : accord=False, tutoriel=False ; relance : accord=False, menu non releve (active=False). Bulle unique : QuarantaineTests (config corrompue, message une seule fois).
+[15:12:16] A12 : OK - processus arrete=True ; paquet retire=True. Clavier systeme utilisable non juge (frappe simulee).
+[15:12:16] fin de la recette automatique

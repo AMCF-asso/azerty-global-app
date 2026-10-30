@@ -1,0 +1,5 @@
+[15:26:06] SHA-256 candidat : c601af2ee82029fcfdc7103895bce7ff7c6ac23d8d706191cbf83395c3cdecbd
+[15:26:08] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[15:26:11] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[15:26:20] ECHEC : l'app ne tourne pas 8 s apres son lancement.
+[15:26:20] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.

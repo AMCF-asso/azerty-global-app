@@ -1,0 +1,65 @@
+﻿Recette automatique : D:\My files\Keyboard Layouts\projects\azerty-global\components\microsoft-store\.claude\worktrees\lot130-integration-locale-f81958\docs\audit-2026-09-22-v1.3.0\feu-vert\evidence\recette-c601af2ee820\auto\resultats.json
+31 lignes attendues ; conformes : 1 ; A VOIR : 1 ; ECHEC : 32
+
+A1     ECHEC     attendu OK            rendu ECHEC
+       empreinte c601af2ee820, paquet 1.3.0.0 x64, shadow stack et CFG lus dans installation.txt
+A2     ECHEC     attendu OK            rendu ECHEC
+       accueil absent au lancement
+A3     ECHEC     attendu OK            rendu ECHEC
+       accueil non rouvert
+A10    ECHEC     attendu OK            rendu ECHEC
+       menu releve en ? puis ? : bascule FR/EN ou ouverture du menu en defaut
+B12    A VOIR    attendu OK            rendu A VOIR
+       noms MSAA de Pause, Parametres, Recherche. Absents FR : ^Heures$, ^Minutes$, Clavier virtuel, ^Recherche$, Compatibilit. des applications, Rechercher un caract ; absents EN : ^Hours$, ^Minutes$, Virtual keyboard, ^Search$, App compatibility, Find a character. Lecture par le Narrateur non jugee. Releves msaa-*.txt.
+R37    ECHEC     attendu OK (partiel)  rendu ECHEC
+       releves menu-fr.txt ou menu-en.txt absents (voir A10)
+R40    ECHEC     attendu OK (partiel)  rendu ECHEC
+       case Rappels d'entrainement visible : 0, presente mais masquee : 0 (FR et EN) ; releve absent : fr, en. Absence de trou : image parametres-general du banc.
+A5     ECHEC     attendu OK (partiel)  rendu ECHEC
+       sortie par Quitter=True ; relance=False ; accord conserve=False ; accueil reaffiche=False. Clavier systeme a la sortie et remappage revenu non juges (frappe simulee).
+R57b   ECHEC     attendu OK (partiel)  rendu ECHEC
+       sous-menu releves menu absents (voir A10) ; apres 15 minutes : aucun Reprendre maintenant, sous-menu retire=True ; apres reprise : sous-menu revenu=False ; application desactivee : sous-menu grise=False. Bulle En pause pour ... non jugee.
+R57    ECHEC     attendu OK (partiel)  rendu ECHEC
+       fenetre Personnaliser absente
+R47    ECHEC     attendu OK            rendu ABSENTE
+R45    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R49    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R58    ECHEC     attendu OK            rendu ECHEC
+       fenetre Couches absente
+R60    ECHEC     attendu OK (partiel)  rendu ECHEC
+       trois ouvertures : A propos absente, absente, absente ; Mes statistiques absente, absente, absente ; Parametres absente, absente, absente ; Accueil absente, absente, absente ; Couches absente, absente, absente ; Pause absente, absente, absente ; defauts : A propos #1 absente, A propos #2 absente, A propos #3 absente, Mes statistiques #1 absente, Mes statistiques #2 absente, Mes statistiques #3 absente, Parametres #1 absente, Parametres #2 absente, Parametres #3 absente, Accueil #1 absente, Accueil #2 absente, Accueil #3 absente, Couches #1 absente, Couches #2 absente, Couches #3 absente, Pause #1 absente, Pause #2 absente, Pause #3 absente ; RegisterClass dans error.log : 0. Conflit non ouvrable dans le Sandbox (pas de disposition systeme).
+R20    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R22    ECHEC     attendu OK            rendu ABSENTE
+R23    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R24    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R25    ECHEC     attendu OK            rendu ECHEC
+       accueil non rouvert
+R26    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R39    ECHEC     attendu OK (partiel)  rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R41    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R71    ECHEC     attendu OK (partiel)  rendu ABSENTE
+R70    ECHEC     attendu OK            rendu ABSENTE
+R72    ECHEC     attendu OK (partiel)  rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R73    ECHEC     attendu OK            rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R74    ECHEC     attendu OK (partiel)  rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\lessons-progress.json'."
+A11    ECHEC     attendu OK (partiel)  rendu ECHEC
+       config.json introuvable dans C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global ; C:\Users\WDAGUtilityAccount\AppData\Local\AZERTY Global
+R75    ECHEC     attendu OK (partiel)  rendu ECHEC
+       apres [1] : accueil ouvert=False, accord=False, menu non releve (inactive=False) ; accord par clic (identifiant 2011, 'accueil absent') : accord=False, tutoriel=False ; relance : accord=False, menu non releve (active=False). Bulle unique : QuarantaineTests (config corrompue, message une seule fois).
+A12    conforme  attendu OK            rendu OK
+R45/R47/R49 ECHEC     attendu -             rendu ECHEC
+       Parametres absents
+R20/R22 ECHEC     attendu -             rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+R70/R71 ECHEC     attendu -             rendu ECHEC
+       Exception calling "WriteAllText" with "2" argument(s): "Could not find a part of the path 'C:\Users\WDAGUtilityAccount\AppData\Local\Packages\AZERTYGlobal.AZERTYGlobal_w9kghr08zmhbg\LocalCache\Local\AZERTY Global\config.json'."
+
+Verdict global : ECHEC
