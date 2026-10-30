@@ -19,13 +19,13 @@ public class UnicodePacketTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void VkPacket_PasseToujours_AvecOuSansHoteDistant(bool remoteHostPresent)
+    public void VkPacket_PasseToujours_AvecOuSansHoteDistant(bool remoteSessionActive)
     {
         // Le cas du constat : injection étrangère, dwExtraInfo à 0, hôte distant présent.
-        Assert.False(KeyboardHook.ShouldProcessKeystroke(KeyboardHook.VK_PACKET, IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent));
-        Assert.False(KeyboardHook.ShouldProcessKeystroke(KeyboardHook.VK_PACKET, IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteHostPresent));
+        Assert.False(KeyboardHook.ShouldProcessKeystroke(KeyboardHook.VK_PACKET, IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteSessionActive));
+        Assert.False(KeyboardHook.ShouldProcessKeystroke(KeyboardHook.VK_PACKET, IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteSessionActive));
         // Sans bit d'injection non plus : le scanCode reste un caractère.
-        Assert.False(KeyboardHook.ShouldProcessKeystroke(KeyboardHook.VK_PACKET, IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent));
+        Assert.False(KeyboardHook.ShouldProcessKeystroke(KeyboardHook.VK_PACKET, IntPtr.Zero, flags: 0, Marqueur, remoteSessionActive));
     }
 
     [Fact]
@@ -33,17 +33,17 @@ public class UnicodePacketTests
     {
         // ⛔ C5 ne doit pas régresser : les frappes Parsec arrivent injectées avec les
         // scan codes physiques du client, et doivent toujours être remappées.
-        Assert.True(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent: true));
-        Assert.True(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteHostPresent: true));
+        Assert.True(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteSessionActive: true));
+        Assert.True(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteSessionActive: true));
     }
 
     [Fact]
     public void ToucheOrdinaire_SuitShouldTreatAsPhysical()
     {
         // Hors VK_PACKET, la décision reste celle d'AG130-07 revu.
-        Assert.True(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: false));
-        Assert.False(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent: false));
-        Assert.False(KeyboardHook.ShouldProcessKeystroke(VkA, Marqueur, LLKHF_INJECTED, Marqueur, remoteHostPresent: true));
+        Assert.True(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, flags: 0, Marqueur, remoteSessionActive: false));
+        Assert.False(KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteSessionActive: false));
+        Assert.False(KeyboardHook.ShouldProcessKeystroke(VkA, Marqueur, LLKHF_INJECTED, Marqueur, remoteSessionActive: true));
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class UnicodePacketTests
     {
         // Les voisins 0xE6 (OEM) et 0xE8 (non attribué) ne sont pas des paquets Unicode.
         Assert.Equal(0xE7u, KeyboardHook.VK_PACKET);
-        Assert.True(KeyboardHook.ShouldProcessKeystroke(0xE6, IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: false));
-        Assert.True(KeyboardHook.ShouldProcessKeystroke(0xE8, IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: false));
+        Assert.True(KeyboardHook.ShouldProcessKeystroke(0xE6, IntPtr.Zero, flags: 0, Marqueur, remoteSessionActive: false));
+        Assert.True(KeyboardHook.ShouldProcessKeystroke(0xE8, IntPtr.Zero, flags: 0, Marqueur, remoteSessionActive: false));
     }
 }
