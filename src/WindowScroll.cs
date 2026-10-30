@@ -60,14 +60,57 @@ internal sealed class WindowScroll
         UpdateBar(hwnd);
     }
 
-    /// <summary>WM_VSCROLL et WM_MOUSEWHEEL, que les deux fenêtres traitent de la même façon.
-    /// Rend vrai quand le message est traité ; tout autre message rend faux.</summary>
+    private const int VK_PRIOR = 0x21, VK_NEXT = 0x22, VK_END = 0x23, VK_HOME = 0x24, VK_UP = 0x26, VK_DOWN = 0x28;
+
+    /// <summary>WM_VSCROLL, WM_MOUSEWHEEL et WM_KEYDOWN, que les deux fenêtres traitent de la même
+    /// façon. Rend vrai quand le message est traité ; tout autre message, ou toute autre touche
+    /// (Tab, Échap, lettres), rend faux.</summary>
     public bool TryHandle(IntPtr hwnd, uint msg, IntPtr wParam, int line) => msg switch
     {
         Win32.WM_VSCROLL => OnVScroll(hwnd, wParam, line),
         Win32.WM_MOUSEWHEEL => OnMouseWheel(hwnd, wParam, line),
+        Win32.WM_KEYDOWN => OnKeyDown(hwnd, wParam, line),
         _ => false,
     };
+
+    /// <summary>WM_KEYDOWN reçu par la fenêtre elle-même : Page haut et bas, Début, Fin, flèches.</summary>
+    public bool OnKeyDown(IntPtr hwnd, IntPtr wParam, int line)
+    {
+        int command = (int)(wParam.ToInt64() & 0xFFFF) switch
+        {
+            VK_PRIOR => Win32.SB_PAGEUP,
+            VK_NEXT => Win32.SB_PAGEDOWN,
+            VK_HOME => Win32.SB_TOP,
+            VK_END => Win32.SB_BOTTOM,
+            VK_UP => Win32.SB_LINEUP,
+            VK_DOWN => Win32.SB_LINEDOWN,
+            _ => -1,
+        };
+        return command >= 0 && OnVScroll(hwnd, (IntPtr)command, line);
+    }
+
+    /// <summary>
+    /// Le focus est presque toujours sur un contrôle, et le WM_KEYDOWN va alors à lui, jamais à la
+    /// fenêtre. Branché sur <see cref="DialogNavigation.Register"/> : Page haut et bas, Début et Fin
+    /// défilent quand le contrôle est un bouton ou une case, qui n'en font rien. Un champ, une liste
+    /// ou une liste déroulante gardent leurs touches ; les flèches restent à la navigation de
+    /// dialogue, qui déplace le focus (<see cref="EnsureVisible"/> le suit).
+    /// </summary>
+    public bool OnControlKey(IntPtr hwnd, in Win32.MSG msg, int line)
+    {
+        if (msg.message != Win32.WM_KEYDOWN || msg.hwnd == hwnd || !Needed) return false;
+
+        int vk = (int)(msg.wParam.ToInt64() & 0xFFFF);
+        if (vk is not (VK_PRIOR or VK_NEXT or VK_HOME or VK_END)) return false;
+
+        var name = new System.Text.StringBuilder(16);
+        // GetClassNameW vient du moteur (Win32 de TypingEngine.Windows) : nom qualifié, comme
+        // CharacterSearch, la classe Win32 de l'application le masque dans ce namespace.
+        if (TypingEngine.Windows.Win32.GetClassNameW(msg.hwnd, name, name.Capacity) <= 0
+            || !name.ToString().Equals("Button", StringComparison.OrdinalIgnoreCase))
+            return false;
+        return OnKeyDown(hwnd, msg.wParam, line);
+    }
 
     /// <summary>WM_VSCROLL. Rend vrai quand le message est traité.</summary>
     public bool OnVScroll(IntPtr hwnd, IntPtr wParam, int line)

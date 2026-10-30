@@ -81,7 +81,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
         // inscrite en permanence, elle ferait passer chaque message du processus par
         // GetAncestor (voir DialogNavigation.TryRoute).
         // Lot 130 A : Tab vers un contrôle sous le pli le fait défiler jusqu'à lui.
-        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)));
+        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
         Win32.ShowWindow(_hWnd, 5);
         Win32.SetForegroundWindow(_hWnd);
         // Focus initial sur le premier contrôle : sans lui, le focus restait sur la fenêtre
@@ -369,6 +370,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     }
                     break;
                 case Win32.WM_KEYDOWN:
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
                     if (wParam == (IntPtr)0x1B)
                     {
                         Hide();

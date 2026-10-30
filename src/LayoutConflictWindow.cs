@@ -169,7 +169,8 @@ sealed class LayoutConflictWindow : IDisposable
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
         // Lot 130 A : Tab vers un lien sous le pli le fait défiler jusqu'à lui.
-        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)));
+        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
         NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
@@ -415,6 +416,7 @@ sealed class LayoutConflictWindow : IDisposable
 
                 case Win32.WM_VSCROLL:
                 case Win32.WM_MOUSEWHEEL:
+                case Win32.WM_KEYDOWN:
                     if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
                         return IntPtr.Zero;
                     break;

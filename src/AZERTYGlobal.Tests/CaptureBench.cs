@@ -403,7 +403,10 @@ public class CaptureBench
         if (!scroll.Needed)
             return;
 
-        scroll.ScrollTo(hwnd, int.MaxValue);
+        // La touche Fin, par la voie du clavier (lot H) : le défilement direct ne l'éprouvait pas.
+        Win32.SendMessageW(hwnd, Win32.WM_KEYDOWN, (IntPtr)0x23 /* VK_END */, IntPtr.Zero);
+        if (scroll.Position != scroll.Clamp(int.MaxValue))
+            throw new InvalidOperationException("la touche Fin n'a pas défilé jusqu'en bas");
         BancCapture.MarkActive(hwnd);
         target.Shoot(hwnd, slug + "-bas", windowDpi);
     }
