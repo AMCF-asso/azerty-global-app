@@ -47,10 +47,14 @@ function Invoke-Commande([string]$Programme, [string[]]$Arguments) {
     if ($code -ne 0) { throw "$Programme a rendu $code" }
 }
 
+# Les tests créent de vraies fenêtres : elles vivent sur un bureau Win32 dédié, jamais à l'écran.
+. (Join-Path $PSScriptRoot 'BureauCache.ps1')
+
 function Invoke-Tests([string]$Projet) {
-    Write-Host "> dotnet test $Projet -c Release"
+    Write-Host "> dotnet test $Projet -c Release (bureau dédié)"
     $ErrorActionPreference = 'Continue'
-    & dotnet test $Projet -c Release | Tee-Object -Variable sortie | Out-Host
+    # La sortie est déjà affichée au fil de l'eau par Invoke-SurBureauCache.
+    $sortie = @(Invoke-SurBureauCache dotnet @('test', $Projet, '-c', 'Release'))
     $code = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'
     $motif = '(?<etat>Passed|Failed)!\s+-\s+Failed:\s+(?<echecs>\d+),\s+Passed:\s+(?<reussis>\d+),\s+Skipped:\s+(?<ignores>\d+),\s+Total:\s+(?<total>\d+)'
