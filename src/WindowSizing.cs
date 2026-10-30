@@ -49,6 +49,27 @@ static class WindowSizing
     }
 
     /// <summary>
+    /// Lot 130 D (D4 d'Antoine, 29/10) — taille extérieure d'une fenêtre à rapport de forme fixe
+    /// (le clavier virtuel) ramenée à la zone de travail entière, cadre compris : c'est la zone
+    /// <em>cliente</em> qui garde son rapport. Sans elle, Windows rognait à l'écran le rectangle
+    /// suggéré par WM_DPICHANGED sans rien garder du rapport (1030 × 768 à 200 % sur 1024 × 768,
+    /// pour un dessin de 854 × 368) : le clavier, calé sur la largeur, flottait entre deux vides.
+    /// Une taille qui tient ressort inchangée.
+    /// </summary>
+    public static (int Width, int Height) FitOuterKeepingRatio(int outerW, int outerH,
+        int nonClientW, int nonClientH, int workW, int workH)
+    {
+        nonClientW = Math.Max(0, nonClientW);
+        nonClientH = Math.Max(0, nonClientH);
+        if (outerW <= nonClientW || outerH <= nonClientH || workW <= nonClientW || workH <= nonClientH)
+            return (Math.Max(1, outerW), Math.Max(1, outerH));
+
+        var (clientW, clientH) = ClampToWorkArea(outerW - nonClientW, outerH - nonClientH,
+            workW - nonClientW, workH - nonClientH, 1f);
+        return (clientW + nonClientW, clientH + nonClientH);
+    }
+
+    /// <summary>
     /// D1 (accessibilité 1.3.0) — une valeur de référence à 96 DPI portée au DPI de l'écran,
     /// arrondie au plus proche comme <c>MulDiv</c>. Les hauteurs de police négatives de
     /// <c>CreateFontW</c> se mettent à l'échelle comme le reste. Un DPI nul ou négatif, donc

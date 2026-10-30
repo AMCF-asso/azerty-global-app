@@ -758,8 +758,9 @@ sealed class VirtualKeyboard : IDisposable
                 if (lParam != IntPtr.Zero)
                 {
                     var suggested = Marshal.PtrToStructure<Win32.RECT>(lParam);
-                    Win32.MoveWindow(_hWnd, suggested.left, suggested.top,
-                        suggested.right - suggested.left, suggested.bottom - suggested.top, true);
+                    var fitted = FitToWorkArea(suggested);
+                    Win32.MoveWindow(_hWnd, fitted.left, fitted.top,
+                        fitted.right - fitted.left, fitted.bottom - fitted.top, true);
                 }
                 if (_visible)
                     SaveWindowBounds();
@@ -818,6 +819,21 @@ sealed class VirtualKeyboard : IDisposable
         }
 
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
+    }
+
+    /// <summary>Le rectangle suggéré par un changement de DPI, ramené à la zone de travail à
+    /// rapport de forme constant (<see cref="WindowSizing.FitOuterKeepingRatio"/>) et calé dedans.</summary>
+    private Win32.RECT FitToWorkArea(Win32.RECT suggested)
+    {
+        const uint style = Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        const uint exStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
+        var work = NativeWindow.WorkArea(_hWnd);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, style, exStyle);
+        var (w, h) = WindowSizing.FitOuterKeepingRatio(suggested.right - suggested.left,
+            suggested.bottom - suggested.top, frameW, frameH, work.right - work.left, work.bottom - work.top);
+        int x = Math.Max(work.left, Math.Min(suggested.left, work.right - w));
+        int y = Math.Max(work.top, Math.Min(suggested.top, work.bottom - h));
+        return new Win32.RECT { left = x, top = y, right = x + w, bottom = y + h };
     }
 
     /// <summary>Contraint le resize pour garder le ratio d'aspect.</summary>
