@@ -82,6 +82,10 @@ public partial class KeyboardContextBench
                         attempts.Add((slug, () => CaptureLessons(target, slug, layout, mapper, hook,
                             DirectModule, DirectLesson, withHint: false, shift, altGr)));
                     }
+                    // Audit du 30/10, M2 : fenêtre plus petite que la référence, défilée au bout.
+                    // Le texte garde l'échelle de Windows et le bas de la surface se rejoint.
+                    attempts.Add(("lecons-etat-aucun-bas", () => CaptureLessons(target, "lecons-etat-aucun-bas", layout, mapper, hook,
+                        DirectModule, DirectLesson, withHint: false, shift: false, altGr: false, scrollToEnd: true)));
 
                     // Leçons : les deux cas d'indice que la table de surlignage distingue.
                     foreach (var (hintCase, module, lesson) in new[] { ("direct", DirectModule, DirectLesson), ("etape1", DeadKeyModule, DeadKeyLesson) })
@@ -137,7 +141,8 @@ public partial class KeyboardContextBench
     /// majuscule et armerait les minuteries de séance.
     /// </summary>
     private static void CaptureLessons(BancCapture.Target target, string slug, Layout layout, KeyMapper mapper,
-        KeyboardHook hook, string moduleId, string lessonId, bool withHint, bool shift, bool altGr)
+        KeyboardHook hook, string moduleId, string lessonId, bool withHint, bool shift, bool altGr,
+        bool scrollToEnd = false)
     {
         // Chaque image part d'un premier affichage : aucune position mémorisée.
         ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
@@ -160,6 +165,12 @@ public partial class KeyboardContextBench
             BancCapture.SetField(window, "_visible", true);
             if (withHint)
                 ShowHintFrozen(window);
+            if (scrollToEnd)
+            {
+                // Comme un glissé des barres jusqu'au bout : le chemin de WM_VSCROLL/WM_HSCROLL.
+                Win32.SendMessageW(hwnd, Win32.WM_VSCROLL, (IntPtr)Win32.SB_BOTTOM, IntPtr.Zero);
+                Win32.SendMessageW(hwnd, Win32.WM_HSCROLL, (IntPtr)Win32.SB_BOTTOM, IntPtr.Zero);
+            }
             Win32.InvalidateRect(hwnd, IntPtr.Zero, true);
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, slug, windowDpi);
