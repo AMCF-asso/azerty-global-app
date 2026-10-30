@@ -46,6 +46,13 @@ internal sealed partial class LessonsWindow
         CurrentModule.Id == LessonCatalogLoader.InitiationModuleId &&
         _exerciseIndex == _tutorialRoute[_tutorialRoutePos].Index;
 
+    /// <summary>Le parcours que l'en-tête compte à la place de la leçon : ses exercices (les
+    /// quatre communs et les bonus choisis), pas les huit de l'Initiation, comme la ligne du
+    /// parcours sous la consigne. Null hors parcours, ou sur un exercice qui n'en est pas
+    /// l'étape.</summary>
+    private TutorialSteps.RouteStep[]? TutorialRouteForHeader =>
+        TutorialOnRouteStep || (_tutorialPage == TutorialPage.Final && _tutorialRoute != null) ? _tutorialRoute : null;
+
     /// <summary>Ouvre le parcours de l'accueil sur l'écran des usages, cochés comme au dernier
     /// passage.</summary>
     public void ShowTutorial()
