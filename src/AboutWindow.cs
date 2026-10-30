@@ -20,7 +20,8 @@ sealed class AboutWindow : IDisposable
     internal const int IDC_LINK_AMCF = 4105;
 
     private const int BASE_WIN_W = 550;
-    private const int BASE_WIN_H = 230;
+    // Audit 1.3.0, M9 : +28 pour la ligne de crédit des polices (OFL) sous la ligne AMCF.
+    private const int BASE_WIN_H = 258;
 
     // ── Couleurs ────────────────────────────────────────────────────
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
@@ -459,6 +460,14 @@ sealed class AboutWindow : IDisposable
         int suffixX = margin + prefixW + linkW;
         var suffixRect = new Win32.RECT { left = suffixX, top = amcfY, right = suffixX + suffixW, bottom = amcfY + amcfH };
         Win32.DrawTextW(hdc, amcfSuffix, -1, ref suffixRect, Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX);
+
+        // Audit 1.3.0, M9 : crédit des polices embarquées (licence OFL).
+        Win32.SelectObject(hdc, FontVersion);
+        Win32.SetTextColor(hdc, _pal.Muted);
+        int fontsY = amcfY + S(26);
+        var fontsRect = new Win32.RECT { left = margin, top = fontsY, right = cw - margin, bottom = fontsY + S(20) };
+        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect,
+            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
 
         // Separateur juste au-dessus des liens
         int sepY = S(BASE_WIN_H - 100);
