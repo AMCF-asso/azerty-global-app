@@ -55,33 +55,68 @@ public static class GameRegistry
     };
 
     /// <summary>
-    /// Logiciels HÔTES de prise en main à distance : présents sur la machine pilotée, ils y
-    /// injectent les frappes reçues du poste client. Distincte de
+    /// Un processus qui signale, côté HÔTE, une session de prise en main à distance ouverte :
+    /// il injecte les frappes reçues du poste client. Distinct de
     /// <see cref="RemoteAccessProcesses"/>, qui sert côté CLIENT à suspendre l'application
     /// quand le logiciel est au premier plan.
+    /// </summary>
+    public readonly record struct RemoteSessionMarker(string Process, string Tool);
+
+    /// <summary>
+    /// Instantané d'un processus : nom (avec ou sans « .exe ») et session Windows.
+    /// </summary>
+    public readonly record struct ProcessEntry(string? Name, int SessionId);
+
+    /// <summary>
+    /// Processus qui ne tournent que pendant une session distante, dans la session Windows
+    /// pilotée. Leur présence dans la session de l'application fait traiter une injection
+    /// étrangère comme physique (KeyboardHook.ShouldTreatAsPhysical).
     ///
-    /// Décision d'Antoine du 2026-09-24 (C5, revue d'AG130-07) : mesure faite sur un hôte
-    /// Parsec, 149 événements, tous LLKHF_INJECTED, dwExtraInfo à 0, scan codes physiques
-    /// réels. AG130-07 écartait donc toute frappe distante : plus aucun remappage, et les
-    /// exercices ne recevaient rien. Quand l'un de ces processus tourne dans la session,
-    /// une injection étrangère est traitée comme physique (KeyboardHook.ShouldTreatAsPhysical).
-    /// Le client étant suspendu quand le logiciel distant a le premier plan, la frappe
-    /// n'est remappée qu'une fois, sur l'hôte.
+    /// Historique : décision C5 d'Antoine du 2026-09-24, fondée sur une mesure faite sur un
+    /// hôte Parsec (149 événements, tous LLKHF_INJECTED, dwExtraInfo à 0, scan codes
+    /// physiques réels). AG130-07 écartait toute frappe distante : plus aucun remappage, et
+    /// les exercices ne recevaient rien. C5 remappait dès qu'un hôte TOURNAIT ; or les
+    /// services TeamViewer, AnyDesk, Parsec et Chrome Remote Desktop tournent en permanence
+    /// dès l'installation, et l'auto-saisie de KeePass ou Bitwarden arrivait remappée, donc
+    /// fausse (audit du 30/10, M1). Décision d'Antoine du 2026-10-30 : remapper seulement
+    /// pendant une session active. Un service seul (TeamViewer_Service, pservice, AnyDesk ou
+    /// RustDesk en service, remoting_host) ne compte plus.
+    ///
+    /// Marqueurs, sources consultées le 2026-10-30 :
+    /// <list type="bullet">
+    /// <item>remoting_desktop.exe — code Chromium : lancé dans la session attachée à chaque
+    /// connexion (remoting/host/desktop_session_win.cc), « recreated per connection »
+    /// (daemon_process.cc).</item>
+    /// <item>TeamViewer_Desktop.exe — lancé par TeamViewer_Service.exe au début d'une session
+    /// entrante (règle SigmaHQ proc_creation_win_remote_access_tools_teamviewer_incoming_connection).
+    /// Source tierce unique : sa fin avec la session n'est pas prouvée.</item>
+    /// <item>parsecd.exe — ⚠️ pas un signal de session : aucun n'est connu pour Parsec. Gardé
+    /// pour le cas mesuré du 24/09 (frappe via Parsec remappée, exercices servis), mais
+    /// seulement dans la session de l'utilisateur ; pservice.exe seul ne compte plus.</item>
+    /// </list>
+    ///
+    /// Limites connues :
+    /// <list type="bullet">
+    /// <item>tant que parsecd.exe tourne dans la session, l'auto-saisie, AutoHotkey et le
+    /// clavier visuel sont remappés eux aussi — aucun drapeau Win32 ne les distingue
+    /// (extra 0 dans les deux cas) ;</item>
+    /// <item>AnyDesk et RustDesk n'ont aucun processus propre à la session (RustDesk lance
+    /// « rustdesk.exe --cm », même nom que son service) : leur frappe distante n'est plus
+    /// remappée ;</item>
+    /// <item>Chrome Remote Desktop peut se replier sur « remoting_host.exe --type=desktop »
+    /// quand remoting_desktop.exe manque : session alors non vue ;</item>
+    /// <item>la sonde passe toutes les 5 s : les premières frappes d'une session peuvent
+    /// arriver avant qu'elle soit vue.</item>
+    /// </list>
     ///
     /// ⛔ Pas de mstsc / msrdc : ce sont des clients RDP, et l'entrée RDP côté hôte n'arrive
-    /// pas injectée. Limite connue : parsecd.exe tourne aussi hors connexion et côté client ;
-    /// tant qu'il tourne, les autres injecteurs (AutoHotkey, clavier visuel) sont remappés
-    /// eux aussi — aucun drapeau Win32 ne les distingue de Parsec (extra 0 dans les deux cas).
+    /// pas injectée.
     /// </summary>
-    public static readonly string[] RemoteAccessHostProcesses =
+    public static readonly RemoteSessionMarker[] RemoteSessionMarkers =
     {
-        "parsecd.exe",             // Parsec (processus utilisateur, session interactive)
-        "pservice.exe",            // Parsec (service, session 0)
-        "AnyDesk.exe",
-        "TeamViewer.exe",
-        "TeamViewer_Service.exe",
-        "rustdesk.exe",
-        "remoting_host.exe",       // Chrome Remote Desktop
+        new("remoting_desktop.exe", "Chrome Remote Desktop"),
+        new("TeamViewer_Desktop.exe", "TeamViewer"),
+        new("parsecd.exe", "Parsec"),
     };
 
     /// <summary>
@@ -270,48 +305,57 @@ public static class GameRegistry
     }
 
     /// <summary>
-    /// Décision pure : un hôte de prise en main à distance figure-t-il parmi ces noms de
-    /// processus ? Accepte les noms avec ou sans « .exe » (Process.ProcessName n'en a pas),
-    /// sans tenir compte de la casse.
+    /// Décision pure : une session distante est-elle ouverte dans la session Windows
+    /// <paramref name="currentSessionId"/> ? Rend le nom de l'outil (pour le journal), sinon
+    /// null. Un marqueur d'une autre session (autre utilisateur, session 0) ne compte pas :
+    /// ses injections n'atteignent pas notre bureau. Noms avec ou sans « .exe »
+    /// (Process.ProcessName n'en a pas), sans tenir compte de la casse.
     /// </summary>
-    public static bool IsRemoteAccessHostPresent(IEnumerable<string?>? runningProcessNames)
+    public static string? FindActiveRemoteSession(IEnumerable<ProcessEntry>? processes, int currentSessionId)
     {
-        if (runningProcessNames == null) return false;
-        foreach (var name in runningProcessNames)
+        if (processes == null) return null;
+        foreach (var process in processes)
         {
-            if (string.IsNullOrEmpty(name)) continue;
+            string? name = process.Name;
+            if (string.IsNullOrEmpty(name) || process.SessionId != currentSessionId) continue;
             string withExe = name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name : name + ".exe";
-            foreach (var host in RemoteAccessHostProcesses)
-                if (string.Equals(withExe, host, StringComparison.OrdinalIgnoreCase))
-                    return true;
+            foreach (var marker in RemoteSessionMarkers)
+                if (string.Equals(withExe, marker.Process, StringComparison.OrdinalIgnoreCase))
+                    return marker.Tool;
         }
-        return false;
+        return null;
     }
 
     /// <summary>
-    /// Énumère les processus de la machine et applique <see cref="IsRemoteAccessHostPresent"/>.
-    /// Une seule énumération (Process.GetProcesses lit l'instantané système, sans ouvrir les
-    /// processus : le service Parsec de la session 0 est vu par son nom). À appeler hors du
-    /// rappel du hook ; rend false si l'énumération échoue.
+    /// Énumère les processus de la machine et applique <see cref="FindActiveRemoteSession"/>
+    /// avec la session de l'application. Une seule énumération (Process.GetProcesses lit
+    /// l'instantané système, nom et session compris, sans ouvrir les processus). À appeler
+    /// hors du rappel du hook ; rend null si l'énumération échoue.
     /// </summary>
-    public static bool IsRemoteAccessHostRunning()
+    public static string? FindActiveRemoteSession()
     {
+        int currentSessionId;
         System.Diagnostics.Process[] processes;
-        try { processes = System.Diagnostics.Process.GetProcesses(); }
-        catch { return false; }
         try
         {
-            return IsRemoteAccessHostPresent(processes.Select(SafeName));
+            using (var self = System.Diagnostics.Process.GetCurrentProcess())
+                currentSessionId = self.SessionId;
+            processes = System.Diagnostics.Process.GetProcesses();
+        }
+        catch { return null; }
+        try
+        {
+            return FindActiveRemoteSession(processes.Select(Entry), currentSessionId);
         }
         finally
         {
             foreach (var p in processes) p.Dispose();
         }
 
-        static string? SafeName(System.Diagnostics.Process p)
+        static ProcessEntry Entry(System.Diagnostics.Process p)
         {
-            try { return p.ProcessName; }
-            catch { return null; } // processus terminé entre l'instantané et la lecture
+            try { return new ProcessEntry(p.ProcessName, p.SessionId); }
+            catch { return new ProcessEntry(null, -1); } // processus terminé entre l'instantané et la lecture
         }
     }
 

@@ -83,30 +83,61 @@ public class ForeignInjectionTests
     [Fact]
     public void SansHoteDistant_AG130_07_EstInchangé()
     {
-        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: false));
-        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_EXTENDED, Marqueur, remoteHostPresent: false));
-        Assert.False(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent: false));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, flags: 0, Marqueur, remoteSessionActive: false));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_EXTENDED, Marqueur, remoteSessionActive: false));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteSessionActive: false));
         var sien = (IntPtr)unchecked((int)0xB0000001);
-        Assert.False(KeyboardHook.ShouldTreatAsPhysical(sien, LLKHF_INJECTED, Marqueur, remoteHostPresent: false));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(sien, LLKHF_INJECTED, Marqueur, remoteSessionActive: false));
     }
 
     [Fact]
     public void AvecHoteDistant_LaFrappeInjectéeEtrangère_EstTraitéeCommePhysique()
     {
         // Ce que Parsec livre sur l'hôte : LLKHF_INJECTED, dwExtraInfo à 0.
-        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteHostPresent: true));
-        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteHostPresent: true));
-        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, flags: 0, Marqueur, remoteHostPresent: true));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED, Marqueur, remoteSessionActive: true));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteSessionActive: true));
+        Assert.True(KeyboardHook.ShouldTreatAsPhysical(IntPtr.Zero, flags: 0, Marqueur, remoteSessionActive: true));
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void NotreMarqueur_ResteExclu_AvecOuSansHoteDistant(bool remoteHostPresent)
+    public void NotreMarqueur_ResteExclu_AvecOuSansHoteDistant(bool remoteSessionActive)
     {
         // ⛔ Remapper nos propres émissions ferait une boucle : elles sortent toujours.
-        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, LLKHF_INJECTED, Marqueur, remoteHostPresent));
-        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteHostPresent));
-        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, flags: 0, Marqueur, remoteHostPresent));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, LLKHF_INJECTED, Marqueur, remoteSessionActive));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, LLKHF_INJECTED | LLKHF_EXTENDED, Marqueur, remoteSessionActive));
+        Assert.False(KeyboardHook.ShouldTreatAsPhysical(Marqueur, flags: 0, Marqueur, remoteSessionActive));
+    }
+
+    // ── Audit du 30/10, M1 (décision d'Antoine) : remapper seulement en session active ──
+
+    private const uint VkA = 0x41;
+
+    private static GameRegistry.ProcessEntry E(string name, int sessionId) => new(name, sessionId);
+
+    private static bool AutoSaisieRemappee(params GameRegistry.ProcessEntry[] processus)
+    {
+        // Ce que livrent l'auto-saisie de KeePass ou Parsec : LLKHF_INJECTED, dwExtraInfo à 0.
+        bool sessionActive = GameRegistry.FindActiveRemoteSession(processus, currentSessionId: 1) != null;
+        return KeyboardHook.ShouldProcessKeystroke(VkA, IntPtr.Zero, LLKHF_INJECTED, Marqueur, sessionActive);
+    }
+
+    [Fact]
+    public void ServiceDePriseEnMainLanceSansSession_LaFrappeInjectee_NEstPasRemappee()
+    {
+        Assert.False(AutoSaisieRemappee(E("TeamViewer_Service", 0), E("TeamViewer", 1), E("KeePass", 1)));
+        Assert.False(AutoSaisieRemappee(E("AnyDesk", 0), E("AnyDesk", 1)));
+        Assert.False(AutoSaisieRemappee(E("pservice", 0)));
+        Assert.False(AutoSaisieRemappee(E("remoting_host", 0)));
+    }
+
+    [Fact]
+    public void SessionDePriseEnMainOuverte_LaFrappeInjectee_EstRemappee()
+    {
+        Assert.True(AutoSaisieRemappee(E("TeamViewer_Service", 0), E("TeamViewer_Desktop", 1)));
+        Assert.True(AutoSaisieRemappee(E("remoting_host", 0), E("remoting_desktop", 1)));
+        // Cas mesuré du 24/09 (décision C5) : frappe reçue via Parsec.
+        Assert.True(AutoSaisieRemappee(E("pservice", 0), E("parsecd", 1)));
     }
 }
