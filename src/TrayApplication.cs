@@ -638,6 +638,7 @@ sealed class TrayApplication : IDisposable
     {
         var spec = Environment.GetEnvironmentVariable("AG_DEV_PREVIEW");
         if (string.IsNullOrWhiteSpace(spec)) return;
+        DevRects.StartWatching();
         foreach (var name in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             switch (name)

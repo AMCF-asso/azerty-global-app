@@ -126,6 +126,9 @@ static class GdiHelpers
     internal static void DrawDarkButton(IntPtr hdc, Win32.RECT rect, string text, IntPtr font, bool primary,
         bool hot, bool pressed, int radius, uint? backdrop = null)
     {
+#if DEBUG
+        DevRects.Element(hdc, "bouton", text, rect.left, rect.top, rect.right, rect.bottom);
+#endif
         if (backdrop is uint fillBehind)
             FillSolidRect(hdc, rect, fillBehind);
 
@@ -161,6 +164,9 @@ static class GdiHelpers
     internal static void DrawLightButton(IntPtr hdc, Win32.RECT rect, string text, IntPtr font, bool primary,
         bool hot, bool pressed, bool enabled, int radius, uint backdrop, bool paper = false)
     {
+#if DEBUG
+        DevRects.Element(hdc, "bouton", text, rect.left, rect.top, rect.right, rect.bottom);
+#endif
         FillSolidRect(hdc, rect, backdrop);
 
         uint fill, border, textColor;
@@ -217,6 +223,9 @@ static class GdiHelpers
     /// </summary>
     internal static void DrawPanel(IntPtr hdc, Win32.RECT rect, uint backgroundColor, uint borderColor, uint accentColor, int accentWidth)
     {
+#if DEBUG
+        DevRects.Element(hdc, "panneau", null, rect.left, rect.top, rect.right, rect.bottom);
+#endif
         FillSolidRect(hdc, rect, borderColor);
         var innerRect = new Win32.RECT
         {

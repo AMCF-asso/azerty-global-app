@@ -277,9 +277,22 @@ static class Win32
     }
     public const byte AC_SRC_OVER = 0x00;
 
+#if DEBUG
+    public static bool AlphaBlend(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest,
+        IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, BLENDFUNCTION blend)
+    {
+        DevRects.Image(hdcDest, xDest, yDest, wDest, hDest);
+        return AlphaBlend_Native(hdcDest, xDest, yDest, wDest, hDest, hdcSrc, xSrc, ySrc, wSrc, hSrc, blend);
+    }
+
+    [DllImport("msimg32.dll", EntryPoint = "AlphaBlend")]
+    private static extern bool AlphaBlend_Native(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest,
+        IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, BLENDFUNCTION blend);
+#else
     [DllImport("msimg32.dll")]
     public static extern bool AlphaBlend(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest,
         IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, BLENDFUNCTION blend);
+#endif
 
     [StructLayout(LayoutKind.Sequential)]
     public struct DRAWITEMSTRUCT
@@ -551,8 +564,24 @@ static class Win32
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
     public static extern bool GetTextExtentPoint32W(IntPtr hdc, string lpString, int c, out SIZE psizl);
 
+#if DEBUG
+    public static bool TextOutW(IntPtr hdc, int x, int y, string lpString, int c)
+    {
+        bool ok = TextOutW_Native(hdc, x, y, lpString, c);
+        if (DevRects.Active && lpString is not null)
+        {
+            string shown = c >= 0 && c < lpString.Length ? lpString.Substring(0, c) : lpString;
+            DevRects.TextOut(hdc, x, y, shown);
+        }
+        return ok;
+    }
+
+    [DllImport("gdi32.dll", CharSet = CharSet.Unicode, EntryPoint = "TextOutW")]
+    private static extern bool TextOutW_Native(IntPtr hdc, int x, int y, string lpString, int c);
+#else
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
     public static extern bool TextOutW(IntPtr hdc, int x, int y, string lpString, int c);
+#endif
 
     [DllImport("gdi32.dll")]
     public static extern uint SetTextAlign(IntPtr hdc, uint align);
@@ -568,8 +597,33 @@ static class Win32
     public const uint TA_TOP = 0;
     public const uint TA_BASELINE = 24;
 
+#if DEBUG
+    public static int DrawTextW(IntPtr hdc, string text, int count, ref RECT rc, uint format)
+    {
+        var box = rc;
+        int result = DrawTextW_Native(hdc, text, count, ref rc, format);
+        if ((format & 0x400) == 0 && DevRects.Active && text is not null) // 0x400 = DT_CALCRECT : rien n'est dessiné
+        {
+            string shown = count >= 0 && count < text.Length ? text.Substring(0, count) : text;
+            // Rectangle du texte seul : mesuré avec DT_CALCRECT, puis aligné comme DrawText l'a fait
+            // (DT_CENTER 1, DT_RIGHT 2, DT_VCENTER 4, DT_BOTTOM 8, DT_SINGLELINE 0x20).
+            var calc = box;
+            DrawTextW_Native(hdc, text, count, ref calc, format | 0x400);
+            int tw = calc.right - calc.left, th = calc.bottom - calc.top;
+            int bw = box.right - box.left, bh = box.bottom - box.top;
+            int x = (format & 1) != 0 ? box.left + (bw - tw) / 2 : (format & 2) != 0 ? box.right - tw : box.left;
+            int y = (format & 0x20) == 0 ? box.top : (format & 4) != 0 ? box.top + (bh - th) / 2 : (format & 8) != 0 ? box.bottom - th : box.top;
+            DevRects.Text(hdc, shown, x, y, x + tw, y + th);
+        }
+        return result;
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "DrawTextW")]
+    private static extern int DrawTextW_Native(IntPtr hdc, string text, int count, ref RECT rc, uint format);
+#else
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int DrawTextW(IntPtr hdc, string text, int count, ref RECT rc, uint format);
+#endif
 
     /// <summary>Rectangle de focus système (pointillé, en XOR : à tracer une fois par dessin complet).</summary>
     [DllImport("user32.dll")]
@@ -587,16 +641,40 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool DestroyCaret();
 
+#if DEBUG
+    public static int FillRect(IntPtr hDC, ref RECT rc, IntPtr hbr)
+    {
+        DevRects.Fill(hDC, rc.left, rc.top, rc.right, rc.bottom, "aplat");
+        return FillRect_Native(hDC, ref rc, hbr);
+    }
+
+    [DllImport("user32.dll", EntryPoint = "FillRect")]
+    private static extern int FillRect_Native(IntPtr hDC, ref RECT rc, IntPtr hbr);
+#else
     [DllImport("user32.dll")]
     public static extern int FillRect(IntPtr hDC, ref RECT rc, IntPtr hbr);
+#endif
 
     [DllImport("gdi32.dll")]
     public static extern bool BitBlt(IntPtr hdcDest, int x, int y, int cx, int cy,
         IntPtr hdcSrc, int x1, int y1, uint rop);
 
+#if DEBUG
+    public static bool StretchBlt(IntPtr hdcDest, int x, int y, int cx, int cy,
+        IntPtr hdcSrc, int x1, int y1, int cxSrc, int cySrc, uint rop)
+    {
+        DevRects.Image(hdcDest, x, y, cx, cy);
+        return StretchBlt_Native(hdcDest, x, y, cx, cy, hdcSrc, x1, y1, cxSrc, cySrc, rop);
+    }
+
+    [DllImport("gdi32.dll", EntryPoint = "StretchBlt")]
+    private static extern bool StretchBlt_Native(IntPtr hdcDest, int x, int y, int cx, int cy,
+        IntPtr hdcSrc, int x1, int y1, int cxSrc, int cySrc, uint rop);
+#else
     [DllImport("gdi32.dll")]
     public static extern bool StretchBlt(IntPtr hdcDest, int x, int y, int cx, int cy,
         IntPtr hdcSrc, int x1, int y1, int cxSrc, int cySrc, uint rop);
+#endif
 
     [DllImport("gdi32.dll")]
     public static extern int SetStretchBltMode(IntPtr hdc, int mode);
@@ -621,8 +699,19 @@ static class Win32
     [DllImport("gdi32.dll")]
     public static extern bool LineTo(IntPtr hdc, int x, int y);
 
+#if DEBUG
+    public static bool RoundRect(IntPtr hdc, int left, int top, int right, int bottom, int w, int h)
+    {
+        DevRects.Fill(hdc, left, top, right, bottom, "arrondi");
+        return RoundRect_Native(hdc, left, top, right, bottom, w, h);
+    }
+
+    [DllImport("gdi32.dll", EntryPoint = "RoundRect")]
+    private static extern bool RoundRect_Native(IntPtr hdc, int left, int top, int right, int bottom, int w, int h);
+#else
     [DllImport("gdi32.dll")]
     public static extern bool RoundRect(IntPtr hdc, int left, int top, int right, int bottom, int w, int h);
+#endif
 
     [DllImport("gdi32.dll")]
     public static extern bool Polygon(IntPtr hdc, POINT[] apt, int cpt);
