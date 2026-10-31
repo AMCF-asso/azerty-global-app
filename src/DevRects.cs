@@ -88,6 +88,16 @@ internal static class DevRects
         {
             var pts = new N.POINT[] { new() { x = l, y = t }, new() { x = r, y = b } };
             N.LPtoDP(hdc, pts, 2);
+            // Région de découpe du DC (contenu défilé, rognage) : hors d'elle rien n'est visible.
+            int region = N.GetClipBox(hdc, out var clip);
+            if (region == 1) return; // NULLREGION : rien de visible
+            if (region > 1)
+            {
+                var cp = new N.POINT[] { new() { x = clip.left, y = clip.top }, new() { x = clip.right, y = clip.bottom } };
+                N.LPtoDP(hdc, cp, 2);
+                pts[0].x = Math.Max(pts[0].x, cp[0].x); pts[0].y = Math.Max(pts[0].y, cp[0].y);
+                pts[1].x = Math.Min(pts[1].x, cp[1].x); pts[1].y = Math.Min(pts[1].y, cp[1].y);
+            }
             int ox = 0, oy = 0;
             IntPtr wnd = N.WindowFromDC(hdc);
             if (wnd != IntPtr.Zero && wnd != _top)
@@ -117,6 +127,7 @@ internal static class DevRects
         { "Win32.cs", "DevRects.cs" };
 
     /// <summary>Jusqu'à trois lignes de code appelantes (fichier:ligne méthode), hors Win32.cs.</summary>
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Debug seulement : jamais dans le binaire publié")]
     private static string[] CallSites()
     {
         var found = new List<string>();
@@ -183,7 +194,7 @@ internal static class DevRects
                 {
                     Directory.CreateDirectory(dir);
                     File.WriteAllText(Path.Combine(dir, "index.json"),
-                        JsonSerializer.Serialize(new Dictionary<string, string> { ["erreur"] = ex.Message }));
+                        "{\"erreur\": \"" + JsonEncodedText.Encode(ex.Message) + "\"}");
                 }
             }
             catch { }
@@ -424,6 +435,7 @@ internal static class DevRects
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] internal static extern bool GetTextExtentPoint32W(IntPtr hdc, string s, int c, out SIZE2 size);
         [DllImport("gdi32.dll")] internal static extern uint GetTextAlign(IntPtr hdc);
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] internal static extern bool GetTextMetricsW(IntPtr hdc, out TEXTMETRIC tm);
+        [DllImport("gdi32.dll")] internal static extern int GetClipBox(IntPtr hdc, out RECT r);
         [DllImport("gdi32.dll")] internal static extern bool LPtoDP(IntPtr hdc, [In, Out] POINT[] pts, int c);
         [DllImport("user32.dll")] internal static extern IntPtr WindowFromDC(IntPtr hdc);
         [DllImport("user32.dll")] internal static extern bool ClientToScreen(IntPtr h, ref POINT p);
