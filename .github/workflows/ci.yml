@@ -124,6 +124,11 @@ jobs:
       - name: Test Windows engine
         run: ./scripts/verify.ps1 -Etape tests-windows
 
+      # M8 : vrai WH_KEYBOARD_LL + vrai SendInput, sur le bureau d'entrée du runner. Échec si le
+      # runner n'en a pas : un témoin qui ne tourne pas ne se range pas parmi les réussis.
+      - name: Test hook clavier réel
+        run: ./scripts/verify.ps1 -Etape tests-entree-reelle
+
       - name: Test application
         run: ./scripts/verify.ps1 -Etape tests-app
 

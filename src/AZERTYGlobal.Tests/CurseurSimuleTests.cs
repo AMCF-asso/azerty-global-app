@@ -235,16 +235,28 @@ public class CurseurSimuleTests
         }
 
         // Isolation fermée : la couche rend de nouveau la vraie souris. Sans bureau d'entrée, la
-        // vraie lecture échoue et la couche avec elle, là où le curseur simulé rendrait (0, 0).
+        // vraie lecture échoue et la couche avec elle, là où le curseur simulé rendrait (0, 0) :
+        // l'accord sur l'échec se prouve ici, partout. L'accord sur la position, lui, a besoin d'une
+        // vraie souris (témoin suivant).
+        bool realOk = Win32.GetCursorPos(out _);
+        bool layerOk = CursorSource.TryGet(out _);
+        Assert.Equal(realOk, layerOk);
+    }
+
+    [FactSourisReelle]
+    public void LaCoucheRendLaPositionDeLaVraieSouris()
+    {
+        // Audit du 30/10 (M8) : ce témoin sortait aussitôt sans bureau d'entrée et passait « réussi ».
+        // Il est désormais sauté, avec sa raison, quand la mesure est impossible.
         // Les deux lectures se font sous le même contexte DPI, celui du fil.
         for (int essai = 1; ; essai++)
         {
             bool realOk = Win32.GetCursorPos(out var truth);
             bool layerOk = CursorSource.TryGet(out var layer);
             bool againOk = Win32.GetCursorPos(out var truthAgain);
-            Assert.Equal(realOk, layerOk);
             if (!realOk)
-                return;
+                throw new MesureImpossibleException("aucun bureau d'entrée : GetCursorPos échoue");
+            Assert.True(layerOk);
 
             // Les lectures se suivent : un écart entre les deux vraies est une souris en mouvement.
             if (againOk && truth.x == truthAgain.x && truth.y == truthAgain.y)
@@ -252,7 +264,8 @@ public class CurseurSimuleTests
                 Assert.Equal((truth.x, truth.y), (layer.x, layer.y));
                 return;
             }
-            Assert.True(essai < Essais, $"souris en mouvement à chacun des {Essais} essais");
+            if (essai >= Essais)
+                throw new MesureImpossibleException($"souris en mouvement à chacun des {Essais} essais");
         }
     }
 }
