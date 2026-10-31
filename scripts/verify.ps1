@@ -50,11 +50,27 @@ function Invoke-Commande([string]$Programme, [string[]]$Arguments) {
 # Les tests créent de vraies fenêtres : elles vivent sur un bureau Win32 dédié, jamais à l'écran.
 . (Join-Path $PSScriptRoot 'BureauCache.ps1')
 
-function Invoke-Tests([string]$Projet) {
-    Write-Host "> dotnet test $Projet -c Release (bureau dédié)"
+# Audit du 30/10, M8 : un test ignoré ne prouve rien et ne doit pas se perdre dans un « 1401/1403 ».
+# Seuls ces trois témoins de la vraie souris peuvent l'être : ils exigent le bureau d'entrée, que le
+# bureau dédié ci-dessus n'est pas. Tout autre ignoré fait échouer l'étape.
+$ignoresAttendus = @(
+    'CurseurSimuleTests.UnClicheLaisseLaVraieSourisOuElleEtait',
+    'CurseurSimuleTests.LesLeconsLaissentLaVraieSourisOuElleEtait',
+    'CurseurSimuleTests.LaCoucheRendLaPositionDeLaVraieSouris'
+)
+
+function Invoke-Tests([string]$Projet, [string]$Filtre = '', [switch]$BureauCourant, [string[]]$Attendus = @()) {
+    $arguments = @('test', $Projet, '-c', 'Release', '--logger', 'console;verbosity=normal')
+    if ($Filtre) { $arguments += @('--filter', $Filtre) }
+    $lieu = if ($BureauCourant) { "bureau d'entrée" } else { 'bureau dédié' }
+    Write-Host "> dotnet $($arguments -join ' ') ($lieu)"
     $ErrorActionPreference = 'Continue'
     # La sortie est déjà affichée au fil de l'eau par Invoke-SurBureauCache.
-    $sortie = @(Invoke-SurBureauCache dotnet @('test', $Projet, '-c', 'Release'))
+    if ($BureauCourant) {
+        $sortie = @(& dotnet @arguments 2>&1 | ForEach-Object { Write-Host "$_"; "$_" })
+    } else {
+        $sortie = @(Invoke-SurBureauCache dotnet $arguments)
+    }
     $code = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'
     $motif = '(?<etat>Passed|Failed)!\s+-\s+Failed:\s+(?<echecs>\d+),\s+Passed:\s+(?<reussis>\d+),\s+Skipped:\s+(?<ignores>\d+),\s+Total:\s+(?<total>\d+)'
@@ -70,6 +86,15 @@ function Invoke-Tests([string]$Projet) {
     $texte = "Passed $($compte.Reussis) / Failed $($compte.Echecs) / Skipped $($compte.Ignores) / Total $($compte.Total)"
     if ($code -ne 0 -or $compte.Echecs -gt 0) { throw "tests en échec : $texte (code $code)" }
     if ($compte.Total -eq 0) { throw "aucun test exécuté" }
+    if ($compte.Ignores -gt 0) {
+        $nomsIgnores = @($sortie | ForEach-Object { [regex]::Match([string]$_, '^\s*Skipped\s+(?<nom>\S+)') } |
+            Where-Object Success | ForEach-Object { $_.Groups['nom'].Value })
+        if ($nomsIgnores.Count -ne $compte.Ignores) {
+            throw "$($compte.Ignores) test(s) ignoré(s), $($nomsIgnores.Count) nom(s) lu(s) : $texte"
+        }
+        $inattendus = @($nomsIgnores | Where-Object { $nom = $_; -not ($Attendus | Where-Object { $nom.EndsWith($_) }) })
+        if ($inattendus.Count -gt 0) { throw "test(s) ignoré(s) : $($inattendus -join ', ')" }
+    }
     return $texte
 }
 
@@ -87,8 +112,11 @@ $etapes = [ordered]@{
     'publish-x64'     = { Invoke-Commande dotnet @('publish', 'src/AZERTYGlobal.csproj', '-c', 'Release', '-r', 'win-x64') }
     'publish-arm64'   = { Invoke-Commande dotnet @('publish', 'src/AZERTYGlobal.csproj', '-c', 'Release', '-r', 'win-arm64') }
     'tests-core'      = { Invoke-Tests 'src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj' }
-    'tests-windows'   = { Invoke-Tests 'src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj' }
-    'tests-app'       = { Invoke-Tests 'src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj' }
+    'tests-windows'   = { Invoke-Tests 'src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj' 'Categorie!=EntreeReelle' }
+    # M8 : vrai hook, vrai SendInput. Le bureau d'entrée est celui du poste : le test avale ses
+    # propres frappes (hook « puits »), rien n'atteint la fenêtre au premier plan.
+    'tests-entree-reelle' = { Invoke-Tests 'src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj' 'Categorie=EntreeReelle' -BureauCourant }
+    'tests-app'       = { Invoke-Tests 'src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj' '' -Attendus $ignoresAttendus }
 }
 
 # `-File` passe « a,b » comme une seule chaîne : on découpe.
