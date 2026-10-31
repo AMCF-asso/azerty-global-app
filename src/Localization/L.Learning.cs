@@ -47,7 +47,7 @@ internal static partial class L
 
     public static string Learning_FinalNextTitle => T("Prochaines étapes", "Next steps");
     public static string Learning_FinalNextTodayHelp => T("Les caractères à revoir aujourd’hui", "The characters to review today");
-    public static string Learning_FinalNextMapHelp => T("Les touches que vous avez travaillées", "The keys you have practised");
+    public static string Learning_FinalNextMapHelp => T("Les touches que vous avez travaillées", "The keys you have practiced");
     public static string Learning_FinalNextAfricaHelp => T("€ ɓ ŋ ɔ, sans chronomètre", "€ ɓ ŋ ɔ, no timer");
     public static string Learning_FinalShortcutsTitle => T("Raccourcis à retenir", "Shortcuts to remember");
 }

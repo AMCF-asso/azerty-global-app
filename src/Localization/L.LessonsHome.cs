@@ -134,8 +134,8 @@ internal static partial class L
         return seen == 0 ? $"{signes}, aucun tapé."
             : $"{signes} : {seen} tapé{(seen > 1 ? "s" : "")}" + (due > 0 ? $", {due} à revoir" : "") + ".";
     }
-    public static string LessonsHome_KeySessionButton => T("Séance sur cette touche", "Practise this key");
-    public static string LessonsHome_KeySessionName(string key) => T($"Séance sur la touche {key}", $"Practise the {key} key");
+    public static string LessonsHome_KeySessionButton => T("Séance sur cette touche", "Practice this key");
+    public static string LessonsHome_KeySessionName(string key) => T($"Séance sur la touche {key}", $"Practice the {key} key");
     public static string LessonsHome_KeySessionInstruction =>
         T("Séance de la touche : tapez ces mots.", "Key session: type these words.");
     /// <summary>Ce que la séance d’une touche fera taper : les signes déjà vus, puis le nouveau.</summary>
@@ -149,7 +149,7 @@ internal static partial class L
         return fresh != null ? T($"Un signe nouveau : {fresh}.", $"A new sign: {fresh}.") : "";
     }
     public static string LessonsHome_KeySessionNone =>
-        T("Rien à travailler sur cette touche pour le moment.", "Nothing to practise on this key for now.");
+        T("Rien à travailler sur cette touche pour le moment.", "Nothing to practice on this key for now.");
     public static string LessonsHome_LayerName(HomeLayer layer) => layer switch
     {
         HomeLayer.Shift => Gesture_LineShift,
