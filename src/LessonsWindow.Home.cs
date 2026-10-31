@@ -672,7 +672,7 @@ internal sealed partial class LessonsWindow
         if (inked > 0)
             ex = PaperText.Draw(hdc, shownLine[..inked], extractFont, ex, baseline, pal.Ink);
         if (inked < shownLine.Length)
-            PaperText.Draw(hdc, shownLine[inked..], extractFont, ex, baseline, inked > 0 ? pal.Pale : pal.Ink);
+            PaperText.Draw(hdc, shownLine[inked..], extractFont, ex, baseline, inked > 0 ? (pal.HighContrast ? pal.Pale : PaperTheme.PaleText) : pal.Ink);
 
         string label = started ? L.LessonsHome_ResumeButton : L.LessonsHome_StartButton;
         int buttonW = HomeButtonWidth(hdc, label);
