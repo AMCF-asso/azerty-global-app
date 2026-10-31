@@ -31,6 +31,10 @@ internal sealed class WindowScroll
 
     public int ViewHeight { get; private set; }
 
+    /// <summary>Appelé après chaque défilement : une fenêtre qui dessine elle-même une partie de son
+    /// contenu (l'Accueil) la repeint à sa nouvelle place.</summary>
+    public Action? Scrolled { get; set; }
+
     public bool Needed => ContentHeight > ViewHeight;
 
     /// <summary>
@@ -58,6 +62,7 @@ internal sealed class WindowScroll
         Position = target;
         ShiftChildren(hwnd, shift);
         UpdateBar(hwnd);
+        Scrolled?.Invoke();
     }
 
     private const int VK_PRIOR = 0x21, VK_NEXT = 0x22, VK_END = 0x23, VK_HOME = 0x24, VK_UP = 0x26, VK_DOWN = 0x28;
