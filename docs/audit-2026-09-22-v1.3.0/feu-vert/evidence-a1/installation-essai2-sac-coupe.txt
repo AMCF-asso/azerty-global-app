@@ -1,0 +1,9 @@
+[23:04:01] SHA-256 candidat : 22f4b36125634a9f489e75624974b7c17cca7fc5788c4269935e4394394d20d5
+[23:04:04] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[23:04:10] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[23:04:10] SAC VerifiedAndReputablePolicyState = 1
+[23:04:10] CiTool --refresh : Operation Successful Press Enter to Continue
+[23:04:15] SAC apres coupure = 0
+[23:04:15] Manifest exe : Executable="AZERTY Global.exe" Executable="AZERTY Global.exe" Executable="AZERTY Global.exe"
+[23:04:42] App lancee (pid 15156) apres 25 s ; shadow stack ON ; CFG ON
+[23:04:42] Pret : derouler recette.md dans cette fenetre, noter chaque ligne.

@@ -1,0 +1,42 @@
+[23:00:22] SHA-256 candidat : 22f4b36125634a9f489e75624974b7c17cca7fc5788c4269935e4394394d20d5
+[23:00:38] Windows 10.0.26100.0 ; 13th Gen Intel(R) Core(TM) i5-13600K
+[23:01:29] Installe : AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg
+[23:01:29] SAC VerifiedAndReputablePolicyState = 1
+[23:01:30] Manifest exe : Executable="AZERTY Global.exe" Executable="AZERTY Global.exe" Executable="AZERTY Global.exe"
+[23:01:55] ECHEC : l'app ne tourne pas 25 s apres son lancement.
+[23:01:56] Processus AZERTY* : 
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3102 Code Integrity policy refresh finished for 6 policies.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3096 No change in active Code Integrity policy {1678656c-05ef-481f-bc5b-ebd8c991502d} VerifiedAndReputableDesktopFlightSupplemental after refresh. id 27766.241221-1700. Status 0x0
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3096 No change in active Code Integrity policy {0283ac0f-fff1-49ae-ada1-8a933130cad6} VerifiedAndReputableDesktop after refresh. id 27555.1000.240208. Status 0x0
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3096 No change in active Code Integrity policy {d2bda982-ccf6-4344-ac5b-0b44427b6816} Microsoft Windows Driver Policy after refresh. id 10.0.29520.0. Status 0x0
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3096 No change in active Code Integrity policy {a072029f-588b-4b5e-b7f9-05aad67df687} Microsoft Windows Virtualization Based Security Policy after refresh. id 10.0.29661.0. Status 0x0
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3096 No change in active Code Integrity policy {784c4414-79f4-4c32-a6a5-f0fb42a51d0d} Microsoft Windows Cross Certificates for Code Integrity Exceptions Audit Policy after refresh. id 10.29611.0.0. Status 0x0
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3096 No change in active Code Integrity policy {60fd87f8-4593-44a0-91b0-2e0da022f248} Microsoft Windows Endpoint Security Policy after refresh. id 10.0.29526.0. Status 0x0
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3105 Trying to refresh Code Integrity policy with policy ID {2678656c-05ef-481f-bc5b-ebd8c991502d}.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3103 Ignoring refresh for Code Integrity policy ID {1939ed82-bfd5-4d32-b58e-d31d3c49715a}. Status 0x0.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3105 Trying to refresh Code Integrity policy with policy ID {1939ed82-bfd5-4d32-b58e-d31d3c49715a}.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3105 Trying to refresh Code Integrity policy with policy ID {1678656c-05ef-481f-bc5b-ebd8c991502d}.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3103 Ignoring refresh for Code Integrity policy ID {0939ed82-bfd5-4d32-b58e-d31d3c49715a}. Status 0x0.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3105 Trying to refresh Code Integrity policy with policy ID {0939ed82-bfd5-4d32-b58e-d31d3c49715a}.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3105 Trying to refresh Code Integrity policy with policy ID {a072029f-588b-4b5e-b7f9-05aad67df687}.
+[23:01:57] EVT [Microsoft-Windows-CodeIntegrity/Operational] 3103 Ignoring refresh for Code Integrity policy ID {5951a96a-e0b5-4d3d-8fb8-3e5b61030784}. Status 0x0.
+[23:01:57] EVT [Application] 24 Repair of state locations for operation InitializeDataChangedSignaler against package Microsoft.Windows.ShellExperienceHost_cw5n1h2txyewy with error -2147024894 returned Error Code: 0
+[23:01:57] EVT [Application] 23 Triggered repair of state locations because operation InitializeDataChangedSignaler against package Microsoft.Windows.ShellExperienceHost_cw5n1h2txyewy hit error -2147024894.
+[23:01:57] EVT [Application] 4 ApiSet Function: CreateStateChangeNotification:statechangenotification.cpp,226,80070002;[ReadStateName];statemanager.cpp,1158,80070002; returned with Result: -2147024894
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 613 Performance summary of Deployment Register operation on Package AZERTYGlobal.AZERTYGlobal_1.3.0.0_neutral_~_w9kghr08zmhbg: 
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 478 Deployment Register operation with target volume C: on Package AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg from:  (AppxBundleManifest.xml)  finished successfully.
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 400 Deployment Register operation with target volume C: on Package AZERTYGlobal.AZERTYGlobal_1.3.0.0_neutral_~_w9kghr08zmhbg from:  (AppxBundleManifest.xml)  finished successfully.
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_neutral_~_w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x300, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x300, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_neutral_~_w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x10000C00, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x10000C00, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_neutral_~_w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x20, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x20, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x20, Set=0x0).
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 5507 AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg : C:\Program Files\WindowsApps\AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg\microsoft.system.package.metadata\Resources.????????.pri : No shared merged files found
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 5507 AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg : C:\Program Files\WindowsApps\AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg\microsoft.system.package.metadata\S-1-5-21-2047949552-857980807-821054962-504-MergedResources-*.pri : No user-specific merged files found
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 5507 AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg : C:\Program Files\WindowsApps\AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg\microsoft.system.package.metadata\Resources.????????.pri : No shared merged files found
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 5507 AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg : C:\Program Files\WindowsApps\AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg\microsoft.system.package.metadata\S-1-5-21-2047949552-857980807-821054962-504-MergedResources-*.pri : No user-specific merged files found
+[23:01:57] EVT [Microsoft-Windows-AppXDeploymentServer/Operational] 617 Successfully updated the status for package AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg and user S-1-5-21-2047949552-857980807-821054962-504 (Clear=0x0, Set=0x20).
+[23:01:57] Lancement direct : C:\Program Files\WindowsApps\AZERTYGlobal.AZERTYGlobal_1.3.0.0_x64__w9kghr08zmhbg\AZERTY Global.exe existe=True
+[23:01:58] ERREUR : This command cannot be run due to the error: An Application Control policy has blocked this file.

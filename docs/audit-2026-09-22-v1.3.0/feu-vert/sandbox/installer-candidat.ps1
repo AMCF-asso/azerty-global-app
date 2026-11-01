@@ -29,14 +29,34 @@ try {
     $package = Get-AppxPackage -Name 'AZERTYGlobal.AZERTYGlobal'
     Say ('Installe : ' + $package.PackageFullName)
 
+    $sac = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy' -ErrorAction SilentlyContinue
+    Say ('SAC VerifiedAndReputablePolicyState = ' + $sac.VerifiedAndReputablePolicyState)
+    if ($sac.VerifiedAndReputablePolicyState -ne 0) {
+        Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy' -Name VerifiedAndReputablePolicyState -Value 0 -Type DWord
+        $ci = Join-Path $env:SystemRoot 'System32\CiTool.exe'
+        if (Test-Path $ci) { Say ('CiTool --refresh : ' + ((& $ci --refresh 2>&1) -join ' ')) }
+        Start-Sleep -Seconds 5
+        Say ('SAC apres coupure = ' + (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy').VerifiedAndReputablePolicyState)
+    }
+    Say ('Manifest exe : ' + (Get-Content (Join-Path $package.InstallLocation 'AppxManifest.xml') -Raw | Select-String -Pattern 'Executable="[^"]+"' -AllMatches).Matches.Value)
+    $t0 = Get-Date
     Start-Process ('shell:AppsFolder\' + $package.PackageFamilyName + '!AZERTYGlobal')
-    Start-Sleep -Seconds 8
+    Start-Sleep -Seconds 25
     $process = Get-Process -Name 'AZERTY Global' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($process) {
         $mitigation = Get-ProcessMitigation -Id $process.Id
-        Say ('App lancee (pid ' + $process.Id + ') ; shadow stack ' + $mitigation.UserShadowStack.UserShadowStack + ' ; CFG ' + $mitigation.CFG.Enable)
+        Say ('App lancee (pid ' + $process.Id + ') apres 25 s ; shadow stack ' + $mitigation.UserShadowStack.UserShadowStack + ' ; CFG ' + $mitigation.CFG.Enable)
     } else {
-        Say "ECHEC : l'app ne tourne pas 8 s apres son lancement."
+        Say "ECHEC : l'app ne tourne pas 25 s apres son lancement."
+        Say ('Processus AZERTY* : ' + ((Get-Process | Where-Object { $_.Name -like '*AZERTY*' } | ForEach-Object { $_.Name + ':' + $_.Id }) -join ', '))
+        foreach ($evtLog in 'Microsoft-Windows-CodeIntegrity/Operational', 'Application', 'Microsoft-Windows-AppXDeploymentServer/Operational') {
+            Get-WinEvent -LogName $evtLog -MaxEvents 15 -ErrorAction SilentlyContinue | Where-Object { $_.TimeCreated -ge $t0.AddSeconds(-5) } | ForEach-Object { Say ("EVT [$evtLog] " + $_.Id + ' ' + ($_.Message -split "`n")[0]) }
+        }
+        $exe = Join-Path $package.InstallLocation 'AZERTY Global.exe'
+        Say ('Lancement direct : ' + $exe + ' existe=' + (Test-Path $exe))
+        $p = Start-Process -FilePath $exe -PassThru -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 10
+        if ($p) { Say ('Direct : HasExited=' + $p.HasExited + $(if ($p.HasExited) { ' code=' + $p.ExitCode } else { ' pid=' + $p.Id })) } else { Say 'Direct : Start-Process sans processus' }
     }
     Say 'Pret : derouler recette.md dans cette fenetre, noter chaque ligne.'
 } catch {
