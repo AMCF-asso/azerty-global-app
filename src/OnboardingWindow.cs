@@ -2382,12 +2382,12 @@ sealed class OnboardingWindow : IDisposable
     {
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        // Atelier du 03/11 : le numéro sort de la carte, sur un rail à droite (losange centré sur
+        // Atelier du 03/11 : le numéro sort de la carte, sur un rail à gauche (losange centré sur
         // la hauteur de la carte, fil en pointillés jusqu'au suivant). Choix d'Antoine : variante F3.
         int railWidth = S(54);
         int half = Px(14);
-        int cardLeft = margin;
-        int contentWidth = cw - margin - railWidth - cardLeft;
+        int cardLeft = margin + railWidth;
+        int contentWidth = cw - margin - cardLeft;
         int textX = cardLeft + cardPaddingX;
         int textWidth = contentWidth - cardPaddingX * 2;
         var regular = FontBody;
@@ -2400,7 +2400,7 @@ sealed class OnboardingWindow : IDisposable
 
         var card = new Win32.RECT { left = cardLeft, top = y, right = cardLeft + contentWidth, bottom = y + cardHeight };
         DrawPaperPanel(hdc, card);
-        int cx = cw - margin - S(22);
+        int cx = margin + S(22);
         int cy = y + cardHeight / 2;
         if (_railPreviousCenterY >= 0)
         {
