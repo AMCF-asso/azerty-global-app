@@ -2082,7 +2082,7 @@ sealed class OnboardingWindow : IDisposable
         DrawStepCard(hdc, gfx, margin, cw, ref y, "3", L.Onboarding_Card3Title,
             ShortcutRuns(null, Shortcut("Q"), L.Onboarding_Card3Suffix));
         DrawStepCard(hdc, gfx, margin, cw, ref y, "4", L.Onboarding_Card4Title,
-            ShortcutRuns(null, Shortcut("W"), L.Onboarding_Card4Suffix));
+            ShortcutRuns(null, Shortcut("W"), L.Onboarding_Card4Suffix), last: true);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2320,11 +2320,32 @@ sealed class OnboardingWindow : IDisposable
     /// Pastille ronde numérotée (A7) : un disque d'action plein, le numéro en AG Titre dessus.
     /// Remplace le badge rectangulaire en Segoe italique.
     /// </summary>
-    private void DrawNumberDisc(IntPtr hdc, IntPtr gfx, int left, int top, int diameter, string number)
+    private void DrawNumberDiamond(IntPtr hdc, IntPtr gfx, int cx, int cy, int half, string number)
     {
-        FillDot(gfx, left + diameter / 2f, top + diameter / 2f, diameter / 2f, CLR_BADGE_BG);
-        var cell = new Win32.RECT { left = left, top = top, right = left + diameter, bottom = top + diameter };
+        FillDiamond(gfx, cx, cy, half, CLR_BADGE_BG);
+        var cell = new Win32.RECT { left = cx - half, top = cy - half, right = cx + half, bottom = cy + half };
         PaperText.DrawLine(hdc, number, FontNumber, cell, CLR_BADGE_TEXT, TextAlign.Center);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GpPoint { public float X, Y; }
+
+    [DllImport("gdiplus.dll")]
+    private static extern int GdipFillPolygon(IntPtr graphics, IntPtr brush, GpPoint[] points, int count, int fillMode);
+
+    /// <summary>Losange lissé (GDI+) de demi-diagonale <paramref name="half"/>, centré sur (cx, cy).</summary>
+    private static void FillDiamond(IntPtr gfx, int cx, int cy, int half, uint colorRef)
+    {
+        if (gfx == IntPtr.Zero) return;
+        uint argb = 0xFF000000u | ((colorRef & 0xFF) << 16) | (colorRef & 0xFF00) | ((colorRef >> 16) & 0xFF);
+        if (GdipCreateSolidFill(argb, out IntPtr brush) != 0) return;
+        var points = new[]
+        {
+            new GpPoint { X = cx, Y = cy - half }, new GpPoint { X = cx + half, Y = cy },
+            new GpPoint { X = cx, Y = cy + half }, new GpPoint { X = cx - half, Y = cy },
+        };
+        GdipFillPolygon(gfx, brush, points, points.Length, 0);
+        GdipDeleteBrush(brush);
     }
 
     /// <summary>
@@ -2354,15 +2375,18 @@ sealed class OnboardingWindow : IDisposable
     /// à la ligne), puis le texte. Hauteur mesurée, jamais devinée : les titres du site (1.3.0)
     /// dépassent la carte 4 en français.</summary>
     private void DrawStepCard(IntPtr hdc, IntPtr gfx, int margin, int cw, ref int y, string number, string title,
-        IReadOnlyList<TextRun> body)
+        IReadOnlyList<TextRun> body, bool last = false)
     {
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        int disc = Px(22);
-        int discGap = S(14);
-        int contentWidth = cw - margin * 2;
-        int textX = margin + cardPaddingX + disc + discGap;
-        int textWidth = contentWidth - cardPaddingX * 2 - disc - discGap;
+        // Atelier du 03/11 : le numéro sort de la carte, sur un rail à gauche (losange, fil en
+        // pointillés jusqu'au suivant). Choix d'Antoine : variante F3.
+        int railWidth = S(54);
+        int half = Px(14);
+        int cardLeft = margin + railWidth;
+        int contentWidth = cw - margin - cardLeft;
+        int textX = cardLeft + cardPaddingX;
+        int textWidth = contentWidth - cardPaddingX * 2;
         var regular = FontBody;
         var strong = FontBodyStrong;
         var titleRuns = new[] { new TextRun(title) };
@@ -2371,10 +2395,20 @@ sealed class OnboardingWindow : IDisposable
         int bodyHeight = Paragraph(hdc, body, regular, strong, textX, 0, textWidth, CLR_TEXT, CLR_INLINE_HIGHLIGHT, draw: false);
         int cardHeight = Math.Max(S(STEP_CARD_MIN_H), cardPaddingY * 2 + titleHeight + bodyHeight + S(2));
 
-        var card = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + cardHeight };
+        var card = new Win32.RECT { left = cardLeft, top = y, right = cw - margin, bottom = y + cardHeight };
         DrawPaperPanel(hdc, card);
-        // La pastille se centre sur la première ligne du titre.
-        DrawNumberDisc(hdc, gfx, margin + cardPaddingX, y + cardPaddingY + (ParagraphLine(strong) - disc) / 2, disc, number);
+        // Le losange se centre sur la première ligne du titre.
+        int cx = margin + S(22);
+        int cy = y + cardPaddingY + ParagraphLine(strong) / 2;
+        DrawNumberDiamond(hdc, gfx, cx, cy, half, number);
+        if (!last)
+        {
+            // Fil en pointillés jusqu'au losange de la carte suivante, au même décalage.
+            int thickness = Math.Max(1, Px(2)), dash = Px(4), gap = Px(4);
+            int from = cy + half + Px(4), to = cy + cardHeight + S(10) - half - Px(4);
+            for (int top = from; top < to; top += dash + gap)
+                GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = cx - thickness / 2, top = top, right = cx - thickness / 2 + thickness, bottom = Math.Min(top + dash, to) }, CLR_LINK);
+        }
         Paragraph(hdc, titleRuns, strong, strong, textX, y + cardPaddingY, textWidth, CLR_STEP_TITLE, CLR_STEP_TITLE, draw: true);
         Paragraph(hdc, body, regular, strong, textX, y + cardPaddingY + titleHeight, textWidth, CLR_TEXT, CLR_INLINE_HIGHLIGHT, draw: true);
 
