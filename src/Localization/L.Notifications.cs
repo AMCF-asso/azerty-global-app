@@ -8,7 +8,13 @@ internal static partial class L
 
     // ── PauseDurationDialog ──────────────────────────────────────────
     public static string Pause_WindowTitle => T($"Mettre {Product} en pause", $"Pause {Product}");
-    public static string Pause_Label => T("Durée", "Duration");
+    // Atelier du 2026-11-03 : les durées courantes sont des pastilles, les champs servent à
+    // « Autre durée ».
+    public static string Pause_Label => T("Autre durée", "Other duration");
+    // Pastille de durée courante : « 5 min », « 1 h » (« 1 hr » en anglais, comme l'unité).
+    public static string Pause_QuickChip(int minutes) => minutes % 60 == 0
+        ? $"{minutes / 60} {Pause_UnitHours}"
+        : $"{minutes} {Pause_UnitMinutes}";
     // Noms accessibles des deux champs : l'unité affichée suit le champ, et le Narrateur
     // nomme un champ par l'étiquette qui le précède.
     public static string Pause_Hours => T("Heures", "Hours");
