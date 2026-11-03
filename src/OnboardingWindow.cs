@@ -1997,7 +1997,7 @@ sealed class OnboardingWindow : IDisposable
         int capsX = Math.Min(Math.Max((first + last - capsW) / 2, atEnd + Px(12)), right - capsW);
         Note("É È Ç À", L.Onboarding_NoteCaps, capsX, combY - Px(13));
 
-        void Down(float units, uint scancode, int depth, string sign, string text)
+        void Down(float units, uint scancode, int depth, string sign, string text, int gap = 20)
         {
             int x = p.OriginX + (int)Math.Round(units * p.Scale);
             int y0 = KeyRect(p, scancode).bottom + 1;
@@ -2005,13 +2005,15 @@ sealed class OnboardingWindow : IDisposable
             VLine(x, y0, yb);
             HLine(x - Px(12), x, yb);
             Dot(x, y0);
-            Note(sign, text, x - Px(20) - NoteWidth(sign, text), yb + Px(4));
+            Note(sign, text, x - Px(gap) - NoteWidth(sign, text), yb + Px(4));
         }
         // d à k par l'interstice b/n ; le point par l'interstice Espace/AltGr ; ù par l'interstice
         // !/Maj, au-dessus de la touche Menu muette.
         Down(7.9f, 0x23, 18, "{ } \\ | [ ]", L.Onboarding_NoteCoding);
         Down(10.35f, 0x33, 42, ".", L.Onboarding_NotePeriod);
-        Down(13.4f, 0x28, 66, "´ ` ~", L.Onboarding_NoteAccents);
+        // Atelier du 03/11 : note des accents remontée de 4 px et rapprochée de son trait de 6 px
+        // (à 8 px, le texte mordait le coude du trait, long de 12 px).
+        Down(13.4f, 0x28, 62, "´ ` ~", L.Onboarding_NoteAccents, 14);
     }
 
     private static Win32.RECT KeyRect(KeyboardPlacement p, uint scancode)
