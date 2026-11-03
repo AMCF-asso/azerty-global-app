@@ -146,6 +146,8 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
     private int _currentStep;
+    /// <summary>Ordonnée du dernier losange de l'étape « Comment utiliser », pour le fil vers le suivant.</summary>
+    private int _railPreviousCenterY = -1;
     private bool _learningModuleDone;
     // Vrai si l'utilisateur a vu l'etape 3 (la ou la checkbox « Ne plus afficher » est presente).
     // Sans ce flag, fermer le wizard via la croix a l'etape 1 sans avoir vu l'etape 3 persisterait
@@ -2075,6 +2077,7 @@ sealed class OnboardingWindow : IDisposable
         DrawStepTitle(hdc, cw, y, L.Onboarding_Step2Title);
         y = StepTitleRect(cw, y).bottom + Px(12);
 
+        _railPreviousCenterY = -1;
         DrawStepCard(hdc, gfx, margin, cw, ref y, "1", L.Onboarding_Card1Title,
             new[] { new TextRun(L.Onboarding_Card1Desc) });
         DrawStepCard(hdc, gfx, margin, cw, ref y, "2", L.Onboarding_Card2Title,
@@ -2082,7 +2085,7 @@ sealed class OnboardingWindow : IDisposable
         DrawStepCard(hdc, gfx, margin, cw, ref y, "3", L.Onboarding_Card3Title,
             ShortcutRuns(null, Shortcut("Q"), L.Onboarding_Card3Suffix));
         DrawStepCard(hdc, gfx, margin, cw, ref y, "4", L.Onboarding_Card4Title,
-            ShortcutRuns(null, Shortcut("W"), L.Onboarding_Card4Suffix), last: true);
+            ShortcutRuns(null, Shortcut("W"), L.Onboarding_Card4Suffix));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2375,16 +2378,16 @@ sealed class OnboardingWindow : IDisposable
     /// à la ligne), puis le texte. Hauteur mesurée, jamais devinée : les titres du site (1.3.0)
     /// dépassent la carte 4 en français.</summary>
     private void DrawStepCard(IntPtr hdc, IntPtr gfx, int margin, int cw, ref int y, string number, string title,
-        IReadOnlyList<TextRun> body, bool last = false)
+        IReadOnlyList<TextRun> body)
     {
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        // Atelier du 03/11 : le numéro sort de la carte, sur un rail à gauche (losange, fil en
-        // pointillés jusqu'au suivant). Choix d'Antoine : variante F3.
+        // Atelier du 03/11 : le numéro sort de la carte, sur un rail à droite (losange centré sur
+        // la hauteur de la carte, fil en pointillés jusqu'au suivant). Choix d'Antoine : variante F3.
         int railWidth = S(54);
         int half = Px(14);
-        int cardLeft = margin + railWidth;
-        int contentWidth = cw - margin - cardLeft;
+        int cardLeft = margin;
+        int contentWidth = cw - margin - railWidth - cardLeft;
         int textX = cardLeft + cardPaddingX;
         int textWidth = contentWidth - cardPaddingX * 2;
         var regular = FontBody;
@@ -2395,20 +2398,20 @@ sealed class OnboardingWindow : IDisposable
         int bodyHeight = Paragraph(hdc, body, regular, strong, textX, 0, textWidth, CLR_TEXT, CLR_INLINE_HIGHLIGHT, draw: false);
         int cardHeight = Math.Max(S(STEP_CARD_MIN_H), cardPaddingY * 2 + titleHeight + bodyHeight + S(2));
 
-        var card = new Win32.RECT { left = cardLeft, top = y, right = cw - margin, bottom = y + cardHeight };
+        var card = new Win32.RECT { left = cardLeft, top = y, right = cardLeft + contentWidth, bottom = y + cardHeight };
         DrawPaperPanel(hdc, card);
-        // Le losange se centre sur la première ligne du titre.
-        int cx = margin + S(22);
-        int cy = y + cardPaddingY + ParagraphLine(strong) / 2;
-        DrawNumberDiamond(hdc, gfx, cx, cy, half, number);
-        if (!last)
+        int cx = cw - margin - S(22);
+        int cy = y + cardHeight / 2;
+        if (_railPreviousCenterY >= 0)
         {
-            // Fil en pointillés jusqu'au losange de la carte suivante, au même décalage.
+            // Fil en pointillés depuis le losange de la carte précédente.
             int thickness = Math.Max(1, Px(2)), dash = Px(4), gap = Px(4);
-            int from = cy + half + Px(4), to = cy + cardHeight + S(10) - half - Px(4);
+            int from = _railPreviousCenterY + half + Px(4), to = cy - half - Px(4);
             for (int top = from; top < to; top += dash + gap)
                 GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = cx - thickness / 2, top = top, right = cx - thickness / 2 + thickness, bottom = Math.Min(top + dash, to) }, CLR_LINK);
         }
+        DrawNumberDiamond(hdc, gfx, cx, cy, half, number);
+        _railPreviousCenterY = cy;
         Paragraph(hdc, titleRuns, strong, strong, textX, y + cardPaddingY, textWidth, CLR_STEP_TITLE, CLR_STEP_TITLE, draw: true);
         Paragraph(hdc, body, regular, strong, textX, y + cardPaddingY + titleHeight, textWidth, CLR_TEXT, CLR_INLINE_HIGHLIGHT, draw: true);
 
