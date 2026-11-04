@@ -98,4 +98,13 @@
     <ProjectReference Include="TypingEngine.Windows\TypingEngine.Windows.csproj" />
   </ItemGroup>
 
+  <!-- D12 (tests autonomes, 2026-11-04) : configuration Banc. Comme Release, plus la constante
+       AG_BANC_TEST qui compile l'interrupteur de banc (TypingEngine.Windows/BancSwitch.cs).
+       Sortie bin/Banc : Pack-MSIX.ps1 et Verify-Release.ps1 lisent bin\Release en dur et ne
+       la prennent jamais. Build : dotnet publish src/AZERTYGlobal.csproj -c Banc -r win-x64 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Banc'">
+    <DefineConstants>$(DefineConstants);AG_BANC_TEST</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
 </Project>

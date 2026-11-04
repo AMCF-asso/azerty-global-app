@@ -13,4 +13,9 @@
   <ItemGroup>
     <ProjectReference Include="..\TypingEngine.Core\TypingEngine.Core.csproj" />
   </ItemGroup>
+  <!-- D12 : configuration Banc (voir AZERTYGlobal.csproj). AG_BANC_TEST compile BancSwitch. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Banc'">
+    <DefineConstants>$(DefineConstants);AG_BANC_TEST</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
 </Project>

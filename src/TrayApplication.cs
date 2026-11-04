@@ -359,6 +359,13 @@ sealed class TrayApplication : IDisposable
         _mapper.StateChanged += OnStateChanged;
         _mapper.ToggleRequested += OnToggleShortcut;
         _hook = new KeyboardHook(_mapper, _typingHost);
+#if AG_BANC_TEST
+        // D12 (tests autonomes) : interrupteur de banc, configuration Banc seulement. L'état
+        // brut est journalisé pour que le banc distingue « non compilé » de « valeur non vue ».
+        var banc = BancSwitch.ReadAtStartup(@"Software\" + ProductIdentity.ConfigFolderName + @"\Banc", "InjectionPhysique");
+        _hook.ForeignInjectionAsPhysical = banc.Active;
+        ConfigManager.LogCompatEvent("BancInjection", banc.Describe());
+#endif
         _hook.RawKeyDown += OnKeyPressed;
         _hook.SearchRequested += () => Win32.PostMessageW(_hWnd, WM_APP_SEARCH, IntPtr.Zero, IntPtr.Zero);
         _hook.VirtualKeyboardRequested += () => Win32.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);

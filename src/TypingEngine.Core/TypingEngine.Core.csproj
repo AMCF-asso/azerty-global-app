@@ -5,4 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>TypingEngine.Core</RootNamespace>
   </PropertyGroup>
+  <!-- D12: test-bench configuration (see AZERTYGlobal.csproj), same as Release here. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Banc'">
+    <DefineConstants>$(DefineConstants);AG_BANC_TEST</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
 </Project>
