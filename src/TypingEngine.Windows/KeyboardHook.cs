@@ -107,6 +107,30 @@ public sealed class KeyboardHook : IDisposable
     /// </summary>
     public bool ShortcutsWhilePassThrough { get; set; }
 
+    // D12 : interrupteur de banc (BancSwitch). Pose une fois au demarrage par l'hote,
+    // lu seul par le rappel : volatile suffit, comme pour la session distante.
+    private volatile bool _foreignInjectionAsPhysical;
+
+    /// <summary>
+    /// D12 (tests autonomes, 2026-11-04) : vrai quand l'interrupteur de banc est actif
+    /// (BancSwitch : configuration Banc et valeur HKCU a 1). Les injections etrangeres sont
+    /// alors traitees comme des frappes physiques, comme pendant une session distante.
+    /// Hors build Banc, l'hote ne le pose jamais : son seul appel est sous #if AG_BANC_TEST.
+    /// </summary>
+    public bool ForeignInjectionAsPhysical
+    {
+        get => _foreignInjectionAsPhysical;
+        set => _foreignInjectionAsPhysical = value;
+    }
+
+    /// <summary>
+    /// Une injection etrangere est-elle une frappe de l'utilisateur ? Oui pendant une session
+    /// distante (C5) ou sous l'interrupteur de banc (D12). VK_PACKET et notre marqueur
+    /// restent exclus en aval, par ShouldProcessKeystroke.
+    /// </summary>
+    internal static bool ForeignInjectionIsUserInput(bool remoteSession, bool bancSwitch)
+        => remoteSession || bancSwitch;
+
     public KeyboardHook(KeyMapper mapper, IWindowsTypingHost? host = null)
     {
         _mapper = mapper;
@@ -290,7 +314,7 @@ public sealed class KeyboardHook : IDisposable
             // injections SONT les frappes de l'utilisateur (lecture d'un booleen).
             // Audit 24/09 B1 : jamais un VK_PACKET, hote distant ou non - son scanCode est
             // un caractere, ni a remapper ni a faire entrer dans TrackModifiers.
-            if (!ShouldProcessKeystroke(hookStruct.vkCode, hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, _remoteHostPresent))
+            if (!ShouldProcessKeystroke(hookStruct.vkCode, hookStruct.dwExtraInfo, hookStruct.flags, INJECTED_FLAG, ForeignInjectionIsUserInput(_remoteHostPresent, _foreignInjectionAsPhysical)))
                 return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();

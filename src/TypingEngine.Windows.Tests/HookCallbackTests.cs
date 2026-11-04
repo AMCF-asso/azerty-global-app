@@ -212,4 +212,33 @@ public sealed class HookCallbackTests : IDisposable
         Rappel(VK_W, SC_W, WM_KEYDOWN);
         Assert.Equal(new[] { "appui 2C" }, _evenements);
     }
+
+    /// <summary>D12 : l'interrupteur de banc est éteint tant que l'hôte ne l'a pas posé.</summary>
+    [Fact]
+    public void InterrupteurDeBanc_EteintParDefaut()
+    {
+        Assert.False(_hook.ForeignInjectionAsPhysical);
+    }
+
+    /// <summary>
+    /// D12 : sous l'interrupteur, la frappe injectée du banc suit la route physique, comme une
+    /// frappe Parsec pendant une session distante. Sans lui, elle est écartée (témoin ci-dessus).
+    /// </summary>
+    [Fact]
+    public void InterrupteurDeBanc_InjectionEtrangereTraitee()
+    {
+        _hook.ForeignInjectionAsPhysical = true;
+        Rappel(VK_W, SC_W, WM_KEYDOWN, flags: 0x10); // LLKHF_INJECTED, sans notre marqueur
+        Assert.Equal(new[] { "appui 2C" }, _evenements);
+    }
+
+    /// <summary>D12 : même sous l'interrupteur, ni un VK_PACKET ni nos propres injections.</summary>
+    [Fact]
+    public void InterrupteurDeBanc_NiVkPacketNiNotreMarqueur()
+    {
+        _hook.ForeignInjectionAsPhysical = true;
+        Assert.Equal(0, Rappel(KeyboardHook.VK_PACKET, 0xE9, WM_KEYDOWN, flags: 0x10));
+        Assert.Equal(0, Rappel(VK_W, SC_W, WM_KEYDOWN, flags: 0x10, extra: KeyboardHook.INJECTED_FLAG));
+        Assert.Empty(_evenements);
+    }
 }

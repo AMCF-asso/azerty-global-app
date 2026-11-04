@@ -23,4 +23,8 @@
   <ItemGroup>
     <Compile Include="..\TestSupport\MockWin32Api.cs" Link="TestSupport\MockWin32Api.cs" />
   </ItemGroup>
+  <!-- D12 : en configuration Banc, les témoins attendent BancSwitch.CompiledIn vrai. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Banc'">
+    <DefineConstants>$(DefineConstants);AG_BANC_TEST</DefineConstants>
+  </PropertyGroup>
 </Project>
