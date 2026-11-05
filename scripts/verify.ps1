@@ -73,16 +73,40 @@ function Invoke-Tests([string]$Projet, [string]$Filtre = '', [switch]$BureauCour
     }
     $code = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'
+    # Deux formats de résumé selon la verbosité du logger console :
+    # minimal : « Passed!  - Failed: 0, Passed: 18, Skipped: 0, Total: 18 » (une ligne) ;
+    # normal  : « Total tests: 18 » puis « Passed: 18 », « Failed: n », « Skipped: n » (lignes à zéro omises).
     $motif = '(?<etat>Passed|Failed)!\s+-\s+Failed:\s+(?<echecs>\d+),\s+Passed:\s+(?<reussis>\d+),\s+Skipped:\s+(?<ignores>\d+),\s+Total:\s+(?<total>\d+)'
-    $resumes = @($sortie | ForEach-Object { [regex]::Match([string]$_, $motif) } | Where-Object Success)
-    if ($resumes.Count -eq 0) { throw "résumé de dotnet test introuvable (code $code)" }
     $compte = @{ Echecs = 0; Reussis = 0; Ignores = 0; Total = 0 }
-    foreach ($r in $resumes) {
-        $compte.Echecs += [int]$r.Groups['echecs'].Value
-        $compte.Reussis += [int]$r.Groups['reussis'].Value
-        $compte.Ignores += [int]$r.Groups['ignores'].Value
-        $compte.Total += [int]$r.Groups['total'].Value
+    $resumes = 0
+    $blocNormal = $false
+    foreach ($ligne in $sortie) {
+        $l = [string]$ligne
+        $r = [regex]::Match($l, $motif)
+        if ($r.Success) {
+            $resumes++
+            $blocNormal = $false
+            $compte.Echecs += [int]$r.Groups['echecs'].Value
+            $compte.Reussis += [int]$r.Groups['reussis'].Value
+            $compte.Ignores += [int]$r.Groups['ignores'].Value
+            $compte.Total += [int]$r.Groups['total'].Value
+            continue
+        }
+        $t = [regex]::Match($l, '^\s*Total tests:\s*(?<n>\d+)\s*$')
+        if ($t.Success) { $resumes++; $blocNormal = $true; $compte.Total += [int]$t.Groups['n'].Value; continue }
+        if (-not $blocNormal) { continue }
+        $c = [regex]::Match($l, '^\s*(?<cle>Passed|Failed|Skipped):\s*(?<n>\d+)\s*$')
+        if ($c.Success) {
+            switch ($c.Groups['cle'].Value) {
+                'Passed'  { $compte.Reussis += [int]$c.Groups['n'].Value }
+                'Failed'  { $compte.Echecs += [int]$c.Groups['n'].Value }
+                'Skipped' { $compte.Ignores += [int]$c.Groups['n'].Value }
+            }
+        } elseif ($l -notmatch '^\s*$') {
+            $blocNormal = $false
+        }
     }
+    if ($resumes -eq 0) { throw "résumé de dotnet test introuvable (code $code)" }
     $texte = "Passed $($compte.Reussis) / Failed $($compte.Echecs) / Skipped $($compte.Ignores) / Total $($compte.Total)"
     if ($code -ne 0 -or $compte.Echecs -gt 0) { throw "tests en échec : $texte (code $code)" }
     if ($compte.Total -eq 0) { throw "aucun test exécuté" }
