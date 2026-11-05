@@ -143,6 +143,19 @@ foreach ($arch in $architectures) {
     # Copier l'exécutable publié
     Copy-Item $publishExe (Join-Path $stagingDir 'AZERTY Global.exe') -Force
 
+    # Licences des polices embarquées (audit 1.3.0, M9) : la clause 2 de l'OFL demande la
+    # licence avec chaque copie, et 5 des 7 polices n'ont pas l'ID 13 dans leur table `name`.
+    # Les textes OFL-*.txt de src/Fonts/ partent donc dans le paquet, sous Licences/.
+    $fontLicenses = @(Get-ChildItem (Join-Path $srcDir 'Fonts') -Filter 'OFL-*.txt')
+    if ($fontLicenses.Count -eq 0) {
+        throw "Aucun OFL-*.txt dans src/Fonts : les polices ne peuvent pas être redistribuées sans leur licence."
+    }
+    $stagingLicenses = Join-Path $stagingDir 'Licences'
+    New-Item -ItemType Directory -Path $stagingLicenses | Out-Null
+    foreach ($license in $fontLicenses) {
+        Copy-Item $license.FullName (Join-Path $stagingLicenses $license.Name) -Force
+    }
+
     # Ajuster ProcessorArchitecture dans le manifest copié
     $manifestPath = Join-Path $stagingDir 'AppxManifest.xml'
     [xml]$manifest = [System.IO.File]::ReadAllText($manifestPath)
