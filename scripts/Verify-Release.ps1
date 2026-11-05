@@ -204,6 +204,20 @@ foreach ($arch in $architectures) {
     }
 
     Write-Host "SHA256 $arch : $publishHash (publish = bundle)"
+
+    # Audit 1.3.0, M9 : les licences OFL des polices voyagent avec le paquet (OFL, clause 2).
+    $fontLicenses = @(Get-ChildItem (Join-Path $srcDir 'Fonts') -Filter 'OFL-*.txt')
+    if ($fontLicenses.Count -eq 0) {
+        throw "Aucun OFL-*.txt dans src/Fonts"
+    }
+    foreach ($license in $fontLicenses) {
+        $sourceHash = (Get-FileHash $license.FullName -Algorithm SHA256).Hash
+        $packedHash = Get-ExeHashFromBundle $bundlePath $msixName ("Licences/{0}" -f $license.Name)
+        if ($sourceHash -ne $packedHash) {
+            throw "$($license.Name) du bundle $arch ne correspond pas à src/Fonts"
+        }
+    }
+    Write-Host "Licences OFL $arch : $($fontLicenses.Count) fichiers présents dans le bundle"
 }
 
 Write-Host ""
