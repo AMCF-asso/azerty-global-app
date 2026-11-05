@@ -1302,8 +1302,9 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// C5 : met à jour KeyboardHook.RemoteHostPresent depuis le pool de threads. Une seule
-    /// sonde à la fois ; une transition est journalisée (nom générique, aucune frappe).
+    /// C5 revu le 30/10 (audit M1) : met à jour KeyboardHook.RemoteSessionActive depuis le
+    /// pool de threads, selon qu'une session distante est ouverte dans notre session Windows.
+    /// Une seule sonde à la fois ; une transition est journalisée (nom de l'outil, aucune frappe).
     /// </summary>
     private void ProbeRemoteHost()
     {
@@ -1312,12 +1313,13 @@ sealed class TrayApplication : IDisposable
         {
             try
             {
-                bool present = GameRegistry.IsRemoteAccessHostRunning();
+                string? tool = GameRegistry.FindActiveRemoteSession();
+                bool active = tool != null;
                 var hook = _hook;
-                if (hook != null && hook.RemoteHostPresent != present)
+                if (hook != null && hook.RemoteSessionActive != active)
                 {
-                    hook.RemoteHostPresent = present;
-                    ConfigManager.LogCompatEvent("RemoteAccessHost", present ? "present" : "absent");
+                    hook.RemoteSessionActive = active;
+                    ConfigManager.LogCompatEvent("RemoteSession", active ? "active (" + tool + ")" : "inactive");
                 }
             }
             catch (Exception ex)
