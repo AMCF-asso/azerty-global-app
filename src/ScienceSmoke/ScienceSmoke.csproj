@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Sonde de liaison du moteur Science : rejoue le corpus du dépôt science à travers l'ABI C,
+       publiée en NativeAOT avec les mêmes options de durcissement que l'app
+       (AZERTYGlobal.csproj : CFG, déterminisme, taille). Sortie 0 si tous les cas concordent. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AZERTYGlobal</RootNamespace>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <ControlFlowGuard>Guard</ControlFlowGuard>
+    <Deterministic>true</Deterministic>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\ScienceEngine.cs" Link="ScienceEngine.cs" />
+  </ItemGroup>
+
+  <Import Project="..\ScienceEngine.targets" />
+
+</Project>

@@ -75,6 +75,16 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      # Moteur Science (Rust) : science/ est la ScienceRoot par défaut de src/ScienceEngine.targets.
+      # Dépôt public (décision d'Antoine du 2026-11-04), donc ni token ni secret. Épinglé par SHA :
+      # le bundle produit ici est attesté, la version du moteur doit l'être aussi.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: AMCF-asso/science
+          ref: SCIENCE_SHA_A_EPINGLER
+          path: science
+          persist-credentials: false
+
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -112,6 +122,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Rust épinglé (rust-version du dépôt science) avec les deux cibles : la publication
+      # construit science_ffi.dll par cargo (src/ScienceEngine.targets).
+      - name: Setup Rust 1.98.1
+        run: |
+          rustup toolchain install 1.98.1 --profile minimal --target x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+          rustup default 1.98.1
+
       - name: Restore + publish x64
         run: ./scripts/verify.ps1 -Etape publish-x64
 
@@ -126,6 +143,9 @@ jobs:
 
       - name: Test application
         run: ./scripts/verify.ps1 -Etape tests-app
+
+      - name: Moteur Science (ABI et corpus par l'interop)
+        run: ./scripts/verify.ps1 -Etape science
 
       - name: Pack MSIX
         run: pwsh ./scripts/Pack-MSIX.ps1

@@ -204,6 +204,14 @@ foreach ($arch in $architectures) {
     }
 
     Write-Host "SHA256 $arch : $publishHash (publish = bundle)"
+
+    # Le moteur Science voyage à côté de l'exe : même contrôle publish → bundle.
+    $publishScience = Join-Path (Split-Path $publishExe) 'science_ffi.dll'
+    $scienceHash = (Get-FileHash $publishScience -Algorithm SHA256).Hash
+    if ($scienceHash -ne (Get-ExeHashFromBundle $bundlePath $msixName 'science_ffi.dll')) {
+        throw "science_ffi.dll $arch embarquée dans le bundle ne correspond pas au publish courant"
+    }
+    Write-Host "SHA256 science_ffi.dll $arch : $scienceHash (publish = bundle)"
 }
 
 Write-Host ""

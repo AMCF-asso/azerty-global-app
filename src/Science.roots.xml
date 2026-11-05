@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Garde ScienceEngine dans l'exe AOT tant qu'aucun code de l'app ne l'appelle (spike du
+     2026-11-04). À retirer quand la fenêtre Science l'appellera. -->
+<linker>
+  <assembly fullname="AZERTY Global">
+    <type fullname="AZERTYGlobal.ScienceEngine" preserve="all" />
+  </assembly>
+</linker>

@@ -63,6 +63,17 @@
     <Compile Remove="TypingEngine.Windows/**/*.cs" />
     <Compile Remove="TypingEngine.Windows.Tests/**/*.cs" />
     <Compile Remove="TestSupport/**/*.cs" />
+    <Compile Remove="ScienceSmoke/**/*.cs" />
+    <Compile Remove="SciencePreviewProbe/**/*.cs" />
+  </ItemGroup>
+
+  <!-- Moteur Science (Rust, science_ffi.dll à côté de l'exe ; ScienceLink=static pour le lier
+       dans l'exe, ARM64 seulement) : ScienceEngine.targets.
+       Tant qu'aucune fenêtre n'appelle ScienceEngine, Science.roots.xml le garde à la
+       compilation AOT, pour que BinSkim et la taille mesurent l'exe avec le moteur. -->
+  <Import Project="ScienceEngine.targets" />
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="Science.roots.xml" />
   </ItemGroup>
 
   <!-- InternalsVisibleTo déclaré directement dans AssemblyAttributes.cs car

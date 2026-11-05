@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
+import os
 import re
 import string
 import struct
@@ -31,9 +32,11 @@ def inline_result_messages(report):
             template = rule.get("messageStrings", {}).get(message.get("id"))
             if template is None:
                 template = driver.get("globalMessageStrings", {}).get(message.get("id"))
-            # BinSkim 4.4.9.11 omet ce modèle commun dans BA4002 (ELF/Mach-O).
+            # BinSkim 4.4.9.11 omet ce modèle commun dans BA4002 (ELF/Mach-O) et dans BA2027
+            # (SourceLink, non applicable au PDB de science_ffi.dll produit par rustc).
             # Réutiliser uniquement le texte unanime déjà fourni par ses autres règles.
-            if template is None and (result.get("ruleId"), message.get("id")) == ("BA4002", "NotApplicable_InvalidMetadata"):
+            if (template is None and result.get("ruleId") in ("BA4002", "BA2027")
+                    and message.get("id") == "NotApplicable_InvalidMetadata"):
                 common = {rule.get("messageStrings", {}).get(message["id"], {}).get("text")
                           for rule in rules.values()}
                 common.discard(None)
@@ -74,6 +77,36 @@ DEROGATIONS = {
     "BA2027": "SourceLink : le PDB natif produit par ILC n'en porte pas ; dette de diagnostic, pas une mitigation d'exploitation.",
     "BA6006": "LTCG : recommandation d'optimisation ; les bibliothèques précompilées du runtime ne sont pas en /GL.",
 }
+# Dérogations propres au moteur Science (science_ffi.dll, Rust), jamais à l'exe : décision
+# d'Antoine du 2026-11-04, Rust stable seul, sans nightly.
+SCIENCE_DLL = "science_ffi.dll"
+SCIENCE_DEROGATIONS = {
+    "BA2014": "Stack protector : rustc stable ne pose pas /GS sur les fonctions Rust ; le code est sûr "
+              "en mémoire (aucun unsafe hors des trois fonctions de l'ABI), les accès sont bornés. "
+              "À retirer le jour où rustc stable pose une protection de pile.",
+    "BA2024": "Spectre : les seuls objets sans /Qspectre sont ceux, précompilés, du CRT Microsoft ; "
+              "Cargo.lock du moteur ne contient que ses crates, donc aucun C/C++ du projet ni de tiers.",
+}
+# BA2024 de la DLL : le compteur C/C++ de l'éditeur de liens inclut l'UCRT, compilée avec /Qspectre
+# et donc non listée ; l'égalité exigée pour l'exe ne peut pas tenir (mesure /VERBOSE du 2026-11-04).
+SCIENCE_CRT_LIBRARIES = frozenset({"libcmt.lib", "libvcruntime.lib", "libucrt.lib"})
+
+
+def crt_only_modules(results):
+    """Vrai si BA2024 ne liste que des modules du CRT Microsoft (casse ignorée)."""
+    for result in results:
+        if result.get("ruleId") != "BA2024" or result.get("kind", "fail") != "fail":
+            continue
+        return all(library.lower() in SCIENCE_CRT_LIBRARIES for library, _ in spectre_modules(result))
+    return False
+
+
+def workspace_only_lock(text):
+    """Vrai si Cargo.lock ne contient que des crates du dépôt : aucune n'a de `source`."""
+    if not isinstance(text, str):
+        return False
+    packages = text.split("[[package]]")[1:]
+    return bool(packages) and not any(re.search(r"^source\s*=", block, re.M) for block in packages)
 SPECTRE_LINE = re.compile(r"^([^,]+),(c|cxx),[0-9.]+ \((.+)\)$")
 
 
@@ -121,6 +154,11 @@ def effective_level(result, rules):
 def derogation_holds(result, results, context, rules=None):
     """Condition propre à chaque règle dérogée ; rien n'est accepté sans contexte."""
     rule = result.get("ruleId")
+    # Dérogations nommées : décidées pour ce binaire seul, quel que soit le niveau de la règle.
+    if context is not None and context.get("binary") == SCIENCE_DLL and rule in SCIENCE_DEROGATIONS:
+        if rule == "BA2024":
+            return crt_only_modules(results) and workspace_only_lock(context.get("cargo_lock"))
+        return True
     if context is None or rule not in DEROGATIONS or effective_level(result, rules or {}) != "warning":
         return False
     if rule in ("BA2024", "BA2026"):
@@ -187,7 +225,9 @@ def validate_report(report, context=None):
             raise ValueError("Contrôles en échec : " + ", ".join(r.get("ruleId", "?") for r in blocking))
         if any(not r.get("message", {}).get("text", "").strip() for r in results):
             raise ValueError("Message SARIF textuel absent")
-        accepted += [{"rule": r["ruleId"], "justification": DEROGATIONS[r["ruleId"]]} for r in failed]
+        named = SCIENCE_DEROGATIONS if (context or {}).get("binary") == SCIENCE_DLL else {}
+        accepted += [{"rule": r["ruleId"], "justification": named.get(r["ruleId"]) or DEROGATIONS[r["ruleId"]]}
+                     for r in failed]
     return accepted
 
 
@@ -220,11 +260,15 @@ def main():
                 target.write_bytes(z.read(name))
         tool = scratch / "tools/net9.0/win-x64/BinSkim.exe"
         errors = []
-        for arch in ("x64", "arm64"):
-            binary = ROOT / f"src/bin/Release/net10.0-windows10.0.17763.0/win-{arch}/publish/AZERTY Global.exe"
+        # Le moteur Science (science_ffi.dll, Rust) est livré à côté de l'exe : il passe les
+        # mêmes contrôles, dans son propre rapport (un fichier, une analyse, une catégorie).
+        targets = [(arch, name, label) for arch in ("x64", "arm64")
+                   for name, label in (("AZERTY Global.exe", arch), ("science_ffi.dll", f"science-{arch}"))]
+        for arch, name, label in targets:
+            binary = ROOT / f"src/bin/Release/net10.0-windows10.0.17763.0/win-{arch}/publish/{name}"
             if not binary.is_file() or not binary.with_suffix(".pdb").is_file():
-                raise ValueError(f"Publication {arch} ou son PDB absent")
-            report = args.output / f"binskim-{arch}.sarif"
+                raise ValueError(f"Publication {arch} : {name} ou son PDB absent")
+            report = args.output / f"binskim-{label}.sarif"
             raw_report = report.with_suffix(".raw.json")
             # Le rapport doit provenir de CET appel, jamais d'une exécution antérieure.
             if report.exists():
@@ -235,7 +279,7 @@ def main():
                                       "--disable-telemetry",
                                       "--kind", "Fail;Pass;Review;Open;NotApplicable"],
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=180)
-            (args.output / f"binskim-{arch}.log").write_bytes(process.stdout)
+            (args.output / f"binskim-{label}.log").write_bytes(process.stdout)
             try:
                 if not raw_report.is_file():
                     raise ValueError("Aucun rapport produit")
@@ -245,8 +289,13 @@ def main():
                 # verdicts fail restent uploadables et sont refusés juste après.
                 report.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
                 counts = vc_feature_counts(binary)
-                accepted = validate_report(data, {"cxx_objects": counts["cxx"]})
-                (args.output / f"derogations-{arch}.json").write_text(
+                context = {"cxx_objects": counts["cxx"], "binary": name}
+                if name == SCIENCE_DLL:
+                    # Même ScienceRoot que src/ScienceEngine.targets ; un lock absent ne déroge rien.
+                    lock = Path(os.environ.get("ScienceRoot") or ROOT / "science") / "Cargo.lock"
+                    context["cargo_lock"] = lock.read_text(encoding="utf-8") if lock.is_file() else None
+                accepted = validate_report(data, context)
+                (args.output / f"derogations-{label}.json").write_text(
                     json.dumps({"binskim": VERSION, "vc_feature": counts, "accepted": accepted},
                                ensure_ascii=False, indent=2), encoding="utf-8")
                 # BinSkim sort en 1 dès qu'un résultat fail existe, même dérogé : le code
@@ -254,10 +303,10 @@ def main():
                 if process.returncode not in (0, 1) or (process.returncode == 1 and not accepted):
                     raise ValueError(f"Code de sortie {process.returncode}")
                 for item in accepted:
-                    print(f"{arch} : {item['rule']} dérogé — {item['justification']}")
-                print(f"{arch} : analyse complète, aucun contrôle bloquant ({len(accepted)} dérogation(s))")
+                    print(f"{label} : {item['rule']} dérogé — {item['justification']}")
+                print(f"{label} : analyse complète, aucun contrôle bloquant ({len(accepted)} dérogation(s))")
             except (ValueError, KeyError) as error:
-                errors.append(f"{arch} : {error}")
+                errors.append(f"{label} : {error}")
         if errors:
             raise ValueError(" ; ".join(errors))
 

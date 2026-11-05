@@ -143,6 +143,15 @@ foreach ($arch in $architectures) {
     # Copier l'exécutable publié
     Copy-Item $publishExe (Join-Path $stagingDir 'AZERTY Global.exe') -Force
 
+    # Moteur Science : l'exe charge science_ffi.dll à côté de lui. Sans elle, l'app démarre
+    # sans moteur au lieu d'échouer : son absence arrête donc l'empaquetage. Son PDB reste
+    # hors du paquet (BinSkim le lit dans publish/).
+    $publishScience = Join-Path (Split-Path $publishExe) 'science_ffi.dll'
+    if (-not (Test-Path $publishScience)) {
+        throw "Moteur Science absent du publish $arch : $publishScience"
+    }
+    Copy-Item $publishScience (Join-Path $stagingDir 'science_ffi.dll') -Force
+
     # Ajuster ProcessorArchitecture dans le manifest copié
     $manifestPath = Join-Path $stagingDir 'AppxManifest.xml'
     [xml]$manifest = [System.IO.File]::ReadAllText($manifestPath)
