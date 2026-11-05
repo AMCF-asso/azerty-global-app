@@ -311,6 +311,25 @@ static class NativeWindow
         return width > 0 ? width : Win32.GetSystemMetrics(Win32.SM_CXVSCROLL);
     }
 
+    /// <summary>Hauteur de la barre de défilement horizontale, même règle que
+    /// <see cref="ScrollBarWidth"/>.</summary>
+    internal static int ScrollBarHeight(IntPtr hwnd)
+    {
+        int height = GetSystemMetricsForDpi(Win32.SM_CYHSCROLL, (uint)DpiOf(hwnd));
+        return height > 0 ? height : Win32.GetSystemMetrics(Win32.SM_CYHSCROLL);
+    }
+
+    /// <summary>Barres de défilement à un DPI donné, pour dimensionner une fenêtre avant de la
+    /// créer ou avant que son DPI ne change (audit du 30/10, M2).</summary>
+    internal static (int VBarWidth, int HBarHeight) ScrollBarsForDpi(int dpi)
+    {
+        uint d = (uint)(dpi > 0 ? dpi : 96);
+        int width = GetSystemMetricsForDpi(Win32.SM_CXVSCROLL, d);
+        int height = GetSystemMetricsForDpi(Win32.SM_CYHSCROLL, d);
+        return (width > 0 ? width : Win32.GetSystemMetrics(Win32.SM_CXVSCROLL),
+                height > 0 ? height : Win32.GetSystemMetrics(Win32.SM_CYHSCROLL));
+    }
+
     [DllImport("user32.dll")]
     private static extern bool AdjustWindowRectExForDpi(ref Win32.RECT rect, uint style, bool menu, uint exStyle, uint dpi);
 

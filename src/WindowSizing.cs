@@ -49,6 +49,124 @@ static class WindowSizing
     }
 
     /// <summary>
+    /// Audit du 30/10, M2 — chaque dimension ramenée à la fraction de la zone de travail, sans
+    /// garder le rapport de forme. Pour une fenêtre qui défile (les Leçons) : garder le rapport
+    /// rétrécissait aussi la dimension qui tenait, et faisait défiler les deux axes au lieu d'un
+    /// (1366 × 768 à 100 % : 955 px de large pour 1120 voulus, qui tenaient).
+    /// </summary>
+    public static (int Width, int Height) ClampEachToWorkArea(
+        int wantedW, int wantedH, int workW, int workH,
+        float fraction = MaxWorkAreaFraction)
+    {
+        if (wantedW <= 0 || wantedH <= 0 || workW <= 0 || workH <= 0)
+            return (Math.Max(1, wantedW), Math.Max(1, wantedH));
+
+        return (Math.Min(wantedW, Math.Max(1, (int)(workW * fraction))),
+                Math.Min(wantedH, Math.Max(1, (int)(workH * fraction))));
+    }
+
+    /// <summary>
+    /// Audit du 30/10, M2 — taille extérieure d'une fenêtre qui défile au lieu de rétrécir
+    /// (<see cref="FitCanvas"/>) : <see cref="ClampEachToWorkArea"/>, plus la place de la barre
+    /// de défilement sur l'axe qui tient encore. Sans elle, à 150 % sur 1920 × 1080, la hauteur
+    /// bornée appelle une barre verticale qui ronge la largeur, juste égale à la référence, et
+    /// une barre horizontale apparaît pour 26 px.
+    /// </summary>
+    /// <param name="wantedW">Taille extérieure de référence, à l'échelle de l'écran.</param>
+    /// <param name="vBarW">Largeur de la barre verticale.</param>
+    /// <param name="hBarH">Hauteur de la barre horizontale.</param>
+    public static (int Width, int Height) ScrollingWindowSize(int wantedW, int wantedH,
+        int workW, int workH, int vBarW, int hBarH, float fraction = MaxWorkAreaFraction)
+    {
+        var (w, h) = ClampEachToWorkArea(wantedW, wantedH, workW, workH, fraction);
+        if (wantedW <= 0 || wantedH <= 0 || workW <= 0 || workH <= 0) return (w, h);
+
+        int maxW = Math.Max(1, (int)(workW * fraction));
+        int maxH = Math.Max(1, (int)(workH * fraction));
+        vBarW = Math.Max(0, vBarW);
+        hBarH = Math.Max(0, hBarH);
+        // Même cascade que FitCanvas : une barre posée peut en appeler une autre.
+        bool scrollsY = h < wantedH, scrollsX = false;
+        for (int pass = 0; pass < 2; pass++)
+        {
+            if (scrollsY) w = Math.Min(wantedW + vBarW, maxW);
+            scrollsX = w - (scrollsY ? vBarW : 0) < wantedW;
+            if (scrollsX) h = Math.Min(wantedH + hBarH, maxH);
+            scrollsY = h - (scrollsX ? hBarH : 0) < wantedH;
+        }
+        return (w, h);
+    }
+
+    /// <summary>Disposition d'une fenêtre à mise en page fixe qui défile au lieu de rétrécir
+    /// (<see cref="FitCanvas"/>).</summary>
+    /// <param name="Scale">Échelle de rendu en plus de celle de l'écran, jamais sous 1.</param>
+    /// <param name="ViewWidth">Zone visible, barres de défilement exclues.</param>
+    /// <param name="CanvasWidth">Surface dessinée : la référence quand la fenêtre est plus petite.</param>
+    public readonly record struct ScrolledCanvas(float Scale, int ViewWidth, int ViewHeight,
+        int CanvasWidth, int CanvasHeight, bool ScrollsX, bool ScrollsY);
+
+    /// <summary>
+    /// Audit du 30/10, M2 — une fenêtre à mise en page fixe (les Leçons) ne rapetisse plus son
+    /// rendu sous l'échelle de l'écran. Plus grande que la référence dans les deux sens, elle
+    /// l'agrandit comme avant (le plus petit des deux rapports). Plus petite dans un sens, le
+    /// rendu reste à l'échelle de l'écran, la surface dessinée garde la taille de référence et
+    /// la fenêtre défile sur l'axe qui ne tient pas. Avant, le rendu suivait la fenêtre bornée :
+    /// 119 % au lieu de 150 % sur un 1920 × 1080, 85 % en 1366 × 768.
+    ///
+    /// Une barre en appelle parfois une autre : la barre verticale prend de la largeur, ce qui
+    /// peut faire déborder une largeur qui tenait, et inversement. Deux passes suffisent, une
+    /// barre posée ne s'enlève jamais.
+    /// </summary>
+    /// <param name="clientW">Zone cliente entière, barres de défilement comprises.</param>
+    /// <param name="baseW">Zone cliente de référence à l'échelle de l'écran.</param>
+    /// <param name="vBarW">Largeur de la barre verticale.</param>
+    /// <param name="hBarH">Hauteur de la barre horizontale.</param>
+    public static ScrolledCanvas FitCanvas(int clientW, int clientH, int baseW, int baseH, int vBarW, int hBarH)
+    {
+        clientW = Math.Max(1, clientW);
+        clientH = Math.Max(1, clientH);
+        baseW = Math.Max(1, baseW);
+        baseH = Math.Max(1, baseH);
+        vBarW = Math.Max(0, vBarW);
+        hBarH = Math.Max(0, hBarH);
+
+        float grow = MathF.Min(clientW / (float)baseW, clientH / (float)baseH);
+        if (grow >= 1f)
+            return new ScrolledCanvas(grow, clientW, clientH, clientW, clientH, false, false);
+
+        bool scrollsX = false, scrollsY = false;
+        for (int pass = 0; pass < 2; pass++)
+        {
+            scrollsY = clientH - (scrollsX ? hBarH : 0) < baseH;
+            scrollsX = clientW - (scrollsY ? vBarW : 0) < baseW;
+        }
+        int viewW = Math.Max(1, clientW - (scrollsY ? vBarW : 0));
+        int viewH = Math.Max(1, clientH - (scrollsX ? hBarH : 0));
+        return new ScrolledCanvas(1f, viewW, viewH, Math.Max(viewW, baseW), Math.Max(viewH, baseH),
+            scrollsX, scrollsY);
+    }
+
+    /// <summary>Position de défilement bornée à [0, surface − visible].</summary>
+    public static int ClampScroll(int position, int canvas, int view)
+        => Math.Clamp(position, 0, Math.Max(0, canvas - view));
+
+    /// <summary>
+    /// Position qui fait voir [<paramref name="start"/>, <paramref name="end"/>) (coordonnées de
+    /// la surface) avec <paramref name="margin"/> autour, en bougeant le moins possible ; plus
+    /// grand que la vue, c'est son début qui se voit.
+    /// </summary>
+    public static int ScrollToShow(int position, int start, int end, int view, int canvas, int margin)
+    {
+        if (end - start + 2 * margin > view)
+            return ClampScroll(start - margin, canvas, view);
+        if (start - margin < position)
+            return ClampScroll(start - margin, canvas, view);
+        if (end + margin > position + view)
+            return ClampScroll(end + margin - view, canvas, view);
+        return ClampScroll(position, canvas, view);
+    }
+
+    /// <summary>
     /// Lot 130 D (D4 d'Antoine, 29/10) — taille extérieure d'une fenêtre à rapport de forme fixe
     /// (le clavier virtuel) ramenée à la zone de travail entière, cadre compris : c'est la zone
     /// <em>cliente</em> qui garde son rapport. Sans elle, Windows rognait à l'écran le rectangle
