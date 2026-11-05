@@ -422,6 +422,13 @@ static class Win32
     public const uint SIF_POS = 0x0004;
     public const uint SIF_TRACKPOS = 0x0010;
     public const int SM_CXVSCROLL = 2;
+    // Audit du 30/10, M2 : les Leçons défilent aussi en largeur (1920 × 1080 à 200 %). Les
+    // codes SB_LINEUP à SB_BOTTOM valent aussi pour la barre horizontale (gauche, droite).
+    public const uint WM_HSCROLL = 0x0114;
+    public const uint WM_MOUSEHWHEEL = 0x020E;
+    public const int SB_HORZ = 0;
+    public const uint WS_HSCROLL = 0x00100000;
+    public const int SM_CYHSCROLL = 3;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct SCROLLINFO
