@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: AMCF-asso/science
-          ref: SCIENCE_SHA_A_EPINGLER
+          ref: a002de15e64bde80aaaae72d4bd5e79733ccfa3a
           path: science
           persist-credentials: false
 
