@@ -90,7 +90,8 @@ jobs:
       - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          dotnet-version: '10.0.x'
+          # global.json : 10.0.403 (ILCompiler 10.0.14, GHSA-p3jp-9v83-76w9 / NU1903), correctifs de série suivis.
+          global-json-file: global.json
 
       # Une ref antérieure au banc (0a1dbc7) ne l'a pas : il est déposé depuis la branche du
       # banc, main par défaut, toujours présente après le checkout complet. Il ne touche pas
