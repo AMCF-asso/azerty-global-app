@@ -255,53 +255,93 @@ public class GameRegistryTests
         Assert.False(GameRegistry.IsRemoteAccessProcess(processName));
     }
 
-    // ── Hôtes de prise en main à distance (C5, décision d'Antoine du 2026-09-24) ──
+    // ── Session de prise en main à distance (C5 du 24/09, revue le 30/10 : audit M1) ──
+
+    private const int SessionUtilisateur = 1;
+    private const int SessionServices = 0;
+
+    private static GameRegistry.ProcessEntry P(string name, int session = SessionUtilisateur) => new(name, session);
+
+    [Fact]
+    public void RemoteSessionMarkers_SontLesSignauxDeSessionDecides()
+    {
+        Assert.Equal(
+            new[] { "remoting_desktop.exe", "TeamViewer_Desktop.exe", "parsecd.exe" },
+            GameRegistry.RemoteSessionMarkers.Select(m => m.Process));
+    }
+
+    [Fact]
+    public void RemoteSessionMarkers_ExcluentServicesEtClientsRdp()
+    {
+        // Un service tourne dès l'installation (M1) ; l'entrée RDP côté hôte n'est pas injectée.
+        foreach (var name in new[] { "TeamViewer_Service.exe", "TeamViewer.exe", "pservice.exe", "AnyDesk.exe",
+                                     "rustdesk.exe", "remoting_host.exe", "mstsc.exe", "msrdc.exe", "msrdcw.exe" })
+            Assert.DoesNotContain(GameRegistry.RemoteSessionMarkers,
+                m => string.Equals(m.Process, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static IEnumerable<object[]> ServicesLancesSansSession() => new[]
+    {
+        new object[] { "TeamViewer", new[] { P("TeamViewer_Service", SessionServices), P("TeamViewer") } },
+        new object[] { "AnyDesk (service)", new[] { P("AnyDesk", SessionServices), P("AnyDesk") } },
+        new object[] { "Parsec (service seul)", new[] { P("pservice", SessionServices) } },
+        new object[] { "Chrome Remote Desktop", new[] { P("remoting_host", SessionServices) } },
+        new object[] { "RustDesk", new[] { P("rustdesk", SessionServices), P("rustdesk") } },
+    };
 
     [Theory]
-    [InlineData("parsecd.exe")]
-    [InlineData("pservice.exe")]
-    [InlineData("AnyDesk.exe")]
-    [InlineData("TeamViewer.exe")]
-    [InlineData("TeamViewer_Service.exe")]
-    [InlineData("rustdesk.exe")]
-    [InlineData("remoting_host.exe")]
-    public void RemoteAccessHostProcesses_ContientLesHotesDecides(string processName)
+    [MemberData(nameof(ServicesLancesSansSession))]
+    public void FindActiveRemoteSession_ServiceLanceSansSession_RendNull(string outil, GameRegistry.ProcessEntry[] hote)
     {
-        Assert.Contains(processName, GameRegistry.RemoteAccessHostProcesses);
+        var processus = new[] { P("explorer"), P("KeePass"), P("svchost", SessionServices) }.Concat(hote);
+        Assert.True(GameRegistry.FindActiveRemoteSession(processus, SessionUtilisateur) == null, outil);
     }
 
-    [Fact]
-    public void RemoteAccessHostProcesses_ExclutLesClientsRdp()
+    public static IEnumerable<object[]> SessionsOuvertes() => new[]
     {
-        // L'entrée RDP côté hôte n'est pas injectée : mstsc/msrdc sont des clients.
-        Assert.Equal(7, GameRegistry.RemoteAccessHostProcesses.Length);
-        foreach (var client in new[] { "mstsc.exe", "msrdc.exe", "msrdcw.exe" })
-            Assert.DoesNotContain(GameRegistry.RemoteAccessHostProcesses,
-                h => string.Equals(h, client, StringComparison.OrdinalIgnoreCase));
+        new object[] { "TeamViewer", new[] { P("TeamViewer_Service", SessionServices), P("TeamViewer"), P("TeamViewer_Desktop") } },
+        new object[] { "Chrome Remote Desktop", new[] { P("remoting_host", SessionServices), P("remoting_desktop") } },
+        new object[] { "Parsec", new[] { P("pservice", SessionServices), P("parsecd") } },
+    };
+
+    [Theory]
+    [MemberData(nameof(SessionsOuvertes))]
+    public void FindActiveRemoteSession_SessionOuverte_RendLOutil(string outil, GameRegistry.ProcessEntry[] hote)
+    {
+        var processus = new[] { P("explorer"), P("svchost", SessionServices) }.Concat(hote);
+        Assert.Equal(outil, GameRegistry.FindActiveRemoteSession(processus, SessionUtilisateur));
     }
 
     [Theory]
-    [InlineData("parsecd")]          // Process.ProcessName, sans extension
-    [InlineData("PSERVICE")]
-    [InlineData("remoting_host.exe")]
-    public void IsRemoteAccessHostPresent_ReconnaitLeNomAvecOuSansExtension(string name)
+    [InlineData("TeamViewer_Desktop")]      // Process.ProcessName, sans extension
+    [InlineData("REMOTING_DESKTOP.EXE")]
+    public void FindActiveRemoteSession_NomAvecOuSansExtension_SansCasse(string name)
     {
-        Assert.True(GameRegistry.IsRemoteAccessHostPresent(new[] { "explorer", name, "svchost" }));
+        Assert.NotNull(GameRegistry.FindActiveRemoteSession(new[] { P(name) }, SessionUtilisateur));
     }
 
     [Fact]
-    public void IsRemoteAccessHostPresent_SansHote_RendFalse()
+    public void FindActiveRemoteSession_MarqueurDUneAutreSession_RendNull()
     {
-        Assert.False(GameRegistry.IsRemoteAccessHostPresent(new[] { "explorer", "mstsc", "msrdc", "notepad", null, "" }));
-        Assert.False(GameRegistry.IsRemoteAccessHostPresent(null));
-        Assert.False(GameRegistry.IsRemoteAccessHostPresent(Array.Empty<string>()));
+        // Session d'un autre utilisateur, ou session 0 : ses injections n'atteignent pas notre bureau.
+        Assert.Null(GameRegistry.FindActiveRemoteSession(new[] { P("TeamViewer_Desktop", 2) }, SessionUtilisateur));
+        Assert.Null(GameRegistry.FindActiveRemoteSession(new[] { P("parsecd", SessionServices) }, SessionUtilisateur));
     }
 
     [Fact]
-    public void IsRemoteAccessHostRunning_NeLeveJamais()
+    public void FindActiveRemoteSession_EntreesVides_RendNull()
+    {
+        Assert.Null(GameRegistry.FindActiveRemoteSession(null, SessionUtilisateur));
+        Assert.Null(GameRegistry.FindActiveRemoteSession(Array.Empty<GameRegistry.ProcessEntry>(), SessionUtilisateur));
+        Assert.Null(GameRegistry.FindActiveRemoteSession(
+            new[] { new GameRegistry.ProcessEntry(null, SessionUtilisateur), P("") }, SessionUtilisateur));
+    }
+
+    [Fact]
+    public void FindActiveRemoteSession_EnumerationReelle_NeLeveJamais()
     {
         // Énumération réelle : la valeur dépend du poste, seule l'absence d'exception compte.
-        _ = GameRegistry.IsRemoteAccessHostRunning();
+        _ = GameRegistry.FindActiveRemoteSession();
     }
 
     // ────────────────────────────────────────────────────────────────
