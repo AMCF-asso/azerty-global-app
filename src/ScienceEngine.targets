@@ -1,0 +1,69 @@
+<Project>
+  <!-- Moteur AZERTY Global Science (Rust, crate science-ffi du dépôt AMCF-asso/science),
+       importé par AZERTYGlobal.csproj et par la sonde ScienceSmoke : une seule définition.
+
+       ScienceLink choisit la liaison en publication NativeAOT (spike du 2026-11-04, rapport
+       operations/2026-11-04-science-spike) :
+       - dll (défaut, livré) : science_ffi.dll à côté de l'exe, CFG et CET posés sur la DLL,
+         panic rattrapé par catch_unwind à la frontière ;
+       - static : lib statique liée dans l'exe (DirectPInvoke), panic=abort. Lie en ARM64
+         seulement : sur x64, l'AOT .NET 10 pose /guard:ehcont et aucun objet Rust, std
+         précompilée comprise, n'en porte la métadonnée (LNK2047, LNK1386, même avec
+         /force:guardehcont). Rouvert seulement par un nightly avec build-std et -Zehcont-guard.
+       Build JIT (dotnet build, tests) : toujours la DLL, copiée à côté de l'assembly.
+
+       Drapeaux Rust communs : +crt-static (CRT statique, comme NativeAOT ; /MD donnerait LNK4098),
+       control-flow-guard (BinSkim BA2008), remap-path-prefix (aucun chemin du poste dans le
+       binaire), debug line-tables-only (BinSkim exige un PDB qui couvre le moteur).
+
+       ScienceRoot : checkout du dépôt science (par défaut ..\science à côté de src, ce que fait
+       la CI) ; en local : -p:ScienceRoot=<chemin>. -->
+  <PropertyGroup>
+    <ScienceLink Condition="'$(ScienceLink)' == ''">dll</ScienceLink>
+    <ScienceRoot Condition="'$(ScienceRoot)' == ''">$(MSBuildThisFileDirectory)..\science</ScienceRoot>
+    <ScienceRoot>$([System.IO.Path]::GetFullPath('$(ScienceRoot)').TrimEnd('\'))</ScienceRoot>
+    <ScienceTriple Condition="'$(RuntimeIdentifier)' == 'win-x64'">x86_64-pc-windows-msvc</ScienceTriple>
+    <ScienceTriple Condition="'$(RuntimeIdentifier)' == 'win-arm64'">aarch64-pc-windows-msvc</ScienceTriple>
+    <ScienceTriple Condition="'$(ScienceTriple)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">aarch64-pc-windows-msvc</ScienceTriple>
+    <ScienceTriple Condition="'$(ScienceTriple)' == ''">x86_64-pc-windows-msvc</ScienceTriple>
+    <!-- Un dossier cible par mode : panic=abort change toute la compilation. -->
+    <ScienceTargetDir>$(MSBuildThisFileDirectory)obj\science-$(ScienceLink)</ScienceTargetDir>
+    <ScienceLibDir>$(ScienceTargetDir)\$(ScienceTriple)\release\</ScienceLibDir>
+    <ScienceRustFlags>'-Ctarget-feature=+crt-static','-Ccontrol-flow-guard','--remap-path-prefix=$(ScienceRoot)=science'</ScienceRustFlags>
+    <!-- CET (shadow stack) n'existe que sur x64 ; la DLL le déclare elle-même (BinSkim BA2025). -->
+    <ScienceRustFlags Condition="'$(ScienceLink)' == 'dll' and '$(ScienceTriple)' == 'x86_64-pc-windows-msvc'">$(ScienceRustFlags),'-Clink-arg=/CETCOMPAT'</ScienceRustFlags>
+    <SciencePanic>unwind</SciencePanic>
+    <SciencePanic Condition="'$(ScienceLink)' == 'static'">abort</SciencePanic>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PublishAot)' == 'true' and '$(ScienceLink)' == 'static'">
+    <DirectPInvoke Include="science_ffi" />
+    <NativeLibrary Include="$(ScienceLibDir)science_ffi.lib" />
+    <!-- Sortie de `cargo rustc -p science-ffi -\-print native-static-libs` (kernel32 et libcmt
+         sont déjà liés par NativeAOT). -->
+    <NativeLibrary Include="ntdll.lib;userenv.lib;ws2_32.lib;dbghelp.lib" />
+    <LinkerArg Include="/force:guardehcont" Condition="'$(ScienceTriple)' == 'x86_64-pc-windows-msvc'" />
+  </ItemGroup>
+
+  <Target Name="BuildScienceEngine" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(ScienceRoot)\Cargo.toml')"
+           Text="Moteur Science introuvable dans « $(ScienceRoot) » : cloner AMCF-asso/science, puis -p:ScienceRoot=&lt;chemin&gt;." />
+    <Error Condition="'$(ScienceLink)' != 'static' and '$(ScienceLink)' != 'dll'" Text="ScienceLink vaut static ou dll." />
+    <!-- Lancé dans ScienceRoot : rustup y lit rust-toolchain.toml (1.98.1), pas la toolchain par défaut. -->
+    <Exec WorkingDirectory="$(ScienceRoot)" Command="cargo build -p science-ffi --release --locked --target $(ScienceTriple) --manifest-path &quot;$(ScienceRoot)\Cargo.toml&quot; --target-dir &quot;$(ScienceTargetDir)&quot; --config &quot;target.$(ScienceTriple).rustflags=[$(ScienceRustFlags)]&quot; --config &quot;profile.release.debug='line-tables-only'&quot; --config &quot;profile.release.panic='$(SciencePanic)'&quot;" />
+  </Target>
+
+  <Target Name="CopyScienceEngineDll" AfterTargets="Build" Condition="'$(_IsPublishing)' != 'true'">
+    <Copy SourceFiles="$(ScienceLibDir)science_ffi.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Publication en mode dll : la DLL et son PDB rejoignent l'exe (MSIX, BinSkim). -->
+  <Target Name="PublishScienceEngineDll" BeforeTargets="ComputeResolvedFilesToPublishList" Condition="'$(ScienceLink)' == 'dll'">
+    <ItemGroup>
+      <_ScienceDllFile Include="$(ScienceLibDir)science_ffi.dll;$(ScienceLibDir)science_ffi.pdb" />
+      <ResolvedFileToPublish Include="@(_ScienceDllFile)"
+                             RelativePath="%(_ScienceDllFile.Filename)%(_ScienceDllFile.Extension)"
+                             CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

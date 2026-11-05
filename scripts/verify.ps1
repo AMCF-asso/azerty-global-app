@@ -47,6 +47,33 @@ function Invoke-Commande([string]$Programme, [string[]]$Arguments) {
     if ($code -ne 0) { throw "$Programme a rendu $code" }
 }
 
+# Moteur Science : toute construction de l'app lance cargo (src/ScienceEngine.targets), sur chaque
+# poste comme en CI (décision d'Antoine du 2026-11-04). Sans Rust épinglé ni ses deux cibles, on
+# s'arrête avant dotnet, avec ce qu'il faut installer, plutôt que sur une erreur de link.
+# La version vient du rust-toolchain.toml de science : rustup la choisit dans ce dossier, quelle
+# que soit la toolchain par défaut du poste ; cargo y est donc toujours lancé (ScienceEngine.targets).
+# Checkout du dépôt science dans science/, ou ailleurs désigné par la variable d'environnement
+# ScienceRoot, que MSBuild lit aussi comme propriété.
+$science = if ($env:ScienceRoot) { $env:ScienceRoot } else { Join-Path $racine 'science' }
+$rustVersion = '1.98.1'
+$rustCibles = @('x86_64-pc-windows-msvc', 'aarch64-pc-windows-msvc')
+function Assert-Rust {
+    $installer = "Installer : rustup toolchain install $rustVersion --target $($rustCibles -join ',')"
+    foreach ($outil in 'rustup', 'cargo', 'rustc') {
+        if (-not (Get-Command $outil -ErrorAction SilentlyContinue)) { throw "Rust absent ($outil introuvable). $installer" }
+    }
+    if (-not (Test-Path (Join-Path $science 'rust-toolchain.toml'))) { throw "Moteur Science sans rust-toolchain.toml dans « $science » (ScienceRoot)." }
+    Push-Location $science
+    try {
+        $version = (& rustc --version) -replace '^rustc (\S+).*$', '$1'
+        $installees = @(& rustup target list --installed)
+    }
+    finally { Pop-Location }
+    if ($version -ne $rustVersion) { throw "Rust $version actif dans science, $rustVersion exigé. $installer" }
+    $manquantes = @($rustCibles | Where-Object { $installees -notcontains $_ })
+    if ($manquantes.Count -gt 0) { throw "Cible(s) Rust manquante(s) : $($manquantes -join ', '). $installer" }
+}
+
 # Les tests créent de vraies fenêtres : elles vivent sur un bureau Win32 dédié, jamais à l'écran.
 . (Join-Path $PSScriptRoot 'BureauCache.ps1')
 
@@ -84,11 +111,22 @@ $etapes = [ordered]@{
         try { Invoke-Commande python @('-m', 'unittest', 'discover', '-s', 'store-analytics/tests') }
         finally { $env:PYTHONPATH = $precedent }
     }
-    'publish-x64'     = { Invoke-Commande dotnet @('publish', 'src/AZERTYGlobal.csproj', '-c', 'Release', '-r', 'win-x64') }
-    'publish-arm64'   = { Invoke-Commande dotnet @('publish', 'src/AZERTYGlobal.csproj', '-c', 'Release', '-r', 'win-arm64') }
+    'publish-x64'     = { Assert-Rust; Invoke-Commande dotnet @('publish', 'src/AZERTYGlobal.csproj', '-c', 'Release', '-r', 'win-x64') }
+    'publish-arm64'   = { Assert-Rust; Invoke-Commande dotnet @('publish', 'src/AZERTYGlobal.csproj', '-c', 'Release', '-r', 'win-arm64') }
+    'science'         = {
+        Assert-Rust
+        # Tests de l'ABI C (dans science/, pour sa toolchain), puis le corpus entier à travers
+        # l'interop NativeAOT (ScienceSmoke).
+        Push-Location $science
+        try { Invoke-Commande cargo @('test', '-p', 'science-ffi', '--release', '--locked') }
+        finally { Pop-Location }
+        $sonde = Join-Path $racine 'src/obj/science-smoke'
+        Invoke-Commande dotnet @('publish', 'src/ScienceSmoke/ScienceSmoke.csproj', '-c', 'Release', '-r', 'win-x64', '-o', $sonde)
+        Invoke-Commande (Join-Path $sonde 'ScienceSmoke.exe') @((Join-Path $science 'corpus'))
+    }
     'tests-core'      = { Invoke-Tests 'src/TypingEngine.Core.Tests/TypingEngine.Core.Tests.csproj' }
     'tests-windows'   = { Invoke-Tests 'src/TypingEngine.Windows.Tests/TypingEngine.Windows.Tests.csproj' }
-    'tests-app'       = { Invoke-Tests 'src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj' }
+    'tests-app'       = { Assert-Rust; Invoke-Tests 'src/AZERTYGlobal.Tests/AZERTYGlobal.Tests.csproj' }
 }
 
 # `-File` passe « a,b » comme une seule chaîne : on découpe.

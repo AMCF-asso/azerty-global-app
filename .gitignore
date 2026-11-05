@@ -45,3 +45,6 @@ test-signing/
 # Archives locales : signature et msix precedents, jamais versionnes
 # (commit 1013d2b : les archives Store restent en stockage prive)
 Archives/
+
+# Checkout du moteur Science (dépôt AMCF-asso/science), ScienceRoot par défaut
+/science/

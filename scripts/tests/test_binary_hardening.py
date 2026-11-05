@@ -65,11 +65,11 @@ class BinaryHardeningTests(unittest.TestCase):
                     result["level"] = level
                 module.validate_report(self.report(results=[{"kind": "pass"}, result]))
 
-    def common_template_report(self, texts):
-        result = {"ruleId": "BA4002", "kind": "notApplicable", "level": "none",
+    def common_template_report(self, texts, rule="BA4002"):
+        result = {"ruleId": rule, "kind": "notApplicable", "level": "none",
                   "message": {"id": "NotApplicable_InvalidMetadata", "arguments": ["app.exe", "ELF", "PE"]}}
         report = self.report(results=[result])
-        rules = [{"id": "BA4002"}] + [
+        rules = [{"id": rule}] + [
             {"id": f"BA{i}", "messageStrings": {"NotApplicable_InvalidMetadata": {"text": text}}}
             for i, text in enumerate(texts)]
         report["runs"][0]["tool"] = {"driver": {"rules": rules}}
@@ -85,6 +85,15 @@ class BinaryHardeningTests(unittest.TestCase):
     def test_ba4002_refuse_des_modeles_communs_ambigus(self):
         with self.assertRaisesRegex(ValueError, "Modèle SARIF introuvable"):
             module.inline_result_messages(self.common_template_report(["{0}", "Autre {0}"]))
+
+    def test_ba2027_non_applicable_au_pdb_rust_reutilise_le_modele_commun(self):
+        report = self.common_template_report(["{0} / {1} / {2}", "{0} / {1} / {2}"], rule="BA2027")
+        module.inline_result_messages(report)
+        self.assertEqual("app.exe / ELF / PE", report["runs"][0]["results"][0]["message"]["text"])
+
+    def test_modele_commun_jamais_emprunte_pour_une_autre_regle(self):
+        with self.assertRaisesRegex(ValueError, "Modèle SARIF introuvable"):
+            module.inline_result_messages(self.common_template_report(["{0}", "{0}"], rule="BA2008"))
 
 
 class DerogationTests(unittest.TestCase):
@@ -117,6 +126,60 @@ class DerogationTests(unittest.TestCase):
     def test_cet_jamais_deroge(self):
         with self.assertRaisesRegex(ValueError, "BA2025"):
             module.validate_report(self.report(self.warning("BA2025")), {"cxx_objects": 3})
+
+    def test_ba2014_deroge_pour_la_dll_science_seule(self):
+        result = self.warning("BA2014", ["science_ffi.dll"])
+        result["level"] = "error"
+        accepted = module.validate_report(self.report(result), {"cxx_objects": 3, "binary": "science_ffi.dll"})
+        self.assertEqual(["BA2014"], [a["rule"] for a in accepted])
+        self.assertIn("rustc stable", accepted[0]["justification"])
+
+    def test_ba2014_jamais_deroge_pour_l_exe(self):
+        result = self.warning("BA2014")
+        result["level"] = "error"
+        for context in ({"cxx_objects": 3, "binary": "AZERTY Global.exe"}, {"cxx_objects": 3}):
+            with self.assertRaisesRegex(ValueError, "BA2014"):
+                module.validate_report(self.report(result), context)
+
+    CRT = ("The following modules were compiled with a toolset that supports /Qspectre but the switch was not enabled on the command-line:\r\n"
+           "libcmt.lib,c,19.44.35207.1 (a.obj,b.obj)\r\n"
+           "libvcruntime.lib,cxx,19.44.35207.1 (c.obj)\r\n")
+    LOCK = ('version = 4\n\n[[package]]\nname = "science-core"\nversion = "0.1.0"\n\n'
+            '[[package]]\nname = "science-ffi"\nversion = "0.1.0"\ndependencies = [\n "science-core",\n]\n')
+
+    def dll(self, lock=LOCK):
+        return {"cxx_objects": 197, "binary": "science_ffi.dll", "cargo_lock": lock}
+
+    def test_ba2024_deroge_pour_la_dll_quand_crt_seul_et_lock_du_depot(self):
+        accepted = module.validate_report(self.report(self.warning("BA2024", ["science_ffi.dll", self.CRT])), self.dll())
+        self.assertEqual(["BA2024"], [a["rule"] for a in accepted])
+        self.assertIn("Cargo.lock", accepted[0]["justification"])
+
+    def test_ba2024_dll_refuse_un_module_hors_crt(self):
+        autre = self.CRT + "zlib.lib,c,19.44.35207.1 (inflate.obj)\r\n"
+        with self.assertRaisesRegex(ValueError, "BA2024"):
+            module.validate_report(self.report(self.warning("BA2024", ["science_ffi.dll", autre])), self.dll())
+
+    def test_ba2024_dll_refuse_une_crate_externe_au_lock(self):
+        externe = self.LOCK + ('\n[[package]]\nname = "cc"\nversion = "1.2.0"\n'
+                               'source = "registry+https://github.com/rust-lang/crates.io-index"\n')
+        with self.assertRaisesRegex(ValueError, "BA2024"):
+            module.validate_report(self.report(self.warning("BA2024", ["science_ffi.dll", self.CRT])), self.dll(externe))
+
+    def test_ba2024_dll_refuse_sans_lock(self):
+        for lock in (None, "version = 4\n"):
+            with self.assertRaisesRegex(ValueError, "BA2024"):
+                module.validate_report(self.report(self.warning("BA2024", ["science_ffi.dll", self.CRT])), self.dll(lock))
+
+    def test_ba2024_exe_garde_la_preuve_d_egalite(self):
+        with self.assertRaisesRegex(ValueError, "BA2024"):
+            module.validate_report(self.report(self.warning("BA2024", ["app.exe", self.CRT])),
+                                   {"cxx_objects": 197, "binary": "AZERTY Global.exe", "cargo_lock": self.LOCK})
+
+    def test_dll_science_n_elargit_pas_les_autres_regles(self):
+        with self.assertRaisesRegex(ValueError, "BA2025"):
+            module.validate_report(self.report(self.warning("BA2025", ["science_ffi.dll"])),
+                                   {"cxx_objects": 3, "binary": "science_ffi.dll"})
 
     def test_niveau_erreur_jamais_deroge(self):
         result = self.warning("BA6006")
