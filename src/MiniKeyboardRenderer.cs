@@ -190,7 +190,7 @@ internal static class MiniKeyboardRenderer
         uint fill = k.IsFunction ? PaperTheme.FunctionKey : PaperTheme.Surface;
         uint border = PaperTheme.KeyFadedBorder;
         int borderWidth = 1;
-        uint ink = PaperTheme.Pale;
+        uint ink = PaperTheme.PaleText;
         bool lit = k.State != MiniKeyState.Off;
         if (k.State == MiniKeyState.Struck)
         {

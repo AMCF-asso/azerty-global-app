@@ -13,12 +13,12 @@ public class AccueilVosLanguesTests : IDisposable
     public void Dispose() => L.Language = "fr";
 
     [Fact]
-    public void LAccueilCompteQuatreEtapesDontLesLanguesEnDeuxieme()
+    public void LAccueilCompteQuatreEtapesDontLesLanguesEnTroisieme()
     {
         Assert.Equal(4, OnboardingStep.Count);
         Assert.Equal(3, OnboardingStep.Last);
-        Assert.Equal(1, OnboardingStep.Languages);
-        Assert.Equal("Étape 2 sur 4", OnboardingStep.Label(OnboardingStep.Languages));
+        Assert.Equal(2, OnboardingStep.Languages);
+        Assert.Equal("Étape 3 sur 4", OnboardingStep.Label(OnboardingStep.Languages));
         L.Language = "en";
         Assert.Equal("Step 4 of 4", OnboardingStep.Label(OnboardingStep.Last));
     }

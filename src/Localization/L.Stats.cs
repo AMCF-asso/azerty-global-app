@@ -53,7 +53,7 @@ internal static partial class L
     // quand la collecte est éteinte par le seul défaut du canal. Sans nom de clé.
     public static string Stats_CollectionOffPolicyHint => T(
         "Votre organisation peut activer la collecte locale par une stratégie de groupe.",
-        "Your organisation can turn local collection on through a group policy.");
+        "Your organization can turn local collection on through a group policy.");
 
     // ── Export presse-papiers (UsageStats.BuildShareText) ────────────
     public static string Stats_ShareJustStarted => T(

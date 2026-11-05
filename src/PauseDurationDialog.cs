@@ -9,6 +9,9 @@ namespace AZERTYGlobal;
 /// flèches Windows (Up-down) collées à droite de chacun. La ligne « Reprise à … » dit
 /// l'heure de fin à mesure de la saisie, et le bouton reste grisé tant que la durée est
 /// hors bornes : plus de boîte d'erreur après coup.
+/// Atelier du 2026-11-03, variante G2 choisie par Antoine : quatre pastilles de durées
+/// courantes (5 min, 15 min, 30 min, 1 h) au-dessus, les champs restent pour « Autre durée »,
+/// et la reprise s'affiche en gras juste au-dessus des boutons.
 /// </summary>
 sealed class PauseDurationDialog : IDisposable
 {
@@ -17,21 +20,27 @@ sealed class PauseDurationDialog : IDisposable
     private const int IDCANCEL = 2;
     private const int IDC_EDIT_HOURS = 4301;
     private const int IDC_EDIT_MINUTES = 4302;
+    private const int IDC_CHIP_FIRST = 4311;
+    private const uint BN_CLICKED = 0;
+    private const uint WS_GROUP = 0x00020000;
     private const uint EM_SETSEL = 0x00B1;
 
     internal const int MaxHours = 23;
     internal const int MaxMinutes = 59;
     internal const int MinutesStep = 5;
     private const int DefaultMinutes = 5;
+    /// <summary>Durées des pastilles, en minutes.</summary>
+    internal static readonly int[] QuickMinutes = { 5, 15, 30, 60 };
 
     // Zone client de référence, à 96 DPI.
     private const int BASE_CLIENT_W = 330;
-    private const int BASE_CLIENT_H = 166;
+    private const int BASE_CLIENT_H = 174;
     private const int SPIN_W = 18;
     private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     private IntPtr _hWnd;
+    private readonly IntPtr[] _hChips = new IntPtr[QuickMinutes.Length];
     private IntPtr _hLabel;
     private IntPtr _hEditHours;
     private IntPtr _hSpinHours;
@@ -43,6 +52,7 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hBtnOk;
     private IntPtr _hBtnCancel;
     private IntPtr _hFont;
+    private IntPtr _hFontStrong;
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
@@ -144,6 +154,7 @@ sealed class PauseDurationDialog : IDisposable
         DialogNavigation.Register(_hWnd);
 
         _hFont = CreateScaledFont();
+        _hFontStrong = CreateScaledFont(TypeRamp.Semibold);
         CreateControls(hInstance);
         NativeWindow.ApplyFrame(_hWnd, dark: false);
 
@@ -159,6 +170,8 @@ sealed class PauseDurationDialog : IDisposable
         if (_hWnd == IntPtr.Zero)
             return;
         Win32.SetWindowTextW(_hWnd, L.Pause_WindowTitle);
+        for (int i = 0; i < _hChips.Length; i++)
+            Win32.SetWindowTextW(_hChips[i], L.Pause_QuickChip(QuickMinutes[i]));
         Win32.SetWindowTextW(_hLabel, L.Pause_Label);
         Win32.SetWindowTextW(_hHours, L.Pause_UnitHours);
         Win32.SetWindowTextW(_hMinutes, L.Pause_UnitMinutes);
@@ -171,23 +184,27 @@ sealed class PauseDurationDialog : IDisposable
     private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
 
     // A9 : AG Texte, la police d'interface du papier.
-    private IntPtr CreateScaledFont()
+    private IntPtr CreateScaledFont(int weight = TypeRamp.Regular)
     {
         AppFonts.EnsureLoaded();
-        return Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Text);
+        return Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, weight, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Text);
     }
 
     /// <summary>D1 : police et géométrie des contrôles au nouveau DPI (WM_DPICHANGED).</summary>
     private void ApplyDpiToControls()
     {
         IntPtr oldFont = _hFont;
+        IntPtr oldStrong = _hFontStrong;
         _hFont = CreateScaledFont();
+        _hFontStrong = CreateScaledFont(TypeRamp.Semibold);
         _layout.Apply(_dpi, _hFont);
+        Win32.SendMessageW(_hResume, Win32.WM_SETFONT, _hFontStrong, (IntPtr)1);
         // Les champs reprennent leur largeur pleine : chaque Up-down, remis à sa largeur au
         // nouveau DPI, se recolle à droite et raccourcit son champ d'autant.
         AttachSpin(_hSpinHours, _hEditHours);
         AttachSpin(_hSpinMinutes, _hEditMinutes);
         if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
+        if (oldStrong != IntPtr.Zero) Win32.DeleteObject(oldStrong);
     }
 
     private void CreateControls(IntPtr hInstance)
@@ -202,17 +219,23 @@ sealed class PauseDurationDialog : IDisposable
         // L'ordre de création fait l'ordre Z : le Up-down suit son champ, et l'unité « h »
         // ou « min » le suit à son tour. Les champs portent leur propre nom accessible
         // (AnnotateFields) : sans lui, le Narrateur nommerait le champ des minutes « h ».
-        _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 14, 294, 22);
-        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 18, 40, 64, 28);
+        // Les pastilles sont un seul groupe de boutons radio : le « Autre durée » qui suit
+        // ouvre un nouveau groupe (WS_GROUP), sinon les flèches continueraient jusqu'aux champs.
+        for (int i = 0; i < _hChips.Length; i++)
+            _hChips[i] = CreateChip(hInstance, IDC_CHIP_FIRST + i, L.Pause_QuickChip(QuickMinutes[i]),
+                15 + i * 74, 11, 74, 34, first: i == 0);
+        _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 59, 104, 22, WS_GROUP);
+        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 126, 54, 50, 28);
         _hSpinHours = CreateSpin(hInstance, _hEditHours, MaxHours, 1);
-        _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 88, 45, 32, 22);
-        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(), 126, 40, 64, 28);
+        _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 180, 59, 20, 22);
+        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(), 204, 54, 50, 28);
         _hSpinMinutes = CreateSpin(hInstance, _hEditMinutes, MaxMinutes, MinutesStep);
-        _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 196, 45, 60, 22);
-        _hResume = CreateStatic(hInstance, string.Empty, 18, 80, 294, 22);
+        _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 258, 59, 44, 22);
+        _hResume = CreateStatic(hInstance, string.Empty, 18, 96, 294, 22);
+        Win32.SendMessageW(_hResume, Win32.WM_SETFONT, _hFontStrong, (IntPtr)1);
 
-        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 90, 118, 124, 32, Win32.BS_DEFPUSHBUTTON);
-        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 222, 118, 90, 32, Win32.BS_PUSHBUTTON);
+        _hBtnOk = CreateButton(hInstance, IDOK, L.Pause_BtnConfirm, 90, 128, 124, 32, Win32.BS_DEFPUSHBUTTON);
+        _hBtnCancel = CreateButton(hInstance, IDCANCEL, L.Pause_BtnCancel, 222, 128, 90, 32, Win32.BS_PUSHBUTTON);
         AnnotateFields();
         UpdateResumeLine();
     }
@@ -234,13 +257,28 @@ sealed class PauseDurationDialog : IDisposable
         AccessibleName.TrySet(spin, down, AccessibleName.UpDownDecrease);
     }
 
-    private IntPtr CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h)
+    private IntPtr CreateStatic(IntPtr hInstance, string text, int x, int y, int w, int h, uint extraStyle = 0)
     {
         var hwnd = Win32.CreateWindowExW(0, "STATIC", text,
-            Win32.WS_CHILD | Win32.WS_VISIBLE,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | extraStyle,
             S(x), S(y), S(w), S(h), _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        return hwnd;
+    }
+
+    /// <summary>Pastille de durée : bouton radio natif à aspect de bouton, peint par
+    /// <see cref="ChipButton"/> ; en contraste élevé, le dessin du système.</summary>
+    private IntPtr CreateChip(IntPtr hInstance, int id, string text, int x, int y, int w, int h, bool first)
+    {
+        var hwnd = Win32.CreateWindowExW(0, "BUTTON", text,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_AUTORADIOBUTTON | ChipButton.BS_PUSHLIKE |
+            (first ? WS_GROUP : 0),
+            S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
+        _layout.Track(hwnd, x, y, w, h);
+        Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        if (!_pal.HighContrast)
+            ChipButton.Attach(hwnd, _pal);
         return hwnd;
     }
 
@@ -322,6 +360,11 @@ sealed class PauseDurationDialog : IDisposable
                     if (id == IDCANCEL)
                     {
                         Close(null);
+                        return IntPtr.Zero;
+                    }
+                    if (id >= IDC_CHIP_FIRST && id < IDC_CHIP_FIRST + QuickMinutes.Length && code == BN_CLICKED)
+                    {
+                        SetDuration(QuickMinutes[id - IDC_CHIP_FIRST]);
                         return IntPtr.Zero;
                     }
                     if ((id == IDC_EDIT_HOURS || id == IDC_EDIT_MINUTES) && code == Win32.EN_CHANGE)
@@ -429,6 +472,27 @@ sealed class PauseDurationDialog : IDisposable
             : L.Pause_InvalidDuration);
         Win32.InvalidateRect(_hResume, IntPtr.Zero, true);
         Win32.EnableWindow(_hBtnOk, _durationValid);
+        SyncChips(duration);
+    }
+
+    /// <summary>Une pastille est cochée quand elle dit la durée des champs, aucune sinon.</summary>
+    private void SyncChips(TimeSpan? duration)
+    {
+        for (int i = 0; i < _hChips.Length; i++)
+        {
+            if (_hChips[i] == IntPtr.Zero) continue;
+            bool on = duration is { } d && (int)d.TotalMinutes == QuickMinutes[i];
+            bool now = Win32.SendMessageW(_hChips[i], Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
+            if (on != now)
+                Win32.SendMessageW(_hChips[i], Win32.BM_SETCHECK, on ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        }
+    }
+
+    /// <summary>Une pastille remplit les deux champs : la ligne de reprise suit (EN_CHANGE).</summary>
+    private void SetDuration(int totalMinutes)
+    {
+        Win32.SetWindowTextW(_hEditHours, (totalMinutes / 60).ToString());
+        Win32.SetWindowTextW(_hEditMinutes, (totalMinutes % 60).ToString());
     }
 
     private void ValidateAndClose()
@@ -477,6 +541,11 @@ sealed class PauseDurationDialog : IDisposable
         {
             Win32.DeleteObject(_hFont);
             _hFont = IntPtr.Zero;
+        }
+        if (_hFontStrong != IntPtr.Zero)
+        {
+            Win32.DeleteObject(_hFontStrong);
+            _hFontStrong = IntPtr.Zero;
         }
         if (_hFieldBrush != IntPtr.Zero)
         {

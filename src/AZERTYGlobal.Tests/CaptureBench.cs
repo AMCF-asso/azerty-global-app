@@ -164,6 +164,12 @@ public class CaptureBench
             Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditMinutes"), "0");
             BancCapture.MarkActive(hwnd);
             target.Shoot(hwnd, "duree-de-pause-invalide", windowDpi);
+            // Durée libre (aucune pastille cochée) : 1 h 20 saisies à la main.
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditHours"), "1");
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditMinutes"), "20");
+            BancCapture.MarkActive(hwnd);
+            target.Shoot(hwnd, "duree-de-pause-libre", windowDpi);
+            Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditHours"), "0");
             Win32.SetWindowTextW(BancCapture.Field<IntPtr>(dialog, "_hEditMinutes"), "5");
 
             // Le même état sur une surface noircie : ce qu'une fenêtre n'efface pas n'a

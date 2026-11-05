@@ -336,10 +336,16 @@ internal sealed class MaintainableLayersWindow : IDisposable
         Win32.EnableWindow(_hScientific, enabled);
         Win32.EnableWindow(_hVisual, enabled);
         Win32.EnableWindow(_hDelay, enabled);
-        Win32.EnableWindow(_hAvailableLabel, enabled);
-        Win32.EnableWindow(_hDelayLabel, enabled);
-        Win32.EnableWindow(_hDelayUnit, enabled);
+        // Atelier du 03/11 : un STATIC désactivé se dessine en gris système embossé, sans égard
+        // pour SetTextColor (« lisibilité pas terrible »). Les trois libellés restent actifs et
+        // prennent le gris du papier (contraste 6,5:1, contre 2,5:1) quand l'interrupteur général est décoché.
+        foreach (var label in new[] { _hAvailableLabel, _hDelayLabel, _hDelayUnit })
+            Win32.InvalidateRect(label, IntPtr.Zero, true);
     }
+
+    private bool IsDimmedLabel(IntPtr control) =>
+        !IsChecked(_hMaster)
+        && (control == _hAvailableLabel || control == _hDelayLabel || control == _hDelayUnit);
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
@@ -383,7 +389,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
                     // Statics et cases posent leur texte directement sur le fond de classe.
                     Win32.SetBkMode(wParam, 1);
                     Win32.SetBkColor(wParam, _pal.Paper);
-                    Win32.SetTextColor(wParam, _pal.Ink);
+                    Win32.SetTextColor(wParam, IsDimmedLabel(lParam) ? _pal.Muted : _pal.Ink);
                     return _hBgBrush;
                 case Win32.WM_CTLCOLOREDIT:
                     // A9 : le délai, encre sur la surface du papier.

@@ -23,7 +23,7 @@ public class OnboardingPaperTests
     private const int IDC_CHK_AUTOSTART = 2006;
     private const int IDC_CHK_TRAINING = 2013;
 
-    private const int Changes = 0, Languages = 1, HowTo = 2, Resources = 3;
+    private const int Changes = 0, HowTo = 1, Languages = 2, Resources = 3;
 
     [DllImport("user32.dll")] private static extern IntPtr GetNextDlgTabItem(IntPtr dialog, IntPtr control, bool previous);
     [DllImport("user32.dll")] private static extern int GetDlgCtrlID(IntPtr hwnd);
@@ -381,7 +381,7 @@ public class OnboardingPaperTests
     {
         Avec((fenêtre, hwnd) =>
         {
-            AllerÀ(fenêtre, HowTo);
+            AllerÀ(fenêtre, Languages);
             IntPtr suivant = Contrôle(fenêtre, "_hWndBtnNext");
             Win32.SetFocus(suivant);
             Assert.Equal(suivant, Win32.GetFocus());
@@ -543,9 +543,9 @@ public class OnboardingPaperTests
         try
         {
             L.Language = "fr";
-            Assert.StartsWith("Étape 3 sur 4.", OnboardingWindow.StepAccessibleSummary(HowTo));
+            Assert.StartsWith("Étape 2 sur 4.", OnboardingWindow.StepAccessibleSummary(HowTo));
             L.Language = "en";
-            Assert.StartsWith("Step 3 of 4.", OnboardingWindow.StepAccessibleSummary(HowTo));
+            Assert.StartsWith("Step 2 of 4.", OnboardingWindow.StepAccessibleSummary(HowTo));
         }
         finally { L.Language = langue; }
     }

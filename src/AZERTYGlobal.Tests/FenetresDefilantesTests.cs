@@ -466,28 +466,47 @@ public class FenetresDefilantesTests
         Assert.False(scroll.TryHandle(IntPtr.Zero, Win32.WM_KEYDOWN, (IntPtr)VK_NEXT, 24));
     }
 
-    // ── Lot H (b) : le cadre de l'Accueil se mesure au DPI de l'écran ──
+    // ── Audit du 30/10, M2 suite : l'Accueil défile en hauteur, son texte garde l'échelle de l'écran ──
 
     [Theory]
-    [InlineData(144)]
-    [InlineData(192)]
-    public void Accueil_PlafondMesureLeCadreAuDpiDeLEcran(int dpi)
+    [InlineData(1.25f, 1366, 768 - 60)]   // 714 px de haut pour 708 : l'ancien plafond réduisait le texte
+    [InlineData(1.50f, 1366, 768 - 72)]   // 810 px de haut pour 642 : l'ancien plafond rendait 80 %
+    [InlineData(1.75f, 1920, 1080 - 84)]
+    public void Accueil_HauteurTropGrande_DefileSansRapetisserLeTexte(float scale, int workW, int workH)
     {
-        // Zone de travail juste assez haute pour le cadre du DPI système, pas pour celui de l'écran.
-        const uint style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        float scale = dpi / 96f;
-        int clientW = (int)(960 * scale * 0.75f);
-        int clientH = (int)(720 * scale * 0.75f);
-        var system = NativeWindow.OuterSize(clientW, clientH, style, Win32.WS_EX_TOPMOST);
-        var screen = NativeWindow.OuterSize(clientW, clientH, style, Win32.WS_EX_TOPMOST, dpi);
-        Assert.True(screen.Height > system.Height, $"précondition : cadre {system} (système) contre {screen} (écran {dpi})");
+        Assert.Equal(scale, OnboardingWindow.FittedScaleFor(scale, workW));
 
-        int workH = system.Height + 1;
-        float fitted = OnboardingWindow.FittedScaleFor(scale, 4000, workH);
+        const int frameW = 2, frameH = 54, bar = 24;
+        int clientW = (int)(960 * scale * 0.75f), clientH = (int)(720 * scale * 0.75f);
+        var fit = WindowSizing.FitScrollable(clientW, _ => clientH, frameW, frameH, workW, workH, bar);
 
-        Assert.True(fitted < scale, $"échelle {fitted} : le cadre de l'écran ({screen.Height - clientH} px) n'est pas compté");
-        int fittedClientH = (int)(720 * fitted * 0.75f);
-        Assert.True(fittedClientH + (screen.Height - clientH) <= workH, $"la fenêtre plafonnée dépasse {workH} px");
+        Assert.True(fit.Scrolls);
+        Assert.Equal(clientH, fit.ContentHeight);
+        Assert.Equal(workH - frameH, fit.ClientHeight);
+        // La barre se pose à droite sans rogner la mise en page : le texte garde sa largeur de référence.
+        Assert.Equal(clientW, fit.LayoutWidth);
+        Assert.True(fit.ClientWidth + frameW <= workW);
+    }
+
+    [Theory]
+    [InlineData(1.00f, 1366, 768 - 48)]
+    [InlineData(1.50f, 1920, 1080 - 72)]
+    public void Accueil_ÉcranAssezGrand_NeDefilePas(float scale, int workW, int workH)
+    {
+        Assert.Equal(scale, OnboardingWindow.FittedScaleFor(scale, workW));
+        int clientW = (int)(960 * scale * 0.75f), clientH = (int)(720 * scale * 0.75f);
+        var fit = WindowSizing.FitScrollable(clientW, _ => clientH, 2, 47, workW, workH, 24);
+
+        Assert.False(fit.Scrolls);
+        Assert.Equal(clientH, fit.ClientHeight);
+    }
+
+    [Fact]
+    public void Accueil_ÉcranTropÉtroit_LaLargeurRéduitEncoreLÉchelle()
+    {
+        // 1024 px à 150 % : 1 080 px de fenêtre. Une largeur ne défile pas : l'échelle baisse.
+        float fitted = OnboardingWindow.FittedScaleFor(1.5f, 1024);
+        Assert.True(fitted < 1.5f && fitted >= WindowSizing.MinFitScale, $"échelle {fitted}");
     }
 
     [Fact]
