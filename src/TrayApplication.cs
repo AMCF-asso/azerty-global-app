@@ -629,6 +629,29 @@ sealed class TrayApplication : IDisposable
         bool startupFailed) =>
         activationConsent && hookCreated && !hookInstalled && !startupFailed;
 
+#if DEBUG
+    /// <summary>
+    /// Aperçu de dev : AG_DEV_PREVIEW=vkbd,lessons,settings,about ouvre ces fenêtres au
+    /// lancement. Compilé en Debug seulement : le binaire du Store n'en porte aucune trace.
+    /// </summary>
+    private void OpenDevPreviewWindows()
+    {
+        var spec = Environment.GetEnvironmentVariable("AG_DEV_PREVIEW");
+        if (string.IsNullOrWhiteSpace(spec)) return;
+        DevRects.StartWatching();
+        foreach (var name in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            switch (name)
+            {
+                case "vkbd": _virtualKeyboard?.Toggle(); break;
+                case "lessons": if (EnsureLessonsWindow()) _lessons!.Show(); break;
+                case "settings": ShowSettingsWindow(); break;
+                case "about": _about ??= new AboutWindow(); _about.Show(); break;
+            }
+        }
+    }
+#endif
+
     /// <summary>Boucle de messages principale.</summary>
     public void Run()
     {
@@ -683,6 +706,10 @@ sealed class TrayApplication : IDisposable
                 return;
             }
         }
+
+#if DEBUG
+        OpenDevPreviewWindows();
+#endif
 
         int ret;
         while ((ret = Win32.GetMessageW(out var msg, IntPtr.Zero, 0, 0)) != 0)

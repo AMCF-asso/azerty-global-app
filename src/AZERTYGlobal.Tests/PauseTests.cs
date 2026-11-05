@@ -193,6 +193,104 @@ public class PauseTests
         }
     }
 
+    // Atelier du 2026-11-03, variante G2 : quatre pastilles de durées courantes.
+
+    [Theory]
+    [InlineData("fr", "5 min", "15 min", "30 min", "1 h", "Autre durée")]
+    [InlineData("en", "5 min", "15 min", "30 min", "1 hr", "Other duration")]
+    public void Pastilles_PortentLesDuréesCourantes(string langue, string a, string b, string c, string d, string autre)
+    {
+        string avant = L.Language;
+        try
+        {
+            L.Language = langue;
+            using var dialogue = Ouvrir();
+            var textes = Pastilles(dialogue).Select(Texte).ToArray();
+            Assert.Equal(new[] { a, b, c, d }, textes);
+            Assert.Equal(autre, Texte(Field(dialogue, "_hLabel")));
+        }
+        finally { L.Language = avant; }
+    }
+
+    [Fact]
+    public void Pastilles_SontDesBoutonsRadioAAspectDeBouton_ParmiLesArretsDeTabulation()
+    {
+        using var dialogue = Ouvrir();
+        const long BS_TYPEMASK = 0x0F, BS_AUTORADIOBUTTON = 0x09, BS_PUSHLIKE = 0x1000, WS_TABSTOP = 0x00010000;
+        foreach (IntPtr pastille in Pastilles(dialogue))
+        {
+            long style = (uint)GetWindowLongW(pastille, -16);
+            Assert.Equal(BS_AUTORADIOBUTTON, style & BS_TYPEMASK);
+            Assert.NotEqual(0, style & BS_PUSHLIKE);
+            Assert.NotEqual(0, style & WS_TABSTOP);
+        }
+    }
+
+    [Fact]
+    public void Pastilles_LaDuréeParDéfautCocheLesCinqMinutes()
+    {
+        using var dialogue = Ouvrir();
+        Assert.Equal(new[] { true, false, false, false }, Pastilles(dialogue).Select(Cochée).ToArray());
+    }
+
+    [Theory]
+    [InlineData(0, "0", "5")]
+    [InlineData(1, "0", "15")]
+    [InlineData(2, "0", "30")]
+    [InlineData(3, "1", "0")]
+    public void Pastilles_UnClicRemplitLesChampsEtCocheLaPastille(int index, string heures, string minutes)
+    {
+        using var dialogue = Ouvrir();
+        IntPtr fenêtre = Field(dialogue, "_hWnd");
+        // BN_CLICKED d'une pastille : WM_COMMAND, identifiant en mot bas, code 0 en mot haut.
+        Win32.SendMessageW(fenêtre, Win32.WM_COMMAND, (IntPtr)(4311 + index), Pastilles(dialogue)[index]);
+
+        Assert.Equal(heures, Texte(Field(dialogue, "_hEditHours")));
+        Assert.Equal(minutes, Texte(Field(dialogue, "_hEditMinutes")));
+        var attendu = Enumerable.Range(0, 4).Select(i => i == index).ToArray();
+        Assert.Equal(attendu, Pastilles(dialogue).Select(Cochée).ToArray());
+    }
+
+    [Fact]
+    public void Pastilles_UneDuréeLibreDécocheTout_EtLaDuréeDUnePastilleLaRecoche()
+    {
+        using var dialogue = Ouvrir();
+        Win32.SetWindowTextW(Field(dialogue, "_hEditMinutes"), "7");
+        Assert.DoesNotContain(true, Pastilles(dialogue).Select(Cochée));
+
+        // 1 h 0 min vaut la dernière pastille ; 1 h 60 est hors bornes, donc aucune.
+        Win32.SetWindowTextW(Field(dialogue, "_hEditHours"), "1");
+        Win32.SetWindowTextW(Field(dialogue, "_hEditMinutes"), "0");
+        Assert.Equal(new[] { false, false, false, true }, Pastilles(dialogue).Select(Cochée).ToArray());
+
+        Win32.SetWindowTextW(Field(dialogue, "_hEditMinutes"), "60");
+        Assert.DoesNotContain(true, Pastilles(dialogue).Select(Cochée));
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLongW(IntPtr hWnd, int nIndex);
+
+    private static PauseDurationDialog Ouvrir()
+    {
+        var dialogue = new PauseDurationDialog();
+        typeof(PauseDurationDialog).GetMethod("CreateWindow", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(dialogue, new object[] { IntPtr.Zero });
+        return dialogue;
+    }
+
+    private static IntPtr[] Pastilles(PauseDurationDialog dialogue) =>
+        (IntPtr[])typeof(PauseDurationDialog).GetField("_hChips", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dialogue)!;
+
+    private static bool Cochée(IntPtr bouton) =>
+        Win32.SendMessageW(bouton, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
+
+    private static string Texte(IntPtr hwnd)
+    {
+        var sb = new System.Text.StringBuilder(64);
+        Win32.GetWindowTextW(hwnd, sb, sb.Capacity);
+        return sb.ToString();
+    }
+
     private static IntPtr Field(object o, string name) =>
         (IntPtr)o.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(o)!;
 }

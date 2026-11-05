@@ -10,8 +10,11 @@ namespace AZERTYGlobal;
 internal static class OnboardingStep
 {
     internal const int Changes = 0;
-    internal const int Languages = 1;
-    internal const int HowTo = 2;
+    internal const int HowTo = 1;
+    // Atelier du 03/11 : les langues africaines passent après « Comment utiliser » (Antoine :
+    // inutile en 2e position pour le public non africain). Les ressources restent la dernière
+    // étape, celle des préférences et du bouton final.
+    internal const int Languages = 2;
     internal const int Resources = 3;
 
     internal const int Count = 4;

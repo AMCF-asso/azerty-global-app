@@ -146,6 +146,8 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
     private int _currentStep;
+    /// <summary>Ordonnée du dernier losange de l'étape « Comment utiliser », pour le fil vers le suivant.</summary>
+    private int _railPreviousCenterY = -1;
     private bool _learningModuleDone;
     // Vrai si l'utilisateur a vu l'etape 3 (la ou la checkbox « Ne plus afficher » est presente).
     // Sans ce flag, fermer le wizard via la croix a l'etape 1 sans avoir vu l'etape 3 persisterait
@@ -269,6 +271,16 @@ sealed class OnboardingWindow : IDisposable
 
     // DPI scaling — mutable, recalculé sur WM_DPICHANGED
     private float _dpiScale;
+
+    // Audit du 30/10, M2 (suite) : la hauteur ne rapetisse plus le texte, la fenêtre défile (WindowScroll,
+    // comme LayoutConflictWindow). WS_VSCROLL dès la création : Reset masque la barre quand tout tient.
+    private const uint WindowStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_VSCROLL;
+    private const uint WindowExStyle = Win32.WS_EX_TOPMOST;
+    private readonly WindowScroll _scroll = new();
+
+    /// <summary>MoveWindow en coordonnées de la surface : les enfants sont décalés du défilement.</summary>
+    private void MoveCtl(IntPtr hwnd, int x, int y, int w, int h)
+        => Win32.MoveWindow(hwnd, x, y - _scroll.Position, w, h, true);
     private int S(int val) => (int)(val * _dpiScale * ONBOARDING_UI_SCALE);
     // Marge des étapes 2 à 4, qui centre leur colonne dans la fenêtre en largeur.
     private int ColumnMargin => (S(BASE_WIN_W) - S(BASE_COLUMN_W)) / 2;
@@ -339,36 +351,32 @@ sealed class OnboardingWindow : IDisposable
             {
                 RecreateFonts();
                 RepositionControls();
-                ResizeWindow();
-                NativeWindow.KeepInWorkArea(_hWnd);
             }
             catch { }
         }
+        try { FitWindow(); } catch { }
     }
 
     /// <summary>
-    /// Plafond de l'Accueil (1.3.0) : l'échelle de l'écran, réduite pour que la fenêtre tienne
-    /// dans la zone de travail de son écran (celui du curseur tant qu'elle n'existe pas). La
-    /// hauteur est fixe : sans lui, les boutons du bas sortaient de l'écran en 1366 × 768 à
-    /// 125 % et en 1920 × 1080 à 175 %.
+    /// Échelle de l'Accueil : celle de l'écran, réduite seulement si la largeur de la fenêtre dépasse
+    /// la zone de travail de son écran (celui du curseur tant qu'elle n'existe pas). La hauteur,
+    /// elle, défile (<see cref="FitWindow"/>) : le texte garde l'échelle choisie dans Windows.
     /// </summary>
     private float FittedScale(float screenScale)
     {
         var work = NativeWindow.WorkArea(_hWnd);
-        return FittedScaleFor(screenScale, work.right - work.left, work.bottom - work.top);
+        return FittedScaleFor(screenScale, work.right - work.left);
     }
 
-    internal static float FittedScaleFor(float screenScale, int workW, int workH)
+    internal static float FittedScaleFor(float screenScale, int workW)
     {
         int clientW = (int)(BASE_WIN_W * screenScale * ONBOARDING_UI_SCALE);
-        int clientH = (int)(BASE_WIN_H * screenScale * ONBOARDING_UI_SCALE);
-        // Cadre au DPI réel de l'écran (celui de screenScale), pas à celui du système : sur un
-        // écran d'une autre échelle, la hauteur du cadre était sous-estimée de jusqu'à 32 px.
+        // Cadre au DPI réel de l'écran (celui de screenScale), pas à celui du système, plus la
+        // barre de défilement (17 px à 96 DPI), réservée d'avance : sa pose ne change pas l'échelle.
         int dpi = (int)Math.Round(screenScale * 96f);
-        var (outerW, outerH) = NativeWindow.OuterSize(clientW, clientH,
-            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST, dpi);
-        return WindowSizing.FitScale(screenScale, clientW, clientH, outerW - clientW, outerH - clientH,
-            workW, workH);
+        var (outerW, _) = NativeWindow.OuterSize(clientW, 100, WindowStyle, WindowExStyle, dpi);
+        return WindowSizing.FitScaleToWidth(screenScale, clientW,
+            outerW - clientW + WindowSizing.ScaleForDpi(17, dpi), workW);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -420,9 +428,23 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Redimensionnement et repositionnement
     // ═══════════════════════════════════════════════════════════════
-    private void ResizeWindow() =>
-        NativeWindow.ResizeAroundCenter(_hWnd, S(BASE_WIN_W), S(BASE_WIN_H),
-            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU, Win32.WS_EX_TOPMOST);
+    /// <summary>
+    /// La fenêtre à sa taille de référence, plafonnée à la zone de travail ; au-delà, le contenu défile
+    /// (<see cref="WindowSizing.FitScrollable"/>, la barre prend sa place à droite). À rappeler quand
+    /// l'échelle ou l'écran change, avant <see cref="RepositionControls"/>.
+    /// </summary>
+    private void FitWindow()
+    {
+        var work = NativeWindow.WorkArea(_hWnd);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, WindowStyle, WindowExStyle);
+        var fit = WindowSizing.FitScrollable(S(BASE_WIN_W), _ => S(BASE_WIN_H), frameW, frameH,
+            work.right - work.left, work.bottom - work.top, NativeWindow.ScrollBarWidth(_hWnd));
+        // Les enfants reviennent à l'origine avant la remesure : Reset repart de zéro.
+        _scroll.ScrollTo(_hWnd, 0);
+        NativeWindow.ResizeAroundCenter(_hWnd, fit.ClientWidth, fit.ClientHeight, WindowStyle, WindowExStyle);
+        NativeWindow.KeepInWorkArea(_hWnd);
+        _scroll.Reset(_hWnd, fit.ContentHeight, fit.ClientHeight);
+    }
 
     private void RepositionControls()
     {
@@ -437,21 +459,21 @@ sealed class OnboardingWindow : IDisposable
         // Navigation : btnPrev seulement ici (position fixe a gauche).
         // btnNext et btnTry sont positionnes dans UpdateStepVisibility selon les 3 etats
         // possibles a l'etape 1 (jamais essaye / essaye non complete / complete).
-        Win32.MoveWindow(_hWndBtnPrev, margin, bottomY, S(BASE_BTN_W_PREV), S(BASE_BTN_H), true);
+        MoveCtl(_hWndBtnPrev, margin, bottomY, S(BASE_BTN_W_PREV), S(BASE_BTN_H));
 
         // Étape 3 — liens dans une grille fixe
-        Win32.MoveWindow(_hWndLinkLessons, linksX, linkStartY, linksWidth, linkControlHeight, true);
-        Win32.MoveWindow(_hWndLinkGuide, linksX, linkStartY + linkRowH, linksWidth, linkControlHeight, true);
-        Win32.MoveWindow(_hWndLinkFeedback, linksX, linkStartY + linkRowH * 2, linksWidth, linkControlHeight, true);
-        Win32.MoveWindow(_hWndLinkDiscord, linksX, linkStartY + linkRowH * 3, linksWidth, linkControlHeight, true);
+        MoveCtl(_hWndLinkLessons, linksX, linkStartY, linksWidth, linkControlHeight);
+        MoveCtl(_hWndLinkGuide, linksX, linkStartY + linkRowH, linksWidth, linkControlHeight);
+        MoveCtl(_hWndLinkFeedback, linksX, linkStartY + linkRowH * 2, linksWidth, linkControlHeight);
+        MoveCtl(_hWndLinkDiscord, linksX, linkStartY + linkRowH * 3, linksWidth, linkControlHeight);
 
         // Préférences
         // Les cases se posent Px(4) à gauche du texte des liens : le carré peint s'y décale d'autant,
         // dans le cadre de focus, et s'aligne ainsi sur le bord gauche des liens.
         int checkPad = Px(CHECK_PAD);
-        Win32.MoveWindow(_hWndChkAutoStart, checkboxX - checkPad, checkboxY, checkboxWidth + checkPad, checkboxHeight, true);
-        Win32.MoveWindow(_hWndChkDontShow, checkboxX - checkPad, checkboxY + checkboxSpacing, checkboxWidth + checkPad, checkboxHeight, true);
-        Win32.MoveWindow(_hWndChkTraining, checkboxX - checkPad, checkboxTrainingY, checkboxWidth + checkPad, checkboxHeight, true);
+        MoveCtl(_hWndChkAutoStart, checkboxX - checkPad, checkboxY, checkboxWidth + checkPad, checkboxHeight);
+        MoveCtl(_hWndChkDontShow, checkboxX - checkPad, checkboxY + checkboxSpacing, checkboxWidth + checkPad, checkboxHeight);
+        MoveCtl(_hWndChkTraining, checkboxX - checkPad, checkboxTrainingY, checkboxWidth + checkPad, checkboxHeight);
     }
 
     private void CreateMainWindow()
@@ -462,8 +484,8 @@ sealed class OnboardingWindow : IDisposable
         if (!NativeWindow.RegisterClass(className, _wndProcDelegate))
             return;
 
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        uint dwExStyle = Win32.WS_EX_TOPMOST;
+        uint dwStyle = WindowStyle;
+        uint dwExStyle = WindowExStyle;
         var (windowW, windowH) = NativeWindow.OuterSize(S(BASE_WIN_W), S(BASE_WIN_H), dwStyle, dwExStyle);
         var (x, y) = NativeWindow.CenterIn(NativeWindow.WorkArea(), windowW, windowH);
 
@@ -724,7 +746,7 @@ sealed class OnboardingWindow : IDisposable
             finally { Win32.ReleaseDC(_hWnd, hdc); }
             int tryWidth = Math.Max(S(BASE_BTN_W_NEXT_MIN), tryTextW + S(BASE_BTN_TEXT_PAD * 2));
             int tryX = btnWinW - btnMargin - tryWidth;
-            Win32.MoveWindow(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H), true);
+            MoveCtl(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H));
             _step1ButtonsLeft = tryX;
         }
         else if (isStep1Attempted)
@@ -733,7 +755,7 @@ sealed class OnboardingWindow : IDisposable
             Win32.ShowWindow(_hWndBtnNext, 1);
             Win32.ShowWindow(_hWndBtnTry, 1);
             var nextGeomB = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
-            Win32.MoveWindow(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width, S(BASE_BTN_H), true);
+            MoveCtl(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width, S(BASE_BTN_H));
 
             string tryText = TryButtonText;
             IntPtr hdc = Win32.GetDC(_hWnd);
@@ -742,7 +764,7 @@ sealed class OnboardingWindow : IDisposable
             finally { Win32.ReleaseDC(_hWnd, hdc); }
             int tryWidth = Math.Max(S(BASE_BTN_W_NEXT_MIN), tryTextW + S(BASE_BTN_TEXT_PAD * 2));
             int tryX = nextGeomB.x - S(12) - tryWidth;
-            Win32.MoveWindow(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H), true);
+            MoveCtl(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H));
             _step1ButtonsLeft = tryX;
         }
         else
@@ -751,7 +773,7 @@ sealed class OnboardingWindow : IDisposable
             Win32.ShowWindow(_hWndBtnTry, 0);
             Win32.ShowWindow(_hWndBtnNext, 1);
             var nextGeomC = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
-            Win32.MoveWindow(_hWndBtnNext, nextGeomC.x, btnBottomY, nextGeomC.width, S(BASE_BTN_H), true);
+            MoveCtl(_hWndBtnNext, nextGeomC.x, btnBottomY, nextGeomC.width, S(BASE_BTN_H));
             _step1ButtonsLeft = nextGeomC.x;
         }
 
@@ -901,7 +923,10 @@ sealed class OnboardingWindow : IDisposable
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
         _visible = true;
-        DialogNavigation.Register(_hWnd);
+        // Tab vers un contrôle sous le pli le fait défiler jusqu'à lui ; Page haut et bas sur un bouton.
+        _scroll.Scrolled = () => Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
         Win32.SetFocus(_currentStep == 0 && !_learningModuleDone ? _hWndBtnTry : _hWndBtnNext);
     }
 
@@ -1024,11 +1049,7 @@ sealed class OnboardingWindow : IDisposable
                 // Après le déplacement : le plafond se prend sur la zone de travail du nouvel écran.
                 _dpiScale = FittedScale(screenScale);
                 RecreateFonts();
-                if (_dpiScale < screenScale)
-                {
-                    ResizeWindow();
-                    NativeWindow.KeepInWorkArea(_hWnd);
-                }
+                FitWindow();
                 RepositionControls();
                 UpdateStepVisibility(); // repositionne btnNext + btnTry selon l'etat (3 etats sur etape 1)
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
@@ -1161,11 +1182,17 @@ sealed class OnboardingWindow : IDisposable
                 }
                 break;
 
+            case Win32.WM_VSCROLL:
+            case Win32.WM_MOUSEWHEEL:
+                if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                    return IntPtr.Zero;
+                break;
+
             case Win32.WM_LBUTTONUP:
             {
                 // Clic sur le drapeau de bascule de langue (hit-test sur le rect GDI du header).
                 int mx = unchecked((short)(lParam.ToInt64() & 0xFFFF));
-                int my = unchecked((short)((lParam.ToInt64() >> 16) & 0xFFFF));
+                int my = unchecked((short)((lParam.ToInt64() >> 16) & 0xFFFF)) + _scroll.Position;
                 if (mx >= _flagRect.left && mx < _flagRect.right &&
                     my >= _flagRect.top && my < _flagRect.bottom)
                 {
@@ -1314,8 +1341,8 @@ sealed class OnboardingWindow : IDisposable
                 wanted.right != _flagButtonRect.right || wanted.bottom != _flagButtonRect.bottom)
             {
                 _flagButtonRect = wanted;
-                Win32.MoveWindow(_hWndBtnFlag, wanted.left, wanted.top,
-                    wanted.right - wanted.left, wanted.bottom - wanted.top, true);
+                MoveCtl(_hWndBtnFlag, wanted.left, wanted.top,
+                    wanted.right - wanted.left, wanted.bottom - wanted.top);
             }
         }
         if (show != _flagButtonShown)
@@ -1370,6 +1397,7 @@ sealed class OnboardingWindow : IDisposable
     {
         if (!CursorSource.TryGet(out var pt)) return false;
         if (!Win32.ScreenToClient(_hWnd, ref pt)) return false;
+        pt.y += _scroll.Position;
         return pt.x >= _flagRect.left && pt.x < _flagRect.right &&
                pt.y >= _flagRect.top && pt.y < _flagRect.bottom;
     }
@@ -1484,10 +1512,10 @@ sealed class OnboardingWindow : IDisposable
         Win32.GetWindowRect(_hWndTrial, out var current);
         var topLeft = new Win32.POINT { x = current.left, y = current.top };
         Win32.ScreenToClient(_hWnd, ref topLeft);
-        if (topLeft.x != edit.left || topLeft.y != edit.top
+        if (topLeft.x != edit.left || topLeft.y != edit.top - _scroll.Position
             || current.right - current.left != edit.right - edit.left
             || current.bottom - current.top != edit.bottom - edit.top)
-            Win32.MoveWindow(_hWndTrial, edit.left, edit.top, edit.right - edit.left, edit.bottom - edit.top, true);
+            MoveCtl(_hWndTrial, edit.left, edit.top, edit.right - edit.left, edit.bottom - edit.top);
     }
 
     private void ShowAutoStartError()
@@ -1572,11 +1600,49 @@ sealed class OnboardingWindow : IDisposable
     // ═══════════════════════════════════════════════════════════════
     private void OnPaint(IntPtr hWnd)
     {
+        if (_scroll.Needed)
+        {
+            OnPaintScrolled(hWnd);
+            return;
+        }
         using var paint = new PaintBuffer(hWnd);
-        var clientRect = paint.Client;
+        DrawContents(paint.Hdc, paint.Client);
+    }
+
+    /// <summary>
+    /// Fenêtre qui défile : toute la surface est dessinée dans un bitmap de la taille de la référence,
+    /// et la partie visible en est copiée (même méthode que les Leçons).
+    /// </summary>
+    private void OnPaintScrolled(IntPtr hWnd)
+    {
+        IntPtr target = Win32.BeginPaint(hWnd, out var ps);
+        try
+        {
+            Win32.GetClientRect(hWnd, out var client);
+            var canvas = new Win32.RECT { left = 0, top = 0, right = client.right, bottom = Math.Max(S(BASE_WIN_H), client.bottom) };
+            var (dc, bitmap, previous) = PaintBuffer.CreateSurface(canvas.right, canvas.bottom);
+            if (dc == IntPtr.Zero)
+            {
+                // Mémoire refusée : directement à l'écran, origine décalée du défilement.
+                Win32.SetViewportOrgEx(target, 0, -_scroll.Position, IntPtr.Zero);
+                DrawContents(target, canvas);
+                Win32.SetViewportOrgEx(target, 0, 0, IntPtr.Zero);
+                return;
+            }
+            try
+            {
+                DrawContents(dc, canvas);
+                Win32.BitBlt(target, 0, 0, client.right, client.bottom, dc, 0, _scroll.Position, Win32.SRCCOPY);
+            }
+            finally { PaintBuffer.ReleaseSurface(dc, bitmap, previous); }
+        }
+        finally { Win32.EndPaint(hWnd, ref ps); }
+    }
+
+    private void DrawContents(IntPtr hdc, Win32.RECT clientRect)
+    {
         int cw = clientRect.right;
         int ch = clientRect.bottom;
-        var hdc = paint.Hdc;
 
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
         Win32.SetBkMode(hdc, 1);
@@ -1933,7 +1999,7 @@ sealed class OnboardingWindow : IDisposable
         int capsX = Math.Min(Math.Max((first + last - capsW) / 2, atEnd + Px(12)), right - capsW);
         Note("É È Ç À", L.Onboarding_NoteCaps, capsX, combY - Px(13));
 
-        void Down(float units, uint scancode, int depth, string sign, string text)
+        void Down(float units, uint scancode, int depth, string sign, string text, int gap = 20)
         {
             int x = p.OriginX + (int)Math.Round(units * p.Scale);
             int y0 = KeyRect(p, scancode).bottom + 1;
@@ -1941,13 +2007,15 @@ sealed class OnboardingWindow : IDisposable
             VLine(x, y0, yb);
             HLine(x - Px(12), x, yb);
             Dot(x, y0);
-            Note(sign, text, x - Px(20) - NoteWidth(sign, text), yb + Px(4));
+            Note(sign, text, x - Px(gap) - NoteWidth(sign, text), yb + Px(4));
         }
         // d à k par l'interstice b/n ; le point par l'interstice Espace/AltGr ; ù par l'interstice
         // !/Maj, au-dessus de la touche Menu muette.
         Down(7.9f, 0x23, 18, "{ } \\ | [ ]", L.Onboarding_NoteCoding);
         Down(10.35f, 0x33, 42, ".", L.Onboarding_NotePeriod);
-        Down(13.4f, 0x28, 66, "´ ` ~", L.Onboarding_NoteAccents);
+        // Atelier du 03/11 : note des accents remontée de 4 px et rapprochée de son trait de 6 px
+        // (à 8 px, le texte mordait le coude du trait, long de 12 px).
+        Down(13.4f, 0x28, 62, "´ ` ~", L.Onboarding_NoteAccents, 14);
     }
 
     private static Win32.RECT KeyRect(KeyboardPlacement p, uint scancode)
@@ -2009,6 +2077,7 @@ sealed class OnboardingWindow : IDisposable
         DrawStepTitle(hdc, cw, y, L.Onboarding_Step2Title);
         y = StepTitleRect(cw, y).bottom + Px(12);
 
+        _railPreviousCenterY = -1;
         DrawStepCard(hdc, gfx, margin, cw, ref y, "1", L.Onboarding_Card1Title,
             new[] { new TextRun(L.Onboarding_Card1Desc) });
         DrawStepCard(hdc, gfx, margin, cw, ref y, "2", L.Onboarding_Card2Title,
@@ -2254,11 +2323,32 @@ sealed class OnboardingWindow : IDisposable
     /// Pastille ronde numérotée (A7) : un disque d'action plein, le numéro en AG Titre dessus.
     /// Remplace le badge rectangulaire en Segoe italique.
     /// </summary>
-    private void DrawNumberDisc(IntPtr hdc, IntPtr gfx, int left, int top, int diameter, string number)
+    private void DrawNumberDiamond(IntPtr hdc, IntPtr gfx, int cx, int cy, int half, string number)
     {
-        FillDot(gfx, left + diameter / 2f, top + diameter / 2f, diameter / 2f, CLR_BADGE_BG);
-        var cell = new Win32.RECT { left = left, top = top, right = left + diameter, bottom = top + diameter };
+        FillDiamond(gfx, cx, cy, half, CLR_BADGE_BG);
+        var cell = new Win32.RECT { left = cx - half, top = cy - half, right = cx + half, bottom = cy + half };
         PaperText.DrawLine(hdc, number, FontNumber, cell, CLR_BADGE_TEXT, TextAlign.Center);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GpPoint { public float X, Y; }
+
+    [DllImport("gdiplus.dll")]
+    private static extern int GdipFillPolygon(IntPtr graphics, IntPtr brush, GpPoint[] points, int count, int fillMode);
+
+    /// <summary>Losange lissé (GDI+) de demi-diagonale <paramref name="half"/>, centré sur (cx, cy).</summary>
+    private static void FillDiamond(IntPtr gfx, int cx, int cy, int half, uint colorRef)
+    {
+        if (gfx == IntPtr.Zero) return;
+        uint argb = 0xFF000000u | ((colorRef & 0xFF) << 16) | (colorRef & 0xFF00) | ((colorRef >> 16) & 0xFF);
+        if (GdipCreateSolidFill(argb, out IntPtr brush) != 0) return;
+        var points = new[]
+        {
+            new GpPoint { X = cx, Y = cy - half }, new GpPoint { X = cx + half, Y = cy },
+            new GpPoint { X = cx, Y = cy + half }, new GpPoint { X = cx - half, Y = cy },
+        };
+        GdipFillPolygon(gfx, brush, points, points.Length, 0);
+        GdipDeleteBrush(brush);
     }
 
     /// <summary>
@@ -2292,11 +2382,14 @@ sealed class OnboardingWindow : IDisposable
     {
         int cardPaddingX = S(16);
         int cardPaddingY = S(12);
-        int disc = Px(22);
-        int discGap = S(14);
-        int contentWidth = cw - margin * 2;
-        int textX = margin + cardPaddingX + disc + discGap;
-        int textWidth = contentWidth - cardPaddingX * 2 - disc - discGap;
+        // Atelier du 03/11 : le numéro sort de la carte, sur un rail à gauche (losange centré sur
+        // la hauteur de la carte, fil en pointillés jusqu'au suivant). Choix d'Antoine : variante F3.
+        int railWidth = S(54);
+        int half = Px(14);
+        int cardLeft = margin + railWidth;
+        int contentWidth = cw - margin - cardLeft;
+        int textX = cardLeft + cardPaddingX;
+        int textWidth = contentWidth - cardPaddingX * 2;
         var regular = FontBody;
         var strong = FontBodyStrong;
         var titleRuns = new[] { new TextRun(title) };
@@ -2305,10 +2398,20 @@ sealed class OnboardingWindow : IDisposable
         int bodyHeight = Paragraph(hdc, body, regular, strong, textX, 0, textWidth, CLR_TEXT, CLR_INLINE_HIGHLIGHT, draw: false);
         int cardHeight = Math.Max(S(STEP_CARD_MIN_H), cardPaddingY * 2 + titleHeight + bodyHeight + S(2));
 
-        var card = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + cardHeight };
+        var card = new Win32.RECT { left = cardLeft, top = y, right = cardLeft + contentWidth, bottom = y + cardHeight };
         DrawPaperPanel(hdc, card);
-        // La pastille se centre sur la première ligne du titre.
-        DrawNumberDisc(hdc, gfx, margin + cardPaddingX, y + cardPaddingY + (ParagraphLine(strong) - disc) / 2, disc, number);
+        int cx = margin + S(22);
+        int cy = y + cardHeight / 2;
+        if (_railPreviousCenterY >= 0)
+        {
+            // Fil en pointillés depuis le losange de la carte précédente.
+            int thickness = Math.Max(1, Px(2)), dash = Px(4), gap = Px(4);
+            int from = _railPreviousCenterY + half + Px(4), to = cy - half - Px(4);
+            for (int top = from; top < to; top += dash + gap)
+                GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = cx - thickness / 2, top = top, right = cx - thickness / 2 + thickness, bottom = Math.Min(top + dash, to) }, CLR_LINK);
+        }
+        DrawNumberDiamond(hdc, gfx, cx, cy, half, number);
+        _railPreviousCenterY = cy;
         Paragraph(hdc, titleRuns, strong, strong, textX, y + cardPaddingY, textWidth, CLR_STEP_TITLE, CLR_STEP_TITLE, draw: true);
         Paragraph(hdc, body, regular, strong, textX, y + cardPaddingY + titleHeight, textWidth, CLR_TEXT, CLR_INLINE_HIGHLIGHT, draw: true);
 

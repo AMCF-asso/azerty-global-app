@@ -135,6 +135,11 @@ public sealed class KeyboardHook : IDisposable
 
     public void Install()
     {
+#if DEBUG
+        // Aperçu de dev (AG_DEV_PREVIEW) : aucun hook clavier, jamais dans le binaire Release.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AG_DEV_PREVIEW")))
+            return;
+#endif
         // GetModuleHandle(null) retourne le handle du module principal — suffisant pour WH_KEYBOARD_LL
         // et compatible avec PublishTrimmed (pas de dépendance à System.Diagnostics.Process)
         _hookId = Win32.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, Win32.GetModuleHandleW(null), 0);
@@ -152,6 +157,11 @@ public sealed class KeyboardHook : IDisposable
     /// </summary>
     public bool Reinstall()
     {
+#if DEBUG
+        // Aperçu de dev (AG_DEV_PREVIEW) : aucun hook clavier, jamais dans le binaire Release.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AG_DEV_PREVIEW")))
+            return true;
+#endif
         var newId = Win32.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, Win32.GetModuleHandleW(null), 0);
         if (newId == IntPtr.Zero)
         {
