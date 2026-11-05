@@ -121,9 +121,9 @@ public sealed class HookReelTests
                     var layout = new Layout();
                     layout.Keys[ScanA] = new KeyDefinition { Position = "C01", Scancode = ScanA, Base = Sortie, Shift = Sortie };
                     var mapper = new KeyMapper(layout, new RealWin32Api());
-                    // Une injection étrangère n'est une frappe physique que si un hôte distant
-                    // tourne (C5) : c'est le cas que ce test éprouve, il le déclare.
-                    produit = new KeyboardHook(mapper) { RemoteHostPresent = true, Enabled = true };
+                    // Une injection étrangère n'est une frappe physique qu'en session distante
+                    // active (C5, revu par l'audit M1) : c'est le cas que ce test éprouve, il le déclare.
+                    produit = new KeyboardHook(mapper) { RemoteSessionActive = true, Enabled = true };
                     produit.Install();
                     Assert.True(produit.IsInstalled);
                 }
