@@ -64,10 +64,10 @@ internal static partial class L
 
 
     // ── Tooltip ────────────────────────────────────────────────────────
-    public static string Tray_TooltipSuspendedCompat => T("Suspendu pour compatibilité", "Suspended for compatibility");
+    public static string Tray_TooltipSuspendedCompat => T("Suspendu : cette application ne supporte pas la saisie d’AZERTY Global", "Suspended: this app does not support AZERTY Global typing");
     public static string Tray_TooltipActive => T("Actif", "Active");
     public static string Tray_TooltipCapsLock => T("Verr. Maj.", "Caps Lock");
-    public static string Tray_TooltipDeadKey(string symbol) => T($"Touche morte : {symbol}", $"Dead key: {symbol}");
+    public static string Tray_TooltipDeadKey(string symbol) => T($"Touche morte {symbol} : attend la lettre suivante", $"Dead key {symbol}: waiting for the next letter");
 
     // ── Sollicitation d'avis ────────────────────────────────────────────
     // Entrée tray de bascule directe de langue : libellée dans la langue CIBLE (même
@@ -187,24 +187,24 @@ internal static partial class L
         $"{Product}’s lesson progress file couldn’t be read. A copy of it is kept, and lessons start over.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active app: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
-    public static string Tray_MenuCompatForceOn => T("Forcer la compatibilité jeu", "Force game compatibility");
+    public static string Tray_MenuCompatForceOn => T("Mode jeu : saisie par combinaisons de touches", "Game mode: typing with key combinations");
     public static string Tray_MenuCompatForceOff => T("Forcer la désactivation", "Force off");
-    public static string Tray_MenuCompatInfo => T("Comprendre la compatibilité…", "About app compatibility…");
+    public static string Tray_MenuCompatInfo => T("Pourquoi AZERTY Global se suspend…", "Why AZERTY Global pauses…");
     public static string Tray_MenuAppCompat => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoTitle => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoBody => T(
         $"{Product} adapte automatiquement son fonctionnement à l’application active.\n\n" +
         "Auto\nUtilise le mode normal, un mode spécial pour certains jeux, ou se suspend lorsque c’est nécessaire.\n\n" +
-        "Forcer la compatibilité jeu\nTape les caractères avec les combinaisons de touches de Windows dans l’application sélectionnée, pour les jeux qui ignorent les caractères insérés directement.\n\n" +
+        "Mode jeu : saisie par combinaisons de touches\nTape les caractères avec les combinaisons de touches de Windows dans l’application sélectionnée, pour les jeux qui ignorent les caractères insérés directement.\n\n" +
         $"Forcer la désactivation\nSuspend {Product} uniquement dans l’application sélectionnée.\n\n" +
-        $"Connexions à distance et machines virtuelles\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer, RustDesk, une console de machine virtuelle (Hyper-V, Windows Sandbox, VMware, VirtualBox) ou Citrix est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant. Une machine virtuelle garde sa propre disposition de clavier.\n\n" +
+        $"Connexions à distance et machines virtuelles\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer, RustDesk, une console de machine virtuelle (Hyper-V, Windows Sandbox, VMware, VirtualBox) ou Citrix (un logiciel de bureau à distance d’entreprise) est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant. Une machine virtuelle garde sa propre disposition de clavier.\n\n" +
         $"Fenêtres lancées en administrateur\nDans une fenêtre lancée en administrateur (terminal, installeur…), {Product} ne peut pas agir : la disposition de Windows s’applique.\n\n" +
         "La détection reste entièrement locale. Aucun nom d’application n’est transmis.",
         $"{Product} automatically adapts its behavior to the active app.\n\n" +
         "Auto\nUses normal mode, a special mode for some games, or suspends itself when necessary.\n\n" +
-        "Force game compatibility\nTypes characters with Windows key combinations in the selected app, for games that ignore directly inserted characters.\n\n" +
+        "Game mode: typing with key combinations\nTypes characters with Windows key combinations in the selected app, for games that ignore directly inserted characters.\n\n" +
         $"Force off\nSuspends {Product} only in the selected app.\n\n" +
-        $"Remote connections and virtual machines\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, RustDesk, a virtual machine console (Hyper-V, Windows Sandbox, VMware, VirtualBox), or Citrix is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer. A virtual machine keeps its own keyboard layout.\n\n" +
+        $"Remote connections and virtual machines\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, RustDesk, a virtual machine console (Hyper-V, Windows Sandbox, VMware, VirtualBox), or Citrix (a company remote-desktop tool) is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer. A virtual machine keeps its own keyboard layout.\n\n" +
         $"Windows run as administrator\nIn a window run as administrator (terminal, installer…), {Product} cannot act: the Windows layout applies.\n\n" +
         "Detection stays entirely local. No app names are transmitted.");
     public static string Tray_MenuAbout => T("À propos", "About");

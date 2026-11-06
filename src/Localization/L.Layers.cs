@@ -4,7 +4,7 @@ internal static partial class L
 {
     // ── Fenêtre des couches maintenables ─────────────────────────────
     public static string Layers_WindowTitleSuffix => T("Couches verrouillables", "Lockable layers");
-    public static string Layers_Title => T("Taper plusieurs caractères d’une autre couche", "Type several characters from another layer");
+    public static string Layers_Title => T("Taper plusieurs caractères d’une autre couche (un autre jeu de caractères : grec, cyrillique, scientifique)", "Type several characters from another layer (another set of characters: Greek, Cyrillic, scientific)");
     public static string Layers_Explainer => T(
         "Appui simple : la prochaine frappe.\r\n" +
         "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",

@@ -35,7 +35,11 @@ sealed class PauseDurationDialog : IDisposable
     // Zone client de référence, à 96 DPI.
     private const int BASE_CLIENT_W = 330;
     private const int BASE_CLIENT_H = 174;
-    private const int SPIN_W = 18;
+    // A9 : cible de pointage d'au moins 24 px (WCAG 2.5.8). Le contrôle Up-down s'imposait sa
+    // largeur système (18 px) quand il s'accrochait au bord de son champ (UDS_ALIGNRIGHT) :
+    // il est donc posé à côté du champ, à sa propre largeur, et suit la mise à l'échelle.
+    internal const int SPIN_W = 24;
+    private const int EDIT_W = 36;
     private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -199,10 +203,6 @@ sealed class PauseDurationDialog : IDisposable
         _hFontStrong = CreateScaledFont(TypeRamp.Semibold);
         _layout.Apply(_dpi, _hFont);
         Win32.SendMessageW(_hResume, Win32.WM_SETFONT, _hFontStrong, (IntPtr)1);
-        // Les champs reprennent leur largeur pleine : chaque Up-down, remis à sa largeur au
-        // nouveau DPI, se recolle à droite et raccourcit son champ d'autant.
-        AttachSpin(_hSpinHours, _hEditHours);
-        AttachSpin(_hSpinMinutes, _hEditMinutes);
         if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
         if (oldStrong != IntPtr.Zero) Win32.DeleteObject(oldStrong);
     }
@@ -225,12 +225,12 @@ sealed class PauseDurationDialog : IDisposable
             _hChips[i] = CreateChip(hInstance, IDC_CHIP_FIRST + i, L.Pause_QuickChip(QuickMinutes[i]),
                 15 + i * 74, 11, 74, 34, first: i == 0);
         _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 59, 104, 22, WS_GROUP);
-        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 126, 54, 50, 28);
-        _hSpinHours = CreateSpin(hInstance, _hEditHours, MaxHours, 1);
-        _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 180, 59, 20, 22);
-        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(), 204, 54, 50, 28);
-        _hSpinMinutes = CreateSpin(hInstance, _hEditMinutes, MaxMinutes, MinutesStep);
-        _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 258, 59, 44, 22);
+        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 126, 54, EDIT_W, 28);
+        _hSpinHours = CreateSpin(hInstance, _hEditHours, MaxHours, 1, 126 + EDIT_W, 54, 28);
+        _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 190, 59, 20, 22);
+        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(), 214, 54, EDIT_W, 28);
+        _hSpinMinutes = CreateSpin(hInstance, _hEditMinutes, MaxMinutes, MinutesStep, 214 + EDIT_W, 54, 28);
+        _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 278, 59, 38, 22);
         _hResume = CreateStatic(hInstance, string.Empty, 18, 96, 294, 22);
         Win32.SendMessageW(_hResume, Win32.WM_SETFONT, _hFontStrong, (IntPtr)1);
 
@@ -296,18 +296,23 @@ sealed class PauseDurationDialog : IDisposable
     /// <summary>Flèches Windows d'un champ : bornes 0..<paramref name="max"/>, pas de
     /// <paramref name="step"/>, flèches du clavier, texte du champ tenu à jour par le
     /// contrôle lui-même (UDS_SETBUDDYINT).</summary>
-    private IntPtr CreateSpin(IntPtr hInstance, IntPtr buddy, int max, uint step)
+    private IntPtr CreateSpin(IntPtr hInstance, IntPtr buddy, int max, uint step, int x, int y, int h)
     {
+        // Sans UDS_ALIGNRIGHT : le contrôle garde la position et la largeur qu'on lui donne.
         var hwnd = Win32.CreateWindowExW(0, Win32.UPDOWN_CLASS, string.Empty,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.UDS_SETBUDDYINT | Win32.UDS_ALIGNRIGHT |
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.UDS_SETBUDDYINT |
             Win32.UDS_ARROWKEYS | Win32.UDS_NOTHOUSANDS | Win32.UDS_HOTTRACK,
-            0, 0, S(SPIN_W), 0, _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+            S(x), S(y), S(SPIN_W), S(h), _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
         if (hwnd == IntPtr.Zero)
             return hwnd;
+        _layout.Track(hwnd, x, y, SPIN_W, h);
 
         Win32.SendMessageW(hwnd, Win32.UDM_SETRANGE32, IntPtr.Zero, (IntPtr)max);
         Win32.SendMessageW(hwnd, Win32.UDM_SETBUDDY, buddy, IntPtr.Zero);
         Win32.SendMessageW(hwnd, Win32.UDM_SETPOS32, IntPtr.Zero, (IntPtr)ReadInt(buddy));
+        // Le contrôle reprend sa largeur système (17-18 px) à la création et à l'accrochage
+        // au champ : on la rétablit en dernier, c'est elle que la main vise (A9, ≥ 24 px).
+        Win32.MoveWindow(hwnd, S(x), S(y), S(SPIN_W), S(h), true);
 
         var accel = new Win32.UDACCEL { nSec = 0, nInc = step };
         IntPtr pAccel = System.Runtime.InteropServices.Marshal.AllocHGlobal(
@@ -319,13 +324,6 @@ sealed class PauseDurationDialog : IDisposable
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(pAccel); }
         return hwnd;
-    }
-
-    private void AttachSpin(IntPtr spin, IntPtr buddy)
-    {
-        if (spin == IntPtr.Zero) return;
-        Win32.MoveWindow(spin, 0, 0, S(SPIN_W), 0, false);
-        Win32.SendMessageW(spin, Win32.UDM_SETBUDDY, buddy, IntPtr.Zero);
     }
 
     private IntPtr CreateButton(IntPtr hInstance, int id, string text, int x, int y, int w, int h, uint style)
@@ -342,6 +340,11 @@ sealed class PauseDurationDialog : IDisposable
         return hwnd;
     }
 
+    /// <summary>N3 : Entrée annule quand le focus est sur « Annuler », confirme sinon.</summary>
+    internal static bool EnterCancels(IntPtr focused, IntPtr cancelButton) =>
+        cancelButton != IntPtr.Zero &&
+        DialogNavigation.ButtonToPressOnEnter(DialogNavigation.IDOK, focused, new[] { cancelButton }) == cancelButton;
+
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
@@ -354,7 +357,12 @@ sealed class PauseDurationDialog : IDisposable
                     int code = (wParam.ToInt32() >> 16) & 0xFFFF;
                     if (id == IDOK)
                     {
-                        ValidateAndClose();
+                        // N3 : IsDialogMessageW envoie IDOK quoi qu'il arrive. Entrée sur
+                        // « Annuler » annule ; partout ailleurs elle confirme, comme avant.
+                        if (EnterCancels(Win32.GetFocus(), _hBtnCancel))
+                            Close(null);
+                        else
+                            ValidateAndClose();
                         return IntPtr.Zero;
                     }
                     if (id == IDCANCEL)

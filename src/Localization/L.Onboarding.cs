@@ -40,10 +40,10 @@ internal static partial class L
     // après « programmation » plutôt que de laisser « repos » seul.
     public static string Onboarding_Feature4Title => T("Symboles de programmation sur la rangée de repos", "Programming symbols on the home row");
     public static string Onboarding_Feature4DescSuffix => T(" avec AltGr.", " with AltGr.");
-    public static string Onboarding_Feature5Title => T("Accents internationaux sur la touche ù", "International accents on the ù key");
+    public static string Onboarding_Feature5Title => T("Accents internationaux sur la touche à droite du M", "International accents on the key right of M");
     public static string Onboarding_Feature5Desc => T(
-        "Accent aigu, accent grave et tilde, en touches mortes.",
-        "Acute accent, grave accent and tilde, as dead keys.");
+        "Accent aigu, accent grave et tilde. Une touche morte ne tape rien seule : elle attend la lettre suivante et l’accentue.",
+        "Acute accent, grave accent and tilde. A dead key types nothing by itself: it waits for the next letter and accents it.");
     // Refonte du 15/10 (textes validés par Antoine) : le clavier et ses cinq notes au trait.
     public static string Onboarding_Step1Subtitle => T(
         "Les nouveautés sont en bleu ; vos lettres restent à leur place.",
@@ -52,7 +52,7 @@ internal static partial class L
     public static string Onboarding_NoteCaps => T("Verr. Maj., puis é è ç à", "Caps Lock, then é è ç à");
     public static string Onboarding_NoteCoding => T("Programmation facilitée : AltGr + D à K", "Easier coding: AltGr + D to K");
     public static string Onboarding_NotePeriod => T("le point, sans Maj", "the period, without Shift");
-    public static string Onboarding_NoteAccents => T("puis la lettre ; ù : AltGr + u", "then the letter; ù: AltGr + u");
+    public static string Onboarding_NoteAccents => T("puis la lettre ; la lettre ù : AltGr + u", "then the letter; the letter ù: AltGr + u");
     // « Aucune frappe enregistrée » serait faux : l'app garde des compteurs locaux agrégés (UsageStats).
     public static string Onboarding_PrivacyReassurance => T(
         "Tout se passe sur votre ordinateur : ce que vous tapez n’est ni enregistré ni envoyé.",
@@ -94,18 +94,18 @@ internal static partial class L
         $"{name}: {letters}. {example} = {gesture}");
     // L'essai : « Essayez ici : frappez ù (´), puis b. » ; ù et b en gras.
     public static string Onboarding_TrialPrefix => T("Essayez ici : frappez ", "Try it here: press ");
-    public static string Onboarding_TrialDeadKey => "ù (´)";
+    public static string Onboarding_TrialDeadKey => T("la touche à droite du M (´)", "the key right of M (´)");
     public static string Onboarding_TrialThen => T(", puis ", ", then ");
     public static string Onboarding_TrialLetter => "b";
     public static string Onboarding_TrialSuffix => ".";
     /// <summary>Nom accessible du champ d'essai.</summary>
     public static string Onboarding_TrialFieldName => T(
-        "Essayez ici : frappez ù, puis b.",
-        "Try it here: press ù, then b.");
+        "Essayez ici : frappez la touche à droite du M, puis b.",
+        "Try it here: press the key right of M, then b.");
     public static string Onboarding_TrialMatch(string letter) => T($"C’est bien {letter}.", $"That’s {letter}.");
     public static string Onboarding_TrialOther => T(
-        "Ce n’est pas ɓ. Réessayez : ù, puis b.",
-        "That isn’t ɓ. Try again: ù, then b.");
+        "Ce n’est pas ɓ. Réessayez : la touche à droite du M, puis b.",
+        "That isn’t ɓ. Try again: the key right of M, then b.");
     // Astuce : « Une autre lettre : Ctrl + Maj + W, puis tapez « peul » ou « bambara ». »
     public static string Onboarding_LanguagesTipPrefix => T("Une autre lettre : ", "Another letter: ");
     public static string Onboarding_LanguagesTipSuffix => T(

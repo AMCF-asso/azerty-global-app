@@ -34,7 +34,7 @@ internal static partial class L
     public static string Keyboard_LayerShiftAltGr => T("Maj+AltGr", "Shift+AltGr");
 
     public static string Keyboard_DeadKeyConnector => T(" — touche morte ", " — dead key ");
-    public static string Keyboard_ActiveDeadKeyStatus(string name) => T($"Touche morte active : {name}", $"Active dead key: {name}");
+    public static string Keyboard_ActiveDeadKeyStatus(string name) => T($"Touche morte active : {name} (attend la lettre suivante)", $"Active dead key: {name} (waiting for the next letter)");
 
     // ── Marqueurs de caractères invisibles ────────────────────────────
     public static string Keyboard_NarrowNbsp => T("esp. ins. fine", "narrow NBSP");

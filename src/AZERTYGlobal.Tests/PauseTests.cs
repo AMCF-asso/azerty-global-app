@@ -267,6 +267,40 @@ public class PauseTests
         Assert.DoesNotContain(true, Pastilles(dialogue).Select(Cochée));
     }
 
+    // N3 (candidat 1.3.0) : Entrée sur « Annuler » annule au lieu de confirmer.
+    [Fact]
+    public void Entrée_SurAnnuler_Annule_Ailleurs_Confirme()
+    {
+        var annuler = (IntPtr)0x1234;
+        Assert.True(PauseDurationDialog.EnterCancels(annuler, annuler));
+        Assert.False(PauseDurationDialog.EnterCancels((IntPtr)0x5678, annuler)); // une pastille, un champ…
+        Assert.False(PauseDurationDialog.EnterCancels(IntPtr.Zero, annuler));
+        Assert.False(PauseDurationDialog.EnterCancels(annuler, IntPtr.Zero));
+    }
+
+    // A9 : chevrons ‹ › des Leçons, 22 → 26 px de large (au moins 24 px à 96 DPI).
+    [Fact]
+    public void ChevronsDesLeçons_FontAuMoins24Px()
+    {
+        Assert.True(LessonsWindow.ChevronWidth >= 24);
+        Assert.True(LessonsWindow.ChevronHeight >= 24);
+    }
+
+    // A9 (candidat 1.3.0) : cibles de pointage d'au moins 24 px, au DPI de l'écran.
+    [Fact]
+    public void Flèches_FontAuMoins24PxDeLarge()
+    {
+        Assert.True(PauseDurationDialog.SPIN_W >= 24);
+        using var dialogue = Ouvrir();
+        IntPtr fenêtre = Field(dialogue, "_hWnd");
+        int minimum = WindowSizing.ScaleForDpi(24, NativeWindow.DpiOf(fenêtre));
+        foreach (string nom in new[] { "_hSpinHours", "_hSpinMinutes" })
+        {
+            Assert.True(Win32.GetWindowRect(Field(dialogue, nom), out var r));
+            Assert.True(r.right - r.left >= minimum, $"{nom} : {r.right - r.left} px < {minimum}");
+        }
+    }
+
     [DllImport("user32.dll")]
     private static extern int GetWindowLongW(IntPtr hWnd, int nIndex);
 

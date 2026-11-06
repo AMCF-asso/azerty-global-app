@@ -488,10 +488,27 @@ sealed class VirtualKeyboard : IDisposable
         int windowH = Math.Max(1, winRect.bottom - winRect.top);
         var workArea = GetActiveMonitorWorkArea(_preferredMonitorWindow, _hWnd);
         _preferredMonitorWindow = IntPtr.Zero;
-        int posX = workArea.left + Math.Max(0, (workArea.right - workArea.left - windowW) / 2);
-        int posY = workArea.top + Math.Max(0, (workArea.bottom - workArea.top - windowH) / 2);
-        Win32.MoveWindow(_hWnd, posX, posY, windowW, windowH, false);
+
+        // A2 : la fenêtre naît à 854 × 368 px, sans échelle. Elle passe d'abord sur l'écran
+        // cible (sa taille actuelle, le temps que Windows lui donne le DPI de cet écran, et
+        // WM_DPICHANGED l'ajuste), puis reçoit la taille par défaut à CE DPI, calée dans la
+        // zone de travail à rapport de forme constant.
+        Win32.MoveWindow(_hWnd, workArea.left, workArea.top, windowW, windowH, false);
+        int dpi = NativeWindow.DpiOf(_hWnd);
+        var (outerW, outerH) = NativeWindow.OuterSize(
+            WindowSizing.ScaleForDpi(DEFAULT_WIDTH, dpi), WindowSizing.ScaleForDpi(DEFAULT_HEIGHT, dpi),
+            FrameStyle, FrameExStyle, dpi);
+        var (posX, posY) = NativeWindow.CenterIn(workArea, outerW, outerH);
+        var fitted = FitToWorkArea(new Win32.RECT
+        {
+            left = posX, top = posY, right = posX + outerW, bottom = posY + outerH
+        });
+        Win32.MoveWindow(_hWnd, fitted.left, fitted.top,
+            fitted.right - fitted.left, fitted.bottom - fitted.top, false);
     }
+
+    private const uint FrameStyle = Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+    private const uint FrameExStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
 
     private bool TryRestoreSavedBounds()
     {
@@ -802,12 +819,13 @@ sealed class VirtualKeyboard : IDisposable
             case Win32.WM_GETMINMAXINFO:
                 if (lParam != IntPtr.Zero)
                 {
-                    // Convertir les tailles client min en tailles fenêtre
-                    var minRect = new Win32.RECT { left = 0, top = 0, right = MIN_WIDTH, bottom = MIN_HEIGHT };
-                    Win32.AdjustWindowRectEx(ref minRect, Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU,
-                        false, Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE);
+                    // Convertir les tailles client min (96 DPI) en tailles fenêtre, au DPI de l'écran
+                    int minDpi = NativeWindow.DpiOf(hWnd);
+                    var (minW, minH) = NativeWindow.OuterSize(
+                        WindowSizing.ScaleForDpi(MIN_WIDTH, minDpi), WindowSizing.ScaleForDpi(MIN_HEIGHT, minDpi),
+                        FrameStyle, FrameExStyle, minDpi);
                     var mmi = Marshal.PtrToStructure<Win32.MINMAXINFO>(lParam);
-                    mmi.ptMinTrackSize = new Win32.POINT { x = minRect.right - minRect.left, y = minRect.bottom - minRect.top };
+                    mmi.ptMinTrackSize = new Win32.POINT { x = minW, y = minH };
                     Marshal.StructureToPtr(mmi, lParam, false);
                 }
                 return IntPtr.Zero;
@@ -825,10 +843,8 @@ sealed class VirtualKeyboard : IDisposable
     /// rapport de forme constant (<see cref="WindowSizing.FitOuterKeepingRatio"/>) et calé dedans.</summary>
     private Win32.RECT FitToWorkArea(Win32.RECT suggested)
     {
-        const uint style = Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        const uint exStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
         var work = NativeWindow.WorkArea(_hWnd);
-        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, style, exStyle);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, FrameStyle, FrameExStyle);
         var (w, h) = WindowSizing.FitOuterKeepingRatio(suggested.right - suggested.left,
             suggested.bottom - suggested.top, frameW, frameH, work.right - work.left, work.bottom - work.top);
         int x = Math.Max(work.left, Math.Min(suggested.left, work.right - w));

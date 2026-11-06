@@ -2099,7 +2099,7 @@ sealed class OnboardingWindow : IDisposable
         public int RowHeight, RowPadX, RowPadY, NameHeight, LettersHeight;
     }
 
-    /// <summary>« Essayez ici : frappez ù (´), puis b. » : ù et b en gras.</summary>
+    /// <summary>« Essayez ici : frappez la touche à droite du M (´), puis b. » : la touche et b en gras.</summary>
     private static TextRun[] TrialRuns() => new[]
     {
         new TextRun(L.Onboarding_TrialPrefix),
