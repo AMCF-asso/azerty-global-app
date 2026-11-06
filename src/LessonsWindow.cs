@@ -218,14 +218,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// <summary>Handle de la fenêtre — propriétaire des boîtes de dialogue système.</summary>
     public IntPtr Handle => _hWnd;
 
-    /// <summary>
-    /// Émis à la fermeture de la fenêtre lorsque l'utilisateur a copié un résultat de défi
-    /// pendant la séance. Différé à la fermeture volontairement : demander un avis à
-    /// l'instant du clic couperait le geste en deux, alors que l'utilisateur est
-    /// précisément en train de partir coller son résultat ailleurs.
-    /// </summary>
-    public Action? ChallengeShared;
-
     /// <summary>Langue de l'UI au moment du parse du catalogue (les titres/instructions des
     /// leçons sont résolus au parse — cf. LessonCatalogLoader.PickText). Mise à jour au
     /// rechargement live du catalogue ; permet à TrayApplication de recréer la fenêtre si la
@@ -2636,7 +2628,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             "BracketRight" => "]",
             "Backslash" => "\\",
             "Semicolon" => ";",
-            "Quote" => "'",
+            "Quote" => "´", // T3 : le signe de la touche à droite du M, plus l'apostrophe
             "Comma" => ",",
             "Period" => ".",
             "Slash" => "/",
@@ -2725,8 +2717,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         SaveWindowBounds();
         _visible = false;
         _challenge.EndRequest();
-        // Avant ChallengeShared ci-dessous : la fin de séance est datée quand le partage
-        // se présente, et les dix minutes sans avis s'appliquent aussi à lui.
         LearningSessionTracker.Closed(this);
         _settingsOpen = false;
         HomeOnHide(); // accueil des Leçons : oublie le clic et le texte collé (LessonsWindow.Home.cs)
@@ -2740,14 +2730,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _freeStartedAt = null;
         ClearPendingPhysicalText();
         Win32.ShowWindow(_hWnd, 0);
-
-        // Le partage a eu lieu pendant cette séance : c'est maintenant, la fenêtre refermée,
-        // que la sollicitation d'avis peut se présenter sans couper quoi que ce soit.
-        if (_challenge.TakeSharedThisSession())
-        {
-            try { ChallengeShared?.Invoke(); }
-            catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeShared", ex); }
-        }
     }
 
     public void Dispose()

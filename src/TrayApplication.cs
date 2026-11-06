@@ -918,7 +918,7 @@ sealed class TrayApplication : IDisposable
                                 _usageStats = null;
                             }
                             _usageStats ??= new UsageStatsWindow();
-                            _usageStats.StatsShared = OnStatsShared;
+                            _usageStats.RateRequested = OnRateStoreFromStats;
                             _usageStats.Show();
                             break;
                         case IDM_EXERCISES:
@@ -1493,7 +1493,6 @@ sealed class TrayApplication : IDisposable
         if (_lessons == null)
         {
             _lessons = new LessonsWindow(_layout, _mapper, _hook);
-            _lessons.ChallengeShared = OnChallengeShared;
             // La fenêtre vient de charger la progression. Fichier corrompu mis de côté
             // (audit du 25/09, L-14) : le dire une fois.
             if (LessonProgressStore.TakeQuarantineNotice())
@@ -2708,12 +2707,6 @@ sealed class TrayApplication : IDisposable
         }
     }
 
-    /// <summary>Photographie de l'état des séances pour <see cref="ReviewPromptGate.LearningAllowsPrompt"/>.</summary>
-    private static bool LearningAllowsReviewNow(ReviewPromptTrigger trigger) =>
-        ReviewPromptGate.LearningAllowsPrompt(trigger, LearningSessionTracker.IsOpen,
-            LearningSessionTracker.MillisecondsSinceLastClose, UsageStats.MillisecondsSinceLastRemap,
-            ReviewPromptGate.LearningCooldownMs);
-
     /// <summary>
     /// Cible du clic sur la sollicitation d'avis. Le volet d'avis Store n'est ouvert
     /// que pour une install packagée (les autres ne peuvent en général pas noter) ;
@@ -2739,9 +2732,11 @@ sealed class TrayApplication : IDisposable
     /// profond dès que l'API n'est pas disponible — installation hors Store, Store absent
     /// du système, ou refus de l'API.
     /// </summary>
-    private void OpenStoreReview()
+    private void OpenStoreReview() => OpenStoreReview(ReviewOwnerWindow());
+
+    private static void OpenStoreReview(IntPtr owner)
     {
-        if (StoreReview.TryShow(ReviewOwnerWindow(), StoreReviewUrl)) return;
+        if (StoreReview.TryShow(owner, StoreReviewUrl)) return;
         Win32.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1);
     }
 
@@ -2773,61 +2768,17 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// L'utilisateur vient de copier son résultat de défi puis de refermer la fenêtre.
-    /// Le geste de partage est le signal de promotion le plus net dont dispose
-    /// l'application : il vaut mieux que n'importe quel seuil de jours, et c'est le seul
-    /// chemin de sollicitation qui atteint aussi ceux qui ont coupé les notifications
-    /// Windows — la sollicitation par toast, elle, ne leur parvient jamais.
-    ///
-    /// Les garde-fous de <see cref="MaybeShowReviewPrompt"/> restent en vigueur : deux
-    /// essais au maximum sur la vie de l'installation, aucun après une réponse, aucun dans
-    /// les 48 heures qui suivent une erreur journalisée, un seul par jour.
+    /// C1 (1.3.0) : « Noter l'application » dans Mes statistiques. Remplace la demande d'avis
+    /// qui partait toute seule après « Copier » ou le partage d'un Défi : la boîte de notation
+    /// du Store s'ouvre seulement sur ce clic, comme pour l'entrée du menu (même geste explicite :
+    /// plus aucune sollicitation ensuite). Le bouton n'existe que sur le canal Store, liens
+    /// externes permis (<c>UsageStatsWindow.RateButtonVisible</c>).
     /// </summary>
-    private void OnChallengeShared() => MaybeShowReviewAfterShare("challenge");
-
-    /// <summary>Résumé de statistiques copié puis fenêtre refermée. Le bouton de copie
-    /// existe depuis la v1.1 sans avoir jamais rien armé, alors que c'est le même geste de
-    /// promotion que le partage d'un résultat de défi (décision du 2026-08-17).</summary>
-    private void OnStatsShared() => MaybeShowReviewAfterShare("stats");
-
-    /// <summary>
-    /// Un partage vient d'aboutir : ouvrir la boîte de notation Store si les gardes le
-    /// permettent. La règle de décision vit dans <see cref="ReviewSharePrompt"/>, pure et
-    /// testable sans fenêtre — R1 et R3 de l'audit v1.2.0 sont restés invisibles tant
-    /// qu'elle était mêlée à l'affichage.
-    /// </summary>
-    private void MaybeShowReviewAfterShare(string source)
+    private void OnRateStoreFromStats(IntPtr owner)
     {
-        try
-        {
-            // Même garde que MaybeShowReviewPrompt : le partage d'un défi se présente à la
-            // fermeture des Leçons, donc « juste après une séance » (2026-09-24).
-            if (!LearningAllowsReviewNow(ReviewPromptTrigger.Share)) return;
-
-            var signals = ReviewSharePrompt.Snapshot();
-            if (!ReviewSharePrompt.ShouldPrompt(signals)) return;
-
-            if (!StoreReview.TryShow(_hWnd, StoreReviewUrl)) return;
-
-            // Consommé une fois la boîte lancée. `TryShow` ne dit que « opération
-            // lancée » : la boîte a besoin de la boucle de messages de ce thread, donc
-            // rien ne l'attend (voir StoreReview) — mais ses deux chemins d'échec
-            // ouvrent le lien profond du Store, si bien qu'un essai n'est jamais
-            // consommé sans issue pour l'utilisateur.
-            //
-            // Un essai, pas la vie de l'installation (arbitrage du 2026-08-17). La boîte
-            // s'est affichée, mais Windows ne dit jamais si l'utilisateur a déposé sa note :
-            // poser aussi `reviewPromptClicked` faisait qu'un seul partage — même refermé
-            // aussitôt sans rien noter — éteignait toute sollicitation ultérieure. Le
-            // plafond de deux essais, la règle « une seule par jour » sur la date
-            // persistée, les seuils d'usage et le silence de 48 h après une erreur
-            // restent les garde-fous, tous réunis dans ReviewSharePrompt.
-            ConfigManager.RecordReviewPromptShown(signals.Today);
-        }
-        catch (Exception ex)
-        {
-            ConfigManager.Log($"TrayApplication.MaybeShowReviewAfterShare({source})", ex);
-        }
+        try { ConfigManager.SetReviewPromptClicked(); }
+        catch (Exception ex) { ConfigManager.Log("OnRateStoreFromStats", ex); }
+        OpenStoreReview(owner != IntPtr.Zero ? owner : ReviewOwnerWindow());
     }
 
     /// <summary>Libellé localisé d'une couche maintenable (indicateur, infobulle).</summary>

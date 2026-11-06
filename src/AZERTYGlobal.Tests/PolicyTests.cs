@@ -361,25 +361,15 @@ public class PolicyTests : IDisposable
             TrayApplication.FeedbackTopLevelEntries(DistributionChannel.Amcf, externalLinksPolicy: true));
     }
 
-    /// <summary>Second chemin de sollicitation, celui qu'on oublie : le partage tombe lui
-    /// aussi avec les liens externes, et il a sa propre garde.</summary>
+    /// <summary>C1 (1.3.0) : le bouton « Noter l'application » de Mes statistiques tombe avec les
+    /// liens externes, comme l'entrée du menu, et n'existe que sur le canal Store (la fiche).</summary>
     [Fact]
-    public void Partage_LiensExternesEteints_NeSollicitePas()
+    public void BoutonNoter_LiensExternesEteints_Masque()
     {
-        var signaux = new ReviewSharePromptSignals(
-            Channel: DistributionChannel.Store,
-            ExternalLinks: false,
-            PromptClicked: false,
-            PromptCount: 0,
-            PromptLastShown: null,
-            LastErrorUtc: null,
-            UtcNow: new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
-            Today: new DateOnly(2026, 8, 19),
-            FirstRemapDate: new DateOnly(2026, 8, 10),
-            ActiveDaysCount: ReviewSharePrompt.MinActiveDays);
-
-        Assert.False(ReviewSharePrompt.ShouldPrompt(signaux));
-        Assert.True(ReviewSharePrompt.ShouldPrompt(signaux with { ExternalLinks = true }));
+        Assert.True(UsageStatsWindow.RateButtonVisible(DistributionChannel.Store, externalLinks: true));
+        Assert.False(UsageStatsWindow.RateButtonVisible(DistributionChannel.Store, externalLinks: false));
+        Assert.False(UsageStatsWindow.RateButtonVisible(DistributionChannel.Amcf, externalLinks: true));
+        Assert.False(UsageStatsWindow.RateButtonVisible(DistributionChannel.Unpackaged, externalLinks: true));
     }
 
     /// <summary>

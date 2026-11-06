@@ -185,6 +185,9 @@ internal sealed partial class LessonsWindow
 
     /// <summary>Sélecteur « Module Leçon ▾ », jalons des exercices entre ‹ et ›, « Exercice n
     /// sur N ». Ce qui ne tient pas cède dans l'ordre : le texte, puis la largeur du sélecteur.</summary>
+    internal const int ChevronWidth = 26;
+    internal const int ChevronHeight = 26; // mid ± 13
+
     private void DrawHeaderLessonPart(IntPtr hdc, int x, int mid, int available)
     {
         var moduleFont = F(AppFonts.Text, 15);
@@ -195,7 +198,9 @@ internal sealed partial class LessonsWindow
         var route = TutorialRouteForHeader;
         int exercises = route?.Length ?? CurrentLesson.Exercises.Count;
         int current = route != null ? _tutorialRoutePos : _exerciseIndex; // écran final : après le dernier
-        int segment = S(18), segGap = S(3), chevron = S(22);
+        // A9 : les chevrons ‹ › sont des cibles de pointage d'au moins 24 px (WCAG 2.5.8) ;
+        // hauteur déjà de 26 px.
+        int segment = S(18), segGap = S(3), chevron = S(ChevronWidth);
         int jalonsMax = S(220);
         if (exercises * (segment + segGap) > jalonsMax)
             segment = Math.Max(S(4), jalonsMax / Math.Max(1, exercises) - segGap);

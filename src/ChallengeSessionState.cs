@@ -19,9 +19,6 @@ internal sealed class ChallengeSessionState
     public string? ShareText { get; private set; }
     public bool ShareCopied { get; private set; }
 
-    /// <summary>Un résultat a été copié pendant cette ouverture de la fenêtre.</summary>
-    public bool SharedThisSession { get; private set; }
-
     /// <summary>Le module du Défi entre-t-il dans le catalogue ? Opt-in d'entraînement, ou
     /// Défi demandé pour cette ouverture : sans cela, le menu « Défi du jour » et l'annonce,
     /// faite justement à qui n'a pas l'opt-in, ouvraient les Leçons ordinaires (A23).</summary>
@@ -112,24 +109,15 @@ internal sealed class ChallengeSessionState
     }
 
     /// <summary>
-    /// Copie le résultat. Le succès change le libellé du bouton et arme la sollicitation
-    /// d'avis différée : quelqu'un qui partage son résultat est la personne la mieux disposée
-    /// à noter l'application, et c'est le seul moment où l'application le sait de source sûre.
+    /// Copie le résultat. Le succès change le libellé du bouton, rien d'autre : depuis la 1.3.0
+    /// (C1), un partage ne déclenche plus la demande d'avis du Store, qui part seulement d'un clic
+    /// sur « Noter l'application ».
     /// </summary>
     public bool Copy(IntPtr owner)
     {
         if (ShareText == null) return false;
         if (!ClipboardText.TrySet(owner, ShareText)) return false;
         ShareCopied = true;
-        SharedThisSession = true;
         return true;
-    }
-
-    /// <summary>Lu une fois à la fermeture de la fenêtre.</summary>
-    public bool TakeSharedThisSession()
-    {
-        bool shared = SharedThisSession;
-        SharedThisSession = false;
-        return shared;
     }
 }

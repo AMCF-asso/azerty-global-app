@@ -8,6 +8,8 @@ internal static partial class L
     public static string Stats_LinkFeedback => T("Donner mon avis", "Give feedback");
     public static string Stats_LinkDiscord => T("Rejoindre la communauté Discord", "Join the Discord community");
     public static string Stats_BtnCopy => T("Copier mes statistiques", "Copy my statistics");
+    // C1 (1.3.0) : seul geste qui ouvre la notation du Store depuis cette fenêtre (canal Store).
+    public static string Stats_BtnRate => T("Noter l’application", "Rate the app");
 
     public static string Stats_HeadlineNoData => T(
         $"Vous n’avez pas encore tapé de caractère spécial avec {Product}.",

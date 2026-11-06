@@ -192,7 +192,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     {
         AppFonts.EnsureLoaded();
         _hFont = Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Text);
-        // -18 : le titre complet tient sur une seule ligne dans 470 px.
+        // Depuis T2-T4 (candidat 1.3.0) le titre dépasse une ligne dans 470 px : il revient à
+        // la ligne et la fenêtre grandit (FitWindow mesure le texte, quel que soit le DPI).
         _hFontTitle = Win32.CreateFontW(S(-TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Title);
     }
 

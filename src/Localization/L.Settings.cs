@@ -47,10 +47,10 @@ internal static partial class L
     public static string Settings_CompatAdd => T("Ajouter…", "Add…");
     public static string Settings_CompatRemove => T("Retirer", "Remove");
     public static string Settings_CompatModeAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
-    public static string Settings_CompatModeForceOn => T("Forcer la compatibilité jeu", "Force game compatibility");
+    public static string Settings_CompatModeForceOn => T("Mode jeu : saisie par combinaisons de touches", "Game mode: typing with key combinations");
     public static string Settings_CompatModeForceOff => T("Forcer la désactivation", "Force off");
     // Libellés courts affichés dans la liste, à côté du nom du process
-    public static string Settings_CompatListForceOn => T("compatibilité jeu", "game compatibility");
+    public static string Settings_CompatListForceOn => T("mode jeu", "game mode");
     public static string Settings_CompatListForceOff => T("désactivée", "disabled");
     public static string Settings_CompatAdded(string process) => T($"« {process} » ajoutée ✓", $"“{process}” added ✓");
     public static string Settings_CompatRemoved(string process) => T($"« {process} » retirée ✓", $"“{process}” removed ✓");

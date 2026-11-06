@@ -16,10 +16,20 @@ sealed class UsageStatsWindow : IDisposable
     private const int IDC_BTN_CLOSE = 4202;
     private const int IDC_LINK_FEEDBACK = 4203;
     private const int IDC_LINK_DISCORD = 4204;
+    private const int IDC_BTN_RATE = 4205;
     private const uint TIMER_COPY_FEEDBACK = 4210;
+
+    // 1.3.0, A1 : WS_VSCROLL dès la création (la barre existe, FitWindow la masque quand tout
+    // tient), comme les Paramètres et l'Accueil. Un seul style pour la création, la mesure du
+    // cadre et le redimensionnement : sans lui, la zone cliente se calcule sans la barre.
+    private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU | Win32.WS_VSCROLL;
+    private readonly WindowScroll _scroll = new();
 
     private const int BASE_WIN_W = 460;
     private const int BASE_WIN_H = 460;
+    // C1 (1.3.0) : « Noter l'application » tient sur sa propre rangée, au-dessus de « Copier ».
+    // Réservée seulement quand le bouton est visible (canal Store, liens externes permis).
+    private const int RATE_ROW_H = 40;
     // Section « Défi du jour » ajoutée en v1.2.0 : la fenêtre ne réserve sa hauteur
     // que lorsque la section se dessine (même prédicat que WM_PAINT, cf. plus bas).
     private const int CHALLENGE_SECTION_H = 130;
@@ -31,7 +41,44 @@ sealed class UsageStatsWindow : IDisposable
     private const int POLICY_HINT_H = 40;
     private static int WinContentH
         => BASE_WIN_H + (ChallengeSectionVisible ? CHALLENGE_SECTION_H : 0)
-           + (PolicyManager.CollectionPolicyHintNow ? POLICY_HINT_H : 0);
+           + (PolicyManager.CollectionPolicyHintNow ? POLICY_HINT_H : 0)
+           + (RateVisibleNow ? RATE_ROW_H : 0);
+
+    /// <summary>C1 : le bouton « Noter l'application » n'existe que si une fiche Store est à noter
+    /// (canal Store, pas AMCF ni hors paquet) et que la politique permet d'ouvrir des liens externes.
+    /// Pure : testable sans fenêtre.</summary>
+    internal static bool RateButtonVisible(DistributionChannel channel, bool externalLinks)
+        => StoreReview.RatesOnStore(channel) && externalLinks;
+
+    private static bool RateVisibleNow
+        => RateButtonVisible(AppChannel.Current, PolicyManager.ExternalLinksEnabledNow);
+
+    /// <summary>Ordonnées (zone de contenu, origine en haut, sans défilement) des rangées posées sous
+    /// le texte : liens, bouton « Noter », boutons « Copier » et « Fermer ».</summary>
+    internal readonly record struct Rows(int LinkY, int RateY, int ButtonY, int ContentHeight);
+
+    /// <summary>
+    /// A1 : les rangées du bas suivent le texte mesuré au lieu de l'estimer. Une hauteur fixe
+    /// laissait, à 200 % ou 300 %, les paragraphes qui reviennent à la ligne passer sous les
+    /// boutons ancrés en bas. La hauteur de référence reste un plancher : à 100 % la fenêtre
+    /// garde sa taille, boutons au bas du cadre.
+    /// </summary>
+    /// <param name="textBottom">Bas du texte peint (y suivant le dernier paragraphe).</param>
+    /// <param name="minContentH">Hauteur de référence, à l'échelle de l'écran.</param>
+    /// <param name="s">Mise à l'échelle d'une valeur de référence.</param>
+    internal static Rows ComputeRows(int textBottom, int minContentH, bool rateVisible, Func<int, int> s)
+    {
+        int margin = s(20), btnH = s(32), linkH = s(22);
+        int flowLinkY = textBottom + s(6);
+        int flowRateY = flowLinkY + linkH + s(8);
+        int flowBtnY = rateVisible ? flowRateY + btnH + s(8) : flowLinkY + linkH + s(10);
+        int contentH = Math.Max(minContentH, flowBtnY + btnH + margin);
+
+        int btnY = contentH - margin - btnH;
+        int rateY = rateVisible ? btnY - s(8) - btnH : 0;
+        int linkY = (rateVisible ? rateY : btnY) - s(rateVisible ? 8 : 10) - linkH;
+        return new Rows(linkY, rateY, btnY, contentH);
+    }
 
     // ── Couleurs ────────────────────────────────────────────────────
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
@@ -41,6 +88,7 @@ sealed class UsageStatsWindow : IDisposable
 
     private IntPtr _hWnd;
     private IntPtr _hWndBtnCopy;
+    private IntPtr _hWndBtnRate;
     private IntPtr _hWndBtnClose;
     private IntPtr _hWndLinkFeedback;
     private IntPtr _hWndLinkDiscord;
@@ -95,8 +143,7 @@ sealed class UsageStatsWindow : IDisposable
             try
             {
                 RecreateFonts();
-                ResizeWindow();
-                RepositionControls();
+                FitWindow();
             }
             catch { }
         }
@@ -122,6 +169,7 @@ sealed class UsageStatsWindow : IDisposable
     private void ApplyFontsToControls()
     {
         Win32.SendMessageW(_hWndBtnCopy, Win32.WM_SETFONT, FontText.Handle, (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnRate, Win32.WM_SETFONT, FontText.Handle, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnClose, Win32.WM_SETFONT, FontText.Handle, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLink, (IntPtr)1);
@@ -135,7 +183,7 @@ sealed class UsageStatsWindow : IDisposable
         if (!NativeWindow.RegisterClass(className, _wndProcDelegate))
             return;
 
-        uint dwStyle = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+        uint dwStyle = Style;
         var (windowW, windowH) = NativeWindow.OuterSize(S(BASE_WIN_W), S(WinContentH), dwStyle);
         var (x, y) = NativeWindow.CenterIn(NativeWindow.WorkArea(), windowW, windowH);
 
@@ -145,7 +193,11 @@ sealed class UsageStatsWindow : IDisposable
         _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
 
         // AG130-40 : cette fenetre veut Tab, Maj+Tab et Entree entre ses controles.
-        DialogNavigation.Register(_hWnd);
+        // A1 : Tab vers un contrôle sous le pli le fait défiler jusqu'à lui ; Page haut et bas,
+        // Début et Fin défilent quand le focus est sur un bouton. Le défilement repeint le texte.
+        _scroll.Scrolled = () => Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
         NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
@@ -177,6 +229,13 @@ sealed class UsageStatsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_COPY, hInstance, IntPtr.Zero);
 
+        // C1 : « Noter l'application », créé après « Copier » (ordre de tabulation) et masqué
+        // quand il n'y a pas de fiche à noter ; FitWindow règle sa visibilité à chaque mise en page.
+        _hWndBtnRate = Win32.CreateWindowExW(0, "BUTTON", L.Stats_BtnRate,
+            Win32.WS_CHILD | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_BTN_RATE, hInstance, IntPtr.Zero);
+
         _hWndBtnClose = Win32.CreateWindowExW(0, "BUTTON", L.Common_Close,
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
@@ -186,42 +245,85 @@ sealed class UsageStatsWindow : IDisposable
         if (!_pal.HighContrast)
         {
             LightButton.Attach(_hWndBtnCopy, paper: true);
+            LightButton.Attach(_hWndBtnRate, paper: true);
             LightButton.Attach(_hWndBtnClose, paper: true);
         }
 
-        RepositionControls();
+        FitWindow();
     }
 
-    private void ResizeWindow() =>
-        NativeWindow.ResizeAroundCenter(_hWnd, S(BASE_WIN_W), S(WinContentH),
-            Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU);
-
-    private void RepositionControls()
+    /// <summary>
+    /// A1 : la fenêtre à sa largeur de référence plafonnée à la zone de travail de son écran, et à
+    /// la hauteur de son contenu mesuré, plafonnée de même ; au-delà, le contenu défile (barre,
+    /// molette, clavier). Même mécanique que l'Accueil et les Paramètres.
+    /// </summary>
+    private void FitWindow()
     {
-        int winW = S(BASE_WIN_W);
-        int winH = S(WinContentH);
-        int margin = S(20);
+        var work = NativeWindow.WorkArea(_hWnd);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, Style);
+        // La dernière mise en page de FitScrollable est celle de fit.LayoutWidth : les contrôles
+        // sont déjà à leur place.
+        var fit = WindowSizing.FitScrollable(S(BASE_WIN_W), PlaceControls, frameW, frameH,
+            work.right - work.left, work.bottom - work.top, NativeWindow.ScrollBarWidth(_hWnd));
 
-        int btnH = S(32);
-        int btnY = winH - margin - btnH;
+        NativeWindow.ResizeAroundCenter(_hWnd, fit.ClientWidth, fit.ClientHeight, Style);
+        NativeWindow.KeepInWorkArea(_hWnd);
+        _scroll.Reset(_hWnd, fit.ContentHeight, fit.ClientHeight);
+    }
+
+    /// <summary>
+    /// Les contrôles à la largeur de mise en page donnée, posés à l'origine (sans défilement) ;
+    /// rend la hauteur du contenu. Le texte est mesuré à cette largeur, avec la plus longue des
+    /// deux phrases du pied (« copié » ou confidentialité) : l'afficher ou l'effacer ne déplace
+    /// donc jamais les boutons.
+    /// </summary>
+    private int PlaceControls(int layoutW)
+    {
+        bool rate = RateVisibleNow;
+        var rows = ComputeRows(MeasureTextBottom(layoutW), S(WinContentH), rate, S);
+        int margin = S(20), btnH = S(32);
 
         int btnCloseW = S(90);
-        int btnCloseX = winW - margin - btnCloseW;
-        Win32.MoveWindow(_hWndBtnClose, btnCloseX, btnY, btnCloseW, btnH, true);
+        int btnCloseX = layoutW - margin - btnCloseW;
+        Win32.MoveWindow(_hWndBtnClose, btnCloseX, rows.ButtonY, btnCloseW, btnH, true);
 
         int btnCopyW = S(210);
         int btnCopyX = btnCloseX - S(12) - btnCopyW;
-        Win32.MoveWindow(_hWndBtnCopy, btnCopyX, btnY, btnCopyW, btnH, true);
+        Win32.MoveWindow(_hWndBtnCopy, btnCopyX, rows.ButtonY, btnCopyW, btnH, true);
+
+        Win32.ShowWindow(_hWndBtnRate, rate ? 5 : 0);
+        if (rate)
+            Win32.MoveWindow(_hWndBtnRate, btnCopyX, rows.RateY, btnCopyW, btnH, true);
 
         // Liens retours/communauté sur une ligne au-dessus des boutons
         int linkH = S(22);
-        int linkY = btnY - S(10) - linkH;
         int wFeedback = S(130);
         int wDiscord = S(240);
         int linkGap = S(24);
-        int linksX = (winW - wFeedback - wDiscord - linkGap) / 2;
-        Win32.MoveWindow(_hWndLinkFeedback, linksX, linkY, wFeedback, linkH, true);
-        Win32.MoveWindow(_hWndLinkDiscord, linksX + wFeedback + linkGap, linkY, wDiscord, linkH, true);
+        int linksX = (layoutW - wFeedback - wDiscord - linkGap) / 2;
+        Win32.MoveWindow(_hWndLinkFeedback, linksX, rows.LinkY, wFeedback, linkH, true);
+        Win32.MoveWindow(_hWndLinkDiscord, linksX + wFeedback + linkGap, rows.LinkY, wDiscord, linkH, true);
+        return rows.ContentHeight;
+    }
+
+    /// <summary>Bas du texte peint à la largeur donnée : la peinture elle-même, sur un bitmap d'un
+    /// pixel (tout est rogné, seul le y final compte).</summary>
+    private int MeasureTextBottom(int width)
+    {
+        var (dc, bitmap, previous) = PaintBuffer.CreateSurface(Math.Max(1, width), 1);
+        bool ownDc = dc == IntPtr.Zero;
+        if (ownDc) dc = Win32.GetDC(_hWnd);
+        try
+        {
+            var area = new Win32.RECT { left = 0, top = 0, right = Math.Max(1, width), bottom = 1 };
+            return Math.Max(DrawContents(dc, area, copiedFeedback: false),
+                            DrawContents(dc, area, copiedFeedback: true));
+        }
+        finally
+        {
+            if (ownDc) Win32.ReleaseDC(_hWnd, dc);
+            else PaintBuffer.ReleaseSurface(dc, bitmap, previous);
+        }
     }
 
     /// <summary>Affiche la fenêtre. Les compteurs sont relus à chaque ouverture (pas de cache).</summary>
@@ -229,9 +331,8 @@ sealed class UsageStatsWindow : IDisposable
     {
         _showCopiedFeedback = false;
         // La visibilité de la section « Défi du jour » peut changer entre deux ouvertures :
-        // la hauteur se recalcule à chaque affichage.
-        ResizeWindow();
-        RepositionControls();
+        // la hauteur se recalcule à chaque affichage ; la fenêtre se rouvre en haut.
+        FitWindow();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
@@ -239,27 +340,16 @@ sealed class UsageStatsWindow : IDisposable
     }
 
     /// <summary>
-    /// Émis à la fermeture de la fenêtre lorsque l'utilisateur a copié son résumé de
-    /// statistiques pendant la visite. Même report que <see cref="LessonsWindow"/> et son
-    /// <c>ChallengeShared</c> : solliciter à l'instant du clic couperait le geste en deux,
-    /// alors que l'utilisateur part précisément coller son résumé ailleurs.
+    /// C1 (1.3.0) : demandé par le bouton « Noter l'application » seulement. « Copier » ne
+    /// sollicite plus d'avis : la demande part d'un geste explicite, jamais d'un partage.
+    /// Reçoit la fenêtre propriétaire de la boîte de notation (cette fenêtre).
     /// </summary>
-    public Action? StatsShared;
-
-    private bool _statsSharedThisSession;
+    public Action<IntPtr>? RateRequested;
 
     public void Close()
     {
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
-
-        // Les trois chemins de fermeture — bouton, Échap, WM_CLOSE — passent tous ici.
-        if (_statsSharedThisSession)
-        {
-            _statsSharedThisSession = false;
-            try { StatsShared?.Invoke(); }
-            catch (Exception ex) { ConfigManager.Log("UsageStatsWindow.StatsShared", ex); }
-        }
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -280,10 +370,16 @@ sealed class UsageStatsWindow : IDisposable
                     _dpiScale = NativeWindow.DpiFromChange(_hWnd, wParam) / 96f;
                     RecreateFonts();
                     NativeWindow.MoveToSuggestedRect(_hWnd, lParam);
-                    RepositionControls();
+                    FitWindow();
                     Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     return IntPtr.Zero;
                 }
+
+                case Win32.WM_VSCROLL:
+                case Win32.WM_MOUSEWHEEL:
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
+                    break;
 
                 case Win32.WM_COMMAND:
                 {
@@ -293,18 +389,28 @@ sealed class UsageStatsWindow : IDisposable
                     switch (id)
                     {
                         // Revue du 2026-09-21, R5 : Entrée et Échap arrivent d'IsDialogMessageW
-                        // en WM_COMMAND. Entrée sur « Copier » copie, ailleurs elle ferme ; Échap ferme.
+                        // en WM_COMMAND. Entrée sur « Copier » copie, sur « Noter » note, ailleurs elle
+                        // ferme ; Échap ferme.
                         case DialogNavigation.IDOK:
-                            if (DialogNavigation.ButtonToPressOnEnter(id, Win32.GetFocus(), new[] { _hWndBtnCopy }) != IntPtr.Zero)
+                        {
+                            IntPtr pressed = DialogNavigation.ButtonToPressOnEnter(id, Win32.GetFocus(),
+                                new[] { _hWndBtnCopy, _hWndBtnRate });
+                            if (pressed == _hWndBtnCopy && pressed != IntPtr.Zero)
                                 OnCopyStats();
+                            else if (pressed == _hWndBtnRate && pressed != IntPtr.Zero)
+                                OnRate();
                             else
                                 Close();
                             break;
+                        }
                         case DialogNavigation.IDCANCEL:
                             Close();
                             break;
                         case IDC_BTN_COPY:
                             OnCopyStats();
+                            break;
+                        case IDC_BTN_RATE:
+                            OnRate();
                             break;
                         case IDC_BTN_CLOSE:
                             Close();
@@ -349,6 +455,8 @@ sealed class UsageStatsWindow : IDisposable
                     return IntPtr.Zero;
 
                 case Win32.WM_KEYDOWN:
+                    if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
                     if (wParam == (IntPtr)0x1B) // VK_ESCAPE
                     {
                         Close();
@@ -377,11 +485,18 @@ sealed class UsageStatsWindow : IDisposable
     {
         if (ClipboardText.TrySet(_hWnd, UsageStats.BuildShareText()))
         {
-            _statsSharedThisSession = true;
             _showCopiedFeedback = true;
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             Win32.SetTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK, 1500, IntPtr.Zero);
         }
+    }
+
+    /// <summary>C1 : « Noter l'application » — la demande d'avis vient de ce clic, et d'aucun
+    /// autre geste de la fenêtre. TrayApplication ouvre la boîte de notation du Store.</summary>
+    private void OnRate()
+    {
+        try { RateRequested?.Invoke(_hWnd); }
+        catch (Exception ex) { ConfigManager.Log("UsageStatsWindow.RateRequested", ex); }
     }
 
     // La copie elle-même vit dans ClipboardText.TrySet depuis la v1.2.0, avec le même
@@ -390,11 +505,55 @@ sealed class UsageStatsWindow : IDisposable
 
     private void OnPaint(IntPtr hWnd)
     {
+        if (_scroll.Needed)
+        {
+            OnPaintScrolled(hWnd);
+            return;
+        }
         using var paint = new PaintBuffer(hWnd);
-        var clientRect = paint.Client;
+        DrawContents(paint.Hdc, paint.Client, _showCopiedFeedback);
+    }
+
+    /// <summary>
+    /// A1 : fenêtre qui défile — tout le texte est dessiné dans un bitmap de la hauteur du contenu,
+    /// et la partie visible en est copiée (même méthode que l'Accueil et les Leçons). Les boutons et
+    /// les liens, eux, sont décalés par <see cref="WindowScroll"/>.
+    /// </summary>
+    private void OnPaintScrolled(IntPtr hWnd)
+    {
+        IntPtr target = Win32.BeginPaint(hWnd, out var ps);
+        try
+        {
+            Win32.GetClientRect(hWnd, out var client);
+            var canvas = new Win32.RECT { left = 0, top = 0, right = client.right,
+                bottom = Math.Max(_scroll.ContentHeight, client.bottom) };
+            var (dc, bitmap, previous) = PaintBuffer.CreateSurface(canvas.right, canvas.bottom);
+            if (dc == IntPtr.Zero)
+            {
+                // Mémoire refusée : directement à l'écran, origine décalée du défilement.
+                Win32.SetViewportOrgEx(target, 0, -_scroll.Position, IntPtr.Zero);
+                DrawContents(target, canvas, _showCopiedFeedback);
+                Win32.SetViewportOrgEx(target, 0, 0, IntPtr.Zero);
+                return;
+            }
+            try
+            {
+                DrawContents(dc, canvas, _showCopiedFeedback);
+                Win32.BitBlt(target, 0, 0, client.right, client.bottom, dc, 0, _scroll.Position, Win32.SRCCOPY);
+            }
+            finally { PaintBuffer.ReleaseSurface(dc, bitmap, previous); }
+        }
+        finally { Win32.EndPaint(hWnd, ref ps); }
+    }
+
+    /// <summary>
+    /// Le texte de la fenêtre dans <paramref name="clientRect"/> (origine en haut à gauche) ; rend
+    /// le bas du dernier paragraphe, que <see cref="PlaceControls"/> mesure pour poser les liens et
+    /// les boutons dessous. <paramref name="copiedFeedback"/> choisit la phrase du pied.
+    /// </summary>
+    private int DrawContents(IntPtr hdc, Win32.RECT clientRect, bool copiedFeedback)
+    {
         int cw = clientRect.right;
-        int ch = clientRect.bottom;
-        var hdc = paint.Hdc;
 
         Win32.FillRect(hdc, ref clientRect, _hBgBrush);
         Win32.SetBkMode(hdc, 1);
@@ -453,16 +612,17 @@ sealed class UsageStatsWindow : IDisposable
         if (ChallengeSectionVisible)
             y = DrawChallengeSection(hdc, margin, y, cw - margin);
 
-        string reassurance = _showCopiedFeedback
+        string reassurance = copiedFeedback
             ? L.Stats_CopiedFeedback
             : collectionOff
                 ? L.Stats_CollectionOffPrivacy
                 : L.Stats_PrivacyReassurance;
         y = DrawWrappedLine(hdc, FontMuted, reassurance, margin, y, cw - margin * 2, S(16),
-            _showCopiedFeedback ? _pal.Action : _pal.Muted);
+            copiedFeedback ? _pal.Action : _pal.Muted);
 
         if (PolicyManager.CollectionPolicyHintNow)
-            DrawWrappedLine(hdc, FontMuted, L.Stats_CollectionOffPolicyHint, margin, y, cw - margin * 2, S(16), _pal.Muted);
+            y = DrawWrappedLine(hdc, FontMuted, L.Stats_CollectionOffPolicyHint, margin, y, cw - margin * 2, S(16), _pal.Muted);
+        return y;
     }
 
     /// <summary>Paragraphe coupé aux espaces dans <paramref name="width"/> ; rend le haut du

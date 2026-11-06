@@ -70,7 +70,7 @@ internal static partial class L
 
     // ── Réglage forcé retiré au démarrage ────────────────────────────
     public static string TrayClarity_GameCompatRemovedTitle =>
-        T("Compatibilité jeu forcée retirée", "Forced game compatibility removed");
+        T("Mode jeu retiré", "Game mode removed");
     public static string TrayClarity_GameCompatRemovedBody(string list) => T(
         $"Ces jeux ont un anti-triche qui pourrait bannir votre compte : {list}. {Product} s’y mettra en pause tout seul. Rien à faire.",
         $"These games have anti-cheat that could ban your account: {list}. {Product} will pause in them on its own. Nothing to do.");

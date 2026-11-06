@@ -628,6 +628,15 @@ public sealed class KeyMapper
             }
         }
 
+        // Entrée (principale ou pavé numérique) et Tab : annuler la touche morte armée
+        // et laisser passer la touche. Sans cela l'accent restait en attente et
+        // s'accolait au premier caractère de la ligne ou du champ suivant.
+        if ((vkCode == 0x0D || vkCode == 0x09) && isKeyDown && _composition.Cancel())
+        {
+            StateChanged?.Invoke();
+            return false;
+        }
+
         // Une répétition déjà transmise reste physique. Backspace et Échap ont
         // néanmoins pu annuler un nouvel état de composition ci-dessus.
         if (isKeyDown && _keyDownOwnership.TryGetValue((scanCode, isExtended), out bool previouslyConsumed) &&
