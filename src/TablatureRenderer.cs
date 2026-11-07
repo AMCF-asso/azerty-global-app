@@ -109,6 +109,14 @@ internal sealed record TablatureStyle
         BandOverflowTop = Px(22, s), BandOverflowBottom = Px(4, s), BandBorder = Px(2, s),
     };
 
+    /// <summary>Parcours de l'accueil (option A du 07/11, maquettes-13b) : la même ligne en 44 px,
+    /// pour laisser la hauteur au clavier. Les Leçons gardent <see cref="LessonsText"/>.</summary>
+    internal static TablatureStyle TutorialText(float s) => LessonsText(s) with
+    {
+        GlyphRowHeight = Px(68, s), GlyphFont = FontSpec.Of(AppFonts.Title, 44, TypeRamp.Semibold, s),
+        NbspWidth = Px(19, s), ThinNbspWidth = Px(11, s), SpaceMarkHeight = Px(26, s),
+    };
+
     /// <summary>Recherche B : la partition du caractère choisi, grandes cases de 38 px.</summary>
     internal static TablatureStyle Search(float s) => new()
     {

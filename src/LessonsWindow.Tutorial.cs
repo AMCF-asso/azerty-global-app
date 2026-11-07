@@ -150,6 +150,30 @@ internal sealed partial class LessonsWindow
         return true;
     }
 
+    /// <summary>« ‹ Précédent » dans le parcours : l'étape d'avant, même déjà réussie, pour la
+    /// rejouer (remontée n° 13, 07/11). Faux hors parcours ou sur la première étape.</summary>
+    private bool TutorialPrevious()
+    {
+        if (!TutorialOnRouteStep) return false;
+        if (_tutorialRoutePos == 0) return true; // rien avant : le parcours ne sort pas vers l'Initiation
+        _tutorialRoutePos--;
+        ResetSummaryTab();
+        SelectExercise(LessonCatalogLoader.InitiationModuleId, LessonCatalogLoader.InitiationLessonId,
+            _tutorialRoute![_tutorialRoutePos].Index, savePosition: true);
+        _focusedActionIndex = -1;
+        UpdateAutoHintIfEnabled();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        return true;
+    }
+
+    /// <summary>« Recommencer » ou « Rejouer » dans le parcours : la même étape, depuis le début.</summary>
+    private void TutorialRestart()
+    {
+        ResetSummaryTab();
+        StartCurrentSession(savePosition: true);
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
     /// <summary>Clôt le parcours : la frappe compte de nouveau, l'accueil est prévenu.</summary>
     private void EndTutorial(bool completed)
     {
@@ -585,6 +609,23 @@ internal sealed partial class LessonsWindow
             var skip = DrawLink(hdc, 0, 0, L.Learning_BtnSkip, false, AdvanceTutorialRoute, measureOnly: true);
             x -= skip.right - skip.left - S(8);
             placed = DrawLink(hdc, x, mid, L.Learning_BtnSkip, false, AdvanceTutorialRoute);
+            x = placed.left - S(20);
+        }
+        // Remontée n° 13 (07/11) : rejouer l'étape et revenir à la précédente. Sur le bilan,
+        // « Rejouer » est un bouton à côté de Suivant (DrawPaperSummary).
+        if (!_showSummary)
+        {
+            var restart = DrawLink(hdc, 0, 0, L.LessonsWin_IconRestart, false, TutorialRestart, measureOnly: true);
+            x -= restart.right - restart.left - S(8);
+            placed = DrawLink(hdc, x, mid, L.LessonsWin_IconRestart, false, TutorialRestart);
+            x = placed.left - S(20);
+        }
+        if (_tutorialRoutePos > 0)
+        {
+            string previous = "‹ " + L.LessonsWin_IconPrevious;
+            var prev = DrawLink(hdc, 0, 0, previous, false, PreviousExercise, measureOnly: true);
+            x -= prev.right - prev.left - S(8);
+            placed = DrawLink(hdc, x, mid, previous, false, PreviousExercise);
             x = placed.left - S(20);
         }
 

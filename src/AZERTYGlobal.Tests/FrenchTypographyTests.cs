@@ -152,6 +152,30 @@ public class FrenchTypographyTests : IDisposable
             + string.Join("\n", violations.Take(40)));
     }
 
+    /// <summary>
+    /// Remontée 13b (07/11) : les explications « Pourquoi ici » du parcours, générées depuis le
+    /// brouillon validé, gardent la typographie française. Elles sortent d'un switch sur le
+    /// caractère, que le balayage des chaînes de L ne voit pas.
+    /// </summary>
+    [Fact]
+    public void TutorialExplanations_KeepFrenchTypography()
+    {
+        L.Language = "fr";
+        var violations = new List<string>();
+        int explained = 0;
+        foreach (var step in TutorialSteps.All)
+            foreach (char c in step.Target.Distinct())
+            {
+                if (L.TutorialExplanation(c) is not { } e) continue;
+                explained++;
+                CheckFrenchTypography($"explication de '{c}'", e.Why, violations);
+                if (e.Remember is { } remember)
+                    CheckFrenchTypography($"« Pour retenir » de '{c}'", remember, violations);
+            }
+        Assert.True(explained > 0, "Aucune explication lue");
+        Assert.True(violations.Count == 0, string.Join("\n", violations));
+    }
+
     /// <summary>Insécable (U+00A0 ou U+202F) avant : ; ? ! » et après «, aucune apostrophe droite.</summary>
     private static void CheckFrenchTypography(string name, string text, List<string> violations)
     {

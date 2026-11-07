@@ -370,24 +370,44 @@ internal sealed partial class LessonsWindow
 
     private void DrawPaperLesson(IntPtr hdc, Win32.RECT rc, Win32.RECT body)
     {
-        var style = TablatureStyle.LessonsText(PaperScale);
-        int partH = 1 + S(22) + style.Height + S(10) + NotationAreaHeight() + S(14) + 1;
+        // Parcours (option A du 07/11 nuit) : ligne en 44 px, geste à sa hauteur mesurée.
+        var style = IsTutorialActive ? TablatureStyle.TutorialText(PaperScale) : TablatureStyle.LessonsText(PaperScale);
+        _notationReserve = IsTutorialActive ? TutorialNotationHeight(hdc) : NotationAreaHeight();
+        int partH = 1 + S(22) + style.Height + S(10) + _notationReserve + S(14) + 1;
         var part = new Win32.RECT { left = body.left, top = body.top, right = body.right, bottom = body.top + partH };
 
         int textTop = part.bottom + S(14);
+        int belowText = textTop + S(44);
         if (_showSummary && _lastCompletedStats != null)
         {
-            DrawPaperSummary(hdc, part, _lastCompletedStats);
+            if (TutorialSummaryIsMessageOnly)
+            {
+                // Le bilan du parcours prend la zone de frappe et la consigne, plus s'il le faut.
+                int height = TutorialSummaryHeight(hdc, part.right - part.left, belowText - S(4) - part.top);
+                var box = new Win32.RECT { left = part.left, top = part.top, right = part.right, bottom = part.top + height };
+                DrawPaperSummary(hdc, box, _lastCompletedStats);
+                belowText = box.bottom + S(12);
+            }
+            else
+            {
+                DrawPaperSummary(hdc, part, _lastCompletedStats);
+            }
         }
         else
         {
             DrawPartition(hdc, part, style);
             DrawLessonTextLines(hdc, part, textTop);
         }
-        int belowText = textTop + S(44);
         belowText = DrawTutorialRouteBar(hdc, part.left, part.right, belowText); // parcours de l'accueil (LessonsWindow.Tutorial.cs)
 
-        if (ConfigManager.LessonKeyboardVisible)
+        if (IsTutorialActive && ConfigManager.LessonKeyboardVisible)
+        {
+            // Parcours : sans panneau du geste (la consigne nomme le caractère), le clavier prend
+            // la largeur, entier.
+            var (tutorialUnit, kbLeft, tutorialKbTop) = TutorialKeyboardLayout(body, belowText + S(12), 52f * PaperScale);
+            DrawPaperKeyboard(hdc, PaperKeyboard.PlaceAt(kbLeft, tutorialKbTop, tutorialUnit), lessons: true);
+        }
+        else if (ConfigManager.LessonKeyboardVisible)
         {
             float unit = 52f * PaperScale;
             var (kbW, kbH) = PaperKeyboard.Size(unit);
@@ -700,7 +720,11 @@ internal sealed partial class LessonsWindow
                 _hints.AddRequiredDeadKey(_hintCharacter.Value, state.LessonVisibleCharacters);
             }
 
-            if (!_showSummary)
+            if (_showSummary)
+            {
+                GuideSummaryTab(state); // bilan du parcours : touches de l'explication ouverte
+            }
+            else
             {
                 if (_hintBackspace || _hintMethod != null)
                 {
@@ -774,6 +798,11 @@ internal sealed partial class LessonsWindow
     private void DrawPaperSummary(IntPtr hdc, Win32.RECT box, LessonAttemptStats stats)
     {
         PaperDraw.RoundBox(hdc, box, CLR_PANEL, CLR_BORDER, 0);
+        if (TutorialSummaryIsMessageOnly)
+        {
+            DrawTutorialSummary(hdc, box); // LessonsWindow.Explanations.cs
+            return;
+        }
         int pad = S(28);
         int x = box.left + pad;
         int right = box.right - pad;
@@ -798,13 +827,6 @@ internal sealed partial class LessonsWindow
         PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_ExerciseSuccess, titleFont, titleRight - x), titleFont,
             new Win32.RECT { left = x, top = box.top + S(22), right = titleRight, bottom = box.top + S(58) }, CLR_TEXT, TextAlign.Left);
 
-        if (TutorialSummaryIsMessageOnly)
-        {
-            var messageFont = F(AppFonts.Text, 16);
-            PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_TutorialEncouragement, messageFont, right - x), messageFont,
-                new Win32.RECT { left = x, top = box.top + S(84), right = right, bottom = box.top + S(112) }, CLR_MUTED, TextAlign.Left);
-            return;
-        }
         if (!ConfigManager.LessonSummaryVisible)
             return;
 
