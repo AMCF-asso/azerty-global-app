@@ -10,6 +10,8 @@ internal static partial class L
     /// <summary>Titre du panneau de geste quand une faute attend Retour arrière (mode souple).</summary>
     public static string LessonsPaper_CorrectionTitle => T("Une faute à corriger", "A mistake to fix");
     public static string LessonsPaper_BackspaceKey => T("Retour arrière", "Backspace");
+    /// <summary>Début de la 1re ligne du bandeau « Pourquoi ici » du parcours (QCM du 07/11).</summary>
+    public static string LessonsPaper_WhyHereLabel => T("Pourquoi ici : ", "Why here: ");
     public static string LessonsPaper_ChooseLesson => T("Choisir une leçon", "Choose a lesson");
     /// <summary>Nom d'un caractère absent de l'index : le caractère entre guillemets.</summary>
     public static string LessonsPaper_CharacterFallback(string character) =>

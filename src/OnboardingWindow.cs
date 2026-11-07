@@ -946,6 +946,9 @@ sealed class OnboardingWindow : IDisposable
         _learningModuleDone = false;
         _learningModuleAttempted = false;
         _step3Reached = false;
+        // Show() relit la progression gardée : sans la remettre à zéro, l'étape 1 repassait
+        // aussitôt à « Suivant » seul (état C), sans « Essayer maintenant ».
+        ConfigManager.ResetTutorialProgress();
         ConfigManager.SetShowOnboardingAtStartup(true);
     }
 

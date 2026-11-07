@@ -2514,6 +2514,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void PreviousExercise()
     {
+        if (TutorialPrevious()) return; // parcours de l'accueil : son étape précédente (LessonsWindow.Tutorial.cs)
         if (_homeComposed != null) // séance composée : un seul exercice, on repart de son début
         {
             StartCurrentSession(savePosition: false);

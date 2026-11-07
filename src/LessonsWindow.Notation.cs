@@ -65,9 +65,17 @@ internal sealed partial class LessonsWindow
     /// </summary>
     private void DrawCurrentNotation(IntPtr hdc, Win32.RECT part, int top, int center, char? following)
     {
-        if (_session.NeedsBackspaceCorrection || _session.GetNextExpectedCharacter() is not char current) return;
+        if (_session.NeedsBackspaceCorrection)
+        {
+            // Parcours, sans panneau du geste : la consigne de correction se lit sous la ligne.
+            if (IsTutorialActive)
+                DrawCenteredRuns(hdc, new List<TextRun> { new(L.Gesture_StrikeCapital), new(L.LessonsPaper_BackspaceKey, true), new(".") },
+                    top + S(6), center, part.left + S(16), part.right - S(16));
+            return;
+        }
+        if (_session.GetNextExpectedCharacter() is not char current) return;
         int minLeft = part.left + S(16), maxRight = part.right - S(16);
-        int areaBottom = top + NotationAreaHeight();
+        int areaBottom = top + _notationReserve;
         int saved = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, part.left + 1, top, part.right - 1, areaBottom);
         try

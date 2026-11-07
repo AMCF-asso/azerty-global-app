@@ -256,6 +256,19 @@ static class ConfigManager
         SetStringList("learningUsages", TutorialSteps.NormalizeUsages(usages));
 
     /// <summary>
+    /// Remet le parcours de l’accueil à zéro : exercices réussis et parcours ouvert. Sert à
+    /// « Réinitialiser l’accueil » (Debug) : sans cela, l’accueil relisait la progression
+    /// gardée et revenait à « Suivant » seul, sans « Essayer maintenant » (remontée d’Antoine,
+    /// 07/11). Les usages choisis restent.
+    /// </summary>
+    public static void ResetTutorialProgress()
+    {
+        SetUInt("learningMaxStepCompleted", 0);
+        SetIntList("learningCompletedExercises", Array.Empty<int>());
+        SetBool("learningTutorialOpened", false);
+    }
+
+    /// <summary>
     /// Le parcours d'exercices de l'accueil a été ouvert au moins une fois (audit 1.3.0, A1) :
     /// l'étape 1 de l'accueil garde alors « Suivant », même sans exercice réussi, et les étapes
     /// suivantes (dont « Ne plus afficher ») restent atteignables d'un démarrage à l'autre.
