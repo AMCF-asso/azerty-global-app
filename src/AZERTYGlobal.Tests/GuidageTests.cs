@@ -106,6 +106,29 @@ public class GuidageTests
         Assert.Equal(new[] { VirtualKeyboard.ContextShiftLeft }, lecons.HighlightedContextIds);
     }
 
+    // Remontée d'Antoine (07/11) : sur « ÇA GÈLE À MONTRÉAL… », le A était guidé Maj + A.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Exercice_en_Verr_Maj_une_capitale_se_guide_par_Verr_Maj(bool verrMaj)
+    {
+        var methode = Recommandee("A"); // Maj + a
+
+        var guide = Guider(methode, "A", null, verrMaj, GuideOptions.CapsLockExercise);
+        Assert.Contains("Verr. Maj.", guide.HighlightedLabels);
+        Assert.Empty(guide.HighlightedContextIds); // pas de Maj
+        Assert.Equal(new[] { Touche("KeyQ") }, guide.HighlightedScancodes);
+
+        var geste = Gesture.Of("A", 'G', verrMaj, capsLockExercise: true);
+        Assert.Equal(new[] { Gesture.CapsLockCode, "KeyQ" }, geste.Select(s => s.KeyCode));
+        Assert.DoesNotContain(geste, s => s.Shift);
+
+        // Hors exercice en Verr. Maj. : Maj + A, comme avant.
+        Assert.Contains(Gesture.Of("A", 'G', verrMaj, capsLockExercise: false), s => s.Shift);
+        // Une capitale accentuée garde sa méthode (Verr. Maj. + touche de É).
+        Assert.Equal(Gesture.Of("É", 'L', verrMaj), Gesture.Of("É", 'L', verrMaj, capsLockExercise: true));
+    }
+
     [Fact]
     public void Les_exercices_1_et_2_gardent_Verr_Maj_surlignee()
     {

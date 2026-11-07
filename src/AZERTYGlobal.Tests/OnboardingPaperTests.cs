@@ -499,6 +499,34 @@ public class OnboardingPaperTests
         });
     }
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern int GetWindowLongW(IntPtr hWnd, int nIndex);
+    private static bool Principal(IntPtr bouton) => ((uint)GetWindowLongW(bouton, -16 /* GWL_STYLE */) & 0x0F) == Win32.BS_DEFPUSHBUTTON;
+
+    // Antoine, 07/11 : parcours déjà ouvert mais pas fini (état B), l'écran doit toujours
+    // inciter à « Essayer maintenant » : il garde l'accent, à droite ; « Suivant » à sa gauche.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Tant_que_le_parcours_n_est_pas_fini_Essayer_porte_l_accent_a_droite(bool dejaOuvert)
+    {
+        Avec((fenêtre, _) =>
+        {
+            BancCapture.SetField(fenêtre, "_learningModuleAttempted", dejaOuvert);
+            AllerÀ(fenêtre, Changes);
+            IntPtr essayer = Contrôle(fenêtre, "_hWndBtnTry"), suivant = Contrôle(fenêtre, "_hWndBtnNext");
+            Assert.True(Principal(essayer));
+            Assert.Equal(dejaOuvert, Win32.IsWindowVisible(suivant));
+            if (dejaOuvert)
+            {
+                Assert.False(Principal(suivant));
+                Win32.GetWindowRect(essayer, out var e);
+                Win32.GetWindowRect(suivant, out var s);
+                Assert.True(s.right < e.left);
+            }
+        });
+    }
+
     [Fact]
     public void A_l_etat_C_de_l_etape_1_le_resume_est_sur_Suivant_puisque_Essayer_est_masque()
     {

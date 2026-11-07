@@ -167,6 +167,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int _hotX = int.MinValue, _hotY = int.MinValue;
     private int _hotActionIndex = -1;
     private int _focusedActionIndex = -1;
+    // Remontée n° 7 d'Antoine (07/11) : comme Windows, l'anneau de focus ne se montre qu'après
+    // une navigation au clavier (Tab) ; un clic le cache à nouveau. La cible focalisée reste
+    // active (Entrée), seul son repère visuel attend. Réglage « toujours souligner » respecté.
+    private bool _focusCuesShown;
+    private bool FocusCuesVisible => _focusCuesShown || SystemKeyboardCues();
     private string? _hoverTooltip;
     private Win32.RECT _hoverTooltipAnchor;
     private bool _hoverTooltipPreferAbove;
@@ -1122,6 +1127,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     DestroySystemCaret(); // avant que la fenêtre suivante crée le sien
                     break; // traitement par défaut, comme avant
                 case Win32.WM_LBUTTONUP:
+                    _focusCuesShown = false;
                     OnClick(lParam);
                     return IntPtr.Zero;
                 case Win32.WM_LBUTTONDBLCLK:
@@ -1334,7 +1340,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Bornées à la partie visible, pas à toute la surface (audit du 30/10, M2).
         var tooltipBounds = _visibleCanvas.right > _visibleCanvas.left ? _visibleCanvas : rc;
         if (string.IsNullOrEmpty(_hoverTooltip))
-            DrawFocusedTooltip(hdc, tooltipBounds);
+        {
+            if (FocusCuesVisible)
+                DrawFocusedTooltip(hdc, tooltipBounds);
+        }
         else
             DrawHoverTooltip(hdc, tooltipBounds);
     }
@@ -1367,6 +1376,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void FocusFromAutomation(int index)
     {
         _focusedActionIndex = index;
+        _focusCuesShown = true; // un lecteur d'écran déplace le focus : le repère suit
         Win32.SetFocus(_hWnd);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
@@ -1876,9 +1886,18 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         }
     }
 
+    private const uint SPI_GETKEYBOARDCUES = 0x100A;
+
+    [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW")]
+    private static extern bool SystemParametersInfoBool(uint action, uint param, out bool value, uint winIni);
+
+    /// <summary>Réglage Windows « souligner les raccourcis et touches d'accès » : repères toujours visibles.</summary>
+    private static bool SystemKeyboardCues()
+        => SystemParametersInfoBool(SPI_GETKEYBOARDCUES, 0, out bool on, 0) && on;
+
     private void DrawFocusRing(IntPtr hdc)
     {
-        if (_focusedActionIndex < 0 || _clickActions.Count == 0)
+        if (_focusedActionIndex < 0 || _clickActions.Count == 0 || !FocusCuesVisible)
             return;
 
         if (_focusedActionIndex >= _clickActions.Count)
@@ -2076,6 +2095,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void MoveKeyboardFocus(int direction)
     {
         _focusedActionIndex = NextFocusIndex(_focusedActionIndex, _clickActions.Count, direction, HasTypingSurface);
+        _focusCuesShown = true;
 
         // K4 : la navigation au clavier retire l'infobulle de survol pour laisser voir celle
         // de la cible focalisée ; le prochain mouvement de souris la rétablit.
@@ -2373,7 +2393,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Même guidage que le tutoriel, réglé pour les Leçons : la méthode recommandée,
         // armement puis touche finale (audit du 25/09, L-02).
         LessonHintProvider.Guide(state, _hintMethod, _hintCharacter?.ToString() ?? "", _mapper.ActiveDeadKey,
-            _mapper.CapsLockActive, GuideOptions.Lessons);
+            _mapper.CapsLockActive, LessonGuideOptions);
     }
 
     private void ToggleAutoHints()

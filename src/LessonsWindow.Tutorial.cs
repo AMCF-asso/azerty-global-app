@@ -43,6 +43,17 @@ internal sealed partial class LessonsWindow
     private bool TutorialPageShown =>
         _tutorialPage != TutorialPage.None && _mode == WindowMode.Lessons && !_settingsOpen && !HomeShown;
 
+    /// <summary>Exercice de l'Initiation qui se tape en Verr. Maj. (« ÇA GÈLE… ») : une capitale
+    /// s'y enseigne Verr. Maj. + lettre, jamais Maj + lettre (remontée d'Antoine, 07/11).
+    /// Vrai dans le parcours comme dans les Leçons : la consigne est celle de l'exercice.</summary>
+    private bool CapsLockExercise =>
+        _mode == WindowMode.Lessons && _homeComposed == null &&
+        CurrentModule.Id == LessonCatalogLoader.InitiationModuleId &&
+        _exerciseIndex >= 0 && _exerciseIndex < TutorialSteps.All.Length &&
+        TutorialSteps.All[_exerciseIndex].KeepCapsLock;
+
+    private GuideOptions LessonGuideOptions => CapsLockExercise ? GuideOptions.CapsLockExercise : GuideOptions.Lessons;
+
     /// <summary>L'exercice affiché est l'étape courante du parcours.</summary>
     private bool TutorialOnRouteStep =>
         _tutorialRoute != null && _tutorialPage == TutorialPage.None && _homeComposed == null &&

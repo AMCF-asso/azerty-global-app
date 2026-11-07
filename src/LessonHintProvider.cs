@@ -34,6 +34,10 @@ internal readonly record struct GuideOptions(
     public static GuideOptions Lessons => default;
 
     public static GuideOptions Tutorial(bool keepCapsLock) => new(true, true, true, keepCapsLock);
+
+    /// <summary>Leçons, sur un exercice qui se tape en Verr. Maj. : une capitale se demande
+    /// par Verr. Maj., jamais par Maj (remontée d'Antoine, 07/11).</summary>
+    public static GuideOptions CapsLockExercise => new(false, false, false, true);
 }
 
 internal sealed class LessonHintProvider
@@ -204,7 +208,8 @@ internal sealed class LessonHintProvider
         if (layers.HasFlag(HintLayers.Shift))
         {
             // Verr. Maj. active et lettre : la majuscule sort déjà, Maj serait redondante.
-            if (options.SmartCapsForLetters && capsLockActive && isLetter)
+            // Exercice en Verr. Maj. : c'est elle qu'on enseigne, même éteinte.
+            if (((options.SmartCapsForLetters && capsLockActive) || options.KeepCapsLock) && isLetter)
                 state.HighlightedLabels.Add(CapsLockLabel);
             else
                 state.HighlightedContextIds.Add(VirtualKeyboard.ContextShiftLeft);

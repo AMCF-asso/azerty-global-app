@@ -127,6 +127,22 @@ internal static class Gesture
             ? Of(method)
             : Array.Empty<GestureStep>();
 
+    /// <summary>Comme <see cref="Of(string, char?, bool)"/> ; dans un exercice en Verr. Maj.
+    /// (<paramref name="capsLockExercise"/>), une capitale tapée Maj + lettre devient
+    /// Verr. Maj. puis la lettre seule (remontée d'Antoine, 07/11).</summary>
+    internal static IReadOnlyList<GestureStep> Of(string character, char? next, bool capsLockActive, bool capsLockExercise)
+    {
+        var steps = Of(character, next, capsLockActive);
+        if (!capsLockExercise || steps.Count != 1 || !steps[0].Shift || steps[0].AltGr
+            || character.Length != 1 || !char.IsLetter(character[0]) || !char.IsUpper(character[0]))
+            return steps;
+        return new[]
+        {
+            new GestureStep(false, false, CapsLockCode, KeyLabel(CapsLockCode)),
+            steps[0] with { Shift = false },
+        };
+    }
+
     /// <summary>Les temps d'une méthode de saisie.</summary>
     internal static IReadOnlyList<GestureStep> Of(MethodData method)
     {
