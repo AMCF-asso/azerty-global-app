@@ -719,11 +719,15 @@ sealed class OnboardingWindow : IDisposable
         //   C — complete             : seul « Suivant » a la position de droite habituelle
         // Etapes 2/3 : seul « Suivant » / « C'est parti ! » a la position habituelle.
         bool isStep1NotAttempted = _currentStep == 0 && !_learningModuleAttempted && !_learningModuleDone; // etat A
-        // Audit UX 1.3.0, #3 : à l'état A, « Essayer maintenant » est la seule action et porte
-        // l'accent ; sinon « Suivant » le porte. Entrée presse toujours le bouton focalisé.
-        Win32.SendMessageW(_hWndBtnTry, 0x00F4 /* BM_SETSTYLE */,
-            (IntPtr)(isStep1NotAttempted ? Win32.BS_DEFPUSHBUTTON : Win32.BS_PUSHBUTTON), (IntPtr)1);
         bool isStep1Attempted    = _currentStep == 0 &&  _learningModuleAttempted && !_learningModuleDone; // etat B
+        // Audit UX 1.3.0, #3, revu par Antoine le 07/11 : tant que le parcours n'est pas fini
+        // (états A et B), « Essayer maintenant » porte l'accent, à droite ; « Suivant » ne le
+        // porte qu'ailleurs. Entrée presse toujours le bouton focalisé.
+        bool tryIsPrimary = isStep1NotAttempted || isStep1Attempted;
+        Win32.SendMessageW(_hWndBtnTry, 0x00F4 /* BM_SETSTYLE */,
+            (IntPtr)(tryIsPrimary ? Win32.BS_DEFPUSHBUTTON : Win32.BS_PUSHBUTTON), (IntPtr)1);
+        Win32.SendMessageW(_hWndBtnNext, 0x00F4 /* BM_SETSTYLE */,
+            (IntPtr)(tryIsPrimary ? Win32.BS_PUSHBUTTON : Win32.BS_DEFPUSHBUTTON), (IntPtr)1);
         // etat C = _currentStep == 0 && _learningModuleDone (ou etapes 2/3) → comportement standard
 
         string nextText = _currentStep == OnboardingStep.Last
@@ -751,21 +755,22 @@ sealed class OnboardingWindow : IDisposable
         }
         else if (isStep1Attempted)
         {
-            // Etat B : « Essayer maintenant » a gauche, « Suivant » a droite (gap 12px).
+            // Etat B : « Essayer maintenant » (accent) a droite, « Suivant » a gauche (gap 12px).
             Win32.ShowWindow(_hWndBtnNext, 1);
             Win32.ShowWindow(_hWndBtnTry, 1);
-            var nextGeomB = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
-            MoveCtl(_hWndBtnNext, nextGeomB.x, btnBottomY, nextGeomB.width, S(BASE_BTN_H));
-
             string tryText = TryButtonText;
             IntPtr hdc = Win32.GetDC(_hWnd);
             int tryTextW;
             try { tryTextW = MeasureSingleLineWidth(hdc, _hFontButton, tryText); }
             finally { Win32.ReleaseDC(_hWnd, hdc); }
             int tryWidth = Math.Max(S(BASE_BTN_W_NEXT_MIN), tryTextW + S(BASE_BTN_TEXT_PAD * 2));
-            int tryX = nextGeomB.x - S(12) - tryWidth;
+            int tryX = btnWinW - btnMargin - tryWidth;
             MoveCtl(_hWndBtnTry, tryX, btnBottomY, tryWidth, S(BASE_BTN_H));
-            _step1ButtonsLeft = tryX;
+
+            var nextGeomB = ComputeNextButtonGeometry(nextText, btnWinW, btnMargin);
+            int nextX = tryX - S(12) - nextGeomB.width;
+            MoveCtl(_hWndBtnNext, nextX, btnBottomY, nextGeomB.width, S(BASE_BTN_H));
+            _step1ButtonsLeft = nextX;
         }
         else
         {

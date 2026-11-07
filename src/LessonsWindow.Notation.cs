@@ -52,7 +52,7 @@ internal sealed partial class LessonsWindow
         string glyph = current.ToString();
         // É, È, Ç, À avant une minuscule : touche morte circonflexe, pas Verr. Maj. (12/10),
         // sauf Verr. Maj. déjà allumée.
-        var gesture = Gesture.Of(glyph, following, _mapper.CapsLockActive);
+        var gesture = Gesture.Of(glyph, following, _mapper.CapsLockActive, CapsLockExercise);
         if (gesture.Count == 0) return null;
         if (gesture.Count == 1 && !gesture[0].Shift && !gesture[0].AltGr && Gesture.StrikesItsOwnKey(glyph, gesture))
             return null;

@@ -27,6 +27,10 @@ internal static partial class L
     public static string LessonsWin_ExerciseDone => T("Exercice terminé", "Exercise done");
     public static string LessonsWin_LineLabel(int current, int total) => T($"Ligne {current}/{total}", $"Line {current}/{total}");
     public static string LessonsWin_ExerciseSuccess => T("Exercice réussi", "Exercise passed");
+    /// <summary>Bilan du parcours de l'accueil, sans chiffres (remontée n° 12, 07/11).</summary>
+    public static string LessonsWin_TutorialEncouragement => T(
+        "Bien joué. Prenez votre temps : la vitesse viendra d’elle-même.",
+        "Well done. Take your time: speed will come on its own.");
     public static string LessonsWin_MetricSpeed => T("Vitesse", "Speed");
     public static string LessonsWin_MetricAccuracy => T("Précision", "Accuracy");
     public static string LessonsWin_MetricErrors => T("Erreurs", "Errors");

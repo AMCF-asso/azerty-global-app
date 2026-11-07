@@ -104,6 +104,43 @@ public class ParcoursAccueilTests
         }
     }
 
+    /// <summary>Remontée n° 12 (07/11) : « Il ne faut pas brusquer l'utilisateur. » Le bilan du
+    /// parcours n'a ni vitesse, ni précision, ni erreurs ; celui des Leçons les garde.</summary>
+    [Fact]
+    public void Le_bilan_du_parcours_encourage_sans_chiffres_celui_des_Lecons_garde_les_mesures()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            window.BeginTutorial();
+            BancCapture.Call(window, "StartTutorialRoute");
+            Type(window, "É");
+            Assert.True(BancCapture.Field<bool>(window, "_showSummary"));
+            Assert.True(window.TutorialSummaryIsMessageOnly);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+
+        var lessons = Open();
+        try
+        {
+            Assert.True((bool)BancCapture.Call(lessons, "SelectExercise", LessonCatalogLoader.InitiationModuleId,
+                LessonCatalogLoader.InitiationLessonId, 0, false)!);
+            Type(lessons, "É");
+            Assert.True(BancCapture.Field<bool>(lessons, "_showSummary"));
+            Assert.False(lessons.TutorialSummaryIsMessageOnly);
+        }
+        finally
+        {
+            BancCapture.Teardown(lessons);
+        }
+
+        Assert.DoesNotContain(L.LessonsWin_TutorialEncouragement, char.IsDigit);
+    }
+
     [Fact]
     public void Suivant_suit_le_parcours_jusqu_a_l_ecran_final_puis_Terminer_previent_l_accueil()
     {
@@ -346,6 +383,36 @@ public class ParcoursAccueilTests
             Paint(window);
             Assert.Contains(L.LessonsWin_SettingsTab, ControlNames(window));
             Assert.Equal(L.LessonsWin_WindowTitle, Caption(window));
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    // Remontée n° 7 d'Antoine (07/11) : l'anneau de focus entourait « Des mails et des
+    // documents » dès l'ouverture de l'écran des usages ; il n'apparaît qu'après Tab.
+    [Fact]
+    public void L_anneau_de_focus_n_apparait_qu_apres_Tab()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            if ((bool)typeof(LessonsWindow).GetMethod("SystemKeyboardCues",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, null)!)
+                return; // réglage Windows « toujours souligner » : repère toujours visible, voulu
+            window.BeginTutorial(); // ouvre l'écran des usages
+            Paint(window);
+            Assert.True(BancCapture.Field<int>(window, "_focusedActionIndex") >= 0); // Entrée reste active
+            Assert.False((bool)BancCapture.Call(window, "get_FocusCuesVisible")!);
+
+            BancCapture.Call(window, "MoveKeyboardFocus", 1);
+            Assert.True((bool)BancCapture.Call(window, "get_FocusCuesVisible")!);
+
+            IntPtr hwnd = BancCapture.Handle(window);
+            Win32.SendMessageW(hwnd, 0x0202 /* WM_LBUTTONUP */, IntPtr.Zero, IntPtr.Zero);
+            Assert.False((bool)BancCapture.Call(window, "get_FocusCuesVisible")!);
         }
         finally
         {

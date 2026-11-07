@@ -48,6 +48,10 @@ internal sealed class PaperKeyboardState
     /// <summary>Accueil : touches de fonction qui gardent leur nom (<see cref="VirtualKeyboard.VisualKey.Label"/>) ;
     /// les autres restent muettes.</summary>
     public HashSet<string> NamedFunctionLabels { get; } = new(StringComparer.Ordinal);
+    /// <summary>Carte (<see cref="PaperKeyboardMode.Map"/>) du parcours : toutes les légendes
+    /// restent à leur place, celles de la couche active en encre, les autres en
+    /// <see cref="PaperKeyboard.InactiveLegendInk"/> (remontée n° 10 d'Antoine, 07/11).</summary>
+    public bool EmphasizeActiveLayer { get; init; }
 }
 
 internal static class PaperKeyboard
@@ -220,7 +224,9 @@ internal static class PaperKeyboard
         else if (mode == PaperKeyboardMode.ActiveLayer)
             DrawActiveSign(hdc, rect, key, active, activeIsDeadKey, onAction, k);
         else if (def != null)
-            DrawLegends(hdc, rect, key, def, onAction, k);
+            DrawLegends(hdc, rect, key, def, onAction, k,
+                state.EmphasizeActiveLayer ? ActiveLegend(def, key.Scancode, state.Shift, state.AltGr, state.CapsLock) ?? "" : null,
+                state.EmphasizeActiveLayer ? def.GetOutput(state.Shift, state.AltGr, state.CapsLock) : null);
 
         if (step > 0)
             DrawBadge(hdc, rect, step, k);
@@ -398,37 +404,78 @@ internal static class PaperKeyboard
 
     // ── Carte à quatre légendes (Leçons F) ─────────────────────────────
 
-    private static void DrawLegends(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, KeyDefinition def,
-        bool onAction, float k)
+    /// <summary>Encre des légendes hors couche active, sur la carte de l'onboarding : lisible,
+    /// en retrait. Réglée en direct avec Antoine (remontée n° 10, 07/11).</summary>
+    internal static uint InactiveLegendInk = PaperTheme.Pale;
+
+    /// <summary>Encre des légendes de la couche active, sur la carte du parcours : bleu foncé
+    /// (#1A2FA0), demandé par Antoine le 07/11 (remontée n° 10).</summary>
+    // Constante : un champ statique ajouté à chaud n'est pas initialisé (il valait 0, du noir).
+    internal const uint ActiveLegendInk = PaperTheme.Action; // #1A3EF2, QCM d'Antoine du 07/11 : « Bleu plus clair »
+
+    /// <summary>Ce que montre une légende : la lettre gravée devient sa capitale quand c'est elle
+    /// que la touche tape (a → A sous Maj ou Verr. Maj., é → É en Verr. Maj.).</summary>
+    internal static string? ShownLegend(string? value, string? activeLegend, string? output)
+        => value != null && value == activeLegend && !string.IsNullOrEmpty(output) ? output : value;
+
+    /// <summary>Légendes gravées sur la carte : Base, Maj (sauf sur une lettre, dont la capitale
+    /// se lit dans la lettre), Maj+AltGr (s'il diffère d'AltGr), AltGr ; l'espace n'a que ses deux
+    /// légendes de droite.</summary>
+    internal static string?[] DrawnLegends(KeyDefinition def, uint scancode)
     {
-        uint ink = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
-        uint secondary = onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary;
+        if (scancode == ScanSpace) return new[] { def.ShiftAltGr, def.AltGr };
+        bool letter = KeyboardRenderer.IsLetterKey(scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
+        return new[] { def.Base, letter ? null : def.Shift, def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null, def.AltGr };
+    }
+
+    /// <summary>La légende gravée qui dit ce que la touche tape avec ces modificateurs : à
+    /// l'identique, sinon la base en lettre pour sa capitale (a pour A sous Maj, é pour É en
+    /// Verr. Maj.) ; null si aucune ne le dit.</summary>
+    internal static string? ActiveLegend(KeyDefinition def, uint scancode, bool shift, bool altGr, bool capsLock)
+    {
+        string? output = def.GetOutput(shift, altGr, capsLock);
+        if (string.IsNullOrEmpty(output)) return null;
+        var drawn = DrawnLegends(def, scancode);
+        if (drawn.Contains(output)) return output;
+        return drawn[0] is { } baseLegend && scancode != ScanSpace
+               && string.Equals(baseLegend, output, StringComparison.OrdinalIgnoreCase) ? baseLegend : null;
+    }
+
+    private static void DrawLegends(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, KeyDefinition def,
+        bool onAction, float k, string? active = null, string? output = null)
+    {
+        uint inkBase = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
+        uint secondaryBase = onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary;
+        // Couche active (onboarding) : la légende qu'elle tape en encre, les autres en retrait.
+        bool letter = KeyboardRenderer.IsLetterKey(key.Scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
+        string? shiftAltGr = def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null;
+        uint Ink(string? value, uint normal) => active == null || onAction ? normal
+            : !string.IsNullOrEmpty(value) && value == active ? ActiveLegendInk : InactiveLegendInk;
         int left = rect.left + Scaled(6, k), right = rect.right - Scaled(5, k);
         int top = rect.top + Scaled(5, k), bottom = rect.bottom - Scaled(6, k);
 
         if (key.Scancode == ScanSpace)
         {
             var nameFont = FontSpec.Of(AppFonts.Text, Scaled(10, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular, 1f);
-            Corner(hdc, SpaceLegend(def.ShiftAltGr), nameFont, left, right, top, bottom, Corner_.TopRight, secondary);
-            Corner(hdc, SpaceLegend(def.AltGr), nameFont, left, right, top, bottom, Corner_.BottomRight, secondary);
+            Corner(hdc, SpaceLegend(def.ShiftAltGr), nameFont, left, right, top, bottom, Corner_.TopRight, Ink(def.ShiftAltGr, secondaryBase));
+            Corner(hdc, SpaceLegend(def.AltGr), nameFont, left, right, top, bottom, Corner_.BottomRight, Ink(def.AltGr, secondaryBase));
             return;
         }
 
         // Medium (ag-mono-500) : les signes fins se lisent mieux qu’en Regular (QCM du 07/10).
         var mono = (int size) => FontSpec.Of(AppFonts.Mono, Scaled(size, k), TypeRamp.Medium, 1f);
-        bool letter = KeyboardRenderer.IsLetterKey(key.Scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
-        string? shiftAltGr = def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null;
         if (letter)
         {
-            Corner(hdc, def.Base, mono(17), left, right, top, bottom, Corner_.TopLeft, ink);
+            Corner(hdc, ShownLegend(def.Base, active, output), mono(17), left, right, top, bottom, Corner_.TopLeft, Ink(def.Base, inkBase));
         }
         else
         {
-            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, secondary);
-            Corner(hdc, def.Base, mono(15), left, right, top, bottom, Corner_.BottomLeft, ink);
+            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, Ink(def.Shift, secondaryBase));
+            Corner(hdc, ShownLegend(def.Base, active, output), mono(15), left, right, top, bottom, Corner_.BottomLeft, Ink(def.Base, inkBase));
         }
-        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, secondary);
-        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, secondary);
+        // Maj+AltGr égal à AltGr n'est gravé qu'une fois : la légende AltGr vaut pour les deux.
+        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, Ink(shiftAltGr, secondaryBase));
+        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, Ink(def.AltGr, secondaryBase));
     }
 
     /// <summary>Taille commune des trois légendes secondaires (Maj, AltGr, Maj+AltGr) : 10 et

@@ -621,7 +621,8 @@ internal sealed partial class LessonsWindow
             else if (CurrentNotation() != LessonNotation.Recipe)
             {
                 // La Recette se lit déjà sous le caractère : pas deux fois la même phrase.
-                var steps = Gesture.Of(next.Value.ToString(), FollowingExpectedCharacter(), _mapper.CapsLockActive);
+                var steps = Gesture.Of(next.Value.ToString(), FollowingExpectedCharacter(), _mapper.CapsLockActive,
+                    CapsLockExercise);
                 if (steps.Count > 0)
                     runs.AddRange(Gesture.Sentence(steps));
             }
@@ -661,6 +662,13 @@ internal sealed partial class LessonsWindow
     /// l'Indice y ajoute le caractère et l'ordre des temps. Retient de quoi construire
     /// l'infobulle d'une touche au survol (L-06).
     /// </summary>
+    /// <summary>Remontée d'Antoine (07/11) : la carte de toutes les couches au repos ; dès que
+    /// Maj ou AltGr est tenue, ou Verr. Maj. allumée, chaque touche montre seulement ce qu'elle
+    /// tape, comme le clavier flottant. Avant, tenir un modificateur ne changeait rien.</summary>
+    internal static PaperKeyboardMode LessonKeyboardMode(PaperKeyboardState state)
+        => state.EmphasizeActiveLayer || !(state.Shift || state.AltGr || state.CapsLock)
+            ? PaperKeyboardMode.Map : PaperKeyboardMode.ActiveLayer;
+
     private void DrawPaperKeyboard(IntPtr hdc, KeyboardPlacement placement, bool lessons)
     {
         // A20 (audit 1.3.0) : Leçons ouvertes à côté d'un champ mot de passe, ni
@@ -715,7 +723,7 @@ internal sealed partial class LessonsWindow
                     if (!string.IsNullOrEmpty(method.DeadKeyToken))
                         state.LessonVisibleCharacters.Add(method.DeadKeyToken);
                     LessonHintProvider.Guide(state, method, next.ToString(), _mapper.ActiveDeadKey,
-                        _mapper.CapsLockActive, GuideOptions.Lessons);
+                        _mapper.CapsLockActive, LessonGuideOptions);
                     if (CurrentNotation() == LessonNotation.NumberedKeyboard)
                         AddNumberedBadges(stepBadges, next);
                 }
@@ -734,6 +742,8 @@ internal sealed partial class LessonsWindow
             ErrorScancode = state.ErrorScancode,
             Profile = profile,
             HintCharacter = state.HintCharacter,
+            // Remontée n° 10 (07/11) : le parcours garde la carte, couche active en encre.
+            EmphasizeActiveLayer = IsTutorialActive,
         };
         foreach (var sc in state.HighlightedScancodes) paper.TargetScancodes.Add(sc);
         foreach (var id in state.HighlightedContextIds) paper.TargetContextLabels.Add(id);
@@ -741,7 +751,7 @@ internal sealed partial class LessonsWindow
         foreach (var ch in state.LessonVisibleCharacters) paper.LessonVisibleCharacters.Add(ch);
         foreach (var (sc, step) in stepBadges) paper.StepBadges[sc] = step;
 
-        PaperKeyboard.Draw(hdc, placement, _layout, PaperKeyboardMode.Map, paper);
+        PaperKeyboard.Draw(hdc, placement, _layout, LessonKeyboardMode(paper), paper);
         _keyboardHover = (placement, profile, state);
     }
 
@@ -755,6 +765,11 @@ internal sealed partial class LessonsWindow
             : KeyboardRenderProfile.Full;
 
     // ── Récapitulatif ────────────────────────────────────────────────
+
+    /// <summary>Remontée n° 12 (Antoine, 07/11) : « Il ne faut pas brusquer l'utilisateur. » Dans le
+    /// parcours de l'accueil, le bilan dit seulement « Exercice réussi » et encourage : ni vitesse,
+    /// ni précision, ni erreurs, ni caractères à retravailler. Les Leçons gardent leur bilan complet.</summary>
+    internal bool TutorialSummaryIsMessageOnly => IsTutorialActive;
 
     private void DrawPaperSummary(IntPtr hdc, Win32.RECT box, LessonAttemptStats stats)
     {
@@ -783,6 +798,13 @@ internal sealed partial class LessonsWindow
         PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_ExerciseSuccess, titleFont, titleRight - x), titleFont,
             new Win32.RECT { left = x, top = box.top + S(22), right = titleRight, bottom = box.top + S(58) }, CLR_TEXT, TextAlign.Left);
 
+        if (TutorialSummaryIsMessageOnly)
+        {
+            var messageFont = F(AppFonts.Text, 16);
+            PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_TutorialEncouragement, messageFont, right - x), messageFont,
+                new Win32.RECT { left = x, top = box.top + S(84), right = right, bottom = box.top + S(112) }, CLR_MUTED, TextAlign.Left);
+            return;
+        }
         if (!ConfigManager.LessonSummaryVisible)
             return;
 
