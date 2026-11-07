@@ -973,6 +973,40 @@ static class Win32
     [DllImport("gdiplus.dll")]
     public static extern int GdipCreateHBITMAPFromBitmap(IntPtr bitmap, out IntPtr hbmReturn, uint background);
 
+    // Tracés lissés (cadres arrondis antialiasés, PaperDraw.SmoothRoundBox).
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreatePath(int fillMode, out IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDeletePath(IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipAddPathArc(IntPtr path, float x, float y, float w, float h, float start, float sweep);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipClosePathFigure(IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreateSolidFill(uint argb, out IntPtr brush);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDeleteBrush(IntPtr brush);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreatePen1(uint argb, float width, int unit, out IntPtr pen);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDeletePen(IntPtr pen);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipFillPath(IntPtr graphics, IntPtr brush, IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDrawPath(IntPtr graphics, IntPtr pen, IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipSetPixelOffsetMode(IntPtr graphics, int mode);
+
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — OLE / COM streams
     // ═══════════════════════════════════════════════════════════════

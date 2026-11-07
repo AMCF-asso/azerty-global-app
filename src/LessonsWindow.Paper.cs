@@ -132,6 +132,13 @@ internal sealed partial class LessonsWindow
 
     private void DrawPaperHeader(IntPtr hdc, Win32.RECT rc)
     {
+        // Parcours de l'accueil : en-tête réduit (LessonsWindow.Tutorial.cs), rien n'y fait
+        // quitter le parcours.
+        if (IsTutorialActive)
+        {
+            DrawTutorialHeader(hdc, rc);
+            return;
+        }
         int mid = S(29);
         int x = S(24);
         var titleFont = F(AppFonts.Title, 24, TypeRamp.Semibold);

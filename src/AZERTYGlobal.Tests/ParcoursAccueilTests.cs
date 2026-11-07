@@ -309,6 +309,68 @@ public class ParcoursAccueilTests
         }
     }
 
+    /// <summary>Remontée n° 6 d'Antoine (07/11) : « Il y a des boutons de partout. Si on clique
+    /// sur un bouton, ça nous fait quitter l'onboarding. » Pendant le parcours, l'en-tête n'offre
+    /// plus ni Aujourd'hui, ni Recommencer, ni Libre, ni Réglages, ni sélecteur, ni chevrons.</summary>
+    [Fact]
+    public void Pendant_le_parcours_rien_ne_fait_quitter_l_accueil()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            string[] leaving =
+            {
+                L.LessonsHome_Today, L.LessonsWin_IconRestart, L.LessonsPaper_FreeTyping, L.LessonsWin_SettingsTab,
+                L.LessonsWin_IconPrevious, L.LessonsWin_IconNext, L.LessonsWin_Title,
+            };
+
+            window.BeginTutorial();
+            Assert.Equal(L.Learning_WindowTitle, Caption(window));
+            Paint(window);
+            Assert.DoesNotContain(ControlNames(window), name => leaving.Contains(name));
+            Assert.Contains(L.Learning_BtnContinue, ControlNames(window));
+
+            BancCapture.Call(window, "StartTutorialRoute");
+            Paint(window);
+            var names = ControlNames(window);
+            Assert.DoesNotContain(names, name => leaving.Contains(name));
+            string picker = BancCapture.Call(window, "get_CurrentModule") is LessonModule module
+                ? $"{module.Title} {((LessonLesson)BancCapture.Call(window, "get_CurrentLesson")!).Title}" : "";
+            Assert.DoesNotContain(picker, names); // le sélecteur de leçon
+            Assert.Contains(L.LessonsWin_IconHint, names);
+            Assert.Contains(L.Learning_SkipForNow, names);
+
+            // Hors parcours, l'en-tête complet revient.
+            BancCapture.Call(window, "LeaveTutorialForNow");
+            Paint(window);
+            Assert.Contains(L.LessonsWin_SettingsTab, ControlNames(window));
+            Assert.Equal(L.LessonsWin_WindowTitle, Caption(window));
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    private static void Paint(LessonsWindow window)
+    {
+        IntPtr hwnd = BancCapture.Handle(window);
+        Win32.InvalidateRect(hwnd, IntPtr.Zero, false);
+        Win32.SendMessageW(hwnd, Win32.WM_PAINT, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    private static string Caption(LessonsWindow window)
+    {
+        var text = new System.Text.StringBuilder(256);
+        Win32.GetWindowTextW(BancCapture.Handle(window), text, text.Capacity);
+        return text.ToString();
+    }
+
+    private static string[] ControlNames(LessonsWindow window) =>
+        BancCapture.Field<System.Collections.Generic.List<LessonControlView>>(window, "_controlViews")!
+            .Select(control => control.Name).ToArray();
+
     private static TutorialSteps.RouteStep[]? HeaderRoute(LessonsWindow window) =>
         (TutorialSteps.RouteStep[]?)typeof(LessonsWindow)
             .GetProperty("TutorialRouteForHeader", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!

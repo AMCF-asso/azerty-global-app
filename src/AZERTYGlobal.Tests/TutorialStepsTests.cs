@@ -158,4 +158,13 @@ public class TutorialStepsTests : IDisposable
             TutorialSteps.NormalizeUsages(new[] { "afrique", "inconnu", "code", "documents", "code" }));
         Assert.Empty(TutorialSteps.NormalizeUsages(null));
     }
+
+    [Fact]
+    public void Chaque_exercice_d_usage_retrouve_son_usage_et_le_tronc_commun_aucun()
+    {
+        foreach (var (usage, step) in TutorialSteps.UsagesByPriority)
+            Assert.Equal(usage, TutorialSteps.UsageOf(step));
+        for (int i = 0; i < TutorialSteps.DoneThreshold; i++)
+            Assert.Null(TutorialSteps.UsageOf(i));
+    }
 }

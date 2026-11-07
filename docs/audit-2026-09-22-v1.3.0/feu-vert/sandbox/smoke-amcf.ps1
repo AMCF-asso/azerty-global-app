@@ -1,6 +1,7 @@
 # Execute dans Windows Sandbox par lancer-smoke-amcf.ps1. Installe le bundle signe AMCF tel
 # quel, sans importer de certificat : la signature doit suffire sur une machine neuve.
-# S1-S5 sont automatiques ; S6 est la frappe, jugee par Antoine ; S7 desinstalle.
+# S1-S5 sont automatiques ; S6 est la frappe, jugee par Antoine ; S7 desinstalle ; S8 reinstalle
+# et verifie que la config partie avec le paquet ne saute pas l'accueil.
 $ErrorActionPreference = 'Stop'
 $log = 'C:\resultats\smoke.txt'
 $script:fails = @()
@@ -55,9 +56,28 @@ try {
     $left = @(Get-AppxPackage -Name 'AZERTYGlobal.*')
     $running = @(Get-Process -Name 'AZERTY Global' -ErrorAction SilentlyContinue)
     Check 'S7' ($left.Count -eq 0 -and $running.Count -eq 0) ("desinstallation : {0} paquet restant, {1} processus" -f $left.Count, $running.Count)
+
+    # S8 (remontee n. 1 d'Antoine, 07/11) : la config vit dans le dossier prive du paquet, la
+    # desinstallation l'efface, et une reinstallation repart a neuf, accueil compris.
+    $realDir = Join-Path $env:LOCALAPPDATA 'AZERTY Global'
+    $privateConfig = Join-Path $env:LOCALAPPDATA ('Packages\' + $package.PackageFamilyName + '\LocalCache\Local\AZERTY Global\config.json')
+    $leftReal = Test-Path $realDir
+    $leftPrivate = Test-Path $privateConfig
+    Add-AppxPackage -Path $bundle
+    $again = Get-AppxPackage -Name 'AZERTYGlobal.AZERTYGlobal'
+    Start-Process ('shell:AppsFolder\' + $again.PackageFamilyName + '!AZERTYGlobal')
+    Start-Sleep -Seconds 8
+    $welcome = @(Get-Process -Name 'AZERTY Global' -ErrorAction SilentlyContinue | Where-Object MainWindowTitle -eq 'AZERTY Global')
+    $newPrivate = Test-Path $privateConfig
+    $newReal = Test-Path $realDir
+    Check 'S8' ((-not $leftReal) -and (-not $leftPrivate) -and $newPrivate -and (-not $newReal) -and $welcome.Count -eq 1) `
+        ("apres desinstallation : dossier reel {0}, config privee {1} ; apres reinstallation : config privee {2}, dossier reel {3}, fenetre d'accueil {4}" -f `
+            $leftReal, $leftPrivate, $newPrivate, $newReal, $welcome.Count)
+    Get-Process -Name 'AZERTY Global' -ErrorAction SilentlyContinue | Stop-Process -Force
+    Remove-AppxPackage -Package $again.PackageFullName
 } catch {
     Say ('ERREUR : ' + $_.Exception.Message)
     $script:fails += 'ERREUR'
 }
-Say $(if ($script:fails.Count -eq 0) { 'VERDICT : CONFORME (S0-S7)' } else { 'VERDICT : ECHEC (' + ($script:fails -join ', ') + ')' })
+Say $(if ($script:fails.Count -eq 0) { 'VERDICT : CONFORME (S0-S8)' } else { 'VERDICT : ECHEC (' + ($script:fails -join ', ') + ')' })
 Write-Host 'Fermer le Sandbox : rien n''en sort hors de ce journal.'

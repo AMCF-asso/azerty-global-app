@@ -1900,7 +1900,7 @@ sealed class OnboardingWindow : IDisposable
     // notes au trait, hors du clavier, disent ce qui change.
 
     /// <summary>Les 13 touches concernées : ², é è ç à, d à k, la touche du point et ù.</summary>
-    private static readonly uint[] Step1ChangedKeys =
+    internal static readonly uint[] Step1ChangedKeys =
         { 0x29, 0x03, 0x08, 0x0A, 0x0B, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x33, 0x28 };
 
     /// <summary>Touches de fonction citées par les notes : les autres restent muettes.</summary>
@@ -1999,23 +1999,38 @@ sealed class OnboardingWindow : IDisposable
         int capsX = Math.Min(Math.Max((first + last - capsW) / 2, atEnd + Px(12)), right - capsW);
         Note("É È Ç À", L.Onboarding_NoteCaps, capsX, combY - Px(13));
 
-        void Down(float units, uint scancode, int depth, string sign, string text, int gap = 20)
+        // units = null : le trait descend tout droit du milieu de la touche.
+        void Down(float? units, uint scancode, int depth, string sign, string text, int gap = 20)
         {
-            int x = p.OriginX + (int)Math.Round(units * p.Scale);
-            int y0 = KeyRect(p, scancode).bottom + 1;
+            var key = KeyRect(p, scancode);
+            int x = units is float u ? p.OriginX + (int)Math.Round(u * p.Scale) : CenterX(key);
+            int y0 = key.bottom + 1;
             int yb = kbBottom + Px(depth);
             VLine(x, y0, yb);
-            HLine(x - Px(12), x, yb);
             Dot(x, y0);
+            HLine(x - Px(12), x, yb);
             Note(sign, text, x - Px(gap) - NoteWidth(sign, text), yb + Px(4));
         }
-        // d à k par l'interstice b/n ; le point par l'interstice Espace/AltGr ; ù par l'interstice
-        // !/Maj, au-dessus de la touche Menu muette.
-        Down(7.9f, 0x23, 18, "{ } \\ | [ ]", L.Onboarding_NoteCoding);
-        Down(10.35f, 0x33, 42, ".", L.Onboarding_NotePeriod);
-        // Atelier du 03/11 : note des accents remontée de 4 px et rapprochée de son trait de 6 px
-        // (à 8 px, le texte mordait le coude du trait, long de 12 px).
-        Down(13.4f, 0x28, 62, "´ ` ~", L.Onboarding_NoteAccents, 14);
+        // Note posée sous le bout du trait, sans coude : elle commence lead px à gauche du trait,
+        // sans dépasser la marge droite.
+        void Under(uint scancode, int depth, int lead, string sign, string text)
+        {
+            var key = KeyRect(p, scancode);
+            int x = CenterX(key);
+            int y0 = key.bottom + 1;
+            int yb = kbBottom + Px(depth);
+            VLine(x, y0, yb);
+            Dot(x, y0);
+            int w = NoteWidth(sign, text);
+            Note(sign, text, Math.Min(x - Px(lead), right - w), yb + Px(13));
+        }
+        // Boucle live du 07/11 (maquette Paint d'Antoine, 2e tour) : la note de programmation se
+        // rattache à g par l'interstice v/b ; le trait du point descend tout droit du milieu de sa
+        // touche et sa note glisse à droite sur la même ligne ; la note des accents passe sous le
+        // bout du trait de ù, sans coude.
+        Down(6.9f, 0x22, 18, "{ } \\ | [ ]", L.Onboarding_NoteCoding);
+        Down(null, 0x33, 18, ".", L.Onboarding_NotePeriod, 17);
+        Under(0x28, 18, 85, "´ ` ~", L.Onboarding_NoteAccents);
     }
 
     private static Win32.RECT KeyRect(KeyboardPlacement p, uint scancode)
