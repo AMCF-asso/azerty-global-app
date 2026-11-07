@@ -15,6 +15,33 @@ internal static partial class L
     public static string Learning_UsageLanguages => T("D’autres langues que le français", "Languages other than French");
     public static string Learning_UsageAfrica => T("Une langue d’Afrique : bambara, peul, wolof…", "An African language: Bambara, Fula, Wolof…");
 
+    // Ligne d'aide sous chaque case : ce que l'exercice de l'usage fait taper (remontée n° 7,
+    // maquette « fusion B + A » validée le 07/11).
+    public static string Learning_UsageDocumentsHelp => T("Guillemets, œ, tiret long", "Quotation marks, œ, em dash");
+    public static string Learning_UsageMessagesHelp => T("À et Ç en début de phrase", "À and Ç at the start of a sentence");
+    public static string Learning_UsageCodeHelp => T("Accolades, crochets, barre verticale", "Braces, brackets, vertical bar");
+    public static string Learning_UsageLanguagesHelp => T("í, ò, ã : espagnol, italien, portugais", "í, ò, ã: Spanish, Italian, Portuguese");
+    public static string Learning_UsageAfricaHelp => T("Lettres africaines de l’alphabet latin", "African letters of the Latin alphabet");
+
+    // Panneau du parcours, à droite des cases : il suit les cases cochées.
+    public static string Learning_PlanTitle(int count) =>
+        T($"Votre parcours : {count} exercices", $"Your route: {count} exercises");
+    public static string Learning_PlanSubtitle => T("Il suit vos choix.", "It follows your choices.");
+    public static string Learning_PlanCapital => T("La majuscule accentuée", "The accented capital");
+    public static string Learning_PlanCapitals => T("Les capitales accentuées et le Ç", "Accented capitals and Ç");
+    public static string Learning_PlanAt => T("L’arobase", "The at sign");
+    public static string Learning_TagDocuments => T("Mails", "Emails");
+    public static string Learning_TagMessages => T("Messages", "Messages");
+    public static string Learning_TagCode => T("Code", "Code");
+    public static string Learning_TagLanguages => T("Langues", "Languages");
+    public static string Learning_TagAfrica => T("Afrique", "Africa");
+    public static string Learning_TagBonus(string tag) => T($"{tag} · bonus", $"{tag} · bonus");
+    public static string Learning_TagDefault => T("par défaut", "default");
+
+    // En-tête réduit de la fenêtre pendant le parcours (remontée n° 6 d'Antoine, 07/11).
+    public static string Learning_HeaderTitle => T("Prise en main", "Getting started");
+    public static string Learning_WindowTitle => T($"{Product} — Prise en main", $"{Product} — Getting started");
+
     // ── Boutons et ligne du parcours ───────────────────────────────────
     public static string Learning_BtnSkip => T("Passer cet exercice", "Skip this exercise");
     public static string Learning_BtnFinish => T("Terminer", "Finish");

@@ -27,6 +27,12 @@ public partial class KeyboardContextBench
     {
         // 1re page : le choix des usages, une case cochée.
         new("tuto-usages", w => BancCapture.Call(w, "ToggleTutorialUsage", 1)),
+        // Aucune case : le parcours par défaut (Documents). Les cinq : le panneau le plus long.
+        new("tuto-usages-0", _ => { }),
+        new("tuto-usages-5", w =>
+        {
+            for (int i = 0; i < 5; i++) BancCapture.Call(w, "ToggleTutorialUsage", i);
+        }),
         // Exercice 1 du parcours Documents : « É », la ligne du parcours sous la consigne.
         new("tuto-parcours", w => BancCapture.Call(w, "StartTutorialRoute")),
         // Afrique puis Code : l'exercice Code arrive en bonus, avec « Passer cet exercice ».

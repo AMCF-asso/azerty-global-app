@@ -75,6 +75,7 @@ internal sealed partial class LessonsWindow
         _tutorialRoute = null;
         _tutorialRoutePos = -1;
         _tutorialPage = TutorialPage.Usages;
+        SetTutorialCaption(active: true);
         if (!_tutorialExcludesTyping)
         {
             UsageStats.BeginExcludedTyping();
@@ -146,6 +147,7 @@ internal sealed partial class LessonsWindow
         _tutorialPage = TutorialPage.None;
         _tutorialRoute = null;
         _tutorialRoutePos = -1;
+        SetTutorialCaption(active: false);
         if (_tutorialExcludesTyping)
         {
             UsageStats.EndExcludedTyping();
@@ -154,6 +156,14 @@ internal sealed partial class LessonsWindow
         if (!wasActive) return;
         try { TutorialClosed?.Invoke(completed); }
         catch (Exception ex) { ConfigManager.Log("LessonsWindow.TutorialClosed", ex); }
+    }
+
+    /// <summary>Barre de titre du parcours, « AZERTY Global — Prise en main », comme son en-tête
+    /// (Antoine, QCM du 07/11) ; « — Leçons » hors parcours.</summary>
+    private void SetTutorialCaption(bool active)
+    {
+        if (_hWnd != IntPtr.Zero)
+            Win32.SetWindowTextW(_hWnd, active ? L.Learning_WindowTitle : L.LessonsWin_WindowTitle);
     }
 
     private void FinishTutorial()
@@ -169,6 +179,49 @@ internal sealed partial class LessonsWindow
     }
 
     // ── Dessin ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// En-tête du parcours (remontée n° 6 d'Antoine, 07/11 : « Il y a des boutons de partout. Si
+    /// on clique sur un bouton, ça nous fait quitter l'onboarding »). Ni onglets, ni Réglages, ni
+    /// sélecteur de leçon, ni chevrons : le titre « Prise en main », les jalons du parcours sans
+    /// clic, et « Indice » sur un exercice. On n'en sort que par « Passer pour l'instant »,
+    /// Échap ou la fermeture, qui rendent la main à l'accueil, ou par l'écran final.
+    /// </summary>
+    private void DrawTutorialHeader(IntPtr hdc, Win32.RECT rc)
+    {
+        int mid = S(29);
+        int x = S(24);
+        var titleFont = F(AppFonts.Title, 24, TypeRamp.Semibold);
+        x += PaperText.DrawLine(hdc, L.Learning_HeaderTitle, titleFont,
+            new Win32.RECT { left = x, top = 0, right = rc.right, bottom = S(58) }, CLR_TEXT, TextAlign.Left);
+        x += S(24);
+
+        int linksLeft = rc.right - S(24);
+        if (TutorialOnRouteStep)
+        {
+            string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_IconHint : FormatHintButtonText();
+            bool active = _hintButtonActive || ConfigManager.LessonAutoHintsEnabled;
+            var measure = DrawLink(hdc, 0, 0, L.LessonsWin_IconHint, active, ShowHint, measureOnly: true);
+            linksLeft -= measure.right - measure.left - S(8);
+            DrawLink(hdc, linksLeft, mid, L.LessonsWin_IconHint, active, ShowHint, hintTooltip, ToggleAutoHints);
+        }
+
+        // Jalons : un trait par exercice du parcours, en couleur d'action pour le courant.
+        var route = TutorialRouteForHeader;
+        if (route == null) return;
+        int segment = S(18), segGap = S(3);
+        int room = Math.Min(S(220), linksLeft - S(24) - x);
+        if (room <= 0) return;
+        if (route.Length * (segment + segGap) > room)
+            segment = Math.Max(S(4), room / Math.Max(1, route.Length) - segGap);
+        for (int i = 0; i < route.Length; i++)
+        {
+            var ex = CurrentLesson.Exercises[route[i].Index];
+            uint color = i == _tutorialRoutePos ? CLR_ACCENT : _progress.IsCompleted(ex) ? CLR_TEXT : CLR_BORDER;
+            PaperDraw.Fill(hdc, x, mid - S(1), x + segment, mid - S(1) + Math.Max(1, S(3)), color);
+            x += segment + segGap;
+        }
+    }
 
     /// <summary>Écran des usages ou écran final, dans le cadre de l'exercice. Faux s'il n'y a
     /// rien à dessiner : l'exercice se dessine alors comme d'habitude.</summary>
@@ -187,22 +240,31 @@ internal sealed partial class LessonsWindow
 
         if (_tutorialPage == TutorialPage.Usages)
         {
-            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_UsagesQuestion, titleFont, right - x), titleFont, titleRect,
+            // Deux colonnes (remontée n° 7, maquette « fusion B + A » validée le 07/11) : à gauche
+            // les cases, chacune avec ce que son exercice fait taper ; à droite le parcours
+            // qu'elles composent, redessiné à chaque case. Trop étroit : les cases seules.
+            bool twoColumns = right - x >= S(700);
+            int leftRight = twoColumns ? x + (right - x - S(40)) / 2 : right;
+            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_UsagesQuestion, titleFont, leftRight - x), titleFont, titleRect,
                 CLR_TEXT, TextAlign.Left);
-            var help = new Win32.RECT { left = x, top = titleRect.bottom + S(4), right = right, bottom = titleRect.bottom + S(26) };
-            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_UsagesHelp, textFont, right - x), textFont, help,
+            var help = new Win32.RECT { left = x, top = titleRect.bottom + S(4), right = leftRight, bottom = titleRect.bottom + S(26) };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_UsagesHelp, textFont, leftRight - x), textFont, help,
                 CLR_MUTED, TextAlign.Left);
 
-            int rowW = Math.Min(right - x, S(560));
+            int rowRight = x - S(8) + Math.Min(leftRight - x + S(8), S(568));
             int top = help.bottom + S(16);
             for (int i = 0; i < TutorialUsageIds.Length; i++)
             {
                 int index = i;
-                var row = new Win32.RECT { left = x - S(8), top = top, right = x - S(8) + rowW, bottom = top + S(36) };
-                DrawCheckRow(hdc, row, TutorialUsageLabel(i), _tutorialUsages[i], () => ToggleTutorialUsage(index));
-                top = row.bottom + S(4);
+                var row = new Win32.RECT { left = x - S(8), top = top, right = rowRight, bottom = top + S(66) };
+                DrawTutorialUsageRow(hdc, row, TutorialUsageLabel(i), TutorialUsageHelp(TutorialUsageIds[i]),
+                    _tutorialUsages[i], () => ToggleTutorialUsage(index));
+                top = row.bottom + S(7);
             }
 
+            int buttonTop = body.bottom - S(22) - S(36);
+            if (twoColumns)
+                DrawTutorialPlan(hdc, leftRight + S(40), right, titleRect.top, buttonTop - S(16));
             DrawTutorialPrimaryButton(hdc, body, right, L.Learning_BtnContinue, StartTutorialRoute);
         }
         else
@@ -381,6 +443,112 @@ internal sealed partial class LessonsWindow
         return y;
     }
 
+    /// <summary>Case d'usage sur deux lignes : le libellé, puis en gris ce que son exercice fait
+    /// taper. La ligne cochée garde un fond léger.</summary>
+    private void DrawTutorialUsageRow(IntPtr hdc, Win32.RECT row, string label, string help, bool enabled, Action toggle)
+    {
+        bool hot = IsHot(row);
+        if (hot || enabled)
+        {
+            uint fill = PaperDraw.Blend(CLR_ACCENT, CLR_PANEL, hot ? 0.08f : 0.05f);
+            PaperDraw.RoundBox(hdc, row, fill, fill, S(4));
+        }
+        int box = S(18);
+        int lineTop = row.top + S(11), lineH = S(24);
+        var square = new Win32.RECT { left = row.left + S(8), top = lineTop + (lineH - box) / 2, right = row.left + S(8) + box };
+        square.bottom = square.top + box;
+        PaperDraw.RoundBox(hdc, square, enabled ? CLR_ACCENT : CLR_PANEL, enabled ? CLR_ACCENT : CLR_PENDING, S(3));
+        if (enabled)
+            DrawTick(hdc, square);
+        int textLeft = square.right + S(12), textRight = row.right - S(8);
+        var labelFont = F(AppFonts.Text, 16);
+        var labelRect = new Win32.RECT { left = textLeft, top = lineTop, right = textRight, bottom = lineTop + lineH };
+        PaperText.DrawLine(hdc, Ellipsize(hdc, label, labelFont, textRight - textLeft), labelFont, labelRect, CLR_TEXT, TextAlign.Left);
+        var helpFont = F(AppFonts.Text, 13);
+        var helpRect = new Win32.RECT { left = textLeft, top = labelRect.bottom, right = textRight, bottom = labelRect.bottom + S(20) };
+        PaperText.DrawLine(hdc, Ellipsize(hdc, help, helpFont, textRight - textLeft), helpFont, helpRect, CLR_MUTED, TextAlign.Left);
+        AddClick(row, toggle, label + ", " + help, LessonControlKind.CheckBox, toggled: enabled);
+    }
+
+    /// <summary>Panneau « Votre parcours » de l'écran des usages : les exercices que
+    /// <see cref="TutorialSteps.BuildRoute"/> tire des cases cochées, dans l'ordre où ils seront
+    /// joués, ceux des usages en couleur d'action avec leur étiquette. La hauteur d'une ligne
+    /// décroît avec leur nombre, sans palier (QCM du 07/11) ; sous un seuil, les lignes d'aide
+    /// tombent, puis les lignes qui ne tiennent pas avant <paramref name="limit"/>.</summary>
+    private void DrawTutorialPlan(IntPtr hdc, int left, int right, int top, int limit)
+    {
+        var route = TutorialSteps.BuildRoute(TutorialUsageIds.Where((_, i) => _tutorialUsages[i]));
+        bool anyChosen = _tutorialUsages.Any(b => b);
+        int pad = S(22);
+        int headH = S(18) + S(22) + S(20) + S(8);
+        int avail = limit - top - headH - S(14);
+        int stepH = Math.Min(S(78), avail / route.Length);
+        bool withWhat = stepH >= S(46);
+        if (!withWhat)
+            stepH = Math.Max(S(28), Math.Min(S(40), avail / route.Length));
+        int shown = Math.Min(route.Length, Math.Max(0, avail / stepH));
+        if (shown == 0) return;
+
+        uint fill = PaperDraw.Blend(CLR_BG, CLR_PANEL, 0.6f);
+        var panel = new Win32.RECT { left = left, top = top, right = right, bottom = top + headH + shown * stepH + S(14) };
+        PaperDraw.RoundBox(hdc, panel, fill, CLR_BORDER, S(6));
+        int innerLeft = left + pad, innerRight = right - pad;
+        var headFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
+        var small = F(AppFonts.Text, 13);
+        var head = new Win32.RECT { left = innerLeft, top = top + S(18), right = innerRight, bottom = top + S(40) };
+        string title = L.Learning_PlanTitle(route.Length);
+        PaperText.DrawLine(hdc, Ellipsize(hdc, title, headFont, innerRight - innerLeft), headFont, head, CLR_TEXT, TextAlign.Left);
+        var sub = new Win32.RECT { left = innerLeft, top = head.bottom, right = innerRight, bottom = head.bottom + S(20) };
+        PaperText.DrawLine(hdc, Ellipsize(hdc, L.Learning_PlanSubtitle, small, innerRight - innerLeft), small, sub, CLR_MUTED, TextAlign.Left);
+
+        var sampleFont = F(AppFonts.Text, 17);
+        var codeFont = F(AppFonts.Mono, 15);
+        uint rule = PaperDraw.Blend(CLR_BORDER, fill, 0.6f);
+        int y = top + headH;
+        for (int i = 0; i < shown; i++)
+        {
+            var step = route[i];
+            string? usage = TutorialSteps.UsageOf(step.Index);
+            bool fresh = usage != null && anyChosen;
+            string what = usage != null ? TutorialUsageHelp(usage) : step.Index switch
+            {
+                0 => L.Learning_PlanCapital,
+                1 => L.Learning_PlanCapitals,
+                _ => L.Learning_PlanAt,
+            };
+            string? tag = usage == null ? null
+                : !anyChosen ? L.Learning_TagDefault
+                : step.Skippable ? L.Learning_TagBonus(TutorialUsageTag(usage))
+                : TutorialUsageTag(usage);
+
+            int contentH = withWhat ? S(24) + S(18) : S(24);
+            int lineTop = y + (stepH - contentH) / 2;
+            var number = new Win32.RECT { left = innerLeft, top = lineTop, right = innerLeft + S(24), bottom = lineTop + S(24) };
+            PaperText.DrawLine(hdc, (i + 1).ToString(), small, number, fresh ? CLR_ACCENT : CLR_MUTED, TextAlign.Left);
+            int textLeft = innerLeft + S(36), textRight = innerRight;
+            if (tag != null)
+            {
+                int tagW = PaperText.Width(hdc, tag, small);
+                var tagRect = new Win32.RECT { left = innerRight - tagW, top = lineTop, right = innerRight, bottom = lineTop + S(24) };
+                PaperText.DrawLine(hdc, tag, small, tagRect, fresh ? CLR_ACCENT : CLR_MUTED, TextAlign.Right);
+                textRight = tagRect.left - S(12);
+            }
+            var font = usage == TutorialSteps.UsageCode ? codeFont : sampleFont;
+            string sample = TutorialSteps.All[step.Index].Target;
+            var sampleRect = new Win32.RECT { left = textLeft, top = lineTop, right = textRight, bottom = lineTop + S(24) };
+            PaperText.DrawLine(hdc, Ellipsize(hdc, sample, font, textRight - textLeft), font, sampleRect,
+                fresh ? CLR_ACCENT : CLR_TEXT, TextAlign.Left);
+            if (withWhat)
+            {
+                var whatRect = new Win32.RECT { left = textLeft, top = lineTop + S(24), right = innerRight, bottom = lineTop + S(42) };
+                PaperText.DrawLine(hdc, Ellipsize(hdc, what, small, innerRight - textLeft), small, whatRect, CLR_MUTED, TextAlign.Left);
+            }
+            if (i < shown - 1)
+                PaperDraw.Fill(hdc, innerLeft, y + stepH - 1, innerRight, y + stepH - 1 + Math.Max(1, S(1)), rule);
+            y += stepH;
+        }
+    }
+
     private void DrawTutorialPrimaryButton(IntPtr hdc, Win32.RECT body, int right, string text, Action action)
     {
         int w = Math.Max(S(140), OutlineButtonWidth(hdc, text));
@@ -424,5 +592,23 @@ internal sealed partial class LessonsWindow
         TutorialSteps.UsageCode => L.Learning_UsageCode,
         TutorialSteps.UsageLanguages => L.Learning_UsageLanguages,
         _ => L.Learning_UsageAfrica,
+    };
+
+    private static string TutorialUsageHelp(string usage) => usage switch
+    {
+        TutorialSteps.UsageDocuments => L.Learning_UsageDocumentsHelp,
+        TutorialSteps.UsageMessages => L.Learning_UsageMessagesHelp,
+        TutorialSteps.UsageCode => L.Learning_UsageCodeHelp,
+        TutorialSteps.UsageLanguages => L.Learning_UsageLanguagesHelp,
+        _ => L.Learning_UsageAfricaHelp,
+    };
+
+    private static string TutorialUsageTag(string usage) => usage switch
+    {
+        TutorialSteps.UsageDocuments => L.Learning_TagDocuments,
+        TutorialSteps.UsageMessages => L.Learning_TagMessages,
+        TutorialSteps.UsageCode => L.Learning_TagCode,
+        TutorialSteps.UsageLanguages => L.Learning_TagLanguages,
+        _ => L.Learning_TagAfrica,
     };
 }

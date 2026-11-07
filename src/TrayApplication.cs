@@ -633,12 +633,14 @@ sealed class TrayApplication : IDisposable
     /// <summary>
     /// Aperçu de dev : AG_DEV_PREVIEW=vkbd,lessons,settings,about ouvre ces fenêtres au
     /// lancement. Compilé en Debug seulement : le binaire du Store n'en porte aucune trace.
+    /// L'export des rectangles (deplacer.py) écoute dans tout build Debug, aussi sans
+    /// AG_DEV_PREVIEW : la boucle live (décision du 07/11) garde le hook clavier actif.
     /// </summary>
     private void OpenDevPreviewWindows()
     {
+        DevRects.StartWatching();
         var spec = Environment.GetEnvironmentVariable("AG_DEV_PREVIEW");
         if (string.IsNullOrWhiteSpace(spec)) return;
-        DevRects.StartWatching();
         foreach (var name in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             switch (name)

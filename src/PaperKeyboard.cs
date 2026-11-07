@@ -463,16 +463,37 @@ internal static class PaperKeyboard
             int bw = (int)Math.Round(u * 0.64f), bh = (int)Math.Round(u * 0.8f);
             int top = cy + (int)Math.Round(letterSize * 0.08f) - bh / 2;
             var frame = new Win32.RECT { left = cx - bw / 2, top = top, right = cx - bw / 2 + bw - 1, bottom = top + bh - 1 };
-            PaperDraw.RoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, (int)Math.Round(bw * 0.24f),
-                Math.Max(1, (int)Math.Round(u * 1.25f / 38f)));
+            if (FrameSmooth)
+                PaperDraw.SmoothRoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, bw * FrameRadiusRatio,
+                    Math.Max(1f, u * 1.25f / 38f));
+            else
+                PaperDraw.RoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, (int)Math.Round(bw * FrameRadiusRatio),
+                    Math.Max(1, (int)Math.Round(u * 1.25f / 38f)));
         }
         // Un accent seul (´ ` ¨ ˜) est minuscule à la taille des lettres : plus grand, abaissé vers le centre.
         bool thinAccent = IsDeadKeyRef(def.Base) && text is "´" or "`" or "¨" or "˜";
-        int size = thinAccent ? Scaled(0.8f * MockKey, k) : letterSize;
-        var font = FontSpec.Of(AppFonts.Mono, size, TypeRamp.Medium, 1f);
-        int baseline = cy + (int)Math.Round(size * (thinAccent ? 0.62f : 0.34f));
+        int size = thinAccent ? Scaled(ThinAccentRatio * MockKey, k) : letterSize;
+        var font = thinAccent
+            ? FontSpec.Of(ThinAccentFont, size, ThinAccentWeight, 1f)
+            : FontSpec.Of(AppFonts.Mono, size, TypeRamp.Medium, 1f);
+        int baseline = cy + (int)Math.Round(size * (thinAccent ? ThinAccentBaseline : 0.34f));
         PaperText.Draw(hdc, text, font, cx - PaperText.Width(hdc, text, font) / 2, baseline, PaperTheme.Ink);
     }
+
+    /// <summary>Rayon des cadres bleus, en fraction de leur largeur (0,5 = pastille). Réglable
+    /// par le banc des contours (remontée n° 2 d'Antoine, 07/11).</summary>
+    internal static float FrameRadiusRatio = 0.36f; // choix d'Antoine sur la planche, 07/11 (variante C, lissée)
+
+    /// <summary>Cadres bleus lissés (GDI+) ; false = l'ancien tracé GDI en escalier, gardé pour le banc.</summary>
+    internal static bool FrameSmooth = true;
+
+    // Accent seul (´ ` ¨ ˜) sur une touche morte : taille (en touche), police, graisse, ligne de base
+    // (en taille). Remontée d'Antoine du 07/11 : le ´ de la touche ù s'affichait en gros trait
+    // (Mono medium) ; choix d'Antoine sur la planche, 07/11 : variante C, police Texte regular.
+    internal static float ThinAccentRatio = 0.8f;
+    internal static string ThinAccentFont = AppFonts.Text;
+    internal static int ThinAccentWeight = TypeRamp.Regular;
+    internal static float ThinAccentBaseline = 0.62f;
 
     private enum Corner_ { TopLeft, TopRight, BottomLeft, BottomRight }
 

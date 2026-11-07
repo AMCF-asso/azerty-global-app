@@ -59,6 +59,14 @@ internal static class TutorialSteps
         (UsageMessages, Messages),
     };
 
+    /// <summary>L'usage dont <paramref name="step"/> est l'exercice, null pour le tronc commun.</summary>
+    public static string? UsageOf(int step)
+    {
+        foreach (var (usage, index) in UsagesByPriority)
+            if (index == step) return usage;
+        return null;
+    }
+
     /// <summary>Un exercice du parcours : son rang fixe et s'il est facultatif (bonus).</summary>
     internal readonly record struct RouteStep(int Index, bool Skippable);
 

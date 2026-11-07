@@ -43,6 +43,58 @@ internal static class PaperDraw
         Win32.DeleteObject(brush);
     }
 
+    /// <summary>Même cadre que <see cref="RoundBox"/>, tracé lissé par GDI+ : GDI ne lisse pas
+    /// RoundRect, et une courbe en escalier se voit sur un contour bleu (remontée n° 2 d'Antoine,
+    /// 07/11). Le trait reste à l'intérieur de <paramref name="r"/> (bornes incluses). Si GDI+
+    /// refuse une étape, retombe sur le tracé GDI.</summary>
+    internal static void SmoothRoundBox(IntPtr hdc, Win32.RECT r, uint fill, uint border, float radius, float borderWidth)
+    {
+        IntPtr g = IntPtr.Zero, path = IntPtr.Zero, brush = IntPtr.Zero, pen = IntPtr.Zero;
+        try
+        {
+            if (Win32.GdipCreateFromHDC(hdc, out g) != 0) { g = IntPtr.Zero; Fallback(); return; }
+            Win32.GdipSetSmoothingMode(g, 4);      // AntiAlias
+            Win32.GdipSetPixelOffsetMode(g, 4);    // Half : les entiers tombent sur les bords des pixels
+            float half = borderWidth / 2f;
+            float x = r.left + half, y = r.top + half;
+            float w = r.right + 1 - r.left - borderWidth, h = r.bottom + 1 - r.top - borderWidth;
+            float rr = Math.Clamp(radius - half, 0f, Math.Min(w, h) / 2f), d = rr * 2f;
+            if (Win32.GdipCreatePath(0, out path) != 0) { path = IntPtr.Zero; Fallback(); return; }
+            if (d <= 0f)
+            {
+                Win32.GdipAddPathArc(path, x, y, 0, 0, 180, 90);
+                Win32.GdipAddPathArc(path, x + w, y, 0, 0, 270, 90);
+                Win32.GdipAddPathArc(path, x + w, y + h, 0, 0, 0, 90);
+                Win32.GdipAddPathArc(path, x, y + h, 0, 0, 90, 90);
+            }
+            else
+            {
+                Win32.GdipAddPathArc(path, x, y, d, d, 180, 90);
+                Win32.GdipAddPathArc(path, x + w - d, y, d, d, 270, 90);
+                Win32.GdipAddPathArc(path, x + w - d, y + h - d, d, d, 0, 90);
+                Win32.GdipAddPathArc(path, x, y + h - d, d, d, 90, 90);
+            }
+            Win32.GdipClosePathFigure(path);
+            if (Win32.GdipCreateSolidFill(Argb(fill), out brush) != 0) { brush = IntPtr.Zero; Fallback(); return; }
+            if (Win32.GdipCreatePen1(Argb(border), borderWidth, 2 /* UnitPixel */, out pen) != 0) { pen = IntPtr.Zero; Fallback(); return; }
+            Win32.GdipFillPath(g, brush, path);
+            Win32.GdipDrawPath(g, pen, path);
+        }
+        finally
+        {
+            if (pen != IntPtr.Zero) Win32.GdipDeletePen(pen);
+            if (brush != IntPtr.Zero) Win32.GdipDeleteBrush(brush);
+            if (path != IntPtr.Zero) Win32.GdipDeletePath(path);
+            if (g != IntPtr.Zero) Win32.GdipDeleteGraphics(g);
+        }
+
+        void Fallback() => RoundBox(hdc, r, fill, border, (int)Math.Round(radius), Math.Max(1, (int)Math.Round(borderWidth)));
+    }
+
+    /// <summary>COLORREF GDI (0x00BBGGRR) vers ARGB opaque de GDI+ (0xAARRGGBB).</summary>
+    internal static uint Argb(uint colorRef)
+        => 0xFF000000u | ((colorRef & 0xFFu) << 16) | (colorRef & 0xFF00u) | ((colorRef >> 16) & 0xFFu);
+
     /// <summary>
     /// Contour de focus des écrans papier : trait plein aux coins arrondis, posé à
     /// <paramref name="outset"/> px autour du cadre. Il remplace le rectangle pointillé de
