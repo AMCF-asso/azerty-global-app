@@ -61,6 +61,20 @@ public sealed class Audit0911Lot8bTests
         }
     }
 
+    // ── E26 : la Recherche en pause ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(Win32.WM_KEYDOWN, 0x1B, false)]  // Échap ferme la fenêtre
+    [InlineData(Win32.WM_KEYDOWN, 0x09, false)]  // Tab quitte le champ
+    [InlineData(Win32.WM_KEYDOWN, 0x41, true)]   // une lettre : saisie refusée
+    [InlineData(Win32.WM_KEYDOWN, 0x2E, true)]   // Suppr : modifie le texte
+    [InlineData(Win32.WM_CHAR, 'a', true)]
+    [InlineData(Win32.WM_PASTE, 0, true)]
+    [InlineData(Win32.WM_CUT, 0, true)]
+    [InlineData(Win32.WM_KEYUP, 0x1B, false)]
+    public void RechercheEnPause_RefuseLaSaisie_PasÉchapNiTab(uint msg, int touche, bool bloqué) =>
+        Assert.Equal(bloqué, CharacterSearch.BlockedWhilePaused(msg, touche));
+
     // ── E28 : dialogue de pause ─────────────────────────────────────────────
 
     [Theory]
