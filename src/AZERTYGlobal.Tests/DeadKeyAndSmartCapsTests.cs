@@ -181,6 +181,39 @@ public class DeadKeyAndSmartCapsTests : IDisposable
         Assert.Equal("e", EmittedText(mock));
     }
 
+    // E15 (audit 09/11) : Échap ou un raccourci Ctrl abandonne la touche morte armée, sans rien
+    // écrire ; la lettre suivante sort nue.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ProcessKey_EscapeOrCtrlShortcut_CancelsActiveDeadKey(bool ctrlX)
+    {
+        var mock = new MockWin32Api();
+        var mapper = new KeyMapper(_layout, mock);
+
+        mapper.ProcessKey(0, SC_C11, 0, true); // dk_acute actif
+        Assert.NotNull(mapper.ActiveDeadKey);
+        mock.SendInputCalls.Clear();
+
+        if (ctrlX)
+        {
+            mock.AsyncKeyStateScript[0xA2] = KeyDown;
+            mapper.TrackModifiers(0xA2, 0x1D, 0, true);
+            mapper.ProcessKey(0x58, 0x2D, 0, true); // Ctrl+X
+            mapper.ProcessKey(0x58, 0x2D, 0, false);
+            mock.AsyncKeyStateScript[0xA2] = 0;
+            mapper.TrackModifiers(0xA2, 0x1D, 0, false);
+        }
+        else
+            mapper.ProcessKey(0x1B, 0x01, 0, true); // Échap
+
+        Assert.Null(mapper.ActiveDeadKey);
+        Assert.DoesNotContain("´", EmittedText(mock));
+        mock.SendInputCalls.Clear();
+        mapper.ProcessKey(0, SC_D03, 0, true);
+        Assert.Equal("e", EmittedText(mock));
+    }
+
     [Fact]
     public void ProcessKey_Enter_WithoutDeadKey_StillPassesThroughUntouched()
     {

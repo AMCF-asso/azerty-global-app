@@ -172,6 +172,11 @@ internal sealed class LessonTypingSession
     {
         if (IsExerciseComplete || IsLineComplete) return IgnoredResult();
         if (c == '\r' || c == '\n') return IgnoredResult();
+        // Un caractère hors du plan de base (émoji, panneau Win+.) arrive en deux moitiés. Aucun
+        // exercice n'en attend : il compte pour une seule frappe fausse, dans une seule case, que
+        // Retour arrière efface d'un coup (audit 09/11, E16). La seconde moitié est ignorée.
+        if (char.IsLowSurrogate(c)) return IgnoredResult();
+        if (char.IsHighSurrogate(c)) c = '�';
 
         return Mode == LessonTypingMode.Strict ? TypeStrict(c) : TypeFlexible(c);
     }

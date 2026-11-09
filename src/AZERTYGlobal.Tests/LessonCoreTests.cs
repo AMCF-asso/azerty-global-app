@@ -176,6 +176,28 @@ public class LessonCoreTests
             });
     }
 
+    /// <summary>E16 : un émoji tapé dans un exercice occupe une case, compte une faute, et
+    /// Retour arrière l'efface en entier (jamais une moitié orpheline).</summary>
+    [Fact]
+    public void TypingSession_AnEmojiIsOneWrongCellThatBackspaceRemovesWhole()
+    {
+        var exercise = new LessonExercise("m", "l", 0, "practice", "Tape", "abc", LessonTypingMode.Flexible);
+        var session = new LessonTypingSession(exercise);
+
+        session.TypeChar('a');
+        foreach (char half in "😀") session.TypeChar(half);
+
+        var cells = session.GetTypedLineSnapshot();
+        Assert.Equal(2, cells.Count);
+        Assert.Equal(LessonCharacterState.Wrong, cells[1].State);
+        Assert.False(char.IsSurrogate(cells[1].Actual));
+        Assert.Equal(2, session.CursorPosition);
+
+        session.Backspace();
+        Assert.Equal(1, session.CursorPosition);
+        Assert.DoesNotContain(session.GetTypedLineSnapshot(), cell => char.IsSurrogate(cell.Actual));
+    }
+
     [Fact]
     public void TypingSession_FlexibleMode_ReportsBackspaceCorrectionAfterWrongCharacter()
     {

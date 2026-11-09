@@ -274,6 +274,40 @@ public class FocusAndStateTests
         finally { BancCapture.Teardown(window); }
     }
 
+    /// <summary>E23 : un bouton ne part qu'enfoncé puis relâché sur lui ; un relâchement seul
+    /// (glissé depuis ailleurs) ou sur une autre cible ne déclenche rien.</summary>
+    [Fact]
+    public void A_button_fires_only_when_pressed_and_released_on_it()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            SelectRegular(window);
+            Paint(window);
+            var actions = BancCapture.Field<List<(Win32.RECT Rect, Action Action)>>(window, "_clickActions");
+            Assert.True(actions.Count > 1);
+            int fired = 0;
+            actions[0] = (actions[0].Rect, () => fired++);
+            actions[1] = (actions[1].Rect, () => { });
+            static IntPtr Center(Win32.RECT r) => (IntPtr)((((r.top + r.bottom) / 2) << 16) | ((r.left + r.right) / 2));
+            IntPtr hwnd = BancCapture.Handle(window);
+            const uint DOWN = 0x0201, UP = 0x0202;
+
+            Win32.SendMessageW(hwnd, UP, IntPtr.Zero, Center(actions[0].Rect));
+            Assert.Equal(0, fired);
+
+            Win32.SendMessageW(hwnd, DOWN, (IntPtr)1, Center(actions[0].Rect));
+            Win32.SendMessageW(hwnd, UP, IntPtr.Zero, Center(actions[0].Rect));
+            Assert.Equal(1, fired);
+
+            Win32.SendMessageW(hwnd, DOWN, (IntPtr)1, Center(actions[0].Rect));
+            Win32.SendMessageW(hwnd, UP, IntPtr.Zero, Center(actions[1].Rect));
+            Assert.Equal(1, fired);
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
     private static object HomePageValue(string name)
     {
         var type = typeof(LessonsWindow).GetNestedType("HomePage", System.Reflection.BindingFlags.NonPublic)!;
