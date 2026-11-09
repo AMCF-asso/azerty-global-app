@@ -35,13 +35,18 @@ public class SummaryButtonsInvariantTests
     public static IEnumerable<object[]> Ends() => new[]
     {
         new object[] { "milieu" }, new object[] { "fin-de-lecon" }, new object[] { "fin-du-catalogue" },
-        new object[] { "defi-echauffement" }, new object[] { "defi-final" }, new object[] { "composee" },
+        new object[] { "defi-echauffement" }, new object[] { "defi-final" }, new object[] { "defi-final-partage" },
+        new object[] { "composee" },
     };
 
     private static void Reach(LessonsWindow window, string end)
     {
         if (end.StartsWith("defi", StringComparison.Ordinal))
         {
+            // Pendant la prise en main (5 premières séances), le Défi n'a rien à partager ;
+            // après, son extrait final offre « Partager ».
+            if (end == "defi-final-partage")
+                ConfigManager.SetTrainingSequenceIndex(DailyChallenge.SequenceLength);
             BancCapture.Field<ChallengeSessionState>(window, "_challenge").Request();
             BancCapture.Call(window, "RefreshChallengeModuleIfStale");
         }
@@ -143,17 +148,22 @@ public class SummaryButtonsInvariantTests
         Assert.True(dead.Count == 0, $"{end} : cibles mortes au bilan : {string.Join(" | ", dead)} (sur {string.Join(" | ", names)})");
     }
 
-    [Fact]
-    public void EndOfChallenge_SaysFinish_AndGoesToToday()
+    /// <summary>QCM 09/11 : fin du Défi = « Terminer » vers Aujourd'hui, « Rejouer », et
+    /// « Partager » quand la séance a un texte à partager (hors prise en main).</summary>
+    [Theory]
+    [InlineData("defi-final", false)]
+    [InlineData("defi-final-partage", true)]
+    public void EndOfChallenge_SaysFinish_AndGoesToToday(string end, bool shares)
     {
         using var isolation = new BancCapture.Isolation();
         var window = Open();
         try
         {
-            Reach(window, "defi-final");
+            Reach(window, end);
             var names = BancCapture.Field<List<LessonControlView>>(window, "_controlViews").Select(c => c.Name).ToList();
             Assert.Contains(L.LessonsHome_Finish, names);
             Assert.Contains(L.LessonsWin_Replay, names);
+            Assert.Equal(shares, names.Contains(L.Challenge_ShareButton));
             Assert.DoesNotContain(L.LessonsWin_IconNext, names);
 
             BancCapture.Call(window, "NextExercise");
