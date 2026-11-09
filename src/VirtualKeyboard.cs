@@ -344,6 +344,7 @@ sealed class VirtualKeyboard : IDisposable
         ApplyPaperFrame(_hWnd);
 
         CreateTooltip();
+        PresentAsDisplay();
         ConfigManager.WindowBoundsCleared += OnWindowBoundsCleared;
         ConfigManager.AppLanguageChanged += OnAppLanguageChanged;
     }
@@ -556,11 +557,34 @@ sealed class VirtualKeyboard : IDisposable
 
     // Les libellés dessinés (Entrée, Verr. Maj., Maj, Espace) suivent la langue de
     // l'interface : redessiner dès qu'elle change, et réécrire l'infobulle au prochain survol.
+    private const int IDC_ARROW = 32512;
+    private const int HTCLIENT = 1;
+
+    /// <summary>W22 : la zone client du clavier montre la flèche (c'est un affichage).</summary>
+    internal static bool ShowsArrowCursor(int hitTest) => hitTest == HTCLIENT;
+
+    /// <summary>
+    /// W22 : le clavier virtuel se présente comme un affichage, pas comme un clavier à cliquer. Un
+    /// lecteur d'écran lit un graphique nommé, décrit « Affichage seul », jamais un bouton ; la fenêtre
+    /// ne prend pas le focus (WS_EX_NOACTIVATE), n'a pas de survol qui s'active, et seul le survol
+    /// d'une touche montre le nom de son caractère.
+    /// </summary>
+    private void PresentAsDisplay()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        AccessibleName.TrySetRole(_hWnd, AccessibleName.RoleGraphic);
+        AccessibleName.TrySet(_hWnd, L.VirtualKeyboardPaper_Title);
+        AccessibleName.TrySetDescription(_hWnd, L.VirtualKeyboardPaper_Description);
+    }
+
     private void OnAppLanguageChanged(string _)
     {
         _hoveredKeyIndex = -1;
         if (_hWnd != IntPtr.Zero)
+        {
             Win32.SetWindowTextW(_hWnd, WindowTitle);
+            PresentAsDisplay();
+        }
         if (_visible && _hWnd != IntPtr.Zero)
             Invalidate();
     }
@@ -788,6 +812,16 @@ sealed class VirtualKeyboard : IDisposable
             case Win32.WM_MOUSEMOVE:
                 OnMouseMove(lParam);
                 return IntPtr.Zero;
+
+            case Win32.WM_SETCURSOR:
+                // W22 : un affichage, jamais un bouton. La flèche, jamais la main, sur toute la zone
+                // client (les bords de redimensionnement gardent les curseurs de Windows).
+                if (ShowsArrowCursor((int)(lParam.ToInt64() & 0xFFFF)))
+                {
+                    Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)IDC_ARROW));
+                    return (IntPtr)1;
+                }
+                break;
 
             case Win32.WM_MOUSELEAVE:
                 _trackingMouse = false;
