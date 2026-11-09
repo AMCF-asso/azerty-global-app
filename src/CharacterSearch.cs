@@ -17,6 +17,7 @@ sealed class CharacterSearch : IDisposable
     private const int EC_RIGHTMARGIN = 0x0002;
 
     private const int VK_ESCAPE = 0x1B;
+    private const int VK_TAB = 0x09;
     private const int VK_RETURN = 0x0D;
     private const int VK_UP = 0x26;
     private const int VK_DOWN = 0x28;
@@ -1010,11 +1011,21 @@ sealed class CharacterSearch : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
+    /// <summary>
+    /// Audit 09/11, E26 : en pause, le champ refuse la saisie, pas la navigation. Échap (fermer la
+    /// fenêtre) et Tab (quitter le champ) ne modifient rien ; ils restent à leur place, sinon la fenêtre
+    /// ne se ferme plus au clavier et le focus y reste prisonnier.
+    /// </summary>
+    internal static bool BlockedWhilePaused(uint msg, int keyOrChar) =>
+        msg == Win32.WM_KEYDOWN
+            ? keyOrChar != VK_ESCAPE && keyOrChar != VK_TAB
+            : msg == Win32.WM_CHAR || msg == Win32.WM_PASTE || msg == Win32.WM_CUT ||
+              msg == Win32.WM_CLEAR || msg == Win32.WM_UNDO;
+
     /// <summary>Subclass de l'Edit pour intercepter les touches spéciales.</summary>
     private IntPtr EditSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
     {
-        if (_inputPaused && (msg == Win32.WM_KEYDOWN || msg == Win32.WM_CHAR ||
-            msg == Win32.WM_PASTE || msg == Win32.WM_CUT || msg == Win32.WM_CLEAR || msg == Win32.WM_UNDO))
+        if (_inputPaused && BlockedWhilePaused(msg, wParam.ToInt32()))
             return IntPtr.Zero;
 
         if (msg == Win32.WM_KEYDOWN)
