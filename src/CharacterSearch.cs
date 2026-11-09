@@ -106,6 +106,8 @@ sealed class CharacterSearch : IDisposable
     private float _dpiScale = 1.0f;
     private bool _showCopiedFeedback;
     private string _copiedChar = "";
+    // Audit 09/11, W10 : Entrée sans rien à insérer le dit (bande et lecteur d'écran) jusqu'à la frappe suivante.
+    private bool _enterFoundNothing;
     private bool _inputPaused;
     private readonly TextInsertionService _insertionService;
     private IntPtr _targetWindow;
@@ -242,6 +244,7 @@ sealed class CharacterSearch : IDisposable
         _totalMatches = 0;
         _selectedIndex = 0;
         _scrollOffset = 0;
+        _enterFoundNothing = false;
 
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -831,6 +834,7 @@ sealed class CharacterSearch : IDisposable
         // Signal Défi du jour (v1.2.0) : compteur GLOBAL d'ouvertures uniquement —
         // jamais le contenu des requêtes (décision 2026-07-22).
         UsageStats.RecordSearchOpened();
+        _enterFoundNothing = false;
 
         // N8 : la langue a pu changer depuis la création (la fenêtre vit tout le processus).
         Win32.SetWindowTextW(_hEditLabel, L.Search_WindowTitle);
@@ -941,6 +945,14 @@ sealed class CharacterSearch : IDisposable
                     int activateState = (int)(wParam.ToInt64() & 0xFFFF);
                     if (activateState == 0) // WA_INACTIVE
                         Hide();
+                    return IntPtr.Zero;
+
+                // Audit 09/11, W9 : Alt+F4 (ou la fermeture par la barre des tâches) arrive en WM_CLOSE ;
+                // DefWindowProc détruisait alors la fenêtre, et la recherche était morte jusqu'au
+                // redémarrage (Show() sur un handle détruit ne fait rien). Fermer, ici, c'est masquer :
+                // la fenêtre ne se détruit que par Dispose.
+                case Win32.WM_CLOSE:
+                    Hide();
                     return IntPtr.Zero;
 
                 case Win32.WM_MOUSEWHEEL:
@@ -1145,10 +1157,21 @@ sealed class CharacterSearch : IDisposable
     // Copie dans le presse-papier
     // ═══════════════════════════════════════════════════════════════
 
+    private string NothingToInsertMessage() =>
+        GetEditTextLength() > 0 ? L.Search_EnterNothingNoResults : L.Search_EnterNothingEmpty;
+
     private void InsertSelectedCharacter()
     {
         if (_inputPaused) return;
-        if (_selectedIndex < 0 || _selectedIndex >= _filteredResults.Count) return;
+        if (_selectedIndex < 0 || _selectedIndex >= _filteredResults.Count)
+        {
+            // W10 : Entrée sur un champ vide ou une requête sans résultat ne restait pas muette
+            // pour rien : elle dit pourquoi rien ne se passe.
+            _enterFoundNothing = true;
+            Announce(NothingToInsertMessage(), notify: true);
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            return;
+        }
 
         var entry = _filteredResults[_selectedIndex];
         IntPtr target = _targetWindow;
@@ -1275,7 +1298,9 @@ sealed class CharacterSearch : IDisposable
             {
                 left = Scale(BASE_FIELD_PAD_X), top = y, right = cw - Scale(BASE_FIELD_PAD_X), bottom = ch,
             };
-            if (GetEditTextLength() > 0)
+            if (_enterFoundNothing)
+                PaperText.DrawLine(hdc, NothingToInsertMessage(), RowNameFont(false), band, PaperTheme.Ink);
+            else if (GetEditTextLength() > 0)
                 PaperText.DrawLine(hdc, L.Search_NoResults, RowNameFont(false), band, PaperTheme.TextSecondary);
             else
                 PaperText.DrawLine(hdc, L.Search_Tip, FooterFont(false), band, PaperTheme.TextSecondary);
