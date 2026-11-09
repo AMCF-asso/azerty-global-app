@@ -168,8 +168,8 @@ internal static class LessonsHomeLogic
         {
             var step = character.Steps[i];
             string label = step.ShortLabel;
-            if (step.AltGr) label = "AltGr " + label;
-            if (step.Shift) label = L.Gesture_LineShift + " " + label;
+            if (step.AltGr) label = L.AltGrKey + " + " + label;
+            if (step.Shift) label = L.Gesture_LineShift + " + " + label;
             parts.Add(label);
         }
         return string.Join(' ', parts);

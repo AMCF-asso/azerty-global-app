@@ -57,7 +57,7 @@ public class RechercheSecondeToucheTests : IDisposable
         int puis = runs.FindLastIndex(run => run.Text == L.Gesture_Then);
 
         Assert.True(puis > 0, "second temps introuvable");
-        Assert.Contains(runs.Skip(puis), run => run.Text == "AltGr");
+        Assert.Contains(runs.Skip(puis), run => run.Text == L.AltGrKey);
     }
 
     /// <summary>
@@ -95,11 +95,11 @@ public class RechercheSecondeToucheTests : IDisposable
     }
 
     [Theory]
-    [InlineData("fr", "∉", "puis AltGr + E")]
-    [InlineData("fr", "ѓ", "puis AltGr + D")]
-    [InlineData("fr", "Ǣ", "puis AltGr + Maj + A")]
-    [InlineData("en", "∉", "then AltGr + E")]
-    [InlineData("en", "Ǣ", "then AltGr + Shift + A")]
+    [InlineData("fr", "∉", "puis " + L.AltGrKey + " + E")]
+    [InlineData("fr", "ѓ", "puis " + L.AltGrKey + " + D")]
+    [InlineData("fr", "Ǣ", "puis " + L.AltGrKey + " + Maj + A")]
+    [InlineData("en", "∉", "then " + L.AltGrKey + " + E")]
+    [InlineData("en", "Ǣ", "then " + L.AltGrKey + " + Shift + A")]
     [InlineData("fr", "ê", "puis E")]          // couche de base : inchangée
     [InlineData("fr", "Ê", "puis Maj + E")]    // Maj : inchangée
     public void LeTexteDeLaMethodeDitLaCoucheDeLaSecondeTouche(string langue, string caractere, string attendu)

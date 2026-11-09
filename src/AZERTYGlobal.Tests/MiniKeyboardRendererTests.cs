@@ -157,14 +157,14 @@ public class MiniKeyboardRendererTests : IDisposable
         L.Language = "fr";
         var fr = Allumees(tenues);
         Assert.Equal("Maj", Maj(fr).Label);
-        Assert.Equal("AltGr", AltGr(fr).Label);
+        Assert.Equal(L.AltGrKey, AltGr(fr).Label);
         Assert.Equal("T", Touche(fr, ScanT).Label);
         Assert.Equal("VM", Allumees(caps)[0].Label);
 
         L.Language = "en";
         var en = Allumees(tenues);
         Assert.Equal("Shift", Maj(en).Label);
-        Assert.Equal("AltGr", AltGr(en).Label);
+        Assert.Equal(L.AltGrKey, AltGr(en).Label);
         Assert.Equal("Caps", Allumees(caps)[0].Label);
     }
 

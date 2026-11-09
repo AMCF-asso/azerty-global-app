@@ -192,7 +192,7 @@ internal static class Gesture
                 runs.Add(new TextRun(L.Gesture_Then));
             var held = new List<string>(2);
             if (step.Shift) held.Add(L.Settings_ShortcutModifier2);
-            if (step.AltGr) held.Add("AltGr");
+            if (step.AltGr) held.Add(L.AltGrKey);
             if (held.Count > 0)
             {
                 runs.Add(new TextRun(first ? L.Gesture_HoldCapital : L.Gesture_Hold));

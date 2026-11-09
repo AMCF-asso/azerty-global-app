@@ -272,7 +272,7 @@ internal static class KeyboardRenderer
         var sb = new System.Text.StringBuilder();
         AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk, style);
         AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk, style);
-        AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk, style);
+        AppendTooltipLayer(sb, L.AltGrKey, keyDef.AltGr, activeDk, style);
         AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk, style);
         return sb.ToString().TrimEnd('\n');
     }

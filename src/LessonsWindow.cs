@@ -2918,12 +2918,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void ReplayExercise() => StartCurrentSession(savePosition: false);
 
     private static string FormatLessonInstruction(string instruction)
-    {
-        return instruction
-            .Replace("{ALTGR}", "AltGr", StringComparison.OrdinalIgnoreCase)
-            .Replace("{SHIFT}", L.LessonsWin_PlaceholderShift, StringComparison.OrdinalIgnoreCase)
-            .Replace("{CAPS}", L.LessonsWin_PlaceholderCaps, StringComparison.OrdinalIgnoreCase);
-    }
+        => LessonCatalogLoader.ExpandPlaceholders(instruction);
 
     private string BuildTypingStatus()
     {
@@ -2983,7 +2978,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             {
                 "Shift" => L.Settings_ShortcutModifier2,
                 "Caps" => L.Onboarding_CapsLockWord,
-                "AltGr" => "AltGr",
+                "AltGr" => L.AltGrKey,
                 _ => part
             }));
     }

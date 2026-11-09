@@ -94,8 +94,8 @@
           "id": "croisillon",
           "title": "Hashtag / croisillon #",
           "titleEn": "Hashtag #",
-          "description": "Maj + @ reste la méthode générale ; AltGr + : est plus efficace pour le code",
-          "descriptionEn": "Shift + @ remains the general method; AltGr + : is more efficient for code",
+          "description": "Maj + @ reste la méthode générale ; {ALTGR} + : est plus efficace pour le code",
+          "descriptionEn": "Shift + @ remains the general method; {ALTGR} + : is more efficient for code",
           "characters": [
             "#"
           ],
@@ -114,8 +114,8 @@
             },
             {
               "type": "practice",
-              "instruction": "Tapez ces exemples de code (AltGr + : est le raccourci ergonomique)",
-              "instructionEn": "Type these code examples (AltGr + : is the ergonomic shortcut)",
+              "instruction": "Tapez ces exemples de code ({ALTGR} + : est le raccourci ergonomique)",
+              "instructionEn": "Type these code examples ({ALTGR} + : is the ergonomic shortcut)",
               "content": "C#\n#include\ncolor: #fff;"
             }
           ]
@@ -279,8 +279,8 @@
           "id": "u-grave",
           "title": "Lettres ù et Ù",
           "titleEn": "Letters ù and Ù",
-          "description": "Deux méthodes : AltGr + U ou Accent aigu + V",
-          "descriptionEn": "Two methods: AltGr + U or Acute accent + V",
+          "description": "Deux méthodes : {ALTGR} + U ou Accent aigu + V",
+          "descriptionEn": "Two methods: {ALTGR} + U or Acute accent + V",
           "characters": [
             "ù",
             "Ù"
@@ -619,8 +619,8 @@
           "id": "tilde-backtick",
           "title": "Tilde ~ et backtick `",
           "titleEn": "Tilde ~ and backtick `",
-          "description": "Tilde sur AltGr + N, backtick sur AltGr + L",
-          "descriptionEn": "Tilde on AltGr + N, backtick on AltGr + L",
+          "description": "Tilde sur {ALTGR} + N, backtick sur {ALTGR} + L",
+          "descriptionEn": "Tilde on {ALTGR} + N, backtick on {ALTGR} + L",
           "characters": [
             "~",
             "`"
@@ -628,8 +628,8 @@
           "exercises": [
             {
               "type": "practice",
-              "instruction": "Tapez ~ (AltGr + N) et ` (AltGr + L)",
-              "instructionEn": "Type ~ (AltGr + N) and ` (AltGr + L)",
+              "instruction": "Tapez ~ ({ALTGR} + N) et ` ({ALTGR} + L)",
+              "instructionEn": "Type ~ ({ALTGR} + N) and ` ({ALTGR} + L)",
               "content": "~ ~ ~ ` ` `"
             },
             {
@@ -769,8 +769,8 @@
           "id": "latin-etendu",
           "title": "Latin étendu",
           "titleEn": "Extended Latin",
-          "description": "Touche morte Latin étendu sur AltGr + - (touche 6)",
-          "descriptionEn": "Extended Latin dead key on AltGr + - (key 6)",
+          "description": "Touche morte Latin étendu sur {ALTGR} + - (touche 6)",
+          "descriptionEn": "Extended Latin dead key on {ALTGR} + - (key 6)",
           "characters": [
             "ð",
             "þ",

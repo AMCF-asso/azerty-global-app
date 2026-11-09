@@ -153,8 +153,8 @@ internal static partial class L
     public static string LessonsHome_LayerName(HomeLayer layer) => layer switch
     {
         HomeLayer.Shift => Gesture_LineShift,
-        HomeLayer.AltGr => "AltGr",
-        HomeLayer.ShiftAltGr => Gesture_LineShift + " AltGr",
+        HomeLayer.AltGr => AltGrKey,
+        HomeLayer.ShiftAltGr => Gesture_LineShift + " + " + AltGrKey,
         _ => T("Touche seule", "Key alone"),
     };
     public static string LessonsHome_ThenLetter => T("puis la lettre", "then the letter");

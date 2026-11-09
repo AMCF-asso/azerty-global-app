@@ -24,17 +24,17 @@ internal static partial class L
     public static string Search_ThenWord => T("puis", "then");
     public static string Search_CapsLockWord => T("Verr. Maj.", "Caps Lock");
 
-    /// <summary>Libellé d'une couche + touche (ex. "Maj + é", "Verr.Maj + AltGr + Maj + à").</summary>
+    /// <summary>Libellé d'une couche + touche (ex. "Maj + é", "Verr. Maj. + Alt Gr + Maj + à").</summary>
     public static string Search_LayerKeyLabel(string layer, string keyLabel) => layer switch
     {
         "Base" => keyLabel,
         "Shift" => $"{Settings_ShortcutModifier2} + {keyLabel}",
-        "AltGr" => $"AltGr + {keyLabel}",
-        "AltGr+Shift" or "Shift+AltGr" => $"AltGr + {Settings_ShortcutModifier2} + {keyLabel}",
+        "AltGr" => $"{AltGrKey} + {keyLabel}",
+        "AltGr+Shift" or "Shift+AltGr" => $"{AltGrKey} + {Settings_ShortcutModifier2} + {keyLabel}",
         "Caps" => $"{Search_CapsLockWord} + {keyLabel}",
         "Caps+Shift" => $"{Search_CapsLockWord} + {Settings_ShortcutModifier2} + {keyLabel}",
-        "Caps+AltGr" => $"{Search_CapsLockWord} + AltGr + {keyLabel}",
-        "Caps+Shift+AltGr" or "Caps+AltGr+Shift" => $"{Search_CapsLockWord} + AltGr + {Settings_ShortcutModifier2} + {keyLabel}",
+        "Caps+AltGr" => $"{Search_CapsLockWord} + {AltGrKey} + {keyLabel}",
+        "Caps+Shift+AltGr" or "Caps+AltGr+Shift" => $"{Search_CapsLockWord} + {AltGrKey} + {Settings_ShortcutModifier2} + {keyLabel}",
         _ => keyLabel,
     };
 
