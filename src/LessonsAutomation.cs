@@ -18,8 +18,22 @@ namespace AZERTYGlobal;
 /// <param name="Cells">Case de chaque caractère de <paramref name="Text"/>, défilement compris ;
 /// vide quand la géométrie n'est pas relevée (mode Libre) : la surface entière en tient lieu.</param>
 /// <param name="HelpText">Titre et consigne de l'exercice, que Narrateur lit après le nom.</param>
+/// <param name="SelectionAnchor">Autre bout de la sélection d'un champ éditable (mode Libre) ;
+/// null ou égal au curseur : rien de sélectionné.</param>
 internal sealed record LessonSurfaceView(string Name, string HelpText, string Text, int Caret, Win32.RECT Box,
-    Win32.RECT[] Cells, Win32.RECT? CaretRect);
+    Win32.RECT[] Cells, Win32.RECT? CaretRect, int? SelectionAnchor = null)
+{
+    /// <summary>La sélection, bornée au texte : (début, fin), égaux sans sélection.</summary>
+    public (int Start, int End) Selection
+    {
+        get
+        {
+            int caret = Math.Clamp(Caret, 0, Text.Length);
+            int anchor = Math.Clamp(SelectionAnchor ?? caret, 0, Text.Length);
+            return (Math.Min(caret, anchor), Math.Max(caret, anchor));
+        }
+    }
+}
 
 internal enum LessonControlKind { Button, ListItem, CheckBox }
 
@@ -254,6 +268,7 @@ internal sealed partial class LessonsAutomation : IDisposable
     private bool _structureChanged;
     private string? _lastText;
     private int _lastCaret = -1;
+    private (int Start, int End) _lastSelection = (-1, -1);
     private int _lastFocus = NoFocus;
     private int _lastFocusGeneration;
     private bool _disposed;
@@ -348,12 +363,14 @@ internal sealed partial class LessonsAutomation : IDisposable
         int focus = FocusTarget();
         bool focusChanged = focus != _lastFocus || (focus >= 0 && Generation != _lastFocusGeneration);
         bool textChanged = view?.Text != _lastText;
-        bool caretChanged = (view?.Caret ?? -1) != _lastCaret;
+        var selection = view?.Selection ?? (-1, -1);
+        bool caretChanged = (view?.Caret ?? -1) != _lastCaret || selection != _lastSelection;
         bool structureChanged = _structureChanged;
         _lastFocus = focus;
         _lastFocusGeneration = Generation;
         _lastText = view?.Text;
         _lastCaret = view?.Caret ?? -1;
+        _lastSelection = selection;
         _structureChanged = false;
 
         if (!UiaClientsAreListening()) return;
@@ -675,7 +692,12 @@ internal sealed partial class LessonsAutomation : IDisposable
 
         public nint GetFragmentRoot() => Pointer(owner.Root, IidFragmentRoot);
 
-        public nint GetSelection() => SafeArray.Unknowns(CaretRange());
+        /// <summary>La sélection du champ (mode Libre), sinon le curseur seul.</summary>
+        public nint GetSelection()
+        {
+            var (start, end) = View.Selection;
+            return SafeArray.Unknowns(new TextRange(this, start, end));
+        }
 
         public nint GetVisibleRanges()
         {

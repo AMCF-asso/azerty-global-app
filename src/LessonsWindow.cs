@@ -27,7 +27,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private const uint HINT_FLASH_MS = 1000;
     private const uint FREE_STATS_REFRESH_MS = 1000;
     private const int PENDING_PHYSICAL_TEXT_TIMEOUT_MS = 1000;
-    private const int FREE_PREVIEW_MAX_CHARS = 220;
+    /// <summary>Longueur du champ du mode Libre. L'ancien plafond de 220 caractères coupait le
+    /// texte sans rien dire (audit 09/11, E6) ; au-delà de celui-ci, un message le dit.</summary>
+    internal const int FREE_MAX_CHARS = 20_000;
 
     // Refonte 1.3.0 (Tablature, maquette Leçons F du 07/10) : la fenêtre passe au papier.
     // A14 : en contraste élevé, le parcours d'exercice prend la palette de l'accueil des Leçons
@@ -53,6 +55,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private const uint MB_ICONWARNING = 0x00000030;
     private const int IDYES = 6;
     private const int HTCLIENT = 1;
+    private const uint WM_CAPTURECHANGED = 0x0215;
     private const int IDC_HAND = 32649;
 
     private enum WindowMode { Lessons, Free }
@@ -182,15 +185,35 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private DateTimeOffset? _freeStartedAt;
     private int _freeChars;
     private int _freeBackspaces;
-    private string _freePreview = "";
-    private int _freeCursorIndex;
+    /// <summary>Le champ du mode Libre (TextEditBuffer.cs). Il vit le temps de l'application :
+    /// Échap ou la croix ferment la fenêtre sans effacer le texte (audit 09/11, E7) ; rien
+    /// n'est écrit sur le disque.</summary>
+    private readonly TextEditBuffer _free = new(FREE_MAX_CHARS);
+    private string _freePreview => _free.Text;
+    private int _freeCursorIndex => _free.Caret;
+    private bool _freeDragging;
+    private bool _freeTruncated;
+    private char? _freeHighSurrogate;
+    private readonly Dictionary<string, int> _freeWidths = new(StringComparer.Ordinal);
+    private int _freeWidthsScale;
     private Win32.RECT _freePreviewRect;
+
+    /// <summary>Modificateurs tenus pendant la frappe en cours. Les tests le remplacent : le
+    /// clavier réel de la machine ne doit pas compter.</summary>
+    internal Func<EditModifiers> ReadEditModifiers { get; set; }
+
+    /// <summary>Presse-papiers des champs ; les tests en passent un factice.</summary>
+    internal ITextClipboard Clipboard { get; set; }
 
     public LessonsWindow(Layout layout, KeyMapper mapper, KeyboardHook hook)
     {
         _layout = layout;
         _mapper = mapper;
         _hook = hook;
+        ReadEditModifiers = () => new EditModifiers(
+            Ctrl: KeyHeld(0x11), Shift: KeyHeld(0x10), Alt: KeyHeld(0x12),
+            Win: KeyHeld(0x5B) || KeyHeld(0x5C), AltGr: _mapper.AltGrDown);
+        Clipboard = new WindowClipboard(() => _hWnd);
         _catalog = _challenge.LoadCatalog();
         _progress = new LessonProgressStore();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
@@ -1128,14 +1151,32 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     _hasFocus = false;
                     DestroySystemCaret(); // avant que la fenêtre suivante crée le sien
                     break; // traitement par défaut, comme avant
+                case Win32.WM_LBUTTONDOWN:
+                    _focusCuesShown = false;
+                    if (OnFreeMouseDown(lParam, wParam))
+                        return IntPtr.Zero;
+                    break;
                 case Win32.WM_LBUTTONUP:
                     _focusCuesShown = false;
+                    if (_freeDragging)
+                    {
+                        EndFreeDrag(); // fin d'une sélection à la souris dans le mode Libre
+                        return IntPtr.Zero;
+                    }
                     OnClick(lParam);
                     return IntPtr.Zero;
+                case WM_CAPTURECHANGED:
+                    _freeDragging = false;
+                    break;
                 case Win32.WM_LBUTTONDBLCLK:
                     OnDoubleClick(lParam);
                     return IntPtr.Zero;
                 case Win32.WM_MOUSEMOVE:
+                    if (_freeDragging)
+                    {
+                        OnFreeMouseDrag(lParam);
+                        return IntPtr.Zero;
+                    }
                     OnMouseMove(lParam);
                     return IntPtr.Zero;
                 case Win32.WM_MOUSELEAVE:
@@ -1500,23 +1541,39 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         int left = FreeTextLeft(preview);
         int y = FreeTextTop(preview);
         int lineH = FreeLineHeight();
+        string text = _free.Text;
 
-        if (_freePreview.Length == 0)
+        if (text.Length == 0)
         {
             PaperText.DrawLine(hdc, "...", FreeLineFont, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
                 CLR_MUTED);
         }
         else
         {
+            // Sélection : fond de sélection sous la part choisie de chaque ligne, texte par-dessus ;
+            // une fin de ligne sélectionnée se voit par un court bloc après la ligne.
+            int selStart = _free.SelectionStart, selEnd = _free.SelectionEnd;
+            uint selFill = _pal.HighContrast ? _pal.Action : PaperTheme.SelectionFill;
+            uint selInk = _pal.HighContrast ? _pal.OnAction : CLR_TEXT;
+            int right = preview.right - S(12);
             for (int i = firstVisibleLine; i < lines.Count; i++)
             {
                 if (y + lineH > preview.bottom - S(8))
                     break;
 
                 var line = lines[i];
-                string text = _freePreview.Substring(line.Start, line.Length);
-                PaperText.DrawLine(hdc, text, FreeLineFont, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
-                    CLR_TEXT);
+                int lineEnd = line.Start + line.Length;
+                int a = Math.Clamp(selStart, line.Start, lineEnd), b = Math.Clamp(selEnd, line.Start, lineEnd);
+                bool breakSelected = _free.HasSelection && selStart <= lineEnd && selEnd > lineEnd &&
+                                     lineEnd < text.Length && text[lineEnd] == '\n';
+                int xa = left + FreeTextWidth(hdc, line.Start, a - line.Start);
+                int xb = xa + FreeTextWidth(hdc, a, b - a);
+                if (a < b || breakSelected)
+                    GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = xa, top = y + S(3), right = xb + (breakSelected ? S(6) : 0), bottom = y + lineH - S(1) }, selFill);
+
+                DrawFreeSegment(hdc, line.Start, a - line.Start, left, y, right, CLR_TEXT);
+                DrawFreeSegment(hdc, a, b - a, xa, y, right, selInk);
+                DrawFreeSegment(hdc, b, lineEnd - b, xb, y, right, CLR_TEXT);
                 y += lineH;
             }
         }
@@ -1524,14 +1581,20 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         DrawFreeCaret(hdc, preview, lines);
     }
 
+    private void DrawFreeSegment(IntPtr hdc, int start, int length, int x, int y, int right, uint color)
+    {
+        if (length <= 0 || x >= right) return;
+        PaperText.DrawLine(hdc, _free.Text.Substring(start, length), FreeLineFont,
+            new Win32.RECT { left = x, top = y, right = right, bottom = y + FreeLineHeight() }, color);
+    }
+
     private void DrawFreeCaret(IntPtr hdc, Win32.RECT preview, IReadOnlyList<FreeVisualLine> lines)
     {
-        int lineIndex = FindFreeLineIndex(lines, _freeCursorIndex);
+        int lineIndex = FindFreeLineIndex(lines, _free.Caret);
         int firstVisibleLine = GetFreeFirstVisibleLine(lines, preview);
         var line = lines[lineIndex];
-        int offset = Math.Clamp(_freeCursorIndex - line.Start, 0, line.Length);
-        string prefix = offset == 0 ? "" : _freePreview.Substring(line.Start, offset);
-        int x = FreeTextLeft(preview) + PaperText.Width(hdc, prefix, FreeLineFont);
+        int offset = Math.Clamp(_free.Caret - line.Start, 0, line.Length);
+        int x = FreeTextLeft(preview) + FreeTextWidth(hdc, line.Start, offset);
         int top = FreeTextTop(preview) + (lineIndex - firstVisibleLine) * FreeLineHeight() + S(4);
         int width = Math.Max(1, S(1));
         var caret = new Win32.RECT { left = x, top = top, right = x + width, bottom = top + S(18) };
@@ -1539,11 +1602,17 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _systemCaretRect = caret;
     }
 
+    /// <summary>
+    /// Lignes visuelles du champ : coupées aux fins de ligne, puis au dernier espace qui tient
+    /// (le mot passe entier à la ligne, comme dans un champ Windows) ; un mot plus long que la
+    /// ligne est coupé où il déborde. Les largeurs sont mesurées par grappe et gardées en cache :
+    /// sans plafond de 220 caractères, chaque repeint ne doit plus coûter une mesure par lettre.
+    /// </summary>
     private List<FreeVisualLine> BuildFreeVisualLines(IntPtr hdc, Win32.RECT preview)
     {
         var lines = new List<FreeVisualLine>();
         int maxWidth = Math.Max(1, preview.right - preview.left - S(24));
-        string text = _freePreview;
+        string text = _free.Text;
 
         if (text.Length == 0)
         {
@@ -1551,28 +1620,46 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             return lines;
         }
 
-        int start = 0;
-        int width = 0;
-        for (int i = 0; i < text.Length; i++)
+        var starts = System.Globalization.StringInfo.ParseCombiningCharacters(text);
+        int start = 0, width = 0;
+        int breakAt = -1, widthAtBreak = 0; // après le dernier espace de la ligne
+        for (int k = 0; k < starts.Length; k++)
         {
-            char ch = text[i];
-            if (ch == '\n')
+            int i = starts[k];
+            int end = k + 1 < starts.Length ? starts[k + 1] : text.Length;
+            if (text[i] == '\n')
             {
                 lines.Add(new FreeVisualLine(start, i - start, width));
-                start = i + 1;
+                start = end;
                 width = 0;
+                breakAt = -1;
                 continue;
             }
 
-            int charWidth = MeasureFreeCharWidth(hdc, ch);
-            if (i > start && width + charWidth > maxWidth)
+            int w = MeasureFreeGrapheme(hdc, text, i, end - i);
+            if (i > start && width + w > maxWidth && text[i] != ' ')
             {
-                lines.Add(new FreeVisualLine(start, i - start, width));
-                start = i;
-                width = 0;
+                if (breakAt > start)
+                {
+                    lines.Add(new FreeVisualLine(start, breakAt - start, widthAtBreak));
+                    width -= widthAtBreak;
+                    start = breakAt;
+                }
+                else
+                {
+                    lines.Add(new FreeVisualLine(start, i - start, width));
+                    start = i;
+                    width = 0;
+                }
+                breakAt = -1;
             }
 
-            width += charWidth;
+            width += w;
+            if (text[i] == ' ')
+            {
+                breakAt = end;
+                widthAtBreak = width;
+            }
         }
 
         lines.Add(new FreeVisualLine(start, text.Length - start, width));
@@ -1581,7 +1668,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private int FindFreeLineIndex(IReadOnlyList<FreeVisualLine> lines, int cursorIndex)
     {
-        int cursor = Math.Clamp(cursorIndex, 0, _freePreview.Length);
+        int cursor = Math.Clamp(cursorIndex, 0, _free.Text.Length);
         for (int i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
@@ -1603,30 +1690,37 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int GetFreeFirstVisibleLine(IReadOnlyList<FreeVisualLine> lines, Win32.RECT preview)
     {
         int visibleLineCount = GetFreeVisibleLineCapacity(preview);
-        int cursorLine = FindFreeLineIndex(lines, _freeCursorIndex);
+        int cursorLine = FindFreeLineIndex(lines, _free.Caret);
         int maxFirstLine = Math.Max(0, lines.Count - visibleLineCount);
         if (cursorLine < visibleLineCount)
             return 0;
         return Math.Clamp(cursorLine - visibleLineCount + 1, 0, maxFirstLine);
     }
 
+    /// <summary>Index de la limite de grappe la plus proche de l'abscisse, dans la ligne.</summary>
     private int FindFreeIndexAtX(IntPtr hdc, FreeVisualLine line, int x)
     {
         if (line.Length <= 0)
             return line.Start;
 
+        string text = _free.Text;
         int width = 0;
-        for (int i = 0; i < line.Length; i++)
+        int i = line.Start, end = line.Start + line.Length;
+        while (i < end)
         {
-            int charWidth = MeasureFreeCharWidth(hdc, _freePreview[line.Start + i]);
-            if (x < width + charWidth / 2)
-                return line.Start + i;
-            width += charWidth;
+            int next = Math.Min(end, _free.NextBoundary(i));
+            int w = MeasureFreeGrapheme(hdc, text, i, next - i);
+            if (x < width + w / 2)
+                return i;
+            width += w;
+            i = next;
         }
-        return line.Start + line.Length;
+        // Après une coupure au dernier espace, le curseur se pose avant cet espace : sur la ligne.
+        return end > line.Start && end < text.Length && text[end - 1] == ' ' ? end - 1 : end;
     }
 
-    private void SetFreeCursorFromPoint(int x, int y)
+    /// <summary>Index du texte sous un point du champ (coordonnées du canevas).</summary>
+    private int FreeIndexAtPoint(int x, int y)
     {
         var hdc = Win32.GetDC(_hWnd);
         try
@@ -1636,36 +1730,45 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             int visibleLineIndex = Math.Clamp((y - FreeTextTop(_freePreviewRect)) / FreeLineHeight(), 0, GetFreeVisibleLineCapacity(_freePreviewRect) - 1);
             int lineIndex = Math.Clamp(firstVisibleLine + visibleLineIndex, 0, lines.Count - 1);
             int relativeX = Math.Max(0, x - FreeTextLeft(_freePreviewRect));
-            _freeCursorIndex = FindFreeIndexAtX(hdc, lines[lineIndex], relativeX);
-            EnsureFreeCursorInRange();
+            return FindFreeIndexAtX(hdc, lines[lineIndex], relativeX);
         }
         finally
         {
             Win32.ReleaseDC(_hWnd, hdc);
         }
+    }
+
+    private void SetFreeCursorFromPoint(int x, int y, bool extend)
+    {
+        _free.MoveTo(FreeIndexAtPoint(x, y), extend);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private bool MoveFreeCursorVertical(int direction)
+    private bool MoveFreeCursorVertical(int direction, bool extend)
     {
         if (_freePreviewRect.right <= _freePreviewRect.left)
-            return false;
+        {
+            _free.MoveTo(direction < 0 ? 0 : _free.Text.Length, extend);
+            return true;
+        }
 
         var hdc = Win32.GetDC(_hWnd);
         try
         {
             var lines = BuildFreeVisualLines(hdc, _freePreviewRect);
-            int currentLineIndex = FindFreeLineIndex(lines, _freeCursorIndex);
-            int targetLineIndex = Math.Clamp(currentLineIndex + direction, 0, lines.Count - 1);
-            if (targetLineIndex == currentLineIndex)
-                return true;
-
+            int currentLineIndex = FindFreeLineIndex(lines, _free.Caret);
+            int targetLineIndex = currentLineIndex + direction;
             var currentLine = lines[currentLineIndex];
-            int offset = Math.Clamp(_freeCursorIndex - currentLine.Start, 0, currentLine.Length);
-            string prefix = offset == 0 ? "" : _freePreview.Substring(currentLine.Start, offset);
-            int x = PaperText.Width(hdc, prefix, FreeLineFont);
-            _freeCursorIndex = FindFreeIndexAtX(hdc, lines[targetLineIndex], x);
-            EnsureFreeCursorInRange();
+            if (targetLineIndex < 0)
+                _free.MoveTo(0, extend); // Haut sur la première ligne : début du texte, comme Windows
+            else if (targetLineIndex >= lines.Count)
+                _free.MoveTo(_free.Text.Length, extend);
+            else
+            {
+                int offset = Math.Clamp(_free.Caret - currentLine.Start, 0, currentLine.Length);
+                int x = FreeTextWidth(hdc, currentLine.Start, offset);
+                _free.MoveTo(FindFreeIndexAtX(hdc, lines[targetLineIndex], x), extend);
+            }
         }
         finally
         {
@@ -1676,8 +1779,41 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return true;
     }
 
-    private int MeasureFreeCharWidth(IntPtr hdc, char ch)
-        => PaperText.Width(hdc, ch.ToString(), FreeLineFont);
+    /// <summary>Largeur d'une grappe dans la police du champ ; une fin de ligne ne mesure rien.</summary>
+    private int MeasureFreeGrapheme(IntPtr hdc, string text, int start, int length)
+    {
+        if (length <= 0 || text[start] == '\n') return 0;
+        int scale = S(1000);
+        if (scale != _freeWidthsScale)
+        {
+            _freeWidths.Clear();
+            _freeWidthsScale = scale;
+        }
+        string grapheme = text.Substring(start, length);
+        if (!_freeWidths.TryGetValue(grapheme, out int width))
+        {
+            width = PaperText.Width(hdc, grapheme, FreeLineFont);
+            _freeWidths[grapheme] = width;
+        }
+        return width;
+    }
+
+    /// <summary>Largeur d'un morceau du texte : la somme de ses grappes, mesure qui place aussi
+    /// le curseur et la sélection.</summary>
+    private int FreeTextWidth(IntPtr hdc, int start, int length)
+    {
+        string text = _free.Text;
+        int width = 0;
+        int i = start, end = Math.Min(text.Length, start + length);
+        while (i < end)
+        {
+            int next = Math.Min(end, _free.NextBoundary(i));
+            if (next <= i) break;
+            width += MeasureFreeGrapheme(hdc, text, i, next - i);
+            i = next;
+        }
+        return width;
+    }
 
     /// <summary>Texte de l'Écriture libre : AG Texte demi-gras, comme le reste des Leçons
     /// (audit 1.3.0, P5, décision d'Antoine du 20/10) ; <see cref="PaperText"/> complète un
@@ -1692,16 +1828,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         => rect.right > rect.left && rect.bottom > rect.top &&
            x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
-    private void EnsureFreeCursorInRange()
-    {
-        _freeCursorIndex = Math.Clamp(_freeCursorIndex, 0, _freePreview.Length);
-    }
-
-    private bool MoveFreeCursorToLineBoundary(bool toEnd)
+    private bool MoveFreeCursorToLineBoundary(bool toEnd, bool extend)
     {
         if (_freePreviewRect.right <= _freePreviewRect.left)
         {
-            _freeCursorIndex = toEnd ? _freePreview.Length : 0;
+            _free.MoveTo(toEnd ? _free.Text.Length : 0, extend);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
             return true;
         }
@@ -1710,9 +1841,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         try
         {
             var lines = BuildFreeVisualLines(hdc, _freePreviewRect);
-            var line = lines[FindFreeLineIndex(lines, _freeCursorIndex)];
-            _freeCursorIndex = toEnd ? line.Start + line.Length : line.Start;
-            EnsureFreeCursorInRange();
+            var line = lines[FindFreeLineIndex(lines, _free.Caret)];
+            int end = line.Start + line.Length;
+            // Fin d'une ligne coupée au dernier espace : avant cet espace, pour rester sur la ligne.
+            if (toEnd && end > line.Start && end < _free.Text.Length && _free.Text[end - 1] == ' ')
+                end--;
+            _free.MoveTo(toEnd ? end : line.Start, extend);
         }
         finally
         {
@@ -1723,90 +1857,160 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return true;
     }
 
-    private bool HandleFreeModeKeyDown(int vk)
+    private static bool KeyHeld(int vk) =>
+        (TypingEngine.Windows.Win32.GetKeyState(vk) & unchecked((short)0x8000)) != 0;
+
+    /// <summary>
+    /// Touches du champ du mode Libre, comme dans un champ Windows (QCM du 09/11) : flèches,
+    /// Origine et Fin (Ctrl : tout le texte), Maj pour sélectionner, Ctrl pour sauter un mot,
+    /// Retour arrière et Suppr (Ctrl : un mot), Entrée, Ctrl+A/C/X/V/Z/Y. Alt Gr tenu n'est
+    /// jamais un raccourci (TextEditKeys).
+    /// </summary>
+    private bool HandleFreeModeKeyDown(int vk) => HandleFreeModeKeyDown(vk, ReadEditModifiers());
+
+    private bool HandleFreeModeKeyDown(int vk, EditModifiers modifiers)
     {
-        EnsureFreeCursorInRange();
-        switch (vk)
+        var key = TextEditKeys.Map(vk, modifiers);
+        switch (key.Command)
         {
-            case 0x25: // Left
-                if (_freeCursorIndex > 0)
-                    _freeCursorIndex--;
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            case 0x27: // Right
-                if (_freeCursorIndex < _freePreview.Length)
-                    _freeCursorIndex++;
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            case 0x26: // Up
-                return MoveFreeCursorVertical(-1);
-
-            case 0x28: // Down
-                return MoveFreeCursorVertical(1);
-
-            case 0x24: // Home
-                return MoveFreeCursorToLineBoundary(toEnd: false);
-
-            case 0x23: // End
-                return MoveFreeCursorToLineBoundary(toEnd: true);
-
-            case 0x08: // Backspace
-                if (_freeCursorIndex > 0 && _freePreview.Length > 0)
-                {
-                    _freePreview = _freePreview.Remove(_freeCursorIndex - 1, 1);
-                    _freeCursorIndex--;
-                    _freeBackspaces++;
-                    ArmFreeStatsTimerIfNeeded();
-                }
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            case 0x2E: // Delete
-                if (_freeCursorIndex < _freePreview.Length)
-                {
-                    _freePreview = _freePreview.Remove(_freeCursorIndex, 1);
-                    _freeBackspaces++;
-                    ArmFreeStatsTimerIfNeeded();
-                }
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            default:
+            case TextEditCommand.None:
                 return false;
+            case TextEditCommand.Left:
+            case TextEditCommand.Right:
+            case TextEditCommand.WordLeft:
+            case TextEditCommand.WordRight:
+                _free.MoveHorizontal(key.Command is TextEditCommand.Left or TextEditCommand.WordLeft ? -1 : 1,
+                    word: key.Command is TextEditCommand.WordLeft or TextEditCommand.WordRight, key.Extend);
+                break;
+            case TextEditCommand.Up:
+                return MoveFreeCursorVertical(-1, key.Extend);
+            case TextEditCommand.Down:
+                return MoveFreeCursorVertical(1, key.Extend);
+            case TextEditCommand.LineStart:
+                return MoveFreeCursorToLineBoundary(toEnd: false, key.Extend);
+            case TextEditCommand.LineEnd:
+                return MoveFreeCursorToLineBoundary(toEnd: true, key.Extend);
+            case TextEditCommand.DocumentStart:
+                _free.MoveTo(0, key.Extend);
+                break;
+            case TextEditCommand.DocumentEnd:
+                _free.MoveTo(_free.Text.Length, key.Extend);
+                break;
+            case TextEditCommand.Backspace:
+            case TextEditCommand.Delete:
+            case TextEditCommand.WordBackspace:
+            case TextEditCommand.WordDelete:
+                if (_free.Delete(backwards: key.Command is TextEditCommand.Backspace or TextEditCommand.WordBackspace,
+                        word: key.Command is TextEditCommand.WordBackspace or TextEditCommand.WordDelete))
+                {
+                    _freeBackspaces++;
+                    _freeTruncated = false;
+                    ArmFreeStatsTimerIfNeeded();
+                }
+                break;
+            case TextEditCommand.NewLine:
+                InsertFreeCharacter('\n');
+                return true;
+            case TextEditCommand.SelectAll:
+                _free.SelectAll();
+                break;
+            case TextEditCommand.Copy:
+                _free.Copy(Clipboard);
+                break;
+            case TextEditCommand.Cut:
+                if (_free.Cut(Clipboard)) _freeTruncated = false;
+                break;
+            case TextEditCommand.Paste:
+                // Un collage n'est pas une frappe : il ne compte ni dans la vitesse ni dans les caractères.
+                _freeTruncated = _free.Paste(Clipboard).Truncated;
+                break;
+            case TextEditCommand.Undo:
+                _free.Undo();
+                _freeTruncated = false;
+                break;
+            case TextEditCommand.Redo:
+                _free.Redo();
+                _freeTruncated = false;
+                break;
         }
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        return true;
     }
 
+    /// <summary>Un caractère tapé : il remplace la sélection. Un caractère hors du plan de base
+    /// (émoji) arrive en deux WM_CHAR : sa première moitié attend la seconde.</summary>
     private void InsertFreeCharacter(char c)
     {
-        EnsureFreeCursorInRange();
+        string typed;
+        if (char.IsHighSurrogate(c))
+        {
+            _freeHighSurrogate = c;
+            return;
+        }
+        if (char.IsLowSurrogate(c))
+        {
+            if (_freeHighSurrogate is not { } high) return;
+            typed = new string(new[] { high, c });
+        }
+        else
+            typed = c.ToString();
+        _freeHighSurrogate = null;
+
         _freeStartedAt ??= DateTimeOffset.UtcNow;
-        _freeChars++;
-        _freePreview = _freePreview.Insert(_freeCursorIndex, c.ToString());
-        _freeCursorIndex++;
-        TrimFreePreviewAroundCursor();
+        var result = _free.Insert(typed, typed: true);
+        _freeTruncated = result.Truncated;
+        if (result.Inserted > 0)
+            _freeChars++;
         ArmFreeStatsTimerIfNeeded();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private void TrimFreePreviewAroundCursor()
+    /// <summary>Double-clic dans le champ : le mot sous le pointeur.</summary>
+    private bool SelectFreeWordAt(int x, int y)
     {
-        if (_freePreview.Length <= FREE_PREVIEW_MAX_CHARS)
-            return;
-
-        int overflow = _freePreview.Length - FREE_PREVIEW_MAX_CHARS;
-        if (_freeCursorIndex >= _freePreview.Length - overflow)
-        {
-            _freePreview = _freePreview[overflow..];
-            _freeCursorIndex -= overflow;
-        }
-        else
-        {
-            _freePreview = _freePreview.Remove(Math.Max(0, _freePreview.Length - overflow), overflow);
-        }
-        EnsureFreeCursorInRange();
+        if (_mode != WindowMode.Free || _settingsOpen || !IsPointInRect(_freePreviewRect, x, y)) return false;
+        _free.SelectWordAt(FreeIndexAtPoint(x, y));
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        return true;
     }
+
+    /// <summary>Bouton gauche enfoncé dans le champ : pose le curseur (Maj : étend la sélection)
+    /// et suit la souris jusqu'au relâchement, pour sélectionner en glissant.</summary>
+    private bool OnFreeMouseDown(IntPtr lParam, IntPtr wParam)
+    {
+        if (_mode != WindowMode.Free || _settingsOpen || _pickerOpen) return false;
+        var (x, y) = ClientToCanvas(lParam);
+        if (!IsPointInRect(_freePreviewRect, x, y) || HitClickAction(x, y) >= 0) return false;
+        const long MK_SHIFT = 0x0004;
+        _focusedActionIndex = -1;
+        SetFreeCursorFromPoint(x, y, extend: (wParam.ToInt64() & MK_SHIFT) != 0);
+        _freeDragging = true;
+        SetCapture(_hWnd);
+        Win32.SetFocus(_hWnd);
+        return true;
+    }
+
+    private void OnFreeMouseDrag(IntPtr lParam)
+    {
+        var (x, y) = ClientToCanvas(lParam);
+        int before = _free.Caret;
+        _free.MoveTo(FreeIndexAtPoint(x, y), extend: true);
+        if (_free.Caret != before)
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+    }
+
+    private void EndFreeDrag()
+    {
+        if (!_freeDragging) return;
+        _freeDragging = false;
+        ReleaseCapture();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCapture(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
 
     private string BuildFreeStatsText()
     {
@@ -1819,13 +2023,13 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return L.LessonsWin_FreeStatsFilled(wpm == 0 ? "—" : wpm.ToString(), cpm, (int)Math.Round(seconds), _freeBackspaces);
     }
 
+    /// <summary>« Effacer les statistiques » : les compteurs seulement. Le texte reste (audit
+    /// 09/11, L13 : le bouton effaçait aussi le texte sans le dire) ; Ctrl+A puis Suppr l'efface.</summary>
     private void ResetFreeStats()
     {
         _freeStartedAt = null;
         _freeChars = 0;
         _freeBackspaces = 0;
-        _freePreview = "";
-        _freeCursorIndex = 0;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
@@ -1984,18 +2188,16 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.SetFocus(_hWnd);
             return;
         }
-        if (_mode == WindowMode.Free && IsPointInRect(_freePreviewRect, x, y))
-        {
-            SetFreeCursorFromPoint(x, y);
-            Win32.SetFocus(_hWnd);
-            return;
-        }
+        // Le champ du mode Libre pose son curseur à l'enfoncement (OnFreeMouseDown) : le
+        // relâchement ne doit pas défaire une sélection faite en glissant.
         Win32.SetFocus(_hWnd);
     }
 
     private void OnDoubleClick(IntPtr lParam)
     {
         var (x, y) = ClientToCanvas(lParam);
+        if (SelectFreeWordAt(x, y))
+            return;
         foreach (var (rect, action) in _doubleClickActions)
         {
             if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
@@ -2823,8 +3025,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
-        _freePreview = "";
-        _freeCursorIndex = 0;
+        // Mode Libre : le texte reste pour la prochaine ouverture (audit 09/11, E7 : Échap
+        // l'effaçait sans prévenir) ; les statistiques mesurent une séance et repartent de zéro.
+        EndFreeDrag();
+        _freeHighSurrogate = null;
         _freeChars = 0;
         _freeBackspaces = 0;
         _freeStartedAt = null;

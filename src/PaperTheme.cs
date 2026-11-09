@@ -41,6 +41,9 @@ static class PaperTheme
     /// <summary>Teinte de la colonne en cours et de la ligne choisie : l'action à 7 % sur la
     /// surface blanche (rgba(26,62,242,.07)).</summary>
     internal const uint ActionTint = 0x00FEF1EF; // #EFF1FE
+    /// <summary>Fond d'un texte sélectionné dans un champ (mode Libre, « Votre texte ») :
+    /// l'action à 22 % sur blanc, assez franche pour se voir, l'encre restant lisible dessus.</summary>
+    internal const uint SelectionFill = 0x00FCD5CD; // #CDD5FC
     /// <summary>La même teinte posée sur le papier.</summary>
     internal const uint ActionTintOnPaper = 0x00F1EBEA; // #EAEBF1
     /// <summary>Contour d'une touche effacée du clavier virtuel, posée à même le papier : elle
