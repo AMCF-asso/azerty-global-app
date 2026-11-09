@@ -69,6 +69,7 @@ sealed class PauseDurationDialog : IDisposable
     private readonly ControlLayout _layout = new(redrawOnFont: false);
     private Action<string>? _onAppLanguageChanged;
     private bool _durationValid = true;
+    private bool _fieldBusy; // garde contre la réentrée d'EN_CHANGE quand Sanitize réécrit le champ
     private bool _done;
     private TimeSpan? _result;
 
@@ -290,6 +291,7 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        NumericField.Limit(hwnd, 2); // 0 à 23 h, 0 à 59 min : le collage est tronqué lui aussi (E28)
         return hwnd;
     }
 
@@ -377,7 +379,7 @@ sealed class PauseDurationDialog : IDisposable
                     }
                     if ((id == IDC_EDIT_HOURS || id == IDC_EDIT_MINUTES) && code == Win32.EN_CHANGE)
                     {
-                        UpdateResumeLine();
+                        OnFieldChanged(lParam);
                         return IntPtr.Zero;
                     }
                     break;
@@ -467,6 +469,17 @@ sealed class PauseDurationDialog : IDisposable
     internal static Func<DateTime> Clock = () => DateTime.Now;
 
     private TimeSpan? CurrentDuration() => ParseDuration(ReadInt(_hEditHours), ReadInt(_hEditMinutes));
+
+    /// <summary>Frappe ou collage dans un champ d'heures ou de minutes : le texte garde ses chiffres
+    /// (audit 09/11, E28 ; <c>ES_NUMBER</c> ne filtre que la frappe), puis la reprise suit.</summary>
+    private void OnFieldChanged(IntPtr edit)
+    {
+        if (_fieldBusy) return;
+        _fieldBusy = true;
+        try { NumericField.Sanitize(edit); }
+        finally { _fieldBusy = false; }
+        UpdateResumeLine();
+    }
 
     private void UpdateResumeLine()
     {
