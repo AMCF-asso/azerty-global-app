@@ -200,6 +200,56 @@ public class FocusAndStateTests
         finally { BancCapture.Teardown(window); }
     }
 
+    /// <summary>W2 : rouvrir depuis la zone de notification une fenêtre déjà visible la ramène
+    /// devant sans la déplacer ni sortir de l'exercice en cours, frappe comprise.</summary>
+    [Fact]
+    public void Show_on_a_visible_window_keeps_the_exercise_and_position()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            SelectRegular(window, exercise: 1);
+            BancCapture.SetField(window, "_homePage", HomePageValue("Exercise"));
+            BancCapture.Call(window, "OnChar", Session(window).GetNextExpectedCharacter()!.Value);
+            BancCapture.SetField(window, "_visible", true);
+            IntPtr hwnd = BancCapture.Handle(window);
+            Win32.GetWindowRect(hwnd, out var before);
+
+            window.Show();
+
+            Assert.Equal("Exercise", BancCapture.Field<object>(window, "_homePage").ToString());
+            Assert.Equal(1, BancCapture.Field<int>(window, "_exerciseIndex"));
+            Assert.Equal(1, Session(window).CursorPosition);
+            Win32.GetWindowRect(hwnd, out var after);
+            Assert.Equal((before.left, before.top), (after.left, after.top));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    /// <summary>W2 : une demande explicite (le Défi) change bien d'écran sur une fenêtre visible.</summary>
+    [Fact]
+    public void Show_on_a_visible_window_opens_a_requested_exercise()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            BancCapture.SetField(window, "_homePage", HomePageValue("Today"));
+            BancCapture.SetField(window, "_visible", true);
+            BancCapture.SetField(window, "_homeOpenOnExercise", true);
+            window.Show();
+            Assert.Equal("Exercise", BancCapture.Field<object>(window, "_homePage").ToString());
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    private static object HomePageValue(string name)
+    {
+        var type = typeof(LessonsWindow).GetNestedType("HomePage", System.Reflection.BindingFlags.NonPublic)!;
+        return Enum.Parse(type, name);
+    }
+
     /// <summary>L7 : à l'écran final du parcours, l'exercice caché derrière repart de zéro :
     /// « Reprendre » n'ouvre pas un exercice fini où la frappe ne fait rien.</summary>
     [Fact]
