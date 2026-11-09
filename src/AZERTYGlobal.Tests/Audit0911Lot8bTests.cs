@@ -17,6 +17,50 @@ public sealed class Audit0911Lot8bTests
         return buffer.ToString();
     }
 
+    // ── E30 : cadre de focus des liens de l'accueil ─────────────────────────
+
+    [Theory]
+    [InlineData(false, true, true, true)]    // focus + clavier déjà utilisé : cadre
+    [InlineData(false, true, false, false)]  // focus donné par un clic : pas de cadre
+    [InlineData(false, false, true, false)]  // pas de focus
+    [InlineData(true, true, true, false)]    // DC de l'appelant (capture) : jamais
+    public void Liens_CadreDeFocus_SeulementAprèsUnUsageDuClavier(bool dcAppelant, bool focus, bool indices, bool attendu) =>
+        Assert.Equal(attendu, GdiHelpers.ShowsFocusFrame(dcAppelant, focus, indices));
+
+    [Theory]
+    [InlineData(true, false, false, true)]   // le survol colore toujours
+    [InlineData(false, true, true, true)]
+    [InlineData(false, true, false, false)]  // focus à la souris : ni couleur de focus ni cadre
+    [InlineData(false, false, true, false)]
+    public void Liens_CouleurDeFocus_SuitLaMêmeRègle(bool survol, bool focus, bool indices, bool attendu) =>
+        Assert.Equal(attendu, LinkBehavior.IsActiveState(survol, focus, indices));
+
+    [Fact]
+    public void Liens_ÉtatDInterface_LevéParLeClavier_BaisséParLaSouris()
+    {
+        const uint WM_UPDATEUISTATE = 0x0128;
+        const int UIS_SET = 1, UIS_CLEAR = 2, UISF_HIDEFOCUS = 1;
+        string classe = "AZERTYGlobal.Tests.Lot8b." + Guid.NewGuid().ToString("N");
+        Win32.WNDPROC proc = Win32.DefWindowProcW;
+        Assert.True(NativeWindow.RegisterClass(classe, proc));
+        IntPtr hwnd = Win32.CreateWindowExW(0, classe, string.Empty, 0, 0, 0, 0, 0,
+            new IntPtr(-3) /* HWND_MESSAGE */, IntPtr.Zero, Win32.GetModuleHandleW(null), IntPtr.Zero);
+        try
+        {
+            Assert.NotEqual(IntPtr.Zero, hwnd);
+            Win32.SendMessageW(hwnd, WM_UPDATEUISTATE, (IntPtr)(UIS_SET | (UISF_HIDEFOCUS << 16)), IntPtr.Zero);
+            Assert.False(PaperChoice.FocusCuesShown(hwnd));
+            Win32.SendMessageW(hwnd, WM_UPDATEUISTATE, (IntPtr)(UIS_CLEAR | (UISF_HIDEFOCUS << 16)), IntPtr.Zero);
+            Assert.True(PaperChoice.FocusCuesShown(hwnd));
+        }
+        finally
+        {
+            Win32.DestroyWindow(hwnd);
+            NativeWindow.UnregisterClass(classe);
+            GC.KeepAlive(proc);
+        }
+    }
+
     // ── E28 : dialogue de pause ─────────────────────────────────────────────
 
     [Theory]

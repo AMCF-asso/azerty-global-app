@@ -12,6 +12,14 @@ static class GdiHelpers
     private const uint WM_GETFONT = 0x0031;
 
     /// <summary>
+    /// Audit 09/11, E30 : le cadre de focus d'un lien suit la règle de Windows — il n'apparaît que
+    /// si le lien a le focus ET que le clavier a servi (<c>UISF_HIDEFOCUS</c> levé), jamais après un
+    /// simple clic ; et pas dans un DC fourni par l'appelant (impression, capture).
+    /// </summary>
+    internal static bool ShowsFocusFrame(bool paintingToCallerDc, bool hasFocus, bool focusCuesShown) =>
+        !paintingToCallerDc && hasFocus && focusCuesShown;
+
+    /// <summary>
     /// K5 (accessibilité 1.3.0) — un lien STATIC ne signalait son focus que par la couleur
     /// (WCAG 1.4.1 et 2.4.7). À appeler depuis la sous-classe du lien sur <c>WM_PAINT</c> : le
     /// contrôle se peint, puis le cadre de focus se pose autour de son texte. A13 (audit
@@ -21,7 +29,7 @@ static class GdiHelpers
     internal static IntPtr PaintLinkWithFocusRect(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         // wParam non nul : peinture dans un DC fourni par l'appelant, pas à l'écran.
-        bool focused = wParam == IntPtr.Zero && Win32.GetFocus() == hWnd;
+        bool focused = ShowsFocusFrame(wParam != IntPtr.Zero, Win32.GetFocus() == hWnd, PaperChoice.FocusCuesShown(hWnd));
         // Le cadre se pose par-dessus la peinture du contrôle, hors de sa région de repeint :
         // un lien focalisé se repeint en entier, pour que le cadre ne reste pas à demi effacé.
         if (focused) Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
