@@ -348,6 +348,18 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     public void Show()
     {
+        // Audit UX du 09/11, W2 et E24 : un menu de la zone de notification qui rouvre une
+        // fenêtre déjà ouverte la ramène devant, sans la déplacer, sans revenir à « Aujourd'hui »
+        // ni éteindre Verr. Maj. Seule une demande explicite (le Défi) change d'écran.
+        if (_visible)
+        {
+            HomeOnShow(); // ne change d'écran que pour un exercice demandé (_homeOpenOnExercise)
+            Win32.ShowWindow(_hWnd, 9); // SW_RESTORE : réaffiche aussi une fenêtre réduite
+            Win32.SetForegroundWindow(_hWnd);
+            Win32.SetFocus(_hWnd);
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            return;
+        }
         if (!RestoreSavedBoundsIfVisible())
             CenterOnActiveMonitor();
         UpdateRenderScaleFromCurrentClient(force: true);
