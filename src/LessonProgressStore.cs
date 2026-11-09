@@ -168,7 +168,10 @@ internal sealed class LessonProgressStore
                 ? stats.ElapsedSeconds
                 : Math.Min(progress.BestSeconds.Value, stats.ElapsedSeconds);
 
-        SetLastPositionNoSave(exercise);
+        // Le Défi ne s'ouvre que par ShowChallenge, reconstruit au jour et à l'étape : ce n'est
+        // jamais la place de « Reprendre » (audit 09/11, L5).
+        if (exercise.ModuleId != DailyChallenge.ModuleId)
+            SetLastPositionNoSave(exercise);
         CommitOrRollback(snapshot, "LessonProgressStore.RecordSuccess");
     }
 

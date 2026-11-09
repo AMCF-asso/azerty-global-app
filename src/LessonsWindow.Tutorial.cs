@@ -128,7 +128,9 @@ internal sealed partial class LessonsWindow
         if (_tutorialRoutePos >= _tutorialRoute.Length)
         {
             _tutorialPage = TutorialPage.Final;
-            _showSummary = false;
+            // L'exercice caché derrière repart de zéro : « Reprendre » n'ouvre jamais un
+            // exercice fini sans bilan, où la frappe ne fait rien (audit 09/11, L7).
+            StartCurrentSession(savePosition: false);
             _tutorialFocusPending = true;
         }
         else

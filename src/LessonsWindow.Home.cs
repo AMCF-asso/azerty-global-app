@@ -61,7 +61,12 @@ internal sealed partial class LessonsWindow
         _homeOpenOnExercise = false;
         if (onExercise)
         {
+            // L'exercice positionné se voit, même si la fenêtre a été fermée en mode Libre, liste
+            // ou Paramètres ouverts (audit 09/11, L6 : le Défi restait caché derrière).
             _homePage = HomePage.Exercise; // même si la fenêtre était déjà ouverte sur l'accueil
+            _mode = WindowMode.Lessons;
+            _settingsOpen = false;
+            _pickerOpen = false;
             _focusedActionIndex = -1;
             return;
         }
