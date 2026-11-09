@@ -61,6 +61,90 @@ public sealed class Audit0911Lot8bTests
         }
     }
 
+    // ── E14 : couches grecque et cyrillique dans la frappe des Leçons ───────
+
+    private const uint SC_TRIGGER_ALPHABET = 0x2B, SC_LSHIFT = 0x2A, SC_A = 0x10, SC_SPACE = 0x39;
+    private const uint VK_LSHIFT = 0xA0;
+    private static readonly short KeyDown = unchecked((short)0x8000);
+
+    private static (KeyMapper Mapper, MockWin32Api Mock, ForegroundMonitor Monitor) MapperAvecCouches()
+    {
+        var mock = new MockWin32Api
+        {
+            ScriptedProcessName = "notepad.exe",
+            ScriptedFullPath = @"C:\Windows\notepad.exe",
+            ScriptedModules = new[] { "kernel32.dll" },
+            ScriptedPid = 4242,
+            ScriptedProcessStartTime = 123456789
+        };
+        var monitor = new ForegroundMonitor(mock, IntPtr.Zero);
+        var mapper = new KeyMapper(LayoutLoader.LoadFromResource(), mock);
+        mapper.SetForegroundMonitor(monitor);
+        mapper.ApplyMaintainableLayerSettings(true, new[] { "dk_greek", "dk_cyrillic", "dk_scientific" }, 500);
+        return (mapper, mock, monitor);
+    }
+
+    private static void TapAlphabetTrigger(KeyMapper mapper, MockWin32Api mock)
+    {
+        mock.AsyncKeyStateScript[(int)VK_LSHIFT] = KeyDown;
+        mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, true);
+        mapper.ProcessKey(0xDC, SC_TRIGGER_ALPHABET, 0, true);
+        mapper.ProcessKey(0xDC, SC_TRIGGER_ALPHABET, 0, false);
+        mock.AsyncKeyStateScript[(int)VK_LSHIFT] = 0;
+        mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, false);
+    }
+
+    [Fact]
+    public void Leçons_CoucheGrecqueVerrouillée_LaFrappeResteGrecque_PasReplaceeParLeLatin()
+    {
+        var (mapper, mock, monitor) = MapperAvecCouches();
+        using (monitor)
+        {
+            TapAlphabetTrigger(mapper, mock);
+            TapAlphabetTrigger(mapper, mock);
+            Assert.Equal(MaintainableLayerMode.Locked, mapper.MaintainableLayerState.Mode);
+
+            var layout = LayoutLoader.LoadFromResource();
+            var buffer = new PhysicalTextInputBuffer(1000, () => 0);
+            buffer.CaptureKey(layout, SC_A, mapper);
+            // Le moteur émet « α » ; la file ne doit pas le remplacer par le « a » de la couche de base.
+            Assert.Equal('α', buffer.Resolve('α'));
+            Assert.False(buffer.HasPending);
+            // Le témoin discrimine : sans la couche, la file attendait bien le latin.
+            Assert.Equal("a", PhysicalTextInputBuffer.ExpectedText(layout, SC_A, false, false, false, null));
+            Assert.Equal("α", PhysicalTextInputBuffer.ExpectedText(layout, SC_A, false, false, false, null, "dk_greek"));
+        }
+    }
+
+    [Fact]
+    public void Leçons_CoucheGrecqueVerrouillée_EspaceResteUnEspace()
+    {
+        var (mapper, mock, monitor) = MapperAvecCouches();
+        using (monitor)
+        {
+            TapAlphabetTrigger(mapper, mock);
+            TapAlphabetTrigger(mapper, mock);
+            var layout = LayoutLoader.LoadFromResource();
+            Assert.Equal(" ", PhysicalTextInputBuffer.ExpectedText(layout, SC_SPACE, false, false, false, null,
+                mapper.MaintainableLayerState.Mode == MaintainableLayerMode.Locked ? mapper.MaintainableLayerState.LayerId : null));
+        }
+    }
+
+    [Fact]
+    public void Leçons_CoucheGrecqueUnCoup_LaFrappeResteGrecque()
+    {
+        var (mapper, mock, monitor) = MapperAvecCouches();
+        using (monitor)
+        {
+            TapAlphabetTrigger(mapper, mock);
+            Assert.Equal(MaintainableLayerMode.OneShot, mapper.MaintainableLayerState.Mode);
+            var layout = LayoutLoader.LoadFromResource();
+            var buffer = new PhysicalTextInputBuffer(1000, () => 0);
+            buffer.CaptureKey(layout, SC_A, mapper);
+            Assert.Equal('α', buffer.Resolve('α'));
+        }
+    }
+
     // ── E26 : la Recherche en pause ─────────────────────────────────────────
 
     [Theory]
