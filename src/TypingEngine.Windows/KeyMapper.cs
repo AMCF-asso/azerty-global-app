@@ -94,6 +94,7 @@ public sealed class KeyMapper
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
     public bool AltDown => _leftAltDown;
+    public bool WinDown => _leftWinDown || _rightWinDown;
 
     /// <summary>Événement déclenché quand l'état change (pour rafraîchir l'UI).</summary>
     public event Action? StateChanged;

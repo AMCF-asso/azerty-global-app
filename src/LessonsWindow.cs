@@ -208,7 +208,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         StartCurrentSession(savePosition: false);
 
         _mapper.StateChanged += OnMapperStateChanged;
-        _hook.RawKeyDown += OnRawKeyDown;
+        _hook.RawKeyDownDetailed += OnRawKeyDown;
         // Bascule de langue en cours de session (ex. depuis le menu tray) : recharger le
         // catalogue dans la nouvelle langue et repeindre, sans fermer la fenêtre ni perdre
         // la position (constat smoke test 2026-07-17).
@@ -1162,7 +1162,16 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 case Win32.WM_SYSCHAR:
                     if (_inputPaused)
                         return IntPtr.Zero;
-                    OnChar((char)wParam.ToInt32());
+                    // Alt Gr ou texte attendu au keydown : c'est une frappe. Sinon Alt+touche est
+                    // un raccourci : Alt+Espace ouvre le menu système, le reste ne tape rien
+                    // (audit 09/11, E2 : Alt+lettre entrait dans l'exercice).
+                    if (_mapper.AltGrDown || _pendingPhysicalText.HasPending)
+                    {
+                        OnChar((char)wParam.ToInt32());
+                        return IntPtr.Zero;
+                    }
+                    if (wParam.ToInt32() == ' ')
+                        return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
                     return IntPtr.Zero;
                 case Win32.WM_SYSDEADCHAR:
                     return IntPtr.Zero;
@@ -1173,6 +1182,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
                     if (_inputPaused)
                         return IntPtr.Zero;
+                    // Alt+Espace hors Alt Gr : menu système, jamais l'activation d'un bouton.
+                    if (vk == 0x20 && !_mapper.AltGrDown)
+                        return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
                     OnKeyDown(vk);
                     return IntPtr.Zero;
                 }
@@ -2690,12 +2702,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private void OnRawKeyDown(uint scancode)
+    private void OnRawKeyDown(uint scancode, bool extended)
     {
         if (_inputPaused) return;
         if (!_visible || _settingsOpen) return;
         _pressedScancode = scancode;
-        CaptureExpectedTextForPhysicalKey(scancode);
+        // Touche étendue (pavé « / », flèches, Entrée du pavé) : jamais une touche de la
+        // disposition, aucun texte attendu (audit 09/11, E3).
+        if (!extended)
+            CaptureExpectedTextForPhysicalKey(scancode);
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_KEYPRESS, KEYPRESS_DURATION_MS, IntPtr.Zero);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
@@ -2761,7 +2776,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (_onAppLanguageChanged != null)
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         _mapper.StateChanged -= OnMapperStateChanged;
-        _hook.RawKeyDown -= OnRawKeyDown;
+        _hook.RawKeyDownDetailed -= OnRawKeyDown;
         _automation?.Dispose(); // tant que le HWND existe
         _automation = null;
         if (_hWnd != IntPtr.Zero)

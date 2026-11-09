@@ -42,6 +42,15 @@ internal sealed class PhysicalTextInputBuffer
         _entries.Enqueue(new Entry(text, now));
     }
 
+    public bool HasPending
+    {
+        get
+        {
+            DiscardExpiredEntries(_clock());
+            return _entries.Count > 0;
+        }
+    }
+
     public char Resolve(char received)
     {
         long now = _clock();
@@ -49,6 +58,16 @@ internal sealed class PhysicalTextInputBuffer
         if (_entries.Count > 0)
         {
             var entry = _entries.Peek();
+
+            // Un caractère de contrôle reçu (Ctrl+lettre, Retour arrière, Entrée, Tab) n'est
+            // jamais remplacé par du texte attendu : Ctrl+A tapait « a » (audit 09/11, E1, E12).
+            // Il ne consomme l'entrée que si elle attendait elle aussi un contrôle.
+            if (char.IsControl(received))
+            {
+                if (char.IsControl(entry.Text[entry.Index]) && ++entry.Index >= entry.Text.Length)
+                    _entries.Dequeue();
+                return received;
+            }
 
             char expected = entry.Text[entry.Index++];
             if (entry.Index >= entry.Text.Length)
@@ -69,11 +88,24 @@ internal sealed class PhysicalTextInputBuffer
     /// </summary>
     public void CaptureKey(Layout layout, uint scancode, KeyMapper mapper)
     {
+        // Raccourci (Ctrl, Alt ou Win tenu) : aucun texte n'est attendu. Sans cette garde,
+        // Ctrl+A tapait « a » et Ctrl+chiffre laissait une entrée fantôme d'une seconde qui
+        // décalait les lettres suivantes (audit 09/11, E1, E11).
+        if (IsShortcutChord(mapper.CtrlDown, mapper.AltDown, mapper.WinDown, mapper.AltGrDown))
+            return;
         string? text = ExpectedText(layout, scancode, mapper.ShiftDown, mapper.AltGrDown,
             mapper.CapsLockActive, mapper.ActiveDeadKey);
         if (!string.IsNullOrEmpty(text))
             Enqueue(text);
     }
+
+    /// <summary>
+    /// Ctrl, Alt ou Win tenu, hors Alt Gr : la frappe est un raccourci, pas du texte. Sous
+    /// Windows Alt Gr se signale comme Ctrl+Alt : le tester seul casserait toutes les
+    /// frappes Alt Gr des leçons (KeyMapper.IsAltGrDown).
+    /// </summary>
+    internal static bool IsShortcutChord(bool ctrl, bool alt, bool win, bool altGr) =>
+        (ctrl || alt || win) && !altGr;
 
     /// <summary>
     /// Texte d'une frappe : la sortie de la couche, transformée par la touche morte armée

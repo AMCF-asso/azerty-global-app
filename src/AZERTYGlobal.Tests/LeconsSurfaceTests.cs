@@ -282,7 +282,7 @@ public class LeconsSurfaceTests
 
             // « x » au lieu de l'espace fine : la frappe physique donne la touche. Une espace
             // ordinaire ne serait pas une faute, l'Initiation la tolère (audit 1.3.0, B1).
-            BancCapture.Call(window, "OnRawKeyDown", X);
+            BancCapture.Call(window, "OnRawKeyDown", X, false);
             BancCapture.Call(window, "OnChar", 'x');
             Assert.Equal(X, BancCapture.Field<uint>(window, "_errorScancode"));
 
