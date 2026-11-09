@@ -87,11 +87,33 @@ internal sealed class LessonExercise
         Instruction = instruction;
         Content = content.Replace("\r\n", "\n");
         TypingMode = typingMode;
-        Hash = LessonCatalogLoader.ComputeExerciseHash(type, instruction, Content);
+        // Audit UX du 09/11 (L1) : l'empreinte ne dépend que de ce qu'on tape, jamais de la
+        // consigne traduite. Elle incluait la consigne : passer en anglais cachait toute la
+        // progression française. Les clés d'avant se reconnaissent par LegacyHashes.
+        Hash = LessonCatalogLoader.ComputeExerciseHash(type, Content);
         // Audit du 25/09 (L-06) : calculée une fois. Interpolée à chaque lecture, elle l'était
         // plus de 160 fois par repeint (IsCompleted, comptes de la barre latérale).
-        StableKey = $"{ModuleId}/{LessonId}/{ExerciseIndex}/{Hash}";
+        KeyPrefix = $"{ModuleId}/{LessonId}/{ExerciseIndex}/";
+        StableKey = KeyPrefix + Hash;
     }
+
+    /// <summary>« module/leçon/rang/ » : la clé de progression sans l'empreinte.</summary>
+    public string KeyPrefix { get; }
+
+    /// <summary>
+    /// Empreintes que les versions d'avant le 09/11/2026 donnaient à cet exercice : une par
+    /// consigne publiée (FR et EN, table figée `lesson-instruction-history.json`) et par la
+    /// consigne actuelle. Calculées avec le texte actuel : un texte modifié depuis ne
+    /// retrouve pas sa progression, comme avant.
+    /// </summary>
+    public IReadOnlyList<string> LegacyHashes => _legacyHashes ??= LessonInstructionHistory
+        .For(KeyPrefix.TrimEnd('/'))
+        .Append(Instruction)
+        .Distinct(StringComparer.Ordinal)
+        .Select(instruction => LessonCatalogLoader.ComputeLegacyExerciseHash(Type, instruction, Content))
+        .ToArray();
+
+    private string[]? _legacyHashes;
 
     public string ModuleId { get; }
     public string LessonId { get; }
@@ -189,12 +211,19 @@ internal static class LessonCatalogLoader
         return new LessonCatalog(modules);
     }
 
-    internal static string ComputeExerciseHash(string type, string instruction, string content)
-    {
-        string normalized = string.Join('\u001F', type, instruction, content.Replace("\r\n", "\n"));
-        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
+    /// <summary>Empreinte d'un exercice : type et texte à taper, indépendante de la langue
+    /// et de la formulation de la consigne (audit UX du 09/11, L1). Le préfixe « v2 » la
+    /// distingue des empreintes d'avant.</summary>
+    internal static string ComputeExerciseHash(string type, string content) =>
+        Sha256Hex(string.Join('\u001F', "v2", type, content.Replace("\r\n", "\n")));
+
+    /// <summary>Empreinte des versions d'avant le 09/11/2026, consigne traduite incluse :
+    /// sert seulement à reconnaître les progressions déjà enregistrées.</summary>
+    internal static string ComputeLegacyExerciseHash(string type, string instruction, string content) =>
+        Sha256Hex(string.Join('\u001F', type, instruction, content.Replace("\r\n", "\n")));
+
+    private static string Sha256Hex(string normalized) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
 
     private static LessonModule BuildInitiationModule()
     {

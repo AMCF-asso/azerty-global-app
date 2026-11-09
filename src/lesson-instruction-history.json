@@ -1,0 +1,332 @@
+{
+ "email-web/arobase/0": [
+  "Tapez l'arobase",
+  "Type the at sign"
+ ],
+ "email-web/arobase/1": [
+  "Tapez ces adresses courtes",
+  "Type these short addresses"
+ ],
+ "email-web/arobase/2": [
+  "Tapez des adresses plus longues",
+  "Type longer addresses"
+ ],
+ "email-web/croisillon/0": [
+  "Tapez #",
+  "Type #"
+ ],
+ "email-web/croisillon/1": [
+  "Tapez ces hashtags",
+  "Type these hashtags"
+ ],
+ "email-web/croisillon/2": [
+  "Tapez ces exemples de code (AltGr + : est le raccourci ergonomique)",
+  "Type these code examples (AltGr + : is the ergonomic shortcut)"
+ ],
+ "email-web/point-virgule/0": [
+  "Tapez le point-virgule",
+  "Type the semicolon"
+ ],
+ "email-web/point-virgule/1": [
+  "Tapez ces phrases courtes",
+  "Type these short sentences"
+ ],
+ "email-web/point/0": [
+  "Tapez le point",
+  "Type the period"
+ ],
+ "email-web/point/1": [
+  "Tapez ces extensions",
+  "Type these extensions"
+ ],
+ "initiation/premiers-pas/0": [
+  "Tapez É pour découvrir les majuscules accentuées.",
+  "Type É to discover accented capitals."
+ ],
+ "initiation/premiers-pas/1": [
+  "Tapez cette phrase en utilisant Verr. Maj. pour les capitales accentuées.",
+  "Type this sentence using Caps Lock for accented capitals."
+ ],
+ "initiation/premiers-pas/2": [
+  "Tapez cette adresse e-mail.",
+  "Type this email address."
+ ],
+ "initiation/premiers-pas/3": [
+  "Tapez cette phrase de typographie française.",
+  "Type this French typography sentence."
+ ],
+ "initiation/premiers-pas/4": [
+  "Tapez cette ligne de code.",
+  "Type this line of code."
+ ],
+ "initiation/premiers-pas/5": [
+  "Tapez ces mots étrangers.",
+  "Type these foreign words."
+ ],
+ "initiation/premiers-pas/6": [
+  "Tapez ce message.",
+  "Type this message."
+ ],
+ "initiation/premiers-pas/7": [
+  "Tapez ces lettres des langues d’Afrique.",
+  "Type these letters of African languages."
+ ],
+ "langues-etrangeres/allemand/0": [
+  "Tapez les caractères allemands",
+  "Type the German characters"
+ ],
+ "langues-etrangeres/allemand/1": [
+  "Tapez ces mots allemands",
+  "Type these German words"
+ ],
+ "langues-etrangeres/espagnol/0": [
+  "Tapez les caractères espagnols",
+  "Type the Spanish characters"
+ ],
+ "langues-etrangeres/espagnol/1": [
+  "Tapez ces mots espagnols",
+  "Type these Spanish words"
+ ],
+ "langues-etrangeres/latin-etendu/0": [
+  "Extended Latin dead key: {ALTGR} + - (key 6), then the letter",
+  "Touche morte Latin étendu : {ALTGR} + - (touche 6), puis la lettre"
+ ],
+ "langues-etrangeres/latin-etendu/1": [
+  "Tapez ces exemples",
+  "Type these examples"
+ ],
+ "langues-etrangeres/nordiques/0": [
+  "Tapez les caractères nordiques",
+  "Type the Nordic characters"
+ ],
+ "langues-etrangeres/nordiques/1": [
+  "Tapez ces mots",
+  "Type these words"
+ ],
+ "langues-etrangeres/portugais/0": [
+  "Tapez les caractères portugais",
+  "Type the Portuguese characters"
+ ],
+ "langues-etrangeres/portugais/1": [
+  "Tapez ces mots portugais",
+  "Type these Portuguese words"
+ ],
+ "majuscules-accentuees/caps-a-grave/0": [
+  "Method 1: Caps Lock + à → À",
+  "Méthode 1 : Verr. Maj. + à → À"
+ ],
+ "majuscules-accentuees/caps-a-grave/1": [
+  "Method 2: Circumflex (^) + à → À (ideal at the start of a word)",
+  "Mix : mots et phrases (adaptez la méthode !)",
+  "Mix: words and sentences (adapt the method!)",
+  "Méthode 2 : Circonflexe (^) + à → À (idéal en début de mot)"
+ ],
+ "majuscules-accentuees/caps-a-grave/2": [
+  "Mix : mots et phrases (adaptez la méthode !)",
+  "Mix: words and sentences (adapt the method!)"
+ ],
+ "majuscules-accentuees/caps-all/0": [
+  "Full mix: adapt the method to the context",
+  "Mix complet : adaptez la méthode selon le contexte"
+ ],
+ "majuscules-accentuees/caps-c-cedilla/0": [
+  "Method 1: Caps Lock + ç → Ç",
+  "Méthode 1 : Verr. Maj. + ç → Ç"
+ ],
+ "majuscules-accentuees/caps-c-cedilla/1": [
+  "Method 2: Circumflex (^) + ç → Ç (ideal at the start of a word)",
+  "Méthode 2 : Circonflexe (^) + ç → Ç (idéal en début de mot)"
+ ],
+ "majuscules-accentuees/caps-c-cedilla/2": [
+  "Mix : mots et phrases (adaptez la méthode !)",
+  "Mix: words and sentences (adapt the method!)"
+ ],
+ "majuscules-accentuees/caps-e-acute/0": [
+  "Method 1: Caps Lock + é → É",
+  "Méthode 1 : Verr. Maj. + é → É"
+ ],
+ "majuscules-accentuees/caps-e-acute/1": [
+  "Method 2: Circumflex (^) + é → É (ideal at the start of a word)",
+  "Méthode 2 : Circonflexe (^) + é → É (idéal en début de mot)"
+ ],
+ "majuscules-accentuees/caps-e-acute/2": [
+  "Mix : mots et phrases (adaptez la méthode !)",
+  "Mix: words and sentences (adapt the method!)"
+ ],
+ "majuscules-accentuees/caps-e-grave/0": [
+  "Method 1: Caps Lock + è → È",
+  "Méthode 1 : Verr. Maj. + è → È"
+ ],
+ "majuscules-accentuees/caps-e-grave/1": [
+  "Method 2: Circumflex (^) + è → È (ideal at the start of a word)",
+  "Méthode 2 : Circonflexe (^) + è → È (idéal en début de mot)"
+ ],
+ "majuscules-accentuees/caps-e-grave/2": [
+  "Mix : mots et phrases (adaptez la méthode !)",
+  "Mix: words and sentences (adapt the method!)"
+ ],
+ "programmation/accolades/0": [
+  "Tapez les accolades",
+  "Type the braces"
+ ],
+ "programmation/accolades/1": [
+  "Tapez du JSON et du code",
+  "Type some JSON and code"
+ ],
+ "programmation/backslash-pipe/0": [
+  "Tapez \\ et |",
+  "Type \\ and |"
+ ],
+ "programmation/backslash-pipe/1": [
+  "Tapez ces exemples",
+  "Type these examples"
+ ],
+ "programmation/crochets/0": [
+  "Tapez les crochets",
+  "Type the brackets"
+ ],
+ "programmation/crochets/1": [
+  "Tapez ces exemples",
+  "Type these examples"
+ ],
+ "programmation/tilde-backtick/0": [
+  "Tapez ~ (AltGr + N) et ` (AltGr + L)",
+  "Type ~ (AltGr + N) and ` (AltGr + L)"
+ ],
+ "programmation/tilde-backtick/1": [
+  "Tapez ces exemples",
+  "Type these examples"
+ ],
+ "symboles-specialises/divers/0": [
+  "Tapez les symboles divers",
+  "Type the miscellaneous symbols"
+ ],
+ "symboles-specialises/divers/1": [
+  "Use these symbols",
+  "Utilisez ces symboles"
+ ],
+ "symboles-specialises/monetaires/0": [
+  "Tapez les symboles monétaires",
+  "Type the currency symbols"
+ ],
+ "symboles-specialises/monetaires/1": [
+  "Tapez ces montants",
+  "Type these amounts"
+ ],
+ "symboles-specialises/ponctuation-speciale/0": [
+  "Tapez la ponctuation spéciale",
+  "Type the special punctuation"
+ ],
+ "symboles-specialises/ponctuation-speciale/1": [
+  "Use these symbols",
+  "Utilisez ces symboles"
+ ],
+ "symboles-specialises/scientifiques/0": [
+  "Tapez les symboles scientifiques",
+  "Type the scientific symbols"
+ ],
+ "symboles-specialises/scientifiques/1": [
+  "Tapez ces expressions",
+  "Type these expressions"
+ ],
+ "typographie-francaise/apostrophe-typographique/0": [
+  "Tapez l'apostrophe typographique",
+  "Type the typographic apostrophe"
+ ],
+ "typographie-francaise/apostrophe-typographique/1": [
+  "Tapez ces mots",
+  "Type these words"
+ ],
+ "typographie-francaise/espaces-insecables/0": [
+  "Espace fine insécable : {ALTGR} + Espace (avant ; ! ? et dans « »)",
+  "Narrow non-breaking space: {ALTGR} + Space (before ; ! ? and inside « »)"
+ ],
+ "typographie-francaise/espaces-insecables/1": [
+  "Espace insécable : Maj + {ALTGR} + Espace (avant les deux-points)",
+  "Non-breaking space: Shift + {ALTGR} + Space (before colons)"
+ ],
+ "typographie-francaise/espaces-insecables/2": [
+  "Mix : choisissez le bon type d'espace",
+  "Mix: choose the right kind of space"
+ ],
+ "typographie-francaise/guillemets/0": [
+  "Tapez les guillemets",
+  "Type the guillemets"
+ ],
+ "typographie-francaise/guillemets/1": [
+  "Tapez ces citations célèbres",
+  "Type these famous quotes"
+ ],
+ "typographie-francaise/ligatures/0": [
+  "Tapez æ et œ",
+  "Type æ and œ"
+ ],
+ "typographie-francaise/ligatures/1": [
+  "Tapez ces mots",
+  "Type these words"
+ ],
+ "typographie-francaise/point-median/0": [
+  "Tapez le point médian",
+  "Type the middle dot"
+ ],
+ "typographie-francaise/point-median/1": [
+  "Use the middle dot",
+  "Utilisez le point médian"
+ ],
+ "typographie-francaise/tiret-insecable/0": [
+  "Non-breaking hyphen: {ALTGR} + Shift + 6",
+  "Tiret insécable : {ALTGR} + Maj + 6"
+ ],
+ "typographie-francaise/tiret-insecable/1": [
+  "Tapez ces exemples",
+  "Type these examples"
+ ],
+ "typographie-francaise/tirets/0": [
+  "Tapez les tirets",
+  "Type the dashes"
+ ],
+ "typographie-francaise/tirets/1": [
+  "Use the dashes",
+  "Utilisez les tirets"
+ ],
+ "u-grave-pourcentage/pourcentage/0": [
+  "Tapez le pourcentage",
+  "Type the percent sign"
+ ],
+ "u-grave-pourcentage/pourcentage/1": [
+  "Tapez ces valeurs",
+  "Type these values"
+ ],
+ "u-grave-pourcentage/u-grave/0": [
+  "Method 1: {ALTGR} + U → ù",
+  "Méthode 1 : {ALTGR} + U → ù"
+ ],
+ "u-grave-pourcentage/u-grave/1": [
+  "Method 2: Acute accent (´) + V → ù (faster!)",
+  "Méthode 2 : Accent aigu (´) + V → ù (plus rapide !)"
+ ],
+ "u-grave-pourcentage/u-grave/2": [
+  "Capital Ù: Shift + {ALTGR} + U or ´ + Shift + V",
+  "Ù majuscule : Maj + {ALTGR} + U ou ´ + Maj + V"
+ ],
+ "u-grave-pourcentage/u-grave/3": [
+  "Tapez ces mots (choisissez votre méthode)",
+  "Type these words (choose your method)"
+ ],
+ "vingt-millions/course-20-millions-afrique/0": [
+  "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+  "Type the complete text; the help shows the next key."
+ ],
+ "vingt-millions/course-20-millions-symboles/0": [
+  "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+  "Type the complete text; the help shows the next key."
+ ],
+ "vingt-millions/course-20-millions-voyage/0": [
+  "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+  "Type the complete text; the help shows the next key."
+ ],
+ "vingt-millions/course-20-millions/0": [
+  "Tapez le texte en entier ; l’aide indique la prochaine touche.",
+  "Type the complete text; the help shows the next key."
+ ]
+}
