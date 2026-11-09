@@ -891,6 +891,8 @@ sealed partial class SettingsWindow : IDisposable
         {
             int message = Math.Max(MessageHeight(L.SettingsClarity_CompatRefusedAntiCheat, inner),
                 MessageHeight(L.SettingsClarity_CompatRefusedRemote, inner));
+            message = Math.Max(message, MessageHeight(L.Settings_CompatReplaced("application.exe",
+                L.Settings_CompatListForceOn, L.Settings_CompatListForceOff), inner));
             height = Math.Max(height, Layout(width, tab, MessagePlace.Compat, message, 0).ContentHeight);
         }
         return height;
@@ -903,6 +905,8 @@ sealed partial class SettingsWindow : IDisposable
         yield return ShortcutCaptureHint;
         yield return L.SettingsClarity_ShortcutKeypadDigit;
         yield return L.SettingsClarity_ShortcutOtherKey;
+        yield return L.SettingsClarity_ShortcutCtrlOnly;
+        yield return L.SettingsClarity_ShortcutRestored("F12");
         yield return L.SettingsClarity_ShortcutTakenByKeyboard("F12");
         yield return L.SettingsClarity_ShortcutTakenBySearch("F12");
         for (char letter = 'A'; letter <= 'Z'; letter++)
@@ -1437,39 +1441,69 @@ sealed partial class SettingsWindow : IDisposable
         }
     }
 
+    /// <summary>Ferme la fenêtre. Plus rien ne s'écrit ici (audit 09/11, W1) : chaque case est
+    /// écrite à son clic (<see cref="ApplyAutoStart"/>, <see cref="ApplyNotifications"/>,
+    /// <see cref="ApplyOnboarding"/>), comme le Défi du jour et les réglages des Leçons. Avant,
+    /// Quitter depuis la zone de notification sans fermer la fenêtre perdait les trois cases.</summary>
     public void Close()
     {
-        bool autoStart = Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
-        bool autoStartWasRegistered = AutoStart.IsRegistered;
-        bool autoStartSaved = AutoStart.Set(autoStart);
+        Win32.ShowWindow(_hWnd, 0);
+        _visible = false;
+    }
+
+    /// <summary>Remet au premier plan la fenêtre déjà ouverte, sans toucher à ce qu'elle
+    /// affiche (audit 09/11, W2) : <see cref="Show"/> relit la configuration, rétablit les cases
+    /// et efface le message, ce qui défaisait un geste en cours.</summary>
+    public void BringToFront()
+    {
+        if (!_visible || _hWnd == IntPtr.Zero) return;
+        Win32.ShowWindow(_hWnd, 9); // SW_RESTORE : réaffiche aussi une fenêtre réduite
+        Win32.SetForegroundWindow(_hWnd);
+    }
+
+    /// <summary>Ouvre la fenêtre, ou la ramène au premier plan si elle l'est déjà.</summary>
+    public void ShowOrBringToFront()
+    {
+        if (_visible) BringToFront();
+        else Show();
+    }
+
+    /// <summary>Démarrage avec Windows : la case est écrite au clic. Un échec rend la case à
+    /// l'état réel et le dit.</summary>
+    private void ApplyAutoStart()
+    {
+        bool autoStart = IsChecked(_hWndChkAutoStart);
+        bool autoStartWasRegistered = AutoStartIsRegistered();
+        bool autoStartSaved = AutoStartSetter(autoStart);
         RefreshAutoStartCheckbox();
         if (!autoStartSaved)
             ShowAutoStartError();
         // Un choix fait à la main éteint la relance, dans un sens comme dans l'autre —
         // même doctrine que l'accueil et que l'ancienne entrée du menu tray (R2 de l'audit v1.2.0).
-        // Seul un changement réel compte : refermer Paramètres sans toucher la case
-        // n'est pas un choix, et ne doit pas consommer la proposition.
+        // Seul un changement réel compte.
         else if (autoStart != autoStartWasRegistered)
             AutoStartNudge.MarkPromptShown();
-
-        // Un réglage imposé ne se réécrit pas dans config.json : la case affiche la valeur de
-        // la politique, la persister écraserait le choix de l'utilisateur, qui doit reprendre
-        // effet le jour où la politique est retirée.
-        if (!_managedNotifications)
-        {
-            bool notifications = Win32.SendMessageW(_hWndChkNotifications, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
-            ConfigManager.SetNotifications(notifications);
-        }
-
-        if (!_managedOnboarding)
-        {
-            bool showOnboarding = Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
-            ConfigManager.SetShowOnboardingAtStartup(showOnboarding);
-        }
-
-        Win32.ShowWindow(_hWnd, 0);
-        _visible = false;
     }
+
+    // Un réglage imposé ne se réécrit pas dans config.json : la case affiche la valeur de
+    // la politique, la persister écraserait le choix de l'utilisateur, qui doit reprendre
+    // effet le jour où la politique est retirée.
+    private void ApplyNotifications()
+    {
+        if (_managedNotifications) return;
+        ConfigManager.SetNotifications(IsChecked(_hWndChkNotifications));
+    }
+
+    private void ApplyOnboarding()
+    {
+        if (_managedOnboarding) return;
+        ConfigManager.SetShowOnboardingAtStartup(IsChecked(_hWndChkOnboarding));
+    }
+
+    /// <summary>Écriture du démarrage automatique et lecture de son état réel. Les témoins les
+    /// remplacent : aucun test ne doit inscrire l'application au démarrage du poste.</summary>
+    internal static Func<bool, bool> AutoStartSetter = AutoStart.Set;
+    internal static Func<bool> AutoStartIsRegistered = () => AutoStart.IsRegistered;
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
@@ -1654,8 +1688,8 @@ sealed partial class SettingsWindow : IDisposable
                             // n'était plus annoncé. Le rendre au bouton, Oui comme Non.
                             Win32.SetFocus(_hWndLinkReset);
                             if (confirmResult != 6) break; // IDYES = 6
-                            _keyboardVk = 0x51;
-                            _searchVk = 0x57;
+                            _keyboardVk = DefaultKeyboardVk;
+                            _searchVk = DefaultSearchVk;
                             ConfigManager.ShortcutVirtualKeyboardVk = _keyboardVk;
                             ConfigManager.ShortcutCharacterSearchVk = _searchVk;
                             RefreshShortcutTexts();
@@ -1688,6 +1722,16 @@ sealed partial class SettingsWindow : IDisposable
                     case IDC_RADIO_LANG_EN:
                         if (code == 0) ApplyLanguageChange("en");
                         break;
+                    // Audit 09/11, W1 : chaque case s'écrit à son clic.
+                    case IDC_CHK_AUTOSTART:
+                        if (code == 0) ApplyAutoStart();
+                        break;
+                    case IDC_CHK_NOTIFICATIONS:
+                        if (code == 0) ApplyNotifications();
+                        break;
+                    case IDC_CHK_ONBOARDING:
+                        if (code == 0) ApplyOnboarding();
+                        break;
                     case IDC_CHK_TRAINING:
                         if (code == 0)
                         {
@@ -1705,7 +1749,7 @@ sealed partial class SettingsWindow : IDisposable
                         if (code == 0) ApplyCompatModeToSelection(null);
                         break;
                     case IDC_RADIO_COMPAT_AUTO:
-                        if (code == 0) ApplyCompatModeToSelection(null);
+                        if (code == 0) ApplyCompatModeToSelection(null, fromAutoRadio: true);
                         break;
                     case IDC_RADIO_COMPAT_FORCEON:
                         if (code == 0) ApplyCompatModeToSelection("forceOn");
@@ -1841,6 +1885,7 @@ sealed partial class SettingsWindow : IDisposable
 
     private void ShowValidationMessage(string text, bool captureHint, bool refused)
     {
+        _captureConfirmed = false; // un autre message : la confirmation n'est plus à l'écran
         var placeBefore = CurrentMessagePlace();
         bool rowChanged = ValidationNeedsRelayout(_validationMessage, text);
         _validationMessage = text;
@@ -1918,7 +1963,7 @@ sealed partial class SettingsWindow : IDisposable
     private void RefreshAutoStartCheckbox()
     {
         Win32.SendMessageW(_hWndChkAutoStart, Win32.BM_SETCHECK,
-            AutoStart.IsRegistered ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+            AutoStartIsRegistered() ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
     }
 
     private void RefreshLanguageRadios()
@@ -2090,7 +2135,11 @@ sealed partial class SettingsWindow : IDisposable
     /// sécurité que le sous-menu tray : jamais de forceOn sur un process anti-cheat ou
     /// de connexion à distance (chemin complet inconnu ici → garde par nom seul).
     /// </summary>
-    private void ApplyCompatModeToSelection(string? mode)
+    private void ApplyCompatModeToSelection(string? mode) => ApplyCompatModeToSelection(mode, false);
+
+    // Surcharge plutôt que paramètre facultatif : les bancs appellent la méthode par réflexion
+    // (BancCapture.Call), qui ne remplit pas les paramètres facultatifs.
+    private void ApplyCompatModeToSelection(string? mode, bool fromAutoRadio)
     {
         string? proc = SelectedCompatProcess();
         if (proc == null) return;
@@ -2111,8 +2160,10 @@ sealed partial class SettingsWindow : IDisposable
 
         ConfigManager.SetCompatibilityOverride(proc, mode);
         RefreshCompatList(mode == null ? null : proc);
+        // Audit 09/11, W19 : « Auto » et « Retirer » ont le même effet (l'entrée sort de la liste) ;
+        // le message de « Auto » le dit, au lieu de répéter celui de « Retirer ».
         SetValidationMessage(mode == null
-            ? L.Settings_CompatRemoved(proc)
+            ? (fromAutoRadio ? L.Settings_CompatAutomatic(proc) : L.Settings_CompatRemoved(proc))
             : L.Settings_CompatUpdated(proc));
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         CompatibilityOverridesChanged?.Invoke();
@@ -2150,16 +2201,26 @@ sealed partial class SettingsWindow : IDisposable
             string name = Path.GetFileName(path);
             if (string.IsNullOrEmpty(name)) return;
 
-            ConfigManager.SetCompatibilityOverride(name, "forceOff");
-            RefreshCompatList(name);
-            SetValidationMessage(L.Settings_CompatAdded(name));
-            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-            CompatibilityOverridesChanged?.Invoke();
+            AddCompatApplication(name);
         }
         finally
         {
             Marshal.FreeHGlobal(buffer);
         }
+    }
+
+    /// <summary>Ajoute l'application en « désactivée ». Audit 09/11, W19 : ajouter une application déjà
+    /// listée écrasait son mode sans le dire ; le message dit de quel mode à quel mode.</summary>
+    private void AddCompatApplication(string name)
+    {
+        string? previous = ConfigManager.GetCompatibilityOverride(name);
+        ConfigManager.SetCompatibilityOverride(name, "forceOff");
+        RefreshCompatList(name);
+        SetValidationMessage(previous == null
+            ? L.Settings_CompatAdded(name)
+            : L.Settings_CompatReplaced(name, CompatListLabel(previous), CompatListLabel("forceOff")));
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        CompatibilityOverridesChanged?.Invoke();
     }
 
     /// <summary>Boîte modale de Windows. Les témoins la remplacent : aucun test n'ouvre de
@@ -2172,10 +2233,52 @@ sealed partial class SettingsWindow : IDisposable
 
     private void ShowAutoStartError()
     {
-        Win32.MessageBoxW(_hWnd,
+        ShowMessageBox(_hWnd,
             AutoStart.GetFailureMessage(),
             L.Common_ErrorTitle, 0x10);
     }
+
+    private const int VK_SHIFT = 0x10, VK_LCONTROL = 0xA2, VK_RCONTROL = 0xA3, VK_LMENU = 0xA4, VK_RMENU = 0xA5;
+    private const uint DefaultKeyboardVk = 0x51; // Q
+    private const uint DefaultSearchVk = 0x57; // W
+
+    /// <summary>Ce que la case de raccourci fait d'une frappe (audit 09/11, W5 et E25).</summary>
+    internal enum ShortcutKeyAction
+    {
+        /// <summary>La touche devient le raccourci (après validation).</summary>
+        Apply,
+        /// <summary>Alt tenu : Alt+F4 ferme la fenêtre, Alt+Espace ouvre son menu. La case ne les prend pas.</summary>
+        PassToSystem,
+        /// <summary>Ctrl tenu sans Maj : Ctrl+A n'enregistre pas « A ». Le raccourci est Ctrl + Maj + touche.</summary>
+        RefuseCtrl,
+        /// <summary>Retour arrière ou Suppr : la touche d'origine revient. Un raccourci ne peut pas être vide
+        /// (le moteur retombe sur Q et W), effacer revient donc à rendre la touche d'origine.</summary>
+        RestoreDefault,
+    }
+
+    /// <summary>Décision pure. <paramref name="ctrl"/> et <paramref name="alt"/> viennent de
+    /// <see cref="EffectiveModifiers"/> : Alt Gr n'y compte ni comme Ctrl ni comme Alt.</summary>
+    internal static ShortcutKeyAction ClassifyShortcutKey(uint vk, bool ctrl, bool alt, bool shift)
+    {
+        if (alt) return ShortcutKeyAction.PassToSystem;
+        if (ctrl && !shift) return ShortcutKeyAction.RefuseCtrl;
+        if (vk is 0x08 or 0x2E) return ShortcutKeyAction.RestoreDefault;
+        return ShortcutKeyAction.Apply;
+    }
+
+    /// <summary>Ctrl et Alt réellement tenus. Sous Windows, Alt Gr se signale comme Ctrl gauche + Alt
+    /// droit : lire « Ctrl » tout court refuserait les caractères Alt Gr. Sans Ctrl gauche, l'Alt droit
+    /// est un vrai Alt.</summary>
+    internal static (bool Ctrl, bool Alt) EffectiveModifiers(bool leftCtrl, bool rightCtrl, bool leftAlt, bool rightAlt)
+    {
+        bool altGr = rightAlt && leftCtrl;
+        bool ctrl = rightCtrl || (leftCtrl && !altGr);
+        bool alt = leftAlt || (rightAlt && !leftCtrl);
+        return (ctrl, alt);
+    }
+
+    /// <summary>Touche tenue enfoncée. Les témoins la remplacent.</summary>
+    internal static Func<int, bool> KeyHeld = vk => (TypingEngine.Windows.Win32.GetKeyState(vk) & unchecked((short)0x8000)) != 0;
 
     private bool IsModifierVirtualKey(uint vk)
     {
@@ -2211,10 +2314,27 @@ sealed partial class SettingsWindow : IDisposable
     /// <summary>L'invite de capture ou un refus de raccourci est affiché sous les raccourcis :
     /// Échap annule alors la saisie au lieu de fermer la fenêtre. Avant le lot « clarté », un
     /// refus effaçait l'invite, et Échap fermait la fenêtre au lieu d'annuler.</summary>
+    /// <summary>Audit 09/11, W18 : un raccourci vient d'être enregistré dans la case qui garde le
+    /// focus. Échap n'a plus rien à annuler : il la quitte (le message « mis à jour ✓ » s'efface),
+    /// et seul un second Échap ferme la fenêtre. Avant, il fermait tout de suite, comme si le geste
+    /// d'annuler l'avait emporté sur celui de valider.</summary>
+    private bool _captureConfirmed;
+
+    private void LeaveShortcutField(IntPtr hWndShortcut)
+    {
+        _captureConfirmed = false;
+        SetValidationMessage(string.Empty);
+        // La case perd le focus (WM_KILLFOCUS rend la touche en place) : il passe à la fenêtre.
+        if (_hWnd != IntPtr.Zero && Win32.GetFocus() == hWndShortcut)
+            Win32.SetFocus(_hWnd);
+    }
+
     private bool ShortcutCaptureMessageShown =>
         _showCaptureHint || (_validationRefused && CurrentMessagePlace() == MessagePlace.Shortcuts);
 
-    private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk)
+    private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk) => ApplyCapturedShortcut(hWndShortcut, vk, false);
+
+    private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk, bool restored)
     {
         bool isKeyboard = hWndShortcut == _hWndEditKeyboard;
         uint otherVk = isKeyboard ? _searchVk : _keyboardVk;
@@ -2250,15 +2370,20 @@ sealed partial class SettingsWindow : IDisposable
             _keyboardVk = vk;
             ConfigManager.ShortcutVirtualKeyboardVk = vk;
             RefreshShortcutText(hWndShortcut, _keyboardVk);
-            SetValidationMessage(L.Settings_ShortcutKeyboardUpdated);
+            SetValidationMessage(restored
+                ? L.SettingsClarity_ShortcutRestored(ConfigManager.GetShortcutDisplayName(vk))
+                : L.Settings_ShortcutKeyboardUpdated);
         }
         else
         {
             _searchVk = vk;
             ConfigManager.ShortcutCharacterSearchVk = vk;
             RefreshShortcutText(hWndShortcut, _searchVk);
-            SetValidationMessage(L.Settings_ShortcutSearchUpdated);
+            SetValidationMessage(restored
+                ? L.SettingsClarity_ShortcutRestored(ConfigManager.GetShortcutDisplayName(vk))
+                : L.Settings_ShortcutSearchUpdated);
         }
+        _captureConfirmed = true; // Échap quitte la case au lieu de fermer (W18)
 
         ShortcutChanged?.Invoke();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
@@ -2343,6 +2468,8 @@ sealed partial class SettingsWindow : IDisposable
                 {
                     if (ShortcutCaptureMessageShown)
                         CancelShortcutCapture(hWnd);
+                    else if (_captureConfirmed)
+                        LeaveShortcutField(hWnd); // W18 : la touche est déjà enregistrée, Échap sort de la case
                     else
                         Close();
                     return IntPtr.Zero;
@@ -2350,6 +2477,26 @@ sealed partial class SettingsWindow : IDisposable
 
                 if (IsModifierVirtualKey((uint)vk))
                     return IntPtr.Zero;
+
+                var (ctrl, alt) = EffectiveModifiers(KeyHeld(VK_LCONTROL), KeyHeld(VK_RCONTROL),
+                    KeyHeld(VK_LMENU), KeyHeld(VK_RMENU));
+                switch (ClassifyShortcutKey((uint)vk, ctrl, alt, KeyHeld(VK_SHIFT)))
+                {
+                    // Alt+F4, Alt+Espace, Alt+lettre : au système, qui ferme ou ouvre le menu.
+                    case ShortcutKeyAction.PassToSystem:
+                        return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+                    case ShortcutKeyAction.RefuseCtrl:
+                        SetShortcutValidity(hWnd, false);
+                        if (ConfigManager.IsShortcutAllowedVk((uint)vk))
+                            RefreshShortcutText(hWnd, (uint)vk); // la touche refusée, comme les autres refus
+                        SetRefusalMessage(L.SettingsClarity_ShortcutCtrlOnly);
+                        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                        return IntPtr.Zero;
+                    case ShortcutKeyAction.RestoreDefault:
+                        ApplyCapturedShortcut(hWnd, hWnd == _hWndEditKeyboard ? DefaultKeyboardVk : DefaultSearchVk,
+                            restored: true);
+                        return IntPtr.Zero;
+                }
 
                 ApplyCapturedShortcut(hWnd, (uint)vk);
                 return IntPtr.Zero;
