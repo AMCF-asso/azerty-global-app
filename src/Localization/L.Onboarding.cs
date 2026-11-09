@@ -107,6 +107,10 @@ internal static partial class L
         "Ce n’est pas ɓ. Réessayez : la touche à droite du M, puis b.",
         "That isn’t ɓ. Try again: the key right of M, then b.");
     // Astuce : « Une autre lettre : Ctrl + Maj + W, puis tapez « peul » ou « bambara ». »
+    /// <summary>Champ d'essai figé pendant une pause ou une suspension (audit 09/11, W3).</summary>
+    public static string Onboarding_TrialPaused => T(
+        "L’essai attend la reprise : le clavier n’est pas actif pour l’instant.",
+        "The test waits for resume: the keyboard is not active right now.");
     public static string Onboarding_LanguagesTipPrefix => T("Une autre lettre : ", "Another letter: ");
     public static string Onboarding_LanguagesTipSuffix => T(
         ", puis tapez « peul » ou « bambara ».",

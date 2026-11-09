@@ -93,6 +93,17 @@ internal static partial class L
     public static string TrayClarity_ReasonUnknown => T("En pause : fenêtre non reconnue", "Paused: unrecognized window");
     public static string TrayClarity_TooltipPausedByYou(string remaining) =>
         T($"En pause à votre demande, reprise dans {remaining}", $"Paused by you, resumes in {remaining}");
+    // Audit 09/11, W14 et W15 : le menu de l'icône dit pourquoi ses entrées sont grisées.
+    public static string TrayClarity_MenuStatePaused => T(
+        "En pause : clavier virtuel et recherche indisponibles",
+        "Paused: virtual keyboard and search unavailable");
+    public static string TrayClarity_MenuStateDisabled => T(
+        "Désactivé : clavier virtuel, recherche et pause indisponibles",
+        "Off: virtual keyboard, search and pause unavailable");
+    /// <summary>En pause, cette entrée désactive : elle met fin à la pause (le raccourci Ctrl + Maj + Verr. Maj. la reprend).</summary>
+    public static string TrayClarity_MenuDisableEndsPause => T(
+        "Désactiver (met fin à la pause)",
+        "Turn off (ends the pause)");
     public static string TrayClarity_TooltipDisabled =>
         T("Désactivé (Ctrl + Maj + Verr. Maj. pour réactiver)", "Off (Ctrl + Shift + Caps Lock to turn on)");
 }
