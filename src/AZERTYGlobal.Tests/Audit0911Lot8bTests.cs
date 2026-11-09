@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using AZERTYGlobal;
 using Xunit;
@@ -60,6 +61,100 @@ public sealed class Audit0911Lot8bTests
             GC.KeepAlive(proc);
         }
     }
+
+    // ── W22 : le clavier virtuel est un affichage ───────────────────────────
+
+    [DllImport("oleacc.dll")]
+    private static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint idObject, ref Guid riid, out IntPtr ppv);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct VariantI4 { public ushort Vt; public ushort R1, R2, R3; public IntPtr Valeur; public IntPtr Reste; }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int ProprieteVariant(IntPtr self, VariantI4 child, out VariantI4 valeur);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int ProprieteTexte(IntPtr self, VariantI4 child, out IntPtr bstr);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int Libérer(IntPtr self);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetCursor();
+
+    [Fact]
+    public void ClavierVirtuel_SePrésenteCommeUnAffichage_RôleNomEtCurseur()
+    {
+        const int ROLE_SYSTEM_PUSHBUTTON = 0x2B, ROLE_SYSTEM_GRAPHIC = 0x28;
+        int rôle = 0; string? nom = null, description = null; IntPtr curseur = IntPtr.Zero, flèche = IntPtr.Zero;
+        IntPtr réponse = IntPtr.Zero, réponseBord = (IntPtr)(-1), curseurBord = IntPtr.Zero;
+        Exception? échec = null;
+        var fil = new Thread(() =>
+        {
+            try
+            {
+                using var isolation = new BancCapture.Isolation();
+                var clavier = new VirtualKeyboard(LayoutLoader.LoadFromResource());
+                try
+                {
+                    IntPtr hwnd = BancCapture.Handle(clavier);
+                    Assert.NotEqual(IntPtr.Zero, hwnd);
+                    Guid iid = new("618736E0-3C3D-11CF-810C-00AA00389B71");
+                    Assert.Equal(0, AccessibleObjectFromWindow(hwnd, 0xFFFFFFFC, ref iid, out IntPtr acc));
+                    try
+                    {
+                        IntPtr Slot(int i) => Marshal.ReadIntPtr(Marshal.ReadIntPtr(acc), i * IntPtr.Size);
+                        var soi = new VariantI4 { Vt = 3 };
+                        Assert.Equal(0, Marshal.GetDelegateForFunctionPointer<ProprieteVariant>(Slot(13))(acc, soi, out VariantI4 r));
+                        rôle = (int)r.Valeur;
+                        string? Texte(int slot)
+                        {
+                            Marshal.GetDelegateForFunctionPointer<ProprieteTexte>(Slot(slot))(acc, soi, out IntPtr bstr);
+                            return bstr == IntPtr.Zero ? null : Marshal.PtrToStringBSTR(bstr);
+                        }
+                        nom = Texte(10);
+                        description = Texte(12);
+                    }
+                    finally
+                    {
+                        Marshal.GetDelegateForFunctionPointer<Libérer>(Slot0(acc, 2))(acc);
+                    }
+
+                    // WM_SETCURSOR au-dessus de la zone client : la flèche, jamais la main.
+                    flèche = Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32512);
+                    Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)32649)); // la main, posée avant
+                    réponse = Win32.SendMessageW(hwnd, Win32.WM_SETCURSOR, hwnd, (IntPtr)(1 | (0x0200 << 16)));
+                    curseur = GetCursor();
+                    // Sur un bord (HTLEFT = 10) : Windows décide, la fenêtre ne répond pas.
+                    réponseBord = Win32.SendMessageW(hwnd, Win32.WM_SETCURSOR, hwnd, (IntPtr)(10 | (0x0200 << 16)));
+                    curseurBord = GetCursor();
+                }
+                finally { BancCapture.Teardown(clavier); }
+            }
+            catch (Exception ex) { échec = ex; }
+        });
+        fil.SetApartmentState(ApartmentState.STA);
+        fil.Start();
+        fil.Join();
+        if (échec != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(échec).Throw();
+
+        Assert.Equal(ROLE_SYSTEM_GRAPHIC, rôle);
+        Assert.NotEqual(ROLE_SYSTEM_PUSHBUTTON, rôle);
+        Assert.Equal(L.VirtualKeyboardPaper_Title, nom);
+        Assert.Equal(L.VirtualKeyboardPaper_Description, description);
+        Assert.Equal((IntPtr)1, réponse);
+        Assert.Equal(flèche, curseur);
+        Assert.NotEqual(flèche, curseurBord);
+    }
+
+    private static IntPtr Slot0(IntPtr acc, int i) => Marshal.ReadIntPtr(Marshal.ReadIntPtr(acc), i * IntPtr.Size);
+
+    [Theory]
+    [InlineData(1, true)]    // HTCLIENT
+    [InlineData(10, false)]  // HTLEFT : curseur de redimensionnement de Windows
+    [InlineData(2, false)]   // HTCAPTION
+    public void ClavierVirtuel_FlècheSeulementSurLaZoneClient(int zone, bool attendu) =>
+        Assert.Equal(attendu, VirtualKeyboard.ShowsArrowCursor(zone));
 
     // ── E14 : couches grecque et cyrillique dans la frappe des Leçons ───────
 
