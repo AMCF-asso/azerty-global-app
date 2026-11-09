@@ -65,8 +65,12 @@ internal static partial class L
     // ── Mode libre ───────────────────────────────────────────────────
     public static string LessonsWin_FreeTitle => T("Mode libre", "Free mode");
     public static string LessonsWin_FreeDescription => T(
-        "Tapez librement pour mesurer le rythme. Rien n’est enregistré après fermeture.",
-        "Type freely to measure your pace. Nothing is recorded after closing.");
+        "Tapez librement pour mesurer le rythme. Le texte reste tant que l’application tourne, sans être enregistré.",
+        "Type freely to measure your pace. Your text stays while the app runs and is never saved.");
+    /// <summary>Champ du mode Libre plein (audit 09/11, E6 : la coupe à 220 caractères était muette).</summary>
+    public static string LessonsWin_FreeFull(int max) => T(
+        $"Champ plein : {max.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"))} caractères au plus.",
+        $"Field full: {max.ToString("#,0", System.Globalization.CultureInfo.GetCultureInfo("en-US"))} characters at most.");
     public static string LessonsWin_FreeStatsEmpty => T(
         "Mots/min : —    Caractères/min : —    Durée : 0 s    Corrections : 0",
         "WPM: —    Characters/min: —    Duration: 0s    Corrections: 0");

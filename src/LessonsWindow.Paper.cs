@@ -948,13 +948,16 @@ internal sealed partial class LessonsWindow
         if (_hasFocus && _focusedActionIndex < 0)
             DrawFocusOutline(hdc, preview, CLR_ACCENT);
         // Géométrie des caractères non relevée ici : l'aperçu entier en tient lieu.
-        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, L.LessonsWin_FreeDescription, _freePreview,
-            Math.Clamp(_freeCursorIndex, 0, _freePreview.Length), preview, Array.Empty<Win32.RECT>(), _systemCaretRect);
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, L.LessonsWin_FreeDescription, _free.Text,
+            _free.Caret, preview, Array.Empty<Win32.RECT>(), _systemCaretRect, SelectionAnchor: _free.Anchor);
 
         var font = F(AppFonts.Text, 15);
         int y = preview.bottom + S(14);
-        PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_FreeDescription, font, body.right - body.left), font,
-            new Win32.RECT { left = body.left, top = y, right = body.right, bottom = y + S(22) }, CLR_MUTED, TextAlign.Left);
+        // Champ plein : le dire à la place de la description, plutôt que couper en silence (E6).
+        string under = _freeTruncated ? L.LessonsWin_FreeFull(FREE_MAX_CHARS) : L.LessonsWin_FreeDescription;
+        PaperText.DrawLine(hdc, Ellipsize(hdc, under, font, body.right - body.left), font,
+            new Win32.RECT { left = body.left, top = y, right = body.right, bottom = y + S(22) },
+            _freeTruncated ? CLR_BAD : CLR_MUTED, TextAlign.Left);
         y += S(26);
         if (ConfigManager.LessonFreeStatsVisible)
         {
