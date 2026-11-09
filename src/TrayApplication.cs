@@ -616,8 +616,9 @@ sealed class TrayApplication : IDisposable
         // détecté ; geler la saisie de la fenêtre ouvrirait une fenêtre inerte.
         _characterSearch?.SetInputPaused(paused && !IsUserOverrideSuspension);
         _lessons?.SetInputPaused(paused);
-        _settings?.SetInputPaused(_activationConsent && paused);
-        // Le consentement doit rester accessible avant que le moteur soit actif.
+        // Audit 09/11, W3 : les Paramètres ne sont pas une surface de frappe, ils restent utilisables
+        // en pause (ils étaient figés, sans un mot : seule la croix répondait). L'accueil l'est aussi,
+        // sauf son champ d'essai, qui ne montre le clavier que si le moteur tourne : il le dit.
         _onboarding?.SetInputPaused(_activationConsent && paused);
     }
 
@@ -743,7 +744,11 @@ sealed class TrayApplication : IDisposable
                     else if (mouseMsg == Win32.WM_LBUTTONDBLCLK)
                     {
                         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK);
-                        if (ShouldProcessHook) _virtualKeyboard?.Toggle();
+                        // Audit 09/11, W14 : en pause, désactivé ou avant l'accord, le double-clic ne
+                        // restait pas sans effet : il dit pourquoi, ou ouvre l'accueil.
+                        if (!_activationConsent) ShowOnboardingNow();
+                        else if (ShouldProcessHook) _virtualKeyboard?.Toggle();
+                        else ShowToolUnavailableBalloon();
                     }
                     else if (mouseMsg == NIN_BALLOONUSERCLICK)
                     {
@@ -801,14 +806,8 @@ sealed class TrayApplication : IDisposable
                     // Le raccourci n'arrive ici, sous suspension, que si elle est choisie
                     // (ShouldDetectShortcutsWhileBlocked). « Désactivé — Ctrl+Maj+Verr. Maj.
                     // pour réactiver » y était faux : ce raccourci aurait désactivé l'app.
-                    else if (IsUserOverrideSuspension)
-                        ShowBalloon(L.Tray_SuspendedInTitle(FormatProcessName(
-                                _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback)),
-                            L.TrayClarity_UserOverrideSuspendedBody);
-                    else if (IsPaused)
-                        ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
                     else
-                        ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
+                        ShowToolUnavailableBalloon();
                     return IntPtr.Zero;
 
                 case WM_APP_STATE:
@@ -866,7 +865,8 @@ sealed class TrayApplication : IDisposable
                                 _maintainableLayersWindow = new MaintainableLayersWindow();
                                 _maintainableLayersWindow.SettingsChanged += OnMaintainableLayerSettingsChanged;
                             }
-                            _maintainableLayersWindow.Show();
+                            // W2 : déjà ouverte, elle revient au premier plan sans se relire.
+                            _maintainableLayersWindow.ShowOrBringToFront();
                             break;
                         case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
                         case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
@@ -880,6 +880,12 @@ sealed class TrayApplication : IDisposable
                         case IDM_BUG: OnReportBug(); break;
                         case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/soutien"), null, null, 1); break;
                         case IDM_ONBOARDING:
+                            // W2 : l'accueil déjà ouvert revient au premier plan, à l'étape où il est.
+                            if (_onboarding?.IsVisible == true)
+                            {
+                                _onboarding.BringToFront();
+                                break;
+                            }
                             if (_onboarding == null)
                             {
                                 _onboarding = CreateOnboardingWindow();
@@ -1316,6 +1322,11 @@ sealed class TrayApplication : IDisposable
     private void ShowOnboardingNow()
     {
         _onboarding ??= CreateOnboardingWindow();
+        if (_onboarding.IsVisible)
+        {
+            _onboarding.BringToFront(); // W2 : Show() le remettrait à l'étape 1
+            return;
+        }
         ApplyWindowInputState();
         _onboarding.Show();
     }
@@ -1516,7 +1527,7 @@ sealed class TrayApplication : IDisposable
             _settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
         }
         ApplyWindowInputState();
-        _settings.Show();
+        _settings.ShowOrBringToFront(); // W2 : déjà ouverte, elle n'est pas remise à zéro
     }
 
     /// <summary>
@@ -1707,6 +1718,10 @@ sealed class TrayApplication : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 
+    /// <summary>Libellé de l'entrée d'activation : en pause, « Désactiver » met fin à la pause.</summary>
+    internal static string ToggleMenuLabel(bool enabled, bool paused) =>
+        !enabled ? L.Tray_MenuEnable : paused ? L.TrayClarity_MenuDisableEndsPause : L.Tray_MenuDisable;
+
     private void ShowContextMenu()
     {
         var hMenu = Win32.CreatePopupMenu();
@@ -1725,8 +1740,15 @@ sealed class TrayApplication : IDisposable
             Win32.AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, SuspensionReasonText(_appliedSuspendReason));
             Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
         }
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE,
-            _enabled ? L.Tray_MenuDisable : L.Tray_MenuEnable);
+        // Audit 09/11, W14 et W15 : en pause ou désactivé, une ligne grisée dit ce que le menu grise ;
+        // « Désactiver » dit qu'il met fin à la pause (le raccourci, lui, la reprend).
+        if (_activationConsent && !_suspendedForCompatibility && (IsPaused || !_enabled))
+        {
+            Win32.AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0,
+                IsPaused ? L.TrayClarity_MenuStatePaused : L.TrayClarity_MenuStateDisabled);
+            Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
+        }
+        Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE, ToggleMenuLabel(_enabled, IsPaused));
         if (IsPaused)
         {
             Win32.AppendMenuW(hMenu, MF_STRING, IDM_PAUSE,
@@ -1745,7 +1767,7 @@ sealed class TrayApplication : IDisposable
                 L.Tray_MenuPauseUntilMorning(morning.Date > now.Date, PauseSchedule.FormatClock(morning)));
             Win32.AppendMenuW(hPauseMenu, MF_SEPARATOR, 0, null);
             Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE, L.Tray_MenuPauseCustom);
-            Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP | (_enabled ? 0u : MF_GRAYED),
+            Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP | (CanStartPause(_enabled, _pauseDialogOpen) ? 0u : MF_GRAYED),
                 (nuint)hPauseMenu, L.Tray_MenuPause);
         }
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
@@ -1909,6 +1931,38 @@ sealed class TrayApplication : IDisposable
         OnToggle();
     }
 
+    /// <summary>La mini-fenêtre de bascule (haut droite) suit la case « Notifications » ; l'anti-cheat la
+    /// supprime toujours (pas d'overlay tiers devant un jeu protégé).</summary>
+    internal static bool ShouldShowToggleOverlay(bool notificationsEnabled, bool securitySuspension) =>
+        notificationsEnabled && !securitySuspension;
+
+    /// <summary>Pourquoi un outil (clavier virtuel, recherche) ne répond pas : choix de l'utilisateur pour une
+    /// application, pause, ou désactivation. Décision pure, la bulle la lit.</summary>
+    internal enum ToolUnavailableReason { UserOverrideSuspension, Paused, Disabled }
+
+    internal static ToolUnavailableReason WhyToolUnavailable(bool userOverrideSuspension, bool paused) =>
+        userOverrideSuspension ? ToolUnavailableReason.UserOverrideSuspension
+        : paused ? ToolUnavailableReason.Paused
+        : ToolUnavailableReason.Disabled;
+
+    private void ShowToolUnavailableBalloon()
+    {
+        switch (WhyToolUnavailable(IsUserOverrideSuspension, IsPaused))
+        {
+            case ToolUnavailableReason.UserOverrideSuspension:
+                ShowBalloon(L.Tray_SuspendedInTitle(FormatProcessName(
+                        _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback)),
+                    L.TrayClarity_UserOverrideSuspendedBody);
+                break;
+            case ToolUnavailableReason.Paused:
+                ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
+                break;
+            default:
+                ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
+                break;
+        }
+    }
+
     private void OnToggle()
     {
         if (_hook == null) return;
@@ -1993,27 +2047,45 @@ sealed class TrayApplication : IDisposable
         // l'icone tray est cachee par le jeu — angle mort accepte en exclusive fullscreen).
         // Garde anti-cheat : pas d'overlay tiers quand un jeu anti-cheat kernel-level est
         // au foreground — risque de detection comme cheat / trainer (fausse alerte).
+        // Audit 09/11, W13 : « Notifications » décochée coupe aussi cette mini-fenêtre (elle restait).
         var suspendReason = _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.None;
-        if (!IsSecuritySuspension(suspendReason))
+        if (ShouldShowToggleOverlay(ConfigManager.NotificationsEnabled, IsSecuritySuspension(suspendReason)))
         {
             if (_toggleNotification == null) _toggleNotification = new ToggleNotification();
             _toggleNotification.Show(_enabled);
         }
     }
 
+    // Audit 09/11, W12 : le dialogue de durée a sa propre boucle de messages ; le menu de la zone de
+    // notification reste servi pendant qu'il est ouvert. Une pause lancée entre-temps (durée
+    // prédéfinie, jusqu'à demain) était écrasée à sa fermeture, et le dialogue pouvait s'ouvrir deux fois.
+    private bool _pauseDialogOpen;
+    private int _pauseSerial;
+
+    /// <summary>Une pause peut démarrer : le programme est actif et aucun dialogue de durée n'attend de réponse.</summary>
+    internal static bool CanStartPause(bool enabled, bool pauseDialogOpen) => enabled && !pauseDialogOpen;
+
+    /// <summary>Le résultat du dialogue s'applique seulement si aucune autre pause n'a démarré depuis son ouverture.</summary>
+    internal static bool ShouldApplyDialogPause(int serialAtOpen, int serialNow, bool enabled) =>
+        enabled && serialAtOpen == serialNow;
+
     private void ShowPauseDialogAndStart()
     {
-        if (!_enabled)
+        if (!CanStartPause(_enabled, _pauseDialogOpen))
             return;
 
-        var duration = PauseDurationDialog.Show(_hWnd);
-        if (duration.HasValue)
+        int serialAtOpen = _pauseSerial;
+        _pauseDialogOpen = true;
+        TimeSpan? duration;
+        try { duration = PauseDurationDialog.Show(_hWnd); }
+        finally { _pauseDialogOpen = false; }
+        if (duration.HasValue && ShouldApplyDialogPause(serialAtOpen, _pauseSerial, _enabled))
             StartPause(duration.Value);
     }
 
     private void StartPresetPause(int minutes)
     {
-        if (_enabled)
+        if (CanStartPause(_enabled, _pauseDialogOpen))
             StartPause(TimeSpan.FromMinutes(minutes));
     }
 
@@ -2029,7 +2101,7 @@ sealed class TrayApplication : IDisposable
     /// de <see cref="StartPause"/>.</summary>
     private void StartPauseUntilMorning()
     {
-        if (!_enabled)
+        if (!CanStartPause(_enabled, _pauseDialogOpen))
             return;
         DateTime now = DateTime.Now;
         DateTime morning = PauseSchedule.NextMorning(now);
@@ -2039,6 +2111,7 @@ sealed class TrayApplication : IDisposable
 
     private void StartPauseUntil(DateTimeOffset untilUtc, string balloonTitle)
     {
+        _pauseSerial++;
         _pauseUntilUtc = untilUtc;
         _mapper?.ClearPassedThroughKeys();
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_PAUSE, 1000, IntPtr.Zero);
@@ -2190,6 +2263,9 @@ sealed class TrayApplication : IDisposable
         ConfigManager.SetMaintainableCyrillicEnabled(cyrillic);
         ConfigManager.SetMaintainableScientificEnabled(scientific);
         ConfigManager.SetMaintainableLayersEnabled(greek || cyrillic || scientific);
+        // Audit 09/11, W4 : la fenêtre Couches ouverte relit la configuration. Elle gardait ses
+        // anciennes cases et les réécrivait à sa fermeture, défaisant le geste du menu.
+        _maintainableLayersWindow?.RefreshFromConfig();
         OnMaintainableLayerSettingsChanged();
     }
 

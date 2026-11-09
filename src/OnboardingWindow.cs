@@ -33,6 +33,7 @@ sealed class OnboardingWindow : IDisposable
     private const uint EN_SETFOCUS = 0x0100;
     private const uint EN_KILLFOCUS = 0x0200;
     private const uint EM_SETSEL = 0x00B1;
+    private const uint EM_SETREADONLY = 0x00CF;
 
     // Dimensions de base (96 DPI)
     // Refonte du 15/10 : fenêtre en largeur, 720 × 540 à 100 % (× ONBOARDING_UI_SCALE), pour
@@ -199,10 +200,22 @@ sealed class OnboardingWindow : IDisposable
         return true;
     }
 
+    /// <summary>Pause ou suspension : audit 09/11, W3. L'accueil reste utilisable (boutons, flèches, cases, liens ;
+    /// il était figé, sans un mot, et seule la croix répondait). Seul le champ d'essai de l'étape « Vos langues »
+    /// s'arrête : il ne montre les lettres de la disposition que si le moteur tourne. Il devient en lecture
+    /// seule, et l'étape dit pourquoi à la place du résultat de l'essai.</summary>
     public void SetInputPaused(bool paused)
     {
+        if (_inputPaused == paused) return;
         _inputPaused = paused;
+        if (_hWndTrial == IntPtr.Zero) return;
+        Win32.SendMessageW(_hWndTrial, EM_SETREADONLY, paused ? (IntPtr)1 : IntPtr.Zero, IntPtr.Zero);
+        if (_hWnd != IntPtr.Zero)
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
+
+    /// <summary>Le champ d'essai refuse la frappe (pause ou suspension).</summary>
+    internal bool TrialReadOnly => _inputPaused;
 
     // Y du contenu (après le header) — recalculé à chaque OnPaint
     private int _contentY;
@@ -311,7 +324,7 @@ sealed class OnboardingWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         _links = new LinkBehavior(() => _hWnd, () => Close(validated: false), focusFrame: true,
-            staticDialogCode: false, swallow: msg => _inputPaused && IsPausedInputMessage(msg));
+            staticDialogCode: false);
         _buttonArrowSubclassProc = ButtonArrowSubclassProc;
         _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
         _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
@@ -1038,9 +1051,6 @@ sealed class OnboardingWindow : IDisposable
     {
         try
         {
-        if (_inputPaused && IsPausedInputMessage(msg))
-            return IntPtr.Zero;
-
         switch (msg)
         {
             case Win32.WM_PAINT:
@@ -1533,13 +1543,6 @@ sealed class OnboardingWindow : IDisposable
             L.Common_ErrorTitle, 0x10);
     }
 
-    private static bool IsPausedInputMessage(uint msg)
-    {
-        return msg is Win32.WM_KEYDOWN or Win32.WM_KEYUP or Win32.WM_SYSKEYDOWN or Win32.WM_SYSKEYUP
-            or Win32.WM_CHAR or Win32.WM_SYSCHAR or Win32.WM_SYSDEADCHAR
-            or Win32.WM_COMMAND or Win32.WM_PASTE or Win32.WM_CUT or Win32.WM_CLEAR or Win32.WM_UNDO;
-    }
-
     private void OpenLink(string url)
     {
         Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
@@ -1583,9 +1586,6 @@ sealed class OnboardingWindow : IDisposable
     // tabulables et le WM_KEYDOWN principal n'est jamais appelé.
     private IntPtr ButtonArrowSubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, IntPtr dwRefData)
     {
-        if (_inputPaused && IsPausedInputMessage(msg))
-            return IntPtr.Zero;
-
         // Les flèches restent gérées par le wizard ; Tab/Entrée/Échap sont routées
         // par IsDialogMessage, comme dans les paramètres.
         if (msg == 0x0087) // WM_GETDLGCODE / DLGC_WANTARROWS
@@ -2237,8 +2237,10 @@ sealed class OnboardingWindow : IDisposable
         DrawTrialBox(hdc, layout.TrialBox);
 
         string trialText = ReadTrialText();
-        string message = LetterTrial.Message(trialText);
-        if (message.Length > 0)
+        string message = _inputPaused ? L.Onboarding_TrialPaused : LetterTrial.Message(trialText);
+        if (_inputPaused)
+            PaperText.DrawLine(hdc, message, FontBody, layout.Result, CLR_TEXT);
+        else if (message.Length > 0)
         {
             bool match = LetterTrial.Evaluate(trialText) == LetterTrialResult.Match;
             PaperText.DrawLine(hdc, message, match ? FontBodyStrong : FontBody, layout.Result, match ? CLR_LINK : CLR_TEXT);
