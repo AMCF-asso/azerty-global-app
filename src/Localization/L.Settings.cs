@@ -55,6 +55,14 @@ internal static partial class L
     public static string Settings_CompatAdded(string process) => T($"« {process} » ajoutée ✓", $"“{process}” added ✓");
     public static string Settings_CompatRemoved(string process) => T($"« {process} » retirée ✓", $"“{process}” removed ✓");
     public static string Settings_CompatUpdated(string process) => T($"« {process} » mise à jour ✓", $"“{process}” updated ✓");
+    /// <summary>« Auto » : l'application sort de la liste, c'est ce qu'elle dit (audit 09/11, W19).</summary>
+    public static string Settings_CompatAutomatic(string process) => T(
+        $"« {process} » repasse en automatique : elle sort de la liste ✓",
+        $"“{process}” goes back to automatic: it leaves the list ✓");
+    /// <summary>Ajouter une application déjà listée change son mode : le message dit de quel mode à quel mode.</summary>
+    public static string Settings_CompatReplaced(string process, string before, string after) => T(
+        $"« {process} » était déjà dans la liste ({before}) : elle passe à « {after} » ✓",
+        $"“{process}” was already in the list ({before}): it is now “{after}” ✓");
     public static string Settings_CompatFilterExe => T("Applications (*.exe)", "Applications (*.exe)");
     public static string Settings_CompatPickerTitle => T("Choisir une application", "Choose an app");
 }

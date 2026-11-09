@@ -67,6 +67,17 @@ internal static partial class L
         "Cette touche ne peut pas servir. Choisissez une lettre, un chiffre ou F1 à F12.",
         "This key can’t be used. Choose a letter, a digit or F1 to F12.");
 
+    /// <summary>Ctrl tenu seul (sans Maj) dans la case : le raccourci est toujours Ctrl + Maj +
+    /// la touche, la case ne reçoit que la touche. Ctrl+A ne doit pas enregistrer « A ».</summary>
+    public static string SettingsClarity_ShortcutCtrlOnly => T(
+        $"Appuyez sur la touche seule, sans Ctrl : le raccourci sera toujours {SettingsClarity_Combo("touche")}.",
+        $"Press the key on its own, without Ctrl: the shortcut will always be {SettingsClarity_Combo("key")}.");
+
+    /// <summary>Retour arrière dans la case : la touche d'origine est rendue.</summary>
+    public static string SettingsClarity_ShortcutRestored(string key) => T(
+        $"Touche d’origine rétablie : {SettingsClarity_Combo(key)} ✓",
+        $"Default key restored: {SettingsClarity_Combo(key)} ✓");
+
     // Sous-titres des réglages : ce que l'on constate, pas le mécanisme.
     public static string SettingsClarity_HintKeyboardShortcut => T(
         "Affiche ou masque le clavier à l’écran.",
@@ -78,8 +89,8 @@ internal static partial class L
         $"{Product} s’ouvre tout seul quand vous ouvrez votre session Windows.",
         $"{Product} opens by itself when you sign in to Windows.");
     public static string SettingsClarity_HintNotifications => T(
-        "Petits messages en bas à droite de l’écran. Les avis de pause (jeux, connexion à distance) s’affichent toujours.",
-        "Small pop-ups at the bottom right of the screen. Pause notices (games, remote connections) always appear.");
+        "Petits messages à l’écran : bulles de la zone de notification et indicateur de Ctrl + Maj + Verr. Maj. Les avis de pause (jeux, connexion à distance) s’affichent toujours.",
+        "Small pop-ups on screen: notification-area bubbles and the Ctrl + Shift + Caps Lock indicator. Pause notices (games, remote connections) always appear.");
     public static string SettingsClarity_HintOnboarding => T(
         "La fenêtre de bienvenue s’ouvre au lancement tant que ses trois premiers exercices ne sont pas faits.",
         "The welcome window opens at launch until its first three exercises are done.");
