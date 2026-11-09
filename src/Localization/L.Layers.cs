@@ -6,10 +6,10 @@ internal static partial class L
     public static string Layers_WindowTitleSuffix => T("Couches verrouillables", "Lockable layers");
     public static string Layers_Title => T("Taper plusieurs caractères d’une autre couche (un autre jeu de caractères : grec, cyrillique, scientifique)", "Type several characters from another layer (another set of characters: Greek, Cyrillic, scientific)");
     public static string Layers_Explainer => T(
-        "Appui simple : la prochaine frappe.\r\n" +
-        "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",
-        "Single press: the next keystroke.\r\n" +
-        "Double press: lock inside the active app.   Esc: unlock.");
+        "Appui simple : la prochaine frappe seulement (l’indicateur affiche « · 1 »).\r\n" +
+        "Double appui : verrouillage dans l’application active (« · verrou »).   Échap : déverrouiller.",
+        "Single press: the next keystroke only (the indicator shows “· 1”).\r\n" +
+        "Double press: lock inside the active app (“· lock”).   Esc: unlock.");
     public static string Layers_MasterCheckbox => T("Activer les couches verrouillables", "Enable lockable layers");
     public static string Layers_AvailableLabel => T("Couches disponibles", "Available layers");
     public static string Layers_GreekCheckbox => T("Grec — Maj + *", "Greek — Shift + *");
@@ -18,6 +18,9 @@ internal static partial class L
     public static string Layers_VisualCheckbox => T("Afficher un indicateur près du curseur", "Show an indicator near the text cursor");
     public static string Layers_DelayLabel => T("Délai du double appui :", "Double-press delay:");
     public static string Layers_DelayUnit => T("ms (150 à 1000)", "ms (150 to 1000)");
+    /// <summary>Délai hors bornes, ramené (audit 09/11, W20) : dit ce qui a été retenu.</summary>
+    public static string Layers_DelayRaised(int ms) => T($"Trop court : ramené à {ms} ms.", $"Too short: raised to {ms} ms.");
+    public static string Layers_DelayLowered(int ms) => T($"Trop long : ramené à {ms} ms.", $"Too long: lowered to {ms} ms.");
     public static string Layers_ActivatedBody => T(
         "Couches activées.\n\nAppui simple : une frappe.\n" +
         "Double appui : verrouillage dans l’application.\nÉchap : déverrouiller.",
