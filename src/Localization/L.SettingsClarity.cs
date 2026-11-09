@@ -91,9 +91,18 @@ internal static partial class L
     public static string SettingsClarity_HintNotifications => T(
         "Petits messages à l’écran : bulles de la zone de notification et indicateur de Ctrl + Maj + Verr. Maj. Les avis de pause (jeux, connexion à distance) s’affichent toujours.",
         "Small pop-ups on screen: notification-area bubbles and the Ctrl + Shift + Caps Lock indicator. Pause notices (games, remote connections) always appear.");
-    public static string SettingsClarity_HintOnboarding => T(
+    /// <summary>Audit 09/11, W24 : une fois les trois exercices faits, la case n'a plus d'effet (la fenêtre ne
+    /// s'ouvre plus d'elle-même) ; l'aide le dit au lieu de promettre une ouverture qui n'arrive pas.</summary>
+    public static string SettingsClarity_HintOnboarding =>
+        ConfigManager.LearningMaxStepCompleted >= TutorialSteps.DoneThreshold
+            ? SettingsClarity_HintOnboardingDone
+            : SettingsClarity_HintOnboardingPending;
+    public static string SettingsClarity_HintOnboardingPending => T(
         "La fenêtre de bienvenue s’ouvre au lancement tant que ses trois premiers exercices ne sont pas faits.",
         "The welcome window opens at launch until its first three exercises are done.");
+    public static string SettingsClarity_HintOnboardingDone => T(
+        "Les trois premiers exercices sont faits : la fenêtre de bienvenue ne s’ouvre plus d’elle-même au lancement. Elle reste dans le menu de la zone de notification.",
+        "The first three exercises are done: the welcome window no longer opens by itself at launch. It stays in the notification-area menu.");
     public static string SettingsClarity_HintResetWindow => T(
         "La replace au centre de l’écran, utile si elle est sortie de la vue.",
         "Moves it back to the center of the screen, handy if it went off-screen.");

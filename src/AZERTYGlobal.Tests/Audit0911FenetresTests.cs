@@ -345,11 +345,11 @@ public sealed class Audit0911FenetresTests : IDisposable
         using var window = OpenLayers(out _);
         IntPtr master = BancCapture.Field<IntPtr>(window, "_hMaster");
         L.Language = "fr";
-        ConfigManager.SetAppLanguage("en");
-        L.Language = "en";
-        // L'abonnement relit la langue ; on la rejoue pour ne pas dépendre de l'ordre des abonnés.
-        BancCapture.Call(window, "OnLanguageChanged");
         Assert.Equal(L.Layers_MasterCheckbox, TextOf(master));
+        L.Language = "en"; // comme les Paramètres, avant SetAppLanguage : les abonnés lisent L.*
+        ConfigManager.SetAppLanguage("en");
+        Assert.Equal(L.Layers_MasterCheckbox, TextOf(master));
+        Assert.Equal("Enable lockable layers", TextOf(master));
     }
 
     [Theory]

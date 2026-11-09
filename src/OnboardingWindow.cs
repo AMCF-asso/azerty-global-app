@@ -189,10 +189,23 @@ sealed class OnboardingWindow : IDisposable
     public Func<bool>? ActivationRequested { get; set; }
     private bool _activationAccepted = ConfigManager.ActivationConsent;
     private string TryButtonText => _activationAccepted ? L.Onboarding_TryNow : L.Onboarding_ActivateAndTry;
+    // Audit 09/11, W6 : qui refuse l'activation à l'étape 1 n'avait que la croix. Après un refus, « Suivant »
+    // paraît à côté d'« Essayer maintenant » (état B) : l'accueil se parcourt sans activer. Remis à faux à
+    // chaque ouverture : le refus ne dure que le temps de cet accueil.
+    private bool _activationRefused;
+
     private bool RequestActivation()
     {
         if (_activationAccepted) return true;
-        if (ActivationRequested?.Invoke() != true) return false;
+        if (ActivationRequested?.Invoke() != true)
+        {
+            if (!_activationRefused)
+            {
+                _activationRefused = true;
+                if (_hWnd != IntPtr.Zero && _visible) UpdateStepVisibility();
+            }
+            return false;
+        }
         _activationAccepted = true;
         Win32.SetWindowTextW(_hWndBtnTry, TryButtonText);
         UpdateStepVisibility();
@@ -666,13 +679,44 @@ sealed class OnboardingWindow : IDisposable
     }
 
     /// <summary>Clic, Espace ou Entrée sur une case : elle bascule. Le Défi du jour s'applique
-    /// aussitôt (même motif que dans les Paramètres) ; les deux autres attendent la fermeture.</summary>
+    /// aussitôt (même motif que dans les Paramètres). Audit 09/11, W16 : les deux autres aussi, dès que leur
+    /// choix compte, c'est-à-dire l'étape 3 vue et l'activation acceptée (la règle de la fermeture, B2 du 24/09) ;
+    /// avant cela, elles restent en attente, rien n'étant écrit sans l'accord d'activation.</summary>
     private void ToggleCheckBox(IntPtr checkBox)
     {
         bool on = !IsChecked(checkBox);
         SetChecked(checkBox, on, announce: true);
         if (checkBox == _hWndChkTraining)
             ConfigManager.SetTrainingEnabled(on);
+        else if (_step3Reached && _activationAccepted)
+        {
+            if (checkBox == _hWndChkDontShow)
+                ConfigManager.SetShowOnboardingAtStartup(!on);
+            else if (checkBox == _hWndChkAutoStart)
+                ApplyAutoStart(on, userChoice: true);
+        }
+    }
+
+    /// <summary>Points d'appui des tests : jamais le vrai démarrage Windows ni la vraie boîte.</summary>
+    internal static Func<bool, bool> AutoStartSetter = AutoStart.Set;
+    internal static Func<bool> AutoStartIsRegistered = () => AutoStart.IsRegistered;
+    internal static Func<IntPtr, string, string, uint, int> ShowMessageBox = Win32.MessageBoxW;
+
+    /// <summary>Écrit « Lancer au démarrage ». Un échec rend la case à l'état réel et le dit. Le choix de
+    /// l'utilisateur éteint la relance, dans un sens comme dans l'autre (R2 de l'audit v1.2.0).</summary>
+    private void ApplyAutoStart(bool autoStart, bool userChoice)
+    {
+        bool wasRegistered = AutoStartIsRegistered();
+        bool saved = AutoStartSetter(autoStart);
+        RefreshAutoStartCheckbox();
+        if (!saved)
+            ShowAutoStartError();
+        else
+        {
+            if (userChoice || autoStart != wasRegistered || autoStart != _autoStartShownChecked)
+                AutoStartNudge.MarkPromptShown();
+            _autoStartShownChecked = autoStart;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -731,8 +775,8 @@ sealed class OnboardingWindow : IDisposable
         //   B — essaye, non complete : « Essayer maintenant » (gauche) + « Suivant » (droite)
         //   C — complete             : seul « Suivant » a la position de droite habituelle
         // Etapes 2/3 : seul « Suivant » / « C'est parti ! » a la position habituelle.
-        bool isStep1NotAttempted = _currentStep == 0 && !_learningModuleAttempted && !_learningModuleDone; // etat A
-        bool isStep1Attempted    = _currentStep == 0 &&  _learningModuleAttempted && !_learningModuleDone; // etat B
+        bool isStep1NotAttempted = _currentStep == 0 && !_learningModuleAttempted && !_activationRefused && !_learningModuleDone; // etat A
+        bool isStep1Attempted    = _currentStep == 0 && (_learningModuleAttempted || _activationRefused) && !_learningModuleDone; // etat B
         // Audit UX 1.3.0, #3, revu par Antoine le 07/11 : tant que le parcours n'est pas fini
         // (états A et B), « Essayer maintenant » porte l'accent, à droite ; « Suivant » ne le
         // porte qu'ailleurs. Entrée presse toujours le bouton focalisé.
@@ -812,6 +856,14 @@ sealed class OnboardingWindow : IDisposable
     /// <summary>« Ctrl + Maj + Q » : la même écriture que les cartes de l'étape 3.</summary>
     private static string Shortcut(string key) => $"Ctrl + {L.Settings_ShortcutModifier2} + {key}";
 
+    /// <summary>Audit 09/11, W17 : les raccourcis du clavier virtuel et de la recherche, tels que
+    /// l'utilisateur les a réglés (Q et W par défaut), pas écrits en dur.</summary>
+    internal static string KeyboardShortcut() =>
+        Shortcut(ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutVirtualKeyboardVk));
+
+    internal static string SearchShortcut() =>
+        Shortcut(ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk));
+
     /// <summary>
     /// Audit 1.3.0, A8 : ce que le lecteur d'écran ne lit pas, parce que c'est peint en GDI. Le texte
     /// de chaque étape (« Étape n sur 4 », son titre, ses cartes, les titres de l'étape Ressources)
@@ -827,13 +879,13 @@ sealed class OnboardingWindow : IDisposable
                 return label + " " + Step1AccessibleSummary();
             case OnboardingStep.Languages:
                 return string.Join(" ", label, L.Onboarding_LanguagesTitle + ".", OnboardingLanguages.AccessibleSummary(),
-                    L.Onboarding_LanguagesTipPrefix + Shortcut("W") + L.Onboarding_LanguagesTipSuffix);
+                    L.Onboarding_LanguagesTipPrefix + SearchShortcut() + L.Onboarding_LanguagesTipSuffix);
             case OnboardingStep.HowTo:
                 return string.Join(" ", label, L.Onboarding_Step2Title + ".",
                     L.Onboarding_Card1Title + ". " + L.Onboarding_Card1Desc,
                     L.Onboarding_Card2Title + ". " + L.Onboarding_Card2ShortcutPrefix + Shortcut(L.Onboarding_CapsLockWord) + ".",
-                    L.Onboarding_Card3Title + ". " + Shortcut("Q") + L.Onboarding_Card3Suffix,
-                    L.Onboarding_Card4Title + ". " + Shortcut("W") + L.Onboarding_Card4Suffix);
+                    L.Onboarding_Card3Title + ". " + KeyboardShortcut() + L.Onboarding_Card3Suffix,
+                    L.Onboarding_Card4Title + ". " + SearchShortcut() + L.Onboarding_Card4Suffix);
             default:
                 return string.Join(" ", new[] { label, L.Onboarding_SectionResources + ".", L.Settings_SectionPreferences + ".",
                     DailyChallenge.Enabled ? L.Onboarding_ChkTrainingDesc : "" }.Where(part => part.Length > 0));
@@ -913,6 +965,7 @@ sealed class OnboardingWindow : IDisposable
     public void Show()
     {
         _currentStep = 0;
+        _activationRefused = false;
         _step3Reached = false; // sera mis a true a la 1ere transition vers l'etape 3
         // Étape 3 : « Lancer au démarrage » cochée par défaut au premier accueil, sinon l'état
         // réel ; un refus dans Windows n'est jamais contourné (AutoStart.DefaultOnboardingCheck,
@@ -963,6 +1016,31 @@ sealed class OnboardingWindow : IDisposable
         // aussitôt à « Suivant » seul (état C), sans « Essayer maintenant ».
         ConfigManager.ResetTutorialProgress();
         ConfigManager.SetShowOnboardingAtStartup(true);
+    }
+
+    /// <summary>Audit 09/11, E28 : Échap dans le champ d'essai vide le texte s'il y en a, sinon ferme
+    /// l'accueil. Avant, il fermait tout, essai compris, sans rien demander.</summary>
+    private void OnEscape()
+    {
+        if (_hWndTrial != IntPtr.Zero && Win32.GetFocus() == _hWndTrial && Win32.GetWindowTextLengthW(_hWndTrial) > 0)
+        {
+            Win32.SetWindowTextW(_hWndTrial, "");
+            return;
+        }
+        Close(validated: false);
+    }
+
+    internal enum ArrowAction { LaunchTutorial, FocusTry, Next, Finish, FocusNext }
+
+    /// <summary>Audit 09/11, W16 : ce que ↓ et → déclenchent. « Bouton principal » de l'étape, sauf quand le
+    /// focus est sur « Suivant » : la flèche en fait alors l'action (à l'étape 1, elle lançait le parcours).</summary>
+    internal static ArrowAction ForwardArrowAction(int step, bool learningDone, bool activationAccepted, bool focusOnNext)
+    {
+        if (step == 0 && !learningDone && !focusOnNext)
+            return activationAccepted ? ArrowAction.LaunchTutorial : ArrowAction.FocusTry;
+        if (step < OnboardingStep.Last)
+            return ArrowAction.Next;
+        return activationAccepted ? ArrowAction.Finish : ArrowAction.FocusNext;
     }
 
     /// <summary>
@@ -1020,18 +1098,13 @@ sealed class OnboardingWindow : IDisposable
             bool autoStart = _autoStartChecked;
             if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, autoStart, _autoStartShownChecked))
             {
-                bool autoStartWasRegistered = AutoStart.IsRegistered;
-                bool autoStartSaved = AutoStart.Set(autoStart);
-                RefreshAutoStartCheckbox();
-                if (!autoStartSaved)
-                    ShowAutoStartError();
                 // Ce bloc n'est atteint que si _step3Reached : la case a donc été vue, et la
                 // modifier est un choix, qui éteint la relance dans un sens comme dans
                 // l'autre (R2 de l'audit v1.2.0). Une case jamais vue reste hors de ce
                 // chemin, la décision v0.9.7.1 est intacte.
                 // Depuis la case cochée par défaut (v1.3.0), la décocher est aussi un choix.
-                else if (autoStart != autoStartWasRegistered || autoStart != _autoStartShownChecked)
-                    AutoStartNudge.MarkPromptShown();
+                // Déjà écrite au clic (W16) : _autoStartShownChecked la suit, rien à refaire sauf validation.
+                ApplyAutoStart(autoStart, userChoice: false);
             }
             // Croix ou Échap sans toucher la case : rien n'est enregistré, la relance
             // unique (AutoStartNudge) reste due, comme pour qui ferme avant l'étape 3.
@@ -1113,7 +1186,7 @@ sealed class OnboardingWindow : IDisposable
                         break;
                     }
                     case DialogNavigation.IDCANCEL:
-                        Close(validated: false);
+                        OnEscape();
                         break;
                     case IDC_BTN_NEXT:
                         // Avant la dernière étape : passer a la suivante. Dernière : fermer l'onboarding.
@@ -1225,25 +1298,21 @@ sealed class OnboardingWindow : IDisposable
                 int vk = wParam.ToInt32();
                 if (vk == 0x1B) // VK_ESCAPE
                 {
-                    Close(validated: false);
+                    OnEscape();
                     return IntPtr.Zero;
                 }
                 // Navigation par flèches : ↓/→ = bouton principal, ↑/← = bouton Précédent.
                 if (vk == 0x27 || vk == 0x28) // VK_RIGHT, VK_DOWN
                 {
-                    if (_currentStep == 0 && !_learningModuleDone)
+                    switch (ForwardArrowAction(_currentStep, _learningModuleDone, _activationAccepted,
+                        Win32.GetFocus() == _hWndBtnNext && _hWndBtnNext != IntPtr.Zero))
                     {
-                        if (_activationAccepted) LaunchTutorial();
-                        else Win32.SetFocus(_hWndBtnTry);
+                        case ArrowAction.LaunchTutorial: LaunchTutorial(); break;
+                        case ArrowAction.FocusTry: Win32.SetFocus(_hWndBtnTry); break;
+                        case ArrowAction.Next: GoToNextStep(); break;
+                        case ArrowAction.Finish: Close(validated: true); break; // flèche = bouton principal (« C'est parti ! »)
+                        default: Win32.SetFocus(_hWndBtnNext); break;
                     }
-                    else if (_currentStep < OnboardingStep.Last)
-                    {
-                        GoToNextStep();
-                    }
-                    else if (_activationAccepted)
-                        Close(validated: true); // flèche = bouton principal (« C'est parti ! »)
-                    else
-                        Win32.SetFocus(_hWndBtnNext);
                     return IntPtr.Zero;
                 }
                 if (vk == 0x25 || vk == 0x26) // VK_LEFT, VK_UP
@@ -1267,7 +1336,7 @@ sealed class OnboardingWindow : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
-    private void RefreshAutoStartCheckbox() => SetChecked(_hWndChkAutoStart, AutoStart.IsRegistered);
+    private void RefreshAutoStartCheckbox() => SetChecked(_hWndChkAutoStart, AutoStartIsRegistered());
 
     /// <summary>
     /// A14 : relit le contraste élevé et les couleurs système. Quand la palette change, les pinceaux
@@ -1402,7 +1471,8 @@ sealed class OnboardingWindow : IDisposable
             // Repli si la ressource manque : l'endonyme court, comme le header.
             PaperText.DrawLine(dis.hDC, L.IsEnglish ? "FR" : "EN", FontTag, inner, CLR_TEXT, TextAlign.Center);
         }
-        if ((dis.itemState & Win32.ODS_FOCUS) != 0)
+        // E30 : le cadre n'apparaît qu'après un usage du clavier (Windows pose ODS_NOFOCUSRECT sinon).
+        if ((dis.itemState & Win32.ODS_FOCUS) != 0 && (dis.itemState & ODS_NOFOCUSRECT) == 0)
         {
             // A13 : le contour plein des Leçons, plus le rectangle pointillé du système.
             var focus = new Win32.RECT { left = rc.left + 1, top = rc.top + 1, right = rc.right - 1, bottom = rc.bottom - 1 };
@@ -1507,7 +1577,7 @@ sealed class OnboardingWindow : IDisposable
         if (announce) AccessibleName.TrySetAndNotify(_hWndTrial, name);
         else AccessibleName.TrySet(_hWndTrial, name);
         AccessibleName.TrySetDescription(_hWndTrial, OnboardingLanguages.AccessibleSummary() + " "
-            + L.Onboarding_LanguagesTipPrefix + $"Ctrl + {L.Settings_ShortcutModifier2} + W" + L.Onboarding_LanguagesTipSuffix);
+            + L.Onboarding_LanguagesTipPrefix + SearchShortcut() + L.Onboarding_LanguagesTipSuffix);
     }
 
     private void InvalidateTrialBox() => Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
@@ -1538,7 +1608,7 @@ sealed class OnboardingWindow : IDisposable
 
     private void ShowAutoStartError()
     {
-        Win32.MessageBoxW(_hWnd,
+        ShowMessageBox(_hWnd,
             AutoStart.GetFailureMessage(),
             L.Common_ErrorTitle, 0x10);
     }
@@ -1796,6 +1866,10 @@ sealed class OnboardingWindow : IDisposable
     /// <summary>Retrait du libellé d'une case, depuis le bord gauche des liens : le carré et son espace.</summary>
     private int CheckLabelIndent => Px(CHECK_BOX + CHECK_GAP);
 
+    /// <summary>Lignes de la grille de liens de l'étape 3 : l'invitation Discord est la quatrième, et le canal
+    /// sobre ou une politique l'éteint (audit 09/11, W24 : le cadre gardait sa place, vide).</summary>
+    internal static int ResourceLinkRows => PolicyManager.ExternalLinksEnabledNow ? 4 : 3;
+
     private void GetStep3Layout(int topY, int winW,
         out Win32.RECT resourcesPanel, out Win32.RECT prefsPanel, out Win32.RECT prefsTitle,
         out int linksX, out int linksWidth, out int linkStartY, out int linkRowH, out int linkControlHeight,
@@ -1816,7 +1890,7 @@ sealed class OnboardingWindow : IDisposable
         {
             linkControlHeight = Math.Max(S(28), MeasureSingleLineHeight(hdc, _hFontLinkStrong) + S(6));
             linkRowH = linkControlHeight + S(2);
-            int resourcesHeight = resourcePaddingTop + linkRowH * 4 + resourcePaddingBottom;
+            int resourcesHeight = resourcePaddingTop + linkRowH * ResourceLinkRows + resourcePaddingBottom;
             int panelTop = StepTitleRect(winW, topY).bottom + Px(12);
 
             resourcesPanel = new Win32.RECT
@@ -2106,9 +2180,9 @@ sealed class OnboardingWindow : IDisposable
         DrawStepCard(hdc, gfx, margin, cw, ref y, "2", L.Onboarding_Card2Title,
             ShortcutRuns(L.Onboarding_Card2ShortcutPrefix, Shortcut(L.Onboarding_CapsLockWord)));
         DrawStepCard(hdc, gfx, margin, cw, ref y, "3", L.Onboarding_Card3Title,
-            ShortcutRuns(null, Shortcut("Q"), L.Onboarding_Card3Suffix));
+            ShortcutRuns(null, KeyboardShortcut(), L.Onboarding_Card3Suffix));
         DrawStepCard(hdc, gfx, margin, cw, ref y, "4", L.Onboarding_Card4Title,
-            ShortcutRuns(null, Shortcut("W"), L.Onboarding_Card4Suffix));
+            ShortcutRuns(null, SearchShortcut(), L.Onboarding_Card4Suffix));
     }
 
     // ═══════════════════════════════════════════════════════════════
