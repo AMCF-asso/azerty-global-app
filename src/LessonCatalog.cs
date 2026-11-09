@@ -194,7 +194,7 @@ internal static class LessonCatalogLoader
                     moduleId,
                     lessonId,
                     PickText(RequiredString(lessonEl, "title"), OptionalString(lessonEl, "titleEn")),
-                    PickText(OptionalString(lessonEl, "description"), OptionalString(lessonEl, "descriptionEn")),
+                    ExpandPlaceholders(PickText(OptionalString(lessonEl, "description"), OptionalString(lessonEl, "descriptionEn"))),
                     characters,
                     exercises));
             }
@@ -202,7 +202,7 @@ internal static class LessonCatalogLoader
             modules.Add(new LessonModule(
                 moduleId,
                 PickText(RequiredString(moduleEl, "title"), OptionalString(moduleEl, "titleEn")),
-                PickText(OptionalString(moduleEl, "description"), OptionalString(moduleEl, "descriptionEn")),
+                ExpandPlaceholders(PickText(OptionalString(moduleEl, "description"), OptionalString(moduleEl, "descriptionEn"))),
                 OptionalString(moduleEl, "icon"),
                 isSynthetic: false,
                 lessons));
@@ -291,4 +291,13 @@ internal static class LessonCatalogLoader
     {
         return L.IsEnglish && !string.IsNullOrEmpty(en) ? en : fr;
     }
+
+    /// <summary>Texte affiché d'une consigne ou d'une description : {ALTGR}, {SHIFT} et {CAPS}
+    /// deviennent le nom des touches dans la langue de l'app (« Alt Gr » : <see cref="L.AltGrKey"/>).
+    /// La consigne brute reste dans <see cref="LessonExercise.Instruction"/> : les empreintes
+    /// d'avant le 09/11/2026 l'incluaient.</summary>
+    internal static string ExpandPlaceholders(string text) => text
+        .Replace("{ALTGR}", L.AltGrKey, StringComparison.OrdinalIgnoreCase)
+        .Replace("{SHIFT}", L.LessonsWin_PlaceholderShift, StringComparison.OrdinalIgnoreCase)
+        .Replace("{CAPS}", L.LessonsWin_PlaceholderCaps, StringComparison.OrdinalIgnoreCase);
 }

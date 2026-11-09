@@ -2367,7 +2367,7 @@ sealed class OnboardingWindow : IDisposable
             if (steps[i].Shift)
                 parts.Add((2, L.Settings_ShortcutModifier2, tag, PaperText.Width(hdc, L.Settings_ShortcutModifier2, tag) + pad));
             if (steps[i].AltGr)
-                parts.Add((2, "AltGr", tag, PaperText.Width(hdc, "AltGr", tag) + pad));
+                parts.Add((2, L.AltGrKey, tag, PaperText.Width(hdc, L.AltGrKey, tag) + pad));
             string label = steps[i].ShortLabel;
             parts.Add((3, label, key, Math.Max(keyH, PaperText.Width(hdc, label, key) + pad)));
         }

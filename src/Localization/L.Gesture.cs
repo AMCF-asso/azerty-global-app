@@ -22,7 +22,7 @@ internal static partial class L
     /// <summary>Gravure courte de Verr. Maj. dans une case de portée.</summary>
     public static string Gesture_CapsLockShort => T("VM", "Caps");
     public static string Gesture_LineShift => Settings_ShortcutModifier2;
-    public static string Gesture_LineAltGr => "AltGr";
+    public static string Gesture_LineAltGr => AltGrKey;
     public static string Gesture_LineKey => T("Touche", "Key");
     public static string Gesture_ThenShort => Search_ThenWord;
 }

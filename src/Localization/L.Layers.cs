@@ -13,8 +13,8 @@ internal static partial class L
     public static string Layers_MasterCheckbox => T("Activer les couches verrouillables", "Enable lockable layers");
     public static string Layers_AvailableLabel => T("Couches disponibles", "Available layers");
     public static string Layers_GreekCheckbox => T("Grec — Maj + *", "Greek — Shift + *");
-    public static string Layers_CyrillicCheckbox => T("Cyrillique — AltGr + *", "Cyrillic — AltGr + *");
-    public static string Layers_ScientificCheckbox => T("Scientifique — AltGr + =", "Scientific — AltGr + =");
+    public static string Layers_CyrillicCheckbox => T($"Cyrillique — {AltGrKey} + *", $"Cyrillic — {AltGrKey} + *");
+    public static string Layers_ScientificCheckbox => T($"Scientifique — {AltGrKey} + =", $"Scientific — {AltGrKey} + =");
     public static string Layers_VisualCheckbox => T("Afficher un indicateur près du curseur", "Show an indicator near the text cursor");
     public static string Layers_DelayLabel => T("Délai du double appui :", "Double-press delay:");
     public static string Layers_DelayUnit => T("ms (150 à 1000)", "ms (150 to 1000)");

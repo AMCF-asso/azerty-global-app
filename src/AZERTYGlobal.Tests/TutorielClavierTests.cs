@@ -236,9 +236,9 @@ public class TutorielClavierTests : IDisposable
 
         // Touche E03, AltGr : le point souscrit. Le tutoriel montre l'accent seul de la
         // disposition, les Leçons le symbole du tray.
-        Assert.Contains("AltGr : ◌\u0323 — touche morte POINT SOUSCRIT",
+        Assert.Contains(L.AltGrKey + " : ◌\u0323 — touche morte POINT SOUSCRIT",
             KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Onboarding, etat, 0x04, ""));
-        Assert.Contains("AltGr : . — touche morte POINT SOUSCRIT",
+        Assert.Contains(L.AltGrKey + " : . — touche morte POINT SOUSCRIT",
             KeyboardRenderer.BuildTooltipText(_layout, KeyboardRenderProfile.Lesson, etat, 0x04, ""));
     }
 }

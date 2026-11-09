@@ -34,12 +34,12 @@ internal static partial class L
     public static string Onboarding_Feature2Title => T("Le point sans Majuscule", "Direct period access");
     public static string Onboarding_Feature2Desc => T("Le point et le point-virgule échangent leurs places.", "The period and semicolon swap places.");
     public static string Onboarding_Feature3Title => T("Arobase et dièse en haut à gauche", "@ and # on the top-left key");
-    public static string Onboarding_Feature3Desc => T("Accès direct sans AltGr.", "Direct access without AltGr.");
+    public static string Onboarding_Feature3Desc => T($"Accès direct sans {AltGrKey}.", $"Direct access without {AltGrKey}.");
     public static string Onboarding_Feature1Prefix => T("Verr. Maj. + ", "Caps Lock + ");
     // Insécables dans « sur la rangée de repos » : à l'étape 1, le titre passe à la ligne
     // après « programmation » plutôt que de laisser « repos » seul.
     public static string Onboarding_Feature4Title => T("Symboles de programmation sur la rangée de repos", "Programming symbols on the home row");
-    public static string Onboarding_Feature4DescSuffix => T(" avec AltGr.", " with AltGr.");
+    public static string Onboarding_Feature4DescSuffix => T($" avec {AltGrKey}.", $" with {AltGrKey}.");
     public static string Onboarding_Feature5Title => T("Accents internationaux sur la touche à droite du M", "International accents on the key right of M");
     public static string Onboarding_Feature5Desc => T(
         "Accent aigu, accent grave et tilde. Une touche morte ne tape rien seule : elle attend la lettre suivante et l’accentue.",
@@ -48,11 +48,11 @@ internal static partial class L
     public static string Onboarding_Step1Subtitle => T(
         "Les nouveautés sont en bleu ; vos lettres restent à leur place.",
         "What’s new is in blue; your letters stay where they are.");
-    public static string Onboarding_NoteAt => T("sans AltGr (# avec Maj)", "without AltGr (# with Shift)");
+    public static string Onboarding_NoteAt => T($"sans {AltGrKey} (# avec Maj)", $"without {AltGrKey} (# with Shift)");
     public static string Onboarding_NoteCaps => T("Verr. Maj., puis é è ç à", "Caps Lock, then é è ç à");
-    public static string Onboarding_NoteCoding => T("Programmation facilitée : AltGr + D à K", "Easier coding: AltGr + D to K");
+    public static string Onboarding_NoteCoding => T($"Programmation facilitée : {AltGrKey} + D à K", $"Easier coding: {AltGrKey} + D to K");
     public static string Onboarding_NotePeriod => T("le point, sans Maj", "the period, without Shift");
-    public static string Onboarding_NoteAccents => T("puis la lettre ; la lettre ù : AltGr + u", "then the letter; the letter ù: AltGr + u");
+    public static string Onboarding_NoteAccents => T($"puis la lettre ; la lettre ù : {AltGrKey} + u", $"then the letter; the letter ù: {AltGrKey} + u");
     // « Aucune frappe enregistrée » serait faux : l'app garde des compteurs locaux agrégés (UsageStats).
     public static string Onboarding_PrivacyReassurance => T(
         "Tout se passe sur votre ordinateur : ce que vous tapez n’est ni enregistré ni envoyé.",

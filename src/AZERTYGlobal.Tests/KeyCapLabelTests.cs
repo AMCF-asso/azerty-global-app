@@ -32,7 +32,6 @@ public class KeyCapLabelTests : IDisposable
     [InlineData("Ctrl")]
     [InlineData("Win")]
     [InlineData("Alt")]
-    [InlineData("AltGr")]
     [InlineData("Menu")]
     [InlineData("A")]
     [InlineData("ù")]

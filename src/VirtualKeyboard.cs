@@ -1138,7 +1138,7 @@ sealed class VirtualKeyboard : IDisposable
         }
         var held = new List<string>(2);
         if (_shiftDown) held.Add(shiftName);
-        if (_altGrDown) held.Add("AltGr");
+        if (_altGrDown) held.Add(L.AltGrKey);
         if (held.Count > 0)
         {
             for (int i = 0; i < held.Count; i++)
@@ -1159,7 +1159,7 @@ sealed class VirtualKeyboard : IDisposable
         runs.Add(new TextRun(L.VirtualKeyboardPaper_IdleLead));
         runs.Add(new TextRun(shiftName, true));
         runs.Add(new TextRun(L.VirtualKeyboardPaper_Or));
-        runs.Add(new TextRun("AltGr", true));
+        runs.Add(new TextRun(L.AltGrKey, true));
         runs.Add(new TextRun(L.VirtualKeyboardPaper_IdleTail));
         return runs;
     }
