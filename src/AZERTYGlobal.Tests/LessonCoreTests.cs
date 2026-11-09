@@ -46,16 +46,18 @@ public class LessonCoreTests
     }
 
     [Fact]
-    public void ExerciseHash_ChangesWhenInstructionOrContentChanges()
+    public void ExerciseHash_ChangesWithContent_NeverWithInstruction()
     {
+        // Audit UX du 09/11 (L1) : la consigne (traduite, reformulée) ne touche plus la clé.
         var a = new LessonExercise("m", "l", 0, "practice", "Tapez", "abc", LessonTypingMode.Flexible);
-        var same = new LessonExercise("m", "l", 0, "practice", "Tapez", "abc", LessonTypingMode.Flexible);
-        var changedInstruction = new LessonExercise("m", "l", 0, "practice", "Tapez vite", "abc", LessonTypingMode.Flexible);
+        var english = new LessonExercise("m", "l", 0, "practice", "Type", "abc", LessonTypingMode.Flexible);
         var changedContent = new LessonExercise("m", "l", 0, "practice", "Tapez", "abcd", LessonTypingMode.Flexible);
+        var changedType = new LessonExercise("m", "l", 0, "warmup", "Tapez", "abc", LessonTypingMode.Flexible);
 
-        Assert.Equal(a.Hash, same.Hash);
-        Assert.NotEqual(a.Hash, changedInstruction.Hash);
+        Assert.Equal(a.Hash, english.Hash);
+        Assert.Equal(a.StableKey, english.StableKey);
         Assert.NotEqual(a.Hash, changedContent.Hash);
+        Assert.NotEqual(a.Hash, changedType.Hash);
         Assert.EndsWith("/" + a.Hash, a.StableKey);
     }
 

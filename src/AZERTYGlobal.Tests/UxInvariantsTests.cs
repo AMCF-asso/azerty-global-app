@@ -30,8 +30,100 @@ public class UxInvariantsTests : IDisposable
 
     public void Dispose()
     {
+        L.Language = "fr";
         try { Directory.Delete(_tempDir, true); } catch { }
     }
+
+    // ── Progression : indépendante de la langue (audit UX du 09/11, L1) ─────────────
+
+    private static string[] AllStableKeys(string language)
+    {
+        L.Language = language;
+        var catalog = LessonCatalogLoader.LoadFromResource();
+        var challenge = DailyChallenge.BuildModule(new DateOnly(2026, 11, 9), 0);
+        var exercises = catalog.Exercises.AsEnumerable();
+        if (challenge != null)
+            exercises = exercises.Concat(challenge.Lessons.SelectMany(lesson => lesson.Exercises));
+        return exercises.Select(e => e.StableKey).ToArray();
+    }
+
+    [Fact]
+    public void EveryExerciseKey_IsTheSameInFrenchAndEnglish()
+    {
+        string[] fr = AllStableKeys("fr");
+        string[] en = AllStableKeys("en");
+
+        Assert.True(fr.Length > 50, $"seulement {fr.Length} exercices");
+        Assert.Equal(fr, en);
+        // La table figée des consignes publiées est bien embarquée (82 exercices le 09/11).
+        Assert.True(LessonInstructionHistory.Count >= 80, $"table des consignes : {LessonInstructionHistory.Count}");
+    }
+
+    [Fact]
+    public void LegacyProgress_SurvivesTheLanguageSwitch_AndMergesBothLanguages()
+    {
+        L.Language = "fr";
+        var frExercise = LessonCatalogLoader.LoadFromResource().Modules[1].Lessons[0].Exercises[0];
+        L.Language = "en";
+        var enExercise = LessonCatalogLoader.LoadFromResource().Modules[1].Lessons[0].Exercises[0];
+        Assert.NotEqual(frExercise.Instruction, enExercise.Instruction);
+
+        // Fichier écrit par une version d'avant le 09/11 : une clé par langue utilisée.
+        string frHash = LessonCatalogLoader.ComputeLegacyExerciseHash(frExercise.Type, frExercise.Instruction, frExercise.Content);
+        string enHash = LessonCatalogLoader.ComputeLegacyExerciseHash(enExercise.Type, enExercise.Instruction, enExercise.Content);
+        string path = Path.Combine(_tempDir, "lessons-progress.json");
+        File.WriteAllText(path,
+            "{\n  \"version\": 1,\n  \"exercises\": {\n" +
+            LegacyEntry(frExercise.KeyPrefix + frHash, frHash, completed: true, attempts: 1, wpm: 30, seconds: 12.5) + ",\n" +
+            LegacyEntry(enExercise.KeyPrefix + enHash, enHash, completed: false, attempts: 2, wpm: 41, seconds: 20) + "\n" +
+            "  }\n}\n");
+
+        foreach (string language in new[] { "fr", "en" })
+        {
+            L.Language = language;
+            var exercise = LessonCatalogLoader.LoadFromResource().Modules[1].Lessons[0].Exercises[0];
+            var store = new LessonProgressStore(path);
+            var progress = store.GetValidProgress(exercise);
+
+            Assert.NotNull(progress);
+            Assert.True(progress!.Completed, $"réussite perdue en {language}");
+            Assert.Equal(3, progress.SuccessfulAttempts);
+            Assert.Equal(41, progress.BestWpm);
+            Assert.Equal(12.5, progress.BestSeconds);
+        }
+
+        // Première écriture : la progression fusionnée passe sous la nouvelle clé, les
+        // anciennes restent pour une version précédente de l'app.
+        var writer = new LessonProgressStore(path);
+        writer.SetLastPosition(enExercise);
+        writer.MarkCompletedNeutral(enExercise);
+        var reread = new LessonProgressStore(path);
+        Assert.True(reread.Exercises.ContainsKey(enExercise.StableKey));
+        Assert.Equal(3, reread.Exercises[enExercise.StableKey].SuccessfulAttempts);
+        Assert.True(reread.Exercises.ContainsKey(frExercise.KeyPrefix + frHash));
+    }
+
+    [Fact]
+    public void LegacyProgress_OfChangedContent_StaysInvalid()
+    {
+        // Comme avant : un texte à taper modifié invalide sa progression.
+        L.Language = "fr";
+        var exercise = LessonCatalogLoader.LoadFromResource().Modules[1].Lessons[0].Exercises[0];
+        string oldHash = LessonCatalogLoader.ComputeLegacyExerciseHash(exercise.Type, exercise.Instruction, exercise.Content + " ancien");
+        string path = Path.Combine(_tempDir, "lessons-progress.json");
+        File.WriteAllText(path,
+            "{\n  \"version\": 1,\n  \"exercises\": {\n" +
+            LegacyEntry(exercise.KeyPrefix + oldHash, oldHash, completed: true, attempts: 1, wpm: 30, seconds: 10) + "\n" +
+            "  }\n}\n");
+
+        Assert.Null(new LessonProgressStore(path).GetValidProgress(exercise));
+    }
+
+    private static string LegacyEntry(string key, string hash, bool completed, int attempts, int wpm, double seconds) =>
+        $"    \"{key}\": {{ \"hash\": \"{hash}\", \"completed\": {(completed ? "true" : "false")}, " +
+        $"\"successfulAttempts\": {attempts}, \"bestWpm\": {wpm}, \"bestAccuracyPercent\": 95, " +
+        $"\"bestSeconds\": {seconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}, " +
+        "\"lastCompletedUtc\": null, \"hintsUsed\": 0 }";
 
     private static readonly (string Name, (uint Vk, uint Sc, uint Flags)[] Keys)[] ShortcutChords =
     {
