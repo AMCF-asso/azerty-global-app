@@ -5,25 +5,34 @@
 // de LessonCustomText. Le texte vit le temps de la fenêtre : rien n'est gardé sur le disque, et
 // la fermeture des Leçons l'oublie (HomeOnHide).
 //
-// Le champ garde son texte déjà normalisé (forme composée, fins de ligne en \n, tabulations en
-// espaces) : les grappes de LessonsHomeLogic.AnalyzeText se recollent alors exactement en lui,
-// et le curseur, un index UTF-16, tombe toujours sur une limite de grappe.
+// Le champ est un TextEditBuffer, le même que celui du mode Libre (audit 09/11, E22) : sélection
+// au clavier et à la souris, Ctrl+A/C/X/V/Z/Y, mots, et un message quand un collage dépasse
+// LessonsHomeLogic.MaxTextLength. Il garde son texte déjà normalisé (forme composée, fins de
+// ligne en \n, tabulations en espaces) : les grappes de LessonsHomeLogic.AnalyzeText se recollent
+// alors exactement en lui, et le curseur, un index UTF-16, tombe toujours sur une limite de grappe.
 using System.Globalization;
 
 namespace AZERTYGlobal;
 
 internal sealed partial class LessonsWindow
 {
-    private string _homeText = "";
-    private int _homeTextCursor;
+    private readonly TextEditBuffer _homeEdit = new(LessonsHomeLogic.MaxTextLength, text => LessonsHomeLogic.NormalizeText(text));
+    // Le dernier collage ou la dernière frappe a buté sur la limite : le pied du champ le dit.
+    private bool _homeTextTruncated;
     // Moitié haute d'un caractère hors du plan de base (émoji) : il arrive en deux WM_CHAR.
     private char? _homeTextHighSurrogate;
     // Première ligne visuelle du champ : le champ défile pour garder le curseur visible.
     private int _homeTextFirstLine;
-    // Les grappes visibles du dernier repeint et leur début dans le texte : un clic y pose le curseur.
-    private readonly List<(Win32.RECT Rect, int Start, int Length)> _homeTextHits = new();
     private Win32.RECT _homeTextField;
+    // Zone du texte dans le champ, au dernier repeint : la mise en page s'y refait à la demande.
+    private Win32.RECT _homeTextArea;
+    private HomeTextLayout? _homeTextLayout;
     private (string Text, string Language, LessonCustomTextResult Result)? _homeTextBuilt;
+
+    /// <summary>Mise en page du champ : chaque grappe, son début dans le texte et sa largeur, et
+    /// les lignes visuelles [début, fin) en index de grappe, coupées à la dernière espace.</summary>
+    private sealed record HomeTextLayout(string Text, int Scale, Win32.RECT Area, IReadOnlyList<HomeTextItem> Items,
+        int[] Starts, int[] Widths, IReadOnlyList<(int From, int To)> Lines, int LineHeight);
 
     private static bool HomeTextTypable(string character) => CharacterIndex.Shared.ByCharacter.ContainsKey(character);
 
@@ -33,203 +42,322 @@ internal sealed partial class LessonsWindow
     /// presse-papiers ; un champ déjà rempli reste tel quel (Ctrl+V y ajoute).</summary>
     private void HomeOpenText()
     {
-        if (_homeText.Length == 0) HomeTextPaste();
+        if (_homeEdit.Text.Length == 0) HomeTextPaste();
         HomeShowPage(HomePage.Text);
     }
 
     private void HomeTextForget()
     {
-        _homeText = "";
-        _homeTextCursor = 0;
+        _homeEdit.Clear();
+        _homeTextTruncated = false;
         _homeTextHighSurrogate = null;
         _homeTextFirstLine = 0;
-        _homeTextHits.Clear();
+        _homeTextLayout = null;
         _homeTextBuilt = null;
     }
 
-    /// <summary>Le texte du presse-papiers, inséré au curseur.</summary>
+    /// <summary>Le texte du presse-papiers, inséré au curseur (à la place de la sélection).</summary>
     private void HomeTextPaste()
     {
-        if (!Win32.OpenClipboard(_hWnd)) return;
-        string? text;
-        try { text = CharacterSearch.ReadClipboardText(); }
-        finally { Win32.CloseClipboard(); }
-        if (!string.IsNullOrEmpty(text)) HomeTextInsert(text);
+        _homeTextTruncated = _homeEdit.Paste(Clipboard).Truncated;
+        HomeTextChanged();
     }
 
     /// <summary>Insère au curseur, sous la forme que garde le champ, dans la limite de
-    /// <see cref="LessonsHomeLogic.MaxTextLength"/> caractères (coupé à une limite de grappe).</summary>
+    /// <see cref="LessonsHomeLogic.MaxTextLength"/> caractères (coupé à une limite de grappe,
+    /// et dit au pied du champ).</summary>
     internal void HomeTextInsert(string text)
     {
-        _homeTextCursor = Math.Clamp(_homeTextCursor, 0, _homeText.Length);
-        string added = LessonsHomeLogic.NormalizeText(text.Replace('\t', ' '));
-        int room = LessonsHomeLogic.MaxTextLength - _homeText.Length;
-        if (room <= 0 || added.Length == 0) return;
-        if (added.Length > room)
-        {
-            int cut = 0;
-            foreach (int start in StringInfo.ParseCombiningCharacters(added))
-            {
-                if (start > room) break;
-                cut = start;
-            }
-            added = added[..cut];
-            if (added.Length == 0) return;
-        }
-        // Une marque combinante tapée après sa lettre se compose avec elle : le curseur se place
-        // après ce qui précède la suite, recomposée elle aussi.
-        string before = _homeText[.._homeTextCursor] + added;
-        string after = _homeText[_homeTextCursor..];
-        string merged = LessonsHomeLogic.NormalizeText(before + after);
-        _homeText = merged;
-        _homeTextCursor = Math.Clamp(merged.Length - LessonsHomeLogic.NormalizeText(after).Length, 0, merged.Length);
+        _homeTextTruncated = _homeEdit.Insert(text).Truncated;
         HomeTextChanged();
     }
 
-    private void HomeTextChanged()
-    {
-        _homeTextBuilt = null;
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-    }
-
-    /// <summary>Les débuts de grappe du texte, suivis de sa longueur.</summary>
-    private int[] HomeTextBoundaries()
-    {
-        var starts = StringInfo.ParseCombiningCharacters(_homeText);
-        var bounds = new int[starts.Length + 1];
-        starts.CopyTo(bounds, 0);
-        bounds[^1] = _homeText.Length;
-        return bounds;
-    }
-
-    private int HomeTextPrevious(int at)
-    {
-        int previous = 0;
-        foreach (int bound in HomeTextBoundaries())
-        {
-            if (bound >= at) break;
-            previous = bound;
-        }
-        return previous;
-    }
-
-    private int HomeTextNext(int at)
-    {
-        foreach (int bound in HomeTextBoundaries())
-            if (bound > at) return bound;
-        return _homeText.Length;
-    }
-
-    private void HomeTextDelete(bool backwards)
-    {
-        _homeTextCursor = Math.Clamp(_homeTextCursor, 0, _homeText.Length);
-        if (backwards)
-        {
-            if (_homeTextCursor == 0) return;
-            int start = HomeTextPrevious(_homeTextCursor);
-            _homeText = _homeText.Remove(start, _homeTextCursor - start);
-            _homeTextCursor = start;
-        }
-        else
-        {
-            if (_homeTextCursor >= _homeText.Length) return;
-            int end = HomeTextNext(_homeTextCursor);
-            _homeText = _homeText.Remove(_homeTextCursor, end - _homeTextCursor);
-        }
-        HomeTextChanged();
-    }
+    private void HomeTextChanged() => Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
 
     /// <summary>
-    /// Un caractère sur la page « Votre texte ». OnChar l'envoie avant tout filtre : Retour
-    /// arrière arrive en '\b', Entrée en '\r', Ctrl+V en 0x16. Espace et Entrée qui viennent
-    /// d'activer la cible focalisée n'écrivent rien ; toute autre frappe rend le focus au champ.
+    /// Un caractère sur la page « Votre texte ». OnChar l'envoie avant tout filtre. Les caractères
+    /// de contrôle (Retour arrière, Entrée, Ctrl+lettre) n'écrivent rien : leur touche a déjà agi
+    /// au keydown (HomeTextKey). Espace qui vient d'activer la cible focalisée n'écrit rien ;
+    /// toute autre frappe rend le focus au champ.
     /// </summary>
     private void HomeTextChar(char c)
     {
-        bool onField = _focusedActionIndex < 0;
-        if (c == '\u0016') { HomeTextPaste(); return; }
-        if (c == '\b')
-        {
-            _focusedActionIndex = -1;
-            HomeTextDelete(backwards: true);
-            return;
-        }
-        if (c == '\r' || c == '\n')
-        {
-            if (onField) HomeTextInsert("\n");
-            return;
-        }
+        string typed;
         if (char.IsHighSurrogate(c)) { _homeTextHighSurrogate = c; return; }
         if (char.IsLowSurrogate(c))
         {
-            if (_homeTextHighSurrogate is { } high)
-            {
-                _focusedActionIndex = -1;
-                HomeTextInsert(new string(new[] { high, c }));
-            }
+            if (_homeTextHighSurrogate is not { } high) return;
+            typed = new string(new[] { high, c });
+        }
+        else
+        {
             _homeTextHighSurrogate = null;
-            return;
+            if (char.IsControl(c)) return;
+            if (c == ' ' && _focusedActionIndex >= 0) return;
+            typed = c.ToString();
         }
         _homeTextHighSurrogate = null;
-        if (char.IsControl(c)) return;
-        if (c == ' ' && !onField) return;
         _focusedActionIndex = -1;
-        HomeTextInsert(c.ToString());
+        _homeTextTruncated = _homeEdit.Insert(typed, typed: true).Truncated;
+        HomeTextChanged();
     }
 
-    /// <summary>Touches du champ : flèches gauche et droite, Origine et Fin (de la ligne),
-    /// Suppr. Ctrl seul (sans AltGr) vide la file de la frappe physique : sans cela, le WM_CHAR
-    /// de Ctrl+V (0x16) serait remplacé par le « v » que la touche donne d'habitude.</summary>
+    /// <summary>Touches du champ, comme dans un champ Windows : flèches (Maj : sélection, Ctrl :
+    /// mot), Origine et Fin (de la ligne visuelle ; Ctrl : du texte), Retour arrière et Suppr
+    /// (Ctrl : un mot), Entrée, Ctrl+A/C/X/V/Z/Y. Alt Gr tenu n'est jamais un raccourci.</summary>
     private void HomeTextKey(int vk)
     {
-        const int VK_CONTROL = 0x11;
-        bool ctrl = (TypingEngine.Windows.Win32.GetKeyState(VK_CONTROL) & unchecked((short)0x8000)) != 0
-                    && !_mapper.AltGrDown;
-        if (ctrl) ClearPendingPhysicalText();
-        int before = _homeTextCursor;
-        switch (vk)
+        var key = TextEditKeys.Map(vk, ReadEditModifiers());
+        switch (key.Command)
         {
-            case 0x25: _homeTextCursor = HomeTextPrevious(_homeTextCursor); break; // Gauche
-            case 0x27: _homeTextCursor = HomeTextNext(_homeTextCursor); break;     // Droite
-            case 0x24: // Origine
-                _homeTextCursor = _homeTextCursor == 0 ? 0 : _homeText.LastIndexOf('\n', _homeTextCursor - 1) + 1;
+            case TextEditCommand.None:
+                return;
+            case TextEditCommand.Left:
+            case TextEditCommand.Right:
+            case TextEditCommand.WordLeft:
+            case TextEditCommand.WordRight:
+                _homeEdit.MoveHorizontal(key.Command is TextEditCommand.Left or TextEditCommand.WordLeft ? -1 : 1,
+                    word: key.Command is TextEditCommand.WordLeft or TextEditCommand.WordRight, key.Extend);
                 break;
-            case 0x23: // Fin
-                int end = _homeText.IndexOf('\n', Math.Min(_homeTextCursor, _homeText.Length));
-                _homeTextCursor = end < 0 ? _homeText.Length : end;
+            case TextEditCommand.Up:
+            case TextEditCommand.Down:
+                HomeTextMoveVertical(key.Command == TextEditCommand.Up ? -1 : 1, key.Extend);
                 break;
-            case 0x2E: HomeTextDelete(backwards: false); return; // Suppr
-            default: return;
+            case TextEditCommand.LineStart:
+            case TextEditCommand.LineEnd:
+                HomeTextMoveToLineBoundary(key.Command == TextEditCommand.LineEnd, key.Extend);
+                break;
+            case TextEditCommand.DocumentStart:
+                _homeEdit.MoveTo(0, key.Extend);
+                break;
+            case TextEditCommand.DocumentEnd:
+                _homeEdit.MoveTo(_homeEdit.Text.Length, key.Extend);
+                break;
+            case TextEditCommand.Backspace:
+            case TextEditCommand.Delete:
+            case TextEditCommand.WordBackspace:
+            case TextEditCommand.WordDelete:
+                if (_homeEdit.Delete(backwards: key.Command is TextEditCommand.Backspace or TextEditCommand.WordBackspace,
+                        word: key.Command is TextEditCommand.WordBackspace or TextEditCommand.WordDelete))
+                    _homeTextTruncated = false;
+                break;
+            case TextEditCommand.NewLine:
+                // Entrée sur une cible focalisée l'a déjà activée (OnKeyDown) ; ici, le champ a le focus.
+                if (_focusedActionIndex >= 0) return;
+                _homeTextTruncated = _homeEdit.Insert("\n", typed: true).Truncated;
+                break;
+            case TextEditCommand.SelectAll:
+                _homeEdit.SelectAll();
+                break;
+            case TextEditCommand.Copy:
+                _homeEdit.Copy(Clipboard);
+                break;
+            case TextEditCommand.Cut:
+                if (_homeEdit.Cut(Clipboard)) _homeTextTruncated = false;
+                break;
+            case TextEditCommand.Paste:
+                _homeTextTruncated = _homeEdit.Paste(Clipboard).Truncated;
+                break;
+            case TextEditCommand.Undo:
+                if (_homeEdit.Undo()) _homeTextTruncated = false;
+                break;
+            case TextEditCommand.Redo:
+                if (_homeEdit.Redo()) _homeTextTruncated = false;
+                break;
         }
         _focusedActionIndex = -1;
-        if (_homeTextCursor != before) Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        HomeTextChanged();
     }
 
-    /// <summary>Un clic dans le champ pose le curseur avant ou après la grappe touchée.</summary>
-    private void HomeTextClick(int x, int y)
+    // ── Mise en page, curseur et souris ─────────────────────────────────
+
+    /// <summary>Coupe le texte en lignes visuelles dans <paramref name="area"/>, avec les polices
+    /// du champ ; le repeint et les touches (Haut, Bas, Origine, Fin, la souris) s'en servent.</summary>
+    private HomeTextLayout BuildHomeTextLayout(IntPtr hdc, Win32.RECT area, IReadOnlyList<HomeTextItem> items)
     {
-        var field = _homeTextField;
-        if (x < field.left || x > field.right || y < field.top || y > field.bottom) return;
-        int best = -1, bestDistance = int.MaxValue;
-        foreach (var (rect, start, length) in _homeTextHits)
+        var font = HomeFont(AppFonts.Title, 30, TypeRamp.Semibold);
+        var skippedFont = HomeFont(AppFonts.Text, 24);
+        var (ascent, descent) = PaperText.Metrics(hdc, font);
+        int lineH = Math.Max(1, (ascent + descent) * 3 / 2);
+        int width = Math.Max(S(40), area.right - area.left);
+
+        var starts = new int[items.Count];
+        var widths = new int[items.Count];
+        int offset = 0;
+        for (int i = 0; i < items.Count; i++)
         {
-            if (y < rect.top || y > rect.bottom) continue;
-            int at = x < (rect.left + rect.right) / 2 ? start : start + length;
-            int distance = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
-            if (distance < bestDistance) { best = at; bestDistance = distance; }
+            starts[i] = offset;
+            offset += items[i].Element.Length;
+            widths[i] = items[i].Kind switch
+            {
+                HomeTextKind.Break => 0,
+                HomeTextKind.Skipped => PaperText.Width(hdc, items[i].Element, skippedFont) + S(12),
+                _ => PaperText.Width(hdc, items[i].Element, font),
+            };
         }
-        if (best < 0) best = _homeText.Length;
-        _homeTextCursor = best;
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+
+        var lines = new List<(int From, int To)>();
+        int from = 0, x = 0, lastSpace = -1;
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].Kind == HomeTextKind.Break)
+            {
+                lines.Add((from, i + 1));
+                from = i + 1; x = 0; lastSpace = -1;
+                continue;
+            }
+            if (x + widths[i] > width && i > from)
+            {
+                int cut = lastSpace >= from ? lastSpace + 1 : i;
+                lines.Add((from, cut));
+                from = cut; lastSpace = -1;
+                x = 0;
+                for (int k = from; k < i; k++) x += widths[k];
+            }
+            if (items[i].Element == " ") lastSpace = i;
+            x += widths[i];
+        }
+        lines.Add((from, items.Count));
+        var layout = new HomeTextLayout(_homeEdit.Text, S(1000), area, items, starts, widths, lines, lineH);
+        _homeTextLayout = layout;
+        return layout;
+    }
+
+    /// <summary>La mise en page du texte actuel : celle du dernier repeint, refaite si le texte a
+    /// changé depuis (une touche peut arriver avant le repeint). Nulle tant que le champ n'a
+    /// jamais été dessiné.</summary>
+    private HomeTextLayout? CurrentHomeTextLayout()
+    {
+        if (_homeTextLayout is { } kept && kept.Text == _homeEdit.Text && kept.Scale == S(1000)) return kept;
+        if (_homeTextArea.right <= _homeTextArea.left) return null;
+        var items = LessonsHomeLogic.AnalyzeText(_homeEdit.Text, HomeTextTypable, HomeTextTracked);
+        var hdc = Win32.GetDC(_hWnd);
+        try { return BuildHomeTextLayout(hdc, _homeTextArea, items); }
+        finally { Win32.ReleaseDC(_hWnd, hdc); }
+    }
+
+    private int HomeVisibleLines(HomeTextLayout layout) =>
+        Math.Max(1, (layout.Area.bottom - layout.Area.top) / layout.LineHeight);
+
+    /// <summary>La ligne visuelle d'une position : une position de fin de ligne coupée au mot
+    /// appartient à la ligne suivante, sauf en fin de texte ou avant une fin de ligne.</summary>
+    private static int HomeLineOf(HomeTextLayout layout, int index)
+    {
+        int item = Array.FindIndex(layout.Starts, s => s >= index);
+        if (item < 0) item = layout.Items.Count;
+        for (int l = 0; l < layout.Lines.Count; l++)
+        {
+            var (from, to) = layout.Lines[l];
+            bool endsWithBreak = to > from && layout.Items[to - 1].Kind == HomeTextKind.Break;
+            int last = endsWithBreak ? to - 1 : to;
+            if (item >= from && (item < last || (item == last && (endsWithBreak || l == layout.Lines.Count - 1))))
+                return l;
+        }
+        return layout.Lines.Count - 1;
+    }
+
+    /// <summary>L'abscisse d'une position dans sa ligne, depuis le bord gauche du texte.</summary>
+    private static int HomeXOf(HomeTextLayout layout, int line, int index)
+    {
+        var (from, to) = layout.Lines[line];
+        int x = 0;
+        for (int i = from; i < to && layout.Starts[i] < index; i++)
+            if (layout.Items[i].Kind != HomeTextKind.Break) x += layout.Widths[i];
+        return x;
+    }
+
+    /// <summary>La limite de grappe la plus proche de l'abscisse dans la ligne. Au-delà de la fin
+    /// d'une ligne coupée au mot, avant son espace final, pour rester sur la ligne.</summary>
+    private int HomeIndexAtX(HomeTextLayout layout, int line, int x)
+    {
+        var (from, to) = layout.Lines[line];
+        int acc = 0;
+        for (int i = from; i < to; i++)
+        {
+            if (layout.Items[i].Kind == HomeTextKind.Break) return layout.Starts[i];
+            int w = layout.Widths[i];
+            if (x < acc + w / 2) return layout.Starts[i];
+            acc += w;
+        }
+        if (to >= layout.Items.Count) return layout.Text.Length;
+        return to > from && layout.Items[to - 1].Element == " " ? layout.Starts[to - 1] : layout.Starts[to];
+    }
+
+    /// <summary>La position sous un point du canevas ; au-dessus ou au-dessous du champ, la ligne
+    /// d'avant ou d'après (le glisser fait défiler).</summary>
+    private int HomeIndexAtPoint(HomeTextLayout layout, int x, int y)
+    {
+        int rel = y - layout.Area.top;
+        int offset = rel >= 0 ? rel / layout.LineHeight : (rel - layout.LineHeight + 1) / layout.LineHeight;
+        int line = Math.Clamp(_homeTextFirstLine + offset, 0, layout.Lines.Count - 1);
+        return HomeIndexAtX(layout, line, Math.Max(0, x - layout.Area.left));
+    }
+
+    private void HomeTextMoveVertical(int direction, bool extend)
+    {
+        if (CurrentHomeTextLayout() is not { } layout)
+        {
+            _homeEdit.MoveTo(direction < 0 ? 0 : _homeEdit.Text.Length, extend);
+            return;
+        }
+        int line = HomeLineOf(layout, _homeEdit.Caret);
+        int target = line + direction;
+        if (target < 0) _homeEdit.MoveTo(0, extend); // Haut sur la première ligne : début du texte, comme Windows
+        else if (target >= layout.Lines.Count) _homeEdit.MoveTo(_homeEdit.Text.Length, extend);
+        else _homeEdit.MoveTo(HomeIndexAtX(layout, target, HomeXOf(layout, line, _homeEdit.Caret)), extend);
+    }
+
+    private void HomeTextMoveToLineBoundary(bool toEnd, bool extend)
+    {
+        if (CurrentHomeTextLayout() is not { } layout)
+        {
+            _homeEdit.MoveTo(toEnd ? _homeEdit.Text.Length : 0, extend);
+            return;
+        }
+        int line = HomeLineOf(layout, _homeEdit.Caret);
+        var (from, _) = layout.Lines[line];
+        int start = from < layout.Starts.Length ? layout.Starts[from] : layout.Text.Length;
+        _homeEdit.MoveTo(toEnd ? HomeIndexAtX(layout, line, int.MaxValue) : start, extend);
+    }
+
+    /// <summary>Le point est-il dans le champ de « Votre texte » affiché, hors d'une cible ?</summary>
+    private bool HomeTextFieldAt(int x, int y) =>
+        HomeShown && _homePage == HomePage.Text && IsPointInRect(_homeTextField, x, y) && HitClickAction(x, y) < 0;
+
+    /// <summary>Bouton gauche enfoncé dans le champ : pose le curseur (Maj : étend la sélection).</summary>
+    private bool HomeTextMouseDown(int x, int y, bool extend)
+    {
+        if (!HomeTextFieldAt(x, y) || CurrentHomeTextLayout() is not { } layout) return false;
+        _focusedActionIndex = -1;
+        _homeEdit.MoveTo(HomeIndexAtPoint(layout, x, y), extend);
+        HomeTextChanged();
+        return true;
+    }
+
+    private void HomeTextMouseDrag(int x, int y)
+    {
+        if (CurrentHomeTextLayout() is not { } layout) return;
+        int before = _homeEdit.Caret;
+        _homeEdit.MoveTo(HomeIndexAtPoint(layout, x, y), extend: true);
+        if (_homeEdit.Caret != before) HomeTextChanged();
+    }
+
+    /// <summary>Double-clic dans le champ : le mot sous le pointeur.</summary>
+    private bool HomeTextSelectWordAt(int x, int y)
+    {
+        if (!HomeTextFieldAt(x, y) || CurrentHomeTextLayout() is not { } layout) return false;
+        _homeEdit.SelectWordAt(HomeIndexAtPoint(layout, x, y));
+        HomeTextChanged();
+        return true;
     }
 
     /// <summary>Ce que la leçon fera du texte : gardé tant que le texte et la langue restent.</summary>
     private LessonCustomTextResult HomeTextBuild()
     {
-        if (_homeTextBuilt is { } built && built.Text == _homeText && built.Language == L.Language)
+        if (_homeTextBuilt is { } built && built.Text == _homeEdit.Text && built.Language == L.Language)
             return built.Result;
-        var result = LessonCustomText.Build(_homeText, L.LessonsHome_TextInstruction);
-        _homeTextBuilt = (_homeText, L.Language, result);
+        var result = LessonCustomText.Build(_homeEdit.Text, L.LessonsHome_TextInstruction);
+        _homeTextBuilt = (_homeEdit.Text, L.Language, result);
         return result;
     }
 
@@ -258,8 +386,7 @@ internal sealed partial class LessonsWindow
 
     private void DrawHomeTextPage(IntPtr hdc, Win32.RECT body, in HomePalette pal, HomeSnapshot snapshot)
     {
-        _homeTextHits.Clear();
-        var items = LessonsHomeLogic.AnalyzeText(_homeText, HomeTextTypable, HomeTextTracked);
+        var items = LessonsHomeLogic.AnalyzeText(_homeEdit.Text, HomeTextTypable, HomeTextTracked);
         var result = HomeTextBuild();
 
         int gap = S(18);
@@ -292,12 +419,13 @@ internal sealed partial class LessonsWindow
         var preview = new Win32.RECT { left = body.left, top = field.bottom + S(20), right = body.right, bottom = body.bottom };
         DrawHomeTextPreview(hdc, preview, pal, result.Exercise);
 
-        _surfaceView = new LessonSurfaceView(L.LessonsHome_YourText, L.LessonsHome_TextSurfaceHelp, _homeText,
-            Math.Clamp(_homeTextCursor, 0, _homeText.Length), field, Array.Empty<Win32.RECT>(), _systemCaretRect);
+        _surfaceView = new LessonSurfaceView(L.LessonsHome_YourText, L.LessonsHome_TextSurfaceHelp, _homeEdit.Text,
+            _homeEdit.Caret, field, Array.Empty<Win32.RECT>(), _systemCaretRect, SelectionAnchor: _homeEdit.Anchor);
     }
 
-    /// <summary>Le champ : le texte en grand, coupé aux mots ; le pied dit les deux marques et le
-    /// nombre de signes. Bordure d'action épaisse quand il a le focus.</summary>
+    /// <summary>Le champ : le texte en grand, coupé aux mots, sa sélection sur fond d'action
+    /// pâle ; le pied dit les deux marques et le nombre de signes, ou que le champ est plein.
+    /// Bordure d'action épaisse quand il a le focus.</summary>
     private void DrawHomeTextField(IntPtr hdc, Win32.RECT field, in HomePalette pal, IReadOnlyList<HomeTextItem> items)
     {
         _homeTextField = field;
@@ -306,120 +434,76 @@ internal sealed partial class LessonsWindow
         PaperDraw.RoundBox(hdc, field, pal.Surface, focused ? pal.Action : pal.Border, S(3), border);
 
         int padX = S(20), padTop = S(14), footH = S(26);
-        var text = new Win32.RECT { left = field.left + padX, top = field.top + padTop, right = field.right - S(14), bottom = field.bottom - footH };
+        var area = new Win32.RECT { left = field.left + padX, top = field.top + padTop, right = field.right - S(14), bottom = field.bottom - footH };
+        _homeTextArea = area;
+        var layout = BuildHomeTextLayout(hdc, area, items);
         var font = HomeFont(AppFonts.Title, 30, TypeRamp.Semibold);
         var skippedFont = HomeFont(AppFonts.Text, 24);
         var (ascent, descent) = PaperText.Metrics(hdc, font);
-        int lineH = (ascent + descent) * 3 / 2;
-        int width = Math.Max(S(40), text.right - text.left);
-
-        // Les grappes, leur début dans le texte et leur largeur.
-        var starts = new int[items.Count];
-        var widths = new int[items.Count];
-        int offset = 0;
-        for (int i = 0; i < items.Count; i++)
-        {
-            starts[i] = offset;
-            offset += items[i].Element.Length;
-            widths[i] = items[i].Kind switch
-            {
-                HomeTextKind.Break => 0,
-                HomeTextKind.Skipped => PaperText.Width(hdc, items[i].Element, skippedFont) + S(12),
-                _ => PaperText.Width(hdc, items[i].Element, font),
-            };
-        }
-
-        // Lignes visuelles : [début, fin) en index de grappe, coupées à la dernière espace.
-        var lines = new List<(int From, int To)>();
-        int from = 0, x = 0, lastSpace = -1;
-        for (int i = 0; i < items.Count; i++)
-        {
-            if (items[i].Kind == HomeTextKind.Break)
-            {
-                lines.Add((from, i + 1));
-                from = i + 1; x = 0; lastSpace = -1;
-                continue;
-            }
-            if (x + widths[i] > width && i > from)
-            {
-                int cut = lastSpace >= from ? lastSpace + 1 : i;
-                lines.Add((from, cut));
-                from = cut; lastSpace = -1;
-                x = 0;
-                for (int k = from; k < i; k++) x += widths[k];
-            }
-            if (items[i].Element == " ") lastSpace = i;
-            x += widths[i];
-        }
-        lines.Add((from, items.Count));
+        int lineH = layout.LineHeight;
+        int width = Math.Max(S(40), area.right - area.left);
 
         // La ligne du curseur, puis le défilement qui la garde visible.
-        int cursor = Math.Clamp(_homeTextCursor, 0, _homeText.Length);
-        int cursorItem = Array.FindIndex(starts, s => s >= cursor);
-        if (cursorItem < 0) cursorItem = items.Count;
-        int cursorLine = lines.Count - 1;
-        for (int l = 0; l < lines.Count; l++)
-        {
-            var (lineFrom, lineTo) = lines[l];
-            bool endsWithBreak = lineTo > lineFrom && items[lineTo - 1].Kind == HomeTextKind.Break;
-            int lastPosition = endsWithBreak ? lineTo - 1 : lineTo;
-            if (cursorItem >= lineFrom && (cursorItem < lastPosition || (cursorItem == lastPosition && (endsWithBreak || l == lines.Count - 1))))
-            { cursorLine = l; break; }
-        }
-        int visible = Math.Max(1, (text.bottom - text.top) / lineH);
+        int cursorLine = HomeLineOf(layout, _homeEdit.Caret);
+        int visible = HomeVisibleLines(layout);
         _homeTextFirstLine = Math.Clamp(_homeTextFirstLine, Math.Max(0, cursorLine - visible + 1), cursorLine);
 
+        int selStart = _homeEdit.SelectionStart, selEnd = _homeEdit.SelectionEnd;
+        uint selFill = pal.HighContrast ? pal.Action : PaperTheme.SelectionFill;
+        uint selInk = pal.HighContrast ? pal.OnAction : pal.Ink;
+
         int saved = Win32.SaveDC(hdc);
-        Win32.IntersectClipRect(hdc, field.left + border, field.top + border, field.right - border, text.bottom);
+        Win32.IntersectClipRect(hdc, field.left + border, field.top + border, field.right - border, area.bottom);
         if (items.Count == 0)
         {
             var placeholder = HomeFont(AppFonts.Text, 17);
             PaperText.DrawLine(hdc, HomeEllipsize(hdc, L.LessonsHome_TextPlaceholder, placeholder, width), placeholder,
-                new Win32.RECT { left = text.left, top = text.top, right = text.right, bottom = text.top + lineH }, pal.Muted, TextAlign.Left);
+                new Win32.RECT { left = area.left, top = area.top, right = area.right, bottom = area.top + lineH }, pal.Muted, TextAlign.Left);
         }
         int underline = Math.Max(2, S(3));
-        int? caretX = null;
         int caretTop = 0;
-        for (int l = _homeTextFirstLine; l < lines.Count && l < _homeTextFirstLine + visible; l++)
+        for (int l = _homeTextFirstLine; l < layout.Lines.Count && l < _homeTextFirstLine + visible; l++)
         {
-            var (lineFrom, lineTo) = lines[l];
-            int top = text.top + (l - _homeTextFirstLine) * lineH;
+            var (lineFrom, lineTo) = layout.Lines[l];
+            int top = area.top + (l - _homeTextFirstLine) * lineH;
             int baseline = top + (lineH - (ascent + descent)) / 2 + ascent;
-            int lx = text.left;
+            int lx = area.left;
             for (int i = lineFrom; i < lineTo; i++)
             {
                 var item = items[i];
-                if (l == cursorLine && i == cursorItem) caretX = lx;
                 if (item.Kind == HomeTextKind.Break) continue;
-                var cell = new Win32.RECT { left = lx, top = top, right = lx + widths[i], bottom = top + lineH };
+                int start = layout.Starts[i];
+                var cell = new Win32.RECT { left = lx, top = top, right = lx + layout.Widths[i], bottom = top + lineH };
+                bool selected = start >= selStart && start + item.Element.Length <= selEnd && selEnd > selStart;
+                if (selected) PaperDraw.Fill(hdc, cell, selFill);
+                uint ink = selected ? selInk : pal.Ink;
                 if (item.Kind == HomeTextKind.Skipped)
                 {
-                    var box = new Win32.RECT { left = lx + S(3), top = top + S(8), right = lx + widths[i] - S(3), bottom = top + lineH - S(8) };
+                    var box = new Win32.RECT { left = lx + S(3), top = top + S(8), right = lx + layout.Widths[i] - S(3), bottom = top + lineH - S(8) };
                     PaperDraw.RoundBox(hdc, box, pal.Surface, pal.Muted, S(4), Math.Max(1, S(1)), Win32.PS_DASH);
                     PaperText.DrawLine(hdc, item.Element, skippedFont, box, pal.Ink, TextAlign.Center);
                 }
                 else
                 {
-                    PaperText.Draw(hdc, item.Element, font, lx, baseline, pal.Ink);
+                    PaperText.Draw(hdc, item.Element, font, lx, baseline, ink);
                     if (item.Kind == HomeTextKind.Gesture)
-                        PaperDraw.Fill(hdc, lx, baseline + S(6), lx + widths[i], baseline + S(6) + underline, pal.Action);
+                        PaperDraw.Fill(hdc, lx, baseline + S(6), lx + layout.Widths[i], baseline + S(6) + underline, selected ? selInk : pal.Action);
                 }
-                _homeTextHits.Add((cell, starts[i], item.Element.Length));
-                lx += widths[i];
+                lx += layout.Widths[i];
             }
-            if (l == cursorLine && caretX == null) caretX = lx;
             if (l == cursorLine) caretTop = top + (lineH - (ascent + descent)) / 2;
         }
         _systemCaretRect = null;
-        if (focused && caretX is { } cxPos && cursorLine >= _homeTextFirstLine && cursorLine < _homeTextFirstLine + visible)
+        if (focused && cursorLine >= _homeTextFirstLine && cursorLine < _homeTextFirstLine + visible)
         {
+            int cxPos = area.left + HomeXOf(layout, cursorLine, _homeEdit.Caret);
             var caret = new Win32.RECT { left = cxPos + S(1), top = caretTop, right = cxPos + S(1) + Math.Max(2, S(2)), bottom = caretTop + ascent + descent };
             PaperDraw.Fill(hdc, caret, pal.Ink);
             _systemCaretRect = caret;
         }
         Win32.RestoreDC(hdc, saved);
 
-        // Pied : les deux marques, puis le compte à droite.
+        // Pied : les deux marques, puis le compte à droite (ou « Champ plein »).
         var small = HomeFont(AppFonts.Text, 12);
         int footTop = field.bottom - footH;
         int mid = footTop + footH / 2 - S(1);
@@ -434,11 +518,19 @@ internal sealed partial class LessonsWindow
         int countLeft = fx + PaperText.Width(hdc, L.LessonsHome_TextLegendSkipped, small) + S(18);
         PaperText.DrawLine(hdc, L.LessonsHome_TextLegendSkipped, small,
             new Win32.RECT { left = fx, top = footTop, right = field.right - S(14), bottom = footTop + footH }, pal.Muted, TextAlign.Left);
-        string count = L.LessonsHome_TextCount(items.Count(item => item.Kind != HomeTextKind.Break));
-        int countW = PaperText.Width(hdc, count, small);
-        if (field.right - S(14) - countW > countLeft)
-            PaperText.DrawLine(hdc, count, small,
-                new Win32.RECT { left = field.right - S(14) - countW, top = footTop, right = field.right - S(14), bottom = footTop + footH }, pal.Muted, TextAlign.Left);
+        string count = _homeTextTruncated
+            ? L.LessonsWin_FreeFull(LessonsHomeLogic.MaxTextLength)
+            : L.LessonsHome_TextCount(items.Count(item => item.Kind != HomeTextKind.Break));
+        var countFont = _homeTextTruncated ? HomeFont(AppFonts.Text, 12, TypeRamp.Semibold) : small;
+        uint countInk = _homeTextTruncated ? (pal.HighContrast ? pal.Ink : PaperTheme.Error) : pal.Muted;
+        int countW = PaperText.Width(hdc, count, countFont);
+        // Le message « champ plein » passe avant la légende : il prend sa place s'il le faut.
+        int countX = Math.Max(_homeTextTruncated ? field.left + padX : countLeft, field.right - S(14) - countW);
+        if (_homeTextTruncated && countX < countLeft)
+            PaperDraw.Fill(hdc, field.left + border, footTop, field.right - border, field.bottom - border, pal.Surface);
+        if (_homeTextTruncated || field.right - S(14) - countW > countLeft)
+            PaperText.DrawLine(hdc, count, countFont,
+                new Win32.RECT { left = countX, top = footTop, right = field.right - S(14), bottom = footTop + footH }, countInk, TextAlign.Left);
     }
 
     /// <summary>« Ce que vous allez taper » : chaque caractère à geste que la leçon gardera, avec
@@ -462,7 +554,7 @@ internal sealed partial class LessonsWindow
         // lignes gardent sa hauteur).
         string? note = null;
         if (result.Exercise == null)
-            note = _homeText.Trim().Length == 0 ? L.LessonsHome_TextEmpty : L.LessonsHome_TextNothingTypable;
+            note = _homeEdit.Text.Trim().Length == 0 ? L.LessonsHome_TextEmpty : L.LessonsHome_TextNothingTypable;
         else if (HomeTextWasCut(items, result.Exercise))
             note = L.LessonsHome_TextCut(LessonCustomText.MaxLines);
         int buttonH = S(34);

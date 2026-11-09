@@ -236,13 +236,13 @@ internal sealed partial class LessonsWindow
     private bool HomePageHasSurface => _homePage == HomePage.Text;
 
     /// <summary>Le clic en cours : le point, retenu pour l'action de la carte ; le focus clavier
-    /// quitte la cible. Dans le champ de « Votre texte », le clic pose le curseur.</summary>
+    /// quitte la cible. Le champ de « Votre texte » a déjà posé son curseur à l'enfoncement
+    /// (OnFieldMouseDown) : le relâchement ne replie pas une sélection faite au double-clic.</summary>
     private void HomeNoteClick(int x, int y)
     {
         _homeClickPoint = (x, y);
         if (!HomeShown) return;
         _focusedActionIndex = -1;
-        if (_homePage == HomePage.Text) HomeTextClick(x, y);
     }
 
     private void HomeOnHide()

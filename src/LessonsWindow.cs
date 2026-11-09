@@ -191,7 +191,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private readonly TextEditBuffer _free = new(FREE_MAX_CHARS);
     private string _freePreview => _free.Text;
     private int _freeCursorIndex => _free.Caret;
-    private bool _freeDragging;
+    private bool _fieldDragging;
     private bool _freeTruncated;
     private char? _freeHighSurrogate;
     private readonly Dictionary<string, int> _freeWidths = new(StringComparer.Ordinal);
@@ -1153,28 +1153,28 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     break; // traitement par défaut, comme avant
                 case Win32.WM_LBUTTONDOWN:
                     _focusCuesShown = false;
-                    if (OnFreeMouseDown(lParam, wParam))
+                    if (OnFieldMouseDown(lParam, wParam))
                         return IntPtr.Zero;
                     break;
                 case Win32.WM_LBUTTONUP:
                     _focusCuesShown = false;
-                    if (_freeDragging)
+                    if (_fieldDragging)
                     {
-                        EndFreeDrag(); // fin d'une sélection à la souris dans le mode Libre
+                        EndFieldDrag(); // fin d'une sélection à la souris dans un champ
                         return IntPtr.Zero;
                     }
                     OnClick(lParam);
                     return IntPtr.Zero;
                 case WM_CAPTURECHANGED:
-                    _freeDragging = false;
+                    _fieldDragging = false;
                     break;
                 case Win32.WM_LBUTTONDBLCLK:
                     OnDoubleClick(lParam);
                     return IntPtr.Zero;
                 case Win32.WM_MOUSEMOVE:
-                    if (_freeDragging)
+                    if (_fieldDragging)
                     {
-                        OnFreeMouseDrag(lParam);
+                        OnFieldMouseDrag(lParam);
                         return IntPtr.Zero;
                     }
                     OnMouseMove(lParam);
@@ -1974,35 +1974,47 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return true;
     }
 
-    /// <summary>Bouton gauche enfoncé dans le champ : pose le curseur (Maj : étend la sélection)
-    /// et suit la souris jusqu'au relâchement, pour sélectionner en glissant.</summary>
-    private bool OnFreeMouseDown(IntPtr lParam, IntPtr wParam)
+    /// <summary>Bouton gauche enfoncé dans un champ (mode Libre ou « Votre texte ») : pose le
+    /// curseur (Maj : étend la sélection) et suit la souris jusqu'au relâchement, pour
+    /// sélectionner en glissant.</summary>
+    private bool OnFieldMouseDown(IntPtr lParam, IntPtr wParam)
     {
-        if (_mode != WindowMode.Free || _settingsOpen || _pickerOpen) return false;
+        if (_settingsOpen || _pickerOpen) return false;
         var (x, y) = ClientToCanvas(lParam);
-        if (!IsPointInRect(_freePreviewRect, x, y) || HitClickAction(x, y) >= 0) return false;
         const long MK_SHIFT = 0x0004;
-        _focusedActionIndex = -1;
-        SetFreeCursorFromPoint(x, y, extend: (wParam.ToInt64() & MK_SHIFT) != 0);
-        _freeDragging = true;
+        bool extend = (wParam.ToInt64() & MK_SHIFT) != 0;
+        if (_mode == WindowMode.Free && IsPointInRect(_freePreviewRect, x, y) && HitClickAction(x, y) < 0)
+        {
+            _focusedActionIndex = -1;
+            SetFreeCursorFromPoint(x, y, extend);
+        }
+        else if (!HomeTextMouseDown(x, y, extend))
+            return false;
+        _fieldDragging = true;
         SetCapture(_hWnd);
         Win32.SetFocus(_hWnd);
         return true;
     }
 
-    private void OnFreeMouseDrag(IntPtr lParam)
+    private void OnFieldMouseDrag(IntPtr lParam)
     {
         var (x, y) = ClientToCanvas(lParam);
+        if (HomeShown)
+        {
+            if (_homePage == HomePage.Text) HomeTextMouseDrag(x, y);
+            return;
+        }
+        if (_mode != WindowMode.Free) return;
         int before = _free.Caret;
         _free.MoveTo(FreeIndexAtPoint(x, y), extend: true);
         if (_free.Caret != before)
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private void EndFreeDrag()
+    private void EndFieldDrag()
     {
-        if (!_freeDragging) return;
-        _freeDragging = false;
+        if (!_fieldDragging) return;
+        _fieldDragging = false;
         ReleaseCapture();
     }
 
@@ -2188,7 +2200,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.SetFocus(_hWnd);
             return;
         }
-        // Le champ du mode Libre pose son curseur à l'enfoncement (OnFreeMouseDown) : le
+        // Le champ du mode Libre pose son curseur à l'enfoncement (OnFieldMouseDown) : le
         // relâchement ne doit pas défaire une sélection faite en glissant.
         Win32.SetFocus(_hWnd);
     }
@@ -2196,7 +2208,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void OnDoubleClick(IntPtr lParam)
     {
         var (x, y) = ClientToCanvas(lParam);
-        if (SelectFreeWordAt(x, y))
+        if (SelectFreeWordAt(x, y) || HomeTextSelectWordAt(x, y))
             return;
         foreach (var (rect, action) in _doubleClickActions)
         {
@@ -3027,7 +3039,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
         // Mode Libre : le texte reste pour la prochaine ouverture (audit 09/11, E7 : Échap
         // l'effaçait sans prévenir) ; les statistiques mesurent une séance et repartent de zéro.
-        EndFreeDrag();
+        EndFieldDrag();
         _freeHighSurrogate = null;
         _freeChars = 0;
         _freeBackspaces = 0;

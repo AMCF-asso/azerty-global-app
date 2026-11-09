@@ -197,10 +197,10 @@ public class FreeModeFieldTests
         using var f = new Field();
         f.Type("un texte assez long pour glisser dessus");
         f.Paint();
-        Assert.True((bool)BancCapture.Call(f.Window, "OnFreeMouseDown", f.PointIn(0.01, 0.15), IntPtr.Zero)!);
+        Assert.True((bool)BancCapture.Call(f.Window, "OnFieldMouseDown", f.PointIn(0.01, 0.15), IntPtr.Zero)!);
         Assert.Equal(0, f.Buffer.Caret);
-        BancCapture.Call(f.Window, "OnFreeMouseDrag", f.PointIn(0.99, 0.15));
-        BancCapture.Call(f.Window, "EndFreeDrag");
+        BancCapture.Call(f.Window, "OnFieldMouseDrag", f.PointIn(0.99, 0.15));
+        BancCapture.Call(f.Window, "EndFieldDrag");
         Assert.True(f.Buffer.HasSelection);
         string selected = f.Buffer.SelectedText;
         Assert.StartsWith("un texte", selected);
@@ -218,10 +218,10 @@ public class FreeModeFieldTests
         using var f = new Field();
         f.Type("alpha beta gamma");
         f.Paint();
-        BancCapture.Call(f.Window, "OnFreeMouseDown", f.PointIn(0.01, 0.15), IntPtr.Zero);
-        BancCapture.Call(f.Window, "EndFreeDrag");
-        BancCapture.Call(f.Window, "OnFreeMouseDown", f.PointIn(0.99, 0.15), (IntPtr)0x0004); // MK_SHIFT
-        BancCapture.Call(f.Window, "EndFreeDrag");
+        BancCapture.Call(f.Window, "OnFieldMouseDown", f.PointIn(0.01, 0.15), IntPtr.Zero);
+        BancCapture.Call(f.Window, "EndFieldDrag");
+        BancCapture.Call(f.Window, "OnFieldMouseDown", f.PointIn(0.99, 0.15), (IntPtr)0x0004); // MK_SHIFT
+        BancCapture.Call(f.Window, "EndFieldDrag");
         Assert.Equal("alpha beta gamma", f.Buffer.SelectedText);
 
         BancCapture.Call(f.Window, "OnDoubleClick", f.PointIn(0.01, 0.15));
