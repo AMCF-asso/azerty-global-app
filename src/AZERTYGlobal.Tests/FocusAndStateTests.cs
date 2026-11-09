@@ -244,6 +244,36 @@ public class FocusAndStateTests
         finally { BancCapture.Teardown(window); }
     }
 
+    /// <summary>E21 : Ctrl+Tab fait défiler les onglets de l'accueil dans les deux sens ; sans
+    /// onglets (mode Libre), il ne fait rien.</summary>
+    [Fact]
+    public void Ctrl_tab_cycles_the_home_tabs()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            string Page() => BancCapture.Field<object>(window, "_homePage").ToString()!;
+            BancCapture.SetField(window, "_homePage", HomePageValue("Today"));
+            BancCapture.Call(window, "HomeCycleTab", 1);
+            Assert.Equal("Map", Page());
+            BancCapture.Call(window, "HomeCycleTab", 1);
+            Assert.Equal("Exercise", Page());
+            BancCapture.Call(window, "HomeCycleTab", 1);
+            Assert.Equal("Today", Page());
+
+            BancCapture.SetField(window, "_homePage", HomePageValue("Text"));
+            BancCapture.Call(window, "HomeCycleTab", -1);
+            Assert.Equal("Exercise", Page());
+
+            SetMode(window, "Free");
+            BancCapture.Call(window, "HomeCycleTab", 1);
+            Assert.Equal("Exercise", Page());
+            Assert.Equal("Free", BancCapture.Field<object>(window, "_mode").ToString());
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
     private static object HomePageValue(string name)
     {
         var type = typeof(LessonsWindow).GetNestedType("HomePage", System.Reflection.BindingFlags.NonPublic)!;

@@ -181,6 +181,25 @@ internal sealed partial class LessonsWindow
         return true;
     }
 
+    /// <summary>Ordre des onglets de l'en-tête de l'accueil ; « Toutes les leçons » mène à
+    /// l'écran d'exercice.</summary>
+    private static readonly HomePage[] HomeTabOrder = { HomePage.Today, HomePage.Map, HomePage.Exercise };
+
+    /// <summary>Ctrl+Tab et Ctrl+Maj+Tab : onglet suivant ou précédent (Aujourd'hui, Votre carte,
+    /// Toutes les leçons), comme dans un navigateur (audit 09/11, E21). « Votre texte » compte
+    /// pour Aujourd'hui, dont il vient. Sans onglets (mode Libre, Paramètres, parcours), rien :
+    /// Ctrl+Tab n'est jamais un second Tab.</summary>
+    private void HomeCycleTab(int delta)
+    {
+        if (_mode != WindowMode.Lessons || _settingsOpen || IsTutorialActive) return;
+        var current = _homePage == HomePage.Text ? HomePage.Today : _homePage;
+        int i = Array.IndexOf(HomeTabOrder, current);
+        var next = HomeTabOrder[(i + delta + HomeTabOrder.Length) % HomeTabOrder.Length];
+        if (next == HomePage.Exercise) HomeShowExercise();
+        else if (next == HomePage.Map) HomeShowMap();
+        else HomeShowPage(HomePage.Today);
+    }
+
     private void HomeMoveMapKey(int delta)
     {
         if (_homeMapKeys.Count == 0) return;

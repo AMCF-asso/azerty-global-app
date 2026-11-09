@@ -2441,7 +2441,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (vk == 0x09)
         {
             bool backwards = (TypingEngine.Windows.Win32.GetKeyState(0x10) & unchecked((short)0x8000)) != 0;
-            MoveKeyboardFocus(backwards ? -1 : 1);
+            bool ctrl = (TypingEngine.Windows.Win32.GetKeyState(0x11) & unchecked((short)0x8000)) != 0;
+            if (ctrl)
+                HomeCycleTab(backwards ? -1 : 1); // Ctrl+Tab : onglet, jamais un second Tab (E21)
+            else
+                MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
         bool summaryShown = _showSummary && _mode == WindowMode.Lessons && !HomeShown && !TutorialPageShown;
