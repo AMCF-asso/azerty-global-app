@@ -101,6 +101,8 @@ sealed class UsageStatsWindow : IDisposable
 
     private bool _visible;
     private bool _showCopiedFeedback;
+    // Audit 09/11, W11 : la copie a échoué (presse-papiers tenu par une autre application).
+    private bool _copyFailed;
 
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
@@ -119,7 +121,7 @@ sealed class UsageStatsWindow : IDisposable
 
     /// <summary>Langue de l'UI à la création : titre, boutons et liens sont figés au
     /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
-    public string UiLanguage { get; } = L.Language;
+    public string UiLanguage { get; private set; } = L.Language;
 
     public UsageStatsWindow()
     {
@@ -133,6 +135,7 @@ sealed class UsageStatsWindow : IDisposable
 
         CreateFonts();
         CreateMainWindow();
+        ConfigManager.AppLanguageChanged += OnLanguageChanged;
         CreateControls();
         ApplyFontsToControls();
 
@@ -197,7 +200,7 @@ sealed class UsageStatsWindow : IDisposable
         // Début et Fin défilent quand le focus est sur un bouton. Le défilement repeint le texte.
         _scroll.Scrolled = () => Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
         DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
-            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
+            (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)) || TryCopyKey(key.wParam));
         NativeWindow.ApplyFrame(_hWnd, dark: false);
     }
 
@@ -316,8 +319,9 @@ sealed class UsageStatsWindow : IDisposable
         try
         {
             var area = new Win32.RECT { left = 0, top = 0, right = Math.Max(1, width), bottom = 1 };
-            return Math.Max(DrawContents(dc, area, copiedFeedback: false),
-                            DrawContents(dc, area, copiedFeedback: true));
+            return Math.Max(Math.Max(DrawContents(dc, area, copiedFeedback: false),
+                                     DrawContents(dc, area, copiedFeedback: true)),
+                            DrawContents(dc, area, copiedFeedback: false, copyFailed: true));
         }
         finally
         {
@@ -330,6 +334,7 @@ sealed class UsageStatsWindow : IDisposable
     public void Show()
     {
         _showCopiedFeedback = false;
+        _copyFailed = false;
         // La visibilité de la section « Défi du jour » peut changer entre deux ouvertures :
         // la hauteur se recalcule à chaque affichage ; la fenêtre se rouvre en haut.
         FitWindow();
@@ -450,12 +455,16 @@ sealed class UsageStatsWindow : IDisposable
                     {
                         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK);
                         _showCopiedFeedback = false;
+                        _copyFailed = false;
                         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                     }
                     return IntPtr.Zero;
 
                 case Win32.WM_KEYDOWN:
                     if (_scroll.TryHandle(_hWnd, msg, wParam, S(24)))
+                        return IntPtr.Zero;
+                    // Audit 09/11, E29 : Ctrl+C copie les statistiques, comme « Copier mes statistiques ».
+                    if (TryCopyKey(wParam))
                         return IntPtr.Zero;
                     if (wParam == (IntPtr)0x1B) // VK_ESCAPE
                     {
@@ -483,12 +492,49 @@ sealed class UsageStatsWindow : IDisposable
     /// </summary>
     private void OnCopyStats()
     {
-        if (ClipboardText.TrySet(_hWnd, UsageStats.BuildShareText()))
-        {
-            _showCopiedFeedback = true;
-            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-            Win32.SetTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK, 1500, IntPtr.Zero);
-        }
+        // W11 : un échec se dit (le presse-papiers peut être tenu par une autre application), avec
+        // la même durée que « Copié ».
+        bool copied = CopyToClipboard(UsageStats.BuildShareText());
+        _showCopiedFeedback = copied;
+        _copyFailed = !copied;
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK, 1500, IntPtr.Zero);
+    }
+
+    /// <summary>Point d'appui du presse-papiers : les tests le remplacent pour simuler un échec.</summary>
+    internal Func<IntPtr, string, bool> ClipboardWriter = ClipboardText.TrySet;
+
+    private bool CopyToClipboard(string text) => ClipboardWriter(_hWnd, text);
+
+    /// <summary>Ctrl+C : le focus est presque toujours sur un bouton, dont la touche passe par le filtre de
+    /// DialogNavigation avant d'atteindre la fenêtre.</summary>
+    private bool TryCopyKey(IntPtr wParam)
+    {
+        if (!IsCopyChord((int)wParam, CtrlHeld(), AltHeld())) return false;
+        OnCopyStats();
+        return true;
+    }
+
+    /// <summary>Ctrl+C, sans Alt : Alt Gr (Ctrl + Alt) n'est pas un Ctrl.</summary>
+    internal static bool IsCopyChord(int vk, bool ctrl, bool alt) => vk == 0x43 && ctrl && !alt;
+
+    private static bool CtrlHeld() => (TypingEngine.Windows.Win32.GetKeyState(0x11) & unchecked((short)0x8000)) != 0;
+    private static bool AltHeld() => (TypingEngine.Windows.Win32.GetKeyState(0x12) & unchecked((short)0x8000)) != 0;
+
+    /// <summary>Audit 09/11, W8 : la langue change pendant que la fenêtre est ouverte. Les textes
+    /// peints suivent d'eux-mêmes ; le titre, les liens et les boutons portaient celui de la création.</summary>
+    internal void OnLanguageChanged(string language)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        UiLanguage = L.Language;
+        Win32.SetWindowTextW(_hWnd, L.Stats_WindowTitle);
+        Win32.SetWindowTextW(_hWndLinkFeedback, L.Stats_LinkFeedback);
+        Win32.SetWindowTextW(_hWndLinkDiscord, L.Stats_LinkDiscord);
+        Win32.SetWindowTextW(_hWndBtnCopy, L.Stats_BtnCopy);
+        Win32.SetWindowTextW(_hWndBtnRate, L.Stats_BtnRate);
+        Win32.SetWindowTextW(_hWndBtnClose, L.Common_Close);
+        FitWindow(); // les textes n'ont plus la même longueur : mise en page et hauteur refaites
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     /// <summary>C1 : « Noter l'application » — la demande d'avis vient de ce clic, et d'aucun
@@ -511,7 +557,7 @@ sealed class UsageStatsWindow : IDisposable
             return;
         }
         using var paint = new PaintBuffer(hWnd);
-        DrawContents(paint.Hdc, paint.Client, _showCopiedFeedback);
+        DrawContents(paint.Hdc, paint.Client, _showCopiedFeedback, _copyFailed);
     }
 
     /// <summary>
@@ -532,13 +578,13 @@ sealed class UsageStatsWindow : IDisposable
             {
                 // Mémoire refusée : directement à l'écran, origine décalée du défilement.
                 Win32.SetViewportOrgEx(target, 0, -_scroll.Position, IntPtr.Zero);
-                DrawContents(target, canvas, _showCopiedFeedback);
+                DrawContents(target, canvas, _showCopiedFeedback, _copyFailed);
                 Win32.SetViewportOrgEx(target, 0, 0, IntPtr.Zero);
                 return;
             }
             try
             {
-                DrawContents(dc, canvas, _showCopiedFeedback);
+                DrawContents(dc, canvas, _showCopiedFeedback, _copyFailed);
                 Win32.BitBlt(target, 0, 0, client.right, client.bottom, dc, 0, _scroll.Position, Win32.SRCCOPY);
             }
             finally { PaintBuffer.ReleaseSurface(dc, bitmap, previous); }
@@ -551,7 +597,7 @@ sealed class UsageStatsWindow : IDisposable
     /// le bas du dernier paragraphe, que <see cref="PlaceControls"/> mesure pour poser les liens et
     /// les boutons dessous. <paramref name="copiedFeedback"/> choisit la phrase du pied.
     /// </summary>
-    private int DrawContents(IntPtr hdc, Win32.RECT clientRect, bool copiedFeedback)
+    private int DrawContents(IntPtr hdc, Win32.RECT clientRect, bool copiedFeedback, bool copyFailed = false)
     {
         int cw = clientRect.right;
 
@@ -614,11 +660,13 @@ sealed class UsageStatsWindow : IDisposable
 
         string reassurance = copiedFeedback
             ? L.Stats_CopiedFeedback
+            : copyFailed
+            ? L.Stats_CopyFailed
             : collectionOff
                 ? L.Stats_CollectionOffPrivacy
                 : L.Stats_PrivacyReassurance;
         y = DrawWrappedLine(hdc, FontMuted, reassurance, margin, y, cw - margin * 2, S(16),
-            copiedFeedback ? _pal.Action : _pal.Muted);
+            copiedFeedback ? _pal.Action : copyFailed ? _pal.Error : _pal.Muted);
 
         if (PolicyManager.CollectionPolicyHintNow)
             y = DrawWrappedLine(hdc, FontMuted, L.Stats_CollectionOffPolicyHint, margin, y, cw - margin * 2, S(16), _pal.Muted);
@@ -708,6 +756,7 @@ sealed class UsageStatsWindow : IDisposable
 
     public void Dispose()
     {
+        ConfigManager.AppLanguageChanged -= OnLanguageChanged;
         _links.Detach();
         if (_hWnd != IntPtr.Zero)
         {
