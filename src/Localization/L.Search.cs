@@ -6,6 +6,9 @@ internal static partial class L
     // Recherche par langue (1.3.0) : le champ dit qu'un nom de langue suffit (« wolof », « pulaar »).
     public static string Search_Placeholder => T("Caractère, nom ou langue…", "Character, name or language…");
     public static string Search_NoResults => T("Aucun résultat", "No results");
+    /// <summary>Entrée sans rien à insérer (audit 09/11, W10) : champ vide, puis requête sans résultat.</summary>
+    public static string Search_EnterNothingEmpty => T("Rien à insérer : tapez un caractère, un nom ou une langue.", "Nothing to insert: type a character, a name or a language.");
+    public static string Search_EnterNothingNoResults => T("Aucun résultat à insérer : essayez un autre mot.", "No result to insert: try another word.");
     public static string Search_Tip => T("Entrée pour insérer · Échap pour fermer", "Enter to insert · Esc to close");
     public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"“{ch}” copied!");
     /// <summary>A18 : le résultat choisi, tel que le lecteur d'écran le lit sur le champ.</summary>
