@@ -340,6 +340,9 @@ public sealed class KeyMapper
         // ToUnicode l'a consommée en combinant — c'est le comportement voulu.
     }
 
+    private static bool IsModifierVk(uint vk) => vk is
+        0x10 or 0x11 or 0x12 or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5 or VK_LWIN or VK_RWIN;
+
     private bool IsShiftDown => _leftShiftDown || _rightShiftDown;
     // AltGr = Right Alt (envoie aussi un phantom LCtrl)
     // ou Right Ctrl + Left Alt (convention Windows : Ctrl+Alt = AltGr)
@@ -637,6 +640,16 @@ public sealed class KeyMapper
             StateChanged?.Invoke();
             return false;
         }
+
+        // Échap ou raccourci (Ctrl, Alt ou Win + touche) : la touche morte armée est abandonnée
+        // sans rien écrire, et la touche suit son chemin habituel (remappage Ctrl compris).
+        // Sans cela, après « ^ » puis Ctrl+X ou Échap, l'accent restait en attente et
+        // s'accolait à la lettre suivante (audit 09/11, E15).
+        if (isKeyDown && _composition.ActiveDeadKey != null && !IsModifierVk(vkCode) &&
+            (vkCode == VK_ESCAPE || (IsCtrlDown && !IsAltGrDown) || (_leftAltDown && !_rightCtrlDown) ||
+             _leftWinDown || _rightWinDown) &&
+            _composition.Cancel())
+            StateChanged?.Invoke();
 
         // Une répétition déjà transmise reste physique. Backspace et Échap ont
         // néanmoins pu annuler un nouvel état de composition ci-dessus.

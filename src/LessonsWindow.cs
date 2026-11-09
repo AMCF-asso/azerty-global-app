@@ -1192,6 +1192,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     _focusCuesShown = false;
                     if (OnFieldMouseDown(lParam, wParam))
                         return IntPtr.Zero;
+                    OnButtonMouseDown(lParam);
                     break;
                 case Win32.WM_LBUTTONUP:
                     _focusCuesShown = false;
@@ -1200,13 +1201,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                         EndFieldDrag(); // fin d'une sélection à la souris dans un champ
                         return IntPtr.Zero;
                     }
-                    OnClick(lParam);
+                    OnButtonMouseUp(lParam);
                     return IntPtr.Zero;
                 case WM_CAPTURECHANGED:
                     _fieldDragging = false;
+                    _clickPressed = false; // capture perdue (Alt+Tab, menu) : le clic est annulé
                     break;
                 case Win32.WM_LBUTTONDBLCLK:
                     OnDoubleClick(lParam);
+                    OnButtonMouseDown(lParam); // le second relâchement reste un clic, comme avant
                     return IntPtr.Zero;
                 case Win32.WM_MOUSEMOVE:
                     if (_fieldDragging)
@@ -2216,6 +2219,33 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void AddHover(Win32.RECT rect, string tooltip, bool preferAbove = false, bool compact = false)
     {
         _hoverAreas.Add((rect, tooltip, preferAbove, compact));
+    }
+
+    // Un clic se joue comme sur un bouton Windows (audit 09/11, E23) : enfoncé sur une cible et
+    // relâché sur la même. Un relâchement sans enfoncement ici (glissé depuis une autre
+    // fenêtre, double-clic de la barre de titre) ou sur une autre cible ne déclenche rien.
+    private bool _clickPressed;
+    private int _pressedClickAction = -1;
+
+    private void OnButtonMouseDown(IntPtr lParam)
+    {
+        var (x, y) = ClientToCanvas(lParam);
+        _pressedClickAction = _clickActionsScreen == CurrentFocusScreen ? HitClickAction(x, y) : -1;
+        _clickPressed = true;
+        SetCapture(_hWnd); // le relâchement arrive ici même hors de la fenêtre
+    }
+
+    private void OnButtonMouseUp(IntPtr lParam)
+    {
+        bool pressed = _clickPressed;
+        int pressedAction = _pressedClickAction;
+        _clickPressed = false;
+        _pressedClickAction = -1;
+        if (!pressed) return;
+        ReleaseCapture();
+        var (x, y) = ClientToCanvas(lParam);
+        if (HitClickAction(x, y) != pressedAction) return; // glissé hors de la cible : annulé
+        OnClick(lParam);
     }
 
     private void OnClick(IntPtr lParam)
