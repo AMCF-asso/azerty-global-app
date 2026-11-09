@@ -152,8 +152,13 @@ internal sealed partial class LessonsWindow
         {
             // Accueil des Leçons (LessonsWindow.Home.cs) : « Aujourd'hui » ramène à sa page.
             links.Add((L.LessonsHome_Today, false, HomeShowToday, L.LessonsHome_BackToTodayTooltip, null));
-            string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_IconHint : FormatHintButtonText();
-            links.Add((L.LessonsWin_IconHint, _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, hintTooltip, ToggleAutoHints));
+            // « Indice » seulement face à un texte à taper : au bilan, à l'accueil ou sur une page
+            // du parcours, il n'y a rien à indiquer et le bouton serait mort (audit 09/11, L11).
+            if (!_showSummary && !HomeShown && !TutorialPageShown)
+            {
+                string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_HintTooltip : FormatHintButtonText();
+                links.Add((L.LessonsWin_IconHint, _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, hintTooltip, ToggleAutoHints));
+            }
             links.Add((L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true), null, null));
             links.Add((L.LessonsPaper_FreeTyping, false, () => SwitchMode(WindowMode.Free), null, null));
         }
@@ -257,9 +262,14 @@ internal sealed partial class LessonsWindow
         int sx = picker.right + S(20);
         var chevronFont = F(AppFonts.Text, 20);
         var prev = new Win32.RECT { left = sx, top = mid - S(13), right = sx + chevron, bottom = mid + S(13) };
-        PaperText.DrawLine(hdc, "‹", chevronFont, prev, IsHot(prev) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
-        AddClick(prev, PreviousExercise, L.LessonsWin_IconPrevious);
-        AddLinkTooltip(prev, L.LessonsWin_IconPrevious);
+        // Sans cible (1er exercice du catalogue, échauffement du Défi), le chevron n'est pas
+        // dessiné : un bouton dessiné n'est jamais mort (audit UX du 09/11, L9).
+        if (HasPreviousExercise)
+        {
+            PaperText.DrawLine(hdc, "‹", chevronFont, prev, IsHot(prev) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
+            AddClick(prev, PreviousExercise, L.LessonsWin_IconPrevious);
+            AddLinkTooltip(prev, L.LessonsWin_IconPrevious);
+        }
         int jx = prev.right + S(6);
         for (int i = 0; i < exercises; i++)
         {
@@ -270,9 +280,13 @@ internal sealed partial class LessonsWindow
         }
         jx = prev.right + S(6) + jalonsW + S(6);
         var next = new Win32.RECT { left = jx, top = mid - S(13), right = jx + chevron, bottom = mid + S(13) };
-        PaperText.DrawLine(hdc, "›", chevronFont, next, IsHot(next) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
-        AddClick(next, NextExercise, L.LessonsWin_IconNext);
-        AddLinkTooltip(next, L.LessonsWin_IconNext);
+        // Fin du Défi ou du catalogue : pas de ›, le bilan propose « Terminer » (L2, L3).
+        if (!IsAtEndOfPath)
+        {
+            PaperText.DrawLine(hdc, "›", chevronFont, next, IsHot(next) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
+            AddClick(next, NextExercise, L.LessonsWin_IconNext);
+            AddLinkTooltip(next, L.LessonsWin_IconNext);
+        }
 
         if (showCount)
             PaperText.DrawLine(hdc, countText, countFont,
@@ -808,12 +822,16 @@ internal sealed partial class LessonsWindow
         int right = box.right - pad;
         var titleFont = F(AppFonts.Title, 26, TypeRamp.Semibold);
 
-        // Suivant, en bas à droite ; le partage du défi, lien sur la ligne du titre. Une séance
-        // composée de l'accueil n'a pas de suite : « Terminer » ramène à Aujourd'hui.
-        string nextText = HomeIsComposedSession ? L.LessonsHome_Finish : L.LessonsWin_IconNext;
+        // Suivant, en bas à droite, Rejouer à sa gauche ; le partage du défi, lien sur la ligne
+        // du titre. Sans suite (séance composée, fin du Défi ou du catalogue), « Terminer »
+        // ramène à Aujourd'hui (QCM du 09/11 ; « Suivant » y était mort, L2).
+        string nextText = HomeIsComposedSession || IsAtEndOfPath ? L.LessonsHome_Finish : L.LessonsWin_IconNext;
         int nextW = Math.Max(S(120), OutlineButtonWidth(hdc, nextText));
         var nextRect = new Win32.RECT { left = right - nextW, top = box.bottom - S(22) - S(36), right = right, bottom = box.bottom - S(22) };
         DrawOutlineButton(hdc, nextRect, nextText, NextExercise, primary: true);
+        int replayW = Math.Max(S(120), OutlineButtonWidth(hdc, L.LessonsWin_Replay));
+        var replayRect = new Win32.RECT { left = nextRect.left - S(12) - replayW, top = nextRect.top, right = nextRect.left - S(12), bottom = nextRect.bottom };
+        DrawOutlineButton(hdc, replayRect, L.LessonsWin_Replay, ReplayExercise);
 
         int titleRight = right;
         if (_challenge.ShareText != null)
@@ -849,7 +867,7 @@ internal sealed partial class LessonsWindow
             ? L.LessonsWin_DetailNoHardChar(seconds)
             : L.LessonsWin_DetailHardChars(seconds, string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString()))));
         var small = F(AppFonts.Text, 14);
-        var detailRect = new Win32.RECT { left = x, top = nextRect.top, right = nextRect.left - S(24), bottom = nextRect.bottom };
+        var detailRect = new Win32.RECT { left = x, top = nextRect.top, right = replayRect.left - S(24), bottom = nextRect.bottom };
         PaperText.DrawLine(hdc, Ellipsize(hdc, detail, small, detailRect.right - detailRect.left), small, detailRect, CLR_MUTED, TextAlign.Left);
     }
 

@@ -147,6 +147,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int _exerciseIndex;
     private LessonTypingSession _session;
     private bool _showSummary;
+    /// <summary>L'Espace vient d'activer un bouton : son WM_CHAR est avalé (E4).</summary>
+    private bool _swallowActivationSpace;
     private LessonAttemptStats? _lastCompletedStats;
     // Métrique « Record » du récapitulatif (QW-4, 2026-08-24) : meilleur score de
     // l'exercice, tentative courante comprise, et vrai si elle vient de l'établir.
@@ -2158,6 +2160,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnKeyDown(int vk)
     {
+        _swallowActivationSpace = false; // ne vaut que pour le WM_CHAR de cette touche-ci
         if (vk == 0x1B)
         {
             if (_pickerOpen)
@@ -2182,10 +2185,23 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
-        if (vk == 0x0D || ((_settingsOpen || HomeShown || TutorialPageShown) && vk == 0x20))
+        bool summaryShown = _showSummary && _mode == WindowMode.Lessons && !HomeShown && !TutorialPageShown;
+        if (vk == 0x0D || ((_settingsOpen || HomeShown || TutorialPageShown || summaryShown) && vk == 0x20))
         {
             if (ActivateFocusedAction())
+            {
+                // L'Espace qui active un bouton n'est pas une frappe : son WM_CHAR ne doit pas
+                // entrer dans la séance suivante (audit 09/11, E4).
+                _swallowActivationSpace = vk == 0x20;
                 return;
+            }
+        }
+        if (summaryShown && !_settingsOpen && !_pickerOpen && (vk == 0x0D || vk == 0x20))
+        {
+            // Bilan sans bouton focalisé : Entrée et Espace valent « Suivant » ou « Terminer » (L12).
+            _swallowActivationSpace = vk == 0x20;
+            NextExercise();
+            return;
         }
         if (HomeHandleKey(vk)) return; // accueil : rien n'atteint la séance cachée
         if (_settingsOpen) return;
@@ -2215,6 +2231,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (_settingsOpen) return;
         c = ResolveTypedCharacter(c);
+        if (_swallowActivationSpace)
+        {
+            _swallowActivationSpace = false;
+            if (c == ' ') return;
+        }
         if (HomeHandleChar(c)) return; // accueil : après la résolution de la frappe physique, rien n'atteint la séance cachée
         if (TutorialPageShown) return; // écran des usages ou final du parcours : rien à taper
         if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
@@ -2524,6 +2545,53 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         StartCurrentSession(savePosition: true);
     }
 
+    /// <summary>
+    /// Position du catalogue après (<paramref name="step"/> = 1) ou avant (-1) l'exercice
+    /// affiché ; null en bout de parcours. On ne passe jamais d'un module ordinaire au Défi du
+    /// jour ni l'inverse : le Défi s'ouvre exprès et compte la séance du jour (audit UX du
+    /// 09/11, L3). Fonction pure pour les tests.
+    /// </summary>
+    internal static (int Module, int Lesson, int Exercise)? AdjacentPosition(
+        LessonCatalog catalog, int moduleIndex, int lessonIndex, int exerciseIndex, int step)
+    {
+        var module = catalog.Modules[moduleIndex];
+        var lesson = module.Lessons[lessonIndex];
+        if (step > 0)
+        {
+            if (exerciseIndex < lesson.Exercises.Count - 1) return (moduleIndex, lessonIndex, exerciseIndex + 1);
+            if (lessonIndex < module.Lessons.Count - 1) return (moduleIndex, lessonIndex + 1, 0);
+            int next = moduleIndex + 1;
+            if (next < catalog.Modules.Count && !CrossesChallenge(module, catalog.Modules[next]))
+                return (next, 0, 0);
+            return null;
+        }
+        if (exerciseIndex > 0) return (moduleIndex, lessonIndex, exerciseIndex - 1);
+        if (lessonIndex > 0)
+            return (moduleIndex, lessonIndex - 1, module.Lessons[lessonIndex - 1].Exercises.Count - 1);
+        int previous = moduleIndex - 1;
+        if (previous >= 0 && !CrossesChallenge(module, catalog.Modules[previous]))
+        {
+            var before = catalog.Modules[previous];
+            int lastLesson = before.Lessons.Count - 1;
+            return (previous, lastLesson, before.Lessons[lastLesson].Exercises.Count - 1);
+        }
+        return null;
+
+        static bool CrossesChallenge(LessonModule a, LessonModule b) =>
+            a.Id == DailyChallenge.ModuleId || b.Id == DailyChallenge.ModuleId;
+    }
+
+    private (int Module, int Lesson, int Exercise)? AdjacentPosition(int step) =>
+        AdjacentPosition(_catalog, _moduleIndex, _lessonIndex, _exerciseIndex, step);
+
+    /// <summary>Rien après cet exercice : fin du Défi ou du catalogue. Le bilan dit alors
+    /// « Terminer », qui ramène à « Aujourd'hui » (QCM du 09/11).</summary>
+    internal bool IsAtEndOfPath => !IsTutorialActive && _homeComposed == null && AdjacentPosition(1) == null;
+
+    /// <summary>Le chevron ‹ (›) a-t-il une cible ? Sinon il n'est pas dessiné : un bouton
+    /// dessiné n'est jamais mort (audit UX du 09/11, L2, L9).</summary>
+    internal bool HasPreviousExercise => IsTutorialActive || _homeComposed != null || AdjacentPosition(-1) != null;
+
     private void PreviousExercise()
     {
         if (TutorialPrevious()) return; // parcours de l'accueil : son étape précédente (LessonsWindow.Tutorial.cs)
@@ -2532,45 +2600,41 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             StartCurrentSession(savePosition: false);
             return;
         }
-        if (_exerciseIndex > 0)
-        {
-            _exerciseIndex--;
-            StartCurrentSession(savePosition: true);
-            return;
-        }
-        if (_lessonIndex > 0)
-        {
-            _lessonIndex--;
-            _exerciseIndex = CurrentLesson.Exercises.Count - 1;
-            StartCurrentSession(savePosition: true);
-        }
+        if (AdjacentPosition(-1) is { } previous)
+            GoTo(previous);
     }
 
     private void NextExercise()
     {
         if (TutorialNext()) return; // parcours de l'accueil : son étape suivante (LessonsWindow.Tutorial.cs)
         if (HomeFinishComposed()) return; // séance composée : retour à « Aujourd'hui »
-        if (_exerciseIndex < CurrentLesson.Exercises.Count - 1)
+        if (AdjacentPosition(1) is { } next)
         {
-            _exerciseIndex++;
-            StartCurrentSession(savePosition: true);
+            GoTo(next);
             return;
         }
-        if (_lessonIndex < CurrentModule.Lessons.Count - 1)
-        {
-            _lessonIndex++;
-            _exerciseIndex = 0;
-            StartCurrentSession(savePosition: true);
-            return;
-        }
-        if (_moduleIndex < _catalog.Modules.Count - 1)
-        {
-            _moduleIndex++;
-            _lessonIndex = 0;
-            _exerciseIndex = 0;
-            StartCurrentSession(savePosition: true);
-        }
+        FinishPath();
     }
+
+    private void GoTo((int Module, int Lesson, int Exercise) position)
+    {
+        _moduleIndex = position.Module;
+        _lessonIndex = position.Lesson;
+        _exerciseIndex = position.Exercise;
+        StartCurrentSession(savePosition: true);
+    }
+
+    /// <summary>Fin du Défi ou du catalogue : « Terminer » ramène à « Aujourd'hui ». L'exercice
+    /// caché derrière repart de zéro : « Reprendre » n'ouvre jamais un exercice fini sans bilan.</summary>
+    private void FinishPath()
+    {
+        StartCurrentSession(savePosition: false);
+        HomeShowPage(HomePage.Today);
+    }
+
+    /// <summary>« Rejouer » au bilan : le même exercice, depuis le début. Un Défi rejoué ne
+    /// recompte pas la séance du jour (ChallengeSessionState.Complete, A23).</summary>
+    private void ReplayExercise() => StartCurrentSession(savePosition: false);
 
     private static string FormatLessonInstruction(string instruction)
     {

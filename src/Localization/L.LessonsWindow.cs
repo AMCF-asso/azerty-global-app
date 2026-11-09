@@ -51,6 +51,10 @@ internal static partial class L
     public static string LessonsWin_IconNext => Onboarding_Next; // "Suivant"/"Next"
     public static string LessonsWin_IconRestart => T("Recommencer", "Restart");
     public static string LessonsWin_IconHint => T("Indice", "Hint");
+    /// <summary>Infobulle d'« Indice » sans indice affiché : dit aussi ce que fait le double-clic (audit 09/11, L11).</summary>
+    public static string LessonsWin_HintTooltip => T(
+        "Montre la touche à taper (double-clic : indices automatiques)",
+        "Shows the key to press (double-click: automatic hints)");
     public static string LessonsWin_HintBackspace => T("Retour arrière → corriger", "Backspace → correct");
 
     // Nom de la surface de frappe pour l'UI Automation (loupe, Narrateur, NVDA).
