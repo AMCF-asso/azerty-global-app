@@ -37,6 +37,10 @@ internal static partial class L
     public static string Stats_LabelSymbols => T("Symboles (©, →, ½…)", "Symbols (©, →, ½…)");
     public static string Stats_LabelTotal => T("Total", "Total");
 
+    /// <summary>La copie a échoué (audit 09/11, W11).</summary>
+    public static string Stats_CopyFailed => T(
+        "Copie impossible : le presse-papiers est occupé. Réessayez dans un instant.",
+        "Could not copy: the clipboard is busy. Try again in a moment.");
     public static string Stats_CopiedFeedback => T("Copié dans le presse-papiers !", "Copied to clipboard!");
     public static string Stats_PrivacyReassurance => T(
         "Ces statistiques sont calculées et stockées uniquement sur votre appareil. Rien n’est transmis.",
