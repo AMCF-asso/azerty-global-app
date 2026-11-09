@@ -172,6 +172,31 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int _hotX = int.MinValue, _hotY = int.MinValue;
     private int _hotActionIndex = -1;
     private int _focusedActionIndex = -1;
+
+    /// <summary>Ce qui décide de la liste des cibles cliquables : un autre écran a d'autres
+    /// boutons, et l'index focalisé n'y désigne plus le même (audit 09/11, L4 : une Entrée
+    /// pouvait « Recommencer » ou ouvrir les Paramètres sur l'écran suivant).</summary>
+    private readonly record struct FocusScreen(WindowMode Mode, bool Settings, bool Picker, HomePage Page,
+        bool Summary, TutorialPage Tutorial, int TutorialPos, int Exercise, bool Composed);
+
+    private FocusScreen CurrentFocusScreen => new(_mode, _settingsOpen, _pickerOpen, _homePage,
+        _showSummary, _tutorialPage, _tutorialRoutePos, _exerciseIndex, _homeComposed != null);
+
+    // L'écran dont _clickActions décrit les cibles (dernier repeint).
+    private FocusScreen? _clickActionsScreen;
+    // Écran pour lequel le focus vient d'être posé exprès (liste ouverte sur sa première ligne).
+    private FocusScreen? _focusPlacedFor;
+
+    /// <summary>Au repeint : un écran changé repart sans cible focalisée (la surface de frappe
+    /// ou rien), sauf si le focus vient d'y être posé exprès.</summary>
+    private void SyncFocusWithScreen()
+    {
+        var screen = CurrentFocusScreen;
+        if (_clickActionsScreen is { } shown && shown != screen && _focusPlacedFor != screen)
+            _focusedActionIndex = -1;
+        _clickActionsScreen = screen;
+        _focusPlacedFor = null;
+    }
     // Remontée n° 7 d'Antoine (07/11) : comme Windows, l'anneau de focus ne se montre qu'après
     // une navigation au clavier (Tab) ; un clic le cache à nouveau. La cible focalisée reste
     // active (Entrée), seul son repère visuel attend. Réglage « toujours souligner » respecté.
@@ -1355,6 +1380,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         GdiHelpers.FillSolidRect(hdc, rc, CLR_BG);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+        SyncFocusWithScreen();
         _clickActions.Clear();
         _controlViews.Clear();
         _doubleClickActions.Clear();
@@ -2367,6 +2393,13 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (_focusedActionIndex < 0 || _focusedActionIndex >= _clickActions.Count)
             return false;
+        // L'écran a changé depuis le dernier repeint : les cibles connues sont celles de
+        // l'écran d'avant, n'en activer aucune (L4).
+        if (_clickActionsScreen != CurrentFocusScreen)
+        {
+            _focusedActionIndex = -1;
+            return false;
+        }
 
         _clickActions[_focusedActionIndex].Action();
         return true;
@@ -2418,7 +2451,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             return;
         }
         if (HomeHandleKey(vk)) return; // accueil : rien n'atteint la séance cachée
-        if (_settingsOpen) return;
+        if (_settingsOpen || _pickerOpen) return; // liste ouverte : rien n'atteint l'exercice caché (E5)
         if (_mode == WindowMode.Free && HandleFreeModeKeyDown(vk))
         {
             ReturnFocusToSurface();
@@ -2443,7 +2476,13 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnChar(char c)
     {
-        if (_settingsOpen) return;
+        // Paramètres ou liste des leçons ouverts : la frappe n'atteint pas l'exercice caché
+        // derrière (audit 09/11, E5).
+        if (_settingsOpen || _pickerOpen)
+        {
+            ResolveTypedCharacter(c); // consomme la frappe physique attendue, sans l'écrire
+            return;
+        }
         c = ResolveTypedCharacter(c);
         if (_swallowActivationSpace)
         {
@@ -2846,6 +2885,34 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         HomeShowPage(HomePage.Today);
     }
 
+    /// <summary>
+    /// À la fermeture (audit 09/11, L5) : un bilan affiché vaut lu, comme « Suivant » (l'exercice
+    /// suivant attend, une séance composée rend le catalogue) ; le Défi, qui ne s'ouvre que par
+    /// ShowChallenge, rend la place du catalogue d'où l'on venait. Sans cela, la réouverture
+    /// rendait l'ancien bilan, et le Défi périmé renvoyait à l'Initiation.
+    /// </summary>
+    private void SettleSessionOnHide()
+    {
+        if (_mode != WindowMode.Lessons || IsTutorialActive) return;
+        bool onChallenge = _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId;
+        if (_showSummary)
+        {
+            if (HomeFinishComposed()) return;
+            if (!onChallenge && AdjacentPosition(1) is { } next)
+            {
+                GoTo(next);
+                return;
+            }
+            if (!onChallenge)
+            {
+                StartCurrentSession(savePosition: false); // fin du catalogue : comme « Terminer »
+                return;
+            }
+        }
+        if (onChallenge)
+            PickInitialSelection(); // la dernière position du catalogue, sinon le premier exercice à faire
+    }
+
     /// <summary>« Rejouer » au bilan : le même exercice, depuis le début. Un Défi rejoué ne
     /// recompte pas la séance du jour (ChallengeSessionState.Complete, A23).</summary>
     private void ReplayExercise() => StartCurrentSession(savePosition: false);
@@ -3029,6 +3096,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // allumée derrière elle (Show l'éteint déjà à l'ouverture).
         _mapper.RequestCapsLockOff();
         SaveWindowBounds();
+        SettleSessionOnHide();
         _visible = false;
         _challenge.EndRequest();
         LearningSessionTracker.Closed(this);

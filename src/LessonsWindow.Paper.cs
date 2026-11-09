@@ -30,6 +30,7 @@ internal sealed partial class LessonsWindow
     {
         _pickerOpen = !_pickerOpen;
         _focusedActionIndex = _pickerOpen ? 0 : -1;
+        if (_pickerOpen) _focusPlacedFor = CurrentFocusScreen; // le repeint garde ce focus (L4)
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
