@@ -19,7 +19,7 @@ AZERTY Global - Clavier français amélioré
 > Limites : Microsoft Learn, *Add and edit Store listing info for MSIX app*, page mise à jour le 2026-08-24.
 
 ```text
-É, È, Ç et À en un appui, les guillemets « » et le point sans Maj, sur le clavier que vous avez déjà. Les lettres A à Z et les chiffres restent à leur place. Gratuit et libre, sans compte.
+É, È, Ç et À en un appui avec le Verr. Maj., les guillemets « » et le point sans Maj, sur le clavier que vous avez déjà. Les lettres A à Z et les chiffres restent à leur place. Gratuit et libre, sans compte.
 ```
 
 ### Description longue
@@ -149,7 +149,7 @@ AZERTY Global - Improved French Keyboard
 ### Short description (up to 1,000 characters, 270 shown in some views)
 
 ```text
-É, È, Ç and À in one key press, French guillemets « » and the period without Shift, on the keyboard you already have. The letters A to Z and the digits stay in place. Free and open source, no account.
+É, È, Ç and À in one key press with Caps Lock, French guillemets « » and the period without Shift, on the keyboard you already have. The letters A to Z and the digits stay in place. Free and open source, no account.
 ```
 
 ### Long description
