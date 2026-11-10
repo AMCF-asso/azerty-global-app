@@ -82,7 +82,7 @@ internal static partial class L
 
     // ── Réinitialisation de la progression ──────────────────────────────
     public static string LessonsWin_ResetProgressConfirm => T(
-        $"Réinitialiser toute la progression des leçons ?\n\nLes exercices réussis, les records et le suivi des caractères de « {LessonsHome_YourMap} » seront effacés. Les préférences, comme les indices automatiques, seront conservées.",
+        $"Réinitialiser toute la progression des leçons ?\n\nLes exercices réussis, les records et le suivi des caractères de « {LessonsHome_YourMap} » seront effacés. Les préférences, comme les indices automatiques, seront conservées.",
         $"Reset all lesson progress?\n\nCompleted exercises, best scores and the character tracking in “{LessonsHome_YourMap}” will be erased. Preferences, such as automatic hints, will be kept.");
 
     // ── Statut de frappe et indices ──────────────────────────────────

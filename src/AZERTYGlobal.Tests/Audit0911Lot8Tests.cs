@@ -58,6 +58,12 @@ public class Audit0911Lot8Tests
     [InlineData("fr", "bienvenue")]
     [InlineData("en", "welcome tour")]
     [InlineData("en", "welcome window")]
+    // RA13 (QCM du 10/11) : le parcours de l'accueil s'appelle « Prise en main » / “Getting started”.
+    [InlineData("fr", "initiation")]
+    [InlineData("fr", "premiers pas")]
+    [InlineData("fr", "parcours")]
+    [InlineData("en", "first steps")]
+    [InlineData("en", "walkthrough")]
     public void Un_seul_nom_par_chose(string langue, string ancienNom)
     {
         using var isolation = new BancCapture.Isolation();
@@ -85,6 +91,28 @@ public class Audit0911Lot8Tests
         // Le produit n'est jamais écrit en dur : il suit ProductIdentity.
         Assert.Contains(ProductIdentity.DisplayName, L.Tray_MenuCompatInfo);
         Assert.Contains(ProductIdentity.DisplayName, L.Tray_TooltipSuspendedCompat);
+    }
+
+    /// <summary>RA13 (QCM du 10/11) : la fenêtre, le module et sa leçon portent le même nom ;
+    /// le panneau de l'écran des usages, que le balayage ne voit pas (il prend un nombre), aussi.</summary>
+    [Theory]
+    [InlineData("fr", "Prise en main")]
+    [InlineData("en", "Getting started")]
+    public void Le_parcours_de_l_accueil_n_a_qu_un_nom(string langue, string nom)
+    {
+        using var isolation = new BancCapture.Isolation();
+        L.Language = langue;
+        Assert.Equal(nom, L.Learning_HeaderTitle);
+        Assert.EndsWith(nom, L.Learning_WindowTitle);
+        Assert.Equal(nom, L.Lessons_InitiationModuleTitle);
+        Assert.Equal(nom, L.Lessons_InitiationLessonTitle);
+        Assert.StartsWith(nom, L.Learning_PlanTitle(5));
+        Assert.Contains(nom, L.Lessons_InitiationModuleDesc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nom, L.Lessons_InitiationLessonDesc, StringComparison.OrdinalIgnoreCase);
+
+        var module = LessonCatalogLoader.LoadFromResource().Modules.Single(m => m.Id == LessonCatalogLoader.InitiationModuleId);
+        Assert.Equal(nom, module.Title);
+        Assert.Equal(nom, module.Lessons.Single().Title);
     }
 
     /// <summary>QCM du 10/11 : « Recommencer » pendant la frappe, « Rejouer » au bilan ; les deux

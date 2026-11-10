@@ -2207,11 +2207,13 @@ sealed class OnboardingWindow : IDisposable
     };
 
     /// <summary>« Une autre lettre : Ctrl + Maj + W, puis tapez « peul » ou « bambara ». » :
-    /// texte secondaire, touches à l'encre en semi-gras.</summary>
-    private static TextRun[] TipRuns()
+    /// texte secondaire, touches à l'encre en semi-gras. La lettre est celle du raccourci
+    /// réglé pour la recherche, comme sur les cartes 3 et 4 (audit de régression 10/11, RA15).</summary>
+    internal static TextRun[] TipRuns()
     {
         var runs = new List<TextRun> { new(L.Onboarding_LanguagesTipPrefix) };
-        string[] keys = { "Ctrl", L.Settings_ShortcutModifier2, "W" };
+        string[] keys = { "Ctrl", L.Settings_ShortcutModifier2,
+            ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk) };
         for (int i = 0; i < keys.Length; i++)
         {
             if (i > 0) runs.Add(new TextRun(" + ", Strong: true));

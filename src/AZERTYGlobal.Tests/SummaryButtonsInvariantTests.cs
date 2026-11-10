@@ -65,7 +65,9 @@ public class SummaryButtonsInvariantTests
         {
             // Séance composée de l'accueil (révision, touche de la carte) : un module d'un seul exercice.
             var source = regular[1].Lessons[0].Exercises[0];
-            BancCapture.Call(window, "HomeStartComposed", source, "Révision", "Révision", (IReadOnlyList<string>)new[] { "a" });
+            BancCapture.Call(window, "HomeStartComposed", source,
+                (Func<(string Module, string Lesson, string Instruction)>)(() => ("Révision", "Révision", source.Instruction)),
+                (IReadOnlyList<string>)new[] { "a" });
             Assert.NotNull(BancCapture.Field<object?>(window, "_homeComposed"));
         }
         TypeToSummary(window, end);

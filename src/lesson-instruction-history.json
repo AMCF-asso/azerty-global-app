@@ -21,7 +21,9 @@
  ],
  "email-web/croisillon/2": [
   "Tapez ces exemples de code (AltGr + : est le raccourci ergonomique)",
-  "Type these code examples (AltGr + : is the ergonomic shortcut)"
+  "Tapez ces exemples de code ({ALTGR} + : est le raccourci ergonomique)",
+  "Type these code examples (AltGr + : is the ergonomic shortcut)",
+  "Type these code examples ({ALTGR} + : is the ergonomic shortcut)"
  ],
  "email-web/point-virgule/0": [
   "Tapez le point-virgule",
@@ -40,26 +42,32 @@
   "Type these extensions"
  ],
  "initiation/premiers-pas/0": [
+  "Tape É pour découvrir les majuscules accentuées.",
   "Tapez É pour découvrir les majuscules accentuées.",
   "Type É to discover accented capitals."
  ],
  "initiation/premiers-pas/1": [
+  "Tape cette phrase en utilisant Verr. Maj pour les capitales accentuées.",
   "Tapez cette phrase en utilisant Verr. Maj. pour les capitales accentuées.",
   "Type this sentence using Caps Lock for accented capitals."
  ],
  "initiation/premiers-pas/2": [
+  "Tape cette adresse e-mail.",
   "Tapez cette adresse e-mail.",
   "Type this email address."
  ],
  "initiation/premiers-pas/3": [
+  "Tape cette phrase de typographie française.",
   "Tapez cette phrase de typographie française.",
   "Type this French typography sentence."
  ],
  "initiation/premiers-pas/4": [
+  "Tape cette ligne de code.",
   "Tapez cette ligne de code.",
   "Type this line of code."
  ],
  "initiation/premiers-pas/5": [
+  "Tape ces mots étrangers.",
   "Tapez ces mots étrangers.",
   "Type these foreign words."
  ],
@@ -191,7 +199,9 @@
  ],
  "programmation/tilde-backtick/0": [
   "Tapez ~ (AltGr + N) et ` (AltGr + L)",
-  "Type ~ (AltGr + N) and ` (AltGr + L)"
+  "Tapez ~ ({ALTGR} + N) et ` ({ALTGR} + L)",
+  "Type ~ (AltGr + N) and ` (AltGr + L)",
+  "Type ~ ({ALTGR} + N) and ` ({ALTGR} + L)"
  ],
  "programmation/tilde-backtick/1": [
   "Tapez ces exemples",

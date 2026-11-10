@@ -81,8 +81,9 @@ internal sealed class LessonProgressStore
     /// <summary>
     /// Fusionne les progressions enregistrées sous les anciennes empreintes de l'exercice
     /// (une par langue au plus) : réussi si l'une l'est, meilleurs scores, tentatives et
-    /// indices additionnés. Null si aucune. Les anciennes entrées restent dans le fichier :
-    /// une version précédente de l'app les relit telles quelles.
+    /// indices additionnés. S'y ajoute la réussite, sans scores, d'une ancienne forme de
+    /// l'exercice (<see cref="LessonExercise.SupersededKeys"/>). Null si aucune. Les anciennes
+    /// entrées restent dans le fichier : une version précédente de l'app les relit telles quelles.
     /// </summary>
     internal LessonExerciseProgress? MergeLegacy(LessonExercise exercise)
     {
@@ -103,6 +104,18 @@ internal sealed class LessonProgressStore
                 : merged.BestSeconds ?? old.BestSeconds;
             if (old.LastCompletedUtc > merged.LastCompletedUtc || merged.LastCompletedUtc == null)
                 merged.LastCompletedUtc = old.LastCompletedUtc ?? merged.LastCompletedUtc;
+        }
+
+        // Anciennes formes de l'exercice (texte ou rang changé depuis une version publiée,
+        // audit de régression du 10/11, RA2) : la réussite seule est reprise, sans scores.
+        foreach (string key in exercise.SupersededKeys)
+        {
+            if (!_exercises.TryGetValue(key, out var old) || !old.Completed ||
+                !key.EndsWith("/" + old.Hash, StringComparison.Ordinal))
+                continue;
+            merged ??= new LessonExerciseProgress(exercise.StableKey, exercise.Hash);
+            merged.Completed = true;
+            merged.SuccessfulAttempts = Math.Max(1, merged.SuccessfulAttempts);
         }
         return merged;
 

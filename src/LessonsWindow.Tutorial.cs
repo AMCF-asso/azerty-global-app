@@ -322,6 +322,10 @@ internal sealed partial class LessonsWindow
             int buttonTop = body.bottom - S(22) - S(36);
             if (twoColumns)
                 DrawTutorialPlan(hdc, leftRight + S(40), right, titleRect.top, buttonTop - S(16));
+            // Audit de régression du 10/11, RA8 : le focus de l'ouverture allait à la première
+            // case, sans cadre avant Tab (remontée n° 7 du 07/11) ; Entrée ou Espace cochaient une
+            // case que rien ne désignait. Il va au bouton principal, comme à l'écran final.
+            focusAt = _clickActions.Count;
             DrawTutorialPrimaryButton(hdc, body, right, L.Learning_BtnContinue, StartTutorialRoute);
         }
         else

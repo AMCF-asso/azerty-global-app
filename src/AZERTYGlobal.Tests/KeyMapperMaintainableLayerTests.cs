@@ -130,6 +130,64 @@ public class KeyMapperMaintainableLayerTests : IDisposable
         }
     }
 
+    // RA3 (audit de régression 10/11, décision d'Antoine du 10/11) : une couche armée d'un coup
+    // est abandonnée par un raccourci, comme une touche morte (E15) : le raccourci part sans rien
+    // écrire et la lettre suivante ne sort pas en grec.
+    [Fact]
+    public void GreekOneShot_CtrlShortcut_AbandonsLayer()
+    {
+        var (mapper, mock, monitor) = CreateMapper();
+        using (monitor)
+        {
+            TapGreekTrigger(mapper, mock);
+            Assert.Equal("dk_greek", mapper.ActiveDeadKey);
+            mock.SendInputCalls.Clear();
+
+            mock.AsyncKeyStateScript[0xA2] = KeyDown;
+            mapper.TrackModifiers(0xA2, 0x1D, 0, true);
+            mapper.ProcessKey(0x43, 0x2E, 0, true); // Ctrl+C
+            mapper.ProcessKey(0x43, 0x2E, 0, false);
+            mock.AsyncKeyStateScript[0xA2] = 0;
+            mapper.TrackModifiers(0xA2, 0x1D, 0, false);
+
+            Assert.Null(mapper.ActiveDeadKey);
+            Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);
+            foreach (var call in mock.SendInputCalls)
+                foreach (var input in call)
+                    Assert.True((input.u.ki.dwFlags & 0x0004) == 0, "aucun caractère ne doit être écrit");
+
+            mock.SendInputCalls.Clear();
+            mapper.ProcessKey(VK_A, SC_A, 0, true);
+            foreach (var call in mock.SendInputCalls)
+                foreach (var input in call)
+                    Assert.False((input.u.ki.dwFlags & 0x0004) != 0 && input.u.ki.wScan == 'α',
+                        "la lettre suivante ne sort plus en grec");
+        }
+    }
+
+    // La couche verrouillée (tout un texte en grec) n'est pas touchée par un raccourci.
+    [Fact]
+    public void GreekLocked_CtrlShortcut_KeepsLayer()
+    {
+        var (mapper, mock, monitor) = CreateMapper();
+        using (monitor)
+        {
+            TapGreekTrigger(mapper, mock);
+            TapGreekTrigger(mapper, mock);
+            Assert.Equal(MaintainableLayerMode.Locked, mapper.MaintainableLayerState.Mode);
+            mock.SendInputCalls.Clear();
+
+            mock.AsyncKeyStateScript[0xA2] = KeyDown;
+            mapper.TrackModifiers(0xA2, 0x1D, 0, true);
+            mapper.ProcessKey(0x43, 0x2E, 0, true); // Ctrl+C
+            mapper.ProcessKey(0x43, 0x2E, 0, false);
+            mock.AsyncKeyStateScript[0xA2] = 0;
+            mapper.TrackModifiers(0xA2, 0x1D, 0, false);
+
+            Assert.Equal(MaintainableLayerMode.Locked, mapper.MaintainableLayerState.Mode);
+        }
+    }
+
     [Fact]
     public void GreekOneShot_DisplayDeadKeyShowsLayer()
     {

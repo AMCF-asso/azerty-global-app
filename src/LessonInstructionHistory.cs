@@ -6,7 +6,8 @@ namespace AZERTYGlobal;
 /// Consignes (FR et EN) que chaque exercice a portées avant le 09/11/2026, quand l'empreinte
 /// les incluait. Table figée, générée depuis l'historique git par
 /// `scripts/build-lesson-instruction-history.py` : modifier une consigne aujourd'hui ne
-/// change plus l'empreinte, il n'y a rien à y ajouter.
+/// change plus l'empreinte, il n'y a rien à y ajouter. Les anciens textes à taper, eux, sont
+/// dans <see cref="LessonContentHistory"/>.
 /// </summary>
 internal static class LessonInstructionHistory
 {

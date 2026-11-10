@@ -88,8 +88,8 @@ internal static partial class L
     // neutre : les règles du Store autorisent à solliciter un avis, pas à orienter vers
     // une note positive.
     public static string Tray_ReviewPromptTitle(int attempt) => attempt >= 2
-        ? T($"Votre avis sur {Product} ?", $"Your feedback on {Product}?")
-        : T($"{Product} vous plaît ?", $"Enjoying {Product}?");
+        ? T($"Votre avis sur {Product} ?", $"Your feedback on {Product}?")
+        : T($"{Product} vous plaît ?", $"Enjoying {Product}?");
 
     // Corps nommés par CIBLE du clic (Store ou page feedback) : depuis la v1.2.0 le
     // packagé vise toujours le Store, la page feedback ne sert plus qu'aux installations
@@ -165,7 +165,7 @@ internal static partial class L
         $"Every day, a passage to type in {Product}, the same one for everyone. Click to open.");
     // Relance unique du lancement automatique (v1.2.0, jamais réémise).
     public static string Tray_AutoStartNudgeTitle => T(
-        $"Lancer {Product} au démarrage ?",
+        $"Lancer {Product} au démarrage ?",
         $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
         "L’application ne démarre pas encore avec Windows.\nCliquez pour activer le lancement au démarrage.",

@@ -60,11 +60,15 @@ internal static class PaperText
     }
 
     /// <summary>Une ligne dans un cadre, centrée verticalement sur la hauteur de la police
-    /// principale. Rend la largeur dessinée.</summary>
+    /// principale. Rend la largeur dessinée. Rien n'est coupé : un texte plus large que le cadre
+    /// déborde, et la couture des tests le signale (audit de régression 1.3.0, RA16).</summary>
     internal static int DrawLine(IntPtr hdc, string text, FontSpec font, Win32.RECT rect, uint color,
-        TextAlign align = TextAlign.Left)
+        TextAlign align = TextAlign.Left,
+        [System.Runtime.CompilerServices.CallerFilePath] string file = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
     {
         int width = Width(hdc, text, font);
+        TruncationProbe.Line(text, width, rect.right - rect.left, file, line);
         var (ascent, descent) = Metrics(hdc, font);
         int baseline = rect.top + (rect.bottom - rect.top - (ascent + descent)) / 2 + ascent;
         int x = align switch

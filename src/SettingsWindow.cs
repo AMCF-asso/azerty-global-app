@@ -1255,9 +1255,13 @@ sealed partial class SettingsWindow : IDisposable
             }
 
             // « Réinitialiser les raccourcis », écrit comme un lien : le contrôle déborde du
-            // texte de quoi porter son contour de focus.
+            // texte de quoi porter son contour de focus. Largeur : S(4) de chaque côté, pas S(3) : à
+            // 120 DPI (écran à 125 %) le contrôle natif demandait 1 px de plus que la mesure GDI du
+            // texte (« Réinitialiser les raccourcis » 182 px pour 181, « Reset shortcuts » 109 pour
+            // 108) et rognait la dernière lettre ; la couture de troncature l'a vu au DPI réel
+            // (audit de régression du 10/11, RA16, suite).
             int linkTop = y + S(8);
-            layout.ResetRect = Rect(margin - S(3), linkTop - S(3), m.ResetText + S(6), m.Button + S(6));
+            layout.ResetRect = Rect(margin - S(4), linkTop - S(3), m.ResetText + S(8), m.Button + S(6));
             y = linkTop + m.Button + sectionGap;
 
             layout.PreferencesTitleRect = Title(ref y);

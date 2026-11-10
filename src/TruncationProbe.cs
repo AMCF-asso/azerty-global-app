@@ -15,7 +15,12 @@ internal static class TruncationProbe
     /// <summary>Un passage par une coupe. <paramref name="Shown"/> est null quand DrawText coupe
     /// lui-même (le texte rendu n'est pas connu) ; <paramref name="File"/> et
     /// <paramref name="Line"/> désignent l'appel qui a demandé la coupe.</summary>
-    internal readonly record struct Passage(string Text, string? Shown, int Needed, int Available, string File, int Line)
+    /// <remarks><paramref name="File"/> ne porte pas le dossier du poste de build : le projet
+    /// le remplace par « /_/ » (PathMap, audit de régression 1.3.0, RP4).
+    /// <paramref name="Overflow"/> : le texte n'est pas coupé à « … », il est écrit en entier
+    /// et déborde de son cadre (<see cref="PaperText.DrawLine"/>, RA16).</remarks>
+    internal readonly record struct Passage(string Text, string? Shown, int Needed, int Available, string File, int Line,
+        bool Overflow = false)
     {
         /// <summary>Le texte n'a pas tenu : coupé, ou effacé faute de toute place.</summary>
         public bool Cut => Text.Length > 0 && Needed > Available;
@@ -30,6 +35,16 @@ internal static class TruncationProbe
         if (Observer is not { } observer) return;
         int needed = text.Length == 0 ? 0 : PaperText.Width(hdc, text, font);
         observer(new Passage(text, shown, needed, Math.Max(0, maxWidth), file, line));
+    }
+
+    /// <summary>Une ligne écrite sans coupe dans un cadre (<see cref="PaperText.DrawLine"/>) :
+    /// plus large que lui, elle déborde sur son voisin ou sort de la fenêtre sans « … »
+    /// (audit de régression 1.3.0, RA16). <paramref name="needed"/> est la largeur déjà
+    /// mesurée par l'appelant : rien n'est remesuré.</summary>
+    internal static void Line(string text, int needed, int available, string file, int line)
+    {
+        if (Observer is not { } observer) return;
+        observer(new Passage(text, text, needed, Math.Max(0, available), file, line, Overflow: true));
     }
 
     /// <summary>Avant un DrawText sur une ligne : la police est déjà choisie dans

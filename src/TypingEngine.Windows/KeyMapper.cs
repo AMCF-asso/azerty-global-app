@@ -644,12 +644,19 @@ public sealed class KeyMapper
         // Échap ou raccourci (Ctrl, Alt ou Win + touche) : la touche morte armée est abandonnée
         // sans rien écrire, et la touche suit son chemin habituel (remappage Ctrl compris).
         // Sans cela, après « ^ » puis Ctrl+X ou Échap, l'accent restait en attente et
-        // s'accolait à la lettre suivante (audit 09/11, E15).
-        if (isKeyDown && _composition.ActiveDeadKey != null && !IsModifierVk(vkCode) &&
+        // s'accolait à la lettre suivante (audit 09/11, E15). La couche ponctuelle (grec d'un coup,
+        // armée pour une seule lettre) suit la même règle : un raccourci annule toute composition
+        // en attente, sans quoi la lettre suivante sortait en grec après un copier-coller (audit
+        // de régression 10/11, RA3, décision d'Antoine). La couche verrouillée n'est pas touchée.
+        if (isKeyDown && !IsModifierVk(vkCode) &&
             (vkCode == VK_ESCAPE || (IsCtrlDown && !IsAltGrDown) || (_leftAltDown && !_rightCtrlDown) ||
-             _leftWinDown || _rightWinDown) &&
-            _composition.Cancel())
-            StateChanged?.Invoke();
+             _leftWinDown || _rightWinDown))
+        {
+            bool abandoned = _composition.ActiveDeadKey != null && _composition.Cancel();
+            abandoned |= _maintainableLayers.CancelOneShot();
+            if (abandoned)
+                StateChanged?.Invoke();
+        }
 
         // Une répétition déjà transmise reste physique. Backspace et Échap ont
         // néanmoins pu annuler un nouvel état de composition ci-dessus.

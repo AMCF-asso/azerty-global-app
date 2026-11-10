@@ -617,8 +617,12 @@ internal sealed partial class LessonsWindow
             int c = glyphColumn[i];
             cells[i] = new Win32.RECT { left = lefts[c], top = grid.top, right = lefts[c + 1], bottom = grid.top + style.GlyphRowHeight };
         }
+        // « Séance du jour déjà comptée » : peinte dans la ligne d'état, dite ici (RA9 du 10/11).
+        string surfaceHelp = $"{CurrentLesson.Title}. {FormatLessonInstruction(CurrentExercise.Instruction)}";
+        if (ChallengeAlreadyCounted)
+            surfaceHelp += " " + L.Challenge_AlreadyDone;
         _surfaceView = new LessonSurfaceView(L.LessonsWin_AutomationLineName,
-            $"{CurrentLesson.Title}. {FormatLessonInstruction(CurrentExercise.Instruction)}", new string(text),
+            surfaceHelp, new string(text),
             Math.Clamp(_session.CursorPosition, 0, text.Length), part, cells, _systemCaretRect);
 
         if (_hasFocus && _focusedActionIndex < 0)
@@ -832,6 +836,11 @@ internal sealed partial class LessonsWindow
     private void DrawPaperSummary(IntPtr hdc, Win32.RECT box, LessonAttemptStats stats)
     {
         PaperDraw.RoundBox(hdc, box, CLR_PANEL, CLR_BORDER, 0);
+        // Audit de régression du 10/11, RA6 : le bilan était peint sans rien exposer. Comme les
+        // pages de l'accueil (HomeSurface), une surface en lecture le porte ; elle garde le
+        // focus de la ligne qu'on vient de finir, hors du cycle de Tab (HasTypingSurface).
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_ExerciseSuccess, "", SummarySpokenText(stats), 0, box,
+            Array.Empty<Win32.RECT>(), null);
         if (TutorialSummaryIsMessageOnly)
         {
             DrawTutorialSummary(hdc, box); // LessonsWindow.Explanations.cs
@@ -889,6 +898,44 @@ internal sealed partial class LessonsWindow
         var small = F(AppFonts.Text, 14);
         var detailRect = new Win32.RECT { left = x, top = nextRect.top, right = replayRect.left - S(24), bottom = nextRect.bottom };
         PaperText.DrawLine(hdc, Ellipsize(hdc, detail, small, detailRect.right - detailRect.left), small, detailRect, CLR_MUTED, TextAlign.Left);
+    }
+
+    /// <summary>
+    /// Le bilan tel que le lecteur d'écran le lit, avec ce que l'écran montre et rien de plus :
+    /// dans le parcours, l'encouragement et l'explication de l'onglet ouvert ; dans les Leçons,
+    /// les chiffres et le détail, sauf si le réglage les cache.
+    /// </summary>
+    private string SummarySpokenText(LessonAttemptStats stats)
+    {
+        var parts = new List<string>();
+        if (TutorialSummaryIsMessageOnly)
+        {
+            parts.Add(L.LessonsWin_TutorialEncouragement);
+            var groups = CurrentSummaryExplanations();
+            if (groups.Count > 0)
+            {
+                var explanation = groups[_summaryTab].Explanation;
+                parts.Add(L.LessonsPaper_WhyHereLabel + explanation.Why);
+                if (explanation.HasRemember)
+                    parts.Add(L.Explanation_RememberLabel + explanation.Remember);
+            }
+            return string.Join(" ", parts);
+        }
+        if (!ConfigManager.LessonSummaryVisible)
+            return "";
+
+        static string Sentence(string label, string value) => L.LessonsAutomation_Metric(label, value) + ".";
+        parts.Add(Sentence(L.LessonsWin_MetricSpeed, FormatWpm(stats.Wpm)));
+        parts.Add(Sentence(L.LessonsWin_MetricAccuracy, FormatNullable(stats.AccuracyPercent, " %")));
+        parts.Add(Sentence(L.LessonsWin_MetricErrors, stats.ErrorCount.ToString()));
+        if (_summaryBestWpm.HasValue)
+            parts.Add(Sentence(L.LessonsWin_MetricBest, FormatWpm(_summaryBestWpm)));
+        var hard = stats.GetHardestCharacters(3);
+        int seconds = (int)Math.Round(stats.ElapsedSeconds);
+        parts.Add(hard.Count == 0
+            ? L.LessonsWin_DetailNoHardChar(seconds)
+            : L.LessonsWin_DetailHardChars(seconds, string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString())))));
+        return string.Join(" ", parts);
     }
 
     private void DrawPaperMetric(IntPtr hdc, int x, int y, int width, string label, string value, uint color)

@@ -7,7 +7,9 @@ namespace AZERTYGlobal;
 /// LessonCatalog). L'Initiation les reprend tous dans cet ordre ; le tutoriel n'en joue que le
 /// parcours choisi (<see cref="BuildRoute"/>). La progression enregistrée dépend du texte (clé
 /// et empreinte des exercices, rang pour l'import de l'accueil) : changer un texte, ou l'ordre,
-/// efface la réussite déjà enregistrée de cet exercice.
+/// efface la réussite déjà enregistrée de cet exercice, sauf si l'ancien texte entre dans la
+/// table des anciennes formes (<see cref="LessonContentHistory"/>, à régénérer par
+/// `scripts/build-lesson-instruction-history.py`).
 /// </summary>
 internal static class TutorialSteps
 {

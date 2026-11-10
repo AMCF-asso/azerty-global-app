@@ -34,7 +34,7 @@ internal static partial class L
     public static string Settings_TabLanguageMaintenance => T("Langue", "Language");
 
     public static string Settings_ConfirmResetShortcuts => T(
-        "Réinitialiser les raccourcis aux valeurs par défaut\n(Ctrl + Maj + Q et Ctrl + Maj + W) ?",
+        "Réinitialiser les raccourcis aux valeurs par défaut\n(Ctrl + Maj + Q et Ctrl + Maj + W) ?",
         "Reset shortcuts to default values\n(Ctrl + Shift + Q and Ctrl + Shift + W)?");
     public static string Settings_ShortcutsReset => T("Raccourcis réinitialisés ✓", "Shortcuts reset ✓");
     public static string Settings_VirtualKeyboardWindowReset => T("Fenêtre du clavier virtuel réinitialisée ✓", "Virtual keyboard window reset ✓");
