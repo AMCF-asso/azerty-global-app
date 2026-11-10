@@ -12,6 +12,10 @@ internal readonly record struct GestureStep(bool Shift, bool AltGr, string KeyCo
     /// <summary>La case de la portée : gravure courte (« Esp » pour Espace).</summary>
     public string ShortLabel => Gesture.ShortKeyLabel(KeyCode, KeyLabel);
 
+    /// <summary>Comme <see cref="ShortLabel"/>, mais Verr. Maj. en sigle (« VM ») : pour les endroits
+    /// où le nom en clair ne tient pas.</summary>
+    public string CompactLabel => Gesture.CompactKeyLabel(KeyCode, KeyLabel);
+
     /// <summary>La touche dans la phrase : sa gravure, ou sa place quand la gravure AZERTY
     /// n'est pas ce qu'elle tape (« la touche à droite du M »).</summary>
     public string SpokenLabel => Gesture.SpokenKeyLabel(KeyCode, KeyLabel);
@@ -103,7 +107,14 @@ internal static class Gesture
         _ => label,
     };
 
-    /// <summary>Gravure courte d'une case de portée (« Esp », « VM »).</summary>
+    /// <summary>Gravure compacte : celle d'une case de portée, Verr. Maj. en sigle (« VM »).</summary>
+    internal static string CompactKeyLabel(string keyCode, string label) => keyCode switch
+    {
+        CapsLockCode => L.Gesture_CapsLockCompact,
+        _ => ShortKeyLabel(keyCode, label),
+    };
+
+    /// <summary>Gravure courte d'une case de portée (« Esp », « Verr. Maj. »).</summary>
     internal static string ShortKeyLabel(string keyCode, string label) => keyCode switch
     {
         "Space" => L.Gesture_SpaceShort,

@@ -28,6 +28,59 @@ public class AvisGlobal130Tests
     private static List<string> Noms(LessonsWindow fenêtre) =>
         BancCapture.Field<List<LessonControlView>>(fenêtre, "_controlViews").Select(c => c.Name).ToList();
 
+    // ── Sigle « VM » : Verr. Maj. en clair là où la place le permet ──────────
+
+    [Theory]
+    [InlineData("fr", "Verr. Maj.", "VM")]
+    [InlineData("en", "Caps", "Caps")]
+    public void Verr_Maj_s_ecrit_en_clair_dans_les_portees_et_en_sigle_dans_la_touche_du_mini_clavier(
+        string langue, string enClair, string compact)
+    {
+        using var isolation = new BancCapture.Isolation();
+        L.Language = langue;
+        var caps = Gesture.Of("É")[0];
+        Assert.Equal(Gesture.CapsLockCode, caps.KeyCode);
+        Assert.Equal(enClair, caps.ShortLabel);
+        Assert.Equal(compact, caps.CompactLabel);
+
+        // La colonne de la portée (leçons, recherche, accueil) porte le nom en clair.
+        Assert.Contains(TabColumn.FromGesture(Gesture.Of("É")), c => c.Key == enClair);
+
+        // Aucun autre temps n'est touché : les lettres gardent leur gravure.
+        var deux = Gesture.Of("É")[1];
+        Assert.Equal(deux.KeyLabel, deux.ShortLabel);
+        Assert.Equal(deux.KeyLabel, deux.CompactLabel);
+
+        // Tous les gestes du catalogue : « VM » n'apparaît plus qu'en version compacte.
+        foreach (var caractère in new[] { "É", "È", "Ç", "À", "Ù" })
+            foreach (var temps in Gesture.Of(caractère))
+                if (temps.KeyCode == Gesture.CapsLockCode)
+                    Assert.NotEqual("VM", temps.ShortLabel);
+    }
+
+    /// <summary>« Le test de troncature tranche » : la touche Verr. Maj. du mini-clavier fait 1,75 unité
+    /// (42 px à l'unité 24) ; le nom en clair n'y tient pas même à la police la plus réduite, le
+    /// sigle y tient. D'où le sigle conservé à cet endroit seulement.</summary>
+    [Fact]
+    public void Le_nom_en_clair_ne_tient_pas_dans_la_touche_du_mini_clavier_le_sigle_y_tient()
+    {
+        using var isolation = new BancCapture.Isolation();
+        L.Language = "fr";
+        float unité = 24f; // MiniUnit des Leçons
+        int largeurTouche = (int)Math.Round(1.75f * unité);
+        IntPtr hdc = Win32.CreateCompatibleDC(IntPtr.Zero);
+        try
+        {
+            int hauteur = Math.Max(6, (int)Math.Round(unité * 0.58f) - 2); // police la plus réduite
+            var police = new FontSpec(AppFonts.Text, hauteur, TypeRamp.Semibold);
+            Assert.True(PaperText.Width(hdc, L.Gesture_CapsLockShort, police) > largeurTouche - 2,
+                "« Verr. Maj. » tient dans la touche : le sigle n'a plus de raison d'être là");
+            var normale = new FontSpec(AppFonts.Text, (int)Math.Round(unité * 0.58f), TypeRamp.Semibold);
+            Assert.True(PaperText.Width(hdc, L.Gesture_CapsLockCompact, normale) <= largeurTouche - 2);
+        }
+        finally { Win32.DeleteDC(hdc); }
+    }
+
     // ── C1 : un seul nom quand module et leçon portent le même titre ─────────
 
     [Theory]
