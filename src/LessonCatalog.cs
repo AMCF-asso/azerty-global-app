@@ -49,6 +49,21 @@ internal sealed class LessonModule
     public IReadOnlyList<LessonLesson> Lessons { get; }
 }
 
+/// <summary>
+/// Nom affiché d'une leçon dans son module. Quand les deux portent le même titre (« Prise en main »,
+/// « Majuscules accentuées »), le nom n'est écrit qu'une fois : avis global 1.3.0, C1. Les titres
+/// ne sont pas modifiés (ils n'entrent pas dans l'empreinte de progression, décision « un seul nom »).
+/// </summary>
+internal static class LessonNames
+{
+    public static bool SameTitle(string module, string lesson) =>
+        string.Equals(module?.Trim(), lesson?.Trim(), StringComparison.CurrentCultureIgnoreCase);
+
+    /// <summary>« Module séparateur Leçon », ou le seul titre quand les deux sont identiques.</summary>
+    public static string Join(string module, string lesson, string separator) =>
+        SameTitle(module, lesson) ? lesson : module + separator + lesson;
+}
+
 internal sealed class LessonLesson
 {
     public LessonLesson(string moduleId, string id, string title, string description, IReadOnlyList<string> characters, IReadOnlyList<LessonExercise> exercises)
