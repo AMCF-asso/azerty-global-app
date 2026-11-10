@@ -95,7 +95,7 @@ internal static class MiniKeyboardRenderer
             var step = steps[i];
             if (step.Shift) Add(IndexOf(k => k.ContextId == VirtualKeyboard.ContextShiftLeft), MiniKeyState.Held, i + 1, null);
             if (step.AltGr) Add(IndexOf(k => k.Label == "AltGr"), MiniKeyState.Held, i + 1, null);
-            Add(KeyIndex(step.KeyCode), MiniKeyState.Struck, i + 1, step.ShortLabel);
+            Add(KeyIndex(step.KeyCode), MiniKeyState.Struck, i + 1, step.CompactLabel);
         }
         return lit;
     }
@@ -139,7 +139,7 @@ internal static class MiniKeyboardRenderer
     /// « Maj » / « Shift », « AltGr »), la gravure du temps pour les autres (rien sur l'espace).</summary>
     private static string LitLabel(VirtualKeyboard.VisualKey key, Lit on)
     {
-        if (key.Scancode == ScanCapsLock) return L.Gesture_CapsLockShort;
+        if (key.Scancode == ScanCapsLock) return L.Gesture_CapsLockCompact; // 1,75 unité : le nom en clair n'y tient pas
         if (key.ContextId == VirtualKeyboard.ContextShiftLeft || key.ContextId == VirtualKeyboard.ContextShiftRight)
             return L.Gesture_LineShift;
         if (key.Label == "AltGr") return L.Gesture_LineAltGr;

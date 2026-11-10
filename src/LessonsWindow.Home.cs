@@ -655,13 +655,32 @@ internal sealed partial class LessonsWindow
         var moreFont = HomeFont(AppFonts.Text, 13);
         int pad = S(8), minCell = S(40), moreWidth = S(40);
         int glyphH = S(32);
+
+        // Verr. Maj. s'écrit en clair ; en sigle (« VM ») seulement si le nom en clair ferait perdre
+        // des caractères à revoir dans la largeur (avis global 1.3.0).
+        int Fitting(bool compact)
+        {
+            int used = 0, count = 0;
+            for (int i = 0; i < due.Count; i++)
+            {
+                var s = Gesture.Of(due[i].Character);
+                int gw = s.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, s, false, HomeScale, 0, 0, draw: false, compact);
+                int cw = Math.Max(minCell, Math.Max(gw, PaperText.Width(hdc, HomeGlyph(due[i].Character), glyphFont))) + 2 * pad;
+                if (used + cw + (i < due.Count - 1 ? moreWidth : 0) > area.right - area.left) break;
+                used += cw;
+                count++;
+            }
+            return count;
+        }
+        bool compactCaps = Fitting(false) < Fitting(true);
+
         int x = area.left;
         int shown = 0;
         for (int i = 0; i < due.Count; i++)
         {
             string glyph = HomeGlyph(due[i].Character);
             var steps = Gesture.Of(due[i].Character);
-            int gestureW = steps.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, 0, 0, draw: false);
+            int gestureW = steps.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, 0, 0, draw: false, compactCaps);
             int cell = Math.Max(minCell, Math.Max(gestureW, PaperText.Width(hdc, glyph, glyphFont))) + 2 * pad;
             int reserve = i < due.Count - 1 ? moreWidth : 0;
             if (x + cell + reserve > area.right) break;
@@ -669,7 +688,7 @@ internal sealed partial class LessonsWindow
             PaperText.DrawLine(hdc, glyph, glyphFont,
                 new Win32.RECT { left = x, top = area.top, right = x + cell, bottom = area.top + glyphH }, pal.Ink, TextAlign.Center);
             if (steps.Count > 0)
-                TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, centre + gestureW / 2, area.top + glyphH + S(15));
+                TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, centre + gestureW / 2, area.top + glyphH + S(15), compact: compactCaps);
             x += cell;
             shown++;
             if (i < due.Count - 1 && x + moreWidth <= area.right)
