@@ -98,11 +98,11 @@ internal static partial class L
             ? SettingsClarity_HintOnboardingDone
             : SettingsClarity_HintOnboardingPending;
     public static string SettingsClarity_HintOnboardingPending => T(
-        "La fenêtre de bienvenue s’ouvre au lancement tant que ses trois premiers exercices ne sont pas faits.",
-        "The welcome window opens at launch until its first three exercises are done.");
+        "L’accueil s’ouvre au lancement tant que ses trois premiers exercices ne sont pas faits.",
+        "The welcome screen opens at launch until its first three exercises are done.");
     public static string SettingsClarity_HintOnboardingDone => T(
-        "Les trois premiers exercices sont faits : la fenêtre de bienvenue ne s’ouvre plus d’elle-même au lancement. Elle reste dans le menu de la zone de notification.",
-        "The first three exercises are done: the welcome window no longer opens by itself at launch. It stays in the notification-area menu.");
+        "Les trois premiers exercices sont faits : l’accueil ne s’ouvre plus de lui-même au lancement. Il reste dans le menu de la zone de notification.",
+        "The first three exercises are done: the welcome screen no longer opens by itself at launch. It stays in the notification-area menu.");
     public static string SettingsClarity_HintResetWindow => T(
         "La replace au centre de l’écran, utile si elle est sortie de la vue.",
         "Moves it back to the center of the screen, handy if it went off-screen.");

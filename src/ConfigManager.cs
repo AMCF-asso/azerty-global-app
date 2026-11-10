@@ -809,6 +809,11 @@ static class ConfigManager
     public static string? TrainingLastSessionDate => GetString("trainingLastSessionDate");
     public static void SetTrainingLastSessionDate(string date) => SetString("trainingLastSessionDate", date);
 
+    /// <summary>Meilleure vitesse (mots/min) à l'extrait du Défi, tous jours confondus ; 0 = aucune.
+    /// Audit UX du 09/11, L10 : le record de l'exercice du jour repartait de zéro chaque matin.</summary>
+    public static uint TrainingBestWpm => GetUInt("trainingBestWpm");
+    public static void SetTrainingBestWpm(uint wpm) => SetUInt("trainingBestWpm", wpm);
+
     /// <summary>Date (yyyy-MM-dd) du dernier rappel émis — jamais deux rappels le même jour.</summary>
     public static string? TrainingLastReminderDate => GetString("trainingLastReminderDate");
     public static void SetTrainingLastReminderDate(string date) => SetString("trainingLastReminderDate", date);

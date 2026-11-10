@@ -16,7 +16,7 @@ internal static partial class L
     public static string Onboarding_LinkGuide => T("Guide de prise en main", "Getting started guide");
     public static string Onboarding_LinkDiscord => T("Échanger avec les autres utilisateurs", "Chat with other users");
     public static string Onboarding_ChkAutoStart => T("Lancer au démarrage de Windows (recommandé)", "Launch at Windows startup (recommended)");
-    public static string Onboarding_ChkDontShow => T("Ne plus afficher cet écran au démarrage", "Don’t show this screen again at startup");
+    public static string Onboarding_ChkDontShow => T("Ne plus afficher l’accueil au démarrage", "Don’t show the welcome screen at startup");
     // Opt-in Défi du jour (v1.2.0) — même préférence que IDC_CHK_TRAINING dans SettingsWindow.cs
     // (ConfigManager.TrainingEnabled), décochée par défaut, appliquée immédiatement au clic.
     public static string Onboarding_ChkTraining => T("Rappels d’entraînement « Défi du jour »", "“Daily challenge” training reminders");

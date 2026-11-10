@@ -467,8 +467,9 @@ sealed class AboutWindow : IDisposable
         Win32.SetTextColor(hdc, _pal.Muted);
         int fontsY = amcfY + S(26);
         var fontsRect = new Win32.RECT { left = margin, top = fontsY, right = cw - margin, bottom = fontsY + S(20) };
-        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect,
-            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint fontsFormat = Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, L.About_FontCredit, fontsRect, fontsFormat); // audit UX du 09/11, W24
+        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect, fontsFormat);
 
         // Separateur juste au-dessus des liens
         int sepY = S(BASE_WIN_H - 100);

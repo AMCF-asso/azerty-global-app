@@ -64,7 +64,7 @@ internal static partial class L
 
 
     // ── Tooltip ────────────────────────────────────────────────────────
-    public static string Tray_TooltipSuspendedCompat => T("Suspendu : cette application ne supporte pas la saisie d’AZERTY Global", "Suspended: this app does not support AZERTY Global typing");
+    public static string Tray_TooltipSuspendedCompat => T($"Suspendu : cette application ne supporte pas la saisie d’{Product}", $"Suspended: this app does not support {Product} typing");
     public static string Tray_TooltipActive => T("Actif", "Active");
     public static string Tray_TooltipCapsLock => T("Verr. Maj.", "Caps Lock");
     public static string Tray_TooltipDeadKey(string symbol) => T($"Touche morte {symbol} : attend la lettre suivante", $"Dead key {symbol}: waiting for the next letter");
@@ -131,10 +131,11 @@ internal static partial class L
     public static string Tray_MenuVirtualKeyboard(string key) => T($"Afficher le clavier virtuel\tCtrl+Maj+{key}", $"Show virtual keyboard\tCtrl+Shift+{key}");
     public static string Tray_MenuSearchCharacter(string key) => T($"Rechercher un caractère\tCtrl+Maj+{key}", $"Find a character\tCtrl+Shift+{key}");
     public static string Tray_MenuLessons => T("Leçons", "Lessons");
-    public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Replay the welcome tour");
+    public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Reopen the welcome screen");
 
     /// <summary>Titre du sous-menu des couches maintenables (décision S2-3 du 2026-09-02).</summary>
-    public static string Tray_MenuLayers => T("Couches", "Layers");
+    // Le nom de la fenêtre qu'il ouvre et de la fiche Store (audit UX du 09/11, W23).
+    public static string Tray_MenuLayers => Layers_WindowTitleSuffix;
 
     /// <summary>Titre du sous-menu d'apprentissage (menu court du 2026-09-19).</summary>
     public static string Tray_MenuLearn => T("Apprendre", "Learn");
@@ -180,7 +181,7 @@ internal static partial class L
     public static string Tray_SettingsResetTitle => T("Paramètres réinitialisés", "Settings reset");
     public static string Tray_SettingsResetBody => T(
         $"Le fichier des paramètres d’{Product} était illisible. Une copie en est gardée. Refaites vos choix dans l’accueil.",
-        $"{Product}’s settings file couldn’t be read. A copy of it is kept. Make your choices again in the welcome tour.");
+        $"{Product}’s settings file couldn’t be read. A copy of it is kept. Make your choices again on the welcome screen.");
     public static string Tray_ProgressResetTitle => T("Progression des leçons réinitialisée", "Lesson progress reset");
     public static string Tray_ProgressResetBody => T(
         $"Le fichier de progression d’{Product} était illisible. Une copie en est gardée, les leçons repartent du début.",
@@ -189,7 +190,7 @@ internal static partial class L
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
     public static string Tray_MenuCompatForceOn => T("Mode jeu : saisie par combinaisons de touches", "Game mode: typing with key combinations");
     public static string Tray_MenuCompatForceOff => T("Forcer la désactivation", "Force off");
-    public static string Tray_MenuCompatInfo => T("Pourquoi AZERTY Global se suspend…", "Why AZERTY Global pauses…");
+    public static string Tray_MenuCompatInfo => T($"Pourquoi {Product} se suspend…", $"Why {Product} pauses…");
     public static string Tray_MenuAppCompat => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoTitle => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoBody => T(

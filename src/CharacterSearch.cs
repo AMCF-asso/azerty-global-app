@@ -1530,7 +1530,16 @@ sealed class CharacterSearch : IDisposable
 
     /// <summary><paramref name="text"/> coupé avec des points de suspension pour tenir dans
     /// <paramref name="maxWidth"/> pixels.</summary>
-    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth)
+    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth,
+        [System.Runtime.CompilerServices.CallerFilePath] string file = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        string shown = EllipsizeCore(hdc, text, font, maxWidth);
+        TruncationProbe.Ellipsized(hdc, text, shown, font, maxWidth, file, line); // audit UX du 09/11, W24
+        return shown;
+    }
+
+    private static string EllipsizeCore(IntPtr hdc, string text, FontSpec font, int maxWidth)
     {
         if (maxWidth <= 0) return "";
         if (PaperText.Width(hdc, text, font) <= maxWidth) return text;

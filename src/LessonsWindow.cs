@@ -289,6 +289,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _catalog = _challenge.LoadCatalog();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         CatalogLanguage = L.Language;
+        _challenge.RefreshShareLanguage(); // le texte à partager suit la langue (audit UX du 09/11, L14)
         // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
         _lessonIndex = Math.Clamp(_lessonIndex, 0, _catalog.Modules[_moduleIndex].Lessons.Count - 1); // le catalogue, pas la séance composée de l'accueil
@@ -330,6 +331,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// </summary>
     public bool ShowChallenge()
     {
+        if (!OpenChallenge()) return false;
+        Show();
+        return true;
+    }
+
+    /// <summary>État du Défi demandé, sans afficher la fenêtre (les tests ne prennent pas le
+    /// premier plan du poste).</summary>
+    internal bool OpenChallenge()
+    {
         if (!DailyChallenge.Enabled) return false; // 1.3.0 : Défi masqué
         _challenge.Request(); // offert même sans opt-in, reconstruit à la date et à l'étape du moment (A23)
         RefreshChallengeModuleIfStale();
@@ -337,10 +347,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         {
             if (_catalog.Modules[m].Id != DailyChallenge.ModuleId) continue;
             var lesson = _catalog.Modules[m].Lessons[0];
+            // Parcours de l'accueil en cours : il se clôt, sinon son en-tête, son bilan sans
+            // chiffres et sa frappe hors statistiques restaient sur le Défi (audit UX du 09/11, L16).
+            EndTutorial(completed: _tutorialPage == TutorialPage.Final);
             if (!SelectExercise(DailyChallenge.ModuleId, lesson.Id, 0, savePosition: false))
                 return false;
             _homeOpenOnExercise = true; // accueil des Leçons : le défi s'ouvre sur son exercice (LessonsWindow.Home.cs)
-            Show();
             return true;
         }
         return false;
@@ -2606,11 +2618,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (_showSummary) return;
 
-        bool challengeFinale = CurrentModule.Id == DailyChallenge.ModuleId &&
-                               _exerciseIndex == CurrentLesson.Exercises.Count - 1;
+        bool onChallenge = CurrentModule.Id == DailyChallenge.ModuleId;
+        bool challengeFinale = onChallenge && _exerciseIndex == CurrentLesson.Exercises.Count - 1;
         // Le meilleur score doit être lu AVANT RecordSuccess, qui l'écrase par le résultat
         // de la tentative courante : après l'appel, toute séance est son propre record.
-        int? previousBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
+        // Extrait du Défi : le record est celui de tous les Défis, pas celui de l'exercice du
+        // jour, neuf chaque matin (audit UX du 09/11, L10).
+        int? previousBestWpm = challengeFinale
+            ? ChallengeSessionState.PersonalBestWpm(_progress)
+            : _progress.GetValidProgress(CurrentExercise)?.BestWpm;
 
         _lastCompletedStats = _session.Stats;
         _progress.RecordSuccess(CurrentExercise, _session.Stats);
@@ -2621,7 +2637,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             ConfigManager.RecordLearningExerciseCompleted(CurrentExercise.ExerciseIndex);
         // Métrique « Record » (QW-4) : relue APRÈS RecordSuccess pour inclure la
         // tentative courante ; « nouveau » seulement si un score antérieur est battu.
-        _summaryBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
+        // Échauffement du Défi : cinq fois chaque caractère, différents chaque jour, pas de record.
+        _summaryBestWpm = challengeFinale
+            ? MaxWpm(previousBestWpm, _session.Stats.Wpm)
+            : onChallenge ? null : _progress.GetValidProgress(CurrentExercise)?.BestWpm;
         _summaryIsNewBest = previousBestWpm.HasValue && _session.Stats.Wpm.HasValue &&
                             _session.Stats.Wpm.Value > previousBestWpm.Value;
         _showSummary = true;
@@ -2633,6 +2652,28 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             _challenge.Complete(_session.Stats, previousBestWpm);
 
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    private static int? MaxWpm(int? a, int? b) => a is { } x && b is { } y ? Math.Max(x, y) : a ?? b;
+
+    /// <summary>La séance du Défi affichée est déjà comptée : dit avant le mode de frappe
+    /// (audit UX du 09/11, L10).</summary>
+    internal bool ChallengeAlreadyCounted =>
+        _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId && _challenge.AlreadyCounted;
+
+    /// <summary>Compteur « x/N exercices » de la liste, sans le Défi du jour : ses deux
+    /// exercices changent chaque jour, comptés ils faisaient baisser x le lendemain et varier N
+    /// avec l'offre du Défi (audit UX du 09/11, L10).</summary>
+    internal (int Done, int Total) PickerExerciseCount()
+    {
+        int done = 0, total = 0;
+        foreach (var exercise in _catalog.Exercises)
+        {
+            if (exercise.ModuleId == DailyChallenge.ModuleId) continue;
+            total++;
+            if (_progress.IsCompleted(exercise)) done++;
+        }
+        return (done, total);
     }
 
     private void OnCopyChallengeResult()
@@ -2814,7 +2855,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             L.LessonsWin_ResetProgressConfirm,
             L.LessonsWin_WindowTitle, MB_YESNO | MB_ICONWARNING);
         if (result != IDYES) return;
+        ApplyProgressReset();
+    }
+
+    /// <summary>Remise à zéro confirmée : exercices, gestes de « Votre carte » et record du
+    /// Défi (audit UX du 09/11, L10 et L13).</summary>
+    internal void ApplyProgressReset()
+    {
         _progress.ResetAll();
+        ConfigManager.SetTrainingBestWpm(0);
         StartCurrentSession(savePosition: true);
     }
 
@@ -2973,7 +3022,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             : L.LessonsWin_StatusFlexible;
         // Audit 1.3.0, A2 : la tolérance se dit ici, hors de la consigne, qui entre dans
         // l'empreinte de l'exercice (changer Lessons_Init* effacerait les réussites).
-        return _session.IsTolerant ? status + " " + L.LessonsWin_StatusTolerated : status;
+        if (_session.IsTolerant) status += " " + L.LessonsWin_StatusTolerated;
+        return ChallengeAlreadyCounted ? L.Challenge_AlreadyDone + " " + status : status;
     }
 
     private string FormatHintButtonText()

@@ -13,12 +13,13 @@ internal static partial class L
     public static string LessonsWin_SectionActions => T("Actions", "Actions");
     public static string LessonsWin_ToggleAutoHints => T("Indices automatiques", "Automatic hints");
     public static string LessonsWin_ToggleSummary => T("Résumé après exercice", "Summary after exercise");
-    public static string LessonsWin_ToggleFreeStats => T("Statistiques du mode libre", "Free mode stats");
-    public static string LessonsWin_ToggleKeyboard => T("Clavier visuel", "Visual keyboard");
+    public static string LessonsWin_ToggleFreeStats => T("Statistiques de l’écriture libre", "Free typing stats");
+    // Le même réglage que Paramètres › Leçons : un seul libellé (audit UX du 09/11, L14).
+    public static string LessonsWin_ToggleKeyboard => Notation_KeyboardUnderText;
     public static string LessonsWin_ToggleInvisibleMarkers => T("Marqueurs invisibles", "Invisible markers");
     public static string LessonsWin_ToggleOn => T("Activé", "On");
     public static string LessonsWin_ToggleOff => T("Désactivé", "Off");
-    public static string LessonsWin_BtnResetFreeStats => T("Effacer les stats du mode libre", "Clear free mode stats");
+    public static string LessonsWin_BtnResetFreeStats => T("Effacer les stats de l’écriture libre", "Clear free typing stats");
     public static string LessonsWin_BtnResetProgress => T("Réinitialiser la progression", "Reset progress");
     public static string LessonsWin_BtnResetStats => T("Effacer les statistiques", "Clear stats");
 
@@ -63,7 +64,8 @@ internal static partial class L
     public static string LessonsWin_AutomationSelected => T("sélectionné", "selected");
 
     // ── Mode libre ───────────────────────────────────────────────────
-    public static string LessonsWin_FreeTitle => T("Mode libre", "Free mode");
+    // Un seul nom, celui du lien d'en-tête (QCM d'Antoine du 10/11, audit UX L14).
+    public static string LessonsWin_FreeTitle => LessonsPaper_FreeTyping;
     public static string LessonsWin_FreeDescription => T(
         "Tapez librement pour mesurer le rythme. Le texte reste tant que l’application tourne, sans être enregistré.",
         "Type freely to measure your pace. Your text stays while the app runs and is never saved.");
@@ -80,13 +82,13 @@ internal static partial class L
 
     // ── Réinitialisation de la progression ──────────────────────────────
     public static string LessonsWin_ResetProgressConfirm => T(
-        "Réinitialiser toute la progression des leçons ?\n\nLes préférences, comme les indices automatiques, seront conservées.",
-        "Reset all lesson progress?\n\nPreferences, such as automatic hints, will be kept.");
+        $"Réinitialiser toute la progression des leçons ?\n\nLes exercices réussis, les records et le suivi des caractères de « {LessonsHome_YourMap} » seront effacés. Les préférences, comme les indices automatiques, seront conservées.",
+        $"Reset all lesson progress?\n\nCompleted exercises, best scores and the character tracking in “{LessonsHome_YourMap}” will be erased. Preferences, such as automatic hints, will be kept.");
 
     // ── Statut de frappe et indices ──────────────────────────────────
     public static string LessonsWin_StatusStrict => T(
-        "Mode initiation : retapez le bon caractère pour corriger.",
-        "Initiation mode: retype the correct character to fix a mistake.");
+        "Pas de retour arrière : retapez le bon caractère pour corriger.",
+        "No Backspace: retype the correct character to fix a mistake.");
     public static string LessonsWin_StatusFlexible => T(
         "Retour arrière autorisé. Le collage est bloqué.",
         "Backspace is allowed. Pasting is blocked.");

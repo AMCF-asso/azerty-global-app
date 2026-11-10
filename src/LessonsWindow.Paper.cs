@@ -43,7 +43,19 @@ internal sealed partial class LessonsWindow
         return false;
     }
 
-    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth)
+    /// <summary>Texte coupé avec des points de suspension pour tenir dans
+    /// <paramref name="maxWidth"/> pixels. Chaque passage est signalé à
+    /// <see cref="TruncationProbe"/> (audit UX du 09/11, W24).</summary>
+    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth,
+        [System.Runtime.CompilerServices.CallerFilePath] string file = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        string shown = EllipsizeCore(hdc, text, font, maxWidth);
+        TruncationProbe.Ellipsized(hdc, text, shown, font, maxWidth, file, line);
+        return shown;
+    }
+
+    private static string EllipsizeCore(IntPtr hdc, string text, FontSpec font, int maxWidth)
     {
         if (maxWidth <= 0) return "";
         if (PaperText.Width(hdc, text, font) <= maxWidth) return text;
@@ -160,7 +172,10 @@ internal sealed partial class LessonsWindow
                 string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_HintTooltip : FormatHintButtonText();
                 links.Add((L.LessonsWin_IconHint, _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, hintTooltip, ToggleAutoHints));
             }
-            links.Add((L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true), null, null));
+            // « Recommencer » pendant la frappe, « Rejouer » au bilan : un mot par moment, un
+            // seul bouton pour un seul geste (QCM d'Antoine du 10/11, audit UX L14).
+            if (!_showSummary)
+                links.Add((L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true), null, null));
             links.Add((L.LessonsPaper_FreeTyping, false, () => SwitchMode(WindowMode.Free), null, null));
         }
         else
@@ -181,8 +196,12 @@ internal sealed partial class LessonsWindow
         int linksLeft = rc.right - S(24) - linksWidth;
 
         int available = linksLeft - S(24) - x;
+        // Paramètres ouverts : ni liste ni ‹ ›, qui changeaient l'exercice caché derrière
+        // (audit UX du 09/11, L13) ; « Leçons », à droite, y ramène.
         if (_mode == WindowMode.Lessons)
-            DrawHeaderLessonPart(hdc, x, mid, available);
+        {
+            if (!_settingsOpen) DrawHeaderLessonPart(hdc, x, mid, available);
+        }
         else
             PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_FreeTitle, F(AppFonts.Text, 15, TypeRamp.Semibold), available),
                 F(AppFonts.Text, 15, TypeRamp.Semibold), new Win32.RECT { left = x, top = 0, right = x + available, bottom = S(58) },
@@ -332,8 +351,8 @@ internal sealed partial class LessonsWindow
         int saved = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, panel.left + 1, panel.top + 1, panel.right - 1, panel.bottom - 1);
         int y = panel.top + pad;
-        int done = _progress.CountCompleted(_catalog);
-        PaperText.DrawLine(hdc, L.LessonsWin_ExerciseCount(done, _catalog.TotalExerciseCount), countFont,
+        var (doneCount, exerciseCount) = PickerExerciseCount();
+        PaperText.DrawLine(hdc, L.LessonsWin_ExerciseCount(doneCount, exerciseCount), countFont,
             new Win32.RECT { left = panel.left + S(16), top = y, right = panel.right - S(16), bottom = y + headH }, CLR_MUTED, TextAlign.Left);
         y += headH;
 
