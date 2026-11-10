@@ -513,7 +513,8 @@ public class ParcoursAccueilTests
             var names = ControlNames(window);
             Assert.DoesNotContain(names, name => leaving.Contains(name));
             string picker = BancCapture.Call(window, "get_CurrentModule") is LessonModule module
-                ? $"{module.Title} {((LessonLesson)BancCapture.Call(window, "get_CurrentLesson")!).Title}" : "";
+                ? LessonNames.Join(module.Title, ((LessonLesson)BancCapture.Call(window, "get_CurrentLesson")!).Title, " ") : "";
+            Assert.Equal(L.Learning_HeaderTitle, picker); // module et leçon de même titre : un seul nom (avis global 1.3.0, C1)
             Assert.DoesNotContain(picker, names); // le sélecteur de leçon
             Assert.Contains(L.LessonsWin_IconHint, names);
             Assert.Contains(L.Learning_SkipForNow, names);
