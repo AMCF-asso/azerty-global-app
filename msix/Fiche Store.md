@@ -29,7 +29,7 @@ AZERTY Global - Clavier français amélioré
 ```text
 Tapez É, Ç, « » ou œ sans code Alt ni copier-coller, avec l’AZERTY que vous connaissez déjà.
 
-Sur l’AZERTY de Windows, Verr. Maj. puis é donne 2. Avec AZERTY Global, vous obtenez É. Les lettres A à Z et les chiffres restent à leur place : 12 caractères seulement changent de touche, et 99 % de vos frappes sont préservées.
+Sur l’AZERTY de Windows, Verr. Maj. puis é donne 2. Avec AZERTY Global, vous obtenez É. Les lettres A à Z et les chiffres restent à leur place : 5 changements seulement, et 99 % de vos frappes sont préservées.
 
 Installez l’application, cliquez sur « Activer et essayer » dans l’accueil, et c’est prêt. Pas besoin de droits administrateur ni de compte. Ctrl+Maj+Verr. Maj. vous rend l’AZERTY d’origine quand vous le voulez.
 
@@ -89,7 +89,7 @@ Guillemets « », œ, æ, tirets, points de suspension et espaces insécables
 Accents aigu, grave et tilde pour l’espagnol, le portugais et d’autres langues
 ```
 ```text
-Lettres A à Z et chiffres à leur place : 12 caractères changent de touche
+Lettres A à Z et chiffres à leur place : 5 changements seulement
 ```
 ```text
 Recherche par nom (Ctrl+Maj+W) qui insère le caractère dans votre texte
@@ -157,7 +157,7 @@ AZERTY Global - Improved French Keyboard
 ```text
 Type É, Ç, « » or œ without Alt codes or copy-paste, on the AZERTY keyboard you already know.
 
-On the traditional Windows French AZERTY, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 12 characters move to another key, and 99% of your keystrokes are preserved.
+On the traditional Windows French AZERTY, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 5 changes, and 99% of your keystrokes are preserved.
 
 Install the app, click “Turn on and try” in the welcome screen, and you're done. No admin rights and no account needed. Ctrl+Shift+Caps Lock gives you back the original AZERTY whenever you want.
 
@@ -217,7 +217,7 @@ French guillemets « », œ, æ, dashes, ellipsis and non-breaking spaces
 Acute, grave and tilde accents for Spanish, Portuguese and more
 ```
 ```text
-The letters A to Z and the digits stay in place: 12 characters move to another key
+The letters A to Z and the digits stay in place: only 5 changes
 ```
 ```text
 Search by name (Ctrl+Shift+W) inserts the character into your text
