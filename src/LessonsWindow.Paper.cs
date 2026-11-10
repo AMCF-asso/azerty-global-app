@@ -241,9 +241,11 @@ internal sealed partial class LessonsWindow
         string countText = L.LessonsPaper_ExerciseOf(Math.Min(current + 1, exercises), exercises);
         int countW = PaperText.Width(hdc, countText, countFont);
 
-        string module = CurrentModule.Title;
+        // Module et leçon de même titre (« Prise en main », « Majuscules accentuées ») : un seul nom (C1).
+        string module = LessonNames.SameTitle(CurrentModule.Title, CurrentLesson.Title) ? "" : CurrentModule.Title;
         string lesson = CurrentLesson.Title;
-        int pickerNatural = S(12) + PaperText.Width(hdc, module, moduleFont) + S(8) + PaperText.Width(hdc, lesson, lessonFont)
+        int moduleGap = module.Length > 0 ? S(8) : 0;
+        int pickerNatural = S(12) + PaperText.Width(hdc, module, moduleFont) + moduleGap + PaperText.Width(hdc, lesson, lessonFont)
                             + S(12) + PaperText.Width(hdc, "▾", arrowFont) + S(12);
         int pickerW = Math.Min(pickerNatural, S(340));
         bool showCount = pickerW + S(20) + stepperW + S(10) + countW <= available;
@@ -261,21 +263,23 @@ internal sealed partial class LessonsWindow
         int moduleW = PaperText.Width(hdc, module, moduleFont);
         int lessonW = PaperText.Width(hdc, lesson, lessonFont);
         int room = textRight - tx;
-        if (moduleW + S(8) + lessonW > room)
+        if (moduleW + moduleGap + lessonW > room)
         {
             // La leçon passe d'abord : le module cède jusqu'à un tiers.
-            int moduleRoom = Math.Max(Math.Min(moduleW, room / 3), room - S(8) - lessonW);
-            module = Ellipsize(hdc, module, moduleFont, moduleRoom);
+            int moduleRoom = Math.Max(Math.Min(moduleW, room / 3), room - moduleGap - lessonW);
+            if (module.Length > 0)
+                module = Ellipsize(hdc, module, moduleFont, moduleRoom);
             moduleW = PaperText.Width(hdc, module, moduleFont);
-            lesson = Ellipsize(hdc, lesson, lessonFont, room - moduleW - S(8));
+            lesson = Ellipsize(hdc, lesson, lessonFont, room - moduleW - moduleGap);
         }
-        tx += PaperText.DrawLine(hdc, module, moduleFont, new Win32.RECT { left = tx, top = picker.top, right = textRight, bottom = picker.bottom },
-            CLR_MUTED, TextAlign.Left) + S(8);
+        if (module.Length > 0)
+            tx += PaperText.DrawLine(hdc, module, moduleFont, new Win32.RECT { left = tx, top = picker.top, right = textRight, bottom = picker.bottom },
+                CLR_MUTED, TextAlign.Left) + moduleGap;
         PaperText.DrawLine(hdc, lesson, lessonFont, new Win32.RECT { left = tx, top = picker.top, right = textRight, bottom = picker.bottom },
             CLR_TEXT, TextAlign.Left);
         PaperText.DrawLine(hdc, "▾", arrowFont, new Win32.RECT { left = picker.right - S(12) - arrowW, top = picker.top, right = picker.right - S(12), bottom = picker.bottom },
             CLR_MUTED, TextAlign.Left);
-        AddClick(picker, TogglePicker, $"{CurrentModule.Title} {CurrentLesson.Title}");
+        AddClick(picker, TogglePicker, LessonNames.Join(CurrentModule.Title, CurrentLesson.Title, " "));
         AddLinkTooltip(picker, L.LessonsPaper_ChooseLesson);
 
         // Jalons entre les chevrons.
@@ -327,7 +331,7 @@ internal sealed partial class LessonsWindow
         _doubleClickActions.Clear();
         _hoverAreas.Clear();
         _keyboardHover = null;
-        AddClick(_pickerButtonRect, TogglePicker, $"{CurrentModule.Title} {CurrentLesson.Title}");
+        AddClick(_pickerButtonRect, TogglePicker, LessonNames.Join(CurrentModule.Title, CurrentLesson.Title, " "));
 
         var moduleFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
         var lessonFont = F(AppFonts.Text, 15);

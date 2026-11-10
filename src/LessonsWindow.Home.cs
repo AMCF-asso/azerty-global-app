@@ -688,7 +688,7 @@ internal sealed partial class LessonsWindow
         var (module, lesson, exerciseIndex) = HomeResumePosition();
         bool started = _progress.CountCompleted(_catalog) > 0;
         HomeCardHeading(hdc, card, started ? L.LessonsHome_ResumeTitle : L.LessonsHome_StartTitle,
-            $"{module.Title} · {lesson.Title}", pal);
+            LessonNames.Join(module.Title, lesson.Title, " · "), pal);
 
         int pad = S(16);
         int inner = card.right - card.left - 2 * pad;
