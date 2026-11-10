@@ -156,6 +156,11 @@ internal sealed partial class LessonsWindow
     /// rejouer (remontée n° 13, 07/11). Faux hors parcours ou sur la première étape.</summary>
     private bool TutorialPrevious()
     {
+        if (_tutorialPage == TutorialPage.Final && _tutorialRoute is { Length: > 0 })
+        {
+            TutorialBackFromFinal();
+            return true;
+        }
         if (!TutorialOnRouteStep) return false;
         if (_tutorialRoutePos == 0) return true; // rien avant : le parcours ne sort pas vers l'Initiation
         _tutorialRoutePos--;
@@ -166,6 +171,21 @@ internal sealed partial class LessonsWindow
         UpdateAutoHintIfEnabled();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         return true;
+    }
+
+    /// <summary>« ‹ Précédent » sur l'écran final : la dernière étape du parcours, à rejouer ;
+    /// son « Suivant » ramène à l'écran final (audit UX du 09/11, L15 : aucun retour possible).</summary>
+    private void TutorialBackFromFinal()
+    {
+        if (_tutorialPage != TutorialPage.Final || _tutorialRoute is not { Length: > 0 }) return;
+        _tutorialRoutePos = _tutorialRoute.Length - 1;
+        _tutorialPage = TutorialPage.None;
+        ResetSummaryTab();
+        SelectExercise(LessonCatalogLoader.InitiationModuleId, LessonCatalogLoader.InitiationLessonId,
+            _tutorialRoute[_tutorialRoutePos].Index, savePosition: true);
+        _focusedActionIndex = -1;
+        UpdateAutoHintIfEnabled();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     /// <summary>« Recommencer » ou « Rejouer » dans le parcours : la même étape, depuis le début.</summary>
@@ -331,6 +351,9 @@ internal sealed partial class LessonsWindow
             focusAt = _clickActions.Count;
             DrawOutlineButton(hdc, more, L.Learning_BtnContinueLessons, () => ContinueAfterTutorial(HomeShowToday), primary: true);
             DrawOutlineButton(hdc, finish, L.Learning_BtnFinish, FinishTutorial);
+            // Retour vers la dernière étape, à gauche des boutons (audit UX du 09/11, L15).
+            if (_tutorialRoute is { Length: > 0 })
+                DrawLink(hdc, x, buttonsTop + S(18), "‹ " + L.LessonsWin_IconPrevious, false, TutorialBackFromFinal);
         }
         if (_tutorialFocusPending)
         {
@@ -606,7 +629,9 @@ internal sealed partial class LessonsWindow
         x -= skipForNow.right - skipForNow.left - S(8);
         var placed = DrawLink(hdc, x, mid, L.Learning_SkipForNow, false, LeaveTutorialForNow, L.Learning_SkipForNowTooltip);
         x = placed.left - S(20);
-        if (step.Skippable)
+        // Au bilan, « Suivant » fait déjà avancer : « Passer cet exercice » n'a plus rien à
+        // passer (audit UX du 09/11, L15).
+        if (step.Skippable && !_showSummary)
         {
             var skip = DrawLink(hdc, 0, 0, L.Learning_BtnSkip, false, AdvanceTutorialRoute, measureOnly: true);
             x -= skip.right - skip.left - S(8);

@@ -159,8 +159,9 @@ static class GdiHelpers
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         Win32.SetTextColor(hdc, primary ? DarkTheme.OnAccent : DarkTheme.Text);
         var textRect = rect;
-        Win32.DrawTextW(hdc, text, -1, ref textRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint format = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, text, textRect, format);
+        Win32.DrawTextW(hdc, text, -1, ref textRect, format);
         Win32.SelectObject(hdc, oldFont);
     }
 
@@ -219,8 +220,9 @@ static class GdiHelpers
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         Win32.SetTextColor(hdc, textColor);
         var textRect = rect;
-        Win32.DrawTextW(hdc, text, -1, ref textRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint format = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, text, textRect, format);
+        Win32.DrawTextW(hdc, text, -1, ref textRect, format);
         Win32.SelectObject(hdc, oldFont);
     }
 

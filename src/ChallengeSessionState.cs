@@ -65,22 +65,77 @@ internal sealed class ChallengeSessionState
     /// ouverture.</summary>
     public void EndRequest() => _requested = false;
 
+    /// <summary>La séance affichée est déjà comptée : la finir de nouveau ne change ni la date,
+    /// ni la séquence, ni « Défis terminés » (audit UX du 09/11, L10).</summary>
+    public bool AlreadyCounted => !TrainingReminders.WouldCount(_moduleDate, _moduleSequenceIndex);
+
+    /// <summary>
+    /// Record du Défi, tous jours confondus (audit UX du 09/11, L10) : la valeur gardée en
+    /// config, ou mieux celle des extraits des jours passés restés dans la progression (records
+    /// d'avant la 1.3.0). Null tant qu'aucun extrait n'a de vitesse.
+    /// </summary>
+    public static int? PersonalBestWpm(LessonProgressStore progress)
+    {
+        long best = Math.Max((long)ConfigManager.TrainingBestWpm, progress.BestChallengeWpm() ?? 0);
+        return best > 0 ? (int)Math.Min(best, int.MaxValue) : null;
+    }
+
     public void ClearShare()
     {
         ShareText = null;
         ShareCopied = false;
+        _shareSource = null;
+    }
+
+    // Ce dont le texte partagé est fait, gardé pour le refaire dans une autre langue.
+    private (DateOnly Date, uint SequenceIndex, LessonAttemptStats Stats, bool PersonalBest)? _shareSource;
+
+    /// <summary>Langue changée, bilan du Défi ouvert : le texte à copier est refait dans la
+    /// nouvelle langue, et le bouton propose de nouveau la copie (audit UX du 09/11, L14 : il
+    /// restait dans l'ancienne langue).</summary>
+    public void RefreshShareLanguage()
+    {
+        if (_shareSource == null) return;
+        try
+        {
+            ShareText = BuildShare();
+            ShareCopied = false;
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("LessonsWindow.RefreshChallengeShare", ex);
+        }
+    }
+
+    private string? BuildShare()
+    {
+        if (_shareSource is not { } source) return null;
+        var session = DailyChallenge.SessionFor(source.Date, source.SequenceIndex);
+        if (session == null || session.IsSequencePhase) return null;
+        return ChallengeShare.Build(source.Date, session.Extract.Credit, source.Stats, source.PersonalBest);
     }
 
     /// <summary>
     /// Clôt la séance jouée : prépare le texte partageable, puis date la séance et fait
     /// avancer la séquence, une seule fois par séance (un rejeu ne compte pas, A23). Les deux
     /// lisent l'étape dont le module a été construit, pas celle de la config, déjà avancée
-    /// après une première fin.
+    /// après une première fin, et la séance est datée du jour du module : une fenêtre restée
+    /// ouverte après minuit ne compte pas l'extrait de la veille une seconde fois, ni à la
+    /// place du Défi du nouveau jour (audit UX du 09/11, L17). <paramref name="previousBestWpm"/> est le record de tous les
+    /// Défis lu avant cette séance (<see cref="PersonalBestWpm"/>) ; battu ou pas encore en
+    /// config, il y est écrit.
     /// </summary>
     public void Complete(LessonAttemptStats stats, int? previousBestWpm)
     {
         PrepareShare(stats, previousBestWpm);
-        try { TrainingReminders.MarkSessionCompleted(DateOnly.FromDateTime(DateTime.Now), _moduleSequenceIndex); }
+        try
+        {
+            int best = Math.Max(previousBestWpm ?? 0, stats.Wpm ?? 0);
+            if (best > 0 && (uint)best > ConfigManager.TrainingBestWpm)
+                ConfigManager.SetTrainingBestWpm((uint)best);
+        }
+        catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeBest", ex); }
+        try { TrainingReminders.MarkSessionCompleted(_moduleDate, _moduleSequenceIndex); }
         catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeCompleted", ex); }
     }
 
@@ -99,7 +154,8 @@ internal sealed class ChallengeSessionState
             bool personalBest = previousBestWpm.HasValue && stats.Wpm.HasValue &&
                                 stats.Wpm.Value > previousBestWpm.Value;
 
-            ShareText = ChallengeShare.Build(today, session.Extract.Credit, stats, personalBest);
+            _shareSource = (today, _moduleSequenceIndex, stats, personalBest);
+            ShareText = BuildShare();
         }
         catch (Exception ex)
         {

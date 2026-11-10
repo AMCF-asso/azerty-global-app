@@ -129,16 +129,26 @@ static class TrainingReminders
     /// </summary>
     public static bool MarkSessionCompleted(DateOnly today, uint playedIndex)
     {
+        if (!WouldCount(today, playedIndex)) return false;
         uint seq = ConfigManager.TrainingSequenceIndex;
-        bool counted = seq < DailyChallenge.SequenceLength
-            ? playedIndex == seq
-            : playedIndex >= DailyChallenge.SequenceLength && ParseDate(ConfigManager.TrainingLastSessionDate) != today;
-        if (!counted) return false;
         ConfigManager.SetTrainingLastSessionDate(today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         if (seq < DailyChallenge.SequenceLength)
             ConfigManager.SetTrainingSequenceIndex(seq + 1);
         UsageStats.RecordChallengeCompleted();
         return true;
+    }
+
+    /// <summary>
+    /// La séance de l'étape <paramref name="playedIndex"/>, finie ce jour, compterait-elle ?
+    /// Faux pour un rejeu : étape déjà dépassée, ou défi commun déjà fait aujourd'hui. La
+    /// fenêtre Leçons le dit avant la frappe (audit UX du 09/11, L10).
+    /// </summary>
+    public static bool WouldCount(DateOnly today, uint playedIndex)
+    {
+        uint seq = ConfigManager.TrainingSequenceIndex;
+        return seq < DailyChallenge.SequenceLength
+            ? playedIndex == seq
+            : playedIndex >= DailyChallenge.SequenceLength && ParseDate(ConfigManager.TrainingLastSessionDate) != today;
     }
 
     private static DateOnly? ParseDate(string? s) =>

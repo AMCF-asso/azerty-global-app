@@ -116,8 +116,9 @@ static class ChipButton
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
         Win32.SetTextColor(hdc, enabled ? pal.Ink : pal.Pale);
         var textRect = pill;
-        Win32.DrawTextW(hdc, text.ToString(), -1, ref textRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint format = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, text.ToString(), textRect, format); // audit UX du 09/11, W24
+        Win32.DrawTextW(hdc, text.ToString(), -1, ref textRect, format);
         Win32.SelectObject(hdc, oldFont);
 
         if ((state & BST_FOCUS) != 0 && PaperChoice.FocusCuesShown(hWnd))

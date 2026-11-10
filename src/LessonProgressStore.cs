@@ -114,6 +114,31 @@ internal sealed class LessonProgressStore
         return GetValidProgress(exercise)?.Completed == true;
     }
 
+    /// <summary>
+    /// Meilleure vitesse enregistrée sur un extrait du Défi, tous jours confondus (audit UX du
+    /// 09/11, L10) : les clés « defi/defi-aaaammjj/1/empreinte » des jours passés restent dans
+    /// le fichier, y compris celles d'avant la 1.3.0. Null si aucun extrait n'a de vitesse.
+    /// </summary>
+    public int? BestChallengeWpm()
+    {
+        int? best = null;
+        foreach (var (key, progress) in _exercises)
+        {
+            if (progress.BestWpm is not int wpm || !IsChallengeExtractKey(key)) continue;
+            if (best is null || wpm > best) best = wpm;
+        }
+        return best;
+    }
+
+    /// <summary>Clé « module/leçon/rang/empreinte » d'un extrait du Défi.</summary>
+    private static bool IsChallengeExtractKey(string key)
+    {
+        string[] parts = key.Split('/');
+        return parts.Length == 4 &&
+               StringComparer.Ordinal.Equals(parts[0], DailyChallenge.ModuleId) &&
+               StringComparer.Ordinal.Equals(parts[2], DailyChallenge.ExtractExerciseIndex.ToString(CultureInfo.InvariantCulture));
+    }
+
     public int CountCompleted(LessonCatalog catalog)
     {
         int count = 0;

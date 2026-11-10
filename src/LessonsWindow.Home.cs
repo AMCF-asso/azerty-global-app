@@ -378,7 +378,18 @@ internal sealed partial class LessonsWindow
         DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect, pal.Ink);
     }
 
-    private string HomeEllipsize(IntPtr hdc, string text, FontSpec font, int maxWidth)
+    /// <summary>Coupe de l'accueil ; chaque passage est signalé à <see cref="TruncationProbe"/>
+    /// (audit UX du 09/11, W24).</summary>
+    private string HomeEllipsize(IntPtr hdc, string text, FontSpec font, int maxWidth,
+        [System.Runtime.CompilerServices.CallerFilePath] string file = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        string shown = HomeEllipsizeCore(hdc, text, font, maxWidth);
+        TruncationProbe.Ellipsized(hdc, text, shown, font, maxWidth, file, line);
+        return shown;
+    }
+
+    private static string HomeEllipsizeCore(IntPtr hdc, string text, FontSpec font, int maxWidth)
     {
         if (maxWidth <= 0) return "";
         if (PaperText.Width(hdc, text, font) <= maxWidth) return text;

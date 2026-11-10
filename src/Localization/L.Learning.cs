@@ -44,7 +44,9 @@ internal static partial class L
 
     // ── Boutons et ligne du parcours ───────────────────────────────────
     public static string Learning_BtnSkip => T("Passer cet exercice", "Skip this exercise");
-    public static string Learning_BtnFinish => T("Terminer", "Finish");
+    // « Fermer » : le bouton ferme la fenêtre, alors que « Terminer » mène ailleurs à
+    // Aujourd'hui (QCM d'Antoine du 10/11, audit UX L15).
+    public static string Learning_BtnFinish => T("Fermer", "Close");
     public static string Learning_BtnContinue => T("Continuer", "Continue");
     public static string Learning_SkipForNow => T("Passer pour l’instant", "Skip for now");
     public static string Learning_SkipForNowTooltip => T(
