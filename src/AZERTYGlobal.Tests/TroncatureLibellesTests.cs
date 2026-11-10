@@ -13,6 +13,11 @@ namespace AZERTYGlobal.Tests;
 /// DT_END_ELLIPSIS) ; le test ouvre les fenêtres sans les montrer, visite leurs écrans, les
 /// repeint (enfants compris) et relève chaque passage.
 ///
+/// Audit de régression 1.3.0, RA16 : s'y ajoutent les lignes écrites sans coupe
+/// (<see cref="PaperText.DrawLine"/>, qui débordent de leur cadre), le texte des contrôles
+/// natifs mesuré contre leur zone cliente, trois DPI simulés (120, 144, 192) et des états
+/// jamais visités ; voir <c>TroncatureLibellesTests.Controles.cs</c>.
+///
 /// Trois familles de textes coupés :
 /// <list type="bullet">
 /// <item>une chaîne de <see cref="L"/> (propriété sans paramètre) : échec ;</item>
@@ -24,7 +29,7 @@ namespace AZERTYGlobal.Tests;
 /// Aucune fenêtre n'est montrée ni activée : les fenêtres sont créées cachées, rendues invisibles
 /// par <see cref="BancCapture.Isolation"/>, et reçoivent leurs WM_PAINT directement.
 /// </summary>
-public sealed class TroncatureLibellesTests
+public sealed partial class TroncatureLibellesTests
 {
     private readonly ITestOutputHelper _sortie;
 
@@ -44,6 +49,8 @@ public sealed class TroncatureLibellesTests
         public string? TitreDatéLePlusLarge;
         /// <summary>DPI de la fenêtre Leçons : les marges de 2 px en dépendent.</summary>
         public int Dpi;
+        /// <summary>Classes de contrôle natif rencontrées et non mesurées (RA16).</summary>
+        public readonly HashSet<string> ClassesNonMesurées = new(StringComparer.OrdinalIgnoreCase);
         private string _écran = "";
 
         public Relevé() => TruncationProbe.Observer = passage => Passages.Add((_écran, passage));
@@ -58,6 +65,22 @@ public sealed class TroncatureLibellesTests
             _écran = écran;
             int avant = Passages.Count;
             Repeindre(hwnd);
+            if (Passages.Count == avant)
+                ÉcransMuets.Add(écran);
+            // RA16 : le texte des contrôles natifs, que Windows coupe au bord sans « … ».
+            foreach (var passage in MesurerContrôles(hwnd, ClassesNonMesurées))
+                Passages.Add((écran, passage));
+        }
+
+        /// <summary>Un passage mesuré par le test lui-même, sous le nom <paramref name="écran"/>.</summary>
+        public void Ajouter(string écran, TruncationProbe.Passage passage) => Passages.Add((écran, passage));
+
+        /// <summary>Une peinture hors fenêtre, relevée sous le nom <paramref name="écran"/>.</summary>
+        public void Sous(string écran, Action peindre)
+        {
+            _écran = écran;
+            int avant = Passages.Count;
+            peindre();
             if (Passages.Count == avant)
                 ÉcransMuets.Add(écran);
         }
@@ -145,7 +168,9 @@ public sealed class TroncatureLibellesTests
         var mapper = new KeyMapper(layout, new MockWin32Api());
         var hook = new KeyboardHook(mapper); // jamais installé
         ConfigManager.ClearWindowBounds(ConfigManager.LessonsWindowBoundsKey);
-        return new LessonsWindow(layout, mapper, hook);
+        var fenêtre = new LessonsWindow(layout, mapper, hook);
+        MettreÀLÉchelle(fenêtre, fenêtre.Handle); // RA16 : DPI simulé
+        return fenêtre;
     }
 
     /// <summary>Tape tout l'exercice sans faute, à 150 mots/min : une frappe toutes les 80 ms
@@ -280,6 +305,12 @@ public sealed class TroncatureLibellesTests
             Choisir(fenêtre, défi.Id, défi.Lessons[0].Id, défi.Lessons[0].Exercises.Count - 1);
             Taper(fenêtre);
             relevé.Visiter("Défi · bilan" + suffixe, hwnd);
+            // Audit de régression du 10/11, RA9 : l'extrait rejoué, sa ligne d'état précédée de
+            // « Séance du jour déjà comptée ».
+            BancCapture.Call(fenêtre, "ReplayExercise");
+            Assert.True(fenêtre.ChallengeAlreadyCounted);
+            Assert.StartsWith(L.Challenge_AlreadyDone, (string)BancCapture.Call(fenêtre, "BuildTypingStatus")!);
+            relevé.Visiter("Défi · rejoué, séance déjà comptée" + suffixe, hwnd);
             relevé.Cataloguer(fenêtre);
         }
         finally { BancCapture.Teardown(fenêtre); }
@@ -316,6 +347,7 @@ public sealed class TroncatureLibellesTests
         try
         {
             IntPtr hwnd = BancCapture.Handle(accueil);
+            MettreÀLÉchelle(accueil, hwnd);
             for (int étape = 0; étape < OnboardingStep.Count; étape++)
             {
                 BancCapture.SetField(accueil, "_currentStep", étape);
@@ -335,6 +367,7 @@ public sealed class TroncatureLibellesTests
         try
         {
             IntPtr hwnd = BancCapture.Handle(paramètres);
+            MettreÀLÉchelle(paramètres, hwnd);
             BancCapture.Call(paramètres, "RepositionControls");
             IntPtr onglets = BancCapture.Field<IntPtr>(paramètres, "_hWndTabStrip");
             var type = typeof(SettingsWindow).GetNestedType("SettingsTab", BindingFlags.NonPublic)!;
@@ -344,20 +377,24 @@ public sealed class TroncatureLibellesTests
                 BancCapture.Call(paramètres, "SetActiveTab", onglet);
                 relevé.Visiter($"Paramètres · {onglet}", hwnd);
             }
+            VisiterMessagesDesParamètres(relevé, paramètres, hwnd);
         }
         finally { BancCapture.Teardown(paramètres); }
 
         var statistiques = new UsageStatsWindow();
         try
         {
+            MettreÀLÉchelle(statistiques, BancCapture.Handle(statistiques));
             BancCapture.Call(statistiques, "FitWindow");
             relevé.Visiter("Statistiques", BancCapture.Handle(statistiques));
         }
         finally { BancCapture.Teardown(statistiques); }
+        VisiterStatistiquesÉteintes(relevé);
 
         var àPropos = new AboutWindow();
         try
         {
+            MettreÀLÉchelle(àPropos, BancCapture.Handle(àPropos));
             BancCapture.Call(àPropos, "RepositionControls");
             relevé.Visiter("À propos", BancCapture.Handle(àPropos));
         }
@@ -366,6 +403,7 @@ public sealed class TroncatureLibellesTests
         var couches = new MaintainableLayersWindow();
         try
         {
+            MettreÀLÉchelle(couches, BancCapture.Handle(couches));
             BancCapture.Call(couches, "LoadFromConfig");
             relevé.Visiter("Couches", BancCapture.Handle(couches));
         }
@@ -375,6 +413,7 @@ public sealed class TroncatureLibellesTests
         try
         {
             IntPtr hwnd = BancCapture.Handle(clavier);
+            MettreÀLÉchelle(clavier, hwnd);
             relevé.Visiter("Clavier virtuel", hwnd);
             clavier.UpdateState(false, true, false, false, false, null);
             relevé.Visiter("Clavier virtuel · AltGr", hwnd);
@@ -389,6 +428,7 @@ public sealed class TroncatureLibellesTests
         try
         {
             BancCapture.Call(pause, "CreateWindow", IntPtr.Zero);
+            MettreÀLÉchelle(pause, BancCapture.Handle(pause));
             relevé.Visiter("Durée de pause", BancCapture.Handle(pause));
         }
         finally
@@ -402,6 +442,7 @@ public sealed class TroncatureLibellesTests
             var conflit = new LayoutConflictWindow(auDémarrage, () => { }, () => { });
             try
             {
+                MettreÀLÉchelle(conflit, BancCapture.Handle(conflit));
                 BancCapture.Call(conflit, "FitWindow");
                 relevé.Visiter(auDémarrage ? "Conflit · démarrage" : "Conflit · bascule", BancCapture.Handle(conflit));
             }
@@ -412,11 +453,16 @@ public sealed class TroncatureLibellesTests
         try
         {
             IntPtr hwnd = BancCapture.Handle(recherche);
+            MettreÀLÉchelle(recherche, hwnd);
             BancCapture.Call(recherche, "ResizeToFitResults");
             Win32.SetWindowTextW(BancCapture.Field<IntPtr>(recherche, "_hEdit"), L.IsEnglish ? "acute" : "aigu");
             relevé.Visiter("Recherche · résultats", hwnd);
+            VisiterRechercheSansRésultat(relevé, recherche, hwnd);
         }
         finally { BancCapture.Teardown(recherche); }
+
+        VisiterBascule(relevé);
+        VisiterIndicateurDeCouche(relevé, _dpiSimulé > 0 ? _dpiSimulé : relevé.Dpi);
     }
 
     // ── Le test ──────────────────────────────────────────────────────
@@ -437,20 +483,34 @@ public sealed class TroncatureLibellesTests
     private static string Décrire(string écran, TruncationProbe.Passage p, string origine) =>
         $"« {p.Text} » [{origine}] — {écran} — {Path.GetFileName(p.File)}:{p.Line} — demande {p.Needed} px, dispose de {p.Available} px";
 
+    /// <summary><paramref name="dpi"/> 0 : le DPI du poste, sur son écran. 120, 144 et 192 :
+    /// DPI simulé (RA16), sur un écran courant à cette échelle.</summary>
     [Theory]
-    [InlineData("fr")]
-    [InlineData("en")]
-    public void Aucun_libelle_d_interface_n_est_coupe_a_la_taille_par_defaut(string langue)
+    [InlineData("fr", 0)]
+    [InlineData("en", 0)]
+    [InlineData("fr", 120)]
+    [InlineData("en", 120)]
+    [InlineData("fr", 144)]
+    [InlineData("en", 144)]
+    [InlineData("fr", 192)]
+    [InlineData("en", 192)]
+    public void Aucun_libelle_d_interface_n_est_coupe_a_la_taille_par_defaut(string langue, int dpi)
     {
         using var isolation = new BancCapture.Isolation();
         isolation.SetLanguage(langue);
+        using var écranSimulé = dpi > 0 ? NativeWindow.OverrideWorkAreaForTests(ÉcranPour(dpi)) : null;
         using var relevé = new Relevé();
-
-        ParcourirLeçons(relevé);
-        ParcourirParcours(relevé);
-        ParcourirDéfi(relevé, aprèsPriseEnMain: false);
-        ParcourirDéfi(relevé, aprèsPriseEnMain: true);
-        ParcourirFenêtres(relevé);
+        _échelles.Clear();
+        _dpiSimulé = dpi;
+        try
+        {
+            ParcourirLeçons(relevé);
+            ParcourirParcours(relevé);
+            ParcourirDéfi(relevé, aprèsPriseEnMain: false);
+            ParcourirDéfi(relevé, aprèsPriseEnMain: true);
+            ParcourirFenêtres(relevé);
+        }
+        finally { _dpiSimulé = 0; }
 
         var chaînes = Chaînes();
         var interface_ = new List<string>();
@@ -470,7 +530,10 @@ public sealed class TroncatureLibellesTests
                 interface_.Add(Décrire(écran, p, "texte composé"));
         }
 
-        _sortie.WriteLine($"{langue} à {relevé.Dpi} DPI : {relevé.Passages.Count} passages par une coupe, sur {relevé.Passages.Select(x => x.Écran).Distinct().Count()} écrans.");
+        _sortie.WriteLine($"{langue}, poste à {relevé.Dpi} DPI, {(dpi > 0 ? $"fenêtres portées à {dpi} DPI" : "sans DPI simulé")} : {relevé.Passages.Count} passages par une coupe, sur {relevé.Passages.Select(x => x.Écran).Distinct().Count()} écrans.");
+        _sortie.WriteLine($"Dont {relevé.Passages.Count(x => x.Passage.Overflow)} lignes sans coupe (DrawLine) et {relevé.Passages.Count(x => x.Passage.File.StartsWith("natif ", StringComparison.Ordinal))} textes de contrôle natif.");
+        _sortie.WriteLine("Échelle retenue par fenêtre : " + string.Join(", ", _échelles.OrderBy(e => e.Key, StringComparer.Ordinal).Select(e => $"{e.Key} {e.Value:0.##}")));
+        _sortie.WriteLine("Classes de contrôle natif non mesurées : " + (relevé.ClassesNonMesurées.Count == 0 ? "aucune" : string.Join(", ", relevé.ClassesNonMesurées.OrderBy(c => c, StringComparer.Ordinal))));
         _sortie.WriteLine("Appels vus : " + string.Join(", ", relevé.Passages
             .Select(x => $"{Path.GetFileName(x.Passage.File)}:{x.Passage.Line}").Distinct().OrderBy(s => s, StringComparer.Ordinal)));
         // L'en-tête n'appelle Ellipsize que si module et leçon ne tiennent pas ensemble : sans
@@ -484,12 +547,37 @@ public sealed class TroncatureLibellesTests
         foreach (string ligne in contenus) _sortie.WriteLine("  " + ligne);
         _sortie.WriteLine($"Libellés d'interface coupés : {interface_.Count}");
         foreach (string ligne in interface_) _sortie.WriteLine("  " + ligne);
+        // Les textes qui tiennent de justesse : les premiers à couper si un libellé s'allonge.
+        _sortie.WriteLine("Marges les plus faibles (textes qui tiennent) :");
+        foreach (var (écran, p) in relevé.Passages.Where(x => !x.Passage.Cut && x.Passage.Text.Length > 1)
+                     .DistinctBy(x => (x.Passage.Text, x.Passage.File, x.Passage.Line))
+                     .OrderBy(x => x.Passage.Available - x.Passage.Needed).Take(12))
+            _sortie.WriteLine("  " + Décrire(écran, p, chaînes.TryGetValue(p.Text, out string? n) ? "L." + n : "autre"));
+        if (Environment.GetEnvironmentVariable("AZERTY_TRONCATURE_DETAIL") == "1")
+        {
+            _sortie.WriteLine("Contrôles natifs mesurés :");
+            foreach (var (écran, p) in relevé.Passages.Where(x => x.Passage.File.StartsWith("natif ", StringComparison.Ordinal))
+                         .DistinctBy(x => (x.Passage.Text, x.Passage.File, x.Passage.Line, x.Passage.Available)))
+                _sortie.WriteLine("  " + Décrire(écran, p, "natif"));
+        }
 
         // Seules ces fenêtres n'ont aucune coupe à points de suspension (ni Ellipsize ni
         // DT_END_ELLIPSIS) ; tout autre écran muet n'a pas été peint, et ne prouverait rien.
-        string[] sansCoupe = { "Paramètres · ", "Clavier virtuel", "Conflit · " };
+        // Depuis que DrawLine passe par la couture (RA16), il ne reste que le Conflit, dont le
+        // texte est en paragraphes et en contrôles natifs.
+        string[] sansCoupe = { "Conflit · " };
         var muets = relevé.ÉcransMuets.Where(é => !sansCoupe.Any(é.StartsWith)).ToList();
         Assert.True(muets.Count == 0, $"{langue} : écrans peints sans aucun passage par une coupe : {string.Join(" | ", muets)}");
+
+        // Le DPI simulé a été pris : sans cela, les passages à 120, 144 et 192 DPI rejoueraient
+        // celui du poste. L'Accueil réduit lui-même son échelle pour tenir dans l'écran.
+        if (dpi > 0)
+        {
+            Assert.True(_échelles.Count >= 9, $"échelle lue dans {_échelles.Count} fenêtres seulement");
+            foreach (var (fenêtre, échelle) in _échelles.Where(e => e.Key != nameof(OnboardingWindow)))
+                Assert.True(Math.Abs(échelle - dpi / 96f) < 0.02f, $"{fenêtre} : échelle {échelle} pour {dpi} DPI");
+            Assert.True(_échelles[nameof(OnboardingWindow)] > 1f, $"Accueil : échelle {_échelles[nameof(OnboardingWindow)]} pour {dpi} DPI");
+        }
 
         Assert.True(interface_.Count == 0,
             $"{langue} : {interface_.Count} libellé(s) d'interface coupé(s) :\n" + string.Join("\n", interface_));

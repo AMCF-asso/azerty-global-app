@@ -83,6 +83,26 @@ public sealed class Audit0911AccueilAProposTests : IDisposable
         Assert.Contains("Ctrl + Maj + J", OnboardingWindow.StepAccessibleSummary(OnboardingStep.HowTo));
     }
 
+    /// <summary>Audit de régression du 10/11, RA15 : l'astuce dessinée à l'étape des langues
+    /// gardait « W » écrit en dur, alors que son texte lu suivait déjà le réglage.</summary>
+    [Theory]
+    [InlineData(0u, "Ctrl + Maj + W")]     // réglage par défaut
+    [InlineData(0x4Au, "Ctrl + Maj + J")]  // recherche réglée sur J
+    public void Accueil_AstuceDesLangues_ÉcritLeRaccourciRéglé(uint vk, string attendu)
+    {
+        using var isolation = new BancCapture.Isolation();
+        L.Language = "fr";
+        if (vk != 0) ConfigManager.ShortcutCharacterSearchVk = vk;
+
+        var runs = OnboardingWindow.TipRuns();
+        string astuce = string.Concat(runs.Select(r => r.Text));
+
+        Assert.Equal(L.Onboarding_LanguagesTipPrefix + attendu + L.Onboarding_LanguagesTipSuffix, astuce);
+        Assert.Equal(L.Onboarding_LanguagesTipPrefix + OnboardingWindow.SearchShortcut() + L.Onboarding_LanguagesTipSuffix, astuce);
+        // Les touches restent en semi-gras, la lettre réglée comprise.
+        Assert.Contains(runs, r => r.Strong && r.Text == attendu[^1..]);
+    }
+
     // ── W6 : un refus d'activation laisse une issue ─────────────────────────
 
     [Fact]

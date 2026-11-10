@@ -173,6 +173,59 @@ public class DefiRecordTests
         finally { BancCapture.Teardown(fenêtre); }
     }
 
+    /// <summary>Audit de régression du 10/11, RA9 : le jour où la 5e séance de prise en main est
+    /// comptée, le premier Défi commun ne compterait pas non plus (un par jour), mais il n'a jamais
+    /// été joué : la ligne « déjà comptée » n'a rien à y faire.</summary>
+    [Fact]
+    public void Le_premier_defi_commun_jamais_joue_n_est_pas_dit_deja_compte()
+    {
+        using var isolation = new BancCapture.Isolation();
+        ConfigManager.SetTrainingSequenceIndex(DailyChallenge.SequenceLength);
+        ConfigManager.SetTrainingLastSessionDate(DateOnly.FromDateTime(DateTime.Now)
+            .ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)); // la 5e séance, finie aujourd'hui
+        var fenêtre = Ouvrir();
+        try
+        {
+            BancCapture.Field<ChallengeSessionState>(fenêtre, "_challenge").Request();
+            BancCapture.Call(fenêtre, "RefreshChallengeModuleIfStale");
+            var défi = BancCapture.Field<LessonCatalog>(fenêtre, "_catalog").Modules.Single(m => m.Id == DailyChallenge.ModuleId);
+            Assert.True((bool)BancCapture.Call(fenêtre, "SelectExercise", DailyChallenge.ModuleId, défi.Lessons[0].Id, 0, false)!);
+
+            Assert.True(BancCapture.Field<ChallengeSessionState>(fenêtre, "_challenge").AlreadyCounted); // la finir ne compterait pas
+            Assert.False(fenêtre.ChallengeAlreadyCounted);
+            Assert.DoesNotContain(L.Challenge_AlreadyDone, (string)BancCapture.Call(fenêtre, "BuildTypingStatus")!);
+        }
+        finally { BancCapture.Teardown(fenêtre); }
+    }
+
+    /// <summary>RA9 : le libellé est court (la ligne d'état en cumulait trois phrases) et il est
+    /// dit au lecteur d'écran, dans le texte d'aide de la surface de frappe.</summary>
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("en")]
+    public void La_seance_deja_comptee_se_dit_en_peu_de_mots_et_au_lecteur_d_ecran(string langue)
+    {
+        using var isolation = new BancCapture.Isolation();
+        isolation.SetLanguage(langue);
+        ConfigManager.SetTrainingSequenceIndex(DailyChallenge.SequenceLength);
+        var fenêtre = Ouvrir();
+        try
+        {
+            JouerLeDéfi(fenêtre, 0);
+            BancCapture.Call(fenêtre, "ReplayExercise");
+            CiblesDessinées(fenêtre);
+            Assert.DoesNotContain(L.Challenge_AlreadyDone, BancCapture.Field<LessonSurfaceView?>(fenêtre, "_surfaceView")!.HelpText);
+
+            JouerLeDéfi(fenêtre, DailyChallenge.ExtractExerciseIndex); // la séance du jour est comptée
+            BancCapture.Call(fenêtre, "ReplayExercise");
+            Assert.True(fenêtre.ChallengeAlreadyCounted);
+            CiblesDessinées(fenêtre);
+            Assert.EndsWith(L.Challenge_AlreadyDone, BancCapture.Field<LessonSurfaceView?>(fenêtre, "_surfaceView")!.HelpText);
+            Assert.InRange(L.Challenge_AlreadyDone.Length, 1, 34);
+        }
+        finally { BancCapture.Teardown(fenêtre); }
+    }
+
     [Fact]
     public void Pendant_la_prise_en_main_seul_le_rejeu_est_deja_compte()
     {

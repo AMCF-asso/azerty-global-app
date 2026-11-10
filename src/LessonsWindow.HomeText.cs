@@ -379,7 +379,8 @@ internal sealed partial class LessonsWindow
         if (result.Exercise is not { } exercise) return;
         var characters = LessonsHomeLogic.TextBilan(exercise.Content, _progress.Gestures, DateTimeOffset.UtcNow, HomeTextTracked)
             .Select(line => line.Character).ToList();
-        HomeStartComposed(exercise, L.LessonsHome_YourText, L.LessonsHome_YourText, characters);
+        HomeStartComposed(exercise,
+            () => (L.LessonsHome_YourText, L.LessonsHome_YourText, L.LessonsHome_TextInstruction), characters);
     }
 
     // ── Dessin ───────────────────────────────────────────────────────────

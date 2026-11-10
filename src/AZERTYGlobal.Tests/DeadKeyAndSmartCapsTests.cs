@@ -183,10 +183,15 @@ public class DeadKeyAndSmartCapsTests : IDisposable
 
     // E15 (audit 09/11) : Échap ou un raccourci Ctrl abandonne la touche morte armée, sans rien
     // écrire ; la lettre suivante sort nue.
+    // RA3 (audit de régression 10/11) : mêmes attentes avec Alt gauche et Win tenus
+    // (0 = Échap seul ; sinon le VK du modificateur tenu pendant la touche X).
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void ProcessKey_EscapeOrCtrlShortcut_CancelsActiveDeadKey(bool ctrlX)
+    [InlineData(0u, 0u, 0u)]        // Échap
+    [InlineData(0xA2u, 0x1Du, 0u)]  // Ctrl gauche + X
+    [InlineData(0xA4u, 0x38u, 0u)]  // Alt gauche + X
+    [InlineData(0x5Bu, 0x5Bu, 1u)]  // Win gauche + X
+    [InlineData(0x5Cu, 0x5Cu, 1u)]  // Win droite + X
+    public void ProcessKey_EscapeOrCtrlShortcut_CancelsActiveDeadKey(uint modifierVk, uint modifierScan, uint modifierFlags)
     {
         var mock = new MockWin32Api();
         var mapper = new KeyMapper(_layout, mock);
@@ -195,14 +200,15 @@ public class DeadKeyAndSmartCapsTests : IDisposable
         Assert.NotNull(mapper.ActiveDeadKey);
         mock.SendInputCalls.Clear();
 
-        if (ctrlX)
+        if (modifierVk != 0)
         {
-            mock.AsyncKeyStateScript[0xA2] = KeyDown;
-            mapper.TrackModifiers(0xA2, 0x1D, 0, true);
-            mapper.ProcessKey(0x58, 0x2D, 0, true); // Ctrl+X
+            mock.AsyncKeyStateScript[(int)modifierVk] = KeyDown;
+            mapper.TrackModifiers(modifierVk, modifierScan, modifierFlags, true);
+            mapper.ProcessKey(0x58, 0x2D, 0, true); // modificateur + X
+            Assert.Null(mapper.ActiveDeadKey);
             mapper.ProcessKey(0x58, 0x2D, 0, false);
-            mock.AsyncKeyStateScript[0xA2] = 0;
-            mapper.TrackModifiers(0xA2, 0x1D, 0, false);
+            mock.AsyncKeyStateScript[(int)modifierVk] = 0;
+            mapper.TrackModifiers(modifierVk, modifierScan, modifierFlags, false);
         }
         else
             mapper.ProcessKey(0x1B, 0x01, 0, true); // Échap
@@ -212,6 +218,43 @@ public class DeadKeyAndSmartCapsTests : IDisposable
         mock.SendInputCalls.Clear();
         mapper.ProcessKey(0, SC_D03, 0, true);
         Assert.Equal("e", EmittedText(mock));
+    }
+
+    // RA3 : Alt Gr n'est pas un raccourci. Tenu avec une touche (Alt Gr réel : Alt droite
+    // et son Ctrl gauche fantôme ; Alt Gr simulé : Ctrl droite + Alt gauche), il ne doit
+    // pas abandonner la touche morte armée : l'accent est rendu avec le caractère.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ProcessKey_AltGrKey_KeepsActiveDeadKey(bool simulated)
+    {
+        var mock = new MockWin32Api();
+        var mapper = new KeyMapper(_layout, mock);
+        (uint Vk, uint Scan, uint Flags)[] modifiers = simulated
+            ? new[] { (0xA3u, 0x1Du, 1u), (0xA4u, 0x38u, 0u) }   // Ctrl droite + Alt gauche
+            : new[] { (0xA2u, 0x1Du, 0u), (0xA5u, 0x38u, 1u) };  // Ctrl fantôme + Alt droite
+
+        mapper.ProcessKey(0, SC_C11, 0, true); // dk_acute actif
+        Assert.Equal("dk_acute", mapper.ActiveDeadKey);
+        mock.SendInputCalls.Clear();
+
+        foreach (var (vk, scan, flags) in modifiers)
+        {
+            mock.AsyncKeyStateScript[(int)vk] = KeyDown;
+            mapper.TrackModifiers(vk, scan, flags, true);
+        }
+        Assert.Equal("dk_acute", mapper.ActiveDeadKey);
+        mapper.ProcessKey(0, SC_D03, 0, true); // Alt Gr + E = €
+        mapper.ProcessKey(0, SC_D03, 0, false);
+        foreach (var (vk, scan, flags) in modifiers)
+        {
+            mock.AsyncKeyStateScript[(int)vk] = 0;
+            mapper.TrackModifiers(vk, scan, flags, false);
+        }
+
+        // L'accent n'a pas été jeté : il sort avec le caractère de la couche Alt Gr.
+        Assert.Equal("´€", EmittedText(mock));
+        Assert.Null(mapper.ActiveDeadKey);
     }
 
     [Fact]

@@ -36,6 +36,13 @@
 
     <!-- Audit sécu 2026-05 SEV-A4-02 : reproductibilité binaire explicite. -->
     <Deterministic>true</Deterministic>
+    <!-- Audit de régression 1.3.0, RP4 : la couture de troncature (TruncationProbe) reçoit
+         [CallerFilePath], que le compilateur remplace par le chemin complet du fichier source.
+         Sans cette table, le dossier du poste de build entrait dans le binaire Release, qui
+         dépendait alors de l'endroit où il est compilé. Le dossier du projet devient « /_/ » :
+         les tests gardent un nom de fichier lisible. Témoin : CheminsDeSourceTests et
+         scripts/check-source-paths.py sur le binaire construit. -->
+    <PathMap>$([MSBuild]::EnsureTrailingSlash('$(MSBuildProjectDirectory)'))=/_/</PathMap>
 
     <!-- Requis par l'interop COM source-générée ([GeneratedComInterface]/[GeneratedComClass])
          de l'activateur de toast (ToastActivation.cs, v1.2.0). Le code applicatif lui-même
@@ -77,6 +84,10 @@
          sous l'ancienne empreinte (audit UX L1). Table figée, générée par
          scripts/build-lesson-instruction-history.py. -->
     <EmbeddedResource Include="lesson-instruction-history.json" LogicalName="lesson-instruction-history.json" />
+    <!-- Anciennes formes (clé, texte) des exercices dont le texte ou le rang a changé depuis
+         une version publiée : leur réussite est reprise, sans scores (audit du 10/11, RA2).
+         Même script. -->
+    <EmbeddedResource Include="lesson-content-history.json" LogicalName="lesson-content-history.json" />
     <!-- Recherche par langue (1.3.0) : noms de langue et de ton → caractères. Générée par
          scripts/build-language-search.py depuis le référentiel Afrique du site. -->
     <EmbeddedResource Include="language-search.json" LogicalName="language-search.json" />

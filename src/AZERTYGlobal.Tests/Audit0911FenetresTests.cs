@@ -462,6 +462,46 @@ public sealed class Audit0911FenetresTests : IDisposable
         Assert.NotEqual(L.Tray_MenuDisable, L.TrayClarity_MenuDisableEndsPause);
     }
 
+    /// <summary>Audit de régression du 10/11, RA4 : error.log recevait « active (TeamViewer) ».
+    /// La note RGPD des établissements promet qu'aucun nom de logiciel n'y est lisible : le
+    /// journal dit l'état, jamais l'outil (QCM du 10/11).</summary>
+    [Fact]
+    public void SessionDistante_LeJournalDitLÉtat_JamaisLOutil()
+    {
+        Assert.Equal("inactive", TrayApplication.RemoteSessionLogDetails(null));
+        Assert.NotEmpty(GameRegistry.RemoteSessionMarkers);
+        foreach (var marker in GameRegistry.RemoteSessionMarkers)
+        {
+            Assert.Equal("active", TrayApplication.RemoteSessionLogDetails(marker.Tool));
+            Assert.Equal("active", TrayApplication.RemoteSessionLogDetails(marker.Process));
+        }
+    }
+
+    /// <summary>La sonde ne passe au journal que ce texte : ni le nom de l'outil, ni celui de
+    /// son processus ne sont concaténés à côté.</summary>
+    [Fact]
+    public void SessionDistante_LaSondeNeJournaliseQueLÉtat()
+    {
+        string source = File.ReadAllText(SourceDeLApp("TrayApplication.cs"));
+        int début = source.IndexOf("private void ProbeRemoteHost()", StringComparison.Ordinal);
+        int fin = source.IndexOf("private bool ActivateWithConsent()", StringComparison.Ordinal);
+        Assert.True(début > 0 && fin > début, "ProbeRemoteHost introuvable dans TrayApplication.cs");
+        string sonde = source[début..fin];
+
+        Assert.Contains("ConfigManager.LogCompatEvent(\"RemoteSession\", RemoteSessionLogDetails(tool));", sonde);
+        Assert.DoesNotMatch(@"LogCompatEvent\([^;]*\+", sonde);
+    }
+
+    private static string SourceDeLApp(string fichier)
+    {
+        for (var dossier = new DirectoryInfo(AppContext.BaseDirectory); dossier != null; dossier = dossier.Parent)
+        {
+            string chemin = Path.Combine(dossier.FullName, "src", fichier);
+            if (File.Exists(chemin)) return chemin;
+        }
+        throw new FileNotFoundException(fichier);
+    }
+
     // ── W3 : l'accueil reste utilisable en pause, seul le champ d'essai s'arrête ─
 
     [Fact]

@@ -103,8 +103,8 @@ internal sealed class LessonExercise
     /// <summary>
     /// Empreintes que les versions d'avant le 09/11/2026 donnaient à cet exercice : une par
     /// consigne publiée (FR et EN, table figée `lesson-instruction-history.json`) et par la
-    /// consigne actuelle. Calculées avec le texte actuel : un texte modifié depuis ne
-    /// retrouve pas sa progression, comme avant.
+    /// consigne actuelle. Calculées avec le texte actuel : un texte modifié depuis se
+    /// retrouve par <see cref="SupersededKeys"/>, s'il est dans la table des anciennes formes.
     /// </summary>
     public IReadOnlyList<string> LegacyHashes => _legacyHashes ??= LessonInstructionHistory
         .For(KeyPrefix.TrimEnd('/'))
@@ -114,6 +114,29 @@ internal sealed class LessonExercise
         .ToArray();
 
     private string[]? _legacyHashes;
+
+    /// <summary>
+    /// Clés de progression complètes (« module/leçon/rang/empreinte ») que les versions
+    /// publiées donnaient aux anciennes formes de cet exercice : un autre texte à taper, ou
+    /// un autre rang dans la leçon (table `lesson-content-history.json`, audit de régression
+    /// du 10/11, RA2). Une par consigne connue, plus l'empreinte sans consigne. Une réussite
+    /// trouvée sous l'une d'elles est reprise sans ses scores
+    /// (<see cref="LessonProgressStore.MergeLegacy"/>). Un texte absent de la table reste
+    /// « à faire ».
+    /// </summary>
+    public IReadOnlyList<string> SupersededKeys => _supersededKeys ??= LessonContentHistory
+        .For(KeyPrefix.TrimEnd('/'))
+        .SelectMany(form => LessonInstructionHistory.For(form.Key)
+            .Concat(LessonInstructionHistory.For(KeyPrefix.TrimEnd('/')))
+            .Append(Instruction)
+            .Distinct(StringComparer.Ordinal)
+            .Select(instruction => LessonCatalogLoader.ComputeLegacyExerciseHash(Type, instruction, form.Content))
+            .Append(LessonCatalogLoader.ComputeExerciseHash(Type, form.Content))
+            .Select(hash => $"{form.Key}/{hash}"))
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
+
+    private string[]? _supersededKeys;
 
     public string ModuleId { get; }
     public string LessonId { get; }

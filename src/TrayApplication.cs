@@ -1342,9 +1342,16 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
+    /// Texte journalisé pour une transition de session distante : l'état, jamais le nom de
+    /// l'outil. La note RGPD des établissements promet qu'aucun nom de logiciel n'est lisible
+    /// dans error.log (audit de régression du 10/11, RA4).
+    /// </summary>
+    internal static string RemoteSessionLogDetails(string? tool) => tool != null ? "active" : "inactive";
+
+    /// <summary>
     /// C5 revu le 30/10 (audit M1) : met à jour KeyboardHook.RemoteSessionActive depuis le
     /// pool de threads, selon qu'une session distante est ouverte dans notre session Windows.
-    /// Une seule sonde à la fois ; une transition est journalisée (nom de l'outil, aucune frappe).
+    /// Une seule sonde à la fois ; une transition est journalisée (état seul, aucune frappe).
     /// </summary>
     private void ProbeRemoteHost()
     {
@@ -1359,7 +1366,7 @@ sealed class TrayApplication : IDisposable
                 if (hook != null && hook.RemoteSessionActive != active)
                 {
                     hook.RemoteSessionActive = active;
-                    ConfigManager.LogCompatEvent("RemoteSession", active ? "active (" + tool + ")" : "inactive");
+                    ConfigManager.LogCompatEvent("RemoteSession", RemoteSessionLogDetails(tool));
                 }
             }
             catch (Exception ex)

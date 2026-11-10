@@ -9,7 +9,7 @@ internal static partial class L
     public static string Onboarding_ActivateAndTry => T("Activer et essayer", "Turn on and try");
     public static string Onboarding_Activate => T($"Activer {Product}", $"Turn on {Product}");
     public static string Onboarding_InactiveSubtitle => T("Activez votre AZERTY amélioré.", "Turn on your improved AZERTY.");
-    public static string Onboarding_LetsGo => T("C’est parti !", "Let’s go!");
+    public static string Onboarding_LetsGo => T("C’est parti !", "Let’s go!");
 
     // ── Étape 3 — liens et préférences ────────────────────────────────
     public static string Onboarding_LinkLessons => T("Continuer avec les leçons", "Continue with the lessons");
@@ -46,13 +46,13 @@ internal static partial class L
         "Acute accent, grave accent and tilde. A dead key types nothing by itself: it waits for the next letter and accents it.");
     // Refonte du 15/10 (textes validés par Antoine) : le clavier et ses cinq notes au trait.
     public static string Onboarding_Step1Subtitle => T(
-        "Les nouveautés sont en bleu ; vos lettres restent à leur place.",
+        "Les nouveautés sont en bleu ; vos lettres restent à leur place.",
         "What’s new is in blue; your letters stay where they are.");
     public static string Onboarding_NoteAt => T($"sans {AltGrKey} (# avec Maj)", $"without {AltGrKey} (# with Shift)");
     public static string Onboarding_NoteCaps => T("Verr. Maj., puis é è ç à", "Caps Lock, then é è ç à");
     public static string Onboarding_NoteCoding => T($"Programmation facilitée : {AltGrKey} + D à K", $"Easier coding: {AltGrKey} + D to K");
     public static string Onboarding_NotePeriod => T("le point, sans Maj", "the period, without Shift");
-    public static string Onboarding_NoteAccents => T($"puis la lettre ; la lettre ù : {AltGrKey} + u", $"then the letter; the letter ù: {AltGrKey} + u");
+    public static string Onboarding_NoteAccents => T($"puis la lettre ; la lettre ù : {AltGrKey} + u", $"then the letter; the letter ù: {AltGrKey} + u");
     // « Aucune frappe enregistrée » serait faux : l'app garde des compteurs locaux agrégés (UsageStats).
     public static string Onboarding_PrivacyReassurance => T(
         "Tout se passe sur votre ordinateur : ce que vous tapez n’est ni enregistré ni envoyé.",
@@ -110,7 +110,7 @@ internal static partial class L
     /// <summary>Champ d'essai figé pendant une pause ou une suspension (audit 09/11, W3).</summary>
     public static string Onboarding_TrialPaused => T(
         "L’essai attend la reprise : le clavier n’est pas actif pour l’instant.",
-        "The test waits for resume: the keyboard is not active right now.");
+        "The trial resumes when the keyboard is active again.");
     public static string Onboarding_LanguagesTipPrefix => T("Une autre lettre : ", "Another letter: ");
     public static string Onboarding_LanguagesTipSuffix => T(
         ", puis tapez « peul » ou « bambara ».",

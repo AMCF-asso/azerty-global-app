@@ -294,6 +294,16 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
         _lessonIndex = Math.Clamp(_lessonIndex, 0, _catalog.Modules[_moduleIndex].Lessons.Count - 1); // le catalogue, pas la séance composée de l'accueil
         _exerciseIndex = Math.Clamp(_exerciseIndex, 0, _catalog.Modules[_moduleIndex].Lessons[_lessonIndex].Exercises.Count - 1);
+        // Audit de régression du 10/11, RA12. Le titre de la fenêtre (barre de titre, barre des
+        // tâches, Alt+Tab) restait dans l'ancienne langue ; la séance composée aussi.
+        SetTutorialCaption(IsTutorialActive);
+        HomeRetranslateComposed();
+        // Le catalogue rechargé porte le Défi du moment : fenêtre restée ouverte après minuit ou
+        // étape changée, l'exercice affiché n'est plus celui de la séance en cours, dont la
+        // frappe irait sous la clé et la date du nouveau. La séance repart sur l'exercice
+        // affiché ; même texte (seule la langue change), elle continue telle quelle.
+        if (!StringComparer.Ordinal.Equals(_session.Exercise.StableKey, CurrentExercise.StableKey))
+            StartCurrentSession(savePosition: false);
         if (_hWnd != IntPtr.Zero)
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
@@ -304,6 +314,17 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         _inputPaused = paused;
     }
+
+    /// <summary>
+    /// Audit de régression du 10/11, RA5 (suite d'E26, CharacterSearch.BlockedWhilePaused) : en
+    /// pause, la fenêtre refuse la frappe de l'exercice, pas la navigation. Échap (fermer), Tab et
+    /// Maj+Tab (changer de cible) passent, ainsi qu'Entrée ou Espace sur un bouton focalisé ;
+    /// sinon il ne restait qu'Alt+F4 au clavier. <paramref name="spaceActivates"/> : l'écran où
+    /// Espace active un bouton (ailleurs, c'est une frappe).
+    /// </summary>
+    internal static bool BlockedWhilePaused(int vk, bool buttonFocused, bool spaceActivates) =>
+        vk != 0x1B && vk != 0x09 &&
+        !(buttonFocused && (vk == 0x0D || (vk == 0x20 && spaceActivates)));
 
     /// <summary>
     /// Reconstruit le module Défi si la date ou l'étape a changé (fenêtre restée ouverte
@@ -1245,7 +1266,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     }
                     break;
                 case Win32.WM_KEYDOWN:
-                    if (_inputPaused)
+                    if (_inputPaused && BlockedWhilePaused(wParam.ToInt32(), _focusedActionIndex >= 0, SpaceActivatesButtons))
                         return IntPtr.Zero;
                     OnKeyDown(wParam.ToInt32());
                     return IntPtr.Zero;
@@ -2459,6 +2480,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return true;
     }
 
+    /// <summary>Le bilan d'un exercice est à l'écran.</summary>
+    private bool SummaryShown => _showSummary && _mode == WindowMode.Lessons && !HomeShown && !TutorialPageShown;
+
+    /// <summary>Écrans sans frappe d'exercice : Espace y active le bouton focalisé, comme Entrée.</summary>
+    private bool SpaceActivatesButtons => _settingsOpen || HomeShown || TutorialPageShown || SummaryShown;
+
     private void OnKeyDown(int vk)
     {
         _swallowActivationSpace = false; // ne vaut que pour le WM_CHAR de cette touche-ci
@@ -2490,8 +2517,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
-        bool summaryShown = _showSummary && _mode == WindowMode.Lessons && !HomeShown && !TutorialPageShown;
-        if (vk == 0x0D || ((_settingsOpen || HomeShown || TutorialPageShown || summaryShown) && vk == 0x20))
+        bool summaryShown = SummaryShown;
+        if (vk == 0x0D || (SpaceActivatesButtons && vk == 0x20))
         {
             if (ActivateFocusedAction())
             {
@@ -2501,6 +2528,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 return;
             }
         }
+        if (_inputPaused) return; // en pause, rien au-delà de la navigation n'atteint l'exercice (RA5)
         if (summaryShown && !_settingsOpen && !_pickerOpen && (vk == 0x0D || vk == 0x20))
         {
             // Bilan sans bouton focalisé : Entrée et Espace valent « Suivant » ou « Terminer » (L12).
@@ -2562,7 +2590,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (!result.Accepted) return;
         // La touche de la dernière faute reste cerclée sur le clavier jusqu'à sa correction.
         if (result.WasError)
+        {
             _errorScancode = _pressedScancode;
+            _automation?.Notify(TypingErrorAnnouncement(result.Actual ?? c, result.Expected, _session.NeedsBackspaceCorrection));
+        }
         else if (!_session.NeedsBackspaceCorrection && !CurrentLineHasWrongCell())
             _errorScancode = 0;
         ClearHint();
@@ -2582,6 +2613,28 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
+
+    /// <summary>
+    /// Ce que le lecteur d'écran dit d'une faute (audit de régression du 10/11, RA7) : la surface
+    /// expose la ligne attendue et le curseur, pas ce qui a été tapé. L'annonce vivait dans
+    /// l'ancien module d'apprentissage, supprimé quand le parcours est entré dans les Leçons.
+    /// </summary>
+    internal static string TypingErrorAnnouncement(char typed, char? expected, bool backspaceFixes)
+    {
+        string fault = expected is { } wanted
+            ? L.LessonsAutomation_TypingError(SpokenCharacter(typed), SpokenCharacter(wanted))
+            : L.LessonsAutomation_TypingExtra(SpokenCharacter(typed));
+        return fault + " " + (backspaceFixes ? L.LessonsAutomation_FixWithBackspace : L.LessonsAutomation_TypeAgain);
+    }
+
+    /// <summary>Un caractère tel qu'il se dit : les espaces par leur nom, les autres entre guillemets.</summary>
+    private static string SpokenCharacter(char c) => c switch
+    {
+        ' ' => L.LessonsAutomation_SpaceName,
+        ' ' => L.LessonsAutomation_NbspName,
+        ' ' => L.LessonsAutomation_NarrowNbspName,
+        _ => L.LessonsPaper_CharacterFallback(c.ToString()),
+    };
 
     private void OnTimer(uint timerId)
     {
@@ -2657,9 +2710,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private static int? MaxWpm(int? a, int? b) => a is { } x && b is { } y ? Math.Max(x, y) : a ?? b;
 
     /// <summary>La séance du Défi affichée est déjà comptée : dit avant le mode de frappe
-    /// (audit UX du 09/11, L10).</summary>
+    /// (audit UX du 09/11, L10). Seulement si c'est bien elle qui a été finie, donc son dernier
+    /// exercice réussi : le jour où la 5e séance de prise en main est comptée, le premier Défi
+    /// commun ne compterait pas non plus, mais il n'a jamais été joué (RA9 du 10/11).</summary>
     internal bool ChallengeAlreadyCounted =>
-        _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId && _challenge.AlreadyCounted;
+        _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId && _challenge.AlreadyCounted &&
+        _progress.IsCompleted(CurrentLesson.Exercises[^1]);
 
     /// <summary>Compteur « x/N exercices » de la liste, sans le Défi du jour : ses deux
     /// exercices changent chaque jour, comptés ils faisaient baisser x le lendemain et varier N

@@ -47,7 +47,8 @@ internal sealed record LessonControlView(string Name, LessonControlKind Kind, Wi
 internal interface ILessonsAutomationHost
 {
     IntPtr Handle { get; }
-    /// <summary>Null quand rien ne se tape (récapitulatif, Paramètres).</summary>
+    /// <summary>Null quand il n'y a ni texte à taper ni texte à lire (Paramètres, liste des
+    /// leçons). Le bilan de fin d'exercice en a une, en lecture : son titre et ses chiffres.</summary>
     LessonSurfaceView? SurfaceView { get; }
     IReadOnlyList<LessonControlView> Controls { get; }
     bool WindowHasFocus { get; }
@@ -267,6 +268,7 @@ internal sealed partial class LessonsAutomation : IDisposable
     private LessonControlView[] _lastControls = Array.Empty<LessonControlView>();
     private bool _structureChanged;
     private string? _lastText;
+    private string? _lastSurfaceName;
     private int _lastCaret = -1;
     private (int Start, int End) _lastSelection = (-1, -1);
     private int _lastFocus = NoFocus;
@@ -361,7 +363,12 @@ internal sealed partial class LessonsAutomation : IDisposable
         if (_disposed) return;
         var view = Host.SurfaceView;
         int focus = FocusTarget();
-        bool focusChanged = focus != _lastFocus || (focus >= 0 && Generation != _lastFocusGeneration);
+        // Même surface, autre écran (la ligne à taper devient le bilan, audit de régression du
+        // 10/11, RA6) : le focus n'a pas bougé pour l'application, mais le lecteur d'écran doit
+        // relire l'élément ; l'événement de focus lui fait dire le nom, le texte et l'aide.
+        bool surfaceRenamed = focus == -1 && view?.Name != _lastSurfaceName;
+        bool focusChanged = focus != _lastFocus || (focus >= 0 && Generation != _lastFocusGeneration) || surfaceRenamed;
+        _lastSurfaceName = view?.Name;
         bool textChanged = view?.Text != _lastText;
         var selection = view?.Selection ?? (-1, -1);
         bool caretChanged = (view?.Caret ?? -1) != _lastCaret || selection != _lastSelection;
@@ -373,6 +380,8 @@ internal sealed partial class LessonsAutomation : IDisposable
         _lastSelection = selection;
         _structureChanged = false;
 
+        if (focusChanged && focus != NoFocus)
+            Observer?.Invoke("focus", focus == -1 ? view?.Name : Host.Controls[focus].Name);
         if (!UiaClientsAreListening()) return;
         if (structureChanged)
             RaiseStructureChanged();
@@ -383,6 +392,33 @@ internal sealed partial class LessonsAutomation : IDisposable
             Raise(_surface, TextChangedEventId);
         if (textChanged || caretChanged)
             Raise(_surface, TextSelectionChangedEventId);
+    }
+
+    /// <summary>Témoin des événements décidés (« focus », « notification ») et de leur texte, pour
+    /// les tests : sans client UIA à l'écoute, rien n'est réellement levé.</summary>
+    internal Action<string, string?>? Observer { get; set; }
+
+    /// <summary>
+    /// Fait dire une phrase au lecteur d'écran sans déplacer le focus (audit de régression du
+    /// 10/11, RA7 : la faute de frappe). La dernière annonce remplace celles en attente : seule
+    /// la faute la plus récente compte. Sans effet avant Windows 10 1709, où l'entrée n'existe pas.
+    /// </summary>
+    public void Notify(string text)
+    {
+        if (_disposed || string.IsNullOrEmpty(text)) return;
+        Observer?.Invoke("notification", text);
+        if (!UiaClientsAreListening() || Host.SurfaceView == null) return;
+        nint simple = Pointer(_surface, IidSimple);
+        nint display = Marshal.StringToBSTR(text);
+        nint activity = Marshal.StringToBSTR(TypingErrorActivityId);
+        try { UiaRaiseNotificationEvent(simple, NotificationKindActionAborted, NotificationProcessingImportantMostRecent, display, activity); }
+        catch (EntryPointNotFoundException) { }
+        finally
+        {
+            Marshal.FreeBSTR(display);
+            Marshal.FreeBSTR(activity);
+            Marshal.Release(simple);
+        }
     }
 
     private static void Raise(object provider, int eventId)
@@ -476,6 +512,15 @@ internal sealed partial class LessonsAutomation : IDisposable
 
     [DllImport("UIAutomationCore.dll")]
     private static extern int UiaRaiseAutomationEvent(nint provider, int eventId);
+
+    // NotificationKind_ActionAborted, NotificationProcessing_ImportantMostRecent (UIAutomationCore.h).
+    private const int NotificationKindActionAborted = 3;
+    private const int NotificationProcessingImportantMostRecent = 1;
+    internal const string TypingErrorActivityId = "LessonTypingError";
+
+    [DllImport("UIAutomationCore.dll")]
+    private static extern int UiaRaiseNotificationEvent(nint provider, int notificationKind, int notificationProcessing,
+        nint displayString, nint activityId);
 
     [DllImport("UIAutomationCore.dll")]
     private static extern int UiaRaiseStructureChangedEvent(nint provider, int structureChangeType, int[]? runtimeId, int runtimeIdLength);

@@ -1,0 +1,769 @@
+{
+  "version": 1,
+  "lastModuleId": "symboles-specialises",
+  "lastLessonId": "divers",
+  "lastExerciseIndex": 1,
+  "onboardingSyncedMaxStep": 6,
+  "exercises": {
+    "email-web/arobase/0/b5e8b2193d55a800a09c2359bed9db96c5fa6a6b9249c32795f628604a4e7f82": {
+      "hash": "b5e8b2193d55a800a09c2359bed9db96c5fa6a6b9249c32795f628604a4e7f82",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/arobase/1/3c3dd87fe3eab60bf70fb52afe2a57015ee19c9b4a12cc8f740ce8d50a03ccf2": {
+      "hash": "3c3dd87fe3eab60bf70fb52afe2a57015ee19c9b4a12cc8f740ce8d50a03ccf2",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/arobase/2/a5182ea613e86f9fd84645e90350bb8654f89b18879435f810f3e027e6a755b3": {
+      "hash": "a5182ea613e86f9fd84645e90350bb8654f89b18879435f810f3e027e6a755b3",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/croisillon/0/a2e982edd7c73ec067fd6e3be837de51a87a5d2f906a6faf8b07d36cc65f2b75": {
+      "hash": "a2e982edd7c73ec067fd6e3be837de51a87a5d2f906a6faf8b07d36cc65f2b75",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/croisillon/1/194e1e40977a8cd85ab1af51bb9c36c6fa4b1fb8a205d1a74d7fa2f0365361bc": {
+      "hash": "194e1e40977a8cd85ab1af51bb9c36c6fa4b1fb8a205d1a74d7fa2f0365361bc",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/croisillon/2/e627d3c64578ba87a7da37c0a5f6e6945803a3119896c74ead08470060e1f701": {
+      "hash": "e627d3c64578ba87a7da37c0a5f6e6945803a3119896c74ead08470060e1f701",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/point-virgule/0/66955fca9311fd87e3d4fc876fc28c0d83903a81e9608944986688adc01eaf1f": {
+      "hash": "66955fca9311fd87e3d4fc876fc28c0d83903a81e9608944986688adc01eaf1f",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/point-virgule/1/7144f2636c7419d50b228685cd0eceee33f6f9e30e09c9260de83e3b0a529c2f": {
+      "hash": "7144f2636c7419d50b228685cd0eceee33f6f9e30e09c9260de83e3b0a529c2f",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/point/0/02ad101949f61579334adbe1e42d9f9bbedc873541337e5c4cd1be50a0eee4b8": {
+      "hash": "02ad101949f61579334adbe1e42d9f9bbedc873541337e5c4cd1be50a0eee4b8",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "email-web/point/1/9931f6ec831b7091903cd56823dfc97f4080b5afed80ad2433d4b18b1c5ac850": {
+      "hash": "9931f6ec831b7091903cd56823dfc97f4080b5afed80ad2433d4b18b1c5ac850",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "initiation/premiers-pas/0/f0f75ceff81450e879bf1da2ccdeddb0c8db0729624e004ebe6e50f0efc5b340": {
+      "hash": "f0f75ceff81450e879bf1da2ccdeddb0c8db0729624e004ebe6e50f0efc5b340",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "initiation/premiers-pas/1/ad34e9d07b6d0cc6610bb2ff21a2dba8d5ed571ba27c583f385b83b1e36e5314": {
+      "hash": "ad34e9d07b6d0cc6610bb2ff21a2dba8d5ed571ba27c583f385b83b1e36e5314",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "initiation/premiers-pas/2/a2ac72b1654d05d82e8dffa028d6dafccd4dd9641f55c80156de8b7ba27f1037": {
+      "hash": "a2ac72b1654d05d82e8dffa028d6dafccd4dd9641f55c80156de8b7ba27f1037",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "initiation/premiers-pas/3/b62d31057de4168645caef1c2a5110be7eec556b43dc82154e4fda5ea24306da": {
+      "hash": "b62d31057de4168645caef1c2a5110be7eec556b43dc82154e4fda5ea24306da",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "initiation/premiers-pas/4/7d320c2093d814713cd1c126b50096b974eff34826e06f0621e57dfd419181ea": {
+      "hash": "7d320c2093d814713cd1c126b50096b974eff34826e06f0621e57dfd419181ea",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "initiation/premiers-pas/5/84da77f92c61d7454501c728abaad61225cc2b9c1ea810013650f9136705f69a": {
+      "hash": "84da77f92c61d7454501c728abaad61225cc2b9c1ea810013650f9136705f69a",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/allemand/0/ca72342dc5a1178907f80e16107c54ecfef256f2f901789559baed2876a65493": {
+      "hash": "ca72342dc5a1178907f80e16107c54ecfef256f2f901789559baed2876a65493",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/allemand/1/8ec0dffff650de4b2305101af4cad6992430b7a37b405aa3b7b106a9396665d2": {
+      "hash": "8ec0dffff650de4b2305101af4cad6992430b7a37b405aa3b7b106a9396665d2",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/espagnol/0/21e946d5e90c2ce77990ea3325deb1db0e30e26dbe6abc9b3dc12af99edee2f1": {
+      "hash": "21e946d5e90c2ce77990ea3325deb1db0e30e26dbe6abc9b3dc12af99edee2f1",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/espagnol/1/e7415a7247567b1ee0eacbc0c798b07968efea48ff27d1c3ebf4e004dcc2e20c": {
+      "hash": "e7415a7247567b1ee0eacbc0c798b07968efea48ff27d1c3ebf4e004dcc2e20c",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/latin-etendu/0/dc6d36d6752a2fe1cfe0c6462b66588bf879319e91e6994c622edad558e96389": {
+      "hash": "dc6d36d6752a2fe1cfe0c6462b66588bf879319e91e6994c622edad558e96389",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/latin-etendu/1/572934240b54dcd381dae51cf52408eb0749cc3993513506033661da39fbb353": {
+      "hash": "572934240b54dcd381dae51cf52408eb0749cc3993513506033661da39fbb353",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/nordiques/0/7418efddd040fa6bae1beb4a4b7c756c9524357c1a7786ef5e987d205b29cabe": {
+      "hash": "7418efddd040fa6bae1beb4a4b7c756c9524357c1a7786ef5e987d205b29cabe",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/nordiques/1/a321ba7c0208fbe1bbcdde541bea49abdc21087ee61026f97956500ba50ab6ef": {
+      "hash": "a321ba7c0208fbe1bbcdde541bea49abdc21087ee61026f97956500ba50ab6ef",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/portugais/0/c2917a6a952ae2bfdb32eae9682aed61cbb529c060e7de8ea03c2ac8d4d98c7d": {
+      "hash": "c2917a6a952ae2bfdb32eae9682aed61cbb529c060e7de8ea03c2ac8d4d98c7d",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "langues-etrangeres/portugais/1/c09e0536e81d9a34a66a35e5e16b86958096ebcb85a779262877df9bb86fc0f4": {
+      "hash": "c09e0536e81d9a34a66a35e5e16b86958096ebcb85a779262877df9bb86fc0f4",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-a-grave/0/121629a89a12f3ad905c601a6700b50ea4a35e08c1718e52be07732339607a39": {
+      "hash": "121629a89a12f3ad905c601a6700b50ea4a35e08c1718e52be07732339607a39",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-a-grave/1/7b29da22e0d980208f3dfbcb466d00082dd251b618a22ca429118aa760f9eed8": {
+      "hash": "7b29da22e0d980208f3dfbcb466d00082dd251b618a22ca429118aa760f9eed8",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-a-grave/2/65a1414e52771a71d36cac63ae95dfcd3a1bef2ead77beac477bceac1a00ede4": {
+      "hash": "65a1414e52771a71d36cac63ae95dfcd3a1bef2ead77beac477bceac1a00ede4",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-all/0/b66cf9ce8d9958f3e2be980d9b31772ee50e3e0d63d81b659f6ba18a73fa42ba": {
+      "hash": "b66cf9ce8d9958f3e2be980d9b31772ee50e3e0d63d81b659f6ba18a73fa42ba",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-c-cedilla/0/b3abd7570fef0dced534130266d3bc9385aaced8101158819d94e8bcf14d0fe6": {
+      "hash": "b3abd7570fef0dced534130266d3bc9385aaced8101158819d94e8bcf14d0fe6",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-c-cedilla/1/b8395a5216ef40c40407dd0716fe05b5324104817a734aebb7c304fc00dcae7a": {
+      "hash": "b8395a5216ef40c40407dd0716fe05b5324104817a734aebb7c304fc00dcae7a",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-c-cedilla/2/52340cf7c02f95c0f7034aa03e016107eddbc7926f34753ebd25a76c77e267e2": {
+      "hash": "52340cf7c02f95c0f7034aa03e016107eddbc7926f34753ebd25a76c77e267e2",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-e-acute/0/bcc05feae7ea73af0958d37c6eeb1142bcbcd5979b0fa397e7d9cc1a25a0d7b7": {
+      "hash": "bcc05feae7ea73af0958d37c6eeb1142bcbcd5979b0fa397e7d9cc1a25a0d7b7",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-e-acute/1/c7c8801127be1ef14a1afe67fd2bd735fa7722f660704103384d0bade23d8af8": {
+      "hash": "c7c8801127be1ef14a1afe67fd2bd735fa7722f660704103384d0bade23d8af8",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-e-acute/2/d6b03c3f2b1340abef963193cbe1320a9f61189dcdd88e27495c7ee23651569e": {
+      "hash": "d6b03c3f2b1340abef963193cbe1320a9f61189dcdd88e27495c7ee23651569e",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-e-grave/0/87171b85244673134f65b485737a13e89caabb4e247d5d1ca63dbce6b2d263ee": {
+      "hash": "87171b85244673134f65b485737a13e89caabb4e247d5d1ca63dbce6b2d263ee",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-e-grave/1/f9f8995b8bb16d7915e06698cedf5ba3df983ca4aaad1d44ba0a9cc5add2680b": {
+      "hash": "f9f8995b8bb16d7915e06698cedf5ba3df983ca4aaad1d44ba0a9cc5add2680b",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "majuscules-accentuees/caps-e-grave/2/292c6cd45622ff9756654f17a6dbbbc065586912fe2d41ffcd870573cf5b3d4a": {
+      "hash": "292c6cd45622ff9756654f17a6dbbbc065586912fe2d41ffcd870573cf5b3d4a",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/accolades/0/7011c1b6f6c07cd528aec84bacd33eb1c27a7cc487cb57aa5719c7915d168d4a": {
+      "hash": "7011c1b6f6c07cd528aec84bacd33eb1c27a7cc487cb57aa5719c7915d168d4a",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/accolades/1/9c506f22c6ec06fbe66021d06b984a4eaa5ce19283b0e4db988a58d50353bacc": {
+      "hash": "9c506f22c6ec06fbe66021d06b984a4eaa5ce19283b0e4db988a58d50353bacc",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/backslash-pipe/0/cd296f38e4e7211eb78aa10e84e9943cbd591ad3dd789cabea39f9de0012fbc2": {
+      "hash": "cd296f38e4e7211eb78aa10e84e9943cbd591ad3dd789cabea39f9de0012fbc2",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/backslash-pipe/1/38b3feadc24a447d28084669eb14613ab4c73c294e8bbbec6787baba7ada3e59": {
+      "hash": "38b3feadc24a447d28084669eb14613ab4c73c294e8bbbec6787baba7ada3e59",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/crochets/0/5b026b953ff6b54c7d50067b6270de6448602e2da870abb717c41e5ce0382c06": {
+      "hash": "5b026b953ff6b54c7d50067b6270de6448602e2da870abb717c41e5ce0382c06",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/crochets/1/0714c153a88b968398783ca8e0273fb5bc107bb0eb0492eedbb4c113c86fb019": {
+      "hash": "0714c153a88b968398783ca8e0273fb5bc107bb0eb0492eedbb4c113c86fb019",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/tilde-backtick/0/aac4f4c146effad74dc5700af0925a1258afa93c905182542de741f7872be71a": {
+      "hash": "aac4f4c146effad74dc5700af0925a1258afa93c905182542de741f7872be71a",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "programmation/tilde-backtick/1/ea46a35c3fdec8acab756d722fe1185b7e0e6aba3bfce76c973938b5801c1297": {
+      "hash": "ea46a35c3fdec8acab756d722fe1185b7e0e6aba3bfce76c973938b5801c1297",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/divers/0/d92f34585ac7faaf05fe76cb8b41f1a40d801ee2bdf1b8d9af23f2c0832eb747": {
+      "hash": "d92f34585ac7faaf05fe76cb8b41f1a40d801ee2bdf1b8d9af23f2c0832eb747",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/divers/1/5bf91cb9c6e26081aebd1a19e8e4e67a1a3382d0bf1113a04dc9d09b0f0aa844": {
+      "hash": "5bf91cb9c6e26081aebd1a19e8e4e67a1a3382d0bf1113a04dc9d09b0f0aa844",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/monetaires/0/f9712f4d1d2cfbd6475242ae18625ec909f57e9f268eef7380badc481709d60b": {
+      "hash": "f9712f4d1d2cfbd6475242ae18625ec909f57e9f268eef7380badc481709d60b",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/monetaires/1/5123442195fa93f20d60720a8136223a8a0274d07c709a4525f87a6ab4c64725": {
+      "hash": "5123442195fa93f20d60720a8136223a8a0274d07c709a4525f87a6ab4c64725",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/ponctuation-speciale/0/0f8074a65728e784db45ab204e09e9d10765d72f782b74e5f5ba097af08e8cda": {
+      "hash": "0f8074a65728e784db45ab204e09e9d10765d72f782b74e5f5ba097af08e8cda",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/ponctuation-speciale/1/3e358530ac9c10d3c7459830e9ebc782c8c9627f72e56d0929002bd22bcdf2d7": {
+      "hash": "3e358530ac9c10d3c7459830e9ebc782c8c9627f72e56d0929002bd22bcdf2d7",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/scientifiques/0/eab52db4d241f4029bf50daecf8db1e8c88b8598f0d5f9f17593a66daf8030b2": {
+      "hash": "eab52db4d241f4029bf50daecf8db1e8c88b8598f0d5f9f17593a66daf8030b2",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "symboles-specialises/scientifiques/1/4f11aa1719b9610a42956e8eb6b41a3fdaad044935ec6423dc007f49d3c87029": {
+      "hash": "4f11aa1719b9610a42956e8eb6b41a3fdaad044935ec6423dc007f49d3c87029",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/apostrophe-typographique/0/984276382ebc744cd104b86d069d484efbeacb4047abe3d647d3d9ec14e75be1": {
+      "hash": "984276382ebc744cd104b86d069d484efbeacb4047abe3d647d3d9ec14e75be1",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/apostrophe-typographique/1/785b7d265a0fee40e0a212bc7256fa910d8e18a18ca0d235c8e2c65445d85c97": {
+      "hash": "785b7d265a0fee40e0a212bc7256fa910d8e18a18ca0d235c8e2c65445d85c97",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/espaces-insecables/0/560da8c732073dc5e1f6c19ded4fe75d02adad40d5590f2e4f1442e96bbaaf10": {
+      "hash": "560da8c732073dc5e1f6c19ded4fe75d02adad40d5590f2e4f1442e96bbaaf10",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/espaces-insecables/1/5f2a9d2d90c1c8ed7c86ec2f3d6312a7613ea41e14834b222afbd6cec2b99a1d": {
+      "hash": "5f2a9d2d90c1c8ed7c86ec2f3d6312a7613ea41e14834b222afbd6cec2b99a1d",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/espaces-insecables/2/32f4920e6d478391a0a17470377acb90ccc3a8ea86db7c7570d37c620299f78f": {
+      "hash": "32f4920e6d478391a0a17470377acb90ccc3a8ea86db7c7570d37c620299f78f",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/guillemets/0/c9c8b71bfe8d39119cc68e011c26647a80c4d5ee1569f74c8543fcc4571e0581": {
+      "hash": "c9c8b71bfe8d39119cc68e011c26647a80c4d5ee1569f74c8543fcc4571e0581",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/guillemets/1/bed0e1f6e34d830fd36307b07fd4c50e9927d2b4546fb1885f39f2ae14456d75": {
+      "hash": "bed0e1f6e34d830fd36307b07fd4c50e9927d2b4546fb1885f39f2ae14456d75",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/ligatures/0/f62ca2dee38486e3dda9abfbb8e8557397102dc75ba297156c873763ab2123a7": {
+      "hash": "f62ca2dee38486e3dda9abfbb8e8557397102dc75ba297156c873763ab2123a7",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/ligatures/1/9b5235336c106e732cbc0cc39668240752a31e5e4d80e2d74bc3663142dd0fa0": {
+      "hash": "9b5235336c106e732cbc0cc39668240752a31e5e4d80e2d74bc3663142dd0fa0",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/point-median/0/07cc1348bcd839cba9fc72229d5c9a0b2e82c414055003412b91074052514f2e": {
+      "hash": "07cc1348bcd839cba9fc72229d5c9a0b2e82c414055003412b91074052514f2e",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/point-median/1/913c6e769526b66c10045f82caf921984f16f585cae402b8b0335edfcc456906": {
+      "hash": "913c6e769526b66c10045f82caf921984f16f585cae402b8b0335edfcc456906",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/tiret-insecable/0/2d927227c9c52cc708cdfa1481af5882b8d22da87d44dfec148ec21111e531fa": {
+      "hash": "2d927227c9c52cc708cdfa1481af5882b8d22da87d44dfec148ec21111e531fa",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/tiret-insecable/1/f30eb1c2de5664a88b08bc2eb9f159bc8c12fbdfff6a185423dac6ba75cf0436": {
+      "hash": "f30eb1c2de5664a88b08bc2eb9f159bc8c12fbdfff6a185423dac6ba75cf0436",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/tirets/0/a612a42c5653b75f6b9e7d23f05b61c15f4f8f7b92e1251f5bc2e3d9c057ca54": {
+      "hash": "a612a42c5653b75f6b9e7d23f05b61c15f4f8f7b92e1251f5bc2e3d9c057ca54",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "typographie-francaise/tirets/1/f1eb6bf41b0f870d73dadc798545d77318ea3a5a21c296d1cf1b63a5fdafd563": {
+      "hash": "f1eb6bf41b0f870d73dadc798545d77318ea3a5a21c296d1cf1b63a5fdafd563",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "u-grave-pourcentage/pourcentage/0/bf06ecb51c7430cfe34b5fb68d7f0301d4ebd2014836b4dd0b8a54f0f126bfff": {
+      "hash": "bf06ecb51c7430cfe34b5fb68d7f0301d4ebd2014836b4dd0b8a54f0f126bfff",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "u-grave-pourcentage/pourcentage/1/ceef884f8e76dbc723a299fc6e13da56702e877eee7e13115ee39de2ca8e16cc": {
+      "hash": "ceef884f8e76dbc723a299fc6e13da56702e877eee7e13115ee39de2ca8e16cc",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "u-grave-pourcentage/u-grave/0/cbc7c3842b979385fb194de57159db2db42e47a5d1810afca0269a459d0e9417": {
+      "hash": "cbc7c3842b979385fb194de57159db2db42e47a5d1810afca0269a459d0e9417",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "u-grave-pourcentage/u-grave/1/0240690eef4e869b6d4b7240bb5ee826110367457de3e77f130fdebafe7d610d": {
+      "hash": "0240690eef4e869b6d4b7240bb5ee826110367457de3e77f130fdebafe7d610d",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "u-grave-pourcentage/u-grave/2/e06ebd26ca0729ba902da26039fe0a9f991e58081324452f9077b4eca458bf3a": {
+      "hash": "e06ebd26ca0729ba902da26039fe0a9f991e58081324452f9077b4eca458bf3a",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    },
+    "u-grave-pourcentage/u-grave/3/e64a31329596c98f2d9e83043f4af4ab5f0ca07f7378921c97318a1d22f042b6": {
+      "hash": "e64a31329596c98f2d9e83043f4af4ab5f0ca07f7378921c97318a1d22f042b6",
+      "completed": true,
+      "successfulAttempts": 2,
+      "bestWpm": 30,
+      "bestAccuracyPercent": 95,
+      "bestSeconds": 12.5,
+      "lastCompletedUtc": "2026-08-20T10:00:00.0000000+00:00",
+      "hintsUsed": 0
+    }
+  }
+}

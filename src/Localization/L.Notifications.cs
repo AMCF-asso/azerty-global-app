@@ -53,7 +53,7 @@ internal static partial class L
     public static string LayoutConflict_IntroAfterSwitch => T(
         $"{Product} vient d’être activée dans Windows comme disposition de clavier, c’est-à-dire comme agencement des caractères sur les touches.",
         $"{Product} has just been enabled in Windows as a keyboard layout, meaning the arrangement of characters on the keys.");
-    public static string LayoutConflict_Question => T("Quel est votre besoin ?", "What do you need?");
+    public static string LayoutConflict_Question => T("Quel est votre besoin ?", "What do you need?");
     // Notes des deux liens de commande, sous leur titre (BtnKeep, BtnQuit).
     public static string LayoutConflict_KeepNote => T(
         $"Pour le clavier virtuel et la recherche de caractère. Retirez ensuite {Product} des dispositions chargées : Paramètres Windows → Heure et langue → Langue et région → Options de la langue concernée. Cochez aussi « Lancer au démarrage de Windows » dans l’application.",

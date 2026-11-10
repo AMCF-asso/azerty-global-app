@@ -36,8 +36,10 @@ internal sealed partial class LessonsWindow
     private Win32.RECT _homeMapZone;
     private (string Key, HomeSession Session)? _homeKeySessionCache;
 
+    // Texts : titres et consigne dans la langue du moment, pour les refaire quand elle change
+    // (HomeRetranslateComposed, RA12 du 10/11).
     private sealed record HomeComposed(LessonModule Module, LessonLesson Lesson, LessonExercise Exercise,
-        int ReturnExerciseIndex);
+        int ReturnExerciseIndex, Func<(string Module, string Lesson, string Instruction)> Texts);
 
     // ── Accroches de LessonsWindow.cs ────────────────────────────────────
 
@@ -142,13 +144,14 @@ internal sealed partial class LessonsWindow
     /// d'un exercice, sans entrer dans le catalogue ; la position du catalogue (celle de
     /// « Reprendre ») n'est pas modifiée et n'est pas enregistrée (StartCurrentSession).
     /// </summary>
-    private void HomeStartComposed(LessonExercise exercise, string moduleTitle, string lessonTitle,
+    private void HomeStartComposed(LessonExercise exercise, Func<(string Module, string Lesson, string Instruction)> texts,
         IReadOnlyList<string> characters)
     {
         HomeClearComposed();
+        var (moduleTitle, lessonTitle, _) = texts();
         var lesson = new LessonLesson(exercise.ModuleId, exercise.LessonId, lessonTitle, "", characters, new[] { exercise });
         var module = new LessonModule(exercise.ModuleId, moduleTitle, "", "", isSynthetic: true, new[] { lesson });
-        _homeComposed = new HomeComposed(module, lesson, exercise, _exerciseIndex);
+        _homeComposed = new HomeComposed(module, lesson, exercise, _exerciseIndex, texts);
         _exerciseIndex = 0;
         _settingsOpen = false;
         _pickerOpen = false;
@@ -156,6 +159,23 @@ internal sealed partial class LessonsWindow
         _homePage = HomePage.Exercise;
         _focusedActionIndex = -1;
         StartCurrentSession(savePosition: false);
+    }
+
+    /// <summary>
+    /// Langue changée pendant une séance composée (audit de régression du 10/11, RA12) : ses
+    /// titres et sa consigne gardaient la langue du lancement. Le texte à taper ne change pas,
+    /// donc ni l'empreinte ni la frappe déjà faite : seuls les textes affichés sont refaits.
+    /// </summary>
+    private void HomeRetranslateComposed()
+    {
+        if (_homeComposed is not { } composed) return;
+        var (moduleTitle, lessonTitle, instruction) = composed.Texts();
+        var old = composed.Exercise;
+        var exercise = new LessonExercise(old.ModuleId, old.LessonId, old.ExerciseIndex, old.Type, instruction,
+            old.Content, old.TypingMode);
+        var lesson = new LessonLesson(exercise.ModuleId, exercise.LessonId, lessonTitle, "", composed.Lesson.Characters, new[] { exercise });
+        var module = new LessonModule(exercise.ModuleId, moduleTitle, "", "", isSynthetic: true, new[] { lesson });
+        _homeComposed = composed with { Module = module, Lesson = lesson, Exercise = exercise };
     }
 
     /// <summary>Échap : de « Votre carte » ou « Votre texte » vers Aujourd'hui ; sur Aujourd'hui,
@@ -349,7 +369,8 @@ internal sealed partial class LessonsWindow
     {
         var review = HomeBuildSnapshot().Review;
         if (review.Exercise is not { } exercise) return;
-        HomeStartComposed(exercise, L.LessonsHome_ReviewTitle, L.LessonsHome_ReviewLessonTitle, review.Covered);
+        HomeStartComposed(exercise,
+            () => (L.LessonsHome_ReviewTitle, L.LessonsHome_ReviewLessonTitle, L.LessonsHome_ReviewInstruction), review.Covered);
     }
 
     // ── Dessin de la page ────────────────────────────────────────────────
@@ -998,7 +1019,8 @@ internal sealed partial class LessonsWindow
         if (!snapshot.Keys.TryGetValue(scancode, out var state)) return;
         var session = HomeKeySession(snapshot, scancode, state);
         if (session.Exercise is not { } exercise) return;
-        HomeStartComposed(exercise, L.LessonsHome_YourMap, L.LessonsHome_KeyTitle(HomeKeyCap(scancode)), session.Covered);
+        HomeStartComposed(exercise,
+            () => (L.LessonsHome_YourMap, L.LessonsHome_KeyTitle(HomeKeyCap(scancode)), L.LessonsHome_KeySessionInstruction), session.Covered);
     }
 
     private static string HomeKeySessionNote(HomeSession session) => session.Exercise == null
