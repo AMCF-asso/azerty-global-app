@@ -605,7 +605,7 @@ internal sealed partial class LessonsWindow
             {
                 runs.Add(new TextRun(L.LessonsHome_ReviewWords("\u0001")));
                 // Les mots en gras : le gabarit coupe autour d'un repère.
-                runs = HomeWordsRuns(L.LessonsHome_ReviewWords("\u0001"), string.Join(", ", review.Words));
+                runs = HomeWordsRuns(L.LessonsHome_ReviewWords("\u0001"), LessonsHomeLogic.JoinWords(review.Words));
                 if (review.Missing.Count > 0)
                     runs.Add(new TextRun(" " + L.LessonsHome_ReviewMissing(string.Join(", ", review.Missing))));
             }
@@ -1208,7 +1208,7 @@ internal sealed partial class LessonsWindow
                 lines.Add(L.LessonsHome_DueSpoken(entry.Character, gesture));
             }
             if (snapshot.Review.Words.Count > 0)
-                lines.Add(L.LessonsHome_ReviewWords(string.Join(", ", snapshot.Review.Words)));
+                lines.Add(L.LessonsHome_ReviewWords(LessonsHomeLogic.JoinWords(snapshot.Review.Words)));
         }
         var (module, lesson, exerciseIndex) = HomeResumePosition();
         lines.Add(L.LessonsHome_ResumeTitle);
