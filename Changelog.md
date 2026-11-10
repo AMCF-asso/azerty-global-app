@@ -4,6 +4,23 @@
 
 Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 octobre a été suspendue le 20 octobre, après l’audit de l’application ; la date de cette version sera fixée au gel du nouveau candidat. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, Défi du jour compris : masqué le 24 septembre, il est réactivé le 7 octobre (voir « Défi du jour et Leçons »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Correctifs de l’audit de régression (décisions d’Antoine du 10 novembre)**
+
+- Mise à jour depuis une version antérieure : les exercices déjà réussis le restent, même ceux dont le texte a changé depuis (Prise en main, majuscules accentuées) ; leurs scores repartent de zéro.
+- Le journal local n’écrit plus le nom de l’outil de prise en main à distance, seulement l’état actif ou inactif ; la note destinée aux établissements le dit.
+- Leçons en pause : Tab, Entrée ou Espace sur un bouton et Échap fonctionnent de nouveau ; la frappe reste bloquée.
+- Lecteur d’écran : le bilan de fin d’exercice est lu, et chaque faute de frappe est annoncée sans déplacer le focus (« Faute : é au lieu de e. Tapez le bon caractère. »).
+- Écran des usages : Entrée ou Espace sans Tab lancent « Continuer » au lieu de cocher une case sans repère.
+- « Séance du jour déjà comptée » ne s’affiche plus à tort, tient sur la ligne d’état et est lue par le lecteur d’écran.
+- Changer de langue met à jour le titre de la fenêtre des Leçons et la séance en cours.
+- Le parcours de l’accueil porte un seul nom, « Prise en main » (“Getting started”) ; la séance d’introduction du Défi s’appelle “Introduction” en anglais.
+- Explications « Pourquoi ici » relues : « Verr. Maj. » partout, anglais américain, un seul mot par chose. L’espace fine insécable précède « ; ! ? » dans tous les textes français de l’application.
+- L’astuce de l’étape des langues affiche le raccourci de recherche que vous avez réglé.
+- Une couche grecque armée pour une seule lettre est abandonnée par un raccourci (Ctrl+C, par exemple), comme une touche morte ; la couche verrouillée ne change pas.
+- Paramètres : le bouton « Réinitialiser les raccourcis » gagne 1 px de large pour ne plus rogner sa dernière lettre à 125 % d’affichage.
+- Textes coupés : la mesure de troncature couvre aussi les lignes sans « … », les boutons, cases et liens natifs, à 125, 150 et 200 %, et les messages de refus.
+- L’exécutable ne porte plus le chemin des sources de la machine qui le compile.
+
 **Noms et libellés (audit UX du 9 novembre, décisions d’Antoine du 9 et du 10 novembre ; correctifs du candidat du 6 novembre)**
 
 - **« Alt Gr » partout (lot 7, décision du 9 novembre).** La touche s’écrit « Alt Gr », avec une espace insécable, en français comme en anglais : touche dessinée, infobulles, lignes de geste et de Tablature, Recherche, parcours, Couches verrouillables, accueil, bandeau du Clavier virtuel. Les gestes se joignent par « + » : « Maj + Alt Gr + U ». Dans les textes du Défi du jour, qui se tapent, l’espace est ordinaire. Aucune progression perdue : les consignes des leçons portent `{ALTGR}`, formaté à l’affichage, et l’ancienne consigne reste reconnue. L’identifiant interne reste `AltGr`. Témoin : `AltGrLabelTests` (aucune chaîne de l’app, des leçons ou du Défi ne dit l’ancien nom, en français et en anglais ; `La_progression_d_avant_reste_reconnue`).
