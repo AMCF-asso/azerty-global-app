@@ -16,6 +16,8 @@ internal static partial class L
     public static string Onboarding_LinkGuide => T("Guide de prise en main", "Getting started guide");
     // Remplace l'étape « Vos langues » (11/11) : ouvre la page /afrique du site.
     public static string Onboarding_LinkAfrica => T("Écrire le peul, le wolof, le bambara", "Write Fula, Wolof and Bambara");
+    // La page a sa version anglaise (/en/africa, 11/11) : le lien suit la langue de l'interface.
+    public static string Onboarding_LinkAfricaPath => T("/afrique", "/en/africa");
     public static string Onboarding_LinkDiscord => T("Échanger avec les autres utilisateurs", "Chat with other users");
     public static string Onboarding_ChkAutoStart => T("Lancer au démarrage de Windows (recommandé)", "Launch at Windows startup (recommended)");
     public static string Onboarding_ChkDontShow => T("Ne plus afficher l’accueil au démarrage", "Don’t show the welcome screen at startup");

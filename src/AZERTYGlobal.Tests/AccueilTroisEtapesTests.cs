@@ -64,6 +64,16 @@ public class AccueilTroisEtapesTests : IDisposable
         finally { BancCapture.Teardown(fenêtre); }
     }
 
+    [Fact]
+    public void LeLienAfrique_OuvreLaPageDeLaLangueDeLInterface()
+    {
+        Assert.Equal("/afrique", L.Onboarding_LinkAfricaPath);
+        Assert.EndsWith("/afrique", ProductIdentity.Url(L.Onboarding_LinkAfricaPath));
+        L.Language = "en";
+        Assert.Equal("/en/africa", L.Onboarding_LinkAfricaPath);
+        Assert.EndsWith("/en/africa", ProductIdentity.Url(L.Onboarding_LinkAfricaPath));
+    }
+
     private static string Texte(IntPtr hwnd)
     {
         var tampon = new StringBuilder(256);
