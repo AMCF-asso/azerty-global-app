@@ -52,7 +52,7 @@ Pour effacer : supprimer le dossier indiqué plus haut, ou désinstaller l'appli
 
 ## Responsabilité
 
-Aucune donnée ne parvenant à l'association, l'AMCF n'est destinataire d'aucun traitement et n'exerce aucun rôle de sous-traitant.
+Hors la version de l'application et celle de Windows que reçoit le site sur un clic de l'utilisateur (voir plus haut), aucune donnée ne parvient à l'association : l'AMCF n'est destinataire d'aucun traitement et n'exerce aucun rôle de sous-traitant.
 
 L'établissement qui déploie l'application reste **responsable de traitement** pour les fichiers locaux décrits ci-dessus : ils vivent dans le profil de ses utilisateurs, sur son parc, sous son administration. Il lui appartient de décider s'il les inscrit à son registre des traitements — un compteur d'usage est rattachable à une personne nommée du seul fait d'être écrit dans son profil.
 
