@@ -617,9 +617,8 @@ sealed class TrayApplication : IDisposable
         _characterSearch?.SetInputPaused(paused && !IsUserOverrideSuspension);
         _lessons?.SetInputPaused(paused);
         // Audit 09/11, W3 : les Paramètres ne sont pas une surface de frappe, ils restent utilisables
-        // en pause (ils étaient figés, sans un mot : seule la croix répondait). L'accueil l'est aussi,
-        // sauf son champ d'essai, qui ne montre le clavier que si le moteur tourne : il le dit.
-        _onboarding?.SetInputPaused(_activationConsent && paused);
+        // en pause (ils étaient figés, sans un mot : seule la croix répondait). L'accueil aussi :
+        // il n'a plus de champ de frappe depuis le retrait de l'étape des langues (11/11).
     }
 
     /// <summary>

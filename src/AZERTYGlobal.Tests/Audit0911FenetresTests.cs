@@ -501,28 +501,4 @@ public sealed class Audit0911FenetresTests : IDisposable
         }
         throw new FileNotFoundException(fichier);
     }
-
-    // ── W3 : l'accueil reste utilisable en pause, seul le champ d'essai s'arrête ─
-
-    [Fact]
-    public void Accueil_EnPause_LeChampDEssaiEstEnLectureSeule_PasLaFenêtre()
-    {
-        using var isolation = new BancCapture.Isolation();
-        var window = new OnboardingWindow();
-        try
-        {
-            window.Show();
-            IntPtr trial = BancCapture.Field<IntPtr>(window, "_hWndTrial");
-            const int ES_READONLY = 0x0800, GWL_STYLE = -16;
-
-            window.SetInputPaused(true);
-            Assert.True(window.TrialReadOnly);
-            Assert.NotEqual(0, GetWindowLongW(trial, GWL_STYLE) & ES_READONLY);
-
-            window.SetInputPaused(false);
-            Assert.False(window.TrialReadOnly);
-            Assert.Equal(0, GetWindowLongW(trial, GWL_STYLE) & ES_READONLY);
-        }
-        finally { BancCapture.Teardown(window); }
-    }
 }

@@ -23,7 +23,7 @@ public class OnboardingPaperTests
     private const int IDC_CHK_AUTOSTART = 2006;
     private const int IDC_CHK_TRAINING = 2013;
 
-    private const int Changes = 0, HowTo = 1, Languages = 2, Resources = 3;
+    private const int Changes = 0, HowTo = 1, Resources = 2;
 
     [DllImport("user32.dll")] private static extern IntPtr GetNextDlgTabItem(IntPtr dialog, IntPtr control, bool previous);
     [DllImport("user32.dll")] private static extern int GetDlgCtrlID(IntPtr hwnd);
@@ -109,10 +109,10 @@ public class OnboardingPaperTests
         Assert.Equal(0x00100000u + HIGHLIGHTTEXT, palette.OnFill);
     }
 
-    // ── P4 : les titres des étapes 2 à 4 au même endroit que celui de l'étape 1 ──
+    // ── P4 : les titres des étapes 2 et 3 au même endroit que celui de l'étape 1 ──
 
     [Fact]
-    public void Titres_des_etapes_2_a_4_ont_le_cadre_du_titre_de_l_etape_1()
+    public void Titres_des_etapes_2_et_3_ont_le_cadre_du_titre_de_l_etape_1()
     {
         Avec((fenêtre, hwnd) =>
         {
@@ -126,19 +126,6 @@ public class OnboardingPaperTests
             Assert.Equal(y, titre.top);
             Assert.Equal(y + (int)Math.Round(30 * échelle), titre.bottom);
             Assert.Equal(client.right - titre.left, titre.right);
-
-            // L'étape « Vos langues » le reprend, son sous-titre dessous, comme à l'étape 1.
-            IntPtr hdc = Win32.GetDC(hwnd);
-            try
-            {
-                object langues = BancCapture.Call(fenêtre, "GetLanguagesLayout", hdc, client.right, y)!;
-                var titreLangues = (Win32.RECT)langues.GetType().GetField("Title")!.GetValue(langues)!;
-                var sousTitre = (Win32.RECT)langues.GetType().GetField("Subtitle")!.GetValue(langues)!;
-                Assert.Equal(titre, titreLangues);
-                Assert.Equal(titre.left, sousTitre.left);
-                Assert.Equal(titre.bottom + (int)Math.Round(4 * échelle), sousTitre.top);
-            }
-            finally { Win32.ReleaseDC(hwnd, hdc); }
 
             // L'étape Ressources : son panneau commence sous le titre, pas dessus.
             var args = new object?[18];
@@ -195,13 +182,13 @@ public class OnboardingPaperTests
     }
 
     [Fact]
-    public void Titres_peints_des_quatre_etapes_partent_du_meme_bord_et_de_la_meme_ligne()
+    public void Titres_peints_des_trois_etapes_partent_du_meme_bord_et_de_la_meme_ligne()
     {
         Avec((fenêtre, hwnd) =>
         {
             float échelle = BancCapture.Field<float>(fenêtre, "_dpiScale");
             var encres = new List<(int Left, int Top, int Bottom)>();
-            foreach (int étape in new[] { Changes, Languages, HowTo, Resources })
+            foreach (int étape in new[] { Changes, HowTo, Resources })
             {
                 AllerÀ(fenêtre, étape);
                 var encre = EncreDuTitre(fenêtre, hwnd);
@@ -213,8 +200,8 @@ public class OnboardingPaperTests
             foreach (var encre in encres)
                 Assert.InRange(encre.Left, bord - 1, bord + 6); // le chasse de la première lettre varie
             // « Comment utiliser… » et « Ressources… » n'ont ni jambage ni accent : même ligne, au pixel près.
-            Assert.InRange(Math.Abs(encres[2].Top - encres[3].Top), 0, 1);
-            Assert.InRange(Math.Abs(encres[2].Bottom - encres[3].Bottom), 0, 1);
+            Assert.InRange(Math.Abs(encres[1].Top - encres[2].Top), 0, 1);
+            Assert.InRange(Math.Abs(encres[1].Bottom - encres[2].Bottom), 0, 1);
         });
     }
 
@@ -240,14 +227,12 @@ public class OnboardingPaperTests
     }
 
     [Fact]
-    public void Boutons_et_liens_sont_en_AG_Texte_et_seul_l_essai_garde_Segoe()
+    public void Boutons_et_liens_sont_en_AG_Texte()
     {
         Avec((fenêtre, _) =>
         {
             Assert.Equal(AppFonts.Text, PoliceDe(BancCapture.Field<IntPtr>(fenêtre, "_hFontButton")));
             Assert.Equal(AppFonts.Text, PoliceDe(BancCapture.Field<IntPtr>(fenêtre, "_hFontLinkStrong")));
-            // Un EDIT n'a pas le secours par caractère de PaperText, et AG Texte n'a pas ɓ ɗ ɛ.
-            Assert.Equal(TypeRamp.Family, PoliceDe(BancCapture.Field<IntPtr>(fenêtre, "_hFontTrial")));
         });
     }
 
@@ -381,7 +366,7 @@ public class OnboardingPaperTests
     {
         Avec((fenêtre, hwnd) =>
         {
-            AllerÀ(fenêtre, Languages);
+            AllerÀ(fenêtre, HowTo);
             IntPtr suivant = Contrôle(fenêtre, "_hWndBtnNext");
             Win32.SetFocus(suivant);
             Assert.Equal(suivant, Win32.GetFocus());
@@ -484,7 +469,6 @@ public class OnboardingPaperTests
 
     [Theory]
     [InlineData(Changes)]
-    [InlineData(Languages)]
     [InlineData(HowTo)]
     [InlineData(Resources)]
     public void Chaque_etape_decrit_son_texte_sur_le_bouton_principal(int étape)
@@ -571,9 +555,9 @@ public class OnboardingPaperTests
         try
         {
             L.Language = "fr";
-            Assert.StartsWith("Étape 2 sur 4.", OnboardingWindow.StepAccessibleSummary(HowTo));
+            Assert.StartsWith("Étape 2 sur 3.", OnboardingWindow.StepAccessibleSummary(HowTo));
             L.Language = "en";
-            Assert.StartsWith("Step 2 of 4.", OnboardingWindow.StepAccessibleSummary(HowTo));
+            Assert.StartsWith("Step 2 of 3.", OnboardingWindow.StepAccessibleSummary(HowTo));
         }
         finally { L.Language = langue; }
     }
@@ -583,7 +567,7 @@ public class OnboardingPaperTests
     [Theory]
     [InlineData(96)]
     [InlineData(168)]
-    public void Etapes_Langues_et_Ressources_tiennent_au_dessus_des_boutons(int dpi)
+    public void Etape_Ressources_tient_au_dessus_des_boutons(int dpi)
     {
         Avec((fenêtre, hwnd) =>
         {
@@ -592,7 +576,8 @@ public class OnboardingPaperTests
             var origine = new Win32.POINT { x = 0, y = 0 };
             Win32.ClientToScreen(hwnd, ref origine);
 
-            foreach (int étape in new[] { Languages, Resources })
+            // Canal Store : la grille a ses cinq liens (Discord compris), le cas le plus haut.
+            foreach (int étape in new[] { Resources })
             {
                 AllerÀ(fenêtre, étape);
                 Win32.GetWindowRect(Contrôle(fenêtre, "_hWndBtnNext"), out var suivant);
@@ -600,25 +585,11 @@ public class OnboardingPaperTests
                 Repeindre(hwnd);
                 int y = BancCapture.Field<int>(fenêtre, "_contentY");
 
-                int bas;
-                if (étape == Languages)
-                {
-                    IntPtr hdc = Win32.GetDC(hwnd);
-                    try
-                    {
-                        object langues = BancCapture.Call(fenêtre, "GetLanguagesLayout", hdc, client.right, y)!;
-                        bas = ((Win32.RECT)langues.GetType().GetField("Tip")!.GetValue(langues)!).bottom;
-                    }
-                    finally { Win32.ReleaseDC(hwnd, hdc); }
-                }
-                else
-                {
-                    var args = new object?[18];
-                    args[0] = y;
-                    args[1] = client.right;
-                    BancCapture.Call(fenêtre, "GetStep3Layout", args);
-                    bas = ((Win32.RECT)args[3]!).bottom; // le panneau Préférences
-                }
+                var args = new object?[18];
+                args[0] = y;
+                args[1] = client.right;
+                BancCapture.Call(fenêtre, "GetStep3Layout", args);
+                int bas = ((Win32.RECT)args[3]!).bottom; // le panneau Préférences
                 Assert.True(bas < hautDesBoutons, $"étape {étape + 1} à {dpi} dpi : contenu jusqu'à {bas}, boutons dès {hautDesBoutons}, client {client.right}x{client.bottom}, dpi fenêtre {Win32.GetDpiForWindow(hwnd)}, échelle {BancCapture.Field<float>(fenêtre, "_dpiScale")}");
             }
         });
