@@ -1,14 +1,16 @@
-﻿// Fenêtre d'accueil — wizard 4 étapes affiché au premier lancement
+﻿// Fenêtre d'accueil — wizard 3 étapes affiché au premier lancement
 using System.Runtime.InteropServices;
 
 namespace AZERTYGlobal;
 
 /// <summary>
-/// Fenêtre Win32 d'onboarding en 4 étapes (<see cref="OnboardingStep"/>) :
+/// Fenêtre Win32 d'onboarding en 3 étapes (<see cref="OnboardingStep"/>) :
 ///   1. Les 5 améliorations
-///   2. Écrire le peul, le wolof, le bambara (direction C, 08/10), avec un essai
-///   3. Comment utiliser l'application
-///   4. Ressources, communauté et préférences
+///   2. Comment utiliser l'application
+///   3. Ressources, communauté et préférences
+/// L'étape « Écrire le peul, le wolof, le bambara » est retirée (décision d'Antoine du 11/11) :
+/// la Prise en main a sa case « Une langue d'Afrique » et son exercice ; un lien de l'étape
+/// Ressources mène à la page /afrique du site.
 /// DPI-aware per-monitor v2 : recalcule polices et layout sur WM_DPICHANGED.
 /// </summary>
 sealed class OnboardingWindow : IDisposable
@@ -27,13 +29,8 @@ sealed class OnboardingWindow : IDisposable
     private const int IDC_LINK_LESSONS = 2012;
     private const int IDC_CHK_TRAINING = 2013;  // opt-in Défi du jour (v1.2.0) — étape 3 uniquement
     private const int IDC_BTN_FLAG = 2014;      // K6 : bouton du drapeau de langue (accessibilité 1.3.0)
-    private const int IDC_EDIT_TRIAL = 2015;    // essai ù puis b → ɓ — étape « Vos langues » uniquement
+    private const int IDC_LINK_AFRICA = 2016;   // « Écrire le peul, le wolof, le bambara » — page /afrique
 
-    // Notifications et messages du champ d'essai.
-    private const uint EN_SETFOCUS = 0x0100;
-    private const uint EN_KILLFOCUS = 0x0200;
-    private const uint EM_SETSEL = 0x00B1;
-    private const uint EM_SETREADONLY = 0x00CF;
 
     // Dimensions de base (96 DPI)
     // Refonte du 15/10 : fenêtre en largeur, 720 × 540 à 100 % (× ONBOARDING_UI_SCALE), pour
@@ -165,7 +162,6 @@ sealed class OnboardingWindow : IDisposable
     // exercices du parcours). Etat B (essaye non complete) sert a afficher « Suivant » a cote de
     // « Essayer maintenant » sur l'etape 1.
     private bool _learningModuleAttempted;
-    private bool _inputPaused;
     // Parcours d'exercices ouvert dans les Leçons (audit 1.3.0, B2 voie (b)) : l'accueil ne se
     // remet pas au premier plan par-dessus.
     private bool _tutorialOpen;
@@ -213,23 +209,6 @@ sealed class OnboardingWindow : IDisposable
         return true;
     }
 
-    /// <summary>Pause ou suspension : audit 09/11, W3. L'accueil reste utilisable (boutons, flèches, cases, liens ;
-    /// il était figé, sans un mot, et seule la croix répondait). Seul le champ d'essai de l'étape « Vos langues »
-    /// s'arrête : il ne montre les lettres de la disposition que si le moteur tourne. Il devient en lecture
-    /// seule, et l'étape dit pourquoi à la place du résultat de l'essai.</summary>
-    public void SetInputPaused(bool paused)
-    {
-        if (_inputPaused == paused) return;
-        _inputPaused = paused;
-        if (_hWndTrial == IntPtr.Zero) return;
-        Win32.SendMessageW(_hWndTrial, EM_SETREADONLY, paused ? (IntPtr)1 : IntPtr.Zero, IntPtr.Zero);
-        if (_hWnd != IntPtr.Zero)
-            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
-    }
-
-    /// <summary>Le champ d'essai refuse la frappe (pause ou suspension).</summary>
-    internal bool TrialReadOnly => _inputPaused;
-
     // Y du contenu (après le header) — recalculé à chaque OnPaint
     private int _contentY;
 
@@ -254,6 +233,7 @@ sealed class OnboardingWindow : IDisposable
     // Contrôles — Étape 3
     private IntPtr _hWndLinkLessons;
     private IntPtr _hWndLinkGuide;
+    private IntPtr _hWndLinkAfrica;
     private IntPtr _hWndLinkFeedback;
     private IntPtr _hWndLinkDiscord;
     // Les trois cases sont des boutons owner-draw peints en papier (A7) : leur état est tenu
@@ -265,14 +245,6 @@ sealed class OnboardingWindow : IDisposable
     private bool _autoStartChecked;
     private bool _dontShowChecked;
     private bool _trainingChecked;
-
-    // Contrôles — Étape « Vos langues » : le champ d'essai, sans bordure ; son cadre est peint
-    // dans _trialBox (accent épaissi au focus, comme la maquette).
-    private IntPtr _hWndTrial;
-    private Win32.RECT _trialBox;
-    private bool _trialFocused;
-    private bool _trialUpdating; // garde contre la réentrée d'EN_CHANGE quand on réduit le texte
-    private IntPtr _hFieldBrush;
 
     // Delegates (prevent GC)
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -315,9 +287,6 @@ sealed class OnboardingWindow : IDisposable
     // les FontSpec ci-dessous (AG Texte, AG Titre) et PaperText, comme l'étape 1 et les Leçons.
     private IntPtr _hFontButton;      // handle du cache d'AppFonts : partagé, jamais détruit ici
     private IntPtr _hFontLinkStrong;  // AG Texte souligné : les liens sont de vrais STATIC
-    // Champ d'essai : un EDIT n'a pas le secours par caractère de PaperText, et AG Texte n'a
-    // ni ɓ, ni ɗ, ni ɛ : il garde Segoe UI (décision du lot accueil).
-    private IntPtr _hFontTrial;
 
     // Corps d'AG Texte à 15 px (celui des Leçons), sa graisse, la légende et l'étiquette.
     private FontSpec FontBody => FontSpec.Of(AppFonts.Text, 15, TypeRamp.Regular, _dpiScale);
@@ -325,10 +294,9 @@ sealed class OnboardingWindow : IDisposable
     private FontSpec FontSubtitle => FontSpec.Of(AppFonts.Text, 14, TypeRamp.Regular, _dpiScale);
     private FontSpec FontCaption => FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, _dpiScale);
     private FontSpec FontTag => FontSpec.Of(AppFonts.Text, 12, TypeRamp.Semibold, _dpiScale);
-    // AG Titre : titre d'étape (celui de l'étape 1), intertitre, lettres montrées, numéros.
+    // AG Titre : titre d'étape (celui de l'étape 1), intertitre, numéros.
     private FontSpec FontStepTitle => FontSpec.Of(AppFonts.Title, 26, TypeRamp.Semibold, _dpiScale);
     private FontSpec FontSection => FontSpec.Of(AppFonts.Title, 20, TypeRamp.Semibold, _dpiScale);
-    private FontSpec FontLetters => FontSpec.Of(AppFonts.Title, 22, TypeRamp.Semibold, _dpiScale);
     private FontSpec FontNumber => FontSpec.Of(AppFonts.Title, 14, TypeRamp.Semibold, _dpiScale);
 
     public bool IsVisible => _visible;
@@ -340,7 +308,6 @@ sealed class OnboardingWindow : IDisposable
             staticDialogCode: false);
         _buttonArrowSubclassProc = ButtonArrowSubclassProc;
         _hPanelBrush = Win32.CreateSolidBrush(CLR_PANEL_BG);
-        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
 
         // DPI initial (moniteur principal — sera corrigé par GetDpiForWindow après création)
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
@@ -413,19 +380,15 @@ sealed class OnboardingWindow : IDisposable
         // Boutons : AG Texte, comme ceux des Leçons (handle du cache d'AppFonts).
         _hFontButton = FontBody.Handle;
         // Liens : AG Texte souligné. FontSpec n'a pas de soulignement : cette police-ci est créée
-        // ici, et c'est la seule, avec celle de l'essai, que le changement de DPI détruit.
+        // ici, et c'est la seule que le changement de DPI détruit.
         AppFonts.EnsureLoaded();
         _hFontLinkStrong = Win32.CreateFontW(-Math.Max(1, (int)(15 * _dpiScale)), 0, 0, 0, TypeRamp.Regular, 0, 1, 0, 0, 0, 0, 5, 0,
             AppFonts.Text);
-        // Hors rampe, comme les glyphes du clavier : la lettre de l'essai est une lettre montrée,
-        // pas du texte d'interface (taille de la maquette accueil-c-etape-vos-langues).
-        _hFontTrial = TypeRamp.Create(28, TypeRamp.Semibold, _dpiScale);
     }
 
     private void DestroyFonts()
     {
         Win32.DeleteObject(_hFontLinkStrong);
-        Win32.DeleteObject(_hFontTrial);
         _hFontButton = IntPtr.Zero; // partagé : ce n'est pas à l'accueil de le détruire
     }
 
@@ -444,11 +407,11 @@ sealed class OnboardingWindow : IDisposable
         Win32.SendMessageW(_hWndBtnTry, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkLessons, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
+        Win32.SendMessageW(_hWndLinkAfrica, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkFeedback, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SendMessageW(_hWndLinkDiscord, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         Win32.SetWindowTextW(_hWndLinkDiscord, L.Onboarding_LinkDiscord);
         // Les cases sont peintes par la fenêtre (DrawCheckBox) : pas de police à leur donner.
-        Win32.SendMessageW(_hWndTrial, Win32.WM_SETFONT, _hFontTrial, (IntPtr)1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -490,8 +453,9 @@ sealed class OnboardingWindow : IDisposable
         // Étape 3 — liens dans une grille fixe
         MoveCtl(_hWndLinkLessons, linksX, linkStartY, linksWidth, linkControlHeight);
         MoveCtl(_hWndLinkGuide, linksX, linkStartY + linkRowH, linksWidth, linkControlHeight);
-        MoveCtl(_hWndLinkFeedback, linksX, linkStartY + linkRowH * 2, linksWidth, linkControlHeight);
-        MoveCtl(_hWndLinkDiscord, linksX, linkStartY + linkRowH * 3, linksWidth, linkControlHeight);
+        MoveCtl(_hWndLinkAfrica, linksX, linkStartY + linkRowH * 2, linksWidth, linkControlHeight);
+        MoveCtl(_hWndLinkFeedback, linksX, linkStartY + linkRowH * 3, linksWidth, linkControlHeight);
+        MoveCtl(_hWndLinkDiscord, linksX, linkStartY + linkRowH * 4, linksWidth, linkControlHeight);
 
         // Préférences
         // Les cases se posent Px(4) à gauche du texte des liens : le carré peint s'y décale d'autant,
@@ -589,6 +553,13 @@ sealed class OnboardingWindow : IDisposable
         Win32.SendMessageW(_hWndLinkGuide, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
         _links.Attach(_hWndLinkGuide, 1);
 
+        // Créé ici, entre le guide et le retour : l'ordre de tabulation suit l'ordre de l'écran.
+        _hWndLinkAfrica = Win32.CreateWindowExW(0, "STATIC", L.Onboarding_LinkAfrica,
+            Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(380), linkH,
+            _hWnd, (IntPtr)IDC_LINK_AFRICA, hInstance, IntPtr.Zero);
+        Win32.SendMessageW(_hWndLinkAfrica, Win32.WM_SETFONT, _hFontLinkStrong, (IntPtr)1);
+        _links.Attach(_hWndLinkAfrica, 7);
+
         _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Tray_MenuGiveFeedback,
             Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP, margin, y, S(280), linkH,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
@@ -616,16 +587,6 @@ sealed class OnboardingWindow : IDisposable
         // au cas où l'utilisateur l'aurait déjà activée depuis les Paramètres.
         _hWndChkTraining = CreateCheckBox(hInstance, L.Onboarding_ChkTraining, IDC_CHK_TRAINING, margin, y, S(320));
         SetChecked(_hWndChkTraining, false);
-
-        // ══ Étape « Vos langues » — champ d'essai ══
-        // Un vrai EDIT : la frappe y arrive comme dans n'importe quelle application, après la
-        // traduction du crochet clavier (ù puis b → ɓ). Placé dans UpdateStepVisibility.
-        _hWndTrial = Win32.CreateWindowExW(0, "EDIT", "",
-            Win32.WS_CHILD | Win32.WS_TABSTOP | Win32.ES_CENTER | Win32.ES_AUTOHSCROLL,
-            margin, y, S(80), S(40),
-            _hWnd, (IntPtr)IDC_EDIT_TRIAL, hInstance, IntPtr.Zero);
-        Win32.SendMessageW(_hWndTrial, Win32.WM_SETFONT, _hFontTrial, (IntPtr)1);
-        RefreshTrialAccessibility(announce: false);
 
         // K6 (accessibilité 1.3.0) : le drapeau de langue n'était qu'une zone GDI du header,
         // hors d'atteinte au clavier. Ce bouton se pose dessus (SyncFlagButton), se tabule,
@@ -735,24 +696,16 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowPos(_hWnd, insertAfter, 0, 0, 0, 0,
             Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
 
-        // Champ d'essai : visible à l'étape « Vos langues » seulement. Le masquer alors qu'il a
-        // le focus le laisserait sur un contrôle invisible : le focus passe à « Suivant ».
-        bool trialVisible = _currentStep == OnboardingStep.Languages;
-        if (!trialVisible && Win32.GetFocus() == _hWndTrial)
-            Win32.SetFocus(_hWndBtnNext);
-        Win32.ShowWindow(_hWndTrial, trialVisible ? 1 : 0);
-        if (trialVisible)
-            PositionTrialField();
-
         int step3Vis = _currentStep == OnboardingStep.Last ? 1 : 0;
         // Même règle pour les liens et les cases de la dernière étape, qu'un retour en arrière masque.
         if (step3Vis == 0 && IsLastStepControl(Win32.GetFocus()))
             Win32.SetFocus(_hWndBtnNext);
         Win32.ShowWindow(_hWndLinkLessons, step3Vis);
         Win32.ShowWindow(_hWndLinkGuide, step3Vis);
+        Win32.ShowWindow(_hWndLinkAfrica, step3Vis);
         Win32.ShowWindow(_hWndLinkFeedback, step3Vis);
         // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. C'est la
-        // dernière ligne de la grille de liens de l'étape 3 : rien ne remonte, aucune place
+        // dernière ligne de la grille de liens de la dernière étape : rien ne remonte, aucune place
         // ne reste vide. Depuis le lot C, une politique d'entreprise peut l'éteindre aussi
         // sur les autres canaux.
         Win32.ShowWindow(_hWndLinkDiscord, PolicyManager.ExternalLinksEnabledNow ? step3Vis : 0);
@@ -866,7 +819,7 @@ sealed class OnboardingWindow : IDisposable
 
     /// <summary>
     /// Audit 1.3.0, A8 : ce que le lecteur d'écran ne lit pas, parce que c'est peint en GDI. Le texte
-    /// de chaque étape (« Étape n sur 4 », son titre, ses cartes, les titres de l'étape Ressources)
+    /// de chaque étape (« Étape n sur 3 », son titre, ses cartes, les titres de l'étape Ressources)
     /// tient en une description, posée sur le bouton principal de l'étape. Les cartes y sont dites
     /// dans l'ordre de l'écran, sans leurs numéros peints.
     /// </summary>
@@ -877,9 +830,6 @@ sealed class OnboardingWindow : IDisposable
         {
             case OnboardingStep.Changes:
                 return label + " " + Step1AccessibleSummary();
-            case OnboardingStep.Languages:
-                return string.Join(" ", label, L.Onboarding_LanguagesTitle + ".", OnboardingLanguages.AccessibleSummary(),
-                    L.Onboarding_LanguagesTipPrefix + SearchShortcut() + L.Onboarding_LanguagesTipSuffix);
             case OnboardingStep.HowTo:
                 return string.Join(" ", label, L.Onboarding_Step2Title + ".",
                     L.Onboarding_Card1Title + ". " + L.Onboarding_Card1Desc,
@@ -925,7 +875,7 @@ sealed class OnboardingWindow : IDisposable
 
     private bool IsLastStepControl(IntPtr hwnd) =>
         hwnd != IntPtr.Zero && (hwnd == _hWndChkAutoStart || hwnd == _hWndChkDontShow || hwnd == _hWndChkTraining
-            || hwnd == _hWndLinkLessons || hwnd == _hWndLinkGuide || hwnd == _hWndLinkFeedback || hwnd == _hWndLinkDiscord);
+            || hwnd == _hWndLinkLessons || hwnd == _hWndLinkGuide || hwnd == _hWndLinkAfrica || hwnd == _hWndLinkFeedback || hwnd == _hWndLinkDiscord);
 
     /// <summary>Avance d'une étape (bouton Suivant ou flèche) ; la dernière arme
     /// <c>_step3Reached</c>, qui autorise l'enregistrement des préférences à la fermeture.</summary>
@@ -980,8 +930,6 @@ sealed class OnboardingWindow : IDisposable
         SetChecked(_hWndChkAutoStart, _autoStartShownChecked);
         SetChecked(_hWndChkDontShow, false);
         RefreshPalette(); // A14 : le contraste élevé a pu changer depuis la création
-        // L'essai de l'étape « Vos langues » repart vide à chaque accueil.
-        Win32.SetWindowTextW(_hWndTrial, "");
         // Sync bidirectionnel des flags avec la progression persistee. Seuils alignes avec
         // la condition d'auto-show ([TrayApplication.cs] : LearningMaxStepCompleted < 3) :
         //   - 0 exo               -> etat A (« Essayer maintenant » seul)
@@ -1018,17 +966,8 @@ sealed class OnboardingWindow : IDisposable
         ConfigManager.SetShowOnboardingAtStartup(true);
     }
 
-    /// <summary>Audit 09/11, E28 : Échap dans le champ d'essai vide le texte s'il y en a, sinon ferme
-    /// l'accueil. Avant, il fermait tout, essai compris, sans rien demander.</summary>
-    private void OnEscape()
-    {
-        if (_hWndTrial != IntPtr.Zero && Win32.GetFocus() == _hWndTrial && Win32.GetWindowTextLengthW(_hWndTrial) > 0)
-        {
-            Win32.SetWindowTextW(_hWndTrial, "");
-            return;
-        }
-        Close(validated: false);
-    }
+    /// <summary>Échap ferme l'accueil sans rien valider.</summary>
+    private void OnEscape() => Close(validated: false);
 
     internal enum ArrowAction { LaunchTutorial, FocusTry, Next, Finish, FocusNext }
 
@@ -1194,14 +1133,6 @@ sealed class OnboardingWindow : IDisposable
                         if (_currentStep < OnboardingStep.Last) GoToNextStep();
                         else if (RequestActivation()) Close(validated: true);
                         break;
-                    case IDC_EDIT_TRIAL:
-                        if (code == Win32.EN_CHANGE) OnTrialChanged();
-                        else if (code == EN_SETFOCUS || code == EN_KILLFOCUS)
-                        {
-                            _trialFocused = code == EN_SETFOCUS;
-                            InvalidateTrialBox();
-                        }
-                        break;
                     case IDC_BTN_TRY:
                         // Etape 1 uniquement (visible seulement si !_learningModuleDone).
                         // L'utilisateur reste sur l'etape 1 a la fermeture du module ; les deux
@@ -1216,6 +1147,8 @@ sealed class OnboardingWindow : IDisposable
                             Program.Version, ProductIdentity.OsDescription(), "onboarding")); break;
                     case IDC_LINK_GUIDE:
                         if (code == 0) OpenLink(ProductIdentity.Url("/guide")); break;
+                    case IDC_LINK_AFRICA:
+                        if (code == 0) OpenLink(ProductIdentity.Url("/afrique")); break;
                     case IDC_LINK_DISCORD:
                         if (code == 0) OpenLink(ProductIdentity.DiscordInviteUrl); break;
                     case IDC_LINK_LESSONS:
@@ -1234,15 +1167,6 @@ sealed class OnboardingWindow : IDisposable
                         break;
                 }
                 return IntPtr.Zero;
-
-            case Win32.WM_CTLCOLOREDIT:
-                if (lParam == _hWndTrial)
-                {
-                    Win32.SetTextColor(wParam, CLR_TEXT);
-                    Win32.SetBkColor(wParam, _pal.Surface);
-                    return _hFieldBrush;
-                }
-                break;
 
             case Win32.WM_CTLCOLORSTATIC:
             {
@@ -1349,9 +1273,7 @@ sealed class OnboardingWindow : IDisposable
         if (now == _pal) return;
         _pal = now;
         if (_hPanelBrush != IntPtr.Zero) Win32.DeleteObject(_hPanelBrush);
-        if (_hFieldBrush != IntPtr.Zero) Win32.DeleteObject(_hFieldBrush);
         _hPanelBrush = Win32.CreateSolidBrush(_pal.Surface);
-        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
         if (_hWnd != IntPtr.Zero)
         {
             _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
@@ -1519,91 +1441,13 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowTextW(_hWndBtnTry, TryButtonText);
         Win32.SetWindowTextW(_hWndLinkLessons, L.Onboarding_LinkLessons);
         Win32.SetWindowTextW(_hWndLinkGuide, L.Onboarding_LinkGuide);
+        Win32.SetWindowTextW(_hWndLinkAfrica, L.Onboarding_LinkAfrica);
         Win32.SetWindowTextW(_hWndLinkFeedback, L.Tray_MenuGiveFeedback);
         Win32.SetWindowTextW(_hWndLinkDiscord, L.Onboarding_LinkDiscord);
         Win32.SetWindowTextW(_hWndChkAutoStart, L.Onboarding_ChkAutoStart);
         Win32.SetWindowTextW(_hWndChkDontShow, L.Onboarding_ChkDontShow);
         Win32.SetWindowTextW(_hWndChkTraining, L.Onboarding_ChkTraining);
         Win32.SetWindowTextW(_hWndBtnFlag, FlagButtonName);
-        RefreshTrialAccessibility(announce: false);
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Étape « Vos langues » — l'essai
-    // ═══════════════════════════════════════════════════════════════
-
-    private string ReadTrialText()
-    {
-        var buffer = new System.Text.StringBuilder(64);
-        Win32.GetWindowTextW(_hWndTrial, buffer, buffer.Capacity);
-        return buffer.ToString();
-    }
-
-    /// <summary>
-    /// Le champ ne garde que la dernière lettre tapée, affichée en grand : une nouvelle
-    /// frappe remplace la précédente, sans qu'il faille effacer. Puis le message et
-    /// l'annonce suivent.
-    /// </summary>
-    private void OnTrialChanged()
-    {
-        if (_trialUpdating) return;
-        string text = ReadTrialText();
-        string letter = LetterTrial.LastLetter(text);
-        if (letter != text)
-        {
-            _trialUpdating = true;
-            try
-            {
-                Win32.SetWindowTextW(_hWndTrial, letter);
-                Win32.SendMessageW(_hWndTrial, EM_SETSEL, (IntPtr)letter.Length, (IntPtr)letter.Length);
-            }
-            finally { _trialUpdating = false; }
-        }
-        RefreshTrialAccessibility(announce: true);
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-    }
-
-    /// <summary>
-    /// Nom accessible du champ : la consigne, suivie du résultat quand une lettre est tapée ;
-    /// description : le tableau des langues et l'astuce, que le lecteur d'écran ne voit pas
-    /// autrement (peints en GDI). <paramref name="announce"/> lève EVENT_OBJECT_NAMECHANGE,
-    /// que le lecteur lit sur l'élément focalisé, comme la faute de frappe du tutoriel.
-    /// </summary>
-    private void RefreshTrialAccessibility(bool announce)
-    {
-        if (_hWndTrial == IntPtr.Zero) return;
-        string message = LetterTrial.Message(ReadTrialText());
-        string name = message.Length == 0 ? L.Onboarding_TrialFieldName : L.Onboarding_TrialFieldName + " " + message;
-        if (announce) AccessibleName.TrySetAndNotify(_hWndTrial, name);
-        else AccessibleName.TrySet(_hWndTrial, name);
-        AccessibleName.TrySetDescription(_hWndTrial, OnboardingLanguages.AccessibleSummary() + " "
-            + L.Onboarding_LanguagesTipPrefix + SearchShortcut() + L.Onboarding_LanguagesTipSuffix);
-    }
-
-    private void InvalidateTrialBox() => Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-
-    /// <summary>Pose le champ au centre de son cadre peint ; ne bouge rien si rien n'a changé.</summary>
-    private void PositionTrialField()
-    {
-        if (_hWndTrial == IntPtr.Zero || _contentY <= 0) return;
-        IntPtr hdc = Win32.GetDC(_hWnd);
-        LanguagesLayout layout;
-        try { layout = GetLanguagesLayout(hdc, S(BASE_WIN_W), _contentY); }
-        finally { Win32.ReleaseDC(_hWnd, hdc); }
-        PlaceTrialField(layout);
-    }
-
-    private void PlaceTrialField(in LanguagesLayout layout)
-    {
-        _trialBox = layout.TrialBox;
-        var edit = layout.TrialEdit;
-        Win32.GetWindowRect(_hWndTrial, out var current);
-        var topLeft = new Win32.POINT { x = current.left, y = current.top };
-        Win32.ScreenToClient(_hWnd, ref topLeft);
-        if (topLeft.x != edit.left || topLeft.y != edit.top - _scroll.Position
-            || current.right - current.left != edit.right - edit.left
-            || current.bottom - current.top != edit.bottom - edit.top)
-            MoveCtl(_hWndTrial, edit.left, edit.top, edit.right - edit.left, edit.bottom - edit.top);
     }
 
     private void ShowAutoStartError()
@@ -1738,7 +1582,6 @@ sealed class OnboardingWindow : IDisposable
         switch (_currentStep)
         {
             case OnboardingStep.Changes: PaintStep1(hdc, gfx, cw, y); break;
-            case OnboardingStep.Languages: PaintLanguages(hdc, cw, y); break;
             case OnboardingStep.HowTo: PaintStep2(hdc, gfx, cw, ch, y); break;
             case OnboardingStep.Resources: PaintStep3(hdc, gfx, cw, ch, y); break;
         }
@@ -1866,9 +1709,9 @@ sealed class OnboardingWindow : IDisposable
     /// <summary>Retrait du libellé d'une case, depuis le bord gauche des liens : le carré et son espace.</summary>
     private int CheckLabelIndent => Px(CHECK_BOX + CHECK_GAP);
 
-    /// <summary>Lignes de la grille de liens de l'étape 3 : l'invitation Discord est la quatrième, et le canal
-    /// sobre ou une politique l'éteint (audit 09/11, W24 : le cadre gardait sa place, vide).</summary>
-    internal static int ResourceLinkRows => PolicyManager.ExternalLinksEnabledNow ? 4 : 3;
+    /// <summary>Lignes de la grille de liens de la dernière étape : l'invitation Discord est la cinquième, et le
+    /// canal sobre ou une politique l'éteint (audit 09/11, W24 : le cadre gardait sa place, vide).</summary>
+    internal static int ResourceLinkRows => PolicyManager.ExternalLinksEnabledNow ? 5 : 4;
 
     private void GetStep3Layout(int topY, int winW,
         out Win32.RECT resourcesPanel, out Win32.RECT prefsPanel, out Win32.RECT prefsTitle,
@@ -2186,237 +2029,6 @@ sealed class OnboardingWindow : IDisposable
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Étape « Vos langues » (direction C, 08/10)
-    // ═══════════════════════════════════════════════════════════════
-
-    /// <summary>Géométrie de l'étape, commune au dessin et au placement du champ d'essai.</summary>
-    private struct LanguagesLayout
-    {
-        public Win32.RECT Title, Subtitle, Panel, TrialText, TrialBox, TrialEdit, Result, Tip;
-        public int RowHeight, RowPadX, RowPadY, NameHeight, LettersHeight;
-    }
-
-    /// <summary>« Essayez ici : frappez la touche à droite du M (´), puis b. » : la touche et b en gras.</summary>
-    private static TextRun[] TrialRuns() => new[]
-    {
-        new TextRun(L.Onboarding_TrialPrefix),
-        new TextRun(L.Onboarding_TrialDeadKey, Strong: true),
-        new TextRun(L.Onboarding_TrialThen),
-        new TextRun(L.Onboarding_TrialLetter, Strong: true),
-        new TextRun(L.Onboarding_TrialSuffix),
-    };
-
-    /// <summary>« Une autre lettre : Ctrl + Maj + W, puis tapez « peul » ou « bambara ». » :
-    /// texte secondaire, touches à l'encre en semi-gras. La lettre est celle du raccourci
-    /// réglé pour la recherche, comme sur les cartes 3 et 4 (audit de régression 10/11, RA15).</summary>
-    internal static TextRun[] TipRuns()
-    {
-        var runs = new List<TextRun> { new(L.Onboarding_LanguagesTipPrefix) };
-        string[] keys = { "Ctrl", L.Settings_ShortcutModifier2,
-            ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk) };
-        for (int i = 0; i < keys.Length; i++)
-        {
-            if (i > 0) runs.Add(new TextRun(" + ", Strong: true));
-            runs.Add(new TextRun(keys[i], Strong: true));
-        }
-        runs.Add(new TextRun(L.Onboarding_LanguagesTipSuffix));
-        return runs.ToArray();
-    }
-
-    private LanguagesLayout GetLanguagesLayout(IntPtr hdc, int cw, int topY)
-    {
-        int margin = ColumnMargin;
-        int contentW = cw - margin * 2;
-        var layout = new LanguagesLayout { RowPadX = S(16), RowPadY = S(11) };
-
-        // Titre et sous-titre : ceux de l'étape 1, au même endroit (P4).
-        layout.Title = StepTitleRect(cw, topY);
-        layout.Subtitle = new Win32.RECT
-        {
-            left = layout.Title.left,
-            top = layout.Title.bottom + Px(4),
-            right = layout.Title.right,
-            bottom = layout.Title.bottom + Px(24)
-        };
-        int y = layout.Subtitle.bottom + Px(14);
-
-        layout.NameHeight = LineHeight(hdc, FontBodyStrong);
-        layout.LettersHeight = LineHeight(hdc, FontLetters);
-        layout.RowHeight = layout.RowPadY * 2 + layout.NameHeight + layout.LettersHeight;
-        int panelH = layout.RowHeight * OnboardingLanguages.All.Length + 2;
-        layout.Panel = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + panelH };
-        y += panelH + S(16);
-
-        // L'essai : consigne à gauche, champ à droite (64 × 48 px à 100 % dans la maquette).
-        int boxW = S(88);
-        int boxH = S(64);
-        int textW = contentW - boxW - S(16);
-        int trialTextH = Paragraph(hdc, TrialRuns(), FontBody, FontBodyStrong, 0, 0, textW, CLR_TEXT, CLR_TEXT, draw: false);
-        int trialH = Math.Max(boxH, trialTextH);
-        layout.TrialBox = new Win32.RECT { left = cw - margin - boxW, top = y + (trialH - boxH) / 2, right = cw - margin, bottom = y + (trialH - boxH) / 2 + boxH };
-        int textTop = y + (trialH - trialTextH) / 2;
-        layout.TrialText = new Win32.RECT { left = margin, top = textTop, right = margin + textW, bottom = textTop + trialTextH };
-        int editH = MeasureSingleLineHeight(hdc, _hFontTrial) + S(2);
-        int editInset = S(6);
-        int editTop = layout.TrialBox.top + (boxH - editH) / 2;
-        layout.TrialEdit = new Win32.RECT
-        {
-            left = layout.TrialBox.left + editInset,
-            top = editTop,
-            right = layout.TrialBox.right - editInset,
-            bottom = editTop + editH
-        };
-        y += trialH + S(6);
-
-        // Le message occupe toujours sa ligne : l'astuce ne saute pas quand il apparaît.
-        int resultH = LineHeight(hdc, FontBodyStrong);
-        layout.Result = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + resultH };
-        y += resultH + S(10);
-
-        int tipH = Paragraph(hdc, TipRuns(), FontBody, FontBodyStrong, 0, 0, contentW, CLR_REASSURE, CLR_TEXT, draw: false);
-        layout.Tip = new Win32.RECT { left = margin, top = y, right = cw - margin, bottom = y + tipH };
-        return layout;
-    }
-
-    private void PaintLanguages(IntPtr hdc, int cw, int y)
-    {
-        var layout = GetLanguagesLayout(hdc, cw, y);
-        PlaceTrialField(layout);
-
-        DrawStepTitle(hdc, cw, y, L.Onboarding_LanguagesTitle);
-        PaperText.DrawLine(hdc, L.Onboarding_LanguagesSubtitle, FontSubtitle, layout.Subtitle, CLR_REASSURE);
-
-        // Les trois langues : nom et lettres à gauche, un geste à droite.
-        DrawPaperPanel(hdc, layout.Panel);
-        int rowLeft = layout.Panel.left + layout.RowPadX;
-        int rowRight = layout.Panel.right - S(12);
-        for (int i = 0; i < OnboardingLanguages.All.Length; i++)
-        {
-            var language = OnboardingLanguages.All[i];
-            int rowTop = layout.Panel.top + 1 + i * layout.RowHeight;
-            if (i > 0)
-                PaperDraw.Fill(hdc, layout.Panel.left + 1, rowTop - 1, layout.Panel.right - 1, rowTop, CLR_PANEL_BORDER);
-
-            int gestureLeft = DrawLanguageGesture(hdc, language.Example, rowRight, rowTop + layout.RowHeight / 2);
-
-            int textTop = rowTop + layout.RowPadY;
-            var nameRect = new Win32.RECT { left = rowLeft, top = textTop, right = gestureLeft - S(8), bottom = textTop + layout.NameHeight };
-            PaperText.DrawLine(hdc, language.Name(), FontBodyStrong, nameRect, CLR_TEXT);
-
-            var lettersRect = new Win32.RECT { left = rowLeft, top = nameRect.bottom, right = gestureLeft - S(8), bottom = nameRect.bottom + layout.LettersHeight };
-            PaperText.DrawLine(hdc, language.Letters, FontLetters, lettersRect, CLR_TEXT);
-        }
-
-        // L'essai : consigne, cadre du champ (le contrôle EDIT est posé dedans), message.
-        Paragraph(hdc, TrialRuns(), FontBody, FontBodyStrong, layout.TrialText.left, layout.TrialText.top,
-            layout.TrialText.right - layout.TrialText.left, CLR_TEXT, CLR_TEXT, draw: true);
-        DrawTrialBox(hdc, layout.TrialBox);
-
-        string trialText = ReadTrialText();
-        string message = _inputPaused ? L.Onboarding_TrialPaused : LetterTrial.Message(trialText);
-        if (_inputPaused)
-            PaperText.DrawLine(hdc, message, FontBody, layout.Result, CLR_TEXT);
-        else if (message.Length > 0)
-        {
-            bool match = LetterTrial.Evaluate(trialText) == LetterTrialResult.Match;
-            PaperText.DrawLine(hdc, message, match ? FontBodyStrong : FontBody, layout.Result, match ? CLR_LINK : CLR_TEXT);
-        }
-
-        Paragraph(hdc, TipRuns(), FontBody, FontBodyStrong, layout.Tip.left, layout.Tip.top,
-            layout.Tip.right - layout.Tip.left, CLR_REASSURE, CLR_TEXT, draw: true);
-    }
-
-    /// <summary>Cadre du champ d'essai : gris au repos ; au focus, bord et anneau d'accent.</summary>
-    private void DrawTrialBox(IntPtr hdc, Win32.RECT box)
-    {
-        if (_trialFocused)
-        {
-            int ring = Math.Max(2, S(3));
-            int gap = Math.Max(1, S(1));
-            var outer = new Win32.RECT { left = box.left - ring - gap, top = box.top - ring - gap, right = box.right + ring + gap, bottom = box.bottom + ring + gap };
-            GdiHelpers.FillSolidRect(hdc, outer, CLR_LINK);
-            var spacer = new Win32.RECT { left = box.left - gap, top = box.top - gap, right = box.right + gap, bottom = box.bottom + gap };
-            GdiHelpers.FillSolidRect(hdc, spacer, CLR_BG);
-        }
-        GdiHelpers.FillSolidRect(hdc, box, _trialFocused ? CLR_LINK : _pal.Pale);
-        var inner = new Win32.RECT { left = box.left + 1, top = box.top + 1, right = box.right - 1, bottom = box.bottom - 1 };
-        GdiHelpers.FillSolidRect(hdc, inner, CLR_PANEL_BG);
-    }
-
-    /// <summary>
-    /// Geste de <paramref name="example"/>, aligné à droite sur <paramref name="right"/> et
-    /// centré sur <paramref name="centerY"/> : la lettre, « = », puis chaque temps (modificateur
-    /// tenu en étiquette pleine, touche frappée en case), séparés par « puis ». Lu dans
-    /// character-index.json (<see cref="Gesture.Of(string)"/>). Rend le bord gauche dessiné.
-    /// </summary>
-    private int DrawLanguageGesture(IntPtr hdc, string example, int right, int centerY)
-    {
-        var parts = new List<(int Kind, string Text, FontSpec Font, int Width)>(); // 0 lettre, 1 texte, 2 tenu, 3 case
-        int keyH = S(32);
-        int tagH = S(27);
-        int pad = S(14);
-        var letters = FontLetters;
-        var small = FontCaption;
-        var tag = FontTag;
-        var key = FontBodyStrong;
-        parts.Add((0, example, letters, PaperText.Width(hdc, example, letters)));
-        parts.Add((1, "=", small, PaperText.Width(hdc, "=", small)));
-        var steps = Gesture.Of(example);
-        for (int i = 0; i < steps.Count; i++)
-        {
-            if (i > 0)
-                parts.Add((1, L.Gesture_ThenShort, small, PaperText.Width(hdc, L.Gesture_ThenShort, small)));
-            if (steps[i].Shift)
-                parts.Add((2, L.Settings_ShortcutModifier2, tag, PaperText.Width(hdc, L.Settings_ShortcutModifier2, tag) + pad));
-            if (steps[i].AltGr)
-                parts.Add((2, L.AltGrKey, tag, PaperText.Width(hdc, L.AltGrKey, tag) + pad));
-            string label = steps[i].ShortLabel;
-            parts.Add((3, label, key, Math.Max(keyH, PaperText.Width(hdc, label, key) + pad)));
-        }
-
-        int gap = S(6);
-        int total = 0;
-        for (int i = 0; i < parts.Count; i++)
-            total += parts[i].Width + (i > 0 ? (i == 1 ? S(10) : gap) : 0);
-        int x = right - total;
-        int left = x;
-
-        for (int i = 0; i < parts.Count; i++)
-        {
-            if (i > 0) x += i == 1 ? S(10) : gap;
-            var part = parts[i];
-            switch (part.Kind)
-            {
-                case 2:
-                {
-                    var box = new Win32.RECT { left = x, top = centerY - tagH / 2, right = x + part.Width, bottom = centerY - tagH / 2 + tagH };
-                    PaperDraw.RoundBox(hdc, new Win32.RECT { left = box.left, top = box.top, right = box.right - 1, bottom = box.bottom - 1 },
-                        CLR_TEXT, CLR_TEXT, Px(3));
-                    PaperText.DrawLine(hdc, part.Text, part.Font, box, CLR_PANEL_BG, TextAlign.Center);
-                    break;
-                }
-                case 3:
-                {
-                    var box = new Win32.RECT { left = x, top = centerY - keyH / 2, right = x + part.Width, bottom = centerY - keyH / 2 + keyH };
-                    PaperDraw.RoundBox(hdc, new Win32.RECT { left = box.left, top = box.top, right = box.right - 1, bottom = box.bottom - 1 },
-                        CLR_PANEL_BG, CLR_TEXT, Px(3));
-                    PaperText.DrawLine(hdc, part.Text, part.Font, box, CLR_TEXT, TextAlign.Center);
-                    break;
-                }
-                default:
-                {
-                    int h = LineHeight(hdc, part.Font);
-                    var box = new Win32.RECT { left = x, top = centerY - h / 2, right = x + part.Width, bottom = centerY - h / 2 + h };
-                    PaperText.DrawLine(hdc, part.Text, part.Font, box, part.Kind == 0 ? CLR_LINK : CLR_REASSURE);
-                    break;
-                }
-            }
-            x += part.Width;
-        }
-        return left;
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // Cartes numérotées de l'étape « Comment utiliser »
     // ═══════════════════════════════════════════════════════════════
 
@@ -2565,7 +2177,6 @@ sealed class OnboardingWindow : IDisposable
         if (_gdipToken != IntPtr.Zero) { Win32.GdiplusShutdown(_gdipToken); _gdipToken = IntPtr.Zero; }
         DestroyFonts();
         Win32.DeleteObject(_hPanelBrush);
-        Win32.DeleteObject(_hFieldBrush);
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("Onboarding"));
     }
 }

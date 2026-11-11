@@ -114,7 +114,7 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 ```text
 Version 1.3.0 :
 • Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (Alt Gr + Maj + *).
-• Accueil refait, avec une étape pour le peul, le wolof et le bambara ; ses exercices passent dans les Leçons et acceptent l’espace ordinaire et l’apostrophe droite.
+• Accueil refait ; ses exercices passent dans les Leçons, selon vos usages (peul, wolof, bambara compris), et acceptent l’espace ordinaire et l’apostrophe droite.
 • Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
 • La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
 • Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
@@ -240,7 +240,7 @@ Free and open source (EUPL 1.2), no admin rights needed
 ```text
 Version 1.3.0:
 • Layout 2026.1: 95 more characters, including Extended Cyrillic (Alt Gr + Shift + *).
-• Redesigned welcome screen, with a step for Fula, Wolof and Bambara; its exercises move to Lessons and accept a regular space and the straight apostrophe.
+• Redesigned welcome screen; its exercises move to Lessons, picked from what you write (Fula, Wolof and Bambara included), and accept a regular space and the straight apostrophe.
 • Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
 • Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
 • Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome screen or in Settings.

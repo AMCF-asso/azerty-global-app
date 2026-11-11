@@ -83,26 +83,6 @@ public sealed class Audit0911AccueilAProposTests : IDisposable
         Assert.Contains("Ctrl + Maj + J", OnboardingWindow.StepAccessibleSummary(OnboardingStep.HowTo));
     }
 
-    /// <summary>Audit de régression du 10/11, RA15 : l'astuce dessinée à l'étape des langues
-    /// gardait « W » écrit en dur, alors que son texte lu suivait déjà le réglage.</summary>
-    [Theory]
-    [InlineData(0u, "Ctrl + Maj + W")]     // réglage par défaut
-    [InlineData(0x4Au, "Ctrl + Maj + J")]  // recherche réglée sur J
-    public void Accueil_AstuceDesLangues_ÉcritLeRaccourciRéglé(uint vk, string attendu)
-    {
-        using var isolation = new BancCapture.Isolation();
-        L.Language = "fr";
-        if (vk != 0) ConfigManager.ShortcutCharacterSearchVk = vk;
-
-        var runs = OnboardingWindow.TipRuns();
-        string astuce = string.Concat(runs.Select(r => r.Text));
-
-        Assert.Equal(L.Onboarding_LanguagesTipPrefix + attendu + L.Onboarding_LanguagesTipSuffix, astuce);
-        Assert.Equal(L.Onboarding_LanguagesTipPrefix + OnboardingWindow.SearchShortcut() + L.Onboarding_LanguagesTipSuffix, astuce);
-        // Les touches restent en semi-gras, la lettre réglée comprise.
-        Assert.Contains(runs, r => r.Strong && r.Text == attendu[^1..]);
-    }
-
     // ── W6 : un refus d'activation laisse une issue ─────────────────────────
 
     [Fact]
@@ -215,41 +195,15 @@ public sealed class Audit0911AccueilAProposTests : IDisposable
         finally { BancCapture.Teardown(window); }
     }
 
-    // ── E28 : Échap dans le champ d'essai vide le texte avant de fermer ─────
-
-    [Fact]
-    public void Accueil_ÉchapDansLeChampDEssai_VideLeTexteAvantDeFermer()
-    {
-        using var isolation = new BancCapture.Isolation();
-        var window = OpenOnboarding();
-        try
-        {
-            while (BancCapture.Field<int>(window, "_currentStep") < OnboardingStep.Languages)
-                BancCapture.Call(window, "GoToNextStep");
-            IntPtr trial = BancCapture.Field<IntPtr>(window, "_hWndTrial");
-            Win32.SetWindowTextW(trial, "ñ");
-            Win32.SetFocus(trial);
-            Assert.Equal(trial, Win32.GetFocus()); // sans focus réel, ce test ne prouverait rien
-
-            BancCapture.Call(window, "OnEscape");
-            Assert.Equal("", TextOf(trial));
-            Assert.True(BancCapture.Field<bool>(window, "_visible"), "le premier Échap ne devait que vider le champ");
-
-            BancCapture.Call(window, "OnEscape");
-            Assert.False(BancCapture.Field<bool>(window, "_visible"));
-        }
-        finally { BancCapture.Teardown(window); }
-    }
-
     // ── W24 : plus de place réservée à Discord quand le lien est éteint ─────
 
     [Fact]
-    public void Accueil_GrilleDeLiens_QuatreLignesAvecDiscord_TroisSans()
+    public void Accueil_GrilleDeLiens_CinqLignesAvecDiscord_QuatreSans()
     {
         using (AppChannel.OverrideForTests(DistributionChannel.Store))
-            Assert.Equal(4, OnboardingWindow.ResourceLinkRows);
+            Assert.Equal(5, OnboardingWindow.ResourceLinkRows);
         using (AppChannel.OverrideForTests(DistributionChannel.Amcf))
-            Assert.Equal(3, OnboardingWindow.ResourceLinkRows);
+            Assert.Equal(4, OnboardingWindow.ResourceLinkRows);
     }
 
     [Fact]
