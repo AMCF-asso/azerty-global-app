@@ -29,7 +29,7 @@ sealed class OnboardingWindow : IDisposable
     private const int IDC_LINK_LESSONS = 2012;
     private const int IDC_CHK_TRAINING = 2013;  // opt-in Défi du jour (v1.2.0) — étape 3 uniquement
     private const int IDC_BTN_FLAG = 2014;      // K6 : bouton du drapeau de langue (accessibilité 1.3.0)
-    private const int IDC_LINK_AFRICA = 2016;   // « Écrire le peul, le wolof, le bambara » — page /afrique
+    private const int IDC_LINK_AFRICA = 2016;   // « Écrire le peul, le wolof, le bambara » — page /afrique (/en/africa en anglais)
 
 
     // Dimensions de base (96 DPI)
@@ -1148,7 +1148,7 @@ sealed class OnboardingWindow : IDisposable
                     case IDC_LINK_GUIDE:
                         if (code == 0) OpenLink(ProductIdentity.Url("/guide")); break;
                     case IDC_LINK_AFRICA:
-                        if (code == 0) OpenLink(ProductIdentity.Url("/afrique")); break;
+                        if (code == 0) OpenLink(ProductIdentity.Url(L.Onboarding_LinkAfricaPath)); break;
                     case IDC_LINK_DISCORD:
                         if (code == 0) OpenLink(ProductIdentity.DiscordInviteUrl); break;
                     case IDC_LINK_LESSONS:
