@@ -135,9 +135,23 @@ public class GameRegistryTests
     [InlineData("AnyDesk.exe")]
     [InlineData("TeamViewer.exe")]
     [InlineData("rustdesk.exe")]
+    [InlineData("wfica32.exe")]
+    [InlineData("vmware-view.exe")]
+    [InlineData("vmware-remotemks.exe")]
+    [InlineData("WFICA32.EXE")]      // casse du nom indifférente
     public void IsRemoteAccessProcess_KnownClient_ReturnsTrue(string processName)
     {
         Assert.True(GameRegistry.IsRemoteAccessProcess(processName));
+    }
+
+    [Fact]
+    public void RemoteAccessHostProcesses_ExclutLesClientsDeBureauVirtuel()
+    {
+        // Citrix et Horizon sont des clients : côté hôte, leur entrée n'est pas traitée
+        // comme une injection de prise en main à distance.
+        foreach (var client in new[] { "wfica32.exe", "vmware-view.exe", "vmware-remotemks.exe" })
+            Assert.DoesNotContain(GameRegistry.RemoteAccessHostProcesses,
+                h => string.Equals(h, client, StringComparison.OrdinalIgnoreCase));
     }
 
     // ── Hôtes de prise en main à distance (C5, décision d'Antoine du 2026-09-24) ──

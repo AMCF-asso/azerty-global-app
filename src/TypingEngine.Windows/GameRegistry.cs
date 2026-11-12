@@ -30,6 +30,11 @@ public static class GameRegistry
         "AnyDesk.exe",
         "TeamViewer.exe",
         "rustdesk.exe",
+        // Décision d'Antoine du 2026-11-12 : clients de bureau virtuel des administrations.
+        // Noms tirés de la documentation des éditeurs, non mesurés sur un poste réel.
+        "wfica32.exe",             // Citrix Workspace (moteur de session ICA)
+        "vmware-view.exe",         // VMware / Omnissa Horizon Client
+        "vmware-remotemks.exe",    // Horizon : fenêtre de la session distante (Blast, PCoIP)
     };
 
     /// <summary>
