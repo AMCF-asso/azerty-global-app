@@ -37,6 +37,27 @@ internal static class AppFonts
     internal const string Symbols = "AG Symboles";
     /// <summary>Dernier secours, présent sur tout Windows.</summary>
     internal const string System = "Segoe UI";
+    /// <summary>Pictogrammes absents des polices embarquées (✈ ☎ ⚠ ✅ ❄…), en monochrome gras :
+    /// présente sur tout Windows 10 et 11.</summary>
+    internal const string Pictographs = "Segoe UI Emoji";
+    /// <summary>Pictogrammes que Segoe UI Emoji n'a pas (★ ☞ ☽).</summary>
+    internal const string PictographsFallback = "Segoe UI Symbol";
+
+    /// <summary>Hauteur d'un pictogramme rapportée à celle du texte. Segoe UI Emoji remplit tout
+    /// son em : à la hauteur du texte, l'avion et l'étoile prenaient 1,3 touche de largeur sur le
+    /// clavier virtuel (touche morte Symboles divers). Réglé par <c>PictographFitTests</c> pour
+    /// que leur encre mesure à peu près celle d'une lettre capitale.</summary>
+    internal const float PictographScale = 0.7f;
+
+    /// <summary>Même rapport pour Segoe UI Symbol (★ ☽ ☞), dont les glyphes sont dessinés plus
+    /// petits dans leur em que ceux de Segoe UI Emoji : à 0,62 l'étoile ne mesurait que 12 px
+    /// pour une touche de 50.</summary>
+    internal const float PictographFallbackScale = 1.0f;
+
+    /// <summary>Un pictogramme : ℹ et les blocs U+2300–U+27BF (Technique, Symboles divers,
+    /// Dingbats). Les flèches, formes géométriques et symboles mathématiques gardent le secours
+    /// de Segoe UI, qui les dessine à la taille du texte.</summary>
+    internal static bool IsPictograph(char c) => c == 'ℹ' || (c >= '⌀' && c <= '➿');
 
     private static readonly object Gate = new();
     private static readonly Dictionary<FontSpec, IntPtr> Cache = new();
@@ -102,6 +123,14 @@ internal static class AppFonts
     {
         System => [spec],
         Symbols => [spec, spec with { Family = System }],
-        _ => [spec, spec with { Family = KeyMarks }, spec with { Family = Symbols }, spec with { Family = System }],
+        _ => [spec, spec with { Family = KeyMarks }, spec with { Family = Symbols },
+            Pictograph(spec, Pictographs, PictographScale), Pictograph(spec, PictographsFallback, PictographFallbackScale),
+            spec with { Family = System }],
     };
+
+    /// <summary>Police des pictogrammes : à la hauteur réduite, et en graisse normale (ces polices
+    /// n'ont pas de gras : GDI l'épaissirait à la main). <see cref="PaperText"/> ne l'essaie que
+    /// pour un pictogramme.</summary>
+    private static FontSpec Pictograph(FontSpec spec, string family, float scale)
+        => new(family, Math.Max(1, (int)MathF.Round(spec.Height * scale)), TypeRamp.Regular);
 }
