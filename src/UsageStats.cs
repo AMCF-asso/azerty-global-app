@@ -128,7 +128,7 @@ static class UsageStats
     // Lecture publique (utilisée par UsageStatsWindow)
     // ═══════════════════════════════════════════════════════════════
 
-    public static DateOnly? FirstRemapDate { get { lock (_lock) { EnsureLoaded(); return ParseDate(_firstRemapDate); } } }
+    public static DateOnly? FirstRemapDate { get { lock (_lock) { EnsureLoaded(); return StoredDate.Parse(_firstRemapDate); } } }
     public static int ActiveDaysCount { get { lock (_lock) { EnsureLoaded(); return _activeDaysCount; } } }
 
     /// <summary>
@@ -143,7 +143,7 @@ static class UsageStats
             lock (_lock)
             {
                 EnsureLoaded();
-                var last = ParseDate(_lastActiveDate);
+                var last = StoredDate.Parse(_lastActiveDate);
                 if (last == null) return 0;
                 var today = DateOnly.FromDateTime(DateTime.Now);
                 return last.Value == today || last.Value.AddDays(1) == today ? _currentStreak : 0;
@@ -151,7 +151,7 @@ static class UsageStats
         }
     }
     public static int BestStreak { get { lock (_lock) { EnsureLoaded(); return _bestStreak; } } }
-    public static DateOnly? LastActiveDate { get { lock (_lock) { EnsureLoaded(); return ParseDate(_lastActiveDate); } } }
+    public static DateOnly? LastActiveDate { get { lock (_lock) { EnsureLoaded(); return StoredDate.Parse(_lastActiveDate); } } }
     public static long TotalActiveMinutes { get { lock (_lock) { EnsureLoaded(); return _totalActiveMinutes; } } }
     public static long AccentedUppercaseCount { get { lock (_lock) { EnsureLoaded(); return _accentedUppercaseCount; } } }
     public static long FrenchTypographyCount { get { lock (_lock) { EnsureLoaded(); return _frenchTypographyCount; } } }
@@ -173,7 +173,7 @@ static class UsageStats
     public static long SearchOpenCount { get { lock (_lock) { EnsureLoaded(); return _searchOpenCount; } } }
     public static long VirtualKeyboardOpenCount { get { lock (_lock) { EnsureLoaded(); return _virtualKeyboardOpenCount; } } }
     public static long ChallengesCompletedCount { get { lock (_lock) { EnsureLoaded(); return _challengesCompletedCount; } } }
-    public static DateOnly? LastSpecialCharDate { get { lock (_lock) { EnsureLoaded(); return ParseDate(_lastSpecialCharDate); } } }
+    public static DateOnly? LastSpecialCharDate { get { lock (_lock) { EnsureLoaded(); return StoredDate.Parse(_lastSpecialCharDate); } } }
 
     /// <summary>Le seuil de caracteres enrichis a-t-il ete franchi depuis le demarrage
     /// du processus ? Aucune I/O : ne lit que l'etat en memoire, donc appelable depuis
@@ -444,15 +444,12 @@ static class UsageStats
         return true;
     }
 
-    private static bool IsConsecutiveDay(string previousDate, string today)
+    internal static bool IsConsecutiveDay(string previousDate, string today)
     {
-        if (!DateOnly.TryParseExact(previousDate, "yyyy-MM-dd", out var prev)) return false;
-        if (!DateOnly.TryParseExact(today, "yyyy-MM-dd", out var todayDate)) return false;
+        if (StoredDate.Parse(previousDate) is not { } prev) return false;
+        if (StoredDate.Parse(today) is not { } todayDate) return false;
         return prev.AddDays(1) == todayDate;
     }
-
-    private static DateOnly? ParseDate(string? s) =>
-        s != null && DateOnly.TryParseExact(s, "yyyy-MM-dd", out var d) ? d : null;
 
     /// <summary>
     /// Formate un total de minutes actives en texte lisible : « 12 min », « 3 h 05 », « 127 h ».
@@ -481,7 +478,7 @@ static class UsageStats
         lock (_lock)
         {
             EnsureLoaded();
-            var first = ParseDate(_firstRemapDate);
+            var first = StoredDate.Parse(_firstRemapDate);
             if (first == null || _activeDaysCount == 0)
                 return L.Stats_ShareJustStarted;
 

@@ -98,8 +98,8 @@ static class TrainingReminders
             Enabled: ConfigManager.TrainingEnabled,
             IgnoredCount: ConfigManager.TrainingIgnoredCount,
             SequenceIndex: ConfigManager.TrainingSequenceIndex,
-            LastSessionDate: ParseDate(ConfigManager.TrainingLastSessionDate),
-            LastReminderDate: ParseDate(ConfigManager.TrainingLastReminderDate),
+            LastSessionDate: StoredDate.Parse(ConfigManager.TrainingLastSessionDate),
+            LastReminderDate: StoredDate.Parse(ConfigManager.TrainingLastReminderDate),
             LastActiveDate: UsageStats.LastActiveDate,
             LastSpecialCharDate: UsageStats.LastSpecialCharDate,
             CurrentStreak: UsageStats.CurrentStreak,
@@ -148,9 +148,6 @@ static class TrainingReminders
         uint seq = ConfigManager.TrainingSequenceIndex;
         return seq < DailyChallenge.SequenceLength
             ? playedIndex == seq
-            : playedIndex >= DailyChallenge.SequenceLength && ParseDate(ConfigManager.TrainingLastSessionDate) != today;
+            : playedIndex >= DailyChallenge.SequenceLength && StoredDate.Parse(ConfigManager.TrainingLastSessionDate) != today;
     }
-
-    private static DateOnly? ParseDate(string? s) =>
-        s != null && DateOnly.TryParseExact(s, "yyyy-MM-dd", out var d) ? d : null;
 }

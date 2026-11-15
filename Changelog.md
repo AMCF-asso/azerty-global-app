@@ -20,6 +20,7 @@ Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 
 - Textes coupés : la mesure de troncature couvre aussi les lignes sans « … », les boutons, cases et liens natifs, à 125, 150 et 200 %, et les messages de refus.
 - L’exécutable ne porte plus le chemin des sources de la machine qui le compile.
 - Presse-papiers occupé : l’application réessaie quelques fois avant d’abandonner ; si la copie échoue, la recherche de caractère (quand rien ne peut être inséré) et « Copier mon résultat » du Défi le disent au lieu de rester muets.
+- Série de jours, rappel et Défi du jour : les dates enregistrées se relisent de la même façon quel que soit le format régional de Windows (calendrier thaï bouddhiste, par exemple) ; la série ne retombe plus et le Défi ne se recompte plus le même jour.
 
 **Retouches de l’avis global (10 novembre, avant le Store)**
 

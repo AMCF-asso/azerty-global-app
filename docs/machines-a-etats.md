@@ -155,7 +155,7 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C4.3 | M4.2 | Écriture de fermeture ratée : réglages perdus, aucune reprise synchrone | plausible (couture à ajouter) | faible | ME-09 | lecture du code |
 | C4.4 | M4.4 | La relance unique du lancement automatique est proposée même quand Windows ou la politique refuse | plausible (couture à ajouter) | faible | ME-04 | lecture du code |
 | C4.5 | M4.3 | Seconde instance : `config.json` lu et mis de côté avant le mutex, `_loadFailed` reste collé et la notice est perdue | confirmé | faible | ME-09 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` |
-| C5.1 | M5.3 | Dates analysées sans culture invariante : série et Défi faussés sous un calendrier non grégorien | confirmé | faible | ME-01 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
+| C5.1 | M5.3 | Dates analysées sans culture invariante : série et Défi faussés sous un calendrier non grégorien | corrigé | faible | ME-01 | `AZERTYGlobal/StoredDate.cs` (analyseur unique), `UsageStats.cs`, `TrainingReminders.cs`, `UsageStatsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`, `Rappel_UnSeulParJour_QuelleQueSoitLaCulture`, `Statistiques_UneDateEcriteEnInvariantSeRelitAIdentique_QuelleQueSoitLaCulture`, `Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`) |
 | C5.2 | M5.4 | Exclusion de frappe liée à l'ouverture du tutoriel et non au focus | plausible (couture à ajouter) | faible | ME-12 | lecture du code |
 | C5.3 | M5.7 | États absorbants _loadFailed et _readFailed jusqu'au redémarrage | réfuté | — | — | relecture adversariale |
 | C5.4 | M5.7 | ResetAll partiel : état de progression résiduel | réfuté | — | — | relecture adversariale |
@@ -1974,7 +1974,7 @@ C5.3.
 
 - I1 : `_currentStreak >= 1` dès qu'un jour est compté — garanti (`src/UsageStats.cs:437`).
 - I2 : un jour n'est compté qu'une fois — garanti (`src/UsageStats.cs:434`).
-- I3 : la série ne dépend pas de la culture — non garanti (C5.1).
+- I3 : la série ne dépend pas de la culture — garanti depuis ME-01 : `IsConsecutiveDay` et toutes les lectures de date passent par `StoredDate.Parse` (culture invariante, `src/StoredDate.cs`).
 - I4 : la date n'avance que vers le futur — non garanti (C5.7).
 
 #### Table de transition
@@ -1992,7 +1992,7 @@ Aucune.
 
 #### États ou transitions invalides atteignables
 
-C5.1, C5.7.
+C5.1 corrigé (ticket ME-01) : invariant I3 rétabli, test `MachinesEtatsLot5Tests.Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`. Reste C5.7.
 
 ### M5.4 — Plage de frappe exclue
 
@@ -2297,12 +2297,12 @@ Aucun constat.
 |---|---|
 | Séquence en cours | `TrainingSequenceIndex < DailyChallenge.SequenceLength` |
 | Défi commun | `TrainingSequenceIndex >= SequenceLength` |
-| Fait aujourd'hui | `ParseDate(TrainingLastSessionDate) == today` |
+| Fait aujourd'hui | `StoredDate.Parse(TrainingLastSessionDate) == today` |
 
 #### Invariants
 
 - I1 : une étape ne compte qu'une fois — garanti (`src/TrainingReminders.cs:149-151`).
-- I2 : en défi commun, une séance par jour — garanti sous réserve du parsage de date (C5.1, `src/TrainingReminders.cs:155`).
+- I2 : en défi commun, une séance par jour — garanti, la date est relue par `StoredDate.Parse` en culture invariante (ME-01).
 - I3 : trois écritures de configuration indépendantes dans `MarkSessionCompleted` restent cohérentes — non garanti en cas d'arrêt du processus entre `:134` et `:137` (pas de constat : fenêtre de quelques instructions, écriture config atomique).
 
 #### Table de transition
@@ -2320,7 +2320,7 @@ Aucune.
 
 #### États ou transitions invalides atteignables
 
-C5.1, C5.7.
+C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Tests.DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`. Reste C5.7.
 
 ### M5.12 — Rappel d'entraînement (balloon)
 
@@ -2358,11 +2358,11 @@ C5.1, C5.7.
 
 #### Temporisations et réessais
 
-Pas avant 17 h (`:38`) ; un seul rappel par jour ; arrêt au 3e ignoré. Pas de réessai le même jour. `Snapshot` relit `TrainingLastSessionDate` et `TrainingLastReminderDate` par `ParseDate` (`:101-102, 155`, sans culture) : un échec de lecture fausse directement les gardes `LastReminderDate == today` et `LastSessionDate == today` de `ShouldRemind` (`:66-67`).
+Pas avant 17 h (`:38`) ; un seul rappel par jour ; arrêt au 3e ignoré. Pas de réessai le même jour. `Snapshot` relit `TrainingLastSessionDate` et `TrainingLastReminderDate` par `StoredDate.Parse` (`:101-102`, culture invariante depuis ME-01) : un échec de lecture fausse directement les gardes `LastReminderDate == today` et `LastSessionDate == today` de `ShouldRemind` (`:66-67`).
 
 #### États ou transitions invalides atteignables
 
-C5.1, C5.7
+C5.1 corrigé (ticket ME-01) : gardes `LastReminderDate` et `LastSessionDate` rétablies, test `MachinesEtatsLot5Tests.Rappel_UnSeulParJour_QuelleQueSoitLaCulture`. Reste C5.7.
 
 ### Frontières avec les autres lots
 
