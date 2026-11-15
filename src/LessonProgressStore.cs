@@ -453,6 +453,10 @@ internal sealed class LessonProgressStore
             foreach (var item in exercisesEl.EnumerateObject())
             {
                 var el = item.Value;
+                // Une entree qui n'est pas un objet (nombre, null, tableau, chaine) est ignoree, comme
+                // pour "gestures" : TryGetProperty leverait InvalidOperationException, hors du filtre
+                // ci-dessous, et la fenetre des Lecons ne s'ouvrirait plus (ME-02).
+                if (el.ValueKind != JsonValueKind.Object) continue;
                 string hash = ReadString(el, "hash") ?? "";
                 if (hash.Length == 0) continue;
 
