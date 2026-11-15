@@ -146,6 +146,7 @@ static class UsageStats
                 var last = StoredDate.Parse(_lastActiveDate);
                 if (last == null) return 0;
                 var today = DateOnly.FromDateTime(DateTime.Now);
+                if (last.Value > today) last = today; // horloge reculée : vaut aujourd'hui (ME-10)
                 return last.Value == today || last.Value.AddDays(1) == today ? _currentStreak : 0;
             }
         }
@@ -430,6 +431,14 @@ static class UsageStats
 
         bool firstRemapSet = _firstRemapDate == null;
         _firstRemapDate ??= today;
+
+        // Horloge ou fuseau reculé (ME-10) : une dernière activité postérieure à aujourd'hui vaut
+        // aujourd'hui. Le jour est déjà compté et la série continue ; la date redevient celle du jour.
+        if (StoredDate.Parse(_lastActiveDate) > todayDate)
+        {
+            _lastActiveDate = today;
+            return true;
+        }
 
         if (_lastActiveDate == today)
             return firstRemapSet || minuteCounted; // jour déjà compté

@@ -192,8 +192,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-10 — Horloge ou fuseau qui recule (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constat** : C5.7 (confirmé).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : une date enregistrée postérieure à aujourd'hui vaut aujourd'hui. `UsageStats.RecordActivityLocked` ne recompte plus le jour et ramène la dernière activité à aujourd'hui (série et jours actifs inchangés) ; `CurrentStreak` la lit comme aujourd'hui ; `TrainingReminders.WouldCount` (Défi) et `ShouldRemind` (dernier rappel, dernière séance) comparent en `>= today`. Tests : `MachinesEtatsLot5Tests`, six tests, tous rouges avant le correctif (jour recompté, série à 1, série affichée à 0, séance du Défi recomptée, rappel et séance datés de demain). Écart avec le verdict : il ne corrigeait que `RecordActivityLocked` et jugeait les étapes rappels inexactes ; une date de rappel future autorisait pourtant un second rappel (test rouge), d'où `>= today` dans `ShouldRemind`. À vérifier à la main : un vrai recul d'horloge d'un jour sur la machine.
+- **Constat** : C5.7 (corrigé).
 - **Effet** : si la dernière date enregistrée est dans le futur (horloge corrigée, voyage), le jour
   est recompté, la série repart à 1 et le Défi du jour se recompte.
 - **Correctif** : une date enregistrée postérieure à aujourd'hui vaut aujourd'hui, pour la série, le

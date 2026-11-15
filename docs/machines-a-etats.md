@@ -161,7 +161,7 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C5.4 | M5.7 | ResetAll partiel : état de progression résiduel | réfuté | — | — | relecture adversariale |
 | C5.5 | M5.6 | Prédicat de mise en page différent de celui de la peinture dans la fenêtre Statistiques | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
 | C5.6 | M5.8 | Entrée d'exercice non objet : TryGetProperty lève et fait échouer tout le chargement | confirmé | faible | ME-02 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
-| C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | confirmé | faible | ME-10 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
+| C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | corrigé | faible | ME-10 | `AZERTYGlobal/UsageStats.cs` (`RecordActivityLocked`, `CurrentStreak`), `TrainingReminders.cs` (`WouldCount`, `ShouldRemind`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte`, `…_LaSerieEnCoursNEstPasRemiseAZero`, `…_LaSerieAfficheeNeTombePasAZero`, `DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`, `Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui`, `Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`) |
 | C6.1 | M6.3 | Garde IsTutorialActive inopérante dans SettleSessionOnHide | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
 | C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
 | C7.1 | M7.1 | Double clic sur « Suivant » à l'étape 2 : l'accueil se valide sans que l'étape 3 ait été vue | confirmé | moyenne | ME-03 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
@@ -1975,7 +1975,7 @@ C5.3.
 - I1 : `_currentStreak >= 1` dès qu'un jour est compté — garanti (`src/UsageStats.cs:437`).
 - I2 : un jour n'est compté qu'une fois — garanti (`src/UsageStats.cs:434`).
 - I3 : la série ne dépend pas de la culture — garanti depuis ME-01 : `IsConsecutiveDay` et toutes les lectures de date passent par `StoredDate.Parse` (culture invariante, `src/StoredDate.cs`).
-- I4 : la date n'avance que vers le futur — non garanti (C5.7).
+- I4 : la date n'avance que vers le futur — garanti depuis ME-10 : une dernière activité postérieure à aujourd'hui vaut aujourd'hui (`RecordActivityLocked` ne recompte pas le jour et ramène la date à aujourd'hui, `CurrentStreak` la lit comme aujourd'hui).
 
 #### Table de transition
 
@@ -1985,6 +1985,7 @@ C5.3.
 | 2 | Actif aujourd'hui | frappe | même jour | idem | rien | `src/UsageStats.cs:434` |
 | 3 | Série vivante | frappe | `IsConsecutiveDay` | Actif aujourd'hui | série + 1 | `src/UsageStats.cs:437-444` |
 | 4 | Série rompue | frappe | non consécutif | Actif aujourd'hui | série = 1 | `src/UsageStats.cs:437` |
+| 5 | Dernière activité datée d'après aujourd'hui (horloge ou fuseau reculé) | frappe | `StoredDate.Parse(_lastActiveDate) > today` | Actif aujourd'hui | date ramenée à aujourd'hui, série et jours inchangés (ME-10) | `src/UsageStats.cs:434-441` |
 
 #### Temporisations et réessais
 
@@ -1992,7 +1993,7 @@ Aucune.
 
 #### États ou transitions invalides atteignables
 
-C5.1 corrigé (ticket ME-01) : invariant I3 rétabli, test `MachinesEtatsLot5Tests.Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`. Reste C5.7.
+C5.1 corrigé (ticket ME-01) : invariant I3 rétabli, test `MachinesEtatsLot5Tests.Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : invariant I4 rétabli, tests `MachinesEtatsLot5Tests.Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte` et `…_LaSerieEnCoursNEstPasRemiseAZero`.
 
 ### M5.4 — Plage de frappe exclue
 
@@ -2297,7 +2298,7 @@ Aucun constat.
 |---|---|
 | Séquence en cours | `TrainingSequenceIndex < DailyChallenge.SequenceLength` |
 | Défi commun | `TrainingSequenceIndex >= SequenceLength` |
-| Fait aujourd'hui | `StoredDate.Parse(TrainingLastSessionDate) == today` |
+| Fait aujourd'hui | `StoredDate.Parse(TrainingLastSessionDate) >= today` (une date future vaut aujourd'hui, ME-10) |
 
 #### Invariants
 
@@ -2320,7 +2321,7 @@ Aucune.
 
 #### États ou transitions invalides atteignables
 
-C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Tests.DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`. Reste C5.7.
+C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Tests.DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : `WouldCount` lit une séance datée d'après aujourd'hui comme faite aujourd'hui, test `MachinesEtatsLot5Tests.DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`.
 
 ### M5.12 — Rappel d'entraînement (balloon)
 
@@ -2362,7 +2363,7 @@ Pas avant 17 h (`:38`) ; un seul rappel par jour ; arrêt au 3e ignoré. Pas d
 
 #### États ou transitions invalides atteignables
 
-C5.1 corrigé (ticket ME-01) : gardes `LastReminderDate` et `LastSessionDate` rétablies, test `MachinesEtatsLot5Tests.Rappel_UnSeulParJour_QuelleQueSoitLaCulture`. Reste C5.7.
+C5.1 corrigé (ticket ME-01) : gardes `LastReminderDate` et `LastSessionDate` rétablies, test `MachinesEtatsLot5Tests.Rappel_UnSeulParJour_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : `ShouldRemind` traite un rappel ou une séance datés d'après aujourd'hui comme datés d'aujourd'hui (`>= today`), tests `MachinesEtatsLot5Tests.Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui` et `…Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`.
 
 ### Frontières avec les autres lots
 
