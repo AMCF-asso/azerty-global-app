@@ -63,8 +63,9 @@ static class TrainingReminders
         if (s.ReviewPromptLastShown == today) return false;     // l'avis du jour prime
         if (now.Hour < EarliestHour) return false;
 
-        if (s.LastReminderDate == today) return false;          // un rappel par jour max
-        if (s.LastSessionDate == today) return false;           // séance déjà faite
+        // Une date enregistrée postérieure à aujourd'hui (horloge ou fuseau reculé) vaut aujourd'hui.
+        if (s.LastReminderDate >= today) return false;          // un rappel par jour max
+        if (s.LastSessionDate >= today) return false;           // séance déjà faite
 
         // Signal 1 — nouveaux utilisateurs (cible prioritaire v1.2.0) : la séquence de
         // désapprentissage n'est pas finie → rappeler tant qu'il reste des étapes,
@@ -148,6 +149,6 @@ static class TrainingReminders
         uint seq = ConfigManager.TrainingSequenceIndex;
         return seq < DailyChallenge.SequenceLength
             ? playedIndex == seq
-            : playedIndex >= DailyChallenge.SequenceLength && StoredDate.Parse(ConfigManager.TrainingLastSessionDate) != today;
+            : playedIndex >= DailyChallenge.SequenceLength && !(StoredDate.Parse(ConfigManager.TrainingLastSessionDate) >= today);
     }
 }
