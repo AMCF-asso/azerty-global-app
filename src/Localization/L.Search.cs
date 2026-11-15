@@ -10,6 +10,8 @@ internal static partial class L
     public static string Search_EnterNothingEmpty => T("Rien à insérer : tapez un caractère, un nom ou une langue.", "Nothing to insert: type a character, a name or a language.");
     public static string Search_EnterNothingNoResults => T("Aucun résultat à insérer : essayez un autre mot.", "No result to insert: try another word.");
     public static string Search_Tip => T("Entrée pour insérer · Échap pour fermer", "Enter to insert · Esc to close");
+    /// <summary>Ni l'insertion ni la copie n'ont abouti (presse-papiers tenu par une autre application).</summary>
+    public static string Search_CopyFailedFeedback => T("Copie impossible : réessayez", "Copy failed: try again");
     public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"“{ch}” copied!");
     /// <summary>A18 : le résultat choisi, tel que le lecteur d'écran le lit sur le champ.</summary>
     public static string Search_AccessibleResult(int position, int count, string glyph, string name, string gesture)

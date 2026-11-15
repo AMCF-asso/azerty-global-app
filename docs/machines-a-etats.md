@@ -169,7 +169,7 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C7.3 | M7.4 | La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert | confirmé | faible | ME-08 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
 | C7.4 | M7.5 | La minuterie de quiétude de l'avis n'est jamais réarmée après coupure puis rétablissement des notifications | plausible (couture à ajouter) | faible | ME-08 | lecture du code |
 | C7.5 | M7.7 | Aucun garde de double appel de la boîte d'avis du Store | plausible (preuve en réel seulement) | faible | ME-08 | lecture du code |
-| C8.1 | M8.2 | Copie de secours sans aucun retour quand le presse-papiers est occupé | plausible (couture à ajouter) | faible | ME-11 | lecture du code |
+| C8.1 | M8.2 | Copie de secours sans aucun retour quand le presse-papiers est occupé | corrigé | faible | ME-11 | `AZERTYGlobal/CharacterSearch.cs`, `ClipboardText.cs`, `ChallengeSessionState.cs` ; test `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` (`Recherche_EchecDeLInsertionEtDeLaCopie_EstAnnoncé`) |
 | C8.2 | M8.2 | Retour Copié périmé à la réouverture | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` |
 
 ## Lot 1 — Moteur de frappe
@@ -3260,6 +3260,7 @@ Aucun constat.
 | `_inputPaused` | bool | `SetInputPaused` (l. 137-141) | fil UI | fil unique |
 | `_targetWindow` | IntPtr | `Show` via `ResolveInsertionTarget` (l. 832-833, 894-900) | fil UI | fil unique |
 | `_showCopiedFeedback`, `_copiedChar` | bool, string | `InsertSelectedCharacter` (l. 1202-1203) ; faux sur `WM_TIMER` (l. 979) | fil UI | fil unique |
+| `_showCopyFailedFeedback` | bool | `InsertSelectedCharacter` (échec de la copie, ME-11) ; faux sur `WM_TIMER` et après une copie réussie | fil UI | fil unique |
 | `_enterFoundNothing` | bool | `InsertSelectedCharacter` (l. 1181) ; faux dans `Show` (l. 838) | fil UI | fil unique |
 | `_selectedIndex`, `_scrollOffset`, `_filteredResults` | int, int, liste | `Search`, molette, clic | fil UI | fil unique |
 
@@ -3279,7 +3280,7 @@ Résultat d'insertion (explicite) : `Inserted`, `NotInserted`, `Partial`, `Bloc
 - I1 : la fenêtre masquée ne laisse pas de surbrillance au clavier virtuel. Garanti par `Hide()` : `SelectionChanged?.Invoke(null)` (l. 915).
 - I2 : une insertion ne s'émet ni sous blocage ni sur champ protégé. Garanti par `_canInsert()` testé avant et après `_refreshTarget()` (`TextInsertionService.cs:29, 37`).
 - I3 : la copie de secours ne part que si aucun événement n'a été émis. Garanti : `if (outcome != TextInsertionOutcome.NotInserted) return;` (`CharacterSearch.cs:1196-1197`).
-- I4 : un échec d'insertion suivi d'un échec de copie est annoncé à l'utilisateur. Non garanti : `if (!ClipboardText.TrySet(_hWnd, entry.Character)) return;` (l. 1199), et `Blocked` retourne sans rien dire (l. 1196).
+- I4 : un échec d'insertion suivi d'un échec de copie est annoncé à l'utilisateur. Garanti depuis ME-11 : `ClipboardWriter` (remplaçable, `ClipboardText.TrySet` par défaut) rend false, alors `FallbackCopyFailed` (ballon), annonce du champ et ligne de pied « Copie impossible » pendant 1500 ms ; `TrySet` ouvre le presse-papiers jusqu'à 4 fois, 25 ms entre les essais (`ClipboardText.OpenWithRetry`). `Blocked` retourne toujours sans rien dire : pause ou champ protégé, voulu.
 - I5 : l'état « Copié » n'a de sens que fenêtre ouverte. Non garanti : `Hide()` et `Show()` ne le remettent pas à zéro.
 
 #### Table de transition
@@ -3293,18 +3294,18 @@ Résultat d'insertion (explicite) : `Inserted`, `NotInserted`, `Partial`, `Bloc
 | T5 | Ouverte | Entrée, résultat sélectionné | `!_inputPaused` | Ouverte, ou Masquée dès que la cible est non nulle et activée (`ActivateTargetWindow` `TextInsertionService.cs:44-60` : le focus passe à la cible, la recherche reçoit `WA_INACTIVE`, T3, avant le retour de `Insert`) | `Insert(target, caractère)` | `CharacterSearch.cs:1174-1192` |
 | T6 | Ouverte | Entrée, aucun résultat | index hors liste | Ouverte | `_enterFoundNothing`, annonce | `CharacterSearch.cs:1177-1184` |
 | T7 | Ouverte ou Masquée (Masquée quand la cible a été activée puis que `_emitText` n'a envoyé aucun événement : T3 a déjà masqué la fenêtre) | insertion `NotInserted` | copie réussie | Retour « Copié » (Ouverte ou Masquée : `Hide()` ne remet pas le drapeau à zéro) | `_showCopiedFeedback`, ballon, minuterie 1500 ms ; posés sur une fenêtre masquée dans le cas Masquée (C8.2) | `CharacterSearch.cs:1196-1207`, `TextInsertionService.cs:30-41` |
-| T8 | Ouverte ou Masquée (comme T7) | insertion `NotInserted` | copie en échec | inchangé | aucun retour | `CharacterSearch.cs:1199` |
+| T8 | Ouverte ou Masquée (comme T7) | insertion `NotInserted` | copie en échec (après 4 essais d'ouverture) | inchangé | `_showCopyFailedFeedback`, `FallbackCopyFailed` (ballon), annonce, minuterie 1500 ms (ME-11) | `CharacterSearch.cs:1199` |
 | T9 | Retour « Copié » (Ouverte ou Masquée) | `WM_TIMER` | id copie | Ouverte ou Masquée (l'état de visibilité ne change pas) | `KillTimer`, feedback faux, repeinte, `AnnounceSelection(notify: false)` même fenêtre masquée | `CharacterSearch.cs:975-983` |
 | T10 | Ouverte | `SetInputPaused(true)` | pause hors suspension choisie | Gelée | saisie jetée | `TrayApplication.cs:617`, `CharacterSearch.cs:137` |
 
 #### Temporisations et réessais
 
-- Copie : `SetTimer(..., 1500)` (l. 1205), tuée à l'échéance (l. 978). Pas de réessai de `OpenClipboard` : `ClipboardText.TrySet` tente une fois (l. 34).
+- Copie : `SetTimer(..., 1500)` (l. 1205), tuée à l'échéance (l. 978). Réessai borné de `OpenClipboard` depuis ME-11 : `ClipboardText.TrySet` tente jusqu'à 4 fois, 25 ms entre les essais (75 ms au plus sur le fil d'interface).
 - Insertion : une seule tentative d'activation de la cible, puis une lecture synchrone (`_refreshTarget`).
 
 #### États ou transitions invalides atteignables
 
-C8.1, C8.2.
+C8.1 corrigé (ticket ME-11) : invariant I4 rétabli, test `MachinesEtatsLot8Tests.Recherche_EchecDeLInsertionEtDeLaCopie_EstAnnoncé`. Reste C8.2.
 
 ### M8.3 — Clavier virtuel
 

@@ -45,6 +45,10 @@ internal static partial class L
     public static string Layers_InsertIncompleteBody => T(
         $"Vérifiez le texte saisi avant de réessayer avec {ProductIdentity.DisplayName}.",
         $"Check the inserted text before trying again with {ProductIdentity.DisplayName}.");
+    public static string Layers_InsertFallbackFailedTitle => T("Caractère non inséré", "Character not inserted");
+    public static string Layers_InsertFallbackFailedBody(string ch) => T(
+        $"Ni l’insertion ni la copie de « {ch} » n’ont abouti : le presse-papiers est occupé. Réessayez dans un instant.",
+        $"Neither inserting nor copying “{ch}” worked: the clipboard is busy. Try again in a moment.");
     public static string Layers_InsertFallbackTitle => T("Caractère copié", "Character copied");
     public static string Layers_InsertFallbackBody(string ch) => T(
         $"L’insertion directe de {ProductIdentity.DisplayName} n’était pas disponible — collez « {ch} » avec Ctrl + V.",

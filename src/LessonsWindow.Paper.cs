@@ -869,7 +869,9 @@ internal sealed partial class LessonsWindow
         int titleRight = right;
         if (_challenge.ShareText != null)
         {
-            string share = _challenge.ShareCopied ? L.Challenge_ShareButtonCopied : L.Challenge_ShareButton;
+            string share = _challenge.ShareCopied ? L.Challenge_ShareButtonCopied
+                : _challenge.ShareCopyFailed ? L.Challenge_ShareButtonFailed
+                : L.Challenge_ShareButton;
             var measure = DrawLink(hdc, 0, 0, share, _challenge.ShareCopied, OnCopyChallengeResult, measureOnly: true);
             int w = measure.right - measure.left - S(8);
             var link = DrawLink(hdc, right - w, box.top + S(22) + S(18), share, _challenge.ShareCopied, OnCopyChallengeResult, L.Challenge_ShareTooltip);

@@ -388,6 +388,8 @@ sealed class TrayApplication : IDisposable
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;
             _characterSearch.FallbackCopied += character =>
                 ShowBalloon(L.Layers_InsertFallbackTitle, L.Layers_InsertFallbackBody(character));
+            _characterSearch.FallbackCopyFailed += character =>
+                ShowBalloon(L.Layers_InsertFallbackFailedTitle, L.Layers_InsertFallbackFailedBody(character));
         }
         catch (Exception ex)
         {
