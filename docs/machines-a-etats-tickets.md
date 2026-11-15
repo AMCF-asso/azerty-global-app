@@ -111,8 +111,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-01 — Dates relues sans culture invariante (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constat** : C5.1 (confirmé).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : les cinq lectures de date passent par un seul analyseur, `StoredDate.Parse` (`src/StoredDate.cs`, `yyyy-MM-dd`, culture invariante), qui remplace `ParseDate` (`UsageStats`, `TrainingReminders`), `ParseTrainingDate` (`UsageStatsWindow`) et les deux `TryParseExact` de `IsConsecutiveDay` ; `IsConsecutiveDay` devient `internal` pour le test de série. Tests : `MachinesEtatsLot5Tests`, trois tests « …QuelleQueSoitLaCulture » (Défi, rappel, statistiques) et une théorie de série sur deux jours sous `th-TH`, tous rouges avant le correctif (le cas du 29 février 2024 aussi : date refusée par le calendrier thaï). À vérifier à la main : une session Windows réglée sur un format régional thaï.
+- **Constat** : C5.1 (corrigé).
 - **Effet** : les dates sont écrites en culture invariante (`2026-11-15`) mais relues avec la
   culture de Windows. Sous un calendrier non grégorien (thaï bouddhiste, par exemple), la date relue
   n'est plus celle du jour : la série affichée tombe à 0, le Défi commun se recompte le même jour,

@@ -727,7 +727,7 @@ sealed class UsageStatsWindow : IDisposable
             : $"{Math.Min(seq, (uint)DailyChallenge.SequenceLength)}/{DailyChallenge.SequenceLength}";
         y = DrawStatLineText(hdc, L.Challenge_StatsOnboardingLabel, onboardingValue, left, y, right);
 
-        var lastSession = ParseTrainingDate(ConfigManager.TrainingLastSessionDate);
+        var lastSession = StoredDate.Parse(ConfigManager.TrainingLastSessionDate);
         string lastSessionValue = lastSession.HasValue ? L.FormatDate(lastSession.Value) : L.Challenge_StatsNoSessionYet;
         y = DrawStatLineText(hdc, L.Challenge_StatsLastSessionLabel, lastSessionValue, left, y, right);
 
@@ -748,11 +748,6 @@ sealed class UsageStatsWindow : IDisposable
 
         return y + h;
     }
-
-    /// <summary>Parse "yyyy-MM-dd" (format de stockage ConfigManager) — même format que
-    /// TrainingReminders.ParseDate, dupliqué ici car privé dans l'autre classe.</summary>
-    private static DateOnly? ParseTrainingDate(string? s) =>
-        s != null && DateOnly.TryParseExact(s, "yyyy-MM-dd", out var d) ? d : null;
 
     public void Dispose()
     {
