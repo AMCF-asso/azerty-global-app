@@ -1,0 +1,256 @@
+# Tickets issus de l'analyse des machines à états (application 1.3.0)
+
+Source : [machines-a-etats.md](machines-a-etats.md), base `250c4ef`, 15 novembre 2026.
+Les constats (`C<lot>.<n>`) et leurs statuts y sont décrits ; ce fichier les regroupe par correctif.
+
+## Règles
+
+- Un ticket regroupe les constats d'une même zone du produit, corrigés et vérifiés ensemble.
+  ME-07 fait exception : il réunit de petits correctifs indépendants ; la décision peut s'y prendre
+  constat par constat.
+- Les tickets sont classés par impact pour l'utilisateur (gravité de l'effet et probabilité de le
+  rencontrer), du plus fort au plus faible. Aucun n'est critique ni fort.
+- « Preuve » dit ce qui est établi aujourd'hui : un test en échec sur `250c4ef`, ou la seule
+  lecture du code.
+- Un correctif arrive avec son test de régression et la mise à jour du document, dans le même commit.
+- Chaque ticket porte sa décision : `à décider`, `1.3.0`, `1.3.1` ou `laissé` (documenté, non corrigé).
+- Un ticket corrigé le dit sur sa ligne « Décision » ; son commit porte l'identifiant du ticket
+  dans son titre (`git log --grep ME-03`).
+
+## Vue d'ensemble
+
+| Ticket | Sujet | Impact | Constats | Preuve |
+|---|---|---|---|---|
+| ME-03 | Accueil : double clic sur « Suivant », case « Ne plus afficher » | moyen | C7.1, C7.2 | 3 tests en échec |
+| ME-04 | Lancement automatique dit actif alors que Windows le refuse | moyen | C4.2, C4.4 | 1 test en échec (accueil) ; le reste à la lecture |
+| ME-05 | Couches : Maj d'activation, répétition du déclencheur | faible | C1.4, C1.6 | 2 tests en échec |
+| ME-06 | Leçons : caractère attendu faux sous une couche | faible | C1.2, C1.3 | 4 tests en échec |
+| ME-01 | Dates relues sans culture invariante | faible | C5.1 | 3 tests en échec |
+| ME-02 | Progression des Leçons : une entrée mal formée bloque la fenêtre | faible | C5.6 | 2 tests en échec |
+| ME-07 | Petits états périmés dans quatre fenêtres | faible | C5.5, C6.2, C8.2, C1.7 | 4 tests en échec ; C1.7 à la lecture |
+| ME-08 | Demande d'avis : mauvais moment, minuterie perdue, double appel | faible | C7.3, C7.4, C7.5 | 1 test en échec ; le reste à la lecture |
+| ME-09 | Réglages : seconde instance, écriture de fermeture, instance élevée | faible | C4.5, C4.3, C4.1 | 1 test en échec ; le reste à la lecture |
+| ME-10 | Horloge ou fuseau qui recule | faible | C5.7 | 3 tests en échec |
+| ME-11 | Presse-papiers : échec muet, et un test qui dépend du presse-papiers réel | faible | C8.1 | lecture du code ; 1 test existant en échec |
+| ME-12 | Comportements à trancher (conception) | faible | C1.1, C1.5, C2.2, C6.1, C2.1, C2.4, C5.2 | 4 atteints (tests en échec) ; 3 à la lecture |
+| ME-13 | Zone de notification : clics, menu, bulles, icône | faible | C3.1 à C3.7 | lecture du code seulement |
+
+Total : 36 constats répartis (15 confirmés, 4 atteints à trancher, 17 plausibles) ; 3 constats
+réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
+
+## ME-03 — Accueil : double clic sur « Suivant », case « Ne plus afficher » (moyen)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C7.1 (confirmé, moyen), C7.2 (confirmé, faible).
+- **Effet C7.1** : un double clic sur « Suivant » à l'étape 2 produit deux clics ; le second tombe
+  sur le bouton final de l'étape 3 et valide l'accueil sans que l'étape ait été vue. Les cases de
+  l'étape 3 sont alors appliquées, dont « Lancer au démarrage », cochée par défaut.
+- **Effet C7.2** : la case « Ne plus afficher » s'ouvre toujours décochée ; valider l'accueil
+  réécrit à « afficher » un refus déjà enregistré.
+- **Où** : `OnboardingWindow.cs:882-889, 909, 926-928, 1027-1046, 1130-1134`.
+- **Correctif C7.1** : ignorer « Suivant » pendant le délai de double clic de Windows après un
+  changement d'étape. Changer l'identifiant du bouton final ne suffirait pas : le second clic
+  arrive après le passage à l'étape 3 et porterait le nouvel identifiant.
+- **Correctif C7.2** : à l'ouverture, la case reprend le réglage enregistré, et la fermeture reçoit
+  l'état affiché (aujourd'hui `false` en dur, sinon décocher puis fermer par Échap ne
+  s'enregistrerait pas). Cela nuance une décision documentée (v0.9.7.1 : case décochée par
+  défaut) : elle reste décochée tant qu'aucun refus n'est enregistré.
+- **Tests** : `MachinesEtatsLot7Tests`, trois tests « Accueil_… ». Le test du double clic envoie
+  aujourd'hui deux commandes directes ; il sera réécrit avec deux vrais clics sur le bouton et une
+  horloge injectée. Le double clic à la souris reste à vérifier à la main.
+- **Risque du correctif** : moyen (comportement de fermeture de l'accueil).
+
+## ME-04 — Lancement automatique dit actif alors que Windows le refuse (moyen)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C4.2 (confirmé pour l'accueil ; plausible pour les Paramètres), C4.4 (plausible).
+- **Effet C4.2** : en version EXE, « enregistré » veut dire « le raccourci existe ». Si Windows a
+  désactivé l'entrée (Gestionnaire des tâches, stratégie), la case reste cochée et l'activation se
+  dit réussie, alors que l'application ne se lancera pas au démarrage.
+- **Ce qui est prouvé** : seule la décision de l'accueil est testée (raccourci présent, refus de
+  Windows, aucune trace de choix : la case est cochée). Ce cas précis suppose des réglages perdus.
+  Le cas courant, activer depuis les Paramètres alors que Windows refuse, est établi à la lecture
+  seulement.
+- **Effet C4.4** : la relance unique « Lancer au démarrage ? » est proposée même quand Windows ou la
+  stratégie refuse ; l'unique proposition est consommée pour rien.
+- **Où** : `AutoStart.cs:132-136, 147-148, 162-168, 379-380`.
+- **Correctif** : « effectif » = état Windows `Enabled` ; l'activation signale le refus de Windows
+  et renvoie vers les Paramètres Windows ; la relance n'est ni proposée ni consommée quand l'état
+  est refusé ou inconnu. Demande de rendre la lecture de l'état Windows remplaçable dans les tests.
+- **Tests** : `MachinesEtatsLot4Tests.Accueil_ne_coche_pas_la_case_quand_Windows_refuse_…` (2 cas) ;
+  à écrire : activation refusée, relance non proposée.
+- **Risque du correctif** : moyen (change le sens d'`IsRegistered` pour ses appelants ; texte
+  d'interface à ajouter en français et en anglais).
+
+## ME-05 — Couches : Maj d'activation, répétition du déclencheur (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C1.4, C1.6 (confirmés).
+- **Effet** : après une saisie de couche avec Maj tenu, la lettre suivante sort en majuscule native
+  (C1.4) ; la répétition automatique du déclencheur après relâchement du modificateur émet un
+  caractère parasite (C1.6). Concerne les utilisateurs des couches ; C1.6 est rare et dépend de la
+  disposition Windows installée sous l'application.
+- **Où** : `TypingEngine.Windows/KeyMapper.cs` (passage natif `:894-895, 929` ; déclencheur `:672-676`).
+- **Correctif** : passer les modificateurs effectifs au passage natif ; traiter la répétition d'une
+  touche déjà prise en charge par la décision mémorisée.
+- **Tests** : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests`, deux tests.
+- **Risque du correctif** : moyen (cœur du moteur de frappe ; à vérifier au clavier).
+
+## ME-06 — Leçons : caractère attendu faux sous une couche (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C1.2, C1.3 (confirmés).
+- **Effet** : la fenêtre des Leçons recalcule le caractère attendu au lieu de reprendre celui que le
+  moteur émet. Sous une couche (accord tenu, Maj d'activation encore enfoncé, second appui du
+  déclencheur, touche morte), l'exercice attend un autre caractère ou une frappe fantôme. Sans effet
+  hors des Leçons.
+- **Où** : `PhysicalTextInputBuffer.cs`, appelé par `LessonsWindow.cs:3225`.
+- **Correctif** : reprendre le résultat réel du moteur et ne rien attendre quand il n'émet rien.
+- **Tests** : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests`, quatre tests « FileDesLecons_… ».
+- **Risque du correctif** : moyen (interface entre le moteur et les Leçons).
+
+## ME-01 — Dates relues sans culture invariante (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constat** : C5.1 (confirmé).
+- **Effet** : les dates sont écrites en culture invariante (`2026-11-15`) mais relues avec la
+  culture de Windows. Sous un calendrier non grégorien (thaï bouddhiste, par exemple), la date relue
+  n'est plus celle du jour : la série affichée tombe à 0, le Défi commun se recompte le même jour,
+  et le rappel d'entraînement peut se répéter le même soir ; or trois rappels ignorés coupent
+  définitivement les rappels (`TrainingReminders.cs:118-121`).
+- **Probabilité** : faible. Seuls sont touchés les formats régionaux de Windows dont le calendrier
+  par défaut n'est pas grégorien (thaï, arabe d'Arabie saoudite, par exemple), pour une application
+  en français et en anglais. L'effet est sérieux pour ces utilisateurs, la gravité est ramenée à
+  faible pour cette raison.
+- **Où** : cinq `DateOnly.TryParseExact` sans `CultureInfo.InvariantCulture`
+  (`UsageStats.cs:449, 450, 455`, `TrainingReminders.cs:155`, `UsageStatsWindow.cs:755`).
+  `ConfigManager.cs:471-473` le fait déjà correctement.
+- **Correctif** : un seul analyseur de date partagé, en culture invariante, appelé aux cinq
+  endroits. Les cinq doivent changer ensemble : corriger `:449` sans `:450` ferait repartir la série
+  chaque jour.
+- **Tests** : `MachinesEtatsLot5Tests`, trois tests « …QuelleQueSoitLaCulture » (Défi, rappel,
+  statistiques) ; à compléter par un test de série sur deux jours.
+- **Risque du correctif** : très faible (lecture seule, format inchangé).
+
+## ME-02 — Progression des Leçons : une entrée mal formée bloque la fenêtre (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constat** : C5.6 (confirmé).
+- **Effet** : si une entrée d'`exercises` dans `lessons-progress.json` n'est pas un objet (un
+  nombre, `null`, un tableau), le chargement échoue à chaque ouverture : la fenêtre des Leçons ne
+  s'ouvre plus, le fichier n'est ni réparé ni mis de côté.
+- **Probabilité** : très faible. L'application n'écrit que des objets et un format plus récent est
+  écarté avant la lecture (`LessonProgressStore.cs:404-417`) ; il reste le fichier modifié à la
+  main. L'effet est sérieux, la gravité est ramenée à faible pour cette raison.
+- **Où** : `LessonProgressStore.cs:455-456, 482, 611-613`. La garde existe pour `gestures` (`:442`),
+  pas pour `exercises`.
+- **Correctif** : ignorer une entrée qui n'est pas un objet, garder les autres.
+- **Tests** : `MachinesEtatsLot5Tests.Progression_UneEntreeNonObjet_…` et `…_EntreesMalFormees_…`.
+- **Risque du correctif** : très faible.
+
+## ME-07 — Petits états périmés dans quatre fenêtres (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C5.5, C6.2, C8.2 (confirmés), C1.7 (plausible).
+- **Effets** : la fenêtre Statistiques garde la hauteur de la section Défi après son masquage
+  (C5.5) ; « Réinitialiser la progression » depuis le Défi enregistre le Défi comme position de
+  reprise (C6.2) ; la recherche de caractère rouverte affiche encore « Copié » pendant 1,5 s au plus
+  (C8.2) ; l'indicateur de couche demande un repeint alors que sa fenêtre n'a pas pu être créée (C1.7).
+- **Correctif** : un correctif local par fenêtre, sans lien entre eux.
+- **Tests** : `MachinesEtatsLot5Tests` (1), `MachinesEtatsLot6Tests` (2), `MachinesEtatsLot8Tests` (1).
+- **Risque du correctif** : faible.
+
+## ME-08 — Demande d'avis : mauvais moment, minuterie perdue, double appel (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C7.3 (confirmé), C7.4 (plausible), C7.5 (plausible, vérifiable seulement avec un vrai paquet Store).
+- **Effet** : un des deux essais de demande d'avis part pendant que l'accueil, rouvert depuis le menu,
+  est à l'écran (C7.3) ; si les notifications sont coupées puis rétablies, l'essai attend le
+  prochain lancement (C7.4) ; rien n'empêche deux appels de la boîte d'avis du Store (C7.5).
+- **Où** : `TrayApplication.cs` (demande d'avis), `StoreReview`.
+- **Correctif** : « accueil visible » vaut report ; minuterie réarmée aussi quand le réglage des
+  notifications change ; un seul appel à la fois pour la boîte du Store.
+- **Tests** : `MachinesEtatsLot7Tests.Avis_AccueilRouvertDepuisLeMenu_…` ; C7.4 à écrire.
+- **Risque du correctif** : faible.
+
+## ME-09 — Réglages : seconde instance, écriture de fermeture, instance élevée (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constats** : C4.5 (confirmé), C4.3 et C4.1 (plausibles).
+- **Effet** : deux lancements simultanés sur un `config.json` corrompu : l'un garde l'état
+  « chargement échoué », l'accord d'activation y est lu comme absent pendant la session et le
+  message de remise à zéro est perdu (C4.5) ; une écriture de fermeture ratée perd les derniers
+  réglages sans nouvel essai (C4.3) ; avec une instance élevée déjà lancée, un lancement non élevé
+  plante au lieu de sortir en silence (C4.1).
+- **Où** : `Program.cs:43-52, 84-85`, `ConfigManager.cs`.
+- **Correctif** : lire la langue sans mettre le fichier de côté, et ne le mettre de côté qu'après
+  l'acquisition des mutex (la langue doit rester lue avant, pour traduire les messages de refus) ;
+  écriture finale avec quelques nouveaux essais bornés ; accès refusé au mutex traité comme « déjà lancée ».
+- **Tests** : `MachinesEtatsLot4Tests.Fichier_corrompu_deja_mis_de_cote_…` ; deux à écrire.
+- **Risque du correctif** : moyen (ordre de démarrage du processus).
+
+## ME-10 — Horloge ou fuseau qui recule (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constat** : C5.7 (confirmé).
+- **Effet** : si la dernière date enregistrée est dans le futur (horloge corrigée, voyage), le jour
+  est recompté, la série repart à 1 et le Défi du jour se recompte.
+- **Correctif** : une date enregistrée postérieure à aujourd'hui vaut aujourd'hui, pour la série, le
+  Défi et les rappels.
+- **Tests** : `MachinesEtatsLot5Tests`, trois tests.
+- **Risque du correctif** : faible.
+
+## ME-11 — Presse-papiers : échec muet, et un test qui dépend du presse-papiers réel (faible)
+
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
+- **Constat** : C8.1 (plausible).
+- **Effet** : quand le presse-papiers est occupé ou refusé, la copie de secours de la recherche de
+  caractère et « Copier mon résultat » du Défi échouent sans rien dire.
+- **Test existant en échec, indépendant de cette analyse** :
+  `SummaryButtonsInvariantTests.EveryDrawnTargetOfTheSummary_Acts(end: "defi-final-partage")` échoue
+  sur `250c4ef` dans l'environnement d'exécution de l'analyse : trois exécutions sur trois, relevées
+  pendant l'analyse (deux suites complètes : 1801 réussis, 1 échec, 3 ignorés sur 1805 ; puis la
+  classe seule : 13 réussis, 1 échec). Cause très probable : l'ouverture du presse-papiers y est refusée (mesuré
+  par une sonde lancée depuis un autre processus du même environnement), donc le bouton ne change
+  aucun état et le test le juge mort. Ce n'est pas un défaut démontré du bilan du Défi. Non vérifié
+  sur le bureau interactif.
+- **Correctif** : écriture du presse-papiers remplaçable dans les tests (comme
+  `UsageStatsWindow.ClipboardWriter`), nouvel essai borné de l'ouverture, retour visible en cas
+  d'échec ; le test existant ne dépend plus de la machine.
+- **Tests** : à écrire (échec annoncé, nouvel essai).
+- **Risque du correctif** : faible.
+
+## ME-12 — Comportements à trancher (faible)
+
+- **Décision** : à décider, question par question.
+
+Les quatre premiers sont atteints (un test le montre) mais peuvent être voulus ; les trois derniers
+sont probables à la lecture. Chacun demande une décision avant tout correctif.
+
+| Constat | Comportement | Question |
+|---|---|---|
+| C1.1 (atteint) | Un coup de couche et une touche morte armés en même temps. | L'un doit-il annuler l'autre ? |
+| C1.5 (atteint) | Un coup de couche armé survit à Entrée et à Tab : la lettre suivante sort dans la couche. L'indicateur reste affiché. | Entrée et Tab doivent-elles annuler le coup ? (À vérifier avant de corriger : Maj ne devrait pas l'annuler, pour garder la capitale après un coup.) |
+| C2.2 (atteint) | Un ouvrier de détection de saisie sécurisée bloqué garde « sécurisé » pour toutes les fenêtres. | Garder cet échec fermé ? Un test existant le fixe comme voulu (`SecureInputProbeTests.Worker_bloque_ne_reutilise_pas_…`). |
+| C6.1 (atteint) | Fermer les Leçons pendant le bilan du parcours solde la séance et avance la position ; la garde prévue contre cela n'agit jamais. | Solder ou non à la fermeture ? |
+| C2.1 (lecture) | La sonde de silence réinstalle le hook toutes les 4 s environ pendant la frappe dans une fenêtre élevée, avec une ligne de journal à chaque fois. | Plafonner les réinstallations et le journal ? |
+| C2.4 (lecture) | Un recalcul du premier plan lancé pendant un autre serait écrasé par l'ancien résultat, 250 ms au plus. Le test simule cette situation ; rien ne prouve qu'elle se produit dans l'application compilée. | Recalculer en fin de traitement, par précaution ? |
+| C5.2 (lecture) | Pendant le parcours de prise en main, la frappe faite dans une autre application n'est pas comptée. | Lier l'exclusion à la fenêtre active ? |
+
+- **Tests** : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests` (C1.1, C1.5), `MachinesEtatsLot6Tests` (C6.1),
+  `TypingEngine.Windows.Tests/MachinesEtatsLot2Tests` (C2.2, C2.4).
+
+## ME-13 — Zone de notification : clics, menu, bulles, icône (faible)
+
+- **Décision** : laissé, documenté (QCM du 16 novembre 2026) ; à reprendre en 1.3.1 si besoin.
+- **Constats** : C3.1 à C3.7, tous plausibles (aucun test : `TrayApplication` n'offre pas de point
+  d'accroche pour ces chemins).
+- **Effets décrits** : action de simple clic après un double clic (C3.1) ; commande de menu appliquée
+  à un état qui a changé pendant que le menu était ouvert (C3.2) ; détection de conflit de
+  disposition morte si la fenêtre échoue à se construire (C3.3) ; bascule complète exécutée dans le
+  rappel du hook (C3.4) ; bulles à usage unique marquées faites avant d'être affichées (C3.5) ; icône
+  absente sans nouvel essai si son ajout échoue (C3.6) ; fenêtre de conflit ouverte pendant une pause
+  ou un jeu (C3.7).
+- **Correctif** : d'abord extraire des décisions testables (routeur de clics, garde de conflit,
+  nouvel essai d'icône), écrire les tests, puis corriger ce que les tests confirment.
+- **Risque du correctif** : moyen (restructuration de `TrayApplication`).
