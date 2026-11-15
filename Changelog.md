@@ -22,6 +22,7 @@ Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 
 - Presse-papiers occupé : l’application réessaie quelques fois avant d’abandonner ; si la copie échoue, la recherche de caractère (quand rien ne peut être inséré) et « Copier mon résultat » du Défi le disent au lieu de rester muets.
 - Série de jours, rappel et Défi du jour : les dates enregistrées se relisent de la même façon quel que soit le format régional de Windows (calendrier thaï bouddhiste, par exemple) ; la série ne retombe plus et le Défi ne se recompte plus le même jour.
 - Horloge ou fuseau qui recule d’un jour : la série, le Défi du jour et les rappels ne recomptent plus un jour déjà compté et ne repartent plus de zéro.
+- Leçons : une entrée mal formée dans le fichier de progression (modifié à la main) est ignorée au lieu d’empêcher la fenêtre de s’ouvrir.
 
 **Retouches de l’avis global (10 novembre, avant le Store)**
 

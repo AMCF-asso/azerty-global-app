@@ -160,7 +160,7 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C5.3 | M5.7 | États absorbants _loadFailed et _readFailed jusqu'au redémarrage | réfuté | — | — | relecture adversariale |
 | C5.4 | M5.7 | ResetAll partiel : état de progression résiduel | réfuté | — | — | relecture adversariale |
 | C5.5 | M5.6 | Prédicat de mise en page différent de celui de la peinture dans la fenêtre Statistiques | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
-| C5.6 | M5.8 | Entrée d'exercice non objet : TryGetProperty lève et fait échouer tout le chargement | confirmé | faible | ME-02 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
+| C5.6 | M5.8 | Entrée d'exercice non objet : TryGetProperty lève et fait échouer tout le chargement | corrigé | faible | ME-02 | `AZERTYGlobal/LessonProgressStore.cs` (`Load`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Progression_UneEntreeNonObjet_NeFaitPasEchouerLeChargement`, `Progression_EntreesMalFormees_IgnoreesSansPerdreLesExercicesValides`) |
 | C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | corrigé | faible | ME-10 | `AZERTYGlobal/UsageStats.cs` (`RecordActivityLocked`, `CurrentStreak`), `TrainingReminders.cs` (`WouldCount`, `ShouldRemind`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte`, `…_LaSerieEnCoursNEstPasRemiseAZero`, `…_LaSerieAfficheeNeTombePasAZero`, `DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`, `Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui`, `Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`) |
 | C6.1 | M6.3 | Garde IsTutorialActive inopérante dans SettleSessionOnHide | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
 | C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
@@ -2139,7 +2139,7 @@ C5.5.
 
 - I1 : un fichier illisible n'est pas écrasé — garanti (`src/LessonProgressStore.cs:528`).
 - I2 : un rechargement conditionnel ne remplace pas un état échoué — garanti (`src/LessonProgressStore.cs:371`).
-- I3 : un chargement ne lève jamais d'exception sur contenu JSON valide mais de forme inattendue — non garanti (C5.6). L'effet réel n'est pas une perte de progression : une `InvalidOperationException` (hors `FileQuarantine.IsCorruption`, `src/FileQuarantine.cs:37`, donc non attrapée par le filtre `src/LessonProgressStore.cs:482`) sort du constructeur de `LessonProgressStore` et rend la fenêtre Leçons inouvrable (`src/LessonsWindow.cs:243`, `src/TrayApplication.cs:1514`, journalisé en `src/TrayApplication.cs:1119-1124`).
+- I3 : un chargement ne lève jamais d'exception sur contenu JSON valide mais de forme inattendue — garanti depuis ME-02 : `Load` ignore toute entrée d'`exercises` qui n'est pas un objet, comme il le faisait déjà pour `gestures`. Avant le correctif, l'effet réel n'était pas une perte de progression : une `InvalidOperationException` (hors `FileQuarantine.IsCorruption`, `src/FileQuarantine.cs:37`, donc non attrapée par le filtre `src/LessonProgressStore.cs:482`) sortait du constructeur de `LessonProgressStore` et rendait la fenêtre Leçons inouvrable (`src/LessonsWindow.cs:243`, `src/TrayApplication.cs:1514`, journalisé en `src/TrayApplication.cs:1119-1124`).
 - I4 : `ResetAll` remet tout l'état de progression — remet exercices, gestes, `LastModuleId`, `LastLessonId`, `LastExerciseIndex` et `_onboardingSynced` (`src/LessonProgressStore.cs:292-303`) ; le résidu d'`_onboardingSynced` (rangs réimportés depuis `ConfigManager.LearningCompletedExercises`) est voulu (`:270-275`). Ce qui reste de C5.4 est ce que `ResetAll` ne couvre pas.
 
 #### Table de transition
@@ -2159,7 +2159,7 @@ Aucun réessai : l'état d'échec est collant jusqu'au prochain démarrage, par
 
 #### États ou transitions invalides atteignables
 
-C5.3, C5.4, C5.6.
+C5.3, C5.4. C5.6 corrigé (ticket ME-02) : invariant I3 rétabli, tests `MachinesEtatsLot5Tests.Progression_UneEntreeNonObjet_NeFaitPasEchouerLeChargement` et `…Progression_EntreesMalFormees_IgnoreesSansPerdreLesExercicesValides`.
 
 ### M5.8 — Progression d'un exercice (Leitner)
 
@@ -2183,7 +2183,7 @@ C5.3, C5.4, C5.6.
 #### Invariants
 
 - I1 : une migration d'empreinte n'écrase pas une progression plus récente — garanti par `MergeLegacy` (`src/LessonProgressStore.cs:88-123`).
-- I2 : une entrée dont l'objet est mal formé ne fait pas échouer tout le chargement — non garanti (C5.6, `:456`).
+- I2 : une entrée dont l'objet est mal formé ne fait pas échouer tout le chargement — garanti depuis ME-02 : `if (el.ValueKind != JsonValueKind.Object) continue;` avant la lecture de l'entrée (`src/LessonProgressStore.cs:455-460`).
 
 #### Table de transition
 
@@ -2192,6 +2192,7 @@ C5.3, C5.4, C5.6.
 | 1 | Jamais fait | RecordSuccess | — | Réussi | entrée créée | `src/LessonProgressStore.cs:180-214` |
 | 2 | Réussi | RecordSuccess | — | Réussi | date mise à jour | `src/LessonProgressStore.cs:180-214` |
 | 3 | Empreinte périmée | MergeLegacy | hash ancien connu | Réussi | fusion | `src/LessonProgressStore.cs:88-123` |
+| 4 | (fichier) | `Load`, entrée d'`exercises` | la valeur n'est pas un objet (nombre, `null`, tableau, chaîne) | inchangé | entrée ignorée, les autres sont gardées, fichier non mis de côté (ME-02) | `src/LessonProgressStore.cs:455-460` |
 
 #### Temporisations et réessais
 
@@ -2199,7 +2200,7 @@ Aucun.
 
 #### États ou transitions invalides atteignables
 
-C5.6.
+C5.6 corrigé (ticket ME-02) : invariant I2 rétabli, test `MachinesEtatsLot5Tests.Progression_EntreesMalFormees_IgnoreesSansPerdreLesExercicesValides`.
 
 ### M5.9 — Maîtrise d'un geste (boîtes Leitner)
 

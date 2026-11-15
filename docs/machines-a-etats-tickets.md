@@ -135,8 +135,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-02 — Progression des Leçons : une entrée mal formée bloque la fenêtre (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constat** : C5.6 (confirmé).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : `LessonProgressStore.Load` ignore une entrée d'`exercises` qui n'est pas un objet (nombre, `null`, tableau, chaîne) et garde les autres, comme il le faisait déjà pour `gestures` ; le fichier n'est pas mis de côté. Tests : `MachinesEtatsLot5Tests`, deux tests rouges avant le correctif (`InvalidOperationException` sortant du constructeur). Écart avec la piste du constat : l'ajout de `InvalidOperationException` au filtre de `Load` n'est pas fait, il aurait fait mettre le fichier de côté pour une seule entrée mal formée. À vérifier à la main : un `lessons-progress.json` édité avec une entrée numérique, puis ouverture de la fenêtre des Leçons.
+- **Constat** : C5.6 (corrigé).
 - **Effet** : si une entrée d'`exercises` dans `lessons-progress.json` n'est pas un objet (un
   nombre, `null`, un tableau), le chargement échoue à chaque ouverture : la fenêtre des Leçons ne
   s'ouvre plus, le fichier n'est ni réparé ni mis de côté.

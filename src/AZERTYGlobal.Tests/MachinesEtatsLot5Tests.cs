@@ -242,4 +242,61 @@ public sealed class MachinesEtatsLot5Tests
 
         Assert.False(TrainingReminders.ShouldRemind(soir, TrainingReminders.Snapshot()));
     }
+
+    private static string ÉcrireProgression(string dossier, string exercices)
+    {
+        string chemin = Path.Combine(dossier, LessonProgressStore.FileName);
+        File.WriteAllText(chemin, "{\"version\":1,\"exercises\":" + exercices + "}", new UTF8Encoding(false));
+        return chemin;
+    }
+
+    // Constat C5.6
+    // lessons-progress.json valide mais avec exercises: { "abc": 3 } : ReadString appelle
+    // JsonElement.TryGetProperty sur un nombre, qui lève InvalidOperationException, hors du filtre
+    // de Load. Une entrée mal formée ne doit pas faire échouer le chargement.
+    // Modèle suivi : QuarantaineTests (fichier de progression temporaire, new LessonProgressStore(path)).
+    [Fact]
+    public void Progression_UneEntreeNonObjet_NeFaitPasEchouerLeChargement()
+    {
+        using var isolation = new BancCapture.Isolation();
+        string dossier = Path.Combine(Path.GetTempPath(), "AZGLot5_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dossier);
+        try
+        {
+            string chemin = ÉcrireProgression(dossier, "{\"abc\":3}");
+
+            var exception = Record.Exception(() => new LessonProgressStore(chemin));
+
+            Assert.Null(exception);
+        }
+        finally { try { Directory.Delete(dossier, true); } catch { } }
+    }
+
+    // Constat C5.6 (variante : les autres exercices survivent)
+    // Entrées nombre, null, tableau et chaîne mêlées à une entrée valide : seules les entrées mal
+    // formées sont ignorées, l'entrée valide est conservée et le fichier n'est pas mis de côté.
+    // Modèle suivi : QuarantaineTests (ProgressionValide, Copies, FileQuarantine.Marker).
+    [Fact]
+    public void Progression_EntreesMalFormees_IgnoreesSansPerdreLesExercicesValides()
+    {
+        using var isolation = new BancCapture.Isolation();
+        string dossier = Path.Combine(Path.GetTempPath(), "AZGLot5_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dossier);
+        try
+        {
+            string chemin = ÉcrireProgression(dossier,
+                "{\"x\":3,\"y\":null,\"z\":[1],\"s\":\"texte\",\"ok\":{\"hash\":\"h\",\"completed\":true}}");
+
+            LessonProgressStore? magasin = null;
+            var exception = Record.Exception(() => magasin = new LessonProgressStore(chemin));
+
+            Assert.Null(exception);
+            Assert.NotNull(magasin);
+            Assert.True(magasin!.Exercises.ContainsKey("ok"), "l'exercice valide a été perdu");
+            Assert.True(magasin.Exercises["ok"].Completed);
+            Assert.Single(magasin.Exercises);
+            Assert.Empty(Directory.GetFiles(dossier, LessonProgressStore.FileName + FileQuarantine.Marker + "*"));
+        }
+        finally { try { Directory.Delete(dossier, true); } catch { } }
+    }
 }
