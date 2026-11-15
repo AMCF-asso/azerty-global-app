@@ -2734,8 +2734,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnCopyChallengeResult()
     {
-        if (_challenge.Copy(_hWnd))
-            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        _challenge.Copy(_hWnd);
+        if (_challenge.ShareCopyFailed)
+            _automation?.Notify(L.Challenge_ShareButtonFailed);
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     private void ShowHint()

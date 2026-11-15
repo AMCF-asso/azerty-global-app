@@ -202,8 +202,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-11 — Presse-papiers : échec muet, et un test qui dépend du presse-papiers réel (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constat** : C8.1 (plausible).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : C8.1 confirmé par test (couture ajoutée, test rouge avant le correctif) puis corrigé. `CharacterSearch.ClipboardWriter` et `ChallengeSessionState.ClipboardWriter` remplacent l'appel direct à `ClipboardText.TrySet` ; `ClipboardText.OpenWithRetry` ouvre le presse-papiers jusqu'à 4 fois (25 ms entre les essais). Échec de la copie : recherche = ballon, annonce du champ et « Copie impossible » dans le pied ; Défi = le bouton passe à « Copie impossible, réessayer » (lecteur d'écran notifié), un nouveau clic réessaie. `SummaryButtonsInvariantTests.EveryDrawnTargetOfTheSummary_Acts("defi-final-partage")` passe par l'écriture remplaçable (cause confirmée : `OpenClipboard` refusé, erreur 5) et ne dépend plus du presse-papiers réel. Tests : `MachinesEtatsLot8Tests`, 6 tests dont 5 rouges avant le correctif (le sixième, sans attente quand l'ouverture réussit, garde le comportement). À vérifier à la main : un presse-papiers réellement tenu par un autre programme, sur le bureau interactif.
+- **Constat** : C8.1 (corrigé).
 - **Effet** : quand le presse-papiers est occupé ou refusé, la copie de secours de la recherche de
   caractère et « Copier mon résultat » du Défi échouent sans rien dire.
 - **Test existant en échec, indépendant de cette analyse** :
@@ -217,7 +218,7 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 - **Correctif** : écriture du presse-papiers remplaçable dans les tests (comme
   `UsageStatsWindow.ClipboardWriter`), nouvel essai borné de l'ouverture, retour visible en cas
   d'échec ; le test existant ne dépend plus de la machine.
-- **Tests** : à écrire (échec annoncé, nouvel essai).
+- **Tests** : `AZERTYGlobal.Tests/MachinesEtatsLot8Tests` (échec annoncé, seconde Entrée, Défi, nouvel essai borné).
 - **Risque du correctif** : faible.
 
 ## ME-12 — Comportements à trancher (faible)

@@ -18,6 +18,10 @@ internal sealed class ChallengeSessionState
     /// individuelle, deux personnes n'y tapent pas le même extrait.</summary>
     public string? ShareText { get; private set; }
     public bool ShareCopied { get; private set; }
+    public bool ShareCopyFailed { get; private set; }
+
+    /// <summary>Point d'appui du presse-papiers : les tests le remplacent.</summary>
+    internal Func<IntPtr, string, bool> ClipboardWriter = ClipboardText.TrySet;
 
     /// <summary>Le module du Défi entre-t-il dans le catalogue ? Opt-in d'entraînement, ou
     /// Défi demandé pour cette ouverture : sans cela, le menu « Défi du jour » et l'annonce,
@@ -84,6 +88,7 @@ internal sealed class ChallengeSessionState
     {
         ShareText = null;
         ShareCopied = false;
+        ShareCopyFailed = false;
         _shareSource = null;
     }
 
@@ -100,6 +105,7 @@ internal sealed class ChallengeSessionState
         {
             ShareText = BuildShare();
             ShareCopied = false;
+            ShareCopyFailed = false;
         }
         catch (Exception ex)
         {
@@ -172,8 +178,10 @@ internal sealed class ChallengeSessionState
     public bool Copy(IntPtr owner)
     {
         if (ShareText == null) return false;
-        if (!ClipboardText.TrySet(owner, ShareText)) return false;
-        ShareCopied = true;
-        return true;
+        // C8.1 : un échec se dit (ShareCopyFailed), il ne laisse plus le bouton inchangé.
+        bool copied = ClipboardWriter(owner, ShareText);
+        ShareCopied = copied;
+        ShareCopyFailed = !copied;
+        return copied;
     }
 }

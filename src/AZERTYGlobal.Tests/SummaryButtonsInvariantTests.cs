@@ -110,7 +110,7 @@ public class SummaryButtonsInvariantTests
         }
         parts.Add($"session={System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(BancCapture.Field<object>(window, "_session"))}");
         var challenge = BancCapture.Field<ChallengeSessionState>(window, "_challenge");
-        parts.Add($"share={challenge.ShareCopied}");
+        parts.Add($"share={challenge.ShareCopied}/{challenge.ShareCopyFailed}");
         parts.Add($"config={ConfigManager.LessonSummaryVisible}/{ConfigManager.LessonAutoHintsEnabled}");
         return string.Join(";", parts);
     }
@@ -139,6 +139,9 @@ public class SummaryButtonsInvariantTests
             try
             {
                 Reach(window, end);
+                // Écriture du presse-papiers remplacée : le test ne dépend plus du presse-papiers réel
+                // de la machine (OpenClipboard refusé dans un bac à sable ou une session distante).
+                BancCapture.Field<ChallengeSessionState>(window, "_challenge").ClipboardWriter = (_, _) => true;
                 string before = State(window);
                 BancCapture.Field<List<(Win32.RECT Rect, Action Action)>>(window, "_clickActions")[i].Action();
                 if (State(window) == before)

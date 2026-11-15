@@ -106,6 +106,7 @@ sealed class CharacterSearch : IDisposable
     private int _bandLines = 1;
     private float _dpiScale = 1.0f;
     private bool _showCopiedFeedback;
+    private bool _showCopyFailedFeedback;
     private string _copiedChar = "";
     // Audit 09/11, W10 : Entrée sans rien à insérer le dit (bande et lecteur d'écran) jusqu'à la frappe suivante.
     private bool _enterFoundNothing;
@@ -131,6 +132,12 @@ sealed class CharacterSearch : IDisposable
     /// <summary>Déclenché quand l'insertion directe a dû retomber sur la copie.</summary>
     public event Action<string>? FallbackCopied;
     public event Action? InsertionIncomplete;
+
+    /// <summary>Déclenché quand ni l'insertion ni la copie de secours n'ont abouti (C8.1).</summary>
+    public event Action<string>? FallbackCopyFailed;
+
+    /// <summary>Point d'appui du presse-papiers : les tests le remplacent pour simuler un échec.</summary>
+    internal Func<IntPtr, string, bool> ClipboardWriter = ClipboardText.TrySet;
 
     public bool IsVisible => _hWnd != IntPtr.Zero && Win32.IsWindowVisible(_hWnd);
 
@@ -977,6 +984,7 @@ sealed class CharacterSearch : IDisposable
                     {
                         Win32.KillTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK);
                         _showCopiedFeedback = false;
+                        _showCopyFailedFeedback = false;
                         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                         AnnounceSelection(notify: false);
                     }
@@ -1196,9 +1204,21 @@ sealed class CharacterSearch : IDisposable
         if (outcome != TextInsertionOutcome.NotInserted)
             return;
 
-        if (!ClipboardText.TrySet(_hWnd, entry.Character)) return;
+        if (!ClipboardWriter(_hWnd, entry.Character))
+        {
+            // C8.1 : l'insertion et la copie ont échoué ; la touche Entrée ne reste pas muette.
+            // Une seconde Entrée retente la copie.
+            _showCopiedFeedback = false;
+            _showCopyFailedFeedback = true;
+            FallbackCopyFailed?.Invoke(entry.Character);
+            Win32.SetTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK, 1500, IntPtr.Zero);
+            Announce(L.Search_CopyFailedFeedback, notify: true);
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            return;
+        }
 
         // Feedback visuel "Copié !" dans la fenêtre restée ouverte, plus la notification
+        _showCopyFailedFeedback = false;
         _showCopiedFeedback = true;
         _copiedChar = entry.Character;
         FallbackCopied?.Invoke(entry.Character);
@@ -1476,6 +1496,8 @@ sealed class CharacterSearch : IDisposable
 
         if (_showCopiedFeedback)
             PaperText.DrawLine(hdc, L.Search_CopiedFeedback(_copiedChar), FooterFont(true), band, PaperTheme.Success, TextAlign.Right);
+        else if (_showCopyFailedFeedback)
+            PaperText.DrawLine(hdc, L.Search_CopyFailedFeedback, FooterFont(true), band, PaperTheme.Ink, TextAlign.Right);
         else if (_selectedIndex >= 0 && _selectedIndex < _filteredResults.Count)
             PaperText.DrawLine(hdc, L.Search_FooterInsert(DisplayGlyph.ForStandaloneMark(_filteredResults[_selectedIndex].Character)),
                 FooterFont(false), band, PaperTheme.TextSecondary, TextAlign.Right);

@@ -69,6 +69,8 @@ internal static partial class L
     // Bouton du récapitulatif de fin de défi
     public static string Challenge_ShareButton => T("Copier mon résultat", "Copy my result");
     public static string Challenge_ShareButtonCopied => T("Copié ✓", "Copied ✓");
+    /// <summary>Le presse-papiers était tenu par une autre application : un nouveau clic réessaie.</summary>
+    public static string Challenge_ShareButtonFailed => T("Copie impossible, réessayer", "Copy failed, try again");
     public static string Challenge_ShareTooltip => T(
         "Copiez votre résultat du jour, prêt à coller dans une conversation.",
         "Copies today’s result, ready to paste into a conversation.");
