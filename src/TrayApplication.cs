@@ -383,7 +383,9 @@ sealed class TrayApplication : IDisposable
         {
             _characterSearch = new CharacterSearch(new TextInsertionService(_mapper.TryEmitText,
                 canInsert: () => !ShouldBlockHookCompletely && _foregroundMonitor?.IsSecureInput != true,
-                refreshTarget: () => _foregroundMonitor?.Recompute()));
+                refreshTarget: () => _foregroundMonitor?.Recompute(),
+                imposedSuspension: () => _foregroundMonitor?.CurrentSuspendReason
+                    is CompatibilitySuspendReason.AntiCheat or CompatibilitySuspendReason.RemoteAccess));
             _characterSearch.InsertionIncomplete += () =>
                 ShowBalloon(L.Layers_InsertIncompleteTitle, L.Layers_InsertIncompleteBody);
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;

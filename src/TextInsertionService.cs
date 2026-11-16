@@ -18,11 +18,13 @@ internal sealed class TextInsertionService
     private readonly Action _refreshTarget;
     private readonly Func<IntPtr, bool> _activateTarget;
     private readonly Func<IntPtr, bool> _targetAboveUs;
+    private readonly Func<bool> _imposedSuspension;
 
     public TextInsertionService(Func<string, TextEmissionResult> emitText,
         Func<IntPtr, bool>? activateTarget = null, Func<bool>? canInsert = null, Action? refreshTarget = null,
-        Func<IntPtr, bool>? targetAboveUs = null)
+        Func<IntPtr, bool>? targetAboveUs = null, Func<bool>? imposedSuspension = null)
     {
+        _imposedSuspension = imposedSuspension ?? (() => false);
         _targetAboveUs = targetAboveUs ?? TargetIntegrity.IsWindowAboveUs;
         _emitText = emitText;
         _canInsert = canInsert ?? (() => true);
@@ -40,6 +42,9 @@ internal sealed class TextInsertionService
         // Le changement de focus peut suspendre l'app ou révéler un champ protégé.
         // Forcer une lecture synchrone avant d'émettre depuis la recherche.
         _refreshTarget();
+        // A21 : un jeu anti-triche ou un client distant ne reçoit aucune requête de plus
+        // (pas d'OpenProcessToken) ; la suspension imposée se décide avant le niveau.
+        if (_imposedSuspension()) return TextInsertionOutcome.Blocked;
         // EW-7 : fenêtre de niveau supérieur (administrateur). Vérifiée avant la seconde
         // lecture : la sonde du champ mot de passe (UIA) y échoue et répond « protégé »,
         // ce qui bloquerait sans copie ni bulle. La copie n'injecte rien : sans risque

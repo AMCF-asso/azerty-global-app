@@ -104,6 +104,21 @@ public sealed class EnvironnementWindowsAdminTests
         Assert.Equal(TextInsertionOutcome.Blocked, service.Insert((IntPtr)42, "α"));
     }
 
+    /// <summary>A21 : jeu anti-triche ou client distant révélé par la relecture : bloqué, et
+    /// son jeton n'est jamais demandé (aucune requête de plus vers ce processus).</summary>
+    [Fact]
+    public void EW7_SuspensionImposee_PrimeSansSonderLeNiveau()
+    {
+        bool sondé = false, émis = false;
+        var service = new TextInsertionService(_ => { émis = true; return new(2, 2); },
+            activateTarget: _ => true, canInsert: () => true,
+            targetAboveUs: _ => sondé = true, imposedSuspension: () => true);
+
+        Assert.Equal(TextInsertionOutcome.Blocked, service.Insert((IntPtr)42, "α"));
+        Assert.False(sondé);
+        Assert.False(émis);
+    }
+
     /// <summary>Pause ou consentement absent (lecture d'avant activation) : rien, pas même
     /// la sonde de niveau ni l'activation.</summary>
     [Fact]
