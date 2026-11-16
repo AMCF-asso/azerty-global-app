@@ -32,8 +32,12 @@ public sealed class RessourcesLongueDureeTests
     /// <summary>Objets tolérés entre deux relevés. GDI : aucune dérive mesurée sur 11
     /// fenêtres (16/11). USER : un décalage ponctuel, sans lien avec le nombre de cycles
     /// (Accueil : +0 sur 20 seul, +7 sur 20 dans verify, +8 sur 100, +9 sur 300 ; Pause +4 sur
-    /// 20 comme sur 100), d'où un relevé à mi-parcours : la seconde moitié ne doit pas croître ;
-    /// une fuite d'un objet par cycle y fait +10.</summary>
+    /// 20 comme sur 100 ; Couches maintenues +9 puis +2 sur 2 × 150), d'où un relevé à
+    /// mi-parcours : la seconde moitié ne doit pas croître ; une fuite d'un objet par cycle y
+    /// fait +10. Dans le processus de verify, le compte USER oscille aussi de quelques objets
+    /// autour d'un relevé (Couches maintenues : −2 puis +6, 16/11) : un dépassement sur la
+    /// seconde moitié se confirme par une prolongation de même longueur (voir
+    /// <see cref="AssertCycleSansFuite"/>).</summary>
     private const int Tolerance = 5;
 
     private readonly ITestOutputHelper _out;
@@ -106,6 +110,9 @@ public sealed class RessourcesLongueDureeTests
     /// et rend l'écart par compteur. GDI, abonnés et dialogues : sur tous les cycles. USER : sur
     /// la seconde moitié seulement, Windows créant à la demande quelques objets une fois par
     /// processus (voir <see cref="Tolerance"/>) ; l'écart total reste écrit dans la sortie.
+    /// Si la seconde moitié dépasse la tolérance, le banc la prolonge d'autant de cycles : une
+    /// fuite croît encore (+10 pour un objet par cycle), un décalage ponctuel ne se répète
+    /// pas. La fuite USER n'est retenue que si les deux dépassent.
     /// </summary>
     private void AssertCycleSansFuite(string nom, Action cycle)
     {
@@ -121,11 +128,57 @@ public sealed class RessourcesLongueDureeTests
         var fuites = new List<string>();
         if (apres.Gdi - avant.Gdi > Tolerance) fuites.Add($"GDI +{apres.Gdi - avant.Gdi}");
         if (apres.User - milieu.User > Tolerance)
-            fuites.Add($"USER +{apres.User - milieu.User} sur les {Cycles - moitie} derniers cycles (+{apres.User - avant.User} en tout)");
+        {
+            for (int i = 0; i < Cycles - moitie; i++) cycle();
+            var prolonge = Mesurer();
+            _out.WriteLine($"{nom} : USER +{apres.User - milieu.User} sur la seconde moitié, prolongé de " +
+                           $"{Cycles - moitie} cycles : {prolonge}");
+            if (prolonge.User - apres.User > Tolerance)
+                fuites.Add($"USER +{apres.User - milieu.User} sur les {Cycles - moitie} derniers cycles, encore " +
+                           $"+{prolonge.User - apres.User} sur {Cycles - moitie} de plus (+{prolonge.User - avant.User} en tout)");
+        }
         if (apres.Abonnes != avant.Abonnes) fuites.Add($"abonnés {avant.Abonnes} → {apres.Abonnes}");
         if (apres.Dialogues != avant.Dialogues) fuites.Add($"dialogues inscrits {avant.Dialogues} → {apres.Dialogues}");
         Assert.True(fuites.Count == 0,
             $"{nom} : {Cycles} cycles laissent {string.Join(", ", fuites)} (avant {avant} ; après {apres})");
+    }
+
+    // ── Contrôle négatif : le banc voit une vraie fuite ───────────────────────
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CreatePopupMenu();
+    [DllImport("user32.dll")]
+    private static extern bool DestroyMenu(IntPtr hMenu);
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateSolidBrush(uint color);
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr obj);
+
+    /// <summary>
+    /// Un cycle qui garde un objet USER (menu) ou GDI (pinceau) à chaque tour doit faire échouer
+    /// <see cref="AssertCycleSansFuite"/>, prolongation comprise : sans ce témoin, une
+    /// tolérance ou une confirmation trop larges rendraient le banc aveugle.
+    /// </summary>
+    [Theory]
+    [InlineData("USER")]
+    [InlineData("GDI")]
+    public void Le_banc_voit_une_fuite_d_un_objet_par_cycle(string compteur)
+    {
+        var gardes = new List<IntPtr>();
+        try
+        {
+            var echec = Assert.Throws<Xunit.Sdk.TrueException>(() => AssertCycleSansFuite(
+                $"témoin {compteur}", () => gardes.Add(compteur == "USER" ? CreatePopupMenu() : CreateSolidBrush(0x00FF00))));
+            Assert.Contains(compteur, echec.Message);
+        }
+        finally
+        {
+            foreach (var objet in gardes)
+            {
+                if (compteur == "USER") DestroyMenu(objet);
+                else DeleteObject(objet);
+            }
+        }
     }
 
     // ── Fenêtres : ouvrir, peindre, fermer ────────────────────────────────────
@@ -445,10 +498,12 @@ public sealed class RessourcesLongueDureeTests
 
     /// <summary>
     /// Les Leçons mettent leur contenu à l'échelle de la fenêtre (_windowScale) : chaque
-    /// taille donne des hauteurs de police neuves, demandées au cache partagé AppFonts.Get
-    /// (FontSpec), qui garde chaque HFONT jusqu'à la fin du processus. Le banc balaie
-    /// <see cref="Cycles"/> tailles distinctes, puis les mêmes une seconde fois : la seconde
-    /// passe ne doit rien créer (cache rempli), la première pas plus que la tolérance.
+    /// taille donne des hauteurs de police neuves. Constat C1 (audit du 16/11) : le cache
+    /// partagé AppFonts.Get les gardait toutes jusqu'à la fin du processus. Correctif : la
+    /// fenêtre les possède (WindowFonts) et les détruit quand l'échelle change et à la
+    /// fermeture. Le banc balaie <see cref="Cycles"/> tailles distinctes, deux fois : GDI
+    /// dans la tolérance, cache partagé immobile, jeu de la fenêtre borné et vide une fois
+    /// la fenêtre fermée.
     /// </summary>
     [Fact]
     public void Redimensionner_les_Lecons_ne_garde_pas_des_polices_pour_chaque_taille_traversee()
@@ -457,6 +512,8 @@ public sealed class RessourcesLongueDureeTests
         var layout = LayoutLoader.LoadFromResource();
         var mapper = new KeyMapper(layout, new MockWin32Api());
         var fen = new LessonsWindow(layout, mapper, new KeyboardHook(mapper)); // crochet jamais installé
+        var parFenetre = BancCapture.Field<WindowFonts>(fen, "_scaledFonts");
+        int parFenetreMax = 0;
         try
         {
             fen.Show();
@@ -479,6 +536,7 @@ public sealed class RessourcesLongueDureeTests
                     BancCapture.Pump(2);
                     Peindre(hwnd);
                     echelles.Add(BancCapture.Field<float>(fen, "_windowScale"));
+                    parFenetreMax = Math.Max(parFenetreMax, parFenetre.Count);
                 }
                 SetWindowPos(hwnd, IntPtr.Zero, 0, 0, w0, h0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 Peindre(hwnd);
@@ -487,16 +545,28 @@ public sealed class RessourcesLongueDureeTests
             for (int i = 0; i < Echauffement; i++) Peindre(hwnd); // taille d'origine seulement
             var avant = Mesurer();
             int policesAvant = Inscrits(typeof(AppFonts), "Cache");
+            int parFenetreAvant = parFenetre.Count;
+            int couvertureAvant = Inscrits(typeof(PaperText), "Coverage");
             Balayer();
             var premiere = Mesurer();
             int policesPremiere = Inscrits(typeof(AppFonts), "Cache");
             Balayer();
             var seconde = Mesurer();
+            int policesSeconde = Inscrits(typeof(AppFonts), "Cache");
+            int couvertureApres = Inscrits(typeof(PaperText), "Coverage");
             _out.WriteLine($"Leçons redimensionnées ({Cycles} tailles, échelles {echelles.Count} distinctes de " +
                            $"{(echelles.Count > 0 ? echelles.Min : 0)} à {(echelles.Count > 0 ? echelles.Max : 0)}) : " +
                            $"avant {avant}, cache AppFonts {policesAvant} ; après une passe {premiere}, cache {policesPremiere} ; " +
-                           $"après la seconde {seconde}");
+                           $"après la seconde {seconde}, cache {policesSeconde} ; " +
+                           $"polices de la fenêtre {parFenetreAvant} à la taille d'origine, {parFenetreMax} au plus, {parFenetre.Count} à la fin ; " +
+                           $"couverture des glyphes {couvertureAvant} → {couvertureApres}");
 
+            Assert.True(policesSeconde == policesAvant,
+                $"les tailles traversées entrent dans le cache partagé AppFonts.Get : {policesAvant} → {policesPremiere} → {policesSeconde}");
+            Assert.True(couvertureApres - couvertureAvant <= Tolerance,
+                $"la couverture des glyphes (PaperText) garde une entrée par hauteur traversée : {couvertureAvant} → {couvertureApres}");
+            Assert.True(parFenetreMax <= parFenetreAvant + Tolerance,
+                $"les polices de la fenêtre s'accumulent d'une taille à l'autre : {parFenetreAvant} à la taille d'origine, {parFenetreMax} au plus");
             Assert.True(seconde.Gdi - premiere.Gdi <= Tolerance,
                 $"seconde passe sur les mêmes tailles : GDI +{seconde.Gdi - premiere.Gdi} (le cache ne se remplit jamais)");
             Assert.True(premiere.Gdi - avant.Gdi <= Tolerance,
@@ -504,13 +574,15 @@ public sealed class RessourcesLongueDureeTests
                 $"(cache AppFonts.Get : {policesAvant} → {policesPremiere} polices, une par hauteur ; avant {avant} ; après {premiere})");
         }
         finally { BancCapture.Teardown(fen); }
+        Assert.Equal(0, parFenetre.Count); // fermées avec la fenêtre
     }
 
     /// <summary>
     /// Le clavier virtuel dessine tout à l'échelle de sa fenêtre (PaintScale, continue, sans
-    /// palier) : touches, bandeau et légendes demandent au cache partagé AppFonts.Get une
-    /// hauteur neuve à chaque taille. Même protocole que le test des Leçons : <see cref="Cycles"/>
-    /// tailles de 0,85 à 1,25 fois la taille d'origine, deux passes.
+    /// palier) : touches, bandeau et légendes demandent une hauteur neuve à chaque taille.
+    /// Constat C2 (même cause que C1), même correctif (WindowFonts) et même protocole que le
+    /// test des Leçons : <see cref="Cycles"/> tailles de 0,85 à 1,25 fois la taille d'origine,
+    /// deux passes.
     /// </summary>
     [Fact]
     public void Redimensionner_le_clavier_virtuel_ne_garde_pas_des_polices_pour_chaque_taille_traversee()
@@ -518,6 +590,8 @@ public sealed class RessourcesLongueDureeTests
         using var isolation = new BancCapture.Isolation();
         var layout = LayoutLoader.LoadFromResource();
         var fen = new VirtualKeyboard(layout);
+        var parFenetre = BancCapture.Field<WindowFonts>(fen, "_fonts");
+        int parFenetreMax = 0;
         try
         {
             fen.Show();
@@ -538,6 +612,7 @@ public sealed class RessourcesLongueDureeTests
                     SetWindowPos(hwnd, IntPtr.Zero, 0, 0, w, h, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                     BancCapture.Pump(2);
                     Peindre(hwnd);
+                    parFenetreMax = Math.Max(parFenetreMax, parFenetre.Count);
                 }
                 SetWindowPos(hwnd, IntPtr.Zero, 0, 0, w0, h0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 Peindre(hwnd);
@@ -546,15 +621,27 @@ public sealed class RessourcesLongueDureeTests
             for (int i = 0; i < Echauffement; i++) Peindre(hwnd);
             var avant = Mesurer();
             int policesAvant = Inscrits(typeof(AppFonts), "Cache");
+            int parFenetreAvant = parFenetre.Count;
+            int couvertureAvant = Inscrits(typeof(PaperText), "Coverage");
             Balayer();
             var premiere = Mesurer();
             int policesPremiere = Inscrits(typeof(AppFonts), "Cache");
             Balayer();
             var seconde = Mesurer();
+            int policesSeconde = Inscrits(typeof(AppFonts), "Cache");
+            int couvertureApres = Inscrits(typeof(PaperText), "Coverage");
             _out.WriteLine($"Clavier virtuel redimensionné ({Cycles} tailles de {tailles[0]} à {tailles[^1]}) : " +
                            $"avant {avant}, cache AppFonts {policesAvant} ; après une passe {premiere}, cache {policesPremiere} ; " +
-                           $"après la seconde {seconde}");
+                           $"après la seconde {seconde}, cache {policesSeconde} ; " +
+                           $"polices de la fenêtre {parFenetreAvant} à la taille d'origine, {parFenetreMax} au plus, {parFenetre.Count} à la fin ; " +
+                           $"couverture des glyphes {couvertureAvant} → {couvertureApres}");
 
+            Assert.True(policesSeconde == policesAvant,
+                $"les tailles traversées entrent dans le cache partagé AppFonts.Get : {policesAvant} → {policesPremiere} → {policesSeconde}");
+            Assert.True(couvertureApres - couvertureAvant <= Tolerance,
+                $"la couverture des glyphes (PaperText) garde une entrée par hauteur traversée : {couvertureAvant} → {couvertureApres}");
+            Assert.True(parFenetreMax <= parFenetreAvant + Tolerance,
+                $"les polices de la fenêtre s'accumulent d'une taille à l'autre : {parFenetreAvant} à la taille d'origine, {parFenetreMax} au plus");
             Assert.True(seconde.Gdi - premiere.Gdi <= Tolerance,
                 $"seconde passe sur les mêmes tailles : GDI +{seconde.Gdi - premiere.Gdi} (le cache ne se remplit jamais)");
             Assert.True(premiere.Gdi - avant.Gdi <= Tolerance,
@@ -562,5 +649,6 @@ public sealed class RessourcesLongueDureeTests
                 $"(cache AppFonts.Get : {policesAvant} → {policesPremiere} polices ; avant {avant} ; après {premiere})");
         }
         finally { BancCapture.Teardown(fen); }
+        Assert.Equal(0, parFenetre.Count); // fermées avec la fenêtre
     }
 }

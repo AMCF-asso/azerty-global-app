@@ -1426,8 +1426,8 @@ sealed class CharacterSearch : IDisposable
         if (steps.Count > 0)
         {
             int midY = top + Scale(BASE_ROW_GESTURE_MID);
-            int gestureW = TablatureRenderer.DrawShortGesture(hdc, steps, chosen, _dpiScale, 0, midY, draw: false);
-            TablatureRenderer.DrawShortGesture(hdc, steps, chosen, _dpiScale, left + gestureW, midY);
+            int gestureW = TablatureRenderer.DrawShortGesture(hdc, steps, chosen, FontScale.Shared(_dpiScale), 0, midY, draw: false);
+            TablatureRenderer.DrawShortGesture(hdc, steps, chosen, FontScale.Shared(_dpiScale), left + gestureW, midY);
         }
     }
 

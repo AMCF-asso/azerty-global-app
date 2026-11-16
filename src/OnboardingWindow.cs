@@ -1926,7 +1926,7 @@ sealed class OnboardingWindow : IDisposable
             var state = new PaperKeyboardState { CenteredBase = true };
             state.FramedScancodes.UnionWith(Step1ChangedKeys);
             state.NamedFunctionLabels.UnionWith(Step1NamedKeys);
-            PaperKeyboard.Draw(hdc, placement, layout, PaperKeyboardMode.Map, state);
+            PaperKeyboard.Draw(hdc, placement, layout, PaperKeyboardMode.Map, state, fonts: null); // échelle du DPI seul : cache partagé
             DrawStep1Notes(hdc, gfx, placement, kbH, cw - margin);
         }
 

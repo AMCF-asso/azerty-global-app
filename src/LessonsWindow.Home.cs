@@ -52,8 +52,11 @@ internal sealed partial class LessonsWindow
 
     private float HomeScale => _dpiScale * _windowScale;
 
+    /// <summary>L'échelle de l'accueil pour ses polices : celles de la fenêtre, à cette échelle.</summary>
+    private FontScale HomeFonts => _scaledFonts.At(HomeScale);
+
     private FontSpec HomeFont(string family, int size, int weight = TypeRamp.Regular) =>
-        FontSpec.Of(family, size, weight, HomeScale);
+        FontSpec.Of(family, size, weight, HomeFonts);
 
     /// <summary>À l'ouverture de la fenêtre (de cachée à visible) : « Aujourd'hui », sauf si
     /// l'appelant a positionné un exercice (défi du jour).</summary>
@@ -664,7 +667,7 @@ internal sealed partial class LessonsWindow
             for (int i = 0; i < due.Count; i++)
             {
                 var s = Gesture.Of(due[i].Character);
-                int gw = s.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, s, false, HomeScale, 0, 0, draw: false, compact);
+                int gw = s.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, s, false, HomeFonts, 0, 0, draw: false, compact);
                 int cw = Math.Max(minCell, Math.Max(gw, PaperText.Width(hdc, HomeGlyph(due[i].Character), glyphFont))) + 2 * pad;
                 if (used + cw + (i < due.Count - 1 ? moreWidth : 0) > area.right - area.left) break;
                 used += cw;
@@ -680,7 +683,7 @@ internal sealed partial class LessonsWindow
         {
             string glyph = HomeGlyph(due[i].Character);
             var steps = Gesture.Of(due[i].Character);
-            int gestureW = steps.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, 0, 0, draw: false, compactCaps);
+            int gestureW = steps.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeFonts, 0, 0, draw: false, compactCaps);
             int cell = Math.Max(minCell, Math.Max(gestureW, PaperText.Width(hdc, glyph, glyphFont))) + 2 * pad;
             int reserve = i < due.Count - 1 ? moreWidth : 0;
             if (x + cell + reserve > area.right) break;
@@ -688,7 +691,7 @@ internal sealed partial class LessonsWindow
             PaperText.DrawLine(hdc, glyph, glyphFont,
                 new Win32.RECT { left = x, top = area.top, right = x + cell, bottom = area.top + glyphH }, pal.Ink, TextAlign.Center);
             if (steps.Count > 0)
-                TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, centre + gestureW / 2, area.top + glyphH + S(15), compact: compactCaps);
+                TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeFonts, centre + gestureW / 2, area.top + glyphH + S(15), compact: compactCaps);
             x += cell;
             shown++;
             if (i < due.Count - 1 && x + moreWidth <= area.right)
@@ -875,7 +878,7 @@ internal sealed partial class LessonsWindow
         var placement = PaperKeyboard.PlaceAt(area.left, kbTop, unit);
         var (kbW, kbH) = PaperKeyboard.Size(unit);
         PaperKeyboard.Draw(hdc, placement, _layout, PaperKeyboardMode.Map,
-            new PaperKeyboardState { Profile = KeyboardRenderProfile.Full });
+            new PaperKeyboardState { Profile = KeyboardRenderProfile.Full }, HomeFonts.Owner);
 
         _homeMapKeys.Clear();
         Win32.RECT? selectedRect = null;
@@ -1113,12 +1116,12 @@ internal sealed partial class LessonsWindow
         string? deadKey = HomeDeadKeyOf(layer.Step);
         string name = deadKey != null ? HomeDeadKeyName(deadKey) : L.LessonsHome_LayerName(layer.Layer);
         var first = new[] { layer.Step };
-        int gestureW = TablatureRenderer.DrawShortGesture(hdc, first, false, HomeScale, 0, 0, draw: false);
+        int gestureW = TablatureRenderer.DrawShortGesture(hdc, first, false, HomeFonts, 0, 0, draw: false);
         string shown = HomeEllipsize(hdc, name, headFont, x1 - x0 - gestureW - S(8));
         int nameW = PaperText.DrawLine(hdc, shown, headFont,
             new Win32.RECT { left = x0, top = col.top + S(10), right = x1, bottom = col.top + S(32) }, pal.Ink, TextAlign.Left);
         if (x0 + nameW + S(8) + gestureW <= x1)
-            TablatureRenderer.DrawShortGesture(hdc, first, false, HomeScale, x0 + nameW + S(8) + gestureW, col.top + S(21));
+            TablatureRenderer.DrawShortGesture(hdc, first, false, HomeFonts, x0 + nameW + S(8) + gestureW, col.top + S(21));
 
         int y = col.top + S(36);
         if (deadKey != null)
