@@ -29,7 +29,7 @@ Les constats (`C<lot>.<n>`) et leurs statuts y sont décrits ; ce fichier les r
 | ME-02 | Progression des Leçons : une entrée mal formée bloque la fenêtre | faible | C5.6 | 2 tests en échec |
 | ME-07 | Petits états périmés dans quatre fenêtres | faible | C5.5, C6.2, C8.2, C1.7 | 4 tests en échec ; C1.7 à la lecture |
 | ME-08 | Demande d'avis : mauvais moment, minuterie perdue, double appel | faible | C7.3, C7.4, C7.5 | C7.3 et C7.4 corrigés (4 tests) ; C7.5 laissé plausible |
-| ME-09 | Réglages : seconde instance, écriture de fermeture, instance élevée | faible | C4.5, C4.3, C4.1 | 1 test en échec ; le reste à la lecture |
+| ME-09 | Réglages : seconde instance, écriture de fermeture, instance élevée | faible | C4.5, C4.3, C4.1 | C4.5, C4.3 et C4.1 corrigés (10 tests, 19 cas) |
 | ME-10 | Horloge ou fuseau qui recule | faible | C5.7 | 3 tests en échec |
 | ME-11 | Presse-papiers : échec muet, et un test qui dépend du presse-papiers réel | faible | C8.1 | lecture du code ; 1 test existant en échec |
 | ME-12 | Comportements à trancher (conception) | faible | C1.1, C1.5, C2.2, C6.1, C2.1, C2.4, C5.2 | 4 atteints (tests en échec) ; 3 à la lecture |
@@ -183,8 +183,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-09 — Réglages : seconde instance, écriture de fermeture, instance élevée (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C4.5 (confirmé), C4.3 et C4.1 (plausibles).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : C4.5, `Program.Main` lit la langue par `ConfigManager.AppLanguageWithoutLoading` (lecture seule, sans cache ni quarantaine, même valeur que le chargement normal) : la seconde instance ne touche plus à `config.json`, le gagnant le charge et le met de côté au premier accès de `TrayApplication`. C4.3, `ConfigManager.FlushFinal` (Flush puis 3 reprises synchrones de 250 ms, perte journalisée `ConfigFinalWriteLost`), appelée par `Cleanup` et `WM_QUERYENDSESSION`. C4.1, la prise des deux mutex est extraite en `Program.AcquireSingleInstance` (fabrique remplaçable) ; `UnauthorizedAccessException` sur `Local\` vaut seconde instance. Tests : `MachinesEtatsLot4Tests`, 10 tests ajoutés (19 cas) ; rouges avant le correctif : C4.5 (2 tests et 2 lignes du test paramétré, sur une lecture qui mettait le fichier de côté), C4.3 (3 tests), C4.1 (1 test) ; les autres gardent le comportement. Écarts avec le correctif prévu : le test rouge d'origine de C4.5 (fichier disparu pendant le renommage) ne se corrige pas par l'ordre de démarrage seul, d'où un second correctif de défense dans `EnsureLoaded` (fichier absent après un renommage raté : pas de `_loadFailed`) ; le gestionnaire d'erreur fatale n'est pas déplacé avant les mutex (la prise des mutex ne lève plus rien d'autre que ce que `Global\` capturait déjà). À vérifier à la main : lancer l'application en administrateur puis en mode normal (aucune boîte d'erreur système, seconde instance qui sort) ; deux lancements simultanés sur un `config.json` corrompu ; un `config.json` tenu ouvert par un autre programme au moment de quitter.
+- **Constats** : C4.5 (corrigé), C4.3 (corrigé), C4.1 (corrigé).
 - **Effet** : deux lancements simultanés sur un `config.json` corrompu : l'un garde l'état
   « chargement échoué », l'accord d'activation y est lu comme absent pendant la session et le
   message de remise à zéro est perdu (C4.5) ; une écriture de fermeture ratée perd les derniers
@@ -194,7 +195,7 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 - **Correctif** : lire la langue sans mettre le fichier de côté, et ne le mettre de côté qu'après
   l'acquisition des mutex (la langue doit rester lue avant, pour traduire les messages de refus) ;
   écriture finale avec quelques nouveaux essais bornés ; accès refusé au mutex traité comme « déjà lancée ».
-- **Tests** : `MachinesEtatsLot4Tests.Fichier_corrompu_deja_mis_de_cote_…` ; deux à écrire.
+- **Tests** : `MachinesEtatsLot4Tests` (`Fichier_corrompu_deja_mis_de_cote_…`, `Langue_lue_au_demarrage_…`, `Ecriture_de_fermeture_…`, `Arret_et_sortie_du_tray_…`, `Mutex_local_refuse_…`, `Acquisition_des_deux_mutex_…`, `Mutex_global_indisponible_…`).
 - **Risque du correctif** : moyen (ordre de démarrage du processus).
 
 ## ME-10 — Horloge ou fuseau qui recule (faible)

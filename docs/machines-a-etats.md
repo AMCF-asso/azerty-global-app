@@ -150,11 +150,11 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C3.5 | M3.3 | Bulles à usage unique marquées faites avant l'affichage, dans la foulée du `NIM_ADD` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.6 | M3.6 | `NIM_ADD` sans contrôle de retour ni réessai, y compris sur `TaskbarCreated` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.7 | M3.5 | Fenêtre de conflit de disposition sans garde sur l'état de l'application | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
-| C4.1 | M4.1 | Mutex `Local\` créé par une instance élevée : le lancement non élevé plante avant tout gestionnaire d'erreur | plausible (couture à ajouter) | faible | ME-09 | lecture du code |
+| C4.1 | M4.1 | Mutex `Local\` créé par une instance élevée : le lancement non élevé plante avant tout gestionnaire d'erreur | corrigé | faible | ME-09 | `AZERTYGlobal/Program.cs` (`AcquireSingleInstance`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Mutex_local_refuse_par_une_instance_elevee_est_une_seconde_instance`, `Acquisition_des_deux_mutex_dit_qui_l_on_est`, `Mutex_global_indisponible_laisse_demarrer_en_mode_degrade`) |
 | C4.2 | M4.4 | Version non packagée : `IsRegistered` ignore le refus de Windows, donc `Set(true)` rend vrai sans effet réel | corrigé | moyenne | ME-04 | `AZERTYGlobal/AutoStart.cs` (`IsRegistered`, `DefaultOnboardingCheck`, `GetFailureMessage`), `Localization/L.Startup.cs` (`AutoStart_FailureMessageRefused`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Accueil_ne_coche_pas_la_case_quand_Windows_refuse_meme_si_le_raccourci_existe`, `Activation_refusee_par_Windows_n_est_pas_dite_reussie`, `Case_des_Parametres_et_de_l_accueil_refletent_le_refus_de_Windows`, `Refus_de_Windows_renvoie_vers_les_Parametres_Windows`) |
-| C4.3 | M4.2 | Écriture de fermeture ratée : réglages perdus, aucune reprise synchrone | plausible (couture à ajouter) | faible | ME-09 | lecture du code |
+| C4.3 | M4.2 | Écriture de fermeture ratée : réglages perdus, aucune reprise synchrone | corrigé | faible | ME-09 | `AZERTYGlobal/ConfigManager.cs` (`FlushFinal`), `TrayApplication.cs` (`WM_QUERYENDSESSION`, `Cleanup`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Ecriture_de_fermeture_reessaie_puis_ecrit_le_reglage`, `Ecriture_de_fermeture_impossible_rend_la_main_sous_le_plafond_et_journalise_la_perte`, `Arret_et_sortie_du_tray_passent_par_l_ecriture_de_fermeture`) |
 | C4.4 | M4.4 | La relance unique du lancement automatique est proposée même quand Windows ou la politique refuse | corrigé | faible | ME-04 | `AZERTYGlobal/AutoStartNudge.cs` (`AutoStartSignals.WindowsState`, `ShouldPrompt`, `Snapshot`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Relance_unique_n_est_pas_proposee_quand_l_etat_est_refuse_ou_inconnu`, `Signaux_de_la_relance_portent_l_etat_Windows`, `Relance_refusee_ne_consomme_pas_la_proposition`) |
-| C4.5 | M4.3 | Seconde instance : `config.json` lu et mis de côté avant le mutex, `_loadFailed` reste collé et la notice est perdue | confirmé | faible | ME-09 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` |
+| C4.5 | M4.3 | Seconde instance : `config.json` lu et mis de côté avant le mutex, `_loadFailed` reste collé et la notice est perdue | corrigé | faible | ME-09 | `AZERTYGlobal/Program.cs`, `ConfigManager.cs` (`AppLanguageWithoutLoading`, `EnsureLoaded`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Fichier_corrompu_deja_mis_de_cote_par_l_autre_instance_ne_bloque_pas_les_ecritures`, `Langue_lue_au_demarrage_ne_met_pas_le_fichier_corrompu_de_cote`, `Langue_lue_au_demarrage_est_celle_du_chargement_normal`) |
 | C5.1 | M5.3 | Dates analysées sans culture invariante : série et Défi faussés sous un calendrier non grégorien | corrigé | faible | ME-01 | `AZERTYGlobal/StoredDate.cs` (analyseur unique), `UsageStats.cs`, `TrainingReminders.cs`, `UsageStatsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`, `Rappel_UnSeulParJour_QuelleQueSoitLaCulture`, `Statistiques_UneDateEcriteEnInvariantSeRelitAIdentique_QuelleQueSoitLaCulture`, `Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`) |
 | C5.2 | M5.4 | Exclusion de frappe liée à l'ouverture du tutoriel et non au focus | plausible (couture à ajouter) | faible | ME-12 | lecture du code |
 | C5.3 | M5.7 | États absorbants _loadFailed et _readFailed jusqu'au redémarrage | réfuté | — | — | relecture adversariale |
@@ -1471,7 +1471,7 @@ Règle appliquée : le code de la pompe (hook, WndProc, setters des fenêtres) 
 
 | variable | type | défini à | fils lecteurs/écrivains | protection |
 |---|---|---|---|---|
-| `mutex` / `isNew` | `Mutex` nommé `Local\AZERTYGlobalSingleInstance.<SID>` | `Program.cs:52` | fil principal du processus | objet noyau nommé (atomique entre processus) ; libéré à la mort du processus ou au `using` |
+| `mutex` / `isNew` | `Mutex` nommé `Local\AZERTYGlobalSingleInstance.<SID>` | `Program.AcquireSingleInstance` | fil principal du processus | objet noyau nommé (atomique entre processus) ; libéré à la mort du processus ou au `using` |
 | `crossSession` / `isNewCrossSession` | `Mutex?` nommé `Global\…` ; défaut `isNewCrossSession = true` | `Program.cs:66-76` | idem | idem ; `null` si privilège absent (3 types d'exception capturés, `Program.cs:73`) |
 | ligne de commande `args` | `string[]` | `Program.cs:97` | seconde instance | locale |
 | `ConfigManager.IsPackaged` | `bool` | `ConfigManager.cs:58` | tous | initialisation statique, immuable |
@@ -1490,14 +1490,14 @@ Règle appliquée : le code de la pompe (hook, WndProc, setters des fenêtres) 
 | S4 Seconde instance, même session, packagée, activation système | `!isNew && IsPackaged && IsSystemActivation(args)` : sortie muette |
 | S5 Seconde instance, même session, packagée, lancement Démarrer | `!isNew && IsPackaged && !IsSystemActivation(args)` : signal puis sortie |
 | S6 Seconde instance, même session, non packagée | `!isNew && !IsPackaged` : MessageBox puis sortie |
-| S7 Échec de création du mutex `Local\` | exception non prévue en `Program.cs:52` (voir C4.1) |
+| S7 Mutex `Local\` refusé (instance élevée) | `UnauthorizedAccessException` sur `Local\` dans `AcquireSingleInstance` : traité comme une seconde instance, donc S4, S5 ou S6 selon le package et les arguments (C4.1 corrigé) |
 
 #### Invariants
 
 - I1 : au plus un processus par compte et par session détient `Local\…` — garanti par le noyau (`Program.cs:52`).
 - I2 : au plus un processus par compte sur la machine détient `Global\…` quand le privilège existe — garanti par `Program.cs:70-71`. Hors privilège : non garanti (assumé, `Program.cs:62-65`).
-- I3 : seul le gagnant écrit config.json, usage-stats.json, error.log (rotation) et s'enregistre pour la relance — garanti pour `RotateLogIfNeeded` et `RestartRegistration.Register` (`Program.cs:129-133`, après les `return`) ; NON garanti pour la lecture/quarantaine de config.json, déclenchée par `Program.cs:44` avant tout mutex (C4.5).
-- I4 : tout lancement concurrent aboutit à exactement un processus vivant — non garanti : une instance valide peut mourir en silence pendant que la gagnante est en train de quitter (cas S4 contre arrêt de S1, fenêtre étroite ; non retenu comme constat, voir « tentative d'écarter » de C4.1 pour le cadrage) ; et une exception à la création du mutex `Local\` ne mène à aucun état (C4.1).
+- I3 : seul le gagnant écrit config.json, usage-stats.json, error.log (rotation) et s'enregistre pour la relance — garanti pour `RotateLogIfNeeded` et `RestartRegistration.Register` (`Program.cs:129-133`, après les `return`) ; garanti aussi pour la lecture de config.json depuis ME-09 : `Program.Main` lit la langue par `ConfigManager.AppLanguageWithoutLoading` (aucun chargement, aucune quarantaine) et seul le gagnant charge et met de côté, au premier accès de `TrayApplication` (C4.5 corrigé).
+- I4 : tout lancement concurrent aboutit à exactement un processus vivant — non garanti : une instance valide peut mourir en silence pendant que la gagnante est en train de quitter (cas S4 contre arrêt de S1, fenêtre étroite ; non retenu comme constat, voir « tentative d'écarter » de C4.1 pour le cadrage) ; un refus d'accès sur `Local\` mène désormais à S4, S5 ou S6 (C4.1 corrigé).
 - I5 : la seconde instance ne montre rien en cas d'activation système — garanti par `Program.cs:110-124` (ordre MessageBox seulement hors package, signal seulement si `!IsSystemActivation`).
 - I6 : un signal de relance n'est jamais perdu — non garanti, assumé : fenêtre pas encore créée → `false` (`RelaunchSignal.cs:65`).
 
@@ -1506,7 +1506,7 @@ Règle appliquée : le code de la pompe (hook, WndProc, setters des fenêtres) 
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
 | T1 | S0 | création `Local\` | succès | S0 (`isNew` connu) | — | `Program.cs:52` |
-| T2 | S0 | création `Local\` | `UnauthorizedAccessException` (mutex créé par un processus élevé) | S7 : exception non rattrapée, aucun gestionnaire encore posé | plantage | `Program.cs:52`, handler posé en `Program.cs:136` |
+| T2 | S0 | création `Local\` | `UnauthorizedAccessException` (mutex créé par un processus élevé) | S4, S5 ou S6 (seconde instance, voir T7 à T9) | journal `SingleInstanceMutexDenied` ; le mutex `Global\` n'est pas créé | `Program.AcquireSingleInstance` |
 | T3 | S0 | création `Global\` | succès | S0 | `isNewCrossSession` | `Program.cs:70-71` |
 | T4 | S0 | création `Global\` | `UnauthorizedAccessException`/`IOException`/`NotSupportedException` | S0 avec `crossSession = null` | `LogCompatEvent("CrossSessionMutexUnavailable")` | `Program.cs:73-76` |
 | T5 | S0 | décision | `isNew && !isNewCrossSession` | S3 | journal, MessageBox, `crossSession.Dispose`, sortie | `Program.cs:81-89` |
@@ -1526,7 +1526,7 @@ Aucune minuterie propre. `TrySignalLiveInstance` n'essaie qu'une fois : pas de 
 
 #### États ou transitions invalides atteignables
 
-C4.1, C4.5
+C4.1 corrigé (ticket ME-09) : invariant I4 rétabli, test `MachinesEtatsLot4Tests.Mutex_local_refuse_par_une_instance_elevee_est_une_seconde_instance`. C4.5 corrigé (ticket ME-09) : invariant I3 rétabli, test `MachinesEtatsLot4Tests.Langue_lue_au_demarrage_ne_met_pas_le_fichier_corrompu_de_cote`.
 
 
 ### M4.2 — Écriture différée de config.json
@@ -1558,7 +1558,7 @@ C4.1, C4.5
 | W3 Écriture en cours + nouveau réglage | W2 et `_dirty == true` reposé par `MarkDirty` |
 | W4 Essai n° k en attente | `_dirty && _failedWrites == k`, minuterie armée à `RetryDelayAfter(k)` (1 s, 5 s, 30 s, 300 s, puis 300 s indéfiniment) |
 | W5 Verrouillé sans écriture | `_loadFailed` : `WriteFile` rend `true` sans écrire si le fichier existe (`ConfigManager.cs:1506-1510`) |
-| W6 Fermeture | `Cleanup` a appelé `Flush` une dernière fois (`TrayApplication.cs:2360`) |
+| W6 Fermeture | `Cleanup` a appelé `FlushFinal` (`Flush` puis jusqu'à 3 reprises synchrones) |
 
 #### Invariants
 
@@ -1567,7 +1567,7 @@ C4.1, C4.5
 - I3 : écritures dans l'ordre des instantanés — garanti par `_fileLock` (`ConfigManager.cs:1421`).
 - I4 : un réglage posé n'est jamais perdu tant que le processus vit — garanti : l'échec remet `_dirty = true` (`ConfigManager.cs:1453`), un `MarkDirty` concurrent ne l'efface pas, un succès avec `_dirty` reposé est suivi d'un nouvel essai (la minuterie de `MarkDirty` reste armée).
 - I5 : `_failedWrites` compte les échecs d'affilée du dernier instantané — non garanti à la nanoseconde : un échec après un `MarkDirty` concurrent donne 1 au lieu de 0+1 et remplace la minuterie de 400 ms par 1 s (`ConfigManager.cs:1454-1455`). Sans effet de perte.
-- I6 : un réglage posé avant la fermeture est durable à la sortie — NON garanti si l'écriture de fermeture échoue : un seul `Flush`, aucune reprise synchrone, la minuterie de reprise meurt avec le processus (C4.3).
+- I6 : un réglage posé avant la fermeture est durable à la sortie — garanti depuis ME-09 dans une limite : `FlushFinal` (`Cleanup`, `WM_QUERYENDSESSION`) refait jusqu'à 3 essais synchrones espacés de 250 ms (750 ms de pause au plus) ; un verrou plus long fait perdre le réglage, et la perte est journalisée (`ConfigFinalWriteLost`) (C4.3 corrigé).
 - I7 : fichier jamais tronqué en cas de coupure — garanti : temp + `Flush(true)` + `File.Replace`/`File.Move` (`ConfigManager.cs:1516-1526`).
 - I8 : deux processus ne s'écrasent pas par le temp — garanti par `BuildTempPath(pid)` ; ne protège pas du « dernier écrivain gagne » sur le fichier final.
 
@@ -1587,17 +1587,17 @@ C4.1, C4.5
 | T10 | W3 | fin d'écriture échouée | — | W4 avec k = 1 | `_failedWrites` passe de 0 à 1, minuterie remplacée par 1 s | `ConfigManager.cs:1453-1455` |
 | T11 | tout état avec `_loadFailed` et fichier présent | `Flush` | — | W0 (réglages jamais écrits) | journal « Sauvegarde ignorée » ; `true` rendu | `ConfigManager.cs:1506-1510` |
 | T12 | W1/W4 | `WM_WTSSESSION_CHANGE` (tout événement) | — | W2 sur le pool | `FlushInBackground` | `TrayApplication.cs:1076`, `ConfigManager.cs:1399` |
-| T13 | W1/W4 | `WM_QUERYENDSESSION` | — | W2 sur la pompe | `Flush` synchrone, bloque la pompe tant que `_fileLock` est tenu | `TrayApplication.cs:1088` |
-| T14 | W1/W4 | `Cleanup` (menu Quitter, `WM_ENDSESSION`) | `_cleaned` faux | W6 | `Flush` final (après le `Dispose` des fenêtres) ; échec = fin de vie sans reprise | `TrayApplication.cs:2331-2360` |
+| T13 | W1/W4 | `WM_QUERYENDSESSION` | — | W2 sur la pompe | `FlushFinal` : `Flush` synchrone puis jusqu'à 3 reprises espacées de 250 ms, bloque la pompe tant que `_fileLock` est tenu et pendant ces pauses (750 ms au plus) | `TrayApplication.cs:1088` |
+| T14 | W1/W4 | `Cleanup` (menu Quitter, `WM_ENDSESSION`) | `_cleaned` faux | W6 | `FlushFinal` (après le `Dispose` des fenêtres) ; échec persistant = perte journalisée (`ConfigFinalWriteLost`) | `TrayApplication.cs:2331-2360` |
 | T15 | tout | `RecordReviewPromptShown` | — | W2 sur la pompe | `Flush` immédiat hors `_lock` | `ConfigManager.cs:496-512` |
 
 #### Temporisations et réessais
 
-Départ 400 ms après le dernier geste (`ConfigManager.cs:1334`). Reprises 1 s, 5 s, 30 s, 5 min puis 5 min (`ConfigManager.cs:1347,1357-1358`), minuterie unique `Change(delay, Infinite)` ; un nouveau réglage remet le compteur à 0. Aucune limite de nombre d'essais (compteur `int` qui croît, `Clamp` sur le dernier palier). Journal : une ligne par palier ouvert (`ConfigManager.cs:1436-1438`). Les reprises tournent sur le pool : elles disparaissent à la fin du processus. T10 est un défaut de comptage sans perte (non retenu).
+Départ 400 ms après le dernier geste (`ConfigManager.cs:1334`). Reprises 1 s, 5 s, 30 s, 5 min puis 5 min (`ConfigManager.cs:1347,1357-1358`), minuterie unique `Change(delay, Infinite)` ; un nouveau réglage remet le compteur à 0. Aucune limite de nombre d'essais (compteur `int` qui croît, `Clamp` sur le dernier palier). Journal : une ligne par palier ouvert (`ConfigManager.cs:1436-1438`). Les reprises tournent sur le pool : elles disparaissent à la fin du processus ; la fermeture ne s'y fie plus (`FlushFinal`, ME-09). T10 est un défaut de comptage sans perte (non retenu).
 
 #### États ou transitions invalides atteignables
 
-C4.3
+C4.3 corrigé (ticket ME-09) : invariant I6 rétabli, test `MachinesEtatsLot4Tests.Ecriture_de_fermeture_reessaie_puis_ecrit_le_reglage`.
 
 
 ### M4.3 — Chargement de config.json et mise de côté d'un fichier illisible
@@ -1628,7 +1628,7 @@ C4.3
 #### Invariants
 
 - I1 : un fichier existant jamais écrasé s'il n'a pas été chargé — garanti : `WriteFile` refuse (`ConfigManager.cs:1506-1510`), quarantaine jamais en suppression ni écrasement (`FileQuarantine.cs:49`, `overwrite: false`).
-- I2 : `_loadFailed` décrit le fichier présent sur le disque — NON garanti : reste vrai si le fichier a disparu entre-temps (C4.5).
+- I2 : `_loadFailed` décrit le fichier présent sur le disque — garanti depuis ME-09 : un renommage raté parce que le fichier a disparu (mis de côté par une autre instance) ne pose plus `_loadFailed` (`File.Exists`), et une seconde instance ne charge plus le fichier avant les mutex (C4.5 corrigé).
 - I3 : le message de remise à zéro part au plus une fois — garanti (`TakeQuarantineNotice`, `ConfigManager.cs:1207-1216`).
 - I4 : `_cache` jamais non nul et vide pour un fichier valide non lu — garanti pour les exceptions listées (`ConfigManager.cs:1252-1280`) ; une exception hors liste laisserait `_cache` vide et `_loadFailed` faux (non atteignable avec les types levés par `ReadAllText` et `JsonDocument.Parse` documentés ; non retenu).
 - I5 : lecture impossible → pas de réessai de lecture dans la session — garanti (assumé : « le prochain lancement relit », `ConfigManager.cs:1254-1257`).
@@ -1641,7 +1641,7 @@ C4.3
 | T2 | L0 | idem | fichier absent, `_cache.Count == 0` | L2 | `appLanguage` dérivé de l'UI Windows, `MarkDirty` | `ConfigManager.cs:1288-1296` |
 | T3 | L0 | idem | `IsReadFailure` (verrou, droits) | L4 | journal | `ConfigManager.cs:1252-1260` |
 | T4 | L0 | idem | `IsCorruption` (JsonException/FormatException/racine non objet) et renommage réussi | L3 puis L2 | cache vidé, copie `.illisible-…`, `_quarantineNoticePending = true`, langue dérivée | `ConfigManager.cs:1261-1274,1288` |
-| T5 | L0 | idem | corruption et renommage raté (verrou, ou fichier déjà parti) | L4 | `_loadFailed = true` | `ConfigManager.cs:1273-1274`, `FileQuarantine.cs:52-56` |
+| T5 | L0 | idem | corruption et renommage raté, fichier toujours présent (verrou) ; si le fichier est parti (autre instance) : L2 sans `_loadFailed` | L4 | `_loadFailed = true` | `ConfigManager.cs:1273-1274`, `FileQuarantine.cs:52-56` |
 | T6 | L0 | idem | `IOException` restante (fichier disparu) | L1 vide, sans langue dérivée si le fichier n'existe pas : L2 | journal | `ConfigManager.cs:1276-1280` |
 | T7 | L3 | `TakeQuarantineNotice` | — | L3 sans message | `TIMER_SETTINGS_RESET_NOTICE` posé par le tray | `TrayApplication.cs:336-338` |
 
@@ -1651,7 +1651,7 @@ Aucun. Horodatage de la copie à la seconde (`FileQuarantine.cs:27-28`) : deux 
 
 #### États ou transitions invalides atteignables
 
-C4.5.
+C4.5 corrigé (ticket ME-09) : invariant I2 rétabli, test `MachinesEtatsLot4Tests.Fichier_corrompu_deja_mis_de_cote_par_l_autre_instance_ne_bloque_pas_les_ecritures`.
 
 
 ### M4.4 — Lancement automatique (`AutoStartWindowsState`, `IsRegistered`, relance unique)
