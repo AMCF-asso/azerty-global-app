@@ -223,17 +223,9 @@ internal sealed partial class LessonsWindow
             Win32.SetWindowTextW(_hWnd, active ? L.Learning_WindowTitle : L.LessonsWin_WindowTitle);
     }
 
-    private void FinishTutorial()
-    {
-        EndTutorial(completed: true);
-        Hide();
-    }
+    private void FinishTutorial() => HideWindow(tutorialCompleted: true);
 
-    private void LeaveTutorialForNow()
-    {
-        EndTutorial(completed: false);
-        Hide();
-    }
+    private void LeaveTutorialForNow() => HideWindow(tutorialCompleted: false);
 
     // ── Dessin ───────────────────────────────────────────────────────
 

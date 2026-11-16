@@ -54,8 +54,9 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
     // WM_COMMAND IDC_BTN_NEXT) se suivent dans le délai de double clic de Windows. Le premier amène à
     // l'étape 3 ; le second, devenu « C'est parti ! » sous le même identifiant, ne doit pas valider
     // l'accueil avant que l'étape 3 ait été vue. Un clic posé après le délai valide toujours.
-    // Horloge et délai injectés. Le vrai double clic à la souris (conversion de WM_LBUTTONDBLCLK en
-    // clic par le bouton système) reste à vérifier à la main.
+    // Horloge et délai injectés. Le double clic est rejoué par les messages de la souris que le bouton
+    // système reçoit (WM_LBUTTONDOWN puis WM_LBUTTONUP, puis WM_LBUTTONDBLCLK et WM_LBUTTONUP) : la
+    // suite de C7.1 ne filtre que ce second clic-là, pas une activation au clavier.
     [Fact]
     public void Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3()
     {
@@ -76,10 +77,10 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
             IntPtr suivant = BancCapture.Field<IntPtr>(window, "_hWndBtnNext");
             maintenant += 2_000; // l'utilisateur est resté un moment sur l'étape 2
 
-            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+            ClicSouris(suivant, doubleClic: false);
             Assert.Equal(OnboardingStep.Last, BancCapture.Field<int>(window, "_currentStep"));
             maintenant += 120; // second clic du double clic
-            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+            ClicSouris(suivant, doubleClic: true);
 
             Assert.True(BancCapture.Field<bool>(window, "_visible"),
                 "le second clic a validé et fermé l'accueil sans que l'étape 3 ait été vue");
@@ -87,11 +88,112 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
             Assert.Equal(OnboardingStep.Last, BancCapture.Field<int>(window, "_currentStep"));
 
             maintenant += 600; // un clic voulu, après le délai de double clic
-            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+            ClicSouris(suivant, doubleClic: false);
 
             Assert.False(BancCapture.Field<bool>(window, "_visible"),
                 "un clic après le délai de double clic doit valider l'accueil");
             Assert.Equal(1, ecritures);
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    private static void ClicSouris(IntPtr bouton, bool doubleClic)
+    {
+        IntPtr point = (IntPtr)((5 << 16) | 5);
+        Win32.SendMessageW(bouton, doubleClic ? Win32.WM_LBUTTONDBLCLK : Win32.WM_LBUTTONDOWN, (IntPtr)1, point);
+        Win32.SendMessageW(bouton, Win32.WM_LBUTTONUP, IntPtr.Zero, point);
+    }
+
+    // Constat C7.1 (suite : le filtre ne vise que le double clic de souris)
+    // Entrée ou Espace répétés au clavier, ou un lecteur d'écran qui invoque « Suivant » deux fois :
+    // l'app reçoit deux WM_COMMAND (BM_CLICK, comme l'envoie IDOK ou l'invocation d'accessibilité)
+    // dans le délai de double clic, sans aucun message de souris. Les deux agissent.
+    [Fact]
+    public void Accueil_DeuxActivationsAuClavierRapprochées_AvancentDeDeuxÉtapes()
+    {
+        using var isolation = new BancCapture.Isolation();
+        long maintenant = 1_000_000;
+        OnboardingWindow.Clock = () => maintenant;
+        OnboardingWindow.DoubleClickDelay = () => 500;
+        OnboardingWindow.AutoStartIsRegistered = () => false;
+        OnboardingWindow.AutoStartSetter = _ => true;
+        OnboardingWindow.ShowMessageBox = (_, _, _, _) => 1;
+        var window = OpenOnboarding();
+        try
+        {
+            BancCapture.SetField(window, "_activationAccepted", true);
+            IntPtr suivant = BancCapture.Field<IntPtr>(window, "_hWndBtnNext");
+
+            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+            maintenant += 120;
+            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+
+            Assert.Equal(OnboardingStep.Last, BancCapture.Field<int>(window, "_currentStep"));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    // Constat C7.1 (suite : « Précédent » puis « Suivant » enchaînés)
+    // « Précédent » arme aussi l'horodatage du changement d'étape : le « Suivant » qui suit, au
+    // clavier ou par l'accessibilité, ne doit pas être perdu.
+    [Fact]
+    public void Accueil_PrécédentPuisSuivantEnchaînés_AgissentTousLesDeux()
+    {
+        using var isolation = new BancCapture.Isolation();
+        long maintenant = 1_000_000;
+        OnboardingWindow.Clock = () => maintenant;
+        OnboardingWindow.DoubleClickDelay = () => 500;
+        OnboardingWindow.AutoStartIsRegistered = () => false;
+        OnboardingWindow.AutoStartSetter = _ => true;
+        OnboardingWindow.ShowMessageBox = (_, _, _, _) => 1;
+        var window = OpenOnboarding();
+        try
+        {
+            BancCapture.SetField(window, "_activationAccepted", true);
+            BancCapture.Call(window, "GoToNextStep"); // étape 2 (index 1)
+            IntPtr suivant = BancCapture.Field<IntPtr>(window, "_hWndBtnNext");
+            IntPtr precedent = BancCapture.Field<IntPtr>(window, "_hWndBtnPrev");
+
+            Win32.SendMessageW(precedent, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+            Assert.Equal(0, BancCapture.Field<int>(window, "_currentStep"));
+            maintenant += 100;
+            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+
+            Assert.Equal(1, BancCapture.Field<int>(window, "_currentStep"));
+        }
+        finally { BancCapture.Teardown(window); }
+    }
+
+    // Constat C7.1 (suite : un double clic abandonné ne laisse pas de trace)
+    // Le second clic d'un double clic est pressé puis relâché hors du bouton : aucun clic n'est
+    // produit. L'activation au clavier qui suit, dans le délai, agit.
+    [Fact]
+    public void Accueil_DoubleClicAbandonné_NeFiltrePasLActivationAuClavierSuivante()
+    {
+        using var isolation = new BancCapture.Isolation();
+        long maintenant = 1_000_000;
+        OnboardingWindow.Clock = () => maintenant;
+        OnboardingWindow.DoubleClickDelay = () => 500;
+        OnboardingWindow.AutoStartIsRegistered = () => false;
+        OnboardingWindow.AutoStartSetter = _ => true;
+        OnboardingWindow.ShowMessageBox = (_, _, _, _) => 1;
+        var window = OpenOnboarding();
+        try
+        {
+            BancCapture.SetField(window, "_activationAccepted", true);
+            IntPtr suivant = BancCapture.Field<IntPtr>(window, "_hWndBtnNext");
+
+            ClicSouris(suivant, doubleClic: false); // étape 2
+            maintenant += 100;
+            IntPtr dedans = (IntPtr)((5 << 16) | 5);
+            IntPtr dehors = (IntPtr)((5000 << 16) | 5000);
+            Win32.SendMessageW(suivant, Win32.WM_LBUTTONDBLCLK, (IntPtr)1, dedans);
+            Win32.SendMessageW(suivant, Win32.WM_LBUTTONUP, IntPtr.Zero, dehors);
+            Assert.Equal(1, BancCapture.Field<int>(window, "_currentStep"));
+            maintenant += 100;
+            Win32.SendMessageW(suivant, Win32.BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+
+            Assert.Equal(OnboardingStep.Last, BancCapture.Field<int>(window, "_currentStep"));
         }
         finally { BancCapture.Teardown(window); }
     }
