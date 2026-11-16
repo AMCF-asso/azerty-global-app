@@ -386,6 +386,55 @@ static class ConfigManager
         }
     }
 
+    /// <summary>
+    /// Langue de l'interface lue au tout début du démarrage, AVANT les mutex d'instance unique,
+    /// sans charger ni mettre de côté config.json (ME-09, C4.5). Seul le gagnant lit et déplace
+    /// les fichiers de l'utilisateur : une seconde instance qui chargeait ici le fichier
+    /// corrompu se disputait le renommage avec la gagnante, perdait la course et gardait un
+    /// « chargement échoué » collé, ou faisait perdre à la gagnante le message de remise à zéro.
+    ///
+    /// La valeur est celle que donnerait le chargement normal : réglage « en » ou « fr », « fr »
+    /// pour une config existante sans clé ou en lecture impossible, langue de l'interface
+    /// Windows pour une installation neuve ou un fichier corrompu (que le chargement mettra de
+    /// côté puis dérivera de la même façon). Aucun accès au cache, aucune écriture, aucune
+    /// quarantaine ; un cache déjà chargé répond directement.
+    /// </summary>
+    internal static string AppLanguageWithoutLoading()
+    {
+        bool loaded;
+        string path;
+        lock (_lock)
+        {
+            loaded = _cache != null;
+            path = _configPath;
+        }
+        if (loaded) return AppLanguage;
+        return PolicyManager.AppLanguage(PolicyManager.Current.Language, ReadLanguageSettingFromDisk(path));
+    }
+
+    private static string ReadLanguageSettingFromDisk(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return DerivedAppLanguage();
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return DerivedAppLanguage();
+            return doc.RootElement.TryGetProperty("appLanguage", out var value)
+                   && value.ValueKind == JsonValueKind.String && value.GetString() == "en"
+                ? "en" : "fr";
+        }
+        catch (Exception ex) when (FileQuarantine.IsReadFailure(ex)) { return "fr"; }
+        catch (Exception ex) when (FileQuarantine.IsCorruption(ex)) { return DerivedAppLanguage(); }
+        catch (IOException) { return DerivedAppLanguage(); } // fichier disparu : installation neuve
+    }
+
+    /// <summary>Langue initiale d'une installation neuve : celle de l'interface Windows.</summary>
+    private static string DerivedAppLanguage()
+    {
+        try { return DefaultAppLanguage(GetUserDefaultUILanguage()); }
+        catch { return "fr"; }
+    }
+
     /// <summary>« fr » quand le LANGID donné est francophone (langue primaire 0x0C,
     /// toutes régions : fr-FR, fr-CA, fr-BE…), « en » sinon. Fonction pure : c'est
     /// elle que les tests éprouvent, un poste de CI n'étant jamais francophone.</summary>
@@ -1276,8 +1325,12 @@ static class ConfigManager
             _compatibilityCache = null;
             if (FileQuarantine.TryMoveAside(_configPath, "ConfigManager.Quarantine") != null)
                 _quarantineNoticePending = true;
-            else
+            else if (File.Exists(_configPath))
                 _loadFailed = true;
+            // Sinon le fichier a disparu entre la lecture et le renommage : une autre instance
+            // l'a déjà mis de côté (ME-09, C4.5). Il n'y a plus de fichier à protéger, l'état
+            // « chargement échoué » collé bloquerait toute écriture pour rien, et la notice est
+            // celle de l'autre instance.
         }
         catch (IOException ex)
         {
@@ -1293,9 +1346,7 @@ static class ConfigManager
         // WriteFile refuse déjà d'écraser un fichier existant non chargé.
         if (!_loadFailed && _cache.Count == 0 && !File.Exists(_configPath))
         {
-            string derived;
-            try { derived = DefaultAppLanguage(GetUserDefaultUILanguage()); }
-            catch { derived = "fr"; }
+            string derived = DerivedAppLanguage();
             using var doc = JsonDocument.Parse($"\"{derived}\"");
             _cache["appLanguage"] = doc.RootElement.Clone();
             MarkDirty();
@@ -1462,6 +1513,47 @@ static class ConfigManager
                 }
             }
         }
+    }
+
+    /// <summary>Nouveaux essais de l'écriture de fermeture, après le premier.</summary>
+    internal const int FinalFlushRetries = 3;
+
+    /// <summary>Pause entre deux essais de l'écriture de fermeture : trois essais de plus coûtent
+    /// 750 ms au plus, sous le plafond de 1,5 s qui ne doit pas retarder l'arrêt de Windows.</summary>
+    internal const int FinalFlushDelayMilliseconds = 250;
+
+    /// <summary>
+    /// Écriture de fermeture (ME-09, C4.3) : <see cref="Flush"/>, puis, tant que le cache reste à
+    /// écrire, quelques nouveaux essais bornés, sur le fil appelant. Les reprises sur minuterie
+    /// (1 s, 5 s…) meurent avec le processus : un verrou d'antivirus tenu au moment de quitter
+    /// faisait perdre les derniers réglages (accord d'activation, progression, compteur d'avis)
+    /// sans un mot. Rend vrai si plus rien n'attend ; sinon la perte est journalisée, de façon
+    /// synchrone, le processus allant mourir. Jamais sous <c>_lock</c> (voir <see cref="Flush"/>).
+    /// </summary>
+    /// <param name="sleep">Attente entre deux essais, en millisecondes (remplaçable en test).</param>
+    internal static bool FlushFinal(Action<int>? sleep = null, int retries = FinalFlushRetries,
+        int delayMilliseconds = FinalFlushDelayMilliseconds)
+    {
+        sleep ??= static ms => Thread.Sleep(ms);
+        Flush();
+        for (int essai = 0; essai < retries && StillToWrite(); essai++)
+        {
+            sleep(delayMilliseconds);
+            Flush();
+        }
+        if (!StillToWrite()) return true;
+        LogCompatEvent("ConfigFinalWriteLost", $"failedWrites={FailedWritesSnapshot()}");
+        return false;
+    }
+
+    private static bool StillToWrite()
+    {
+        lock (_lock) return _dirty && _cache != null;
+    }
+
+    private static int FailedWritesSnapshot()
+    {
+        lock (_lock) return _failedWrites;
     }
 
     /// <summary>Instantané du cache en JSON, sous <c>_lock</c>, sans I/O : les mêmes

@@ -1085,8 +1085,9 @@ sealed class TrayApplication : IDisposable
 
                 case Win32.WM_QUERYENDSESSION:
                     // Arrêt ou déconnexion annoncé : écrire tout de suite ce qui attend, sans
-                    // compter sur WM_ENDSESSION (audit du 25/09, A-05). Deux écritures au plus.
-                    ConfigManager.Flush();
+                    // compter sur WM_ENDSESSION (audit du 25/09, A-05). Deux écritures au plus ;
+                    // quelques nouveaux essais bornés (750 ms) si un verrou tient le fichier (ME-09).
+                    ConfigManager.FlushFinal();
                     UsageStats.Flush();
                     return (IntPtr)1; // ne jamais bloquer l'arrêt/déconnexion
 
@@ -2365,7 +2366,7 @@ sealed class TrayApplication : IDisposable
         // réglages (bornes des fenêtres). Le hook est déjà décroché (audit du 25/09, A-05).
         // Chacune dans son try : un échec ne doit couper ni l'autre ni le reste du nettoyage.
         try { UsageStats.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.Flush", ex); }
-        try { ConfigManager.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.Flush", ex); }
+        try { ConfigManager.FlushFinal(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.FlushFinal", ex); }
         ToastActivation.Unregister();
         Win32.Shell_NotifyIconW(NIM_DELETE, ref _nid);
         if (_hIcon != IntPtr.Zero)
