@@ -138,7 +138,9 @@ static class NativeWindow
         if (hwnd == IntPtr.Zero)
             return;
         Win32.SetTitleBarTheme(hwnd, dark);
-        var (caption, text) = CaptionColors(dark, HighContrast.IsOn());
+        bool highContrast = HighContrast.IsOn();
+        FrameAppliedForTests?.Invoke(hwnd, highContrast);
+        var (caption, text) = CaptionColors(dark, highContrast);
         int captionValue = unchecked((int)caption), textValue = unchecked((int)text);
         Win32.DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref captionValue, sizeof(int));
         Win32.DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref textValue, sizeof(int));
@@ -149,6 +151,60 @@ static class NativeWindow
             Win32.SendMessageW(hwnd, WM_SETICON, IntPtr.Zero, small);
         if (big != IntPtr.Zero)
             Win32.SendMessageW(hwnd, WM_SETICON, (IntPtr)1, big);
+    }
+
+    /// <summary>Espion des tests : chaque <see cref="ApplyFrame"/> avec le contraste élevé lu.
+    /// DWM ne relit pas la couleur de barre partout (Windows 10, Server). Null en production.</summary>
+    internal static Action<IntPtr, bool>? FrameAppliedForTests;
+
+    private const uint WM_SYSCOLORCHANGE = 0x0015;
+    private const uint WM_SETTINGCHANGE = 0x001A;
+    private const uint RDW_INVALIDATE = 0x0001;
+    private const uint RDW_ERASE = 0x0004;
+    private const uint RDW_ALLCHILDREN = 0x0080;
+    private const uint RDW_FRAME = 0x0400;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
+
+    /// <summary>T5 (EW-15) : le contraste élevé ou les couleurs du système ont pu changer.</summary>
+    internal static bool IsThemeChange(uint msg) => msg == WM_SYSCOLORCHANGE || msg == WM_SETTINGCHANGE;
+
+    /// <summary>
+    /// T5 (EW-15) : relit la palette papier d'une fenêtre ouverte. Rend faux quand rien n'a
+    /// changé : WM_SETTINGCHANGE arrive aussi pour le fond d'écran, la langue, la zone de
+    /// travail. Sinon <paramref name="palette"/> prend la nouvelle valeur et la barre de titre
+    /// est reposée ; l'appelant refait ses pinceaux puis appelle <see cref="RepaintAll"/>.
+    /// </summary>
+    internal static bool RefreshPalette(IntPtr hwnd, ref PaperPalette palette)
+    {
+        var now = PaperPalette.Now();
+        if (now == palette)
+            return false;
+        palette = now;
+        ApplyFrame(hwnd, dark: false);
+        return true;
+    }
+
+    /// <summary>
+    /// T5 (EW-15) : pour une fenêtre sans palette papier (clavier virtuel, recherche), repose la
+    /// barre de titre quand le contraste élevé a changé depuis <paramref name="highContrast"/>.
+    /// </summary>
+    internal static void RefreshFrame(IntPtr hwnd, ref bool highContrast)
+    {
+        bool now = HighContrast.IsOn();
+        if (hwnd == IntPtr.Zero || now == highContrast)
+            return;
+        highContrast = now;
+        ApplyFrame(hwnd, dark: false);
+        RepaintAll(hwnd);
+    }
+
+    /// <summary>Repeint la fenêtre, ses contrôles et son cadre (palette changée).</summary>
+    internal static void RepaintAll(IntPtr hwnd)
+    {
+        if (hwnd != IntPtr.Zero)
+            RedrawWindow(hwnd, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_FRAME);
     }
 
     /// <summary>A12 : fond et texte de la barre de titre (COLORREF, ou
@@ -399,7 +455,7 @@ static class NativeWindow
     /// <see cref="CenterIn"/>, pour garder sa barre de titre à l'écran.</summary>
     internal static void KeepInWorkArea(IntPtr hwnd)
     {
-        if (hwnd == IntPtr.Zero || !Win32.GetWindowRect(hwnd, out var current))
+        if (!IsPlacedFreely(hwnd) || !Win32.GetWindowRect(hwnd, out var current))
             return;
 
         var work = WorkArea(hwnd);
@@ -409,6 +465,100 @@ static class NativeWindow
         int y = Math.Max(work.top, Math.Min(current.top, work.bottom - height));
         if (x != current.left || y != current.top)
             Win32.MoveWindow(hwnd, x, y, width, height, true);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // T6 (EW-17, EW-18, EW-19) : écran branché, débranché, changé
+    // ═══════════════════════════════════════════════════════════════
+
+    private const uint WM_DISPLAYCHANGE = 0x007E;
+    private const int SPI_SETWORKAREA = 0x002F;
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsZoomed(IntPtr hWnd);
+
+    /// <summary>T6 : ni réduite (rectangle à -32000) ni agrandie (Windows la tient) : sa place
+    /// est la sienne, et peut être recalée.</summary>
+    internal static bool IsPlacedFreely(IntPtr hwnd) =>
+        hwnd != IntPtr.Zero && !IsIconic(hwnd) && !IsZoomed(hwnd);
+
+    /// <summary>T6 (EW-18) : écran branché ou débranché, définition changée (WM_DISPLAYCHANGE),
+    /// ou zone de travail changée (barre des tâches déplacée, agrandie : SPI_SETWORKAREA).</summary>
+    internal static bool IsDisplayChange(uint msg, IntPtr wParam) =>
+        msg == WM_DISPLAYCHANGE || (msg == WM_SETTINGCHANGE && wParam == (IntPtr)SPI_SETWORKAREA);
+
+    /// <summary>
+    /// T6 (EW-17) : une position mémorisée se restaure quand la fenêtre y serait attrapable : au
+    /// moins 100 × 80 px, et 40 px d'elle dans la zone de travail de chaque côté. Venu du
+    /// clavier virtuel et des Leçons, qui en tenaient chacun une copie.
+    /// </summary>
+    internal static bool IsRectVisible(Win32.RECT rect, Win32.RECT work)
+    {
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+        if (width < 100 || height < 80) return false;
+        return rect.right > work.left + 40 &&
+               rect.left < work.right - 40 &&
+               rect.bottom > work.top + 40 &&
+               rect.top < work.bottom - 40;
+    }
+
+    /// <summary>
+    /// T6 (EW-17) : <see cref="IsRectVisible"/> sur l'écran qui porte le centre du rectangle ;
+    /// faux quand ce centre n'est sur aucun écran (écran débranché depuis).
+    /// </summary>
+    internal static bool IsRectVisibleOnScreen(Win32.RECT rect)
+    {
+        var center = new Win32.POINT
+        {
+            x = rect.left + (rect.right - rect.left) / 2,
+            y = rect.top + (rect.bottom - rect.top) / 2,
+        };
+        if (t_workAreaOverride is { } simulated)
+            return Contains(simulated, center) && IsRectVisible(rect, simulated);
+
+        var monitor = Win32.MonitorFromPoint(center, 0 /* MONITOR_DEFAULTTONULL */);
+        if (monitor == IntPtr.Zero) return false;
+        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        return Win32.GetMonitorInfo(monitor, ref info) && IsRectVisible(rect, info.rcWork);
+    }
+
+    private static bool Contains(Win32.RECT r, Win32.POINT p) =>
+        p.x >= r.left && p.x < r.right && p.y >= r.top && p.y < r.bottom;
+
+    /// <summary>T6 (EW-17) : zone de travail de l'écran le plus proche du centre du rectangle
+    /// (celui où la fenêtre va s'afficher), simulée au banc comme <see cref="WorkArea"/>.</summary>
+    internal static Win32.RECT WorkAreaOf(Win32.RECT rect)
+    {
+        if (t_workAreaOverride is { } simulated)
+            return simulated;
+        var center = new Win32.POINT
+        {
+            x = rect.left + (rect.right - rect.left) / 2,
+            y = rect.top + (rect.bottom - rect.top) / 2,
+        };
+        var monitor = Win32.MonitorFromPoint(center, Win32.MONITOR_DEFAULTTONEAREST);
+        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        if (monitor != IntPtr.Zero && Win32.GetMonitorInfo(monitor, ref info))
+            return info.rcWork;
+        return new Win32.RECT { left = 0, top = 0, right = 1024, bottom = 768 };
+    }
+
+    /// <summary>
+    /// T6 (EW-17) : le rectangle ramené dans la zone de travail. Plus grand qu'elle, il y est
+    /// réduit ; puis il est décalé sans changer de taille, coin haut-gauche d'abord pour garder
+    /// la barre de titre à l'écran, comme <see cref="KeepInWorkArea"/>.
+    /// </summary>
+    internal static Win32.RECT FitRectIn(Win32.RECT rect, Win32.RECT work)
+    {
+        int width = Math.Min(rect.right - rect.left, work.right - work.left);
+        int height = Math.Min(rect.bottom - rect.top, work.bottom - work.top);
+        int x = Math.Max(work.left, Math.Min(rect.left, work.right - width));
+        int y = Math.Max(work.top, Math.Min(rect.top, work.bottom - height));
+        return new Win32.RECT { left = x, top = y, right = x + width, bottom = y + height };
     }
 
     /// <summary>Nouvelle zone cliente, même centre : la fenêtre grandit ou rétrécit sur place.

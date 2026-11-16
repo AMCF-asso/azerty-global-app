@@ -1124,6 +1124,9 @@ static class Win32
     public const uint WM_WTSSESSION_CHANGE = 0x02B1;
     public const int WTS_CONSOLE_CONNECT = 0x1;
     public const int WTS_REMOTE_CONNECT = 0x3;
+    public const int WTS_CONSOLE_DISCONNECT = 0x2;
+    public const int WTS_REMOTE_DISCONNECT = 0x4;
+    public const int WTS_SESSION_LOCK = 0x7;
     public const int WTS_SESSION_UNLOCK = 0x8;
     public const uint NOTIFY_FOR_THIS_SESSION = 0;
 

@@ -61,7 +61,7 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hBgBrush;
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
     // création, comme l'accueil). Les champs prennent la surface blanche du papier.
-    private readonly PaperPalette _pal = PaperPalette.Now();
+    private PaperPalette _pal = PaperPalette.Now(); // T5 : relue sur WM_SETTINGCHANGE
     private IntPtr _hFieldBrush;
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
@@ -278,8 +278,7 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
-        if (!_pal.HighContrast)
-            ChipButton.Attach(hwnd, _pal);
+        ChipButton.Attach(hwnd); // T5 : en contraste élevé, le dessin du système, décidé au dessin
         return hwnd;
     }
 
@@ -337,8 +336,7 @@ sealed class PauseDurationDialog : IDisposable
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         // Audit UX 1.3.0, #3 : « Confirmer » porte l'accent. A9 : boutons papier ; en
         // contraste élevé, le dessin du système.
-        if (!_pal.HighContrast)
-            LightButton.Attach(hwnd, paper: true);
+        LightButton.Attach(hwnd, paper: true); // T5 : idem
         return hwnd;
     }
 
@@ -347,10 +345,32 @@ sealed class PauseDurationDialog : IDisposable
         cancelButton != IntPtr.Zero &&
         DialogNavigation.ButtonToPressOnEnter(DialogNavigation.IDOK, focused, new[] { cancelButton }) == cancelButton;
 
+    /// <summary>
+    /// T5 (EW-15) : relit la palette (contraste élevé activé ou coupé fenêtre ouverte) ;
+    /// fond, pinceaux, barre de titre et contrôles suivent. Rien quand elle n'a pas changé.
+    /// </summary>
+    private void RefreshPalette()
+    {
+        if (_hWnd == IntPtr.Zero || !NativeWindow.RefreshPalette(_hWnd, ref _pal))
+            return;
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        IntPtr oldField = _hFieldBrush;
+        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
+        if (oldField != IntPtr.Zero) Win32.DeleteObject(oldField);
+        NativeWindow.RepaintAll(_hWnd);
+    }
+
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
         {
+            // T5 (EW-15) : contraste élevé ou couleurs du système changés, fenêtre ouverte.
+            if (NativeWindow.IsThemeChange(msg))
+                RefreshPalette();
+            // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+            // affichée ou cachée, revient dans la zone de travail de son écran.
+            if (NativeWindow.IsDisplayChange(msg, wParam))
+                NativeWindow.KeepInWorkArea(hWnd);
             switch (msg)
             {
                 case Win32.WM_COMMAND:

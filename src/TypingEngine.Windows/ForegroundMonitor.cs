@@ -123,7 +123,17 @@ public sealed class ForegroundMonitor : IDisposable
         var snap = _snapshot;  // capture atomique
         if (!IsTrackingAvailable || snap == null || snap.Window != _api.GetForegroundWindow())
             return (CompatibilityMode.DisabledAntiCheat, IntPtr.Zero);
-        return (snap?.Mode ?? CompatibilityMode.Default, snap?.Hkl ?? IntPtr.Zero);
+        // EW-2 : une bascule de disposition dans la même fenêtre (Alt+Maj, Ctrl+Maj, barre de
+        // langue) ne déclenche aucun évènement suivi ; le HKL du snapshot serait périmé. Relire
+        // celui du fil de la fenêtre à chaque émission : deux appels user32, sans OpenProcess.
+        var hkl = snap.Hkl;
+        uint tid = _api.GetWindowThreadId(snap.Window);
+        if (tid != 0)
+        {
+            var live = _api.GetKeyboardLayout(tid);
+            if (live != IntPtr.Zero) hkl = live;
+        }
+        return (snap.Mode, hkl);
     }
 
     /// <summary>

@@ -223,6 +223,8 @@ sealed class VirtualKeyboard : IDisposable
     // Champs d'instance
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
+    /// <summary>T5 (EW-15) : contraste élevé de la barre de titre posée.</summary>
+    private bool _frameHighContrast;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Layout _layout;
 
@@ -342,6 +344,7 @@ sealed class VirtualKeyboard : IDisposable
             posX, posY, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         ApplyPaperFrame(_hWnd);
+        _frameHighContrast = HighContrast.IsOn();
 
         CreateTooltip();
         PresentAsDisplay();
@@ -516,42 +519,21 @@ sealed class VirtualKeyboard : IDisposable
         if (_hWnd == IntPtr.Zero) return false;
         if (!ConfigManager.TryGetWindowBounds(ConfigManager.VirtualKeyboardBoundsKey, out var rect))
             return false;
-        if (!IsRectVisibleOnScreen(rect))
+        if (!NativeWindow.IsRectVisibleOnScreen(rect))
             return false;
 
+        // T6 (EW-17) : la place mémorisée peut venir d'un écran plus grand : ramenée dans la
+        // zone de travail, réduite au besoin en gardant les proportions.
+        rect = FitToWorkArea(rect);
         Win32.MoveWindow(_hWnd, rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top, false);
         return true;
     }
 
-    private static bool IsRectVisibleOnScreen(Win32.RECT rect)
-    {
-        int width = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        if (width < 100 || height < 80) return false;
-
-        var center = new Win32.POINT
-        {
-            x = rect.left + width / 2,
-            y = rect.top + height / 2
-        };
-        var monitor = Win32.MonitorFromPoint(center, 0);
-        if (monitor == IntPtr.Zero) return false;
-
-        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        if (!Win32.GetMonitorInfo(monitor, ref info)) return false;
-
-        var work = info.rcWork;
-        return rect.right > work.left + 40 &&
-               rect.left < work.right - 40 &&
-               rect.bottom > work.top + 40 &&
-               rect.top < work.bottom - 40;
-    }
-
     private void SaveWindowBounds()
     {
         if (_hWnd == IntPtr.Zero) return;
-        if (Win32.GetWindowRect(_hWnd, out var rect) && IsRectVisibleOnScreen(rect))
+        if (Win32.GetWindowRect(_hWnd, out var rect) && NativeWindow.IsRectVisibleOnScreen(rect))
             ConfigManager.SetWindowBounds(ConfigManager.VirtualKeyboardBoundsKey, rect);
     }
 
@@ -768,6 +750,13 @@ sealed class VirtualKeyboard : IDisposable
     {
         try
         {
+        // T5 (EW-15) : contraste élevé activé ou coupé, clavier affiché : la barre de titre suit.
+        if (NativeWindow.IsThemeChange(msg))
+            NativeWindow.RefreshFrame(hWnd, ref _frameHighContrast);
+        // T6 (EW-18) : écran débranché, définition ou zone de travail changée : le clavier,
+        // affiché ou caché, revient dans la zone de travail, proportions gardées.
+        if (NativeWindow.IsDisplayChange(msg, wParam))
+            KeepInWorkArea();
         switch (msg)
         {
             case Win32.WM_PAINT:
@@ -875,9 +864,22 @@ sealed class VirtualKeyboard : IDisposable
 
     /// <summary>Le rectangle suggéré par un changement de DPI, ramené à la zone de travail à
     /// rapport de forme constant (<see cref="WindowSizing.FitOuterKeepingRatio"/>) et calé dedans.</summary>
+    /// <summary>T6 (EW-18) : replace le clavier dans la zone de travail de son écran.</summary>
+    private void KeepInWorkArea()
+    {
+        if (!NativeWindow.IsPlacedFreely(_hWnd) || !Win32.GetWindowRect(_hWnd, out var current)) return;
+        var fitted = FitToWorkArea(current);
+        if (fitted.left != current.left || fitted.top != current.top ||
+            fitted.right != current.right || fitted.bottom != current.bottom)
+            Win32.MoveWindow(_hWnd, fitted.left, fitted.top,
+                fitted.right - fitted.left, fitted.bottom - fitted.top, true);
+    }
+
+    /// <summary>Le rectangle tenu dans la zone de travail de l'écran où il tombe (T6 : celui
+    /// d'arrivée, pas celui que la fenêtre quitte), proportions gardées.</summary>
     private Win32.RECT FitToWorkArea(Win32.RECT suggested)
     {
-        var work = NativeWindow.WorkArea(_hWnd);
+        var work = NativeWindow.WorkAreaOf(suggested);
         var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, FrameStyle, FrameExStyle);
         var (w, h) = WindowSizing.FitOuterKeepingRatio(suggested.right - suggested.left,
             suggested.bottom - suggested.top, frameW, frameH, work.right - work.left, work.bottom - work.top);

@@ -384,6 +384,7 @@ public sealed class KeyboardHook : IDisposable
                 // ── Détection changement de layout via Ctrl+Shift ──
                 // Windows change le layout du foreground thread quand Ctrl+Shift
                 // est pressé et relâché SANS qu'une 3e touche ait été pressée.
+                if (isKeyDown) _mapper.ResyncModifiersWithPhysicalState(); // EW-1 : relâchement perdu
                 bool wasCtrlShift = _mapper.IsToggleShortcut();
 
                 // Toujours tracker les modificateurs (même quand désactivé)

@@ -53,4 +53,10 @@ internal static partial class L
     public static string Layers_InsertFallbackBody(string ch) => T(
         $"L’insertion directe de {ProductIdentity.DisplayName} n’était pas disponible — collez « {ch} » avec Ctrl + V.",
         $"{ProductIdentity.DisplayName}’s direct insertion was unavailable — paste “{ch}” with Ctrl + V.");
+    // EW-7 (audit environnement Windows) : fenêtre lancée en administrateur, Windows refuse
+    // les frappes simulées d'une application ordinaire ; le caractère a été copié.
+    public static string Layers_InsertElevatedTitle => T("Caractère copié", "Character copied");
+    public static string Layers_InsertElevatedBody(string ch) => T(
+        $"Windows empêche {ProductIdentity.DisplayName} d’écrire dans une fenêtre lancée en administrateur. Collez « {ch} » avec Ctrl + V.",
+        $"Windows prevents {ProductIdentity.DisplayName} from typing into a window run as administrator. Paste “{ch}” with Ctrl + V.");
 }

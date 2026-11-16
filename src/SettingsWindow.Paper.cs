@@ -83,6 +83,7 @@ sealed partial class SettingsWindow
         if (palette == _pal) return;
         _pal = palette;
         if (_hWnd == IntPtr.Zero) return;
+        NativeWindow.ApplyFrame(_hWnd, dark: false); // T5 (EW-15) : la barre de titre suit
         _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, CLR_BG);
         IntPtr oldSurface = _hSurfaceBrush;
         _hSurfaceBrush = Win32.CreateSolidBrush(CLR_SURFACE);

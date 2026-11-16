@@ -136,6 +136,7 @@ sealed class TrayApplication : IDisposable
     private readonly Win32.WNDPROC _wndProcDelegate; // prevent GC
     private KeyboardHook? _hook;
     private KeyMapper? _mapper;
+    private bool _sessionLocked;
     private Layout? _layout;
     private VirtualKeyboard? _virtualKeyboard;
     private CharacterSearch? _characterSearch;
@@ -394,12 +395,16 @@ sealed class TrayApplication : IDisposable
         {
             _characterSearch = new CharacterSearch(new TextInsertionService(_mapper.TryEmitText,
                 canInsert: () => !ShouldBlockHookCompletely && _foregroundMonitor?.IsSecureInput != true,
-                refreshTarget: () => _foregroundMonitor?.Recompute()));
+                refreshTarget: () => _foregroundMonitor?.Recompute(),
+                imposedSuspension: () => _foregroundMonitor?.CurrentSuspendReason
+                    is CompatibilitySuspendReason.AntiCheat or CompatibilitySuspendReason.RemoteAccess));
             _characterSearch.InsertionIncomplete += () =>
                 ShowBalloon(L.Layers_InsertIncompleteTitle, L.Layers_InsertIncompleteBody);
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;
             _characterSearch.FallbackCopied += character =>
                 ShowBalloon(L.Layers_InsertFallbackTitle, L.Layers_InsertFallbackBody(character));
+            _characterSearch.ElevatedTargetCopied += character =>
+                ShowBalloon(L.Layers_InsertElevatedTitle, L.Layers_InsertElevatedBody(character));
             _characterSearch.FallbackCopyFailed += character =>
                 ShowBalloon(L.Layers_InsertFallbackFailedTitle, L.Layers_InsertFallbackFailedBody(character));
         }
@@ -1139,13 +1144,26 @@ sealed class TrayApplication : IDisposable
                         // écrire ce qui attend, sur le pool de threads (audit du 25/09, A-05).
                         ConfigManager.FlushInBackground();
                         UsageStats.FlushInBackground();
-                        // Les relâches faites sur l'écran de verrouillage ou dans l'autre
-                        // session n'atteignent pas le hook (AFH-4).
+                        // Les relâchements faits sur l'écran de verrouillage ou dans l'autre session
+                        // n'atteignent pas le hook. Deux effets complémentaires :
+                        // - AFH-4 : le hook oublie les appuis qu'il croyait tenus (sinon l'appui
+                        //   suivant passerait pour une répétition), à l'heure de l'avis ;
+                        // - EW-1, EW-3, EW-24 : au départ comme au retour, le moteur relit l'état
+                        //   physique des touches et abandonne touche morte et couche à un coup.
                         ForgetHeldKeys(SessionTransitionTime(
                             Shell.InSendMessage(), Shell.GetMessageTime(), Shell.GetTickCount()));
-                        if (sessionEvent == Win32.WTS_SESSION_UNLOCK ||
+                        bool depart = sessionEvent == Win32.WTS_SESSION_LOCK ||
+                            sessionEvent == Win32.WTS_CONSOLE_DISCONNECT ||
+                            sessionEvent == Win32.WTS_REMOTE_DISCONNECT;
+                        bool retour = sessionEvent == Win32.WTS_SESSION_UNLOCK ||
                             sessionEvent == Win32.WTS_CONSOLE_CONNECT ||
-                            sessionEvent == Win32.WTS_REMOTE_CONNECT)
+                            sessionEvent == Win32.WTS_REMOTE_CONNECT;
+                        if (depart || retour)
+                        {
+                            _sessionLocked = depart; // EW-4 : rappel et demande d'avis attendent le retour
+                            _mapper?.SyncState();
+                        }
+                        if (retour)
                             ReinstallHook(nudgeForeground: false);
                     }
                     return IntPtr.Zero;
@@ -1752,7 +1770,7 @@ sealed class TrayApplication : IDisposable
             var now = DateTime.Now;
             TrainingReminders.RepairFutureDates(DateOnly.FromDateTime(now));
             if (!ConfigManager.NotificationsEnabled) return;
-            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot()))
+            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot() with { SessionLocked = _sessionLocked }))
                 return;
 
             TrainingReminders.MarkReminderShown(DateOnly.FromDateTime(now));
@@ -2869,7 +2887,7 @@ sealed class TrayApplication : IDisposable
             // ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
             if (!ReviewPromptGate.ShouldTryAfterQuietTyping(UsageStats.EnrichedThresholdCrossed,
                     UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS,
-                    _reviewPromptDeferred || _onboarding is { IsVisible: true }))
+                    _reviewPromptDeferred || _sessionLocked || _onboarding is { IsVisible: true }))
                 return;
 
             bool shown = MaybeShowReviewPrompt(ReviewPromptTrigger.QuietTyping);

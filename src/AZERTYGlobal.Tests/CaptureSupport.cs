@@ -330,6 +330,8 @@ internal static class BancCapture
             Native.DeactivateActCtx(0, _activationCookie);
             Native.ReleaseActCtx(_activationContext);
             L.Language = _previousLanguage;
+            HighContrast.OverrideForTests = null;
+            NativeWindow.FrameAppliedForTests = null;
             _channel.Dispose();
             _policy.Dispose();
             _invisibles.Dispose();

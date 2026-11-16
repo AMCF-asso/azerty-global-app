@@ -530,6 +530,16 @@ public sealed class KeyMapper
     }
 
     /// <summary>
+    /// Constat EW-1 : un relâchement fait sur le bureau sécurisé (Win+L, Ctrl+Alt+Suppr, UAC)
+    /// n'atteint jamais le hook. Le hook appelle cette méthode à chaque appui, avant de tester
+    /// ses raccourcis, y compris remappage coupé ou en pause où ProcessKey ne tourne pas.
+    /// </summary>
+    public void ResyncModifiersWithPhysicalState()
+    {
+        if (_pendingInputRecovery == null) CleanupStaleModifiers();
+    }
+
+    /// <summary>
     /// Resynchronise les modificateurs avec l'état physique réel des touches.
     /// Corrige les modificateurs "collés" quand un keyup est manqué pendant
     /// le traitement d'une séquence SendInput.

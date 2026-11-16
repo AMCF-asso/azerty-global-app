@@ -41,6 +41,9 @@ static class LightButton
     [DllImport("user32.dll")]
     private static extern IntPtr GetParent(IntPtr hWnd);
 
+    /// <summary>T5 (EW-15) : faux en contraste élevé, où le système dessine le bouton.</summary>
+    internal static bool PaintsPaper => !HighContrast.IsOn();
+
     /// <summary>Repeint <paramref name="button"/> au style clair ; sans effet sur un handle nul.
     /// <paramref name="paper"/> : palette papier des Leçons (Accueil, refonte du 15/10).</summary>
     public static void Attach(IntPtr button, bool paper = false)
@@ -53,6 +56,10 @@ static class LightButton
     private static IntPtr SubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
+        // T5 (EW-15) : en contraste élevé, le dessin du système, décidé à chaque dessin : la
+        // sous-classe reste posée et suit le réglage changé fenêtre ouverte.
+        if (!PaintsPaper && (msg == Win32.WM_PAINT || msg == Win32.WM_PRINTCLIENT || msg == Win32.WM_ERASEBKGND))
+            return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
         switch (msg)
         {
             case Win32.WM_PAINT:

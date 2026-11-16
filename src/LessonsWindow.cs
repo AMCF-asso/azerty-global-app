@@ -525,9 +525,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (_hWnd == IntPtr.Zero) return false;
         if (!ConfigManager.TryGetWindowBounds(ConfigManager.LessonsWindowBoundsKey, out var rect))
             return false;
-        if (!IsRectVisibleOnScreen(rect))
+        if (!NativeWindow.IsRectVisibleOnScreen(rect))
             return false;
 
+        // T6 (EW-17) : la place mémorisée peut venir d'un écran plus grand.
+        rect = NativeWindow.FitRectIn(rect, NativeWindow.WorkAreaOf(rect));
         Win32.MoveWindow(_hWnd, rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top, false);
         return true;
@@ -553,34 +555,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         Win32.MoveWindow(_hWnd, x, y, winW, winH, false);
     }
 
-    private static bool IsRectVisibleOnScreen(Win32.RECT rect)
-    {
-        int width = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        if (width < 100 || height < 80) return false;
-
-        var center = new Win32.POINT
-        {
-            x = rect.left + width / 2,
-            y = rect.top + height / 2
-        };
-        var monitor = Win32.MonitorFromPoint(center, 0);
-        if (monitor == IntPtr.Zero) return false;
-
-        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        if (!Win32.GetMonitorInfo(monitor, ref info)) return false;
-
-        var work = info.rcWork;
-        return rect.right > work.left + 40 &&
-               rect.left < work.right - 40 &&
-               rect.bottom > work.top + 40 &&
-               rect.top < work.bottom - 40;
-    }
-
     private void SaveWindowBounds()
     {
         if (_hWnd == IntPtr.Zero) return;
-        if (Win32.GetWindowRect(_hWnd, out var rect) && IsRectVisibleOnScreen(rect))
+        if (Win32.GetWindowRect(_hWnd, out var rect) && NativeWindow.IsRectVisibleOnScreen(rect))
             ConfigManager.SetWindowBounds(ConfigManager.LessonsWindowBoundsKey, rect);
     }
 
@@ -619,7 +597,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// </summary>
     private void FitWindowToWorkArea()
     {
-        if (_hWnd == IntPtr.Zero) return;
+        if (!NativeWindow.IsPlacedFreely(_hWnd)) return; // T6 : ni réduite ni agrandie
         if (!Win32.GetWindowRect(_hWnd, out var window)) return;
 
         var work = NativeWindow.WorkArea(_hWnd);
@@ -631,14 +609,22 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // nouveau DPI, bornée comme à la création ; celle qui tient reste celle de l'utilisateur.
         int maxW = (int)(workW * WindowSizing.MaxWorkAreaFraction);
         int maxH = (int)(workH * WindowSizing.MaxWorkAreaFraction);
+        int x = window.left, y = window.top;
         if (workW > 0 && workH > 0 && (winW > maxW || winH > maxH))
+        {
             (winW, winH) = ScrollingWindowSize(D(BASE_WIN_W), D(BASE_WIN_H), workW, workH);
-
-        // Recentrer plutot que garder le coin : une fenetre retrecie qui garde son coin
-        // superieur gauche laisse tout le retrecissement du meme cote.
-        int x = work.left + Math.Max(0, (workW - winW) / 2);
-        int y = work.top + Math.Max(0, (workH - winH) / 2);
-        Win32.MoveWindow(_hWnd, x, y, winW, winH, true);
+            // Réduite sur son centre : garder le coin laisserait tout le rétrécissement du
+            // même côté.
+            x = (window.left + window.right) / 2 - winW / 2;
+            y = (window.top + window.bottom) / 2 - winH / 2;
+        }
+        // T6 (EW-19) : plus de recentrage à chaque WM_DPICHANGED ; la fenêtre reste où
+        // Windows la pose (glisser vers l'autre écran), tenue dans la zone de travail.
+        var fitted = NativeWindow.FitRectIn(new Win32.RECT { left = x, top = y, right = x + winW, bottom = y + winH }, work);
+        if (fitted.left != window.left || fitted.top != window.top ||
+            fitted.right != window.right || fitted.bottom != window.bottom)
+            Win32.MoveWindow(_hWnd, fitted.left, fitted.top,
+                fitted.right - fitted.left, fitted.bottom - fitted.top, true);
     }
 
     /// <summary><see cref="WindowSizing.ScrollingWindowSize"/> avec les barres au DPI de rendu,
@@ -1167,15 +1153,24 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 case 0x0015: // WM_SYSCOLORCHANGE
                 case 0x001A: // WM_SETTINGCHANGE
                 {
+                    // T6 (EW-18) : zone de travail changée (SPI_SETWORKAREA).
+                    if (NativeWindow.IsDisplayChange(msg, wParam))
+                        FitWindowToWorkArea();
                     var palette = HomePaletteNow();
                     if (palette != _pal)
                     {
                         _pal = palette;
+                        NativeWindow.ApplyFrame(hWnd, dark: false); // T5 (EW-15) : la barre suit
                         NativeWindow.ApplyClassBackground(hWnd, CLR_BG);
                         Win32.InvalidateRect(hWnd, IntPtr.Zero, false);
                     }
                     break;
                 }
+
+                // T6 (EW-18) : écran débranché ou définition changée.
+                case 0x007E: // WM_DISPLAYCHANGE
+                    FitWindowToWorkArea();
+                    break;
 
                 case Win32.WM_DPICHANGED:
                 {

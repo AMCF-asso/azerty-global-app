@@ -10,7 +10,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
 {
     // A9 : palette papier des Leçons et des Paramètres, ou celle du système en contraste
     // élevé (lue à la création, comme l'accueil).
-    private readonly PaperPalette _pal = PaperPalette.Now();
+    private PaperPalette _pal = PaperPalette.Now(); // T5 : relue sur WM_SETTINGCHANGE
 
     private const int IDC_MASTER = 5201;
     private const int IDC_GREEK = 5202;
@@ -101,6 +101,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
     public void Show()
     {
+        RefreshPalette(); // T5 : le réglage a pu changer fenêtre cachée
         LoadFromConfig();
         // La fenêtre se rouvre en haut : l'instance est gardée d'une ouverture à l'autre, et
         // le défilement de la fermeture précédente masquerait le titre et la case générale.
@@ -112,6 +113,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         // Lot 130 A : Tab vers un contrôle sous le pli le fait défiler jusqu'à lui.
         DialogNavigation.Register(_hWnd, control => _scroll.EnsureVisible(_hWnd, control, S(8)),
             (in Win32.MSG key) => _scroll.OnControlKey(_hWnd, key, S(24)));
+        NativeWindow.KeepInWorkArea(_hWnd); // T6 (EW-18) : l'écran de la dernière ouverture a pu partir
         Win32.ShowWindow(_hWnd, 5);
         Win32.SetForegroundWindow(_hWnd);
         // Focus initial sur le premier contrôle : sans lui, le focus restait sur la fenêtre
@@ -189,9 +191,9 @@ internal sealed class MaintainableLayersWindow : IDisposable
         _texts.Add((save, () => L.Common_Close));
         // Lot 130 A et C : « Fermer » reste à 30 px du bord droit de ce qui est affiché.
         Track(save, 350, 357, 140, 34, Role.Anchored);
-        // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système.
-        if (!_pal.HighContrast)
-            LightButton.Attach(save, paper: true);
+        // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système
+        // (T5 : LightButton le décide à chaque dessin).
+        LightButton.Attach(save, paper: true);
         _checkboxes = new[] { _hMaster, _hGreek, _hCyrillic, _hScientific, _hVisual };
 
         FitWindow();
@@ -471,10 +473,32 @@ internal sealed class MaintainableLayersWindow : IDisposable
         !IsChecked(_hMaster)
         && (control == _hAvailableLabel || control == _hDelayLabel || control == _hDelayUnit);
 
+    /// <summary>
+    /// T5 (EW-15) : relit la palette (contraste élevé activé ou coupé fenêtre ouverte) ;
+    /// fond, pinceaux, barre de titre et contrôles suivent. Rien quand elle n'a pas changé.
+    /// </summary>
+    private void RefreshPalette()
+    {
+        if (_hWnd == IntPtr.Zero || !NativeWindow.RefreshPalette(_hWnd, ref _pal))
+            return;
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        IntPtr oldField = _hFieldBrush;
+        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
+        if (oldField != IntPtr.Zero) Win32.DeleteObject(oldField);
+        NativeWindow.RepaintAll(_hWnd);
+    }
+
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
         {
+            // T5 (EW-15) : contraste élevé ou couleurs du système changés, fenêtre ouverte.
+            if (NativeWindow.IsThemeChange(msg))
+                RefreshPalette();
+            // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+            // affichée ou cachée, revient dans la zone de travail de son écran.
+            if (NativeWindow.IsDisplayChange(msg, wParam))
+                NativeWindow.KeepInWorkArea(hWnd);
             switch (msg)
             {
                 case Win32.WM_COMMAND:
