@@ -1592,6 +1592,7 @@ C4.1 corrigé (ticket ME-09) : invariant I4 rétabli, test `MachinesEtatsLot4Te
 | `_compatibilityCache` | `Dictionary<string,string>?` | `ConfigManager.cs:121` | idem | `_lock` |
 | `_dirty` | `bool` | `ConfigManager.cs:1328` | pompe (`MarkDirty`), pool et pompe (`Flush`) | `_lock` |
 | `_failedWrites` | `int` | `ConfigManager.cs:1350` | pompe (remise à 0), flusheur (incrément) | `_lock` |
+| `_dirtyGeneration` | `int` | `ConfigManager.cs` (après `_failedWrites`) | pompe (incrément par `MarkDirty`), flusheur (relevé avec l'instantané) | `_lock` |
 | `_saveTimer` | `System.Threading.Timer?` | `ConfigManager.cs:1330,1392` | créé sous `_lock` par `ArmSaveLocked` ; callback sur le pool | `_lock` pour `Change` ; callback sans verrou, `Flush` reprend les siens |
 | `SaveDelayMilliseconds` | `int` statique (400, ou −1 en test) | `ConfigManager.cs:1334` | lu sous `_lock` | champ non volatile, modifié seulement par les tests |
 | `_loadFailed` | `bool` | `ConfigManager.cs:123` | `Flush` copie sous `_lock` | `_lock` |
@@ -1616,7 +1617,7 @@ C4.1 corrigé (ticket ME-09) : invariant I4 rétabli, test `MachinesEtatsLot4Te
 - I2 : ordre `_fileLock` → `_lock`, `Flush` refusé sous `_lock` — garanti (`ConfigManager.cs:1418-1421`).
 - I3 : écritures dans l'ordre des instantanés — garanti par `_fileLock` (`ConfigManager.cs:1421`).
 - I4 : un réglage posé n'est jamais perdu tant que le processus vit — garanti : l'échec remet `_dirty = true` (`ConfigManager.cs:1453`), un `MarkDirty` concurrent ne l'efface pas, un succès avec `_dirty` reposé est suivi d'un nouvel essai (la minuterie de `MarkDirty` reste armée).
-- I5 : `_failedWrites` compte les échecs d'affilée du dernier instantané — non garanti à la nanoseconde : un échec après un `MarkDirty` concurrent donne 1 au lieu de 0+1 et remplace la minuterie de 400 ms par 1 s (`ConfigManager.cs:1454-1455`). Sans effet de perte.
+- I5 : `_failedWrites` compte les échecs d'affilée du dernier instantané — garanti depuis l'audit des accès concurrents (CM6) : un échec d'écriture n'incrémente le compteur et ne réarme la minuterie que si `_dirtyGeneration` n'a pas changé depuis l'instantané ; sinon le cycle normal relancé par `MarkDirty` (0, 400 ms) reste en place. Test : `AccesConcurrentsEcrituresTests.Config_ReglageChangePendantUneEcritureQuiEchoue_GardeLeCycleNormal`.
 - I6 : un réglage posé avant la fermeture est durable à la sortie — garanti depuis ME-09 dans une limite : `FlushFinal` (appelée par `Cleanup`, donc à la sortie normale et à `WM_ENDSESSION` confirmé) refait jusqu'à 3 essais synchrones espacés de 250 ms (750 ms de pause au plus) ; un verrou plus long fait perdre le réglage, et la perte est journalisée (`ConfigFinalWriteLost`) (C4.3 corrigé). `WM_QUERYENDSESSION` n'est qu'une demande, qu'une autre application peut annuler : elle ne fait qu'un `Flush` immédiat sans attente (`TrayApplication.OnQueryEndSession`), la minuterie de reprise couvrant l'app qui continue de vivre (suite du 16 novembre).
 - I7 : fichier jamais tronqué en cas de coupure — garanti : temp + `Flush(true)` + `File.Replace`/`File.Move` (`ConfigManager.cs:1516-1526`).
 - I8 : deux processus ne s'écrasent pas par le temp — garanti par `BuildTempPath(pid)` ; ne protège pas du « dernier écrivain gagne » sur le fichier final.
@@ -1634,7 +1635,7 @@ C4.1 corrigé (ticket ME-09) : invariant I4 rétabli, test `MachinesEtatsLot4Te
 | T7 | W2 | écriture échouée (IOException/UnauthorizedAccess) | — | W4 (k = ++`_failedWrites`) | `_dirty = true`, minuterie `RetryDelayAfter(k)`, journal une fois par palier, temp supprimé | `ConfigManager.cs:1450-1456,1530-1540` |
 | T8 | W2 | setter pendant l'écriture | — | W3 | `_dirty = true`, `_failedWrites = 0`, minuterie 400 ms | `ConfigManager.cs:1375-1378` |
 | T9 | W3 | fin d'écriture réussie | — | W1 | `_failedWrites = 0` ; `_dirty` reste vrai, minuterie 400 ms déjà armée | `ConfigManager.cs:1446-1449` |
-| T10 | W3 | fin d'écriture échouée | — | W4 avec k = 1 | `_failedWrites` passe de 0 à 1, minuterie remplacée par 1 s | `ConfigManager.cs:1453-1455` |
+| T10 | W3 | fin d'écriture échouée | `_dirtyGeneration` changé depuis l'instantané | W1 | `_dirty = true` ; `_failedWrites` reste à 0 et la minuterie de 400 ms armée par le setter reste en place (avant l'audit des accès concurrents, CM6 : W4 avec k = 1, minuterie remplacée par 1 s) | `ConfigManager.Flush` |
 | T11 | tout état avec `_loadFailed` et fichier présent | `Flush` | — | W0 (réglages jamais écrits) | journal « Sauvegarde ignorée » ; `true` rendu | `ConfigManager.cs:1506-1510` |
 | T12 | W1/W4 | `WM_WTSSESSION_CHANGE` (tout événement) | — | W2 sur le pool | `FlushInBackground` | `TrayApplication.cs:1076`, `ConfigManager.cs:1399` |
 | T13 | W1/W4 | `WM_QUERYENDSESSION` (demande d'arrêt, annulable, peut se répéter) | — | W2 sur la pompe | `OnQueryEndSession` : un `Flush` synchrone puis `UsageStats.Flush`, sans pause ; un échec est repris par la minuterie de reprise (W4), l'app vivant toujours ; répond vrai | `TrayApplication.OnQueryEndSession` ; le `case` est gardé par un test de texte source |
@@ -1920,7 +1921,7 @@ Verrouillage de `UsageStats` : `_fileLock` puis `_lock`, jamais l'inverse ; ins
 | variable | type | défini à | fils lecteurs/écrivains | protection |
 |---|---|---|---|---|
 | `_dirty` | bool | `src/UsageStats.cs:98,234,310,642,651` | UI, pool | `_lock` |
-| `_backgroundFlushQueued` | int | `src/UsageStats.cs:39` | UI, pool | `Interlocked` |
+| `_backgroundFlushState` | int (0, 1, 2) | `src/UsageStats.cs:41` | UI, pool | `Interlocked` |
 | `_statsPath` | string | `src/UsageStats.cs` | UI, pool | `_lock` |
 
 #### États
@@ -1930,7 +1931,8 @@ Verrouillage de `UsageStats` : `_fileLock` puis `_lock`, jamais l'inverse ; ins
 | Propre | `!_dirty` |
 | Sale | `_dirty` |
 | Écriture en cours | `_fileLock` tenu, `_dirty` déjà remis à faux |
-| Vidage de fond en file | `_backgroundFlushQueued == 1` |
+| Vidage de fond en file ou en cours | `_backgroundFlushState == 1` |
+| Vidage de fond avec un tour de plus demandé | `_backgroundFlushState == 2` |
 
 #### Invariants
 
@@ -1948,7 +1950,9 @@ Verrouillage de `UsageStats` : `_fileLock` puis `_lock`, jamais l'inverse ; ins
 | 3 | Écriture | échec d'écriture | même chemin | Sale | `_dirty = true` | `src/UsageStats.cs:651` |
 | 4 | Propre | Flush | `!_dirty` | Propre | retour immédiat | `src/UsageStats.cs:639` |
 | 5 | — | FlushInBackground | file libre | Vidage en file | tâche pool | `src/UsageStats.cs:661` |
-| 6 | Vidage en file | FlushInBackground | file prise | idem | retour | `src/UsageStats.cs:661` |
+| 6 | Vidage en file | FlushInBackground | état 1 | Tour de plus demandé | aucun : servi à la fin du vidage (audit des accès concurrents, B2 ; avant : demande jetée) | `src/UsageStats.cs:FlushInBackground` |
+| 7 | Tour de plus demandé | FlushInBackground | état 2 | idem | retour : le tour demandé verra ces frappes | `src/UsageStats.cs:FlushInBackground` |
+| 8 | Vidage en file ou tour de plus | fin d'un vidage | état décrémenté > 0 | Vidage en file | nouveau `Flush` sur le même fil du pool | `src/UsageStats.cs:RunBackgroundFlushes` |
 
 #### Temporisations et réessais
 

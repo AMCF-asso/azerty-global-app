@@ -34,6 +34,7 @@ Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 
 - Saisie sécurisée : quand une application figée bloque la détection des champs mot de passe, les autres applications ne restent plus privées de la recherche et du clavier virtuel indéfiniment : la détection bloquée est abandonnée au bout de 2 s et repart (« sécurisé » reste le verdict tant qu’elle n’a pas répondu). Témoin : `MachinesEtatsLot2Tests`.
 - Leçons : fermer la fenêtre (croix, Échap, « Terminer » ou « Passer pour l’instant ») pendant le parcours de prise en main, sur le bilan d’une étape, ne fait plus avancer le catalogue à l’exercice suivant ; hors parcours, fermer sur un bilan passe toujours à l’exercice suivant. Témoin : `MachinesEtatsLot6Tests`.
 - Changement de fenêtre : quand le focus change pendant la vérification du champ mot de passe (Alt+Tab puis clic dans un champ, par exemple), l’app ne revient plus à l’ancienne fenêtre en mémoire ; elle n’interrompt donc plus la frappe remappée pendant un quart de seconde et n’affiche plus de bulle de suspension ou de reprise à tort. Témoin : `ForegroundMonitorReentreeTests`.
+- Écritures sur le disque : verrouiller la session pendant une écriture des statistiques déjà en cours enregistre désormais aussi les dernières frappes, au lieu d’attendre le minuteur de 5 minutes ; un réglage changé pendant une écriture de `config.json` qui échoue est écrit au délai normal (0,4 s) et non plus après le délai de reprise (1 s). Témoin : `AccesConcurrentsEcrituresTests`.
 
 **Retouches de l’avis global (10 novembre, avant le Store)**
 

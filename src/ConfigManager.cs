@@ -1406,6 +1406,12 @@ static class ConfigManager
     /// <summary>Écritures ratées d'affilée, sous <c>_lock</c> ; 0 hors d'un échec.</summary>
     private static int _failedWrites;
 
+    /// <summary>Numéro du dernier <see cref="MarkDirty"/>, sous <c>_lock</c>. <see cref="Flush"/>
+    /// le relève avec son instantané : s'il a changé à la fin d'une écriture ratée, un réglage
+    /// a relancé le cycle normal pendant l'écriture, et l'échec ne le remplace pas (audit des
+    /// accès concurrents, CM6).</summary>
+    private static int _dirtyGeneration;
+
     /// <summary>Hook de test : reçoit chaque délai armé, à la place de la minuterie. Le
     /// test déclenche lui-même l'écriture par <see cref="Flush"/>.</summary>
     internal static Action<int>? SaveSchedulerForTests;
@@ -1430,6 +1436,7 @@ static class ConfigManager
     private static void MarkDirty()
     {
         _dirty = true;
+        _dirtyGeneration++;
         _failedWrites = 0; // un nouveau réglage relance le cycle normal
         if (SaveDelayMilliseconds < 0) return;
         ArmSaveLocked(SaveDelayMilliseconds);
@@ -1481,9 +1488,11 @@ static class ConfigManager
             byte[] content;
             bool loadFailed;
             string? failureContext;
+            int generation;
             lock (_lock)
             {
                 if (!_dirty || _cache == null) return;
+                generation = _dirtyGeneration;
                 content = SerializeLocked();
                 path = _configPath;
                 loadFailed = _loadFailed;
@@ -1508,8 +1517,14 @@ static class ConfigManager
                 {
                     // Le cache reste à écrire, et l'écriture se réessaie seule.
                     _dirty = true;
-                    _failedWrites++;
-                    ArmSaveLocked(RetryDelayAfter(_failedWrites));
+                    // Un réglage changé pendant l'écriture a déjà relancé le cycle normal
+                    // (MarkDirty : compteur à zéro, minuterie au délai normal) : l'échec de
+                    // l'instantané précédent ne le remplace pas par un palier d'échec (CM6).
+                    if (generation == _dirtyGeneration)
+                    {
+                        _failedWrites++;
+                        ArmSaveLocked(RetryDelayAfter(_failedWrites));
+                    }
                 }
             }
         }
