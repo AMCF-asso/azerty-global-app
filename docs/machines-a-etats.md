@@ -166,8 +166,8 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | corrigé | faible | ME-07 | `AZERTYGlobal/LessonProgressStore.cs` (`SetLastPosition`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` (`ReinitialiserLaProgression_SurLeDefi_NEnregistrePasLeDefiCommePosition`, `ReinitialiserLaProgression_SurLeDefi_PuisFermer_RendLaPlaceDuCatalogue`) |
 | C7.1 | M7.1 | Double clic sur « Suivant » à l'étape 2 : l'accueil se valide sans que l'étape 3 ait été vue | corrigé | moyenne | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`IsSecondClickOfDoubleClick`, `GoToNextStep`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`) |
 | C7.2 | M7.2 | « Ne plus afficher » toujours affichée décochée : « C'est parti ! » réécrit à true un refus déjà persisté | corrigé | faible | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`Show`, `Close`, `_dontShowShownChecked`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé`, `Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`) |
-| C7.3 | M7.4 | La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert | confirmé | faible | ME-08 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
-| C7.4 | M7.5 | La minuterie de quiétude de l'avis n'est jamais réarmée après coupure puis rétablissement des notifications | plausible (couture à ajouter) | faible | ME-08 | lecture du code |
+| C7.3 | M7.4 | La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert | corrigé | faible | ME-08 | `AZERTYGlobal/TrayApplication.cs` (`MaybeShowReviewAfterQuietTyping`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Avis_AccueilRouvertDepuisLeMenu_DiffèreLaSollicitationAuTickDeQuiétude`) |
+| C7.4 | M7.5 | La minuterie de quiétude de l'avis n'est jamais réarmée après coupure puis rétablissement des notifications | corrigé | faible | ME-08 | `AZERTYGlobal/TrayApplication.cs` (`EnsureReviewTimer`, `ConfigureSettingsWindow`), `SettingsWindow.cs` (`ApplyNotifications`, `NotificationsChanged`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Avis_NotificationsRallumeesDansLesParametres_ReposentLaMinuterieDeQuietude`, `Parametres_CaseNotifications_PrevientLeTrayApresEcriture`, `Avis_TickPendantLaCoupure_ArreteLaMinuterie_PuisLeRallumageLaRepose`) |
 | C7.5 | M7.7 | Aucun garde de double appel de la boîte d'avis du Store | plausible (preuve en réel seulement) | faible | ME-08 | lecture du code |
 | C8.1 | M8.2 | Copie de secours sans aucun retour quand le presse-papiers est occupé | corrigé | faible | ME-11 | `AZERTYGlobal/CharacterSearch.cs`, `ClipboardText.cs`, `ChallengeSessionState.cs` ; test `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` (`Recherche_EchecDeLInsertionEtDeLaCopie_EstAnnoncé`) |
 | C8.2 | M8.2 | Retour Copié périmé à la réouverture | corrigé | faible | ME-07 | `AZERTYGlobal/CharacterSearch.cs` (`Show`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` (`Recherche_RetourCopié_NeSurvitPasÀLaRéouverture`) |
@@ -1688,7 +1688,7 @@ Relance unique : N0 `autoStartNudgeDone == false` (éligible ou non selon `Shou
 
 #### Invariants
 
-- I1 : `Set(x)` ne rend vrai que si `IsRegistered == x` après coup (`AutoStart.cs:132-134`) — garanti, et `IsRegistered` est l'état réel de Windows (`Enabled`) depuis ME-04 : `Set(true)` rend `false` quand Windows refuse, sans écrire `autoStartEnabled` ; l'interface dit le refus et renvoie vers les Paramètres Windows (`GetFailureMessage`, `AutoStart_FailureMessageRefused`).
+- I1 : `Set(x)` ne rend vrai que si `IsRegistered == x` après coup (`AutoStart.cs:132-134`) — garanti, et `IsRegistered` est l'état réel de Windows (`Enabled`) depuis ME-04 : `Set(true)` rend `false` quand Windows refuse, sans écrire `autoStartEnabled` ; l'interface dit le refus et renvoie vers les Paramètres Windows (`GetFailureMessage`, `AutoStart_FailureMessageRefused`).
 - I2 : `autoStartEnabled` suit la dernière réussite de `Set` — garanti (`AutoStart.cs:136`) ; vaut cache, jamais source de vérité (`ConfigManager.cs:283`).
 - I3 : un refus Windows n'est jamais contourné par l'accueil — garanti par `DefaultOnboardingCheck` pour l'état `DisabledByUser`/`DisabledByPolicy` quelle que soit la présence du raccourci, et pour `Unknown` quand aucune trace d'un choix passé existe (`AutoStart.cs:177-188`) : le refus est testé avant `isRegistered` depuis ME-04.
 - I4 : la relance unique ne part qu'une fois — garanti (`AutoStartNudge.cs:40`, `MarkPromptShown` avant l'affichage, `TrayApplication.cs:1597`).
@@ -2840,7 +2840,7 @@ C7.1 corrigé (ticket ME-03) : invariants I3 et I5 rétablis, test `MachinesEta
 - I3 : sur croix, Échap, `WM_CLOSE`, seule une case modifiée par l'utilisateur est persistée. Garanti par `ShouldApplyPreferenceOnClose` (`:993-998`), qui compare chaque case à son état affiché (`_dontShowShownChecked`, `_autoStartShownChecked`).
 - I4 : la case « Ne plus afficher » affichée reflète le réglage persisté. Garanti depuis ME-03 : `Show()` la pose d'après le réglage de l'utilisateur seul (`ConfigManager.ShowOnboardingUserSetting`, pas la politique) : décochée tant qu'aucun refus n'est enregistré (décision v0.9.7.1 conservée), cochée sinon (`:956-957`). `Close` reçoit cet état affiché comme référence (`_dontShowShownChecked`) : la validation, case inchangée, réécrit la valeur déjà enregistrée ; Échap et la croix n'écrivent rien.
 - I5 : `Close` est idempotent. Garanti en partie : `_step3Reached` consommé (`:1026`) ; mais `OnClosed` est rappelé à chaque `Close` (`:1056`) et `ShowWindow(0)` est rejoué. Sans effet d'état tant que `_reviewPromptDeferred` est déjà levé (`src/TrayApplication.cs:1427-1428`).
-- I6 : la sollicitation d'avis ne s'affiche pas par-dessus l'accueil. Garanti **seulement** pour l'accueil ouvert au démarrage (`_reviewPromptDeferred`, `:313`) ; **non garanti** pour l'accueil ouvert depuis le menu (C7.3).
+- I6 : la sollicitation d'avis ne s'affiche pas par-dessus l'accueil. Garanti depuis ME-08 : l'accueil du démarrage par `_reviewPromptDeferred` (`:313`), l'accueil rouvert depuis le menu par `_onboarding is { IsVisible: true }`, lu au tick de quiétude (`MaybeShowReviewAfterQuietTyping`).
 - I7 : `_activationAccepted` vrai ⇔ `ConfigManager.ActivationConsent` vrai. Garanti par `src/TrayApplication.cs:1390-1391` ; mais la réentrance de `ActivateWithConsent` pendant sa boîte d'erreur rend l'appelant incohérent (voir « Temporisations et réessais »).
 
 #### Table de transition
@@ -2850,7 +2850,7 @@ C7.1 corrigé (ticket ME-03) : invariants I3 et I5 rétablis, test `MachinesEta
 | T2.1 | Absent | démarrage, `shouldShowOnboarding` vrai, pas de popup de conflit | — | Ouvert (sans accord ou avec accord) | `_reviewPromptDeferred = true` ; création ; `Show()` (étape 0, focus « Essayer » ou « Suivant ») | `src/TrayApplication.cs:305-325`, `src/OnboardingWindow.cs:915-950` |
 | T2.2 | Absent | démarrage avec popup de conflit | `_layoutPopupOpen` | Différé | `_pendingOnboardingShow = true`, `_reviewPromptDeferred = true` | `:313-321` |
 | T2.3 | Différé | « Garder l'app » | `_pendingOnboardingShow` | Ouvert | `ShowOnboardingNow` | `:1301-1312` |
-| T2.4 | Masqué ou Absent | menu « Accueil », double-clic sans accord, `ShowLessonsWindow` sans accord, relance Démarrer sans accord | non visible | Ouvert | `Show()` ; ne touche **pas** `_reviewPromptDeferred` | `:881-898`, `:748`, `:1474`, `:1453-1456` |
+| T2.4 | Masqué ou Absent | menu « Accueil », double-clic sans accord, `ShowLessonsWindow` sans accord, relance Démarrer sans accord | non visible | Ouvert | `Show()` ; ne touche **pas** `_reviewPromptDeferred` : le tick de quiétude lit la visibilité de l'accueil (C7.3 corrigé) | `:881-898`, `:748`, `:1474`, `:1453-1456` |
 | T2.5 | Ouvert étape 3 | « C'est parti ! » ou flèche | `RequestActivation()` vrai | Masqué | `Close(validated: true)` : écrit `showOnboardingAtStartup = !_dontShowChecked` (case reprise du réglage à l'ouverture, C7.2 corrigé) et `ApplyAutoStart(_autoStartChecked)` ; `ShowWindow(0)` ; `OnClosed` | `src/OnboardingWindow.cs:1014-1057` |
 | T2.6 | Ouvert | croix, Échap, `WM_CLOSE`, Échap sur un lien | — | Masqué | `Close(false)` : n'écrit qu'une case modifiée (et seulement avec accord + étape 3 vue) | `:970`, `:1250-1252`, `src/LinkBehavior.cs:136-139` |
 | T2.7 | Ouvert sans accord | « Essayer/Activer » ou « Activer » (étape 3) | `ActivationRequested()` vrai | Ouvert avec accord | `_activationAccepted = true`, texte du bouton, `UpdateStepVisibility` | `:193-210`, `src/TrayApplication.cs:1382-1397` |
@@ -2866,7 +2866,7 @@ Aucune minuterie. Réessai de l'activation : l'utilisateur peut relancer « Es
 
 #### États ou transitions invalides atteignables
 
-C7.3. C7.2 corrigé (ticket ME-03) : invariant I4 rétabli, tests `MachinesEtatsLot7Tests.Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `…Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé` et `…Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`.
+C7.3 corrigé (ticket ME-08) : invariant I6 rétabli, test `MachinesEtatsLot7Tests.Avis_AccueilRouvertDepuisLeMenu_DiffèreLaSollicitationAuTickDeQuiétude`. C7.2 corrigé (ticket ME-03) : invariant I4 rétabli, tests `MachinesEtatsLot7Tests.Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `…Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé` et `…Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`.
 
 ### M7.3 — Accueil : essai de frappe intégré (états A, B, C de l'étape 1)
 
@@ -2974,7 +2974,7 @@ Constantes : essai 2 après ≥ 7 jours (`SecondMinGapDays`), ≥ 10 jours d'us
 
 #### États ou transitions invalides atteignables
 
-C7.3.
+C7.3 corrigé (ticket ME-08) : l'essai 1 ne part plus pendant que l'accueil, rouvert depuis le menu, est à l'écran ; test `MachinesEtatsLot7Tests.Avis_AccueilRouvertDepuisLeMenu_DiffèreLaSollicitationAuTickDeQuiétude`.
 
 ### M7.5 — Demande d'avis : signal de frappe et minuterie de quiétude
 
@@ -2986,14 +2986,14 @@ C7.3.
 |---|---|---|---|---|
 | `UsageStats._enrichedThresholdCrossed` | bool | écrit `src/UsageStats.cs:306`, `:202`, `:211` | hook (pompe) écrit ; pompe lit ; pool lit pour flush | `lock (_lock)` |
 | `UsageStats._lastRemapTickCount` | long (`TickCount64`) | `:410` | hook écrit, pompe lit | `lock (_lock)` ; 0 = aucune frappe dans ce processus (`:192`) |
-| minuterie `TIMER_REVIEW_QUIET` | `SetTimer` du tray, 5 s | posée `src/TrayApplication.cs:673-674` (une seule fois), tuée `:2704` | pompe | fil unique |
+| minuterie `TIMER_REVIEW_QUIET` | `SetTimer` du tray, 5 s | posée et tuée par `EnsureReviewTimer` (au `Run`, au tick, au changement du réglage des notifications) ; état `_reviewTimerArmed` | pompe | fil unique |
 | `_reviewPromptDeferred` | bool | `:147` | pompe | fil unique |
 
 #### États
 
 | état | prédicat |
 |---|---|
-| Minuterie absente | jamais posée (`!ReviewPromptStillPossible()` au `Run`) ou tuée au tick (`:2702-2706`) : une coupure des notifications puis leur rétablissement entre deux ticks suffit à la laisser tuée, la minuterie n'étant jamais réarmée (C7.4) |
+| Minuterie absente | jamais posée ou tuée par `EnsureReviewTimer` parce que `!ReviewPromptStillPossible()` ; reposée dès que le réglage des notifications change et qu'une sollicitation redevient possible (C7.4 corrigé) |
 | Minuterie active, signal désarmé | minuterie posée ∧ `!_enrichedThresholdCrossed` |
 | Armé | minuterie posée ∧ `_enrichedThresholdCrossed` |
 | Armé et différé | armé ∧ `_reviewPromptDeferred` (reste vrai après un accueil fermé sans accord : M7.2 T2.11) |
@@ -3003,8 +3003,8 @@ C7.3.
 
 - I1 : le signal ne part que sur une frappe remappée de ce processus suivie de silence. Garanti par `ShouldTryAfterQuietTyping` : `if (millisecondsSinceLastRemap == long.MaxValue) return false;` (`src/ReviewPromptGate.cs:234`).
 - I2 : un refus provisoire laisse le signal armé ; un envoi ou l'impossibilité le désarme. Garanti par `ShouldConsumeEnrichedSignal` (`src/TrayApplication.cs:2678-2679`).
-- I3 : la minuterie tourne ⇔ une sollicitation reste possible. **Non garanti dans le sens réciproque** : elle est tuée à la première impossibilité et jamais réarmée (C7.4).
-- I4 : pas de sollicitation tant que l'accueil du démarrage est ouvert. Garanti (`:2711-2713`, report levé par `OnOnboardingClosed`). Voir M7.2 I6 pour l'accueil rouvert.
+- I3 : la minuterie tourne ⇔ une sollicitation reste possible. Garanti depuis ME-08 par `EnsureReviewTimer`, idempotente, appelée au `Run`, au tick et par `SettingsWindow.NotificationsChanged` (écrit après chaque clic sur la case des notifications). Le même effet par la politique d'entreprise ou les liens externes n'est relu qu'au prochain tick tant que la minuterie tourne, et au prochain lancement sinon.
+- I4 : pas de sollicitation tant que l'accueil est ouvert. Garanti : accueil du démarrage par `_reviewPromptDeferred` (levé par `OnOnboardingClosed`), accueil rouvert depuis le menu par `_onboarding.IsVisible`, les deux lus dans la même garde du tick.
 - I5 : le signal armé au chargement n'existe que pour l'essai 1. Garanti par `ShouldArmSignalAtLoad` (`src/ReviewPromptGate.cs:243-245`).
 - I6 : aucune I/O disque dans le tick. Garanti : `ReviewPromptStillPossible` lit le cache de config ; `RecordReviewPromptShown` fait un `Flush` synchrone seulement au moment d'un essai réel (au plus deux fois).
 
@@ -3013,15 +3013,16 @@ C7.3.
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
 | T5.1 | — | `Run()` | `ReviewPromptStillPossible()` | Minuterie active | `SetTimer(9050, 5 s)` | `src/TrayApplication.cs:673-674` |
-| T5.2 | — | `Run()` | `!ReviewPromptStillPossible()` (notifications coupées, liens externes éteints, plafond, réponse) | Minuterie absente | rien, jamais réarmée | `:673` |
+| T5.2 | — | `Run()` | `!ReviewPromptStillPossible()` (notifications coupées, liens externes éteints, plafond, réponse) | Minuterie absente | rien ; reposée par T5.11 si les notifications sont rallumées | `EnsureReviewTimer` |
 | T5.3 | désarmé | frappe remappée | `enrichedBefore < 20 <= enrichedAfter` | Armé | `_enrichedThresholdCrossed = true` | `src/UsageStats.cs:301-307` |
 | T5.4 | désarmé | `Run()` | `ShouldArmSignalAtLoad` (`count == 0`, possible, total ≥ 20) | Armé | `ArmEnrichedThresholdSignal()` | `src/TrayApplication.cs:687`, `:2729-2742` |
-| T5.5 | actif | tick 5 s | `!ReviewPromptStillPossible()` (y compris une simple coupure des notifications couvrant un tick, puis rétablie) | Minuterie absente | `KillTimer`, sans réarmement ultérieur (C7.4) | `:2702-2706` |
-| T5.6 | armé | tick | `ShouldTryAfterQuietTyping` faux (différé, pas de frappe, silence < 15 s) | inchangé | aucun | `:2711-2713` |
+| T5.5 | actif | tick 5 s | `!ReviewPromptStillPossible()` (y compris une simple coupure des notifications couvrant un tick, puis rétablie) | Minuterie absente | `KillTimer` via `EnsureReviewTimer` ; reposée par T5.11 (C7.4 corrigé) | `MaybeShowReviewAfterQuietTyping` |
+| T5.6 | armé | tick | `ShouldTryAfterQuietTyping` faux (différé, accueil visible, pas de frappe, silence < 15 s) | inchangé | aucun | `:2711-2713` |
 | T5.7 | armé et prêt | tick | `MaybeShowReviewPrompt(QuietTyping)` vrai | désarmé | essai compté (M7.4) ; `ClearEnrichedThresholdSignal` | `:2715-2717` |
 | T5.8 | armé et prêt | tick | décision fausse, encore possible | armé | aucun | `:2715-2716`, `:2678` |
 | T5.9 | armé | décision fausse et `!StillPossible` | — | désarmé | `ClearEnrichedThresholdSignal` | `:2716-2717` |
 | T5.10 | différé | fermeture de l'accueil avec accord | `_reviewPromptDeferred` | Armé et prêt éventuel | `MaybeShowReviewPrompt(Startup)` (refusera l'essai 1) | `:1425-1432` |
+| T5.11 | Minuterie absente | clic sur la case des notifications des Paramètres | `ReviewPromptStillPossible()` redevenu vrai | Minuterie active | `SettingsWindow.NotificationsChanged` → `EnsureReviewTimer` → `SetTimer(9050, 5 s)` | `src/SettingsWindow.cs` (`ApplyNotifications`), `src/TrayApplication.cs` (`ConfigureSettingsWindow`) |
 
 #### Temporisations et réessais
 
@@ -3029,7 +3030,7 @@ Tick 5 s (`REVIEW_QUIET_POLL_MS`), silence requis 15 s (`REVIEW_QUIET_SILENCE_MS
 
 #### États ou transitions invalides atteignables
 
-C7.3, C7.4.
+C7.3 corrigé (ticket ME-08) : invariant I4 rétabli, test `MachinesEtatsLot7Tests.Avis_AccueilRouvertDepuisLeMenu_DiffèreLaSollicitationAuTickDeQuiétude`. C7.4 corrigé (ticket ME-08) : invariant I3 rétabli, tests `MachinesEtatsLot7Tests.Avis_NotificationsRallumeesDansLesParametres_ReposentLaMinuterieDeQuietude`, `…Parametres_CaseNotifications_PrevientLeTrayApresEcriture` et `…Avis_TickPendantLaCoupure_ArreteLaMinuterie_PuisLeRallumageLaRepose`.
 
 ### M7.6 — Demande d'avis : notification affichée et cible du clic
 
@@ -3167,7 +3168,7 @@ Aucun constat.
 - **TrayApplication** : minuteries, menu, toast COM (`ToastActivation`, fil RPC → `WM_APP_TOAST`), relance par second processus (`RelaunchSignal`), `ApplyWindowInputState`, `ActivateWithConsent` (installation du hook ; boîte d'erreur imbriquée avec l'accueil resté actif).
 - **KeyboardHook / TypingEngine.Windows** : le hook est posé et appelé sur le fil de la pompe ; `Install` relançable après `Dispose`.
 - **AutoStart / AutoStartNudge** : `ApplyAutoStart` écrit l'état de démarrage Windows et la relance unique.
-- **SettingsWindow** : écrit `notificationsEnabled` (`SettingsWindow.cs:1498`) et la case « afficher l'accueil » pendant la vie du processus ; aucun réarmement de `TIMER_REVIEW_QUIET` n'en découle (C7.4).
+- **SettingsWindow** : écrit `notificationsEnabled` (`SettingsWindow.cs:1498`) et la case « afficher l'accueil » pendant la vie du processus ; depuis ME-08, le changement de la case des notifications repose la minuterie de quiétude (`NotificationsChanged`, C7.4 corrigé).
 - **UsageStatsWindow** : bouton « Noter l'application » → `OnRateStoreFromStats`.
 - **DialogNavigation / WindowScroll / NativeWindow** : acheminement Tab/Entrée/flèches (`IsDialogMessage`) et défilement ; les flèches des cases ne passent pas par le `WM_KEYDOWN` de l'accueil (pas de sous-classe, `src/OnboardingWindow.cs:577-578`).
 
@@ -3175,8 +3176,8 @@ Aucun constat.
 
 - **C7.1** — Double clic sur « Suivant » à l'étape 2 : valide l'accueil sans voir l'étape 3 (moyenne, confiance moyenne).
 - **C7.2** — « Ne plus afficher » toujours affichée décochée : « C'est parti ! » réécrit un refus déjà posé (moyenne, confiance haute).
-- **C7.3** — La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert (faible, confiance moyenne).
-- **C7.4** — La minuterie de quiétude n'est jamais réarmée après coupure des notifications (faible, confiance haute).
+- **C7.3** — La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert (faible, confiance moyenne) : corrigé (ME-08).
+- **C7.4** — La minuterie de quiétude n'est jamais réarmée après coupure des notifications (faible, confiance haute) : corrigé (ME-08).
 - **C7.5** — Aucun garde de double appel de la boîte d'avis du Store (faible, confiance basse).
 
 Détail des scénarios, preuves et esquisses de test : voir la sortie structurée du lot (champ `constats`).
