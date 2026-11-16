@@ -729,6 +729,21 @@ sealed class TrayApplication : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Gestion des messages Windows
     // ═══════════════════════════════════════════════════════════════
+    /// <summary>
+    /// Réponse à WM_QUERYENDSESSION : une écriture immédiate de ce qui attend (audit du 25/09, A-05),
+    /// rapide et sans attente. Le message est une demande : une autre application peut l'annuler,
+    /// et il peut arriver plusieurs fois ; l'app ne quitte pas, son fil d'interface ne doit pas
+    /// dormir (ME-09 suite : <c>FlushFinal</c> y dormait jusqu'à 750 ms par appel). Un échec
+    /// d'écriture est repris par la minuterie de reprise tant que l'app vit ; les nouveaux essais
+    /// avec attente de <c>FlushFinal</c> n'ont leur place qu'à WM_ENDSESSION confirmé (wParam non
+    /// nul, via <c>Cleanup</c>) et à la sortie normale.
+    /// </summary>
+    internal static void OnQueryEndSession()
+    {
+        ConfigManager.Flush();
+        UsageStats.Flush();
+    }
+
     private IntPtr WndProcCallback(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
@@ -1084,11 +1099,7 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case Win32.WM_QUERYENDSESSION:
-                    // Arrêt ou déconnexion annoncé : écrire tout de suite ce qui attend, sans
-                    // compter sur WM_ENDSESSION (audit du 25/09, A-05). Deux écritures au plus ;
-                    // quelques nouveaux essais bornés (750 ms) si un verrou tient le fichier (ME-09).
-                    ConfigManager.FlushFinal();
-                    UsageStats.Flush();
+                    OnQueryEndSession();
                     return (IntPtr)1; // ne jamais bloquer l'arrêt/déconnexion
 
                 case Win32.WM_ENDSESSION:
@@ -1660,8 +1671,9 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (!ConfigManager.NotificationsEnabled) return;
             var now = DateTime.Now;
+            TrainingReminders.RepairFutureDates(DateOnly.FromDateTime(now));
+            if (!ConfigManager.NotificationsEnabled) return;
             if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot()))
                 return;
 
