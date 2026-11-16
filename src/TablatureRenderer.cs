@@ -77,7 +77,7 @@ internal sealed record TablatureStyle
     internal int Height => GlyphRowHeight + ShiftRowHeight + AltGrRowHeight + KeyRowHeight;
 
     /// <summary>Leçons F : glyphes Literata 50 px, lignes de 34 px, étiquettes à gauche.</summary>
-    internal static TablatureStyle Lessons(float s) => new()
+    internal static TablatureStyle Lessons(FontScale s) => new()
     {
         LabelWidth = Px(74, s), LabelInset = Px(18, s),
         LabelFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, s),
@@ -97,7 +97,7 @@ internal sealed record TablatureStyle
     /// du caractère courant se lit dessous en notation Mots (<see cref="KeyNotation"/>). La
     /// bande de la colonne en cours s'arrête au bas des glyphes, au-dessus de la notation.
     /// </summary>
-    internal static TablatureStyle LessonsText(float s) => new()
+    internal static TablatureStyle LessonsText(FontScale s) => new()
     {
         LabelWidth = Px(30, s),
         LabelFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, s),
@@ -111,14 +111,14 @@ internal sealed record TablatureStyle
 
     /// <summary>Parcours de l'accueil (option A du 07/11, maquettes-13b) : la même ligne en 44 px,
     /// pour laisser la hauteur au clavier. Les Leçons gardent <see cref="LessonsText"/>.</summary>
-    internal static TablatureStyle TutorialText(float s) => LessonsText(s) with
+    internal static TablatureStyle TutorialText(FontScale s) => LessonsText(s) with
     {
         GlyphRowHeight = Px(68, s), GlyphFont = FontSpec.Of(AppFonts.Title, 44, TypeRamp.Semibold, s),
         NbspWidth = Px(19, s), ThinNbspWidth = Px(11, s), SpaceMarkHeight = Px(26, s),
     };
 
     /// <summary>Recherche B : la partition du caractère choisi, grandes cases de 38 px.</summary>
-    internal static TablatureStyle Search(float s) => new()
+    internal static TablatureStyle Search(FontScale s) => new()
     {
         LabelWidth = Px(56, s), LabelInset = Px(8, s), LabelsRight = true,
         LabelFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, s),
@@ -132,7 +132,7 @@ internal sealed record TablatureStyle
     };
 
     /// <summary>Clavier virtuel A : le geste venu de la recherche, dans le bandeau d'état.</summary>
-    internal static TablatureStyle Banner(float s) => new()
+    internal static TablatureStyle Banner(FontScale s) => new()
     {
         LabelWidth = Px(52, s),
         LabelFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s),
@@ -146,6 +146,7 @@ internal sealed record TablatureStyle
     };
 
     internal static int Px(float value, float scale) => Math.Max(1, (int)Math.Round(value * scale));
+    internal static int Px(float value, FontScale scale) => Px(value, scale.Value);
 }
 
 /// <summary>
@@ -308,7 +309,7 @@ internal static class TablatureRenderer
     /// droit, <paramref name="midY"/> le milieu vertical. <paramref name="compact"/> écrit Verr. Maj.
     /// en sigle, pour la bande de révision quand le nom en clair y ferait perdre des caractères.
     /// </summary>
-    internal static int DrawShortGesture(IntPtr hdc, IReadOnlyList<GestureStep> steps, bool chosen, float s,
+    internal static int DrawShortGesture(IntPtr hdc, IReadOnlyList<GestureStep> steps, bool chosen, FontScale s,
         int right, int midY, bool draw = true, bool compact = false)
     {
         var tagFont = FontSpec.Of(AppFonts.Text, 11, TypeRamp.Semibold, s);

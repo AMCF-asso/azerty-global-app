@@ -68,11 +68,11 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `SettingsWindow.cs:431` | DialogNavigation.Register | libéré : SettingsWindow.cs:2530 |
 | `UsageStatsWindow.cs:203` | DialogNavigation.Register | libéré : UsageStatsWindow.cs:771 |
 | `AboutWindow.cs:104` | event += | désabonné : AboutWindow.cs:501 |
-| `LessonsWindow.cs:256` | event += | désabonné : LessonsWindow.cs:3288 |
-| `LessonsWindow.cs:260` | event += | désabonné : LessonsWindow.cs:3291 |
-| `LessonsWindow.cs:261` | event += | désabonné : LessonsWindow.cs:3292 |
-| `LessonsWindow.cs:262` | event += | désabonné : LessonsWindow.cs:3293 |
-| `LessonsWindow.cs:267` | event += | désabonné : LessonsWindow.cs:3290 |
+| `LessonsWindow.cs:259` | event += | désabonné : LessonsWindow.cs:3292 |
+| `LessonsWindow.cs:263` | event += | désabonné : LessonsWindow.cs:3295 |
+| `LessonsWindow.cs:264` | event += | désabonné : LessonsWindow.cs:3296 |
+| `LessonsWindow.cs:265` | event += | désabonné : LessonsWindow.cs:3297 |
+| `LessonsWindow.cs:270` | event += | désabonné : LessonsWindow.cs:3294 |
 | `MaintainableLayersWindow.cs:81` | event += | désabonné : MaintainableLayersWindow.cs:571 |
 | `OnboardingWindow.cs:341` | event += | désabonné : OnboardingWindow.cs:2221 |
 | `PauseDurationDialog.cs:170` | event += | désabonné : PauseDurationDialog.cs:551 |
@@ -96,8 +96,8 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TypingEngine.Windows/SecureInputDetector.cs:63` | event += | désabonné : TypingEngine.Windows/SecureInputDetector.cs:64 |
 | `UsageStatsWindow.cs:138` | event += | désabonné : UsageStatsWindow.cs:765 |
 | `UsageStatsWindow.cs:139` | event += | désabonné : UsageStatsWindow.cs:766 |
-| `VirtualKeyboard.cs:348` | event += | désabonné : VirtualKeyboard.cs:1337 |
-| `VirtualKeyboard.cs:349` | event += | désabonné : VirtualKeyboard.cs:1338 |
+| `VirtualKeyboard.cs:352` | event += | désabonné : VirtualKeyboard.cs:1341 |
+| `VirtualKeyboard.cs:353` | event += | désabonné : VirtualKeyboard.cs:1342 |
 
 ## gdi (110)
 
@@ -107,35 +107,35 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TrayApplication.cs:3244` | CreateBitmap | libéré : TrayApplication.cs:3255 |
 | `TrayIcon.cs:172` | CreateBitmap | libéré : TrayIcon.cs:175 |
 | `DevRects.cs:337` | CreateCompatibleBitmap | libéré : DevRects.cs:357 |
-| `LessonsWindow.Home.cs:802` | CreateCompatibleBitmap | libéré : LessonsWindow.Home.cs:825 |
-| `LessonsWindow.cs:1381` | CreateCompatibleBitmap | libéré : LessonsWindow.cs:1416 |
-| `LessonsWindow.cs:995` | CreateCompatibleBitmap | libéré : LessonsWindow.cs:1019 |
+| `LessonsWindow.Home.cs:805` | CreateCompatibleBitmap | libéré : LessonsWindow.Home.cs:828 |
+| `LessonsWindow.cs:1385` | CreateCompatibleBitmap | libéré : LessonsWindow.cs:1420 |
+| `LessonsWindow.cs:999` | CreateCompatibleBitmap | libéré : LessonsWindow.cs:1023 |
 | `PaintBuffer.cs:52` | CreateCompatibleBitmap | libéré : PaintBuffer.cs:70 |
 | `TrayApplication.cs:3197` | CreateCompatibleBitmap | libéré : TrayApplication.cs:3256 |
-| `VirtualKeyboard.cs:956` | CreateCompatibleBitmap | libéré : VirtualKeyboard.cs:975 |
+| `VirtualKeyboard.cs:960` | CreateCompatibleBitmap | libéré : VirtualKeyboard.cs:979 |
 | `DevRects.cs:336` | CreateCompatibleDC | libéré : DevRects.cs:358 |
-| `LessonsWindow.Home.cs:801` | CreateCompatibleDC | libéré : LessonsWindow.Home.cs:826 |
-| `LessonsWindow.cs:1031` | CreateCompatibleDC | libéré : LessonsWindow.cs:1045 |
-| `LessonsWindow.cs:1380` | CreateCompatibleDC | libéré : LessonsWindow.cs:1418 |
-| `LessonsWindow.cs:994` | CreateCompatibleDC | libéré : LessonsWindow.cs:1012 |
+| `LessonsWindow.Home.cs:804` | CreateCompatibleDC | libéré : LessonsWindow.Home.cs:829 |
+| `LessonsWindow.cs:1035` | CreateCompatibleDC | libéré : LessonsWindow.cs:1049 |
+| `LessonsWindow.cs:1384` | CreateCompatibleDC | libéré : LessonsWindow.cs:1422 |
+| `LessonsWindow.cs:998` | CreateCompatibleDC | libéré : LessonsWindow.cs:1016 |
 | `PaintBuffer.cs:51` | CreateCompatibleDC | libéré : PaintBuffer.cs:58 |
 | `TrayApplication.cs:3196` | CreateCompatibleDC | libéré : TrayApplication.cs:3257 |
-| `VirtualKeyboard.cs:955` | CreateCompatibleDC | libéré : VirtualKeyboard.cs:976 |
-| `AppFonts.cs:93` | CreateFontW | jamais : cache partagé par FontSpec (famille, hauteur, graisse), aucune destruction ; croît avec chaque hauteur nouvelle, constat C1 (lu) |
-| `LessonsWindow.cs:431` | CreateFontW | libéré : LessonsWindow.cs:460 |
-| `LessonsWindow.cs:432` | CreateFontW | libéré : LessonsWindow.cs:461 |
-| `LessonsWindow.cs:433` | CreateFontW | libéré : LessonsWindow.cs:462 |
-| `LessonsWindow.cs:434` | CreateFontW | libéré : LessonsWindow.cs:463 |
-| `LessonsWindow.cs:435` | CreateFontW | libéré : LessonsWindow.cs:464 |
-| `LessonsWindow.cs:436` | CreateFontW | libéré : LessonsWindow.cs:465 |
-| `LessonsWindow.cs:437` | CreateFontW | libéré : LessonsWindow.cs:466 |
-| `LessonsWindow.cs:438` | CreateFontW | libéré : LessonsWindow.cs:467 |
-| `LessonsWindow.cs:439` | CreateFontW | libéré : LessonsWindow.cs:468 |
-| `LessonsWindow.cs:440` | CreateFontW | libéré : LessonsWindow.cs:469 |
-| `LessonsWindow.cs:441` | CreateFontW | libéré : LessonsWindow.cs:470 |
-| `LessonsWindow.cs:442` | CreateFontW | libéré : LessonsWindow.cs:471 |
-| `LessonsWindow.cs:443` | CreateFontW | libéré : LessonsWindow.cs:472 |
-| `LessonsWindow.cs:444` | CreateFontW | libéré : LessonsWindow.cs:473 |
+| `VirtualKeyboard.cs:959` | CreateCompatibleDC | libéré : VirtualKeyboard.cs:980 |
+| `AppFonts.cs:183` | CreateFontW | rendu à l'appelant (AppFonts.Create) : AppFonts.Get le garde pour la vie du processus (tailles qui ne suivent que le DPI, une par écran) ; WindowFonts le détruit quand l'échelle de sa fenêtre change et à la fermeture (correctif C1 et C2) (lu) |
+| `LessonsWindow.cs:434` | CreateFontW | libéré : LessonsWindow.cs:464 |
+| `LessonsWindow.cs:435` | CreateFontW | libéré : LessonsWindow.cs:465 |
+| `LessonsWindow.cs:436` | CreateFontW | libéré : LessonsWindow.cs:466 |
+| `LessonsWindow.cs:437` | CreateFontW | libéré : LessonsWindow.cs:467 |
+| `LessonsWindow.cs:438` | CreateFontW | libéré : LessonsWindow.cs:468 |
+| `LessonsWindow.cs:439` | CreateFontW | libéré : LessonsWindow.cs:469 |
+| `LessonsWindow.cs:440` | CreateFontW | libéré : LessonsWindow.cs:470 |
+| `LessonsWindow.cs:441` | CreateFontW | libéré : LessonsWindow.cs:471 |
+| `LessonsWindow.cs:442` | CreateFontW | libéré : LessonsWindow.cs:472 |
+| `LessonsWindow.cs:443` | CreateFontW | libéré : LessonsWindow.cs:473 |
+| `LessonsWindow.cs:444` | CreateFontW | libéré : LessonsWindow.cs:474 |
+| `LessonsWindow.cs:445` | CreateFontW | libéré : LessonsWindow.cs:475 |
+| `LessonsWindow.cs:446` | CreateFontW | libéré : LessonsWindow.cs:476 |
+| `LessonsWindow.cs:447` | CreateFontW | libéré : LessonsWindow.cs:477 |
 | `MaintainableLayersWindow.cs:243` | CreateFontW | libéré : MaintainableLayersWindow.cs:579 |
 | `MaintainableLayersWindow.cs:246` | CreateFontW | libéré : MaintainableLayersWindow.cs:580 |
 | `OnboardingWindow.cs:393` | CreateFontW | libéré : OnboardingWindow.cs:399 |
@@ -150,9 +150,9 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `GdiHelpers.cs:148` | CreatePen | libéré : GdiHelpers.cs:155 |
 | `GdiHelpers.cs:209` | CreatePen | libéré : GdiHelpers.cs:216 |
 | `KeyboardRenderer.cs:440` | CreatePen | libéré : KeyboardRenderer.cs:451 |
-| `LessonsWindow.Home.cs:840` | CreatePen | libéré : LessonsWindow.Home.cs:846 |
-| `LessonsWindow.Paper.cs:135` | CreatePen | libéré : LessonsWindow.Paper.cs:141 |
-| `LessonsWindow.cs:2223` | CreatePen | libéré : LessonsWindow.cs:2229 |
+| `LessonsWindow.Home.cs:843` | CreatePen | libéré : LessonsWindow.Home.cs:849 |
+| `LessonsWindow.Paper.cs:138` | CreatePen | libéré : LessonsWindow.Paper.cs:144 |
+| `LessonsWindow.cs:2227` | CreatePen | libéré : LessonsWindow.cs:2233 |
 | `LightButton.cs:116` | CreatePen | libéré : LightButton.cs:122 |
 | `MiniKeyboardRenderer.cs:252` | CreatePen | libéré : MiniKeyboardRenderer.cs:258 |
 | `MiniKeyboardRenderer.cs:266` | CreatePen | libéré : MiniKeyboardRenderer.cs:272 |
@@ -170,9 +170,9 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `KeyboardRenderer.cs:459` | CreateSolidBrush | libéré : KeyboardRenderer.cs:461 |
 | `KeyboardRenderer.cs:485` | CreateSolidBrush | libéré : KeyboardRenderer.cs:487 |
 | `LayoutConflictWindow.cs:89` | CreateSolidBrush | libéré : LayoutConflictWindow.cs:528 |
-| `LessonsWindow.Home.cs:812` | CreateSolidBrush | libéré : LessonsWindow.Home.cs:814 |
-| `LessonsWindow.Home.cs:839` | CreateSolidBrush | libéré : LessonsWindow.Home.cs:847 |
-| `LessonsWindow.cs:2222` | CreateSolidBrush | libéré : LessonsWindow.cs:2230 |
+| `LessonsWindow.Home.cs:815` | CreateSolidBrush | libéré : LessonsWindow.Home.cs:817 |
+| `LessonsWindow.Home.cs:842` | CreateSolidBrush | libéré : LessonsWindow.Home.cs:850 |
+| `LessonsWindow.cs:2226` | CreateSolidBrush | libéré : LessonsWindow.cs:2234 |
 | `MaintainableLayersWindow.cs:150` | CreateSolidBrush | libéré : MaintainableLayersWindow.cs:581 |
 | `MiniKeyboardRenderer.cs:251` | CreateSolidBrush | libéré : MiniKeyboardRenderer.cs:259 |
 | `MiniKeyboardRenderer.cs:265` | CreateSolidBrush | libéré : MiniKeyboardRenderer.cs:273 |
@@ -221,15 +221,15 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `CharacterSearch.cs:1131` | GCHandle.Alloc | libéré : CharacterSearch.cs:1139 |
 | `TrayIcon.cs:164` | GCHandle.Alloc | libéré : TrayIcon.cs:182 |
 | `TrayIcon.cs:55` | GCHandle.Alloc | libéré : TrayIcon.cs:73 |
-| `AppFonts.cs:68` | Marshal.AllocHGlobal | libéré : AppFonts.cs:73 |
+| `AppFonts.cs:146` | Marshal.AllocHGlobal | libéré : AppFonts.cs:151 |
 | `LayoutConflictWindow.cs:304` | Marshal.AllocHGlobal | libéré : LayoutConflictWindow.cs:313 |
 | `PauseDurationDialog.cs:320` | Marshal.AllocHGlobal | libéré : PauseDurationDialog.cs:327 |
 | `SettingsWindow.Paper.cs:165` | Marshal.AllocHGlobal | libéré : SettingsWindow.Paper.cs:172 |
 | `SettingsWindow.cs:1041` | Marshal.AllocHGlobal | libéré : SettingsWindow.cs:1047 |
 | `SettingsWindow.cs:2189` | Marshal.AllocHGlobal | libéré : SettingsWindow.cs:2216 |
-| `VirtualKeyboard.cs:395` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:403 |
-| `VirtualKeyboard.cs:419` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:427 |
-| `VirtualKeyboard.cs:441` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:449 |
+| `VirtualKeyboard.cs:399` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:407 |
+| `VirtualKeyboard.cs:423` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:431 |
+| `VirtualKeyboard.cs:445` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:453 |
 | `LayoutConflictWindow.cs:295` | Marshal.StringToHGlobalUni | libéré : LayoutConflictWindow.cs:297 |
 | `SettingsWindow.cs:1037` | Marshal.StringToHGlobalUni | libéré : SettingsWindow.cs:1049 |
 | `SettingsWindow.cs:2110` | Marshal.StringToHGlobalUni | libéré : SettingsWindow.cs:2112 |
@@ -241,11 +241,11 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `CharacterSearch.cs:1219` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer CharacterSearch.cs:848, CharacterSearch.cs:990 ; morte avec la fenêtre (CharacterSearch.cs:1619) |
 | `CharacterSearch.cs:1230` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer CharacterSearch.cs:848, CharacterSearch.cs:990 ; morte avec la fenêtre (CharacterSearch.cs:1619) |
 | `DevRects.cs:158` | SetTimer | jamais : minuterie de thread sans fenêtre, une par processus ; build Debug seulement (#if DEBUG, TrayApplication.cs:713-715) (lu) |
-| `LessonsWindow.cs:2666` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1099, LessonsWindow.cs:2662, LessonsWindow.cs:2847 ; morte avec la fenêtre (LessonsWindow.cs:3298) |
-| `LessonsWindow.cs:2800` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1101, LessonsWindow.cs:2656, LessonsWindow.cs:2789 ; morte avec la fenêtre (LessonsWindow.cs:3298) |
-| `LessonsWindow.cs:2808` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1100, LessonsWindow.cs:2788, LessonsWindow.cs:2802 ; morte avec la fenêtre (LessonsWindow.cs:3298) |
-| `LessonsWindow.cs:2908` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1099, LessonsWindow.cs:2662, LessonsWindow.cs:2847 ; morte avec la fenêtre (LessonsWindow.cs:3298) |
-| `LessonsWindow.cs:3213` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:2644 ; morte avec la fenêtre (LessonsWindow.cs:3298) |
+| `LessonsWindow.cs:2670` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1103, LessonsWindow.cs:2666, LessonsWindow.cs:2851 ; morte avec la fenêtre (LessonsWindow.cs:3302) |
+| `LessonsWindow.cs:2804` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1105, LessonsWindow.cs:2660, LessonsWindow.cs:2793 ; morte avec la fenêtre (LessonsWindow.cs:3302) |
+| `LessonsWindow.cs:2812` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1104, LessonsWindow.cs:2792, LessonsWindow.cs:2806 ; morte avec la fenêtre (LessonsWindow.cs:3302) |
+| `LessonsWindow.cs:2912` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:1103, LessonsWindow.cs:2666, LessonsWindow.cs:2851 ; morte avec la fenêtre (LessonsWindow.cs:3302) |
+| `LessonsWindow.cs:3217` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer LessonsWindow.cs:2648 ; morte avec la fenêtre (LessonsWindow.cs:3302) |
 | `ToggleNotification.cs:105` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer ToggleNotification.cs:104, ToggleNotification.cs:121 ; morte avec la fenêtre (ToggleNotification.cs:176) |
 | `TrayApplication.cs:1276` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer TrayApplication.cs:1003 ; morte avec la fenêtre (TrayApplication.cs:2346) |
 | `TrayApplication.cs:2144` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer TrayApplication.cs:2043, TrayApplication.cs:2155, TrayApplication.cs:2357 ; morte avec la fenêtre (TrayApplication.cs:2346) |
@@ -262,7 +262,7 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TrayApplication.cs:680` | SetTimer | minuterie de fenêtre, même id remplacé : aucun KillTimer ; morte avec la fenêtre (TrayApplication.cs:2346) |
 | `TrayApplication.cs:758` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer TrayApplication.cs:761, TrayApplication.cs:998 ; morte avec la fenêtre (TrayApplication.cs:2346) |
 | `UsageStatsWindow.cs:502` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer UsageStatsWindow.cs:457 ; morte avec la fenêtre (UsageStatsWindow.cs:772) |
-| `VirtualKeyboard.cs:756` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer VirtualKeyboard.cs:843 ; morte avec la fenêtre (VirtualKeyboard.cs:1346) |
+| `VirtualKeyboard.cs:760` | SetTimer | minuterie de fenêtre, même id remplacé : KillTimer VirtualKeyboard.cs:847 ; morte avec la fenêtre (VirtualKeyboard.cs:1350) |
 | `ConfigManager.cs:1449` | System.Threading.Timer | libéré : ConfigManager.cs:1451 |
 | `TypingEngine.Windows/SecureInputProbe.cs:85` | Thread | borné : un fil vivant, plus au plus 3 fils bloqués abandonnés (MaxAbandonedWorkers, SecureInputProbe.cs:38) (lu) |
 | `ConfigManager.cs:1066` | ThreadPool | aucun objet gardé : tâche ponctuelle du pool, une seule en vol (garde _deferredLogDraining) (lu) |
@@ -275,15 +275,15 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 
 | Site | API | Libération |
 |---|---|---|
-| `AppFonts.cs:70` | AddFontMemResourceEx | jamais : polices privées chargées une fois par processus (garde _loaded) ; mémoire gardée jusqu'à la sortie, bornée (lu) |
+| `AppFonts.cs:148` | AddFontMemResourceEx | jamais : polices privées chargées une fois par processus (garde _loaded) ; mémoire gardée jusqu'à la sortie, bornée (lu) |
 | `ChipButton.cs:48` | BeginPaint | libéré : ChipButton.cs:50 |
 | `LayerIndicatorWindow.cs:134` | BeginPaint | libéré : LayerIndicatorWindow.cs:137 |
-| `LessonsWindow.cs:1344` | BeginPaint | libéré : LessonsWindow.cs:1357 |
+| `LessonsWindow.cs:1348` | BeginPaint | libéré : LessonsWindow.cs:1361 |
 | `LightButton.cs:60` | BeginPaint | libéré : LightButton.cs:62 |
 | `OnboardingWindow.cs:1597` | BeginPaint | libéré : OnboardingWindow.cs:1618 |
 | `PaintBuffer.cs:28` | BeginPaint | libéré : PaintBuffer.cs:83 |
 | `UsageStatsWindow.cs:581` | BeginPaint | libéré : UsageStatsWindow.cs:603 |
-| `VirtualKeyboard.cs:946` | BeginPaint | libéré : VirtualKeyboard.cs:951 |
+| `VirtualKeyboard.cs:950` | BeginPaint | libéré : VirtualKeyboard.cs:955 |
 | `AccessibleName.cs:166` | CoCreateInstance | libéré : Release par la vtable dans le finally (AccessibleName.cs:185-188) (lu) |
 | `AccessibleName.cs:208` | CoCreateInstance | libéré : Release par la vtable dans le finally (AccessibleName.cs:221-224) (lu) |
 | `AccessibleName.cs:91` | CoCreateInstance | libéré : Release par la vtable dans le finally (AccessibleName.cs:103-106) (lu) |
@@ -291,7 +291,7 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TypingEngine.Windows/SecureInputDetector.cs:79` | CoCreateInstance | jamais : objet UI Automation gardé en cache statique, relâché et recréé seulement après une erreur (ReleaseAutomation) (lu) |
 | `TypingEngine.Windows/SecureInputDetector.cs:43` | CoInitializeEx | jamais : CoInitializeEx une fois par fil de la sonde ; COM libéré à la sortie du fil (lu) |
 | `ToastActivation.cs:122` | CoRegisterClassObject | libéré : ToastActivation.cs:146 |
-| `LessonsWindow.cs:1542` | CreateCaret | libéré : LessonsWindow.cs:1553 |
+| `LessonsWindow.cs:1546` | CreateCaret | libéré : LessonsWindow.cs:1557 |
 | `TrayApplication.cs:1754` | CreatePopupMenu | libéré : TrayApplication.cs:1767 |
 | `TrayApplication.cs:1788` | CreatePopupMenu | libéré : TrayApplication.cs:1789 |
 | `TrayApplication.cs:1814` | CreatePopupMenu | libéré : TrayApplication.cs:1815 |
@@ -314,7 +314,7 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LayoutConflictWindow.cs:165` | CreateWindowExW | libéré : LayoutConflictWindow.cs:524 |
 | `LayoutConflictWindow.cs:193` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (LayoutConflictWindow.cs:524) |
 | `LayoutConflictWindow.cs:198` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (LayoutConflictWindow.cs:524) |
-| `LessonsWindow.cs:508` | CreateWindowExW | libéré : LessonsWindow.cs:3298 |
+| `LessonsWindow.cs:512` | CreateWindowExW | libéré : LessonsWindow.cs:3302 |
 | `MaintainableLayersWindow.cs:143` | CreateWindowExW | libéré : MaintainableLayersWindow.cs:576 |
 | `MaintainableLayersWindow.cs:173` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (MaintainableLayersWindow.cs:576) |
 | `MaintainableLayersWindow.cs:185` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (MaintainableLayersWindow.cs:576) |
@@ -370,8 +370,8 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `UsageStatsWindow.cs:231` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (UsageStatsWindow.cs:772) |
 | `UsageStatsWindow.cs:238` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (UsageStatsWindow.cs:772) |
 | `UsageStatsWindow.cs:243` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (UsageStatsWindow.cs:772) |
-| `VirtualKeyboard.cs:337` | CreateWindowExW | libéré : VirtualKeyboard.cs:1346 |
-| `VirtualKeyboard.cs:369` | CreateWindowExW | libéré : VirtualKeyboard.cs:1341 |
+| `VirtualKeyboard.cs:341` | CreateWindowExW | libéré : VirtualKeyboard.cs:1350 |
+| `VirtualKeyboard.cs:373` | CreateWindowExW | libéré : VirtualKeyboard.cs:1345 |
 | `ConfigManager.cs:1614` | FileStream | using : fermé en fin de bloc |
 | `DailyChallenge.cs:99` | FileStream | using : fermé en fin de bloc |
 | `LessonCatalog.cs:188` | FileStream | using : fermé en fin de bloc |
@@ -393,11 +393,11 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LayoutConflictWindow.cs:345` | GetDC | libéré : LayoutConflictWindow.cs:353 |
 | `LayoutConflictWindow.cs:94` | GetDC | libéré : LayoutConflictWindow.cs:96 |
 | `LessonsWindow.HomeText.cs:234` | GetDC | libéré : LessonsWindow.HomeText.cs:236 |
-| `LessonsWindow.cs:1800` | GetDC | libéré : LessonsWindow.cs:1812 |
-| `LessonsWindow.cs:1830` | GetDC | libéré : LessonsWindow.cs:1850 |
-| `LessonsWindow.cs:1915` | GetDC | libéré : LessonsWindow.cs:1928 |
-| `LessonsWindow.cs:249` | GetDC | libéré : LessonsWindow.cs:251 |
-| `LessonsWindow.cs:987` | GetDC | libéré : LessonsWindow.cs:1013 |
+| `LessonsWindow.cs:1804` | GetDC | libéré : LessonsWindow.cs:1816 |
+| `LessonsWindow.cs:1834` | GetDC | libéré : LessonsWindow.cs:1854 |
+| `LessonsWindow.cs:1919` | GetDC | libéré : LessonsWindow.cs:1932 |
+| `LessonsWindow.cs:252` | GetDC | libéré : LessonsWindow.cs:254 |
+| `LessonsWindow.cs:991` | GetDC | libéré : LessonsWindow.cs:1017 |
 | `MaintainableLayersWindow.cs:287` | GetDC | libéré : MaintainableLayersWindow.cs:313 |
 | `OnboardingWindow.cs:1788` | GetDC | libéré : OnboardingWindow.cs:1849 |
 | `OnboardingWindow.cs:1863` | GetDC | libéré : OnboardingWindow.cs:1873 |
@@ -412,16 +412,16 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TrayApplication.cs:3195` | GetDC | libéré : TrayApplication.cs:3258 |
 | `UsageStatsWindow.cs:131` | GetDC | libéré : UsageStatsWindow.cs:133 |
 | `UsageStatsWindow.cs:319` | GetDC | libéré : UsageStatsWindow.cs:329 |
-| `VirtualKeyboard.cs:954` | GetDC | libéré : VirtualKeyboard.cs:958 |
+| `VirtualKeyboard.cs:958` | GetDC | libéré : VirtualKeyboard.cs:962 |
 | `CharacterSearch.cs:1244` | GlobalAlloc | libéré : CharacterSearch.cs:1251 |
 | `GdiImageLoader.cs:18` | GlobalAlloc | libéré : GdiImageLoader.cs:25 |
-| `LessonsWindow.cs:1265` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
+| `LessonsWindow.cs:1269` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `LinkBehavior.cs:72` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `NativeWindow.cs:50` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `OnboardingWindow.cs:1224` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `OnboardingWindow.cs:1230` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `SettingsWindow.cs:1794` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
-| `VirtualKeyboard.cs:821` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
+| `VirtualKeyboard.cs:825` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `Program.cs:49` | Mutex | libéré : using var jusqu'à la fin de Main (Program.cs:137, 149) (lu) |
 | `TextEditBuffer.cs:30` | OpenClipboard | libéré : TextEditBuffer.cs:32 |
 | `TypingEngine.Windows/Win32Api/RealWin32Api.cs:145` | OpenProcess | libéré : TypingEngine.Windows/Win32Api/RealWin32Api.cs:178 |
@@ -433,17 +433,17 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LayoutConflictWindow.cs:399` | SaveDC | libéré : LayoutConflictWindow.cs:401 |
 | `LessonsWindow.HomeText.cs:456` | SaveDC | libéré : LessonsWindow.HomeText.cs:505 |
 | `LessonsWindow.Notation.cs:79` | SaveDC | libéré : LessonsWindow.Notation.cs:143 |
-| `LessonsWindow.Paper.cs:355` | SaveDC | libéré : LessonsWindow.Paper.cs:390 |
-| `LessonsWindow.Paper.cs:576` | SaveDC | libéré : LessonsWindow.Paper.cs:605 |
+| `LessonsWindow.Paper.cs:358` | SaveDC | libéré : LessonsWindow.Paper.cs:393 |
+| `LessonsWindow.Paper.cs:579` | SaveDC | libéré : LessonsWindow.Paper.cs:608 |
 | `PaperChoice.cs:220` | SaveDC | libéré : PaperChoice.cs:223 |
 | `SettingsWindow.Paper.cs:280` | SaveDC | libéré : SettingsWindow.Paper.cs:283 |
 | `SettingsWindow.Paper.cs:348` | SaveDC | libéré : SettingsWindow.Paper.cs:357 |
 | `SettingsWindow.Paper.cs:391` | SaveDC | libéré : SettingsWindow.Paper.cs:395 |
 | `SettingsWindow.cs:1538` | SaveDC | libéré : SettingsWindow.cs:1540 |
-| `TablatureRenderer.cs:236` | SaveDC | libéré : TablatureRenderer.cs:301 |
+| `TablatureRenderer.cs:237` | SaveDC | libéré : TablatureRenderer.cs:302 |
 | `UsageStatsWindow.cs:700` | SaveDC | libéré : UsageStatsWindow.cs:703 |
-| `LessonsWindow.cs:2069` | SetCapture | libéré : LessonsWindow.cs:2093, LessonsWindow.cs:2100, LessonsWindow.cs:2279 |
-| `LessonsWindow.cs:2269` | SetCapture | libéré : LessonsWindow.cs:2093, LessonsWindow.cs:2100, LessonsWindow.cs:2279 |
+| `LessonsWindow.cs:2073` | SetCapture | libéré : LessonsWindow.cs:2097, LessonsWindow.cs:2104, LessonsWindow.cs:2283 |
+| `LessonsWindow.cs:2273` | SetCapture | libéré : LessonsWindow.cs:2097, LessonsWindow.cs:2104, LessonsWindow.cs:2283 |
 | `SettingsWindow.CompatScroll.cs:152` | SetCapture | libéré : SettingsWindow.CompatScroll.cs:23, SettingsWindow.CompatScroll.cs:163 |
 | `TypingEngine.Windows/ForegroundMonitor.cs:174` | SetWinEventHook | libéré : TypingEngine.Windows/ForegroundMonitor.cs:343, TypingEngine.Windows/ForegroundMonitor.cs:348, TypingEngine.Windows/ForegroundMonitor.cs:353 |
 | `TypingEngine.Windows/ForegroundMonitor.cs:176` | SetWinEventHook | libéré : TypingEngine.Windows/ForegroundMonitor.cs:343, TypingEngine.Windows/ForegroundMonitor.cs:348, TypingEngine.Windows/ForegroundMonitor.cs:353 |

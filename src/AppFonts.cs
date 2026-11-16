@@ -5,16 +5,107 @@ namespace AZERTYGlobal;
 
 /// <summary>
 /// Une police d'écran : famille, hauteur de caractère en pixels (déjà mise à l'échelle) et
-/// graisse. Les fenêtres refondues décrivent leurs polices ainsi ; <see cref="AppFonts"/> crée
-/// et garde la HFONT, et la partage entre fenêtres.
+/// graisse. Les fenêtres refondues décrivent leurs polices ainsi. Sans propriétaire,
+/// <see cref="AppFonts"/> crée et garde la HFONT, partagée entre fenêtres : réservé aux tailles
+/// qui ne suivent que le DPI. Avec un propriétaire (<see cref="WindowFonts"/>), la police vit
+/// avec l'échelle de sa fenêtre (audit des ressources du 16/11, C1 et C2).
 /// </summary>
-internal readonly record struct FontSpec(string Family, int Height, int Weight = TypeRamp.Regular)
+internal readonly record struct FontSpec(string Family, int Height, int Weight = TypeRamp.Regular, WindowFonts? Owner = null)
 {
-    public IntPtr Handle => AppFonts.Get(this);
+    public IntPtr Handle => Owner is { } owner ? owner.Get(this) : AppFonts.Get(this);
 
-    /// <summary>La spécification d'une taille de maquette (px à 96 DPI) portée à l'échelle.</summary>
+    /// <summary>Une taille de maquette (px à 96 DPI) portée à une échelle qui ne suit que le
+    /// DPI : police du cache partagé.</summary>
     public static FontSpec Of(string family, int size, int weight, float scale)
         => new(family, Math.Max(1, (int)(size * scale)), weight);
+
+    /// <summary>Une taille de maquette portée à l'échelle d'une fenêtre : police de son propriétaire.</summary>
+    public static FontSpec Of(string family, int size, int weight, FontScale scale)
+        => new(family, Math.Max(1, (int)(size * scale.Value)), weight, scale.Owner);
+}
+
+/// <summary>
+/// L'échelle de dessin d'une fenêtre et le jeu qui possède les polices de cette échelle. Les
+/// dessinateurs partagés (<see cref="KeyNotation"/>, <see cref="TablatureRenderer"/>,
+/// <see cref="MiniKeyboardRenderer"/>) la reçoivent au lieu d'un <c>float</c> : aucune
+/// conversion implicite, un appelant choisit entre <see cref="WindowFonts.At"/> (échelle qui
+/// suit la taille de la fenêtre) et <see cref="Shared"/> (échelle qui ne suit que le DPI).
+/// </summary>
+internal readonly record struct FontScale(float Value, WindowFonts? Owner)
+{
+    /// <summary>Échelle qui ne suit que le DPI : polices du cache partagé, une par écran.</summary>
+    internal static FontScale Shared(float value) => new(value, null);
+
+    /// <summary>La même échelle multipliée (tailles dérivées), au même propriétaire.</summary>
+    internal FontScale Times(float factor) => this with { Value = Value * factor };
+
+    /// <summary>Une police de hauteur déjà calculée, au même propriétaire.</summary>
+    internal FontSpec Font(string family, int height, int weight) => new(family, Math.Max(1, height), weight, Owner);
+}
+
+/// <summary>
+/// Les polices d'une fenêtre dont l'échelle suit la taille (Leçons, clavier virtuel) : créées à
+/// la demande, toutes détruites quand l'échelle change (<see cref="At"/>) et à la fermeture
+/// (<see cref="Dispose"/>). Le cache partagé en gardait une par hauteur traversée, jusqu'à la
+/// fin du processus. Les dessinateurs remettent la police d'origine dans le DC après chaque
+/// texte (<see cref="PaperText"/>) : aucune police d'ici ne reste sélectionnée entre deux messages.
+/// Fil de l'interface seulement.
+/// </summary>
+internal sealed class WindowFonts : IDisposable
+{
+    private readonly Dictionary<FontSpec, IntPtr> _fonts = new();
+    private float _scale = float.NaN;
+    private int _thread;
+
+    /// <summary>Polices vivantes (tests).</summary>
+    internal int Count => _fonts.Count;
+
+    /// <summary>L'échelle courante de la fenêtre. Une échelle différente de la précédente
+    /// détruit d'abord les polices de l'ancienne.</summary>
+    internal FontScale At(float scale)
+    {
+        CheckThread();
+        if (scale != _scale)
+        {
+            Reset();
+            _scale = scale;
+        }
+        return new FontScale(scale, this);
+    }
+
+    internal IntPtr Get(FontSpec spec)
+    {
+        CheckThread();
+        if (_fonts.TryGetValue(spec, out var font))
+            return font;
+        font = AppFonts.Create(spec);
+        _fonts[spec] = font;
+        return font;
+    }
+
+    /// <summary>Détruit toutes les polices ; les suivantes sont recréées à la demande.</summary>
+    internal void Reset()
+    {
+        foreach (var font in _fonts.Values)
+            Win32.DeleteObject(font);
+        _fonts.Clear();
+    }
+
+    public void Dispose()
+    {
+        Reset();
+        _scale = float.NaN;
+    }
+
+    /// <summary>Sans verrou : un seul fil, celui de la fenêtre. Un appel d'un autre fil
+    /// (fournisseur UIA, minuterie du pool) pourrait détruire les polices d'une peinture en
+    /// cours ; les tests le voient en Debug.</summary>
+    private void CheckThread()
+    {
+        int current = Environment.CurrentManagedThreadId;
+        if (_thread == 0) _thread = current;
+        global::System.Diagnostics.Debug.Assert(_thread == current, "WindowFonts appelé hors du fil de sa fenêtre");
+    }
 }
 
 /// <summary>
@@ -81,19 +172,28 @@ internal static class AppFonts
         }
     }
 
-    /// <summary>La HFONT de <paramref name="spec"/>, créée à la première demande puis gardée.
-    /// Ne jamais la détruire : elle est partagée.</summary>
+    /// <summary>La HFONT partagée de <paramref name="spec"/> (sans propriétaire), créée à la
+    /// première demande puis gardée jusqu'à la fin du processus. Ne jamais la détruire : elle
+    /// est partagée. Réservé aux tailles qui ne suivent que le DPI (un jeu par écran).</summary>
     internal static IntPtr Get(FontSpec spec)
     {
-        EnsureLoaded();
+        global::System.Diagnostics.Debug.Assert(spec.Owner == null, "police à propriétaire demandée au cache partagé");
         lock (Gate)
         {
             if (Cache.TryGetValue(spec, out var font))
                 return font;
-            font = Win32.CreateFontW(-spec.Height, 0, 0, 0, spec.Weight, 0, 0, 0, 0, 0, 0, 5, 0, spec.Family);
+            font = Create(spec);
             Cache[spec] = font;
             return font;
         }
+    }
+
+    /// <summary>Crée la HFONT de <paramref name="spec"/> ; l'appelant la garde ou la détruit
+    /// (<see cref="Get"/> la garde, <see cref="WindowFonts"/> la détruit).</summary>
+    internal static IntPtr Create(FontSpec spec)
+    {
+        EnsureLoaded();
+        return Win32.CreateFontW(-spec.Height, 0, 0, 0, spec.Weight, 0, 0, 0, 0, 0, 0, 5, 0, spec.Family);
     }
 
     /// <summary>La chaîne de secours d'une police : elle-même, puis les polices qui comblent
