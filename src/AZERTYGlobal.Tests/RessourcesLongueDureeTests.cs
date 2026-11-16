@@ -14,8 +14,9 @@ namespace AZERTYGlobal.Tests;
 /// plusieurs heures se simule ici en répétant ce qu'elle fait sans cesse : ouvrir, peindre,
 /// relire la palette, changer de langue, fermer. Après un échauffement (caches par taille et
 /// par police remplis), chaque cycle doit rendre ce qu'il a pris : objets GDI et USER du
-/// processus (GetGuiResources), poignées du noyau, abonnés des événements statiques et
-/// fenêtres inscrites à la navigation des dialogues.
+/// processus (GetGuiResources), abonnés des événements statiques et fenêtres inscrites à la
+/// navigation des dialogues ; les tests sans fenêtre comptent aussi les crochets et les
+/// abonnés du moteur partagé.
 ///
 /// Les compteurs couvrent tout le processus : l'assemblée tourne sans parallélisme
 /// (TestCollectionBehavior.cs). On compare la pente entre deux paliers, jamais une valeur
@@ -327,5 +328,173 @@ public sealed class RessourcesLongueDureeTests
             BancCapture.Teardown(fen);
             ConfigManager.SetAppLanguage(langue);
         }
+    }
+
+    // ── Leçons recréées sur le moteur partagé ─────────────────────────────────
+
+    /// <summary>
+    /// TrayApplication garde un seul KeyMapper et un seul KeyboardHook pour toute la session,
+    /// et recrée les Leçons sur eux quand la langue a changé (EnsureLessonsWindow : Dispose
+    /// puis new). Chaque fenêtre s'abonne à trois événements de ces objets : le premier banc
+    /// donnait un moteur neuf à chaque cycle et ne pouvait pas voir un abonné oublié.
+    /// </summary>
+    [Fact]
+    public void Recreer_les_Lecons_sur_le_meme_moteur_ne_laisse_aucun_abonne_sur_le_moteur()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var layout = LayoutLoader.LoadFromResource();
+        var mapper = new KeyMapper(layout, new MockWin32Api());
+        var hook = new KeyboardHook(mapper); // jamais installé
+        int AbonnesDuMoteur() =>
+            Abonnes(typeof(KeyMapper), mapper, "StateChanged")
+            + Abonnes(typeof(KeyMapper), mapper, "KeyDecided")
+            + Abonnes(typeof(KeyboardHook), hook, "RawKeyDownDetailed");
+
+        int moteurAvant = AbonnesDuMoteur();
+        AssertCycleSansFuite("Leçons recréées sur le même moteur",
+            () => OuvrirFermer(() => new LessonsWindow(layout, mapper, hook), w => w.Show()));
+        int moteurApres = AbonnesDuMoteur();
+        _out.WriteLine($"abonnés du moteur : {moteurAvant} avant, {moteurApres} après {Cycles + Echauffement} fenêtres");
+        Assert.Equal(moteurAvant, moteurApres);
+    }
+
+    // ── Sans fenêtre : suivi du premier plan, icônes de la zone de notification ─
+
+    /// <summary>ForegroundMonitor pose trois crochets WinEvent à la construction et les retire
+    /// au Dispose. Le tray n'en crée qu'un, mais un oubli coûterait un crochet système à
+    /// chaque recréation : on compte posés et retirés sur le mock.</summary>
+    [Fact]
+    public void Creer_et_disposer_le_suivi_du_premier_plan_retire_chaque_crochet_pose()
+    {
+        var api = new MockWin32Api();
+        for (int i = 0; i < Cycles; i++)
+            new global::TypingEngine.Windows.ForegroundMonitor(api, IntPtr.Zero).Dispose();
+        _out.WriteLine($"{Cycles} suivis : {api.WinEventHooksSet} crochets posés, {api.WinEventHooksRemoved} retirés");
+        Assert.Equal(3 * Cycles, api.WinEventHooksSet);
+        Assert.Equal(api.WinEventHooksSet, api.WinEventHooksRemoved);
+    }
+
+    /// <summary>L'icône du tray est refaite à chaque bascule, Verr. Maj. ou pause
+    /// (TrayApplication.UpdateIcon, qui détruit l'ancienne) : la fabrique ne doit rien
+    /// garder d'autre que l'icône qu'elle rend.</summary>
+    [Theory]
+    [InlineData("TrayIcon.Create")]
+    [InlineData("TrayApplication.CreateTextIcon")]
+    public void Refaire_l_icone_du_tray_ne_garde_que_l_icone_rendue(string fabrique)
+    {
+        int tour = 0;
+        AssertCycleSansFuite($"icône du tray ({fabrique})", () =>
+        {
+            bool actif = tour % 2 == 0, majuscules = tour % 3 == 0;
+            tour++;
+            IntPtr icone = fabrique == "TrayIcon.Create"
+                ? TrayIcon.Create(actif, majuscules, suspended: !actif)
+                : TrayApplication.CreateTextIcon("AG", actif, majuscules);
+            Assert.NotEqual(IntPtr.Zero, icone);
+            Win32.DestroyIcon(icone);
+            BancCapture.Pump(2); // la boucle de messages du tray tourne entre deux icônes
+        });
+    }
+
+    /// <summary>Ce que TrayIcon.FromPixels fait autour de l'icône à chaque appel, seul :
+    /// démarrer GDI+ puis l'arrêter (GdiplusStartup / GdiplusShutdown).
+    ///
+    /// Mesure du 16/11 : sans pomper les messages entre deux cycles, USER +52 sur 100 cycles,
+    /// encore là après 2 s d'attente ; en pompant comme la boucle du tray, +2 ; avec un GDI+
+    /// gardé ouvert ailleurs, 0. GDI+ libère ses objets USER par la file de messages du fil
+    /// qui l'arrête : le tray la vide, le constat est réfuté. Une boucle serrée sans pompage
+    /// (fil de fond, outil en ligne de commande) fuirait.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Demarrer_puis_arreter_GDIplus_ne_garde_rien(bool gdiplusDejaOuvert)
+    {
+        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
+        IntPtr exterieur = IntPtr.Zero;
+        if (gdiplusDejaOuvert) // ce que ferait un GDI+ démarré une fois pour tout le processus
+            Assert.Equal(0, Win32.GdiplusStartup(out exterieur, ref input, IntPtr.Zero));
+        try
+        {
+            AssertCycleSansFuite($"GdiplusStartup puis GdiplusShutdown (GDI+ déjà ouvert : {gdiplusDejaOuvert})", () =>
+            {
+                Assert.Equal(0, Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero));
+                Win32.GdiplusShutdown(token);
+                BancCapture.Pump(2); // la boucle de messages du tray tourne entre deux icônes
+            });
+        }
+        finally
+        {
+            if (exterieur != IntPtr.Zero) Win32.GdiplusShutdown(exterieur);
+        }
+    }
+
+    // ── Leçons redimensionnées : le contenu suit la taille de la fenêtre ──────
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+
+    private const uint SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010;
+
+    /// <summary>
+    /// Les Leçons mettent leur contenu à l'échelle de la fenêtre (_windowScale) : chaque
+    /// taille donne des hauteurs de police neuves, demandées au cache partagé AppFonts.Get
+    /// (FontSpec), qui garde chaque HFONT jusqu'à la fin du processus. Le banc balaie
+    /// <see cref="Cycles"/> tailles distinctes, puis les mêmes une seconde fois : la seconde
+    /// passe ne doit rien créer (cache rempli), la première pas plus que la tolérance.
+    /// </summary>
+    [Fact]
+    public void Redimensionner_les_Lecons_ne_garde_pas_des_polices_pour_chaque_taille_traversee()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var layout = LayoutLoader.LoadFromResource();
+        var mapper = new KeyMapper(layout, new MockWin32Api());
+        var fen = new LessonsWindow(layout, mapper, new KeyboardHook(mapper)); // crochet jamais installé
+        try
+        {
+            fen.Show();
+            BancCapture.Pump(3);
+            IntPtr hwnd = BancCapture.Handle(fen);
+            GetWindowRect(hwnd, out var rect);
+            int w0 = rect.right - rect.left, h0 = rect.bottom - rect.top;
+            var tailles = new List<(int W, int H)>();
+            for (int i = 0; i < Cycles; i++)
+            {
+                float k = 0.85f + 0.4f * i / Math.Max(1, Cycles - 1); // de 0,85 à 1,25 fois la taille d'origine
+                tailles.Add(((int)(w0 * k), (int)(h0 * k)));
+            }
+            var echelles = new SortedSet<float>();
+            void Balayer()
+            {
+                foreach (var (w, h) in tailles)
+                {
+                    SetWindowPos(hwnd, IntPtr.Zero, 0, 0, w, h, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+                    BancCapture.Pump(2);
+                    Peindre(hwnd);
+                    echelles.Add(BancCapture.Field<float>(fen, "_windowScale"));
+                }
+                SetWindowPos(hwnd, IntPtr.Zero, 0, 0, w0, h0, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+                Peindre(hwnd);
+            }
+
+            for (int i = 0; i < Echauffement; i++) Peindre(hwnd); // taille d'origine seulement
+            var avant = Mesurer();
+            int policesAvant = Inscrits(typeof(AppFonts), "Cache");
+            Balayer();
+            var premiere = Mesurer();
+            int policesPremiere = Inscrits(typeof(AppFonts), "Cache");
+            Balayer();
+            var seconde = Mesurer();
+            _out.WriteLine($"Leçons redimensionnées ({Cycles} tailles, échelles {echelles.Count} distinctes de " +
+                           $"{(echelles.Count > 0 ? echelles.Min : 0)} à {(echelles.Count > 0 ? echelles.Max : 0)}) : " +
+                           $"avant {avant}, cache AppFonts {policesAvant} ; après une passe {premiere}, cache {policesPremiere} ; " +
+                           $"après la seconde {seconde}");
+
+            Assert.True(seconde.Gdi - premiere.Gdi <= Tolerance,
+                $"seconde passe sur les mêmes tailles : GDI +{seconde.Gdi - premiere.Gdi} (le cache ne se remplit jamais)");
+            Assert.True(premiere.Gdi - avant.Gdi <= Tolerance,
+                $"{Cycles} tailles traversées laissent GDI +{premiere.Gdi - avant.Gdi} objets jusqu'à la fin du processus " +
+                $"(cache AppFonts.Get : {policesAvant} → {policesPremiere} polices, une par hauteur ; avant {avant} ; après {premiere})");
+        }
+        finally { BancCapture.Teardown(fen); }
     }
 }
