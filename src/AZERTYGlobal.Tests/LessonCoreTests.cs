@@ -453,7 +453,9 @@ public class LessonCoreTests
     }
 
     [Fact]
-    public void ProgressStore_RollsBackMemoryWhenSaveFails()
+    // AF-02 (audit des fichiers 1.3.0, QCM du 16/11) : le retour arrière perdait la réussite sur
+    // un échec passager ; la mémoire la garde désormais et l'écriture se réessaie.
+    public void ProgressStore_KeepsMemoryAndPendingSaveWhenSaveFails()
     {
         string path = Path.Combine(Path.GetTempPath(), "azerty-lessons-dir-" + Guid.NewGuid());
         Directory.CreateDirectory(path);
@@ -467,8 +469,9 @@ public class LessonCoreTests
             var store = new LessonProgressStore(path);
             store.RecordSuccess(exercise, session.Stats);
 
-            Assert.False(store.IsCompleted(exercise));
-            Assert.False(File.Exists(path + ".tmp"));
+            Assert.True(store.IsCompleted(exercise));
+            Assert.True(store.HasPendingSave);
+            Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + "*.tmp")); // T-01 : temporaire par PID depuis AG130-11 (b)
         }
         finally
         {

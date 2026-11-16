@@ -1,4 +1,5 @@
 // Gestion de la configuration persistante (config.json)
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -30,6 +31,7 @@ static class ConfigManager
             _logDirectoryOverride = Path.GetDirectoryName(path);
             _cache = null;
             _compatibilityCache = null;
+            _compatibilityUnknown = null;
             _loadFailed = false;
             _dirty = false;
             _failedWrites = 0;
@@ -119,6 +121,15 @@ static class ConfigManager
 
     private static Dictionary<string, JsonElement>? _cache;
     private static Dictionary<string, string>? _compatibilityCache; // sous-objet compatibility (process → "forceOn"/"forceOff")
+
+    /// <summary>
+    /// Entrées de <c>compatibility</c> que cette version ne connaît pas (mode d'une version plus
+    /// récente, valeur d'une autre forme), gardées telles quelles et réécrites (AF-03, audit des
+    /// fichiers 1.3.0) : avant, elles étaient jetées au chargement puis effacées à la première
+    /// écriture, alors que les clés inconnues de la racine survivent depuis AG130-11 (a). Elles
+    /// n'ont aucun effet ici ; un choix de l'utilisateur pour le même processus les remplace.
+    /// </summary>
+    private static Dictionary<string, JsonElement>? _compatibilityUnknown;
     private static readonly object _lock = new();
     private static bool _loadFailed;
 
@@ -417,7 +428,7 @@ static class ConfigManager
         try
         {
             if (!File.Exists(path)) return DerivedAppLanguage();
-            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            using var doc = FileQuarantine.ParseUserFile(File.ReadAllText(path));
             if (doc.RootElement.ValueKind != JsonValueKind.Object) return DerivedAppLanguage();
             return doc.RootElement.TryGetProperty("appLanguage", out var value)
                    && value.ValueKind == JsonValueKind.String && value.GetString() == "en"
@@ -811,6 +822,7 @@ static class ConfigManager
         {
             EnsureLoaded();
             _compatibilityCache ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _compatibilityUnknown?.Remove(processName);
             if (mode == null)
                 _compatibilityCache.Remove(processName);
             else
@@ -900,10 +912,10 @@ static class ConfigManager
 
         var parts = value.Split(',');
         if (parts.Length != 4) return false;
-        if (!int.TryParse(parts[0], out int left) ||
-            !int.TryParse(parts[1], out int top) ||
-            !int.TryParse(parts[2], out int width) ||
-            !int.TryParse(parts[3], out int height))
+        if (!TryParseStoredInt(parts[0], out int left) ||
+            !TryParseStoredInt(parts[1], out int top) ||
+            !TryParseStoredInt(parts[2], out int width) ||
+            !TryParseStoredInt(parts[3], out int height))
             return false;
 
         if (width < 100 || height < 80) return false;
@@ -922,8 +934,20 @@ static class ConfigManager
         int width = rect.right - rect.left;
         int height = rect.bottom - rect.top;
         if (width < 100 || height < 80) return;
-        SetString(key, $"{rect.left},{rect.top},{width},{height}");
+        SetString(key, string.Create(CultureInfo.InvariantCulture, $"{rect.left},{rect.top},{width},{height}"));
     }
+
+    /// <summary>
+    /// Relit un entier de position de fenêtre (AF-05, audit des fichiers 1.3.0). Écrit en
+    /// culture invariante depuis ce correctif ; avant, il suivait le format régional du moment,
+    /// dont le signe moins peut être U+2212 (suédois, norvégien, finnois) : une coordonnée
+    /// négative ne se relisait plus après un changement de format. Le seul écart possible d'un
+    /// entier formaté par défaut est ce signe : on le ramène au trait d'union, puis on relit en
+    /// culture invariante.
+    /// </summary>
+    private static bool TryParseStoredInt(string text, out int value) =>
+        int.TryParse(text.Trim().Replace('−', '-'), NumberStyles.AllowLeadingSign,
+            CultureInfo.InvariantCulture, out value);
 
     public static void ClearWindowBounds(string key)
     {
@@ -1280,7 +1304,7 @@ static class ConfigManager
             if (File.Exists(_configPath))
             {
                 var json = File.ReadAllText(_configPath);
-                using var doc = JsonDocument.Parse(json);
+                using var doc = FileQuarantine.ParseUserFile(json);
                 if (doc.RootElement.ValueKind != JsonValueKind.Object)
                     throw new JsonException("La configuration doit être un objet JSON.");
                 foreach (var prop in doc.RootElement.EnumerateObject())
@@ -1291,11 +1315,13 @@ static class ConfigManager
                         _compatibilityCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                         foreach (var entry in prop.Value.EnumerateObject())
                         {
-                            if (entry.Value.ValueKind == JsonValueKind.String)
+                            var v = entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString() : null;
+                            if (v == "forceOn" || v == "forceOff")
+                                _compatibilityCache[entry.Name] = v;
+                            else
                             {
-                                var v = entry.Value.GetString();
-                                if (v == "forceOn" || v == "forceOff")
-                                    _compatibilityCache[entry.Name] = v;
+                                _compatibilityUnknown ??= new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+                                _compatibilityUnknown[entry.Name] = entry.Value.Clone();
                             }
                         }
                         continue;
@@ -1323,6 +1349,7 @@ static class ConfigManager
             Log("ConfigManager.EnsureLoaded", ex);
             _cache.Clear();
             _compatibilityCache = null;
+            _compatibilityUnknown = null;
             if (FileQuarantine.TryMoveAside(_configPath, "ConfigManager.Quarantine") != null)
                 _quarantineNoticePending = true;
             else if (File.Exists(_configPath))
@@ -1337,6 +1364,9 @@ static class ConfigManager
             // Fichier disparu entre File.Exists et la lecture : comme une installation neuve.
             Log("ConfigManager.EnsureLoaded", ex);
         }
+
+        // AF-06 : temporaires laissés par une coupure d'un lancement précédent.
+        if (!_loadFailed) FileQuarantine.RemoveOrphanTemps(_configPath);
 
         // Installation neuve (aucun fichier, ou fichier corrompu mis de côté) : la langue
         // initiale suit l'interface Windows et s'écrit à la première écriture — un défaut
@@ -1577,15 +1607,23 @@ static class ConfigManager
                 val.WriteTo(writer);
             }
             // Sous-objet compatibility (overrides utilisateur par process)
-            if (_compatibilityCache != null && _compatibilityCache.Count > 0)
+            if (_compatibilityCache?.Count > 0 || _compatibilityUnknown?.Count > 0)
             {
                 writer.WritePropertyName("compatibility");
                 writer.WriteStartObject();
-                foreach (var (proc, mode) in _compatibilityCache)
-                {
-                    writer.WritePropertyName(proc);
-                    writer.WriteStringValue(mode);
-                }
+                if (_compatibilityCache != null)
+                    foreach (var (proc, mode) in _compatibilityCache)
+                    {
+                        writer.WritePropertyName(proc);
+                        writer.WriteStringValue(mode);
+                    }
+                // AF-03 : entrées inconnues, réécrites telles qu'elles ont été lues.
+                if (_compatibilityUnknown != null)
+                    foreach (var (proc, value) in _compatibilityUnknown)
+                    {
+                        writer.WritePropertyName(proc);
+                        value.WriteTo(writer);
+                    }
                 writer.WriteEndObject();
             }
             writer.WriteEndObject();

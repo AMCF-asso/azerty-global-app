@@ -3267,6 +3267,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _freeBackspaces = 0;
         _freeStartedAt = null;
         ClearPendingPhysicalText();
+        _progress.RetryPendingSave(); // AF-02 : progression gardée en mémoire après un échec d'écriture
         Win32.ShowWindow(_hWnd, 0);
     }
 
@@ -3274,6 +3275,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         EndTutorial(completed: false); // referme la plage de frappe exclue du parcours
         LearningSessionTracker.Closed(this);
+        _progress.RetryPendingSave(); // AF-02 : dernier essai à la fermeture de l'application
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
         if (_onAppLanguageChanged != null)
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;

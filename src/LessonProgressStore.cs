@@ -167,12 +167,12 @@ internal sealed class LessonProgressStore
         // Le Défi n'est jamais la place de « Reprendre » (ME-07, C6.2) : même garde que
         // RecordSuccess, pour tous les chemins (relance de séance après « Réinitialiser »).
         if (exercise.ModuleId == DailyChallenge.ModuleId) return;
-        ReloadIfChangedOnDisk();
-        var snapshot = CaptureSnapshot();
-        LastModuleId = exercise.ModuleId;
-        LastLessonId = exercise.LessonId;
-        LastExerciseIndex = exercise.ExerciseIndex;
-        CommitOrRollback(snapshot, "LessonProgressStore.SetLastPosition");
+        Mutate("LessonProgressStore.SetLastPosition", () =>
+        {
+            LastModuleId = exercise.ModuleId;
+            LastLessonId = exercise.LessonId;
+            LastExerciseIndex = exercise.ExerciseIndex;
+        });
     }
 
     public void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats) =>
@@ -182,20 +182,26 @@ internal sealed class LessonProgressStore
     /// index de caractères.</param>
     internal void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats, Func<char, bool> isTracked)
     {
-        ReloadIfChangedOnDisk();
-        var snapshot = CaptureSnapshot();
-        RecordGesturesNoSave(stats, isTracked);
         // Révision ou texte collé : contenu composé, rien à retenir par exercice (L-13).
         if (LessonCatalogLoader.IsComposed(exercise.ModuleId))
         {
-            CommitOrRollback(snapshot, "LessonProgressStore.RecordReview");
+            Mutate("LessonProgressStore.RecordReview", () => RecordGesturesNoSave(stats, isTracked));
             return;
         }
+        var completedUtc = DateTimeOffset.UtcNow;
+        Mutate("LessonProgressStore.RecordSuccess", () =>
+        {
+            RecordGesturesNoSave(stats, isTracked);
+            RecordSuccessNoSave(exercise, stats, completedUtc);
+        });
+    }
 
+    private void RecordSuccessNoSave(LessonExercise exercise, LessonAttemptStats stats, DateTimeOffset completedUtc)
+    {
         var progress = GetOrReset(exercise);
         progress.Completed = true;
         progress.SuccessfulAttempts++;
-        progress.LastCompletedUtc = DateTimeOffset.UtcNow;
+        progress.LastCompletedUtc = completedUtc;
         progress.HintsUsed += stats.HintCount;
 
         if (stats.Wpm.HasValue)
@@ -213,7 +219,6 @@ internal sealed class LessonProgressStore
         // jamais la place de « Reprendre » (audit 09/11, L5).
         if (exercise.ModuleId != DailyChallenge.ModuleId)
             SetLastPositionNoSave(exercise);
-        CommitOrRollback(snapshot, "LessonProgressStore.RecordSuccess");
     }
 
     /// <summary>
@@ -229,21 +234,11 @@ internal sealed class LessonProgressStore
         catch (Exception ex) { ConfigManager.Log("LessonProgressStore.RecordTutorialGestures", ex); }
     }
 
-    internal void RecordGestures(LessonAttemptStats stats, Func<char, bool> isTracked)
-    {
-        ReloadIfChangedOnDisk();
-        var snapshot = CaptureSnapshot();
-        RecordGesturesNoSave(stats, isTracked);
-        CommitOrRollback(snapshot, "LessonProgressStore.RecordGestures");
-    }
+    internal void RecordGestures(LessonAttemptStats stats, Func<char, bool> isTracked) =>
+        Mutate("LessonProgressStore.RecordGestures", () => RecordGesturesNoSave(stats, isTracked));
 
-    public void MarkCompletedNeutral(LessonExercise exercise)
-    {
-        ReloadIfChangedOnDisk();
-        var snapshot = CaptureSnapshot();
-        MarkCompletedNeutralNoSave(exercise);
-        CommitOrRollback(snapshot, "LessonProgressStore.MarkCompletedNeutral");
-    }
+    public void MarkCompletedNeutral(LessonExercise exercise) =>
+        Mutate("LessonProgressStore.MarkCompletedNeutral", () => MarkCompletedNeutralNoSave(exercise));
 
     private void RecordGesturesNoSave(LessonAttemptStats stats, Func<char, bool> isTracked)
     {
@@ -279,34 +274,34 @@ internal sealed class LessonProgressStore
     public void SyncOnboardingProgress(LessonCatalog catalog, IReadOnlySet<int> completedExercises)
     {
         if (completedExercises.All(_onboardingSynced.Contains)) return;
-        ReloadIfChangedOnDisk();
-        var snapshot = CaptureSnapshot();
-        foreach (var exercise in catalog.Exercises)
+        Mutate("LessonProgressStore.SyncOnboardingProgress", () =>
         {
-            if (!StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.InitiationModuleId))
-                continue;
-            if (completedExercises.Contains(exercise.ExerciseIndex) && !_onboardingSynced.Contains(exercise.ExerciseIndex))
-                MarkCompletedNeutralNoSave(exercise);
-        }
-        _onboardingSynced.UnionWith(completedExercises);
-        CommitOrRollback(snapshot, "LessonProgressStore.SyncOnboardingProgress");
+            foreach (var exercise in catalog.Exercises)
+            {
+                if (!StringComparer.Ordinal.Equals(exercise.ModuleId, LessonCatalogLoader.InitiationModuleId))
+                    continue;
+                if (completedExercises.Contains(exercise.ExerciseIndex) && !_onboardingSynced.Contains(exercise.ExerciseIndex))
+                    MarkCompletedNeutralNoSave(exercise);
+            }
+            _onboardingSynced.UnionWith(completedExercises);
+        });
     }
 
     public void ResetAll(int? onboardingSyncedMaxStep = null)
     {
-        ReloadIfChangedOnDisk();
-        var snapshot = CaptureSnapshot();
-        _exercises.Clear();
-        _gestures.Clear();
-        LastModuleId = null;
-        LastLessonId = null;
-        LastExerciseIndex = 0;
-        _onboardingSynced.Clear();
-        if (onboardingSyncedMaxStep is int maxStep)
-            _onboardingSynced.UnionWith(Enumerable.Range(0, Math.Max(0, maxStep)));
-        else
-            _onboardingSynced.UnionWith(ConfigManager.LearningCompletedExercises);
-        CommitOrRollback(snapshot, "LessonProgressStore.ResetAll");
+        var synced = onboardingSyncedMaxStep is int maxStep
+            ? Enumerable.Range(0, Math.Max(0, maxStep)).ToArray()
+            : ConfigManager.LearningCompletedExercises.ToArray();
+        Mutate("LessonProgressStore.ResetAll", () =>
+        {
+            _exercises.Clear();
+            _gestures.Clear();
+            LastModuleId = null;
+            LastLessonId = null;
+            LastExerciseIndex = 0;
+            _onboardingSynced.Clear();
+            _onboardingSynced.UnionWith(synced);
+        });
     }
 
     private LessonExerciseProgress GetOrReset(LessonExercise exercise)
@@ -375,7 +370,16 @@ internal sealed class LessonProgressStore
         try
         {
             DateTime? current = File.Exists(_path) ? File.GetLastWriteTimeUtc(_path) : null;
-            if (current != _knownWriteUtc) Load();
+            if (current != _knownWriteUtc)
+            {
+                Load();
+                // AF-02 : les changements pas encore écrits sont rejoués sur l'état relu, comme
+                // s'ils venaient d'être faits : ni ceux de l'autre écrivain ni les nôtres ne
+                // sont perdus. Un fichier devenu non chargeable les abandonne (la mémoire suit
+                // alors le disque, qu'on ne réécrira pas).
+                if (_loadFailed) _pendingChanges.Clear();
+                else foreach (var change in _pendingChanges) change();
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -383,16 +387,66 @@ internal sealed class LessonProgressStore
         }
     }
 
-    private void CommitOrRollback(ProgressStoreSnapshot snapshot, string operation)
+    /// <summary>
+    /// Changements gardés en mémoire après un échec d'écriture (AF-02, audit des fichiers
+    /// 1.3.0). Avant, la mémoire revenait à l'état d'avant : un fichier tenu un instant par un
+    /// antivirus ou une sauvegarde, ou un disque plein, faisait perdre la réussite sans un mot,
+    /// même après une écriture suivante réussie. Ils s'écrivent avec le changement suivant, à la
+    /// fermeture de la fenêtre des Leçons ou de l'application (<see cref="RetryPendingSave"/>).
+    /// </summary>
+    private readonly List<Action> _pendingChanges = new();
+
+    /// <summary>Vrai tant qu'un changement attend d'être écrit.</summary>
+    internal bool HasPendingSave => _pendingChanges.Count > 0;
+
+    /// <summary>
+    /// Toute écriture de la progression : relit le fichier s'il a changé, applique le
+    /// changement, écrit. Sur un échec, un fichier chargé garde le changement en mémoire pour
+    /// le prochain essai (AF-02) ; un fichier non chargé (format plus récent, lecture
+    /// impossible) n'est jamais écrit, et la mémoire revient à son état pour ne pas diverger.
+    /// </summary>
+    private void Mutate(string operation, Action change)
     {
-        if (!Save(operation))
+        ReloadIfChangedOnDisk();
+        var snapshot = CaptureSnapshot();
+        change();
+        if (Save(operation))
+            _pendingChanges.Clear();
+        else if (_loadFailed)
             RestoreSnapshot(snapshot);
+        else
+            _pendingChanges.Add(change);
     }
+
+    /// <summary>Réessaie d'écrire les changements gardés après un échec (AF-02). Sans effet
+    /// quand rien n'attend.</summary>
+    public void RetryPendingSave()
+    {
+        if (_pendingChanges.Count == 0) return;
+        ReloadIfChangedOnDisk();
+        if (_pendingChanges.Count > 0 && Save("LessonProgressStore.RetryPendingSave"))
+            _pendingChanges.Clear();
+    }
+
+    /// <summary>Champs de la racine que cette version lit et écrit.</summary>
+    private static readonly HashSet<string> KnownRootFields = new(StringComparer.Ordinal)
+    {
+        "version", "lastModuleId", "lastLessonId", "lastExerciseIndex", "onboardingSyncedMaxStep",
+        "onboardingSyncedExercises", "exercises", "gestures",
+    };
+
+    /// <summary>
+    /// Champs inconnus de la racine, gardés tels quels et réécrits (AF-03, audit des fichiers
+    /// 1.3.0) : le format 1 s'enrichit sans changer de numéro (« gestures » y est né), et une
+    /// version plus récente qui ajoute un champ le perdait au premier passage par celle-ci.
+    /// </summary>
+    private readonly List<KeyValuePair<string, JsonElement>> _unknownRootFields = new();
 
     private void Load()
     {
         _exercises.Clear();
         _gestures.Clear();
+        _unknownRootFields.Clear();
         _loadFailed = false;
         _knownWriteUtc = null;
         if (!File.Exists(_path)) return;
@@ -402,7 +456,7 @@ internal sealed class LessonProgressStore
 
         try
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(_path));
+            using var doc = FileQuarantine.ParseUserFile(File.ReadAllText(_path)); // AF-01
             var root = doc.RootElement;
             if (IsNewerFormat(root))
             {
@@ -418,6 +472,11 @@ internal sealed class LessonProgressStore
                 version.ValueKind != JsonValueKind.Number ||
                 !version.TryGetInt32(out int formatVersion) || formatVersion != CurrentVersion)
                 throw new JsonException("Format de progression non pris en charge ; fichier conservé.");
+
+            foreach (var prop in root.EnumerateObject())
+                if (!KnownRootFields.Contains(prop.Name))
+                    _unknownRootFields.Add(new(prop.Name, prop.Value.Clone()));
+            FileQuarantine.RemoveOrphanTemps(_path); // AF-06
 
             LastModuleId = ReadString(root, "lastModuleId");
             LastLessonId = ReadString(root, "lastLessonId");
@@ -585,6 +644,11 @@ internal sealed class LessonProgressStore
                     writer.WriteEndObject();
                 }
                 writer.WriteEndObject();
+                foreach (var (name, value) in _unknownRootFields) // AF-03
+                {
+                    writer.WritePropertyName(name);
+                    value.WriteTo(writer);
+                }
                 writer.WriteEndObject();
                 // L-14 : atomique, mais pas durable sans ceci — après une coupure de courant,
                 // le fichier remplacé pouvait rester vide ou illisible.
