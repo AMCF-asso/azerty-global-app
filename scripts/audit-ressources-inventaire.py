@@ -9,7 +9,10 @@ docs/audit-ressources-verdicts.tsv ; docs/audit-ressources.md en tire les consta
 
 Usage : python scripts/audit-ressources-inventaire.py [--tsv sortie.tsv] [--md docs/audit-ressources-inventaire.md] [--check]
 --check échoue (code 1) si un site n'a ni règle ni verdict, ou si un verdict lu ne
-correspond plus à aucun site.
+correspond plus à aucun site. verify.ps1 le lance (étape « ressources »).
+Un verdict lu s'attache à l'appel, pas à sa ligne : fichier, API, occurrence et texte de
+l'appel (espaces réduits). Ajouter du code au-dessus ne le périme pas ; changer l'appel, si :
+il faut alors le relire.
 Règle de recherche : motifs CREATIONS ci-dessous, ligne par ligne, commentaires et
 déclarations P/Invoke exclus ; appels coupés sur deux lignes recollés (ligne suivante jointe
 quand la parenthèse ouverte n'est pas fermée).
@@ -115,13 +118,18 @@ EVENTS_DECL = re.compile(r"\bevent\s+[\w<>?,\. ]+\s+(?P<n>\w+)\s*[;{=]")
 WINDOW_LINES = 120
 
 
-def source_files():
-    for dirpath, dirnames, filenames in os.walk(ROOT):
+def source_files(root):
+    for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if not d.endswith("Tests") and d not in ("bin", "obj", "TestSupport"))
         for fn in sorted(filenames):
             if fn.endswith(".cs"):
                 path = os.path.join(dirpath, fn)
-                yield os.path.relpath(path, ROOT).replace("\\", "/"), path
+                yield os.path.relpath(path, root).replace("\\", "/"), path
+
+
+def call_text(s):
+    """Texte de l'appel qui porte un verdict lu : espaces réduits, stable quand le code bouge."""
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def logical_lines(lines):
@@ -201,15 +209,20 @@ def fr_typo(line):
     return "".join(parts)
 
 
-def load_verdicts():
+def load_verdicts(path):
+    """(fichier, api, occurrence, appel) → verdict. Une ligne : fichier, api, occurrence, appel,
+    verdict, séparés par des tabulations."""
     out = {}
-    if os.path.exists(VERDICTS):
-        with open(VERDICTS, encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("#") or not line.strip() or line.startswith("site\t"):
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            for no, line in enumerate(f, 1):
+                if line.startswith("#") or not line.strip() or line.startswith("fichier\t"):
                     continue
-                site, verdict = line.rstrip("\n").split("\t", 1)
-                out[site] = verdict
+                parts = line.rstrip("\n").split("\t")
+                if len(parts) != 5 or not parts[2].isdigit():
+                    sys.exit(f"{path}:{no} : attendu fichier, api, occurrence, appel, verdict")
+                rel, api, occ, call, verdict = parts
+                out[(rel, api, int(occ), call)] = verdict
     return out
 
 
@@ -218,10 +231,12 @@ def main():
     ap.add_argument("--tsv")
     ap.add_argument("--md", help="écrit l'inventaire complet en Markdown")
     ap.add_argument("--check", action="store_true", help="échoue si un site n'a pas de verdict")
+    ap.add_argument("--src", default=ROOT, help="dossier des sources (src/ par défaut)")
+    ap.add_argument("--verdicts", default=VERDICTS, help="verdicts lus (docs/audit-ressources-verdicts.tsv par défaut)")
     args = ap.parse_args()
 
     declared_events = set()
-    files = list(source_files())
+    files = list(source_files(args.src))
     for rel, path in files:
         with open(path, encoding="utf-8-sig") as f:
             for line in f:
@@ -263,7 +278,7 @@ def main():
                             break
                 if partner == "à lire":
                     partner = rule_partner(api, s, var, rel, lines, no)
-                rows.append((cat, api, f"{rel}:{no}", var or "", partner, s[:150]))
+                rows.append((cat, api, f"{rel}:{no}", var or "", partner, s[:150], rel, call_text(s)))
 
     # Deux créations sur la même ligne logique : le site prend le nom de l'API en suffixe.
     seen = Counter(r[2] for r in rows)
@@ -271,19 +286,25 @@ def main():
     # Libération trouvée dans la même méthode : « libéré : site ».
     rows = [r if r[4] == "à lire" or not re.match(r"^[\w\./]+\.cs:\d+$", r[4]) else r[:4] + ("libéré : " + r[4],) + r[5:]
             for r in rows]
-    manual = load_verdicts()
-    sites = {r[2] for r in rows}
-    stale = sorted(set(manual) - sites)
-    rows = [r[:4] + (manual[r[2]] + " (lu)",) + r[5:] if r[4] == "à lire" and r[2] in manual else r for r in rows]
+    # Ancre d'un verdict lu : fichier, API, rang de l'appel identique dans le fichier, appel.
+    rank = Counter()
+    anchors = []
+    for r in rows:
+        rank[(r[6], r[1], r[7])] += 1
+        anchors.append((r[6], r[1], rank[(r[6], r[1], r[7])], r[7]))
+    manual = load_verdicts(args.verdicts)
+    stale = sorted(set(manual) - set(anchors))
+    rows = [r[:4] + (manual[a] + " (lu)",) + r[5:] if r[4] == "à lire" and a in manual else r
+            for r, a in zip(rows, anchors)]
 
     counts = Counter((r[0], r[1]) for r in rows)
     per_cat = Counter(r[0] for r in rows)
     unread = [r for r in rows if r[4] == "à lire"]
     if args.tsv:
         with open(args.tsv, "w", encoding="utf-8") as o:
-            o.write("categorie\tapi\tsite\tvariable\tliberation\ttexte\n")
-            for r in rows:
-                o.write("\t".join(r) + "\n")
+            o.write("categorie\tapi\tsite\tvariable\tliberation\ttexte\toccurrence\tappel\n")
+            for r, a in zip(rows, anchors):
+                o.write("\t".join(r[:6] + (str(a[2]), a[3])) + "\n")
     if args.md:
         o = io.StringIO()
         o.write("# Inventaire des ressources de src/ (généré)\n\n")
@@ -309,8 +330,8 @@ def main():
     if args.check and (unread or stale):
         for r in unread:
             out.write(f"sans verdict : {r[2]}\t{r[1]}\t{r[5]}\n")
-        for s in stale:
-            out.write(f"verdict lu sans site (ligne déplacée ?) : {s}\n")
+        for rel, api, occ, call in stale:
+            out.write(f"verdict lu sans appel (appel modifié ou retiré : relire) : {rel}\t{api}\t{occ}\t{call[:150]}\n")
         sys.exit(1)
 
 
