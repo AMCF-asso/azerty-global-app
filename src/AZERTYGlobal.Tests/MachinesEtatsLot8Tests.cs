@@ -143,4 +143,28 @@ public sealed class MachinesEtatsLot8Tests
         Assert.True(ClipboardText.OpenWithRetry(_ => true, (IntPtr)1, sleeps.Add));
         Assert.Empty(sleeps);
     }
+
+    // Constat C8.2
+    // Copie de secours réussie (« Copié » armé pour 1,5 s), puis fermeture et réouverture avant
+    // l'échéance : l'état « Copié » est propre à une ouverture et ne doit pas survivre à Show.
+    // Modèle suivi : Audit0911RechercheTests.PerteDeFocus_LaRequêteEtLesRésultatsSurvivent_Réouverture.
+    [Fact]
+    public void Recherche_RetourCopié_NeSurvitPasÀLaRéouverture()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var search = CreateWithoutTarget();
+        try
+        {
+            search.Show();
+            BancCapture.SetField(search, "_showCopiedFeedback", true);
+            BancCapture.SetField(search, "_copiedChar", "é");
+
+            search.Hide();
+            search.Show();
+
+            Assert.False(BancCapture.Field<bool>(search, "_showCopiedFeedback"),
+                "la fenêtre rouverte affiche encore « Copié » pour le caractère de l'ouverture précédente");
+        }
+        finally { BancCapture.Teardown(search); }
+    }
 }

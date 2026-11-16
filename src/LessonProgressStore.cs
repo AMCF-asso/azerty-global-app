@@ -164,6 +164,9 @@ internal sealed class LessonProgressStore
 
     public void SetLastPosition(LessonExercise exercise)
     {
+        // Le Défi n'est jamais la place de « Reprendre » (ME-07, C6.2) : même garde que
+        // RecordSuccess, pour tous les chemins (relance de séance après « Réinitialiser »).
+        if (exercise.ModuleId == DailyChallenge.ModuleId) return;
         ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
         LastModuleId = exercise.ModuleId;

@@ -243,6 +243,39 @@ public sealed class MachinesEtatsLot5Tests
         Assert.False(TrainingReminders.ShouldRemind(soir, TrainingReminders.Snapshot()));
     }
 
+    // Constat C5.5
+    // Statistiques ouverte avec la section « Défi du jour » visible (opt-in coché) ; l'opt-in est
+    // décoché depuis les Paramètres (fenêtre non modale) pendant l'ouverture. La peinture relit le
+    // prédicat, la mise en page ne suit pas : la hauteur de contenu garde la section disparue.
+    // Modèle suivi : Audit0911AccueilAProposTests.Statistiques_LangueChangéePendantLOuverture_LesTextesSuivent
+    // (fenêtre ouverte, réglage changé à chaud) et TroncatureLibellesTests (UsageStatsWindow, _scroll).
+    [Fact]
+    public void Statistiques_SectionDefiMasqueePendantLOuverture_LaHauteurDeMiseEnPageSuit()
+    {
+        using var isolation = new BancCapture.Isolation();
+        ConfigManager.SetTrainingEnabled(true);
+        var fenetre = new UsageStatsWindow();
+        UsageStatsWindow? reference = null;
+        try
+        {
+            int hauteurSectionVisible = BancCapture.Field<WindowScroll>(fenetre, "_scroll").ContentHeight;
+
+            ConfigManager.SetTrainingEnabled(false);
+
+            reference = new UsageStatsWindow(); // mise en page faite d'emblée sans la section
+            int hauteurAttendue = BancCapture.Field<WindowScroll>(reference, "_scroll").ContentHeight;
+            Assert.True(hauteurSectionVisible > hauteurAttendue,
+                "témoin : la section Défi doit ajouter de la hauteur quand elle est visible");
+
+            Assert.Equal(hauteurAttendue, BancCapture.Field<WindowScroll>(fenetre, "_scroll").ContentHeight);
+        }
+        finally
+        {
+            if (reference != null) BancCapture.Teardown(reference);
+            BancCapture.Teardown(fenetre);
+        }
+    }
+
     private static string ÉcrireProgression(string dossier, string exercices)
     {
         string chemin = Path.Combine(dossier, LessonProgressStore.FileName);

@@ -138,7 +138,7 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C1.4 | M1.3 | Le passage natif des lettres lit le Maj physique alors que le Maj d'activation est neutralisé (A au lieu de a) | confirmé | faible | ME-05 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
 | C1.5 | M1.2 | Un coup de couche survit à Entrée et à Tab, sans expiration | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
 | C1.6 | M1.4 | Répétition automatique du déclencheur après relâchement du modificateur d'activation : étoile émise ou code de touche périmé dans `_passedThroughKeys` | confirmé | faible | ME-05 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
-| C1.7 | M1.8 | `LayerIndicatorWindow` sans fenêtre : `InvalidateRect` avec un HWND nul | plausible (couture à ajouter) | faible | ME-07 | lecture du code |
+| C1.7 | M1.8 | `LayerIndicatorWindow` sans fenêtre : `InvalidateRect` avec un HWND nul | corrigé (test rouge avant le correctif : confirmé) | faible | ME-07 | `AZERTYGlobal/LayerIndicatorWindow.cs` (`Update`, `RefreshPosition`, `Hide` ; points d'appui `InvalidateWindow` et constructeur interne à enregistrement de classe injectable) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`IndicateurDeCouche_SansFenetre_NeRepeintRien`) |
 | C2.1 | M2.2 | La sonde de silence réinstalle le hook toutes les ~4 s pendant la frappe dans une fenêtre de niveau d'intégrité supérieur | plausible (preuve en réel seulement) | faible | ME-12 | lecture du code |
 | C2.2 | M2.5 | Un ouvrier UIA unique bloqué rend « sécurisé » le premier plan de toutes les applications | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `TypingEngine.Windows.Tests/MachinesEtatsLot2Tests.cs` |
 | C2.3 | M2.4 | Premier plan absent traité Default/None (fail-open) alors que l'inconnu est traité fail-closed | réfuté | — | — | relecture adversariale |
@@ -159,18 +159,18 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C5.2 | M5.4 | Exclusion de frappe liée à l'ouverture du tutoriel et non au focus | plausible (couture à ajouter) | faible | ME-12 | lecture du code |
 | C5.3 | M5.7 | États absorbants _loadFailed et _readFailed jusqu'au redémarrage | réfuté | — | — | relecture adversariale |
 | C5.4 | M5.7 | ResetAll partiel : état de progression résiduel | réfuté | — | — | relecture adversariale |
-| C5.5 | M5.6 | Prédicat de mise en page différent de celui de la peinture dans la fenêtre Statistiques | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` |
+| C5.5 | M5.6 | Prédicat de mise en page différent de celui de la peinture dans la fenêtre Statistiques | corrigé | faible | ME-07 | `AZERTYGlobal/UsageStatsWindow.cs` (`OnTrainingEnabledChanged`), `ConfigManager.cs` (`TrainingEnabledChanged`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_SectionDefiMasqueePendantLOuverture_LaHauteurDeMiseEnPageSuit`) |
 | C5.6 | M5.8 | Entrée d'exercice non objet : TryGetProperty lève et fait échouer tout le chargement | corrigé | faible | ME-02 | `AZERTYGlobal/LessonProgressStore.cs` (`Load`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Progression_UneEntreeNonObjet_NeFaitPasEchouerLeChargement`, `Progression_EntreesMalFormees_IgnoreesSansPerdreLesExercicesValides`) |
 | C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | corrigé | faible | ME-10 | `AZERTYGlobal/UsageStats.cs` (`RecordActivityLocked`, `CurrentStreak`), `TrainingReminders.cs` (`WouldCount`, `ShouldRemind`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte`, `…_LaSerieEnCoursNEstPasRemiseAZero`, `…_LaSerieAfficheeNeTombePasAZero`, `DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`, `Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui`, `Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`) |
 | C6.1 | M6.3 | Garde IsTutorialActive inopérante dans SettleSessionOnHide | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
-| C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
+| C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | corrigé | faible | ME-07 | `AZERTYGlobal/LessonProgressStore.cs` (`SetLastPosition`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` (`ReinitialiserLaProgression_SurLeDefi_NEnregistrePasLeDefiCommePosition`, `ReinitialiserLaProgression_SurLeDefi_PuisFermer_RendLaPlaceDuCatalogue`) |
 | C7.1 | M7.1 | Double clic sur « Suivant » à l'étape 2 : l'accueil se valide sans que l'étape 3 ait été vue | corrigé | moyenne | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`IsSecondClickOfDoubleClick`, `GoToNextStep`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`) |
 | C7.2 | M7.2 | « Ne plus afficher » toujours affichée décochée : « C'est parti ! » réécrit à true un refus déjà persisté | corrigé | faible | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`Show`, `Close`, `_dontShowShownChecked`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé`, `Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`) |
 | C7.3 | M7.4 | La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert | confirmé | faible | ME-08 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
 | C7.4 | M7.5 | La minuterie de quiétude de l'avis n'est jamais réarmée après coupure puis rétablissement des notifications | plausible (couture à ajouter) | faible | ME-08 | lecture du code |
 | C7.5 | M7.7 | Aucun garde de double appel de la boîte d'avis du Store | plausible (preuve en réel seulement) | faible | ME-08 | lecture du code |
 | C8.1 | M8.2 | Copie de secours sans aucun retour quand le presse-papiers est occupé | corrigé | faible | ME-11 | `AZERTYGlobal/CharacterSearch.cs`, `ClipboardText.cs`, `ChallengeSessionState.cs` ; test `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` (`Recherche_EchecDeLInsertionEtDeLaCopie_EstAnnoncé`) |
-| C8.2 | M8.2 | Retour Copié périmé à la réouverture | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` |
+| C8.2 | M8.2 | Retour Copié périmé à la réouverture | corrigé | faible | ME-07 | `AZERTYGlobal/CharacterSearch.cs` (`Show`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot8Tests.cs` (`Recherche_RetourCopié_NeSurvitPasÀLaRéouverture`) |
 
 ## Lot 1 — Moteur de frappe
 
@@ -612,7 +612,7 @@ C1.2, C1.3.
 #### Invariants
 
 - I1 : l'indicateur n'est montré que si la couche est active, les réglages l'autorisent, hors saisie sécurisée (`LayerIndicatorWindow.cs:56-62`).
-- I2 : aucun appel Win32 sur une fenêtre absente. **Non garanti** : `Update` et `RefreshPosition` n'examinent jamais `_hWnd` (C1.7).
+- I2 : aucun appel Win32 sur une fenêtre absente. Garanti depuis ME-07 : `Update` et `RefreshPosition` sortent dès que `_hWnd == 0`, et `Hide` n'appelle `ShowWindow` que si la fenêtre existe (C1.7 corrigé).
 - I3 : le pinceau n'est pas détruit par l'indicateur (propriété de la classe). Garanti par `:29-31` et `:158-166`.
 
 #### Table de transition
@@ -620,9 +620,9 @@ C1.2, C1.3.
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
 | T1.8.1 | — | construction | classe et fenêtre créées | Caché | DPI lu | `:17-37` |
-| T1.8.2 | — | construction | classe ou fenêtre refusée | Sans fenêtre | — | `:22-23, 26-28` |
+| T1.8.2 | — | construction | classe ou fenêtre refusée | Sans fenêtre | — ; `Update`, `RefreshPosition` et `Hide` n'agissent plus (ME-07) | `:22-23, 26-28` |
 | T1.8.3 | Caché/Visible | `Update(state, secure)` | réglages off, secure ou inactif | Caché | `ShowWindow(0)` si visible | `:56-62, 93-99` |
-| T1.8.4 | Caché/Visible | `Update` | actif | Visible si caret trouvé, sinon Caché | libellé recalculé, `SetWindowPos`, `InvalidateRect` | `:64-74, 76-91` |
+| T1.8.4 | Caché/Visible | `Update` | actif et fenêtre présente (`_hWnd != 0`, ME-07) | Visible si caret trouvé, sinon Caché | libellé recalculé, `SetWindowPos`, `InvalidateRect` | `:64-74, 76-91` |
 | T1.8.5 | Visible | `RefreshPosition` | pas de caret | Caché (`_label` vidé) | — | `:79-83` |
 | T1.8.6 | Visible | `WM_DPICHANGED` | nouveau DPI | Visible | redimensionne, repaint | `:128-142` |
 | T1.8.7 | tout | `Dispose` | — | Détruit | `DestroyWindow`, `UnregisterClass` | `:158-166` |
@@ -633,7 +633,7 @@ Aucune minuterie. Repositionnement déclenché par chaque keydown quand une couc
 
 #### États ou transitions invalides atteignables
 
-C1.7.
+C1.7 corrigé (ticket ME-07) : invariant I2 rétabli, test `MachinesEtatsLot1Tests.IndicateurDeCouche_SansFenetre_NeRepeintRien`.
 
 ### Constats du lot (renvoi)
 
@@ -2096,7 +2096,7 @@ Aucun constat.
 
 #### Invariants
 
-- I1 : la mise en page et la peinture utilisent le même prédicat — non garanti (C5.5 : `src/UsageStatsWindow.cs:286` contre `:658`).
+- I1 : la mise en page et la peinture utilisent le même prédicat — garanti depuis ME-07 : la mise en page est refaite (`FitWindow`) dès que l'opt-in du Défi change pendant l'ouverture (`ConfigManager.TrainingEnabledChanged`, `OnTrainingEnabledChanged`), au lieu de ne l'être qu'à `Show` et au changement de langue (C5.5 corrigé).
 - I2 : la minuterie de copie est détruite à la fermeture — non garanti : `Close()` (`src/UsageStatsWindow.cs:354-358`) ne fait que `ShowWindow(0)` et `_visible = false`, sans `KillTimer` ; la minuterie ne se détruit que dans son propre `WM_TIMER` (`:453-460`, 1500 ms) ou à `DestroyWindow`. `:493-502` est `OnCopyStats`, qui l'arme.
 
 #### Table de transition
@@ -2105,6 +2105,7 @@ Aucun constat.
 |---|---|---|---|---|---|---|
 | 1 | Fermée | Show | — | Ouverte | taille calculée | `src/UsageStatsWindow.cs:334-345` |
 | 2 | Ouverte | Paint | `ChallengeSectionVisible` | idem | section peinte | `src/UsageStatsWindow.cs:658` |
+| 2b | Ouverte (ou masquée) | opt-in du Défi changé (Paramètres, accueil) | fenêtre créée | idem | `FitWindow` (hauteur, boutons), repeinte (ME-07) | `OnTrainingEnabledChanged` |
 | 3 | Ouverte | copie (`OnCopyStats`) | — | Copie confirmée | indicateur posé, minuterie armée (1500 ms) | `src/UsageStatsWindow.cs:493-502` |
 | 4 | Copie confirmée | `WM_TIMER` de la minuterie de copie | — | Ouverte | minuterie détruite, libellé restauré | `src/UsageStatsWindow.cs:453-460` |
 | 5 | Ouverte ou Copie confirmée | fermeture (`Close`) | — | Fermée (masquée) | `ShowWindow(0)`, `_visible = false` ; la minuterie de copie, si armée, n'est pas détruite | `src/UsageStatsWindow.cs:354-358` |
@@ -2115,7 +2116,7 @@ Minuterie de confirmation de copie, courte, sans réessai.
 
 #### États ou transitions invalides atteignables
 
-C5.5.
+C5.5 corrigé (ticket ME-07) : invariant I1 rétabli, test `MachinesEtatsLot5Tests.Statistiques_SectionDefiMasqueePendantLOuverture_LaHauteurDeMiseEnPageSuit`.
 
 ### M5.7 — Magasin de progression (LessonProgressStore)
 
@@ -2465,7 +2466,7 @@ Aucun constat.
 - I1 : `CompleteExercise` ne s'exécute qu'une fois par séance — garanti (`if (_showSummary) return;`, l.2672).
 - I2 : toute nouvelle séance repart de `StartCurrentSession` (l.1096) — garanti : `ReplayExercise`, `GoTo` et `SelectExercise` y passent. Cela ne garantit pas la position enregistrée (voir I4).
 - I3 : fermer la fenêtre solde un bilan lu — garanti sauf en mode Libre (`_mode != Lessons`, l.3047). La garde `IsTutorialActive` (l.3047) est morte : `Hide` appelle `EndTutorial` (l.3241) avant `SettleSessionOnHide` (l.3246), donc le solde s'exécute aussi après un parcours du tutoriel (C6.1).
-- I4 : la position enregistrée ne désigne jamais le Défi — non garanti, et aucune garde côté magasin : `SetLastPosition` n'a pas la garde de `RecordSuccess` (`LessonProgressStore.cs:165-172` contre `:209-212`). Atteignable sans réentrance : le bouton de remise à zéro est dans l'onglet Réglages (`LessonsWindow.Paper.cs:1001`), module courant inchangé ; après `ShowChallenge`, `ApplyProgressReset` (l.2919-2924) enregistre le Défi comme position (`StartCurrentSession(savePosition: true)`, l.1111-1112) (C6.2).
+- I4 : la position enregistrée ne désigne jamais le Défi — garanti depuis ME-07 par le magasin : `SetLastPosition` ignore un exercice du Défi, comme `RecordSuccess` (`LessonProgressStore.cs`). Avant : le bouton de remise à zéro est dans l'onglet Réglages (`LessonsWindow.Paper.cs:1001`), module courant inchangé ; après `ShowChallenge`, `ApplyProgressReset` enregistrait le Défi comme position (`StartCurrentSession(savePosition: true)`) (C6.2 corrigé).
 
 #### Table de transition
 
@@ -2478,7 +2479,7 @@ Aucun constat.
 | 5 | Frappe/Bilan | choisir module/leçon | index valide | Frappe | `HomeClearComposed`, `_settingsOpen=false` | `SelectModule` l.2926, `SelectLesson` l.2939 |
 | 6 | Frappe ou Bilan | Hide | `_mode == Lessons` (la garde `IsTutorialActive` est morte, voir C6.1 : le solde s'exécute aussi après un tutoriel) | Frappe | `SettleSessionOnHide` : bilan lu soldé par `HomeFinishComposed`, `GoTo` (l.3052-3056) ou `StartCurrentSession(false)` en fin de catalogue (l.3057-3061) | l.3238-3246, 3045-3065 |
 | 7 | Défi | Hide | — | catalogue | `PickInitialSelection` | l.3063 |
-| 8 | tout | reset confirmé | IDYES | Frappe | `ApplyProgressReset` | l.2908-2924 |
+| 8 | tout | reset confirmé | IDYES | Frappe | `ApplyProgressReset` ; sur le Défi, la séance repart sans enregistrer de position (ME-07) | l.2908-2924 |
 
 #### Temporisations et réessais
 
@@ -2486,7 +2487,8 @@ Aucun constat.
 
 #### États ou transitions invalides atteignables
 
-C6.1, C6.2
+C6.1
+C6.2 corrigé (ticket ME-07) : invariant I4 rétabli, tests `MachinesEtatsLot6Tests.ReinitialiserLaProgression_SurLeDefi_NEnregistrePasLeDefiCommePosition` et `…_PuisFermer_RendLaPlaceDuCatalogue`.
 
 ### M6.3 — Tutoriel de l'accueil (_tutorialPage, _tutorialRoute)
 
@@ -2704,7 +2706,7 @@ Aucun constat.
 
 #### États ou transitions invalides atteignables
 
-C6.2
+C6.2 corrigé (ticket ME-07) : voir M6.2.
 
 ### M6.8 — File de texte physique attendu (PhysicalTextInputBuffer)
 
@@ -3267,6 +3269,7 @@ Aucun constat.
 | `_showCopiedFeedback`, `_copiedChar` | bool, string | `InsertSelectedCharacter` (l. 1202-1203) ; faux sur `WM_TIMER` (l. 979) | fil UI | fil unique |
 | `_showCopyFailedFeedback` | bool | `InsertSelectedCharacter` (échec de la copie, ME-11) ; faux sur `WM_TIMER` et après une copie réussie | fil UI | fil unique |
 | `_enterFoundNothing` | bool | `InsertSelectedCharacter` (l. 1181) ; faux dans `Show` (l. 838) | fil UI | fil unique |
+| (retours de copie) | `_showCopiedFeedback`, `_showCopyFailedFeedback`, minuterie 1500 ms | faux, minuterie tuée, dans `Show` (ME-07) | fil UI | fil unique |
 | `_selectedIndex`, `_scrollOffset`, `_filteredResults` | int, int, liste | `Search`, molette, clic | fil UI | fil unique |
 
 #### États
@@ -3286,7 +3289,7 @@ Résultat d'insertion (explicite) : `Inserted`, `NotInserted`, `Partial`, `Bloc
 - I2 : une insertion ne s'émet ni sous blocage ni sur champ protégé. Garanti par `_canInsert()` testé avant et après `_refreshTarget()` (`TextInsertionService.cs:29, 37`).
 - I3 : la copie de secours ne part que si aucun événement n'a été émis. Garanti : `if (outcome != TextInsertionOutcome.NotInserted) return;` (`CharacterSearch.cs:1196-1197`).
 - I4 : un échec d'insertion suivi d'un échec de copie est annoncé à l'utilisateur. Garanti depuis ME-11 : `ClipboardWriter` (remplaçable, `ClipboardText.TrySet` par défaut) rend false, alors `FallbackCopyFailed` (ballon), annonce du champ et ligne de pied « Copie impossible » pendant 1500 ms ; `TrySet` ouvre le presse-papiers jusqu'à 4 fois, 25 ms entre les essais (`ClipboardText.OpenWithRetry`). `Blocked` retourne toujours sans rien dire : pause ou champ protégé, voulu.
-- I5 : l'état « Copié » n'a de sens que fenêtre ouverte. Non garanti : `Hide()` et `Show()` ne le remettent pas à zéro.
+- I5 : l'état « Copié » (et « Copie impossible ») est propre à une ouverture. Garanti depuis ME-07 : `Show()` remet les deux drapeaux à faux et tue la minuterie de 1500 ms encore en vol ; `Hide()` n'y touche pas (un retour armé fenêtre masquée, T7, est effacé à la réouverture).
 
 #### Table de transition
 
@@ -3298,7 +3301,7 @@ Résultat d'insertion (explicite) : `Inserted`, `NotInserted`, `Partial`, `Bloc
 | T4 | Ouverte | `WM_CLOSE` | aucune | Masquée | `Hide()` | `CharacterSearch.cs:955-957` |
 | T5 | Ouverte | Entrée, résultat sélectionné | `!_inputPaused` | Ouverte, ou Masquée dès que la cible est non nulle et activée (`ActivateTargetWindow` `TextInsertionService.cs:44-60` : le focus passe à la cible, la recherche reçoit `WA_INACTIVE`, T3, avant le retour de `Insert`) | `Insert(target, caractère)` | `CharacterSearch.cs:1174-1192` |
 | T6 | Ouverte | Entrée, aucun résultat | index hors liste | Ouverte | `_enterFoundNothing`, annonce | `CharacterSearch.cs:1177-1184` |
-| T7 | Ouverte ou Masquée (Masquée quand la cible a été activée puis que `_emitText` n'a envoyé aucun événement : T3 a déjà masqué la fenêtre) | insertion `NotInserted` | copie réussie | Retour « Copié » (Ouverte ou Masquée : `Hide()` ne remet pas le drapeau à zéro) | `_showCopiedFeedback`, ballon, minuterie 1500 ms ; posés sur une fenêtre masquée dans le cas Masquée (C8.2) | `CharacterSearch.cs:1196-1207`, `TextInsertionService.cs:30-41` |
+| T7 | Ouverte ou Masquée (Masquée quand la cible a été activée puis que `_emitText` n'a envoyé aucun événement : T3 a déjà masqué la fenêtre) | insertion `NotInserted` | copie réussie | Retour « Copié » (Ouverte ou Masquée : `Hide()` ne remet pas le drapeau à zéro ; `Show()` le fait, ME-07) | `_showCopiedFeedback`, ballon, minuterie 1500 ms ; posés sur une fenêtre masquée dans le cas Masquée (C8.2) | `CharacterSearch.cs:1196-1207`, `TextInsertionService.cs:30-41` |
 | T8 | Ouverte ou Masquée (comme T7) | insertion `NotInserted` | copie en échec (après 4 essais d'ouverture) | inchangé | `_showCopyFailedFeedback`, `FallbackCopyFailed` (ballon), annonce, minuterie 1500 ms (ME-11) | `CharacterSearch.cs:1199` |
 | T9 | Retour « Copié » (Ouverte ou Masquée) | `WM_TIMER` | id copie | Ouverte ou Masquée (l'état de visibilité ne change pas) | `KillTimer`, feedback faux, repeinte, `AnnounceSelection(notify: false)` même fenêtre masquée | `CharacterSearch.cs:975-983` |
 | T10 | Ouverte | `SetInputPaused(true)` | pause hors suspension choisie | Gelée | saisie jetée | `TrayApplication.cs:617`, `CharacterSearch.cs:137` |
@@ -3310,7 +3313,7 @@ Résultat d'insertion (explicite) : `Inserted`, `NotInserted`, `Partial`, `Bloc
 
 #### États ou transitions invalides atteignables
 
-C8.1 corrigé (ticket ME-11) : invariant I4 rétabli, test `MachinesEtatsLot8Tests.Recherche_EchecDeLInsertionEtDeLaCopie_EstAnnoncé`. Reste C8.2.
+C8.1 corrigé (ticket ME-11) : invariant I4 rétabli, test `MachinesEtatsLot8Tests.Recherche_EchecDeLInsertionEtDeLaCopie_EstAnnoncé`. C8.2 corrigé (ticket ME-07) : invariant I5 rétabli, test `MachinesEtatsLot8Tests.Recherche_RetourCopié_NeSurvitPasÀLaRéouverture`.
 
 ### M8.3 — Clavier virtuel
 

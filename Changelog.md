@@ -25,6 +25,7 @@ Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 
 - Leçons : une entrée mal formée dans le fichier de progression (modifié à la main) est ignorée au lieu d’empêcher la fenêtre de s’ouvrir.
 - Lancement automatique : quand Windows le refuse (Gestionnaire des tâches, Paramètres Windows, stratégie d’entreprise), la case des Paramètres et de l’accueil reste décochée, l’activation le dit et renvoie vers Paramètres Windows → Applications → Démarrage, et la proposition unique « Lancer au démarrage ? » n’est plus faite ni consommée. Témoin : `MachinesEtatsLot4Tests`.
 - Accueil : un double clic sur « Suivant » ne saute plus l’étape 3 et ne valide plus l’accueil à votre place ; la case « Ne plus afficher » s’ouvre cochée si vous l’aviez déjà cochée, et « C’est parti ! » ne défait plus ce choix.
+- Petits états périmés corrigés : la fenêtre Statistiques se redimensionne quand vous cochez ou décochez l’entraînement pendant qu’elle est ouverte ; « Réinitialiser la progression » depuis le Défi n’enregistre plus le Défi comme point de reprise ; la recherche de caractère rouverte n’affiche plus un « Copié » resté de l’ouverture précédente ; l’indicateur de couche ne repeint plus tout le bureau si sa fenêtre n’a pas pu être créée. Témoins : `MachinesEtatsLot5Tests`, `MachinesEtatsLot6Tests`, `MachinesEtatsLot8Tests`, `MachinesEtatsLot1Tests`.
 
 **Retouches de l’avis global (10 novembre, avant le Store)**
 
