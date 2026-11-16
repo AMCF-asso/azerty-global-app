@@ -10,6 +10,53 @@ namespace AZERTYGlobal.Tests;
 /// </summary>
 public sealed class MachinesEtatsLot1Tests
 {
+    private const uint SC_TRIGGER_ALPHABET = 0x2B;  // SC02B : Maj = grec, AltGr = cyrillique
+    private const uint VK_TRIGGER_ALPHABET = 0xDC;
+    private const uint SC_A = 0x10;
+    private const uint VK_A = 0x41;
+    private const uint SC_LSHIFT = 0x2A;
+    private const uint VK_LSHIFT = 0xA0;
+    private const uint KEYEVENTF_UNICODE = 0x0004;
+    private static readonly short KeyDown = unchecked((short)0x8000);
+
+    private static (KeyMapper Mapper, MockWin32Api Mock, ForegroundMonitor Monitor) CreerMapper()
+    {
+        var mock = new MockWin32Api
+        {
+            ScriptedProcessName = "notepad.exe",
+            ScriptedFullPath = @"C:\Windows\notepad.exe",
+            ScriptedModules = new[] { "kernel32.dll" },
+            ScriptedPid = 4242,
+            ScriptedProcessStartTime = 123456789
+        };
+        var monitor = new ForegroundMonitor(mock, IntPtr.Zero);
+        var mapper = new KeyMapper(LayoutLoader.LoadFromResource(), mock);
+        mapper.SetForegroundMonitor(monitor);
+        mapper.ApplyMaintainableLayerSettings(true, new[] { "dk_greek", "dk_cyrillic", "dk_scientific" }, 500);
+        mock.SendInputCalls.Clear();
+        return (mapper, mock, monitor);
+    }
+
+    private static void MajEnfoncee(KeyMapper mapper, MockWin32Api mock)
+    {
+        mock.AsyncKeyStateScript[(int)VK_LSHIFT] = KeyDown;
+        mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, true);
+    }
+
+    private static void MajRelachee(KeyMapper mapper, MockWin32Api mock)
+    {
+        mock.AsyncKeyStateScript[(int)VK_LSHIFT] = 0;
+        mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, false);
+    }
+
+    private static char DernierCaractereEmis(MockWin32Api mock)
+    {
+        Assert.NotEmpty(mock.SendInputCalls);
+        var ki = mock.SendInputCalls[0][0].u.ki;
+        Assert.True((ki.dwFlags & KEYEVENTF_UNICODE) != 0);
+        return (char)ki.wScan;
+    }
+
     // Constat C1.7
     // Classe de fenêtre refusée : l'indicateur existe sans fenêtre (HWND nul). Une couche qui
     // devient active ne doit alors rien placer ni repeindre : InvalidateRect(NULL) invalide toutes
@@ -27,5 +74,64 @@ public sealed class MachinesEtatsLot1Tests
         indicateur.Update(new MaintainableLayerState("dk_greek", MaintainableLayerMode.OneShot, default), secureInput: false);
 
         Assert.Empty(invalidations);
+    }
+
+    // ── C1.4 ──
+
+    // Constat C1.4
+    // Maj tenu, déclencheur SC02B tenu, a (alpha, un coup consommé), puis un second a : le Maj
+    // d'activation reste neutralisé, le moteur doit émettre « a ». CanPassThrough lit le Maj
+    // physique et laisse passer la touche native, d'où « A ». Invariant M1.2 I7.
+    // Modèle suivi : KeyMapperMaintainableLayerCoverageTests.ActivationShift_IsConsumedWhileHeld.
+    [Fact]
+    public void MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative()
+    {
+        var (mapper, mock, monitor) = CreerMapper();
+        using (monitor)
+        {
+            MajEnfoncee(mapper, mock);
+            Assert.True(mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true));
+
+            Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true));
+            Assert.Equal('α', DernierCaractereEmis(mock));
+            mapper.ProcessKey(VK_A, SC_A, 0, false);
+
+            // Couche consommée, Maj d'activation toujours tenu.
+            Assert.Equal(MaintainableLayerMode.Inactive, mapper.MaintainableLayerState.Mode);
+            mock.SendInputCalls.Clear();
+
+            Assert.True(mapper.ProcessKey(VK_A, SC_A, 0, true),
+                "la touche est passée au système avec Maj physique tenu : Windows produirait A");
+            Assert.Equal('a', DernierCaractereEmis(mock));
+        }
+    }
+
+    // ── C1.6 ──
+
+    // Constat C1.6
+    // Maj+SC02B tenu, Maj relâché, SC02B toujours enfoncé : l'auto-répétition rejoue les effets
+    // de ProcessKeyCore (étoile émise, ou scancode périmé dans _passedThroughKeys). Invariant
+    // M1.4 I1 : chaque répétition garde la décision de l'appui initial, effets compris.
+    // Modèle suivi : KeyMapperMaintainableLayerCoverageTests.ActivationShift_IsConsumedWhileHeld
+    // (ClearPassedThroughKeys envoie un keyup par scancode suivi : témoin sans réflexion).
+    [Fact]
+    public void RepetitionDuDeclencheur_ApresRelachementDeMaj_NEmetRienEtNeSuitRien()
+    {
+        var (mapper, mock, monitor) = CreerMapper();
+        using (monitor)
+        {
+            MajEnfoncee(mapper, mock);
+            Assert.True(mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true));
+            MajRelachee(mapper, mock);
+            mock.SendInputCalls.Clear();
+
+            // Auto-répétition système de la touche toujours enfoncée.
+            Assert.True(mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true));
+            Assert.Empty(mock.SendInputCalls); // pas d'étoile parasite
+
+            // Aucun scancode périmé : la purge n'a aucun keyup à envoyer.
+            mapper.ClearPassedThroughKeys();
+            Assert.Empty(mock.SendInputCalls);
+        }
     }
 }

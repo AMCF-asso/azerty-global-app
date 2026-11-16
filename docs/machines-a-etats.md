@@ -135,9 +135,9 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C1.1 | M1.2 | Un coup de couche et une composition de touche morte coexistent (grec après l'accent aigu) | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
 | C1.2 | M1.7 | File des Leçons : le caractère attendu diverge de l'émis si l'accord est tenu ou si le Maj d'activation est encore enfoncé | confirmé | faible | ME-06 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
 | C1.3 | M1.7 | File des Leçons : entrée fantôme quand un déclencheur ou une touche morte est pressé sous un coup armé | confirmé | faible | ME-06 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
-| C1.4 | M1.3 | Le passage natif des lettres lit le Maj physique alors que le Maj d'activation est neutralisé (A au lieu de a) | confirmé | faible | ME-05 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
+| C1.4 | M1.3 | Le passage natif des lettres lit le Maj physique alors que le Maj d'activation est neutralisé (A au lieu de a) | corrigé | faible | ME-05 | `TypingEngine.Windows/KeyMapper.cs` (`CanPassThrough` reçoit les modificateurs effectifs) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`) |
 | C1.5 | M1.2 | Un coup de couche survit à Entrée et à Tab, sans expiration | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
-| C1.6 | M1.4 | Répétition automatique du déclencheur après relâchement du modificateur d'activation : étoile émise ou code de touche périmé dans `_passedThroughKeys` | confirmé | faible | ME-05 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
+| C1.6 | M1.4 | Répétition automatique du déclencheur après relâchement du modificateur d'activation : étoile émise ou code de touche périmé dans `_passedThroughKeys` | corrigé | faible | ME-05 | `TypingEngine.Windows/KeyMapper.cs` (`ProcessKey` : répétition du déclencheur tenu) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`RepetitionDuDeclencheur_ApresRelachementDeMaj_NEmetRienEtNeSuitRien`) |
 | C1.7 | M1.8 | `LayerIndicatorWindow` sans fenêtre : `InvalidateRect` avec un HWND nul | corrigé (test rouge avant le correctif : confirmé) | faible | ME-07 | `AZERTYGlobal/LayerIndicatorWindow.cs` (`Update`, `RefreshPosition`, `Hide` ; points d'appui `InvalidateWindow` et constructeur interne à enregistrement de classe injectable) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`IndicateurDeCouche_SansFenetre_NeRepeintRien`) |
 | C2.1 | M2.2 | La sonde de silence réinstalle le hook toutes les ~4 s pendant la frappe dans une fenêtre de niveau d'intégrité supérieur | plausible (preuve en réel seulement) | faible | ME-12 | lecture du code |
 | C2.2 | M2.5 | Un ouvrier UIA unique bloqué rend « sécurisé » le premier plan de toutes les applications | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `TypingEngine.Windows.Tests/MachinesEtatsLot2Tests.cs` |
@@ -287,7 +287,7 @@ C1.1.
 - I4 : en saisie sécurisée, aucune couche n'est active et rien ne reste armé. Garanti par `:132-136` et `:256`.
 - I5 : un coup armé disparaît quand l'utilisateur fait autre chose que taper un caractère de couche (Retour arrière, raccourci, Échap). Garanti par `KeyMapper.cs:627, 656`. **Non garanti** pour Entrée, Tab (C1.5) et pour une touche morte ordinaire (C1.1).
 - I6 : un coup et une composition de touche morte ne coexistent jamais. Invariant déduit, écrit nulle part dans le code (décision de conception non prise). **Non garanti** (C1.1) : la voie couche n'a pas priorité sur la composition, elle est gardée par `_composition.ActiveDeadKey == null` et `!output.StartsWith("dk_")` (`KeyMapper.cs:813-815`) ; une touche morte frappée sur un coup armé va donc à la composition, le coup survit sans être consommé et la lettre suivante sort de la composition (`e` donne é), puis la suivante de la couche.
-- I7 : le modificateur d'activation reste neutralisé tant qu'il est enfoncé, pour toutes les voies de sortie. **Non garanti** : la voie « laisser passer la touche native » ne lit pas l'état neutralisé. Pour les lettres A-Z, `CanPassThrough` rend true sans lire Maj (`KeyMapper.cs:894-895`) et la touche native sort avec le Maj physique tenu ; les touches non lettres comparent à l'état Maj réellement tenu (`:929`), ce qui est cohérent avec le natif (C1.4).
+- I7 : le modificateur d'activation reste neutralisé tant qu'il est enfoncé, pour toutes les voies de sortie. Garanti depuis ME-05 : la voie « laisser passer la touche native » reçoit les modificateurs effectifs (`CanPassThrough(…, effectiveShift, effectiveAltGr)`) et refuse dès que l'un d'eux diffère du modificateur physiquement tenu, puisque le système lirait le physique (C1.4 corrigé).
 - I8 : la relâche du déclencheur est toujours vue du gestionnaire. Garanti hors suspension (`KeyMapper.cs:559-562`) ; si une suspension tombe pendant l'appui, `_pressedLayer` reste tant que `SyncState` (`KeyMapper.cs:235`) ou un changement de processus (`:132`) ne l'efface.
 
 #### Table de transition
@@ -295,7 +295,7 @@ C1.1.
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
 | T1.2.1 | déclencheur au repos | `BeginTrigger(L, sc)` | `!_secureInput`, `_foreground.IsValid`, `IsLayerEnabled(L)` | enfoncé (appui simple) | un coup armé précédent effacé ; le verrou n'est pas touché ; `NotifyIfChanged` | `MaintainableLayerManager.cs:143-164` |
-| T1.2.2 | enfoncé | `BeginTrigger(L, sc)` même scancode | répétition automatique, modificateur d'activation toujours tenu (sinon `GetOutput(IsShiftDown=false)` ne rend plus le déclencheur, `BeginTrigger` n'est pas appelé et la répétition suit le chemin ordinaire : voir C1.6) | inchangé, rend true | — | `:149-150`, `KeyMapper.cs:783-787` |
+| T1.2.2 | enfoncé | `BeginTrigger(L, sc)` même scancode | répétition automatique, modificateur d'activation toujours tenu ; si le modificateur est déjà relâché, `ProcessKey` rend la décision de l'appui initial (consommée) sans rejouer `ProcessKeyCore` (C1.6 corrigé) | inchangé, rend true | — | `:149-150`, `KeyMapper.cs` (`ProcessKey`, `PendingTriggerScanCode`) |
 | T1.2.3 | enfoncé | `BeginTrigger(L2, sc2)` scancode différent | — | inchangé, rend false : la touche est traitée par l'appelant comme une touche morte ordinaire. Avant cela, la frappe de `sc2` a déjà promu le premier déclencheur en accord (T1.2.4 : un coup armé, coexistence transitoire avec la composition, reprise au relâchement du premier, T1.2.8) | voir C1.1 | `:149-150`, `KeyMapper.cs:672-676, 850-869` |
 | T1.2.4 | enfoncé (appui simple) | autre touche enfoncée | `_pressedOwner == _foreground`, pas secure | enfoncé (accord) + OneShot(L) | `ClearTapHistory` | `:238-252`, `KeyMapper.cs:672-676` |
 | T1.2.5 | enfoncé (appui simple) | `EndTrigger(sc)` | `Locked(L)` sur ce processus | déclencheur au repos, Inactive | verrou retiré | `:181-188` |
@@ -323,7 +323,9 @@ Note non retenue : `_consumeEscapeKeyUp` périmé (voir plus bas).
 
 #### États ou transitions invalides atteignables
 
-C1.1, C1.4, C1.5, C1.6.
+C1.1, C1.5.
+
+C1.4 corrigé (ticket ME-05) : invariant I7 rétabli, test `MachinesEtatsLot1Tests.MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`.
 
 ### M1.3 — Modificateurs suivis et Verr. Maj. (`KeyMapper`)
 
@@ -383,7 +385,7 @@ Répétition automatique de Verr. Maj. : `KeyMapper.cs:611-614` bascule sur cha
 
 #### États ou transitions invalides atteignables
 
-C1.4.
+C1.4 corrigé (ticket ME-05) : invariant M1.2 I7 rétabli, test `MachinesEtatsLot1Tests.MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`.
 
 ### M1.4 — Propriété des appuis physiques et touches synthétiques (`KeyMapper`)
 
@@ -410,7 +412,7 @@ C1.4.
 
 #### Invariants
 
-- I1 : chaque répétition garde la décision de l'appui initial. Garanti par `KeyMapper.cs:518-526` (`if (hadDown) handled = consumed;`), à une réserve près : `ProcessKeyCore` réévalue quand même l'appui (effets, voir C1.6). Pour un déclencheur répété après relâchement de Maj, la réévaluation ne passe pas par `BeginTrigger` mais par le chemin ordinaire (laisser passer, `:873-877`, ou `EmitText`, `:879`), alors que la décision forcée reste « consommée ».
+- I1 : chaque répétition garde la décision de l'appui initial. Garanti par `KeyMapper.ProcessKey` (`if (hadDown) handled = consumed;`), à une réserve près : `ProcessKeyCore` réévalue quand même l'appui d'une touche ordinaire (c'est ce qui fait répéter une lettre tenue). Depuis ME-05, la répétition du déclencheur de couche tenu (`PendingTriggerScanCode`) rend la décision mémorisée sans réévaluation : relâcher Maj avant l'auto-répétition n'émet plus d'étoile et ne laisse plus de scancode dans `_passedThroughKeys` (C1.6 corrigé).
 - I2 : tout keydown synthétique injecté reçoit un keyup (à la relâche, ou à la reprise sûre). Garanti par `:557-563`, `:257-289`, garde de débordement `:601-604`. Les keyups sont conservés en quarantaine pendant la suspension (`:259-261`).
 - I3 : une touche dont le keydown a été transmis a son keyup transmis. Garanti par `:692-696`, `:769-772`.
 - I4 : une touche dont le keydown a été absorbé a son keyup absorbé. Garanti par `:561-562, 567-568, 773`, sauf suspension (`:535-537`, conservation des relâchements).
@@ -433,11 +435,11 @@ C1.4.
 
 Pas de minuterie. Le nettoyage des keyups synthétiques est répété à chaque `SyncState` et à chaque débordement ; en cas de retour partiel on garde tous les keyups (`:272-274`).
 
-Fuite bénigne notée : une répétition qui prend la voie « laisser passer » laisse un scancode dans `_passedThroughKeys` jusqu'à la prochaine remise à zéro (keyup synthétique inoffensif).
+Fuite bénigne notée : une répétition qui prend la voie « laisser passer » laisse un scancode dans `_passedThroughKeys` jusqu'à la prochaine remise à zéro (keyup synthétique inoffensif). Plus atteignable pour le déclencheur de couche depuis ME-05 (C1.6).
 
 #### États ou transitions invalides atteignables
 
-C1.6.
+C1.6 corrigé (ticket ME-05) : invariant I1 rétabli, test `MachinesEtatsLot1Tests.RepetitionDuDeclencheur_ApresRelachementDeMaj_NEmetRienEtNeSuitRien`.
 
 ### M1.5 — Suspension d'émission et abandon de la touche morte au changement d'application (`KeyMapper`)
 
