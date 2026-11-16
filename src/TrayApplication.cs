@@ -2379,6 +2379,8 @@ sealed class TrayApplication : IDisposable
         // Chacune dans son try : un échec ne doit couper ni l'autre ni le reste du nettoyage.
         try { UsageStats.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.Flush", ex); }
         try { ConfigManager.FlushFinal(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.FlushFinal", ex); }
+        // Les lignes d'error.log encore en file mourraient avec le processus (T5).
+        ConfigManager.FlushLog();
         ToastActivation.Unregister();
         Win32.Shell_NotifyIconW(NIM_DELETE, ref _nid);
         if (_hIcon != IntPtr.Zero)

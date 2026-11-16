@@ -950,11 +950,104 @@ static class ConfigManager
 
     private static readonly object _logFlushLock = new();
 
-    private static void AppendLogEntry(string logDir, string logFile, string logEntry)
+    /// <summary>Tests : appelé juste avant d'écrire une ligne d'error.log, verrou du journal
+    /// tenu (simule un disque lent).</summary>
+    internal static Action<string>? LogWritePhaseForTests;
+
+    /// <summary>
+    /// File unique d'error.log (audit des accès concurrents, T2 et T5) : chaque ligne y entre
+    /// datée, avec son dossier, dans l'ordre des appels. Elle n'est retirée et écrite que sous
+    /// <c>_logFlushLock</c>, par un seul vidage à la fois sur le pool (<see cref="DrainLogQueue"/>)
+    /// ou en synchrone (<see cref="FlushLog"/>) : l'ordre du fichier est celui des appels, et le
+    /// fil d'interface n'attend plus le disque pour une ligne ordinaire.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<(string Dir, string Entry)> _logQueue = new();
+    private static int _logDraining;
+
+    private static void EnqueueLogEntry(string logEntry)
     {
-        lock (_logFlushLock)
+        _logQueue.Enqueue((LogDirectory, logEntry));
+        if (Interlocked.Exchange(ref _logDraining, 1) == 0)
+            ThreadPool.QueueUserWorkItem(static _ => DrainLogQueue());
+    }
+
+    private static void DrainLogQueue()
+    {
+        do
         {
-            try { Directory.CreateDirectory(logDir); File.AppendAllText(logFile, logEntry); } catch { }
+            FlushLog();
+            Volatile.Write(ref _logDraining, 0);
+            // Une ligne arrivée entre le dernier retrait et la remise à zéro n'a pas relancé
+            // de vidage : la reprendre ici, sauf si un autre vidage l'a déjà fait.
+        }
+        while (!_logQueue.IsEmpty && Interlocked.Exchange(ref _logDraining, 1) == 0);
+    }
+
+    /// <summary>
+    /// Écrit maintenant, sur le fil appelant et dans l'ordre, toutes les lignes en file :
+    /// ligne critique, fin de l'application, tests. Attend une écriture du journal en cours.
+    /// </summary>
+    public static void FlushLog()
+    {
+        lock (_logFlushLock) WriteQueuedLogEntriesLocked();
+    }
+
+    /// <summary>Retire et écrit les lignes en file. Sous <c>_logFlushLock</c>, sauf en dernier
+    /// recours dans <see cref="LogFatal"/>. Chaque ligne dans son try : une erreur d'écriture
+    /// ne bloque ni la suite de la file ni les vidages suivants.
+    ///
+    /// Un lecteur qui ouvre error.log sans partage d'écriture (antivirus, indexeur, éditeur,
+    /// test qui relit le fichier) fait échouer l'ajout par une violation de partage passagère.
+    /// L'écriture se fait désormais hors du fil appelant, donc plus souvent pendant une telle
+    /// lecture : la ligne est réessayée au lieu d'être jetée. Le budget est par vidage
+    /// (<see cref="LogShareRetryBudget"/> attentes de <see cref="LogShareRetryDelayMs"/> ms) :
+    /// un fichier tenu longtemps coûte au plus 200 ms au vidage, puis ses lignes sont perdues
+    /// comme avant.</summary>
+    private static void WriteQueuedLogEntriesLocked()
+    {
+        int retriesLeft = LogShareRetryBudget;
+        while (_logQueue.TryDequeue(out var item))
+        {
+            try { LogWritePhaseForTests?.Invoke(item.Entry); } catch { }
+            while (true)
+            {
+                try
+                {
+                    Directory.CreateDirectory(item.Dir);
+                    File.AppendAllText(Path.Combine(item.Dir, "error.log"), item.Entry);
+                    break;
+                }
+                catch (IOException) when (retriesLeft > 0)
+                {
+                    retriesLeft--;
+                    Thread.Sleep(LogShareRetryDelayMs);
+                }
+                catch { break; }
+            }
+        }
+    }
+
+    private const int LogShareRetryBudget = 20;
+    private const int LogShareRetryDelayMs = 10;
+
+    /// <summary>
+    /// Ligne FATAL du gestionnaire d'exception non rattrapée (n'importe quel fil, processus
+    /// condamné) : écrite en synchrone après toutes les lignes encore en file, qui mourraient
+    /// sinon avec le processus (T5, P5). Le verrou est attendu 1 s au plus : une écriture
+    /// bloquée ne doit pas faire perdre la ligne FATAL.
+    /// </summary>
+    public static void LogFatal(string safeMessage)
+    {
+        _logQueue.Enqueue((LogDirectory, $"[{DateTime.Now:s}] FATAL: {safeMessage}\n"));
+        bool locked = false;
+        try
+        {
+            Monitor.TryEnter(_logFlushLock, 1000, ref locked);
+            WriteQueuedLogEntriesLocked();
+        }
+        finally
+        {
+            if (locked) Monitor.Exit(_logFlushLock);
         }
     }
 
@@ -981,13 +1074,7 @@ static class ConfigManager
     public static void Log(string context, Exception ex)
     {
         _lastErrorUtc = DateTime.UtcNow; // garde de la sollicitation d'avis
-        var logDir = LogDirectory;
-        var logEntry = $"[{DateTime.Now:s}] {context}: {SanitizeException(ex)}\n";
-        var logFile = Path.Combine(logDir, "error.log");
-        ThreadPool.QueueUserWorkItem(_ =>
-        {
-            AppendLogEntry(logDir, logFile, logEntry);
-        });
+        EnqueueLogEntry($"[{DateTime.Now:s}] {context}: {SanitizeException(ex)}\n");
     }
 
     /// <summary>
@@ -996,15 +1083,13 @@ static class ConfigManager
     /// **Aucune frappe utilisateur ne doit jamais être loguée**, conformément à la
     /// politique de confidentialité onboarding. Ne loguer QUE des événements agrégés
     /// sans contenu (process name, mode, action) — pas de codepoint, pas de char.
-    /// Ecriture synchrone et verrouillee : ces evenements sont rares et doivent rester durables.
+    /// Mise en file, écrite sur le pool (audit des accès concurrents, T2) : appelée sur le fil
+    /// d'interface à chaque changement de mode au premier plan, elle y attendait le disque sous
+    /// le verrou du journal, donc gelait le hook clavier. Un événement qui doit survivre à un
+    /// plantage passe par <see cref="LogCompatCriticalEvent"/>.
     /// </summary>
-    public static void LogCompatEvent(string eventName, string details)
-    {
-        var logDir = LogDirectory;
-        var logEntry = $"[{DateTime.Now:s}] {eventName}: {details}\n";
-        var logFile = Path.Combine(logDir, "error.log");
-        AppendLogEntry(logDir, logFile, logEntry);
-    }
+    public static void LogCompatEvent(string eventName, string details) =>
+        EnqueueLogEntry($"[{DateTime.Now:s}] {eventName}: {details}\n");
 
     /// <summary>
     /// Audit sécu 2026-05 SEV-A1-02 : anonymise un nom de process via HMAC-SHA256
@@ -1039,47 +1124,23 @@ static class ConfigManager
     /// <summary>
     /// Variante synchrone de <see cref="LogCompatEvent"/> pour les events critiques
     /// (AntiCheatDetected, OverrideInvalidCleanup) qui doivent être persistés même si
-    /// l'app crash juste après. Acquiert un lock sur _logFlushLock.
+    /// l'app crash juste après. Mise en file puis vidage synchrone (<see cref="FlushLog"/>) :
+    /// les lignes journalisées avant elle sont écrites avant elle, dans l'ordre (T5).
     /// </summary>
     public static void LogCompatCriticalEvent(string eventName, string details)
     {
-        var logDir = LogDirectory;
-        var logEntry = $"[{DateTime.Now:s}] {eventName}: {details}\n";
-        var logFile = Path.Combine(logDir, "error.log");
-        AppendLogEntry(logDir, logFile, logEntry);
+        _logQueue.Enqueue((LogDirectory, $"[{DateTime.Now:s}] {eventName}: {details}\n"));
+        FlushLog();
     }
-
-    private static readonly System.Collections.Concurrent.ConcurrentQueue<string> _deferredLogEntries = new();
-    private static int _deferredLogDraining;
 
     /// <summary>
-    /// Audit du 25/09 (M-07) : variante pour le rappel du hook. Un refus de SendInput y
-    /// journalisait par <see cref="LogCompatCriticalEvent"/> : Directory.CreateDirectory et
-    /// File.AppendAllText sous <c>_logFlushLock</c>, partagé avec le pool de threads. La ligne
-    /// est maintenant datée ici, mise en file, et écrite par un seul vidage à la fois sur le
-    /// pool de threads, dans l'ordre d'arrivée. Un plantage juste après peut la perdre.
+    /// Audit du 25/09 (M-07) : variante pour le rappel du hook, qui ne doit jamais attendre le
+    /// disque. Depuis l'audit des accès concurrents (T2), toute ligne ordinaire suit ce chemin :
+    /// datée ici, mise en file, écrite sur le pool dans l'ordre d'arrivée. Un plantage juste
+    /// après peut la perdre, sauf s'il passe par <see cref="LogFatal"/>.
     /// </summary>
-    public static void LogCompatEventDeferred(string eventName, string details)
-    {
-        _deferredLogEntries.Enqueue($"[{DateTime.Now:s}] {eventName}: {details}\n");
-        if (Interlocked.Exchange(ref _deferredLogDraining, 1) == 0)
-            ThreadPool.QueueUserWorkItem(static _ => DrainDeferredLog());
-    }
-
-    private static void DrainDeferredLog()
-    {
-        do
-        {
-            var logDir = LogDirectory;
-            var logFile = Path.Combine(logDir, "error.log");
-            while (_deferredLogEntries.TryDequeue(out var entry))
-                AppendLogEntry(logDir, logFile, entry);
-            Volatile.Write(ref _deferredLogDraining, 0);
-            // Une ligne arrivée entre le dernier TryDequeue et la remise à zéro n'a pas
-            // relancé de vidage : la reprendre ici, sauf si un autre vidage l'a déjà fait.
-        }
-        while (!_deferredLogEntries.IsEmpty && Interlocked.Exchange(ref _deferredLogDraining, 1) == 0);
-    }
+    public static void LogCompatEventDeferred(string eventName, string details) =>
+        EnqueueLogEntry($"[{DateTime.Now:s}] {eventName}: {details}\n");
 
     /// <summary>
     /// Trace de debug pour le crash post-Reset (cf. project_crash_lm_post_reset_hypothesis).
@@ -1099,6 +1160,9 @@ static class ConfigManager
     /// </summary>
     public static void RotateLogIfNeeded()
     {
+        // Sous le verrou du journal (T5) : une ligne en cours d'écriture ne part pas dans le
+        // fichier qu'on renomme, et aucune n'est écrite entre le test de taille et le renommage.
+        lock (_logFlushLock)
         try
         {
             var logFile = Path.Combine(LogDirectory, "error.log");
