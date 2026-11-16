@@ -103,6 +103,16 @@ public sealed class KeyMapper
     public event Action? ToggleRequested;
 
     /// <summary>
+    /// Déclenché à la fin de chaque appui de touche traité par le moteur (répétitions comprises),
+    /// avec la décision réelle : absorbée ou non, et le texte effectivement émis. Rien n'est
+    /// déclenché quand l'émission est suspendue : la touche passe alors au système.
+    /// </summary>
+    public event Action<KeyDecision>? KeyDecided;
+
+    private readonly System.Text.StringBuilder _keyEmitted = new();
+    private bool _recordingKey;
+
+    /// <summary>
     /// Constructeur principal pour les tests (IWin32Api injecté).
     /// </summary>
     public KeyMapper(Layout layout, IWin32Api api, IWindowsTypingHost? host = null)
@@ -521,8 +531,19 @@ public sealed class KeyMapper
         // touche sans Maj (étoile émise, ou scancode périmé dans _passedThroughKeys).
         if (isKeyDown && hadDown && consumed && !key.Item2 &&
             _maintainableLayers.PendingTriggerScanCode == scanCode)
+        {
+            KeyDecided?.Invoke(new KeyDecision(scanCode, true, string.Empty));
             return true;
-        bool handled = ProcessKeyCore(vkCode, scanCode, flags, isKeyDown);
+        }
+        bool recording = isKeyDown && KeyDecided != null;
+        if (recording)
+        {
+            _keyEmitted.Clear();
+            _recordingKey = true;
+        }
+        bool handled;
+        try { handled = ProcessKeyCore(vkCode, scanCode, flags, isKeyDown); }
+        finally { _recordingKey = false; }
         if (isKeyDown)
         {
             // Chaque répétition garde la décision de l'appui initial.
@@ -530,6 +551,8 @@ public sealed class KeyMapper
             _keyDownOwnership[key] = handled;
         }
         else _keyDownOwnership.Remove(key);
+        if (recording)
+            KeyDecided?.Invoke(new KeyDecision(scanCode, handled, _keyEmitted.ToString()));
         return handled;
     }
 
@@ -1085,6 +1108,7 @@ public sealed class KeyMapper
         // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué. Rien
         // de ce qui est tapé dans un champ mot de passe ne va aux statistiques (audit 1.3.0,
         // test SaisieSecuriseeStatsTests, choix d'Antoine du 21/10).
+        if (result.IsComplete && _recordingKey) _keyEmitted.Append(text);
         if (result.IsComplete && _foregroundMonitor?.IsSecureInput != true) _host.RecordEmittedText(text);
         return result;
     }

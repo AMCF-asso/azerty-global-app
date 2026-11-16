@@ -133,8 +133,8 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | Id | Machine | Constat | Statut | Gravité | Ticket | Preuve |
 |---|---|---|---|---|---|---|
 | C1.1 | M1.2 | Un coup de couche et une composition de touche morte coexistent (grec après l'accent aigu) | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
-| C1.2 | M1.7 | File des Leçons : le caractère attendu diverge de l'émis si l'accord est tenu ou si le Maj d'activation est encore enfoncé | confirmé | faible | ME-06 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
-| C1.3 | M1.7 | File des Leçons : entrée fantôme quand un déclencheur ou une touche morte est pressé sous un coup armé | confirmé | faible | ME-06 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
+| C1.2 | M1.7 | File des Leçons : le caractère attendu diverge de l'émis si l'accord est tenu ou si le Maj d'activation est encore enfoncé | corrigé | faible | ME-06 | `TypingEngine.Windows/KeyMapper.cs` (`KeyDecided`), `PhysicalTextInputBuffer.cs` (`ApplyEngineDecision`), `LessonsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet`, `FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet`) |
+| C1.3 | M1.7 | File des Leçons : entrée fantôme quand un déclencheur ou une touche morte est pressé sous un coup armé | corrigé | faible | ME-06 | `TypingEngine.Windows/KeyMapper.cs` (`KeyDecided`), `PhysicalTextInputBuffer.cs` (`ApplyEngineDecision`), `LessonsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere`, `FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere`) |
 | C1.4 | M1.3 | Le passage natif des lettres lit le Maj physique alors que le Maj d'activation est neutralisé (A au lieu de a) | corrigé | faible | ME-05 | `TypingEngine.Windows/KeyMapper.cs` (`CanPassThrough` reçoit les modificateurs effectifs) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`) |
 | C1.5 | M1.2 | Un coup de couche survit à Entrée et à Tab, sans expiration | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
 | C1.6 | M1.4 | Répétition automatique du déclencheur après relâchement du modificateur d'activation : étoile émise ou code de touche périmé dans `_passedThroughKeys` | corrigé | faible | ME-05 | `TypingEngine.Windows/KeyMapper.cs` (`ProcessKey` : répétition du déclencheur tenu) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`RepetitionDuDeclencheur_ApresRelachementDeMaj_NEmetRienEtNeSuitRien`) |
@@ -552,6 +552,7 @@ Aucun constat.
 |---|---|---|---|---|
 | `_entries` | `Queue<Entry(Text, CreatedAt, Index)>` | `PhysicalTextInputBuffer.cs:23` | écrit par `Enqueue` depuis `RawKeyDownDetailed` (hook, avant `ProcessKey`), lu/dépilé par `Resolve` depuis `WM_CHAR` (pompe) : même fil | aucune |
 | `_timeoutMs`, `_clock` | long, `Func<long>` | `:24-25` | lecture | immuables |
+| `_provisional`, `_awaitingDecision` | `Entry?`, bool | `PhysicalTextInputBuffer.cs` | posés par `CaptureKey` (keydown, avant `ProcessKey`), consommés par `ApplyEngineDecision` (`KeyMapper.KeyDecided`, fin de `ProcessKey`) : même fil | aucune |
 
 #### États
 
@@ -566,21 +567,23 @@ Aucun constat.
 - I1 : ordre FIFO des frappes physiques. Garanti par `Queue` (`:23`).
 - I2 : un caractère de contrôle reçu n'est jamais remplacé par du texte. Garanti par `:65-69`.
 - I3 : aucun texte attendu pour un raccourci. Garanti par `:94-95` (`IsShortcutChord`).
-- I4 : la file reflète ce que le moteur émet réellement. **Non garanti** : `ExpectedText` recopie à part la logique de `KeyMapper` ; écarts en C1.2 et C1.3.
-- I5 : toute entrée correspond à un `WM_CHAR` à venir. **Non garanti** : un texte attendu sans émission (C1.3) reste jusqu'à la péremption (1 s) et remplace le caractère suivant ; la péremption est le seul filet. Le cas le plus direct est le second appui du double appui qui verrouille la couche : `CaptureKey` lit le coup armé comme une touche morte active (`KeyMapper.ActiveDeadKey`, `KeyMapper.cs:68-71`) et attend l'isolé (µ, `PhysicalTextInputBuffer.cs:140-145`, couche de `AZERTY Global 2026.json:450`), alors que `BeginTrigger` efface le coup et que rien n'est émis. Autres cas : une touche morte ordinaire ou un autre déclencheur frappé sur un coup armé.
-- I6 : le texte attendu tient compte de la neutralisation du modificateur d'activation. **Non garanti** : après un appui bref sur le déclencheur avec Maj encore tenu, le coup est armé et Maj reste neutralisé côté moteur (`KeyMapper.cs:802`) ; `CaptureKey` lit `ShiftDown` brut (`:93`) et calcule Α là où le moteur émet α (C1.2).
+- I4 : la file reflète ce que le moteur émet réellement. Garanti depuis ME-06 : `CaptureKey` pose une entrée provisoire (calcul de `ExpectedText`, fait avant le moteur, qui sert encore quand la touche est laissée passer au système) et le moteur annonce ensuite sa décision (`KeyMapper.KeyDecided`, texte réellement émis) ; `ApplyEngineDecision` remplace l'entrée provisoire par ce texte (C1.2 corrigé).
+- I5 : toute entrée correspond à un `WM_CHAR` à venir. Garanti depuis ME-06 pour les touches que le moteur absorbe : quand il n'émet rien (second appui du déclencheur sous un coup armé, touche morte ou autre déclencheur frappé sur un coup armé), `ApplyEngineDecision` retire l'entrée provisoire et rien n'est attendu (C1.3 corrigé). Une touche laissée passer au système garde l'attendu de la disposition ; la péremption (1 s) reste le filet des cas où la décision n'arrive pas (émission suspendue).
+- I6 : le texte attendu tient compte de la neutralisation du modificateur d'activation. Garanti depuis ME-06 : le texte attendu est celui que le moteur a émis (Maj d'activation neutralisé : α et non Α, accord tenu compris) (C1.2 corrigé).
 
 #### Table de transition
 
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
 | T1.7.1 | tout | `CaptureKey` | chord Ctrl/Alt/Win sans AltGr | inchangé | rien | `:94-95` |
-| T1.7.2 | tout | `CaptureKey` | `ExpectedText` non vide | +1 entrée | purge des périmées | `:101-104, 36-43` |
+| T1.7.2 | tout | `CaptureKey` | `ExpectedText` non vide | +1 entrée provisoire | purge des périmées ; attend la décision du moteur | `CaptureKey`, `Enqueue` |
 | T1.7.3 | file ≥ 1 | `Resolve(c)` | `c` est contrôle | inchangé sauf si l'entrée attendait aussi un contrôle | rend `c` | `:65-69` |
 | T1.7.4 | file ≥ 1 | `Resolve(c)` | `c` n'est pas contrôle | index +1, dépile si fini | rend le caractère attendu (et non `c`) | `:72-75` |
 | T1.7.5 | Vide | `Resolve(c)` | — | Vide | rend `c` | `:78` |
 | T1.7.6 | file | `Clear()` | changement de séance/fenêtre | Vide | — | `:81` |
 | T1.7.7 | file | temps | `now - CreatedAt > 1000` | entrée retirée | — | `:151-155` |
+| T1.7.8 | file avec entrée provisoire | `ApplyEngineDecision(handled, texte)` (fin de `ProcessKey`) | touche absorbée ou texte émis | entrée provisoire retirée ; +1 entrée du texte réellement émis s'il n'est pas vide | rien attendu quand le moteur n'émet rien (C1.2, C1.3) | `ApplyEngineDecision` |
+| T1.7.9 | file avec entrée provisoire | `ApplyEngineDecision(false, vide)` | touche laissée passer sans texte émis | inchangé | Windows écrira le caractère natif ; l'attendu de la disposition reste | `ApplyEngineDecision` |
 
 #### Temporisations et réessais
 
@@ -588,7 +591,9 @@ Une seconde de péremption paresseuse (`Enqueue`, `HasPending`, `Resolve`). Pas 
 
 #### États ou transitions invalides atteignables
 
-C1.2, C1.3.
+C1.2 corrigé (ticket ME-06) : invariants I4 et I6 rétablis, tests `MachinesEtatsLot1Tests.FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet` et `MachinesEtatsLot1Tests.FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet`.
+
+C1.3 corrigé (ticket ME-06) : invariant I5 rétabli, tests `MachinesEtatsLot1Tests.FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere` et `MachinesEtatsLot1Tests.FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere`.
 
 ### M1.8 — Indicateur de couche (`LayerIndicatorWindow`)
 
