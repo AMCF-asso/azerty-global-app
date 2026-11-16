@@ -151,9 +151,9 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C3.6 | M3.6 | `NIM_ADD` sans contrôle de retour ni réessai, y compris sur `TaskbarCreated` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.7 | M3.5 | Fenêtre de conflit de disposition sans garde sur l'état de l'application | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C4.1 | M4.1 | Mutex `Local\` créé par une instance élevée : le lancement non élevé plante avant tout gestionnaire d'erreur | plausible (couture à ajouter) | faible | ME-09 | lecture du code |
-| C4.2 | M4.4 | Version non packagée : `IsRegistered` ignore le refus de Windows, donc `Set(true)` rend vrai sans effet réel | confirmé (variante de l'accueil) ; `Set(true)` et Paramètres : plausible | moyenne | ME-04 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` |
+| C4.2 | M4.4 | Version non packagée : `IsRegistered` ignore le refus de Windows, donc `Set(true)` rend vrai sans effet réel | corrigé | moyenne | ME-04 | `AZERTYGlobal/AutoStart.cs` (`IsRegistered`, `DefaultOnboardingCheck`, `GetFailureMessage`), `Localization/L.Startup.cs` (`AutoStart_FailureMessageRefused`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Accueil_ne_coche_pas_la_case_quand_Windows_refuse_meme_si_le_raccourci_existe`, `Activation_refusee_par_Windows_n_est_pas_dite_reussie`, `Case_des_Parametres_et_de_l_accueil_refletent_le_refus_de_Windows`, `Refus_de_Windows_renvoie_vers_les_Parametres_Windows`) |
 | C4.3 | M4.2 | Écriture de fermeture ratée : réglages perdus, aucune reprise synchrone | plausible (couture à ajouter) | faible | ME-09 | lecture du code |
-| C4.4 | M4.4 | La relance unique du lancement automatique est proposée même quand Windows ou la politique refuse | plausible (couture à ajouter) | faible | ME-04 | lecture du code |
+| C4.4 | M4.4 | La relance unique du lancement automatique est proposée même quand Windows ou la politique refuse | corrigé | faible | ME-04 | `AZERTYGlobal/AutoStartNudge.cs` (`AutoStartSignals.WindowsState`, `ShouldPrompt`, `Snapshot`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Relance_unique_n_est_pas_proposee_quand_l_etat_est_refuse_ou_inconnu`, `Signaux_de_la_relance_portent_l_etat_Windows`, `Relance_refusee_ne_consomme_pas_la_proposition`) |
 | C4.5 | M4.3 | Seconde instance : `config.json` lu et mis de côté avant le mutex, `_loadFailed` reste collé et la notice est perdue | confirmé | faible | ME-09 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` |
 | C5.1 | M5.3 | Dates analysées sans culture invariante : série et Défi faussés sous un calendrier non grégorien | corrigé | faible | ME-01 | `AZERTYGlobal/StoredDate.cs` (analyseur unique), `UsageStats.cs`, `TrainingReminders.cs`, `UsageStatsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`, `Rappel_UnSeulParJour_QuelleQueSoitLaCulture`, `Statistiques_UneDateEcriteEnInvariantSeRelitAIdentique_QuelleQueSoitLaCulture`, `Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`) |
 | C5.2 | M5.4 | Exclusion de frappe liée à l'ouverture du tutoriel et non au focus | plausible (couture à ajouter) | faible | ME-12 | lecture du code |
@@ -1682,24 +1682,24 @@ Windows vu par l'app (`AutoStart.WindowsState`, `AutoStart.cs:184-185`) :
 | DisabledByPolicy | jamais en non packagé / `DisabledByPolicy` |
 | Unknown | exception de l'API WinRT |
 
-`IsRegistered` (`AutoStart.cs:147-148`) est un second prédicat, plus pauvre : non packagé = `File.Exists(ShortcutPath)`, packagé = `Enabled` ou `EnabledByPolicy`. Les deux divergent en non packagé quand le raccourci existe avec le refus inscrit (C4.2).
+`IsRegistered` (`AutoStart.cs:152`) vaut `WindowsState == Enabled` depuis ME-04 : « effectif » veut dire « Windows exécutera l'entrée ». Un raccourci présent avec le refus inscrit n'est plus « enregistré » (C4.2 corrigé). En packagé, le prédicat est inchangé (`Enabled` ou `EnabledByPolicy`, état illisible = faux). La lecture de l'état (`WindowsStateReader`), la présence du raccourci (`ShortcutExists`) et sa création (`ShortcutEnabler`) sont remplaçables dans les tests.
 
 Relance unique : N0 `autoStartNudgeDone == false` (éligible ou non selon `ShouldPrompt`), N1 `autoStartNudgeDone == true` (absorbant).
 
 #### Invariants
 
-- I1 : `Set(x)` ne rend vrai que si `IsRegistered == x` après coup (`AutoStart.cs:132-134`) — garanti, mais `IsRegistered` n'est pas l'état réel de Windows en non packagé (C4.2).
+- I1 : `Set(x)` ne rend vrai que si `IsRegistered == x` après coup (`AutoStart.cs:132-134`) — garanti, et `IsRegistered` est l'état réel de Windows (`Enabled`) depuis ME-04 : `Set(true)` rend `false` quand Windows refuse, sans écrire `autoStartEnabled` ; l'interface dit le refus et renvoie vers les Paramètres Windows (`GetFailureMessage`, `AutoStart_FailureMessageRefused`).
 - I2 : `autoStartEnabled` suit la dernière réussite de `Set` — garanti (`AutoStart.cs:136`) ; vaut cache, jamais source de vérité (`ConfigManager.cs:283`).
-- I3 : un refus Windows n'est jamais contourné par l'accueil — garanti par `DefaultOnboardingCheck` pour l'état `DisabledByUser`/`DisabledByPolicy`/`Unknown` quand aucune trace d'un choix passé existe (`AutoStart.cs:162-168`) ; NON garanti en non packagé quand le raccourci existe : `if (isRegistered) return true` précède le test d'état (`AutoStart.cs:166`).
+- I3 : un refus Windows n'est jamais contourné par l'accueil — garanti par `DefaultOnboardingCheck` pour l'état `DisabledByUser`/`DisabledByPolicy` quelle que soit la présence du raccourci, et pour `Unknown` quand aucune trace d'un choix passé existe (`AutoStart.cs:177-188`) : le refus est testé avant `isRegistered` depuis ME-04.
 - I4 : la relance unique ne part qu'une fois — garanti (`AutoStartNudge.cs:40`, `MarkPromptShown` avant l'affichage, `TrayApplication.cs:1597`).
-- I5 : la relance ne propose que ce que l'app peut obtenir — NON garanti : `AutoStartSignals` ne porte pas `WindowsState` (C4.4).
+- I5 : la relance ne propose que ce que l'app peut obtenir — garanti depuis ME-04 : `AutoStartSignals.WindowsState` est lu une fois par `Snapshot`, et `ShouldPrompt` rend faux pour `DisabledByUser`, `DisabledByPolicy` et `Unknown` (`AutoStartNudge.cs:45-46`) ; la relance n'est alors ni proposée ni consommée (`MarkPromptShown` n'est appelé qu'après `ShouldPrompt`).
 - I6 : `Set` n'appelle pas `RequestEnableAsync` si déjà actif — garanti (`AutoStart.cs:314-315`).
 
 #### Table de transition
 
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
-| T1 | Disabled | `Set(true)` non packagé | `Enable()` réussit | Enabled si pas de refus, sinon DisabledByUser avec `IsRegistered == true` | raccourci créé via IShellLink, `autoStartEnabled = true`, retour `true` | `AutoStart.cs:124-136,187-269` |
+| T1 | Disabled | `Set(true)` non packagé | `Enable()` réussit | Enabled si pas de refus (retour `true`) ; sinon DisabledByUser, `IsRegistered == false`, retour `false` (ME-04) | raccourci créé via IShellLink ; `autoStartEnabled = true` seulement si Enabled ; refus : message vers les Paramètres Windows | `AutoStart.cs:124-136,187-269` |
 | T2 | Enabled | `Set(false)` non packagé | suppression réussie | Disabled (le refus éventuel reste) | raccourci supprimé, `autoStartEnabled = false` | `AutoStart.cs:129,271-282` |
 | T3 | Enabled | `Set(false)` non packagé | suppression bloquée (verrou) | Enabled | exception avalée, `IsRegistered` vrai, `Set` rend `false` | `AutoStart.cs:278-281,133-134` |
 | T4 | Disabled | `Set(true)` packagé | `RequestEnableAsync` rend Enabled/EnabledByPolicy | Enabled | `autoStartEnabled = true` | `AutoStart.cs:319-320` |
@@ -1707,7 +1707,7 @@ Relance unique : N0 `autoStartNudgeDone == false` (éligible ou non selon `Shou
 | T6 | Enabled | `Set(true)` packagé | déjà actif | Enabled | aucun appel Windows | `AutoStart.cs:314-315` |
 | T7 | Enabled/EnabledByPolicy | `Set(false)` packagé | — | Disabled, ou Enabled si imposé par politique | `task.Disable()` ; vérité relue ; politique : `Set` rend `false` | `AutoStart.cs:324-325,132-134` |
 | T8 | tout (packagé) | exception WinRT dans `SetStartupTask` | relecture : `enabled ? actif : true` | selon relecture | journal ; une exception de relecture donne `false` | `AutoStart.cs:328-341` |
-| T9 | N0 éligible | démarrage de l'app, aucune autre bulle | `ShouldPrompt` | N1 | `SetAutoStartNudgeDone`, toast ou bulle | `TrayApplication.cs:328-329,1589-1606` |
+| T9 | N0 éligible | démarrage de l'app, aucune autre bulle | `ShouldPrompt` (faux si Windows refuse ou état illisible : N0 conservé) | N1 | `SetAutoStartNudgeDone`, toast ou bulle | `TrayApplication.cs:328-329,1589-1606` |
 | T10 | N0 | choix manuel Paramètres ou accueil, `Set` réussi | Paramètres : état réellement changé (`autoStart != autoStartWasRegistered`). Accueil : `userChoice \|\| autoStart != wasRegistered \|\| autoStart != _autoStartShownChecked` | N1 | `MarkPromptShown` | `SettingsWindow.cs:1488-1489`, `OnboardingWindow.cs:677-678` |
 | T11 | N1 | clic sur le toast (même tardif, ou répété) ou clic sur la bulle (une seule fois utile) | bulle : `_pendingBalloon` remis à `None` avant d'agir, un clic répété ne rejoue pas l'action ; toast COM : `WM_APP_TOAST` sans garde | N1 | `AutoStart.Set(true)` ; succès ou bulle d'erreur | `TrayApplication.cs:753-767,777-785,1617-1625` |
 
@@ -1717,7 +1717,8 @@ Aucun réessai automatique. Les appels WinRT sont bloquants sur la pompe (`AutoS
 
 #### États ou transitions invalides atteignables
 
-C4.2, C4.4
+C4.2 corrigé (ticket ME-04) : invariants I1 et I3 rétablis, test `MachinesEtatsLot4Tests.Activation_refusee_par_Windows_n_est_pas_dite_reussie`.
+C4.4 corrigé (ticket ME-04) : invariant I5 rétabli, test `MachinesEtatsLot4Tests.Relance_unique_n_est_pas_proposee_quand_l_etat_est_refuse_ou_inconnu`.
 
 
 ### M4.5 — Cache de politiques d'entreprise et canal de distribution

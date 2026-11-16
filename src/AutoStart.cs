@@ -123,7 +123,7 @@ static class AutoStart
             {
                 if (enabled)
                 {
-                    if (!Enable()) return false;
+                    if (!ShortcutEnabler()) return false;
                 }
                 else
                     Disable();
@@ -143,11 +143,26 @@ static class AutoStart
         }
     }
 
-    /// <summary>Vérifie si le lancement automatique est enregistré.</summary>
-    public static bool IsRegistered =>
-        ConfigManager.IsPackaged ? IsStartupTaskEnabled() : File.Exists(ShortcutPath);
+    /// <summary>
+    /// Le lancement automatique est EFFECTIF : Windows exécutera l'entrée au démarrage
+    /// (<see cref="AutoStartWindowsState.Enabled"/>). Un raccourci présent mais refusé par
+    /// l'utilisateur ou par une stratégie ne compte pas (C4.2). En version packagée, c'est
+    /// l'ancien prédicat (StartupTask Enabled ou EnabledByPolicy), état illisible compris.
+    /// </summary>
+    public static bool IsRegistered => WindowsState == AutoStartWindowsState.Enabled;
+
+    /// <summary>Points d'appui des tests (C4.2, C4.4) : lecture de l'état de Windows, présence du
+    /// raccourci et création du raccourci. Aucun test ne doit lire ni écrire le vrai démarrage.</summary>
+    internal static Func<AutoStartWindowsState> WindowsStateReader = ReadWindowsState;
+    internal static Func<bool> ShortcutExists = () => File.Exists(ShortcutPath);
+    internal static Func<bool> ShortcutEnabler = Enable;
 
     public static string GetFailureMessage() =>
+        WindowsState is AutoStartWindowsState.DisabledByUser or AutoStartWindowsState.DisabledByPolicy
+            ? L.AutoStart_FailureMessageRefused
+            : FailureMessageOfChannel();
+
+    private static string FailureMessageOfChannel() =>
         ConfigManager.IsPackaged
             ? L.AutoStart_FailureMessagePackaged
             : L.AutoStart_FailureMessageUnpackaged;
@@ -162,6 +177,10 @@ static class AutoStart
     internal static bool DefaultOnboardingCheck(
         AutoStartWindowsState state, bool isRegistered, bool choiceAlreadyPossible)
     {
+        // Un refus de Windows prime sur tout, y compris sur un raccourci présent : Windows
+        // n'exécuterait pas l'entrée (C4.2).
+        if (state is AutoStartWindowsState.DisabledByUser or AutoStartWindowsState.DisabledByPolicy)
+            return false;
         if (choiceAlreadyPossible) return isRegistered;
         if (isRegistered) return true;
         return state == AutoStartWindowsState.Disabled;
@@ -181,7 +200,9 @@ static class AutoStart
     }
 
     /// <summary>État du lancement automatique vu de Windows, refus compris.</summary>
-    internal static AutoStartWindowsState WindowsState =>
+    internal static AutoStartWindowsState WindowsState => WindowsStateReader();
+
+    private static AutoStartWindowsState ReadWindowsState() =>
         ConfigManager.IsPackaged ? GetStartupTaskWindowsState() : GetShortcutWindowsState();
 
     private static bool Enable()
@@ -341,17 +362,6 @@ static class AutoStart
         }
     }
 
-    private static bool IsStartupTaskEnabled()
-    {
-        try
-        {
-            var task = Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId)
-                .GetAwaiter().GetResult();
-            return IsStartupTaskActive(task.State);
-        }
-        catch { return false; }
-    }
-
     private static AutoStartWindowsState GetStartupTaskWindowsState()
     {
         try
@@ -377,7 +387,7 @@ static class AutoStart
     private static AutoStartWindowsState GetShortcutWindowsState()
     {
         if (IsShortcutDisabledInWindows()) return AutoStartWindowsState.DisabledByUser;
-        return File.Exists(ShortcutPath) ? AutoStartWindowsState.Enabled : AutoStartWindowsState.Disabled;
+        return ShortcutExists() ? AutoStartWindowsState.Enabled : AutoStartWindowsState.Disabled;
     }
 
     /// <summary>
