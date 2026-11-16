@@ -210,7 +210,9 @@ public sealed class EnvironnementWindowsDispositionTests
         ScriptedFullPath = @"C:\Windows\notepad.exe",
         ScriptedModules = new[] { "kernel32.dll", "user32.dll" },
         ForegroundWindow = (IntPtr)0x1234,
+        ScriptedWindowThreadId = FilPremierPlan,
     };
+    private const uint FilPremierPlan = 7;
 
     private (KeyMapper mapper, ForegroundMonitor premierPlan) MonterEnFrancaisPuisBasculerEnUs()
     {
@@ -224,6 +226,7 @@ public sealed class EnvironnementWindowsDispositionTests
         _api.VkKeyScanScript[('&', HklUs)] = (short)((1 << 8) | VK_7);
 
         _api.CurrentHkl = HklFr;
+        _api.ThreadHkl[FilPremierPlan] = HklFr;
         var premierPlan = new ForegroundMonitor(_api, IntPtr.Zero);
         var layout = new Layout();
         layout.Keys[SC_D01] = new KeyDefinition { Position = "D01", Scancode = SC_D01, Base = "a", Shift = "A", Caps = "A", CapsShift = "a" };
@@ -233,6 +236,7 @@ public sealed class EnvironnementWindowsDispositionTests
 
         // Bascule de disposition dans la même fenêtre : aucun évènement de premier plan ni de focus.
         _api.CurrentHkl = HklUs;
+        _api.ThreadHkl[FilPremierPlan] = HklUs;
         _api.SendInputCalls.Clear();
         return (mapper, premierPlan);
     }

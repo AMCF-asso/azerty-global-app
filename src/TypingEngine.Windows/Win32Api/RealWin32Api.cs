@@ -16,6 +16,8 @@ public sealed class RealWin32Api : IWin32Api
     public short GetAsyncKeyState(int vk) => Win32.GetAsyncKeyState(vk);
 
     public IntPtr GetKeyboardLayout(uint threadId) => Win32.GetKeyboardLayout(threadId);
+    public uint GetWindowThreadId(IntPtr window) =>
+        window == IntPtr.Zero ? 0u : Win32.GetWindowThreadProcessIdOut(window, out _);
 
     public bool GetCursorPos(out int x, out int y)
     {

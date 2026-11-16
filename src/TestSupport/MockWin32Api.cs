@@ -85,7 +85,16 @@ internal sealed class MockWin32Api : IWin32Api
     public short GetAsyncKeyState(int vk) =>
         AsyncKeyStateScript.TryGetValue(vk, out var v) ? v : (short)0;
 
-    public IntPtr GetKeyboardLayout(uint threadId) => CurrentHkl;
+    public IntPtr GetKeyboardLayout(uint threadId) =>
+        threadId != 0 && ThreadHkl.TryGetValue(threadId, out var hkl) ? hkl : CurrentHkl;
+
+    /// <summary>Fil rendu pour toute fenêtre (0 = inconnu : pas de relecture de la disposition).</summary>
+    public uint ScriptedWindowThreadId { get; set; }
+
+    /// <summary>Disposition par fil, pour distinguer le fil du premier plan de celui de l'app.</summary>
+    public Dictionary<uint, IntPtr> ThreadHkl { get; } = new();
+
+    public uint GetWindowThreadId(IntPtr window) => window == IntPtr.Zero ? 0u : ScriptedWindowThreadId;
 
     /// <summary>Position rendue par <see cref="GetCursorPos"/> : le banc de capture la veut hors
     /// de toute fenêtre, la vraie souris n'est jamais lue ni déplacée.</summary>

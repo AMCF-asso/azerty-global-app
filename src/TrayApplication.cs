@@ -1091,9 +1091,18 @@ sealed class TrayApplication : IDisposable
                         // écrire ce qui attend, sur le pool de threads (audit du 25/09, A-05).
                         ConfigManager.FlushInBackground();
                         UsageStats.FlushInBackground();
-                        if (sessionEvent == Win32.WTS_SESSION_UNLOCK ||
+                        // EW-1, EW-3, EW-24 : les relâchements faits hors du bureau de l'utilisateur
+                        // n'atteignent pas le hook. Au départ comme au retour, relire l'état physique
+                        // des touches et abandonner touche morte et couche à un coup en attente.
+                        bool depart = sessionEvent == Win32.WTS_SESSION_LOCK ||
+                            sessionEvent == Win32.WTS_CONSOLE_DISCONNECT ||
+                            sessionEvent == Win32.WTS_REMOTE_DISCONNECT;
+                        bool retour = sessionEvent == Win32.WTS_SESSION_UNLOCK ||
                             sessionEvent == Win32.WTS_CONSOLE_CONNECT ||
-                            sessionEvent == Win32.WTS_REMOTE_CONNECT)
+                            sessionEvent == Win32.WTS_REMOTE_CONNECT;
+                        if (depart || retour)
+                            _mapper?.SyncState();
+                        if (retour)
                             ReinstallHook(nudgeForeground: false);
                     }
                     return IntPtr.Zero;
