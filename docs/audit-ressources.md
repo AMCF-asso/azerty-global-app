@@ -1,10 +1,10 @@
 # Audit des ressources longue durée — app AZERTY Global 1.3.0 (16/11/2026)
 
 - **Inventaire** : 387 créations de minuteries, d'abonnements, d'objets Windows et de mémoire native dans `src/`, chacune avec sa libération ou « jamais » ([inventaire généré](audit-ressources-inventaire.md)) ; 0 site sans verdict (`--check`).
-- **1 constat confirmé, impact faible** : redimensionner les Leçons remplit le cache de polices partagé `AppFonts.Get`, qui ne détruit rien. Mesure : +48 objets GDI pour 13 échelles traversées, palier ensuite ; test en échec `Redimensionner_les_Lecons_ne_garde_pas_des_polices_pour_chaque_taille_traversee`.
-- **0 fuite** sur 11 fenêtres ouvertes, peintes et fermées, puis laissées ouvertes sous changements d'écran, de couleurs et de langue, puis rouvertes : GDI 0, USER dans le bruit (±4) sur 20 et 100 cycles.
+- **2 constats confirmés, même cause, impact faible** : redimensionner les Leçons (C1) ou le clavier virtuel (C2) remplit le cache de polices partagé `AppFonts.Get`, qui ne détruit rien. Mesures : +48 et +47 objets GDI pour 20 tailles traversées, palier ensuite ; deux tests en échec, nommés dans les constats.
+- **0 fuite** sur 11 fenêtres ouvertes, peintes et fermées, puis laissées ouvertes sous changements d'écran, de couleurs et de langue, puis rouvertes : GDI 0 ; USER sans croissance d'un cycle à l'autre (un décalage ponctuel de +9 au plus, borné : Accueil +8 sur 100 cycles, +9 sur 300).
 - **Réfuté après mesure** : la fuite USER de GDI+ démarré puis arrêté à chaque icône du tray (+52 sur 100 cycles) était un artefact du banc, qui ne pompait pas les messages ; en pompant comme le tray : +2.
-- **Décision attendue** : correctif du ticket T1 et ajout du contrôle d'inventaire à `verify.ps1` (QCM à Antoine) ; aucun correctif du produit dans cette branche.
+- **Décision attendue** : piste de correctif du ticket T1 (C1 et C2) et ajout du contrôle d'inventaire à `verify.ps1` (QCM à Antoine) ; aucun correctif du produit dans cette branche.
 
 Base : `396e449`, branche `claude/ag-audit-ressources-130`. Aucun fichier de `src/` hors tests n'est modifié.
 
@@ -26,7 +26,7 @@ Base : `396e449`, branche `claude/ag-audit-ressources-130`. Aucun fichier de `s
    - Le script échoue si un site n'a ni règle ni verdict, ou si un verdict ne correspond plus à une ligne.
 4. **Banc de cycles** : `src/AZERTYGlobal.Tests/RessourcesLongueDureeTests.cs`.
    - Compteurs relevés après un échauffement : `GetGuiResources` (GDI, USER), abonnés des événements statiques, fenêtres inscrites à `DialogNavigation`.
-   - On compare deux paliers séparés de 20 cycles (`AZERTY_CYCLES_RESSOURCES` allonge). La tolérance est de 5 objets : le bruit USER mesuré est de ±4 et ne dépend pas du nombre de cycles.
+   - On relève les compteurs après l'échauffement, à mi-parcours et après 20 cycles (`AZERTY_CYCLES_RESSOURCES` allonge). Tolérance : 5 objets. GDI, abonnés et dialogues se comparent sur tous les cycles ; USER sur la seconde moitié seulement, car Windows crée à la demande quelques objets USER une fois par processus (Accueil : +0 sur 20 cycles lancé seul, +7 sur 20 dans verify, +8 sur 100, +9 sur 300). Une fuite d'un objet par cycle fait +10 sur la seconde moitié.
 
 ## Inventaire compté
 
@@ -52,7 +52,7 @@ Verdicts sur les 387 sites :
 - **jamais** : 22 ;
 - divers : 4.
 
-Les 22 « jamais » durent tous une fois par processus, ou par objet possédé par l'instance unique du tray, sauf une exception : `AppFonts.cs:93`, le constat C1.
+Les 22 « jamais » durent tous une fois par processus, ou par objet possédé par l'instance unique du tray, sauf une exception : `AppFonts.cs:93`, cause des constats C1 et C2.
 
 ## Constats
 
@@ -79,6 +79,21 @@ Les 22 « jamais » durent tous une fois par processus, ou par objet possédé
   - `CharacterSearch.cs:1550` réduit la police du glyphe pour qu'il tienne (`Math.Max(8, size × available / width)`), soit au plus 21 hauteurs par DPI ;
   - les fenêtres à DPI fixe ajoutent un jeu par écran traversé.
 
+### C2 — confirmé, impact faible : le cache de polices grandit avec chaque taille du clavier virtuel
+
+- **Test en échec** : `RessourcesLongueDureeTests.Redimensionner_le_clavier_virtuel_ne_garde_pas_des_polices_pour_chaque_taille_traversee`.
+- **Mesure du 16/11, 20 tailles de 0,85 à 1,25 fois la taille d'ouverture** (739 × 345 à 1087 × 508) :
+  - cache `AppFonts` : 7 → 54 polices ;
+  - GDI : 29 → 76, soit +47, exactement l'écart du cache ;
+  - seconde passe sur les mêmes tailles : +0.
+- **Cause** : le mécanisme de C1, sans plancher.
+  - `PaintScale` (`VirtualKeyboard.cs:288`) suit la taille client en continu (minimum 0,1).
+  - Les touches (`PaperKeyboard.cs:286-599`), le bandeau (`VirtualKeyboard.cs:1096-1115`) et les légendes demandent `AppFonts.Get` à la hauteur `taille × échelle`.
+  - La fenêtre se redimensionne à la souris (`WS_THICKFRAME`) : chaque taille peinte pendant le glissé ajoute ses hauteurs.
+- **Borne (estimation)** : environ 1,2 police par point d'échelle (47 pour 40 points) ; de 0,5 à 2 fois la taille d'origine, de l'ordre de 200 polices, sous le quota de 10 000. Croissance bornée, jamais rendue.
+- **Ordre des tests** : le cache est commun au processus. Lancé juste après celui du clavier, le test des Leçons ne voit plus que +28, les hauteurs communes existant déjà. Les chiffres de C1 et C2 sont ceux de chaque test lancé sans l'autre avant lui.
+- **Recherche des autres appelants** : toutes les polices `FontSpec` de `src/` passent par `AppFonts.Get` (`AppFonts.cs:13`). Seuls les Leçons et le clavier virtuel ont une échelle qui suit la taille de la fenêtre ; les autres fenêtres suivent le DPI (`_dpiScale`, `dpi / 96f`), d'où un jeu par écran, borné.
+
 ### Plausibles (sans test en échec)
 
 - **P1** — `AppFonts.cs:70` : les polices embarquées sont chargées une fois par processus (`AddFontMemResourceEx`). La mémoire copiée reste allouée jusqu'à la sortie. C'est borné et non répété, donc pas un ticket.
@@ -87,7 +102,7 @@ Les 22 « jamais » durent tous une fois par processus, ou par objet possédé
 ### Réfutés
 
 Par mesure (tests verts, `RessourcesLongueDureeTests`) :
-- **Fenêtres ouvertes, peintes et fermées (11 fenêtres)** : GDI 0, USER dans le bruit, abonnés statiques et dialogues inscrits stables, sur 20 et 100 cycles.
+- **Fenêtres ouvertes, peintes et fermées (11 fenêtres)** : GDI 0, USER sans croissance sur la seconde moitié, abonnés statiques et dialogues inscrits stables, sur 20 et 100 cycles. Le +7 USER de l'Accueil vu une fois dans verify est le décalage ponctuel décrit dans la méthode : +9 sur 300 cycles.
 - **Fenêtres laissées ouvertes** sous `WM_DPICHANGED` 96/144, `WM_SYSCOLORCHANGE`, `WM_SETTINGCHANGE` et une langue qui alterne fr/en (11 fenêtres) : idem.
 - **Même instance fermée puis rouverte** (9 fenêtres que le tray garde en un exemplaire) : idem.
 - **Leçons recréées sur le KeyMapper et le KeyboardHook partagés**, comme le fait `EnsureLessonsWindow` : 0 abonné laissé sur le moteur après 23 fenêtres. Le premier banc donnait un moteur neuf à chaque cycle et ne pouvait pas le voir.
@@ -114,26 +129,25 @@ Par lecture (le site et la libération sont dans l'inventaire) :
 
 | Ticket | Impact | Objet |
 |---|---|---|
-| T1 | faible | C1 : polices du cache `AppFonts` gardées pour chaque échelle des Leçons |
+| T1 | faible | C1 et C2 : polices du cache `AppFonts` gardées pour chaque taille des Leçons et du clavier virtuel |
 | T2 | prévention | `audit-ressources-inventaire.py --check` dans `verify.ps1`, pour qu'une création sans libération connue échoue en CI |
 
 - **T1, pistes de correctif** (choix au QCM, aucun appliqué) :
-  1. Les Leçons possèdent leurs polices à l'échelle de la fenêtre, comme leurs 14 `_hFont*`, et `AppFonts.Get` ne sert qu'aux tailles fixes par DPI.
-  2. Arrondir `_windowScale` à des paliers, ce qui réduit le nombre de hauteurs sans supprimer la croissance.
-  3. Un cache à plafond qui détruit les polices non utilisées depuis le dernier changement d'échelle.
-  - Le test C1 passe au vert avec la piste 1 ; avec la piste 2 seulement si la plage traversée tombe sous la tolérance.
+  1. Chaque fenêtre à échelle continue (Leçons, clavier virtuel) possède ses polices à l'échelle : un jeu par fenêtre, détruit au changement d'échelle et à la fermeture, comme les 14 `_hFont*` des Leçons. Les dessinateurs partagés (`PaperKeyboard`, `MiniKeyboardRenderer`, `KeyNotation`, `TablatureRenderer`) reçoivent ce jeu au lieu d'appeler `AppFonts.Get`, qui ne sert plus qu'aux tailles fixes par DPI. Corrige C1 et C2 ; les deux tests passent au vert.
+  2. Arrondir les échelles à des paliers (par exemple 5 %) : moins de hauteurs, mais la croissance reste ; les tests ne passent au vert que si la plage tombe sous la tolérance.
+  3. Un cache à plafond qui détruit les polices non demandées depuis le dernier changement d'échelle. Risque : une HFONT encore sélectionnée dans un DC ou donnée à un contrôle par `WM_SETFONT` serait détruite sous lui.
 - **T2** : environ 2 s de plus par exécution. Chaque nouvelle création de ressource demanderait alors une règle ou une ligne de verdict.
 
 ## Vérification
 
-- Banc `RessourcesLongueDuree` : 38 tests, 37 réussis, 1 en échec (C1, voulu).
+- Banc `RessourcesLongueDuree` : 39 tests, 37 réussis, 2 en échec voulus (C1, C2).
 - `scripts/verify.ps1 -Etape "tests-core,tests-windows,tests-app"` (16/11, Windows PowerShell 5.1) :
 
 | Étape | Référence 396e449 | Cette branche |
 |---|---|---|
 | tests-core | 18/18 | 18/18 |
 | tests-windows | 404/404 | 404/404 |
-| tests-app | 1993 réussis, 3 ignorés, 0 échec, sur 1996 | 2030 réussis, 3 ignorés, 1 échec (C1), sur 2034 |
+| tests-app | 1993 réussis, 3 ignorés, 0 échec, sur 1996 | 2030 réussis, 3 ignorés, 2 échecs (C1, C2), sur 2035 |
 
-  Les 38 tests ajoutés expliquent l'écart (1996 + 38 = 2034). Le seul échec est le test du constat C1 ; les 3 ignorés sont les mêmes (`CurseurSimuleTests`).
+  Les 39 tests ajoutés expliquent l'écart (1996 + 39 = 2035). Les seuls échecs sont les tests des constats C1 et C2 ; les 3 ignorés sont les mêmes (`CurseurSimuleTests`). Mesure du 16/11, 19 h 37.
 - `python scripts/audit-ressources-inventaire.py --check` : 387 sites, 0 sans verdict, 0 verdict périmé.
