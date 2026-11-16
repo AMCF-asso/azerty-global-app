@@ -164,6 +164,9 @@ internal sealed class LessonProgressStore
 
     public void SetLastPosition(LessonExercise exercise)
     {
+        // Le Défi n'est jamais la place de « Reprendre » (ME-07, C6.2) : même garde que
+        // RecordSuccess, pour tous les chemins (relance de séance après « Réinitialiser »).
+        if (exercise.ModuleId == DailyChallenge.ModuleId) return;
         ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
         LastModuleId = exercise.ModuleId;
@@ -453,6 +456,10 @@ internal sealed class LessonProgressStore
             foreach (var item in exercisesEl.EnumerateObject())
             {
                 var el = item.Value;
+                // Une entree qui n'est pas un objet (nombre, null, tableau, chaine) est ignoree, comme
+                // pour "gestures" : TryGetProperty leverait InvalidOperationException, hors du filtre
+                // ci-dessous, et la fenetre des Lecons ne s'ouvrirait plus (ME-02).
+                if (el.ValueKind != JsonValueKind.Object) continue;
                 string hash = ReadString(el, "hash") ?? "";
                 if (hash.Length == 0) continue;
 

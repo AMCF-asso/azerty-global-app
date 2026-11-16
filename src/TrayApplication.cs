@@ -388,6 +388,8 @@ sealed class TrayApplication : IDisposable
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;
             _characterSearch.FallbackCopied += character =>
                 ShowBalloon(L.Layers_InsertFallbackTitle, L.Layers_InsertFallbackBody(character));
+            _characterSearch.FallbackCopyFailed += character =>
+                ShowBalloon(L.Layers_InsertFallbackFailedTitle, L.Layers_InsertFallbackFailedBody(character));
         }
         catch (Exception ex)
         {
@@ -670,8 +672,7 @@ sealed class TrayApplication : IDisposable
         // Sauvegarde différée des statistiques locales d'usage (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH, STATS_FLUSH_INTERVAL_MS, IntPtr.Zero);
         // Sollicitation d'avis au fil de la frappe : seulement s'il en reste une à faire.
-        if (ReviewPromptStillPossible())
-            Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero);
+        EnsureReviewTimer();
         // Chien de garde du snapshot foreground (non tué : périodique)
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_FOREGROUND_WATCHDOG, FOREGROUND_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
         // Sonde des hôtes de prise en main à distance (non tuée : périodique), plus une
@@ -728,6 +729,21 @@ sealed class TrayApplication : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Gestion des messages Windows
     // ═══════════════════════════════════════════════════════════════
+    /// <summary>
+    /// Réponse à WM_QUERYENDSESSION : une écriture immédiate de ce qui attend (audit du 25/09, A-05),
+    /// rapide et sans attente. Le message est une demande : une autre application peut l'annuler,
+    /// et il peut arriver plusieurs fois ; l'app ne quitte pas, son fil d'interface ne doit pas
+    /// dormir (ME-09 suite : <c>FlushFinal</c> y dormait jusqu'à 750 ms par appel). Un échec
+    /// d'écriture est repris par la minuterie de reprise tant que l'app vit ; les nouveaux essais
+    /// avec attente de <c>FlushFinal</c> n'ont leur place qu'à WM_ENDSESSION confirmé (wParam non
+    /// nul, via <c>Cleanup</c>) et à la sortie normale.
+    /// </summary>
+    internal static void OnQueryEndSession()
+    {
+        ConfigManager.Flush();
+        UsageStats.Flush();
+    }
+
     private IntPtr WndProcCallback(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
@@ -1083,10 +1099,7 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case Win32.WM_QUERYENDSESSION:
-                    // Arrêt ou déconnexion annoncé : écrire tout de suite ce qui attend, sans
-                    // compter sur WM_ENDSESSION (audit du 25/09, A-05). Deux écritures au plus.
-                    ConfigManager.Flush();
-                    UsageStats.Flush();
+                    OnQueryEndSession();
                     return (IntPtr)1; // ne jamais bloquer l'arrêt/déconnexion
 
                 case Win32.WM_ENDSESSION:
@@ -1525,15 +1538,22 @@ sealed class TrayApplication : IDisposable
         if (_settings == null)
         {
             _settings = new SettingsWindow();
-            _settings.ShortcutChanged = () => _hook?.ReloadShortcuts();
-            // Un override modifié depuis la section Apps suspendues doit
-            // s'appliquer immédiatement au process foreground courant.
-            _settings.CompatibilityOverridesChanged = () => _foregroundMonitor?.Recompute();
-            // Notation des touches changée dans l'onglet Leçons : la fenêtre ouverte suit.
-            _settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
+            ConfigureSettingsWindow(_settings);
         }
         ApplyWindowInputState();
         _settings.ShowOrBringToFront(); // W2 : déjà ouverte, elle n'est pas remise à zéro
+    }
+
+    private void ConfigureSettingsWindow(SettingsWindow settings)
+    {
+        settings.ShortcutChanged = () => _hook?.ReloadShortcuts();
+        // Un override modifié depuis la section Apps suspendues doit
+        // s'appliquer immédiatement au process foreground courant.
+        settings.CompatibilityOverridesChanged = () => _foregroundMonitor?.Recompute();
+        // Notation des touches changée dans l'onglet Leçons : la fenêtre ouverte suit.
+        settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
+        // Notifications rallumées : la demande d'avis peut de nouveau partir dans cette session (C7.4).
+        settings.NotificationsChanged = EnsureReviewTimer;
     }
 
     /// <summary>
@@ -1651,8 +1671,9 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (!ConfigManager.NotificationsEnabled) return;
             var now = DateTime.Now;
+            TrainingReminders.RepairFutureDates(DateOnly.FromDateTime(now));
+            if (!ConfigManager.NotificationsEnabled) return;
             if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot()))
                 return;
 
@@ -2357,7 +2378,7 @@ sealed class TrayApplication : IDisposable
         // réglages (bornes des fenêtres). Le hook est déjà décroché (audit du 25/09, A-05).
         // Chacune dans son try : un échec ne doit couper ni l'autre ni le reste du nettoyage.
         try { UsageStats.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.Flush", ex); }
-        try { ConfigManager.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.Flush", ex); }
+        try { ConfigManager.FlushFinal(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.FlushFinal", ex); }
         ToastActivation.Unregister();
         Win32.Shell_NotifyIconW(NIM_DELETE, ref _nid);
         if (_hIcon != IntPtr.Zero)
@@ -2660,6 +2681,33 @@ sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>Pose ou retire la minuterie de quiétude. Couture des tests : SetTimer/KillTimer
+    /// sur une fenêtre réelle ne s'observent pas.</summary>
+    internal static Action<IntPtr, bool> ReviewTimerSwitch = static (hWnd, on) =>
+    {
+        if (on) Win32.SetTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero);
+        else Win32.KillTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+    };
+
+    private bool _reviewTimerArmed;
+
+    /// <summary>La minuterie de quiétude est-elle posée ?</summary>
+    internal bool ReviewTimerArmed => _reviewTimerArmed;
+
+    /// <summary>
+    /// Met la minuterie de quiétude d'accord avec <see cref="ReviewPromptStillPossible"/> :
+    /// posée quand une sollicitation redevient possible (notifications rallumées dans les
+    /// Paramètres), retirée quand plus aucune ne l'est. Idempotente ; appelée au démarrage,
+    /// par le tick et par le changement du réglage des notifications.
+    /// </summary>
+    internal void EnsureReviewTimer()
+    {
+        bool possible = ReviewPromptStillPossible();
+        if (possible == _reviewTimerArmed) return;
+        ReviewTimerSwitch(_hWnd, possible);
+        _reviewTimerArmed = possible;
+    }
+
     /// <summary>
     /// Le franchissement du seuil enrichi doit-il être consommé après une tentative de
     /// sollicitation ? Décision pure, sans état ni I/O, pour rester éprouvable.
@@ -2701,7 +2749,7 @@ sealed class TrayApplication : IDisposable
             // Plus rien à solliciter : le timer n'a plus de raison de tourner.
             if (!ReviewPromptStillPossible())
             {
-                Win32.KillTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+                EnsureReviewTimer();
                 return;
             }
 
@@ -2709,7 +2757,8 @@ sealed class TrayApplication : IDisposable
             // refermé. Encore en train de taper : on repasse dans cinq secondes. Accueil
             // ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
             if (!ReviewPromptGate.ShouldTryAfterQuietTyping(UsageStats.EnrichedThresholdCrossed,
-                    UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS, _reviewPromptDeferred))
+                    UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS,
+                    _reviewPromptDeferred || _onboarding is { IsVisible: true }))
                 return;
 
             bool shown = MaybeShowReviewPrompt(ReviewPromptTrigger.QuietTyping);
