@@ -1,12 +1,15 @@
 """Inventaire des créations de ressources de src/ (audit des ressources, 16/11/2026).
 
-Recense, hors projets de tests, chaque appel qui crée une minuterie, un abonnement ou un
-objet Windows, et cherche sa libération : même variable libérée plus bas dans la même
-méthode (objets graphiques, DC, poignées), ou partenaire nommé (KillTimer, -=, Unhook…).
-Les sites sans partenaire trouvé sont marqués « à lire » : docs/audit-ressources.md donne le
-verdict lu à la main pour chacun.
+Recense, hors projets de tests, chaque appel qui crée une minuterie, un abonnement, un
+objet Windows ou de la mémoire native, et cherche sa libération : même variable libérée plus
+bas dans la même méthode, champ libéré ailleurs dans le fichier, fenêtre enfant ou minuterie
+de fenêtre détruites avec leur fenêtre, partenaire nommé (KillTimer, -=, Unhook…). Les sites
+qu'aucune règle ne classe prennent leur verdict lu à la main dans
+docs/audit-ressources-verdicts.tsv ; docs/audit-ressources.md en tire les constats.
 
-Usage : python scripts/audit-ressources-inventaire.py [--tsv sortie.tsv]
+Usage : python scripts/audit-ressources-inventaire.py [--tsv sortie.tsv] [--md docs/audit-ressources-inventaire.md] [--check]
+--check échoue (code 1) si un site n'a ni règle ni verdict, ou si un verdict lu ne
+correspond plus à aucun site.
 Règle de recherche : motifs CREATIONS ci-dessous, ligne par ligne, commentaires et
 déclarations P/Invoke exclus ; appels coupés sur deux lignes recollés (ligne suivante jointe
 quand la parenthèse ouverte n'est pas fermée).
@@ -14,6 +17,7 @@ quand la parenthèse ouverte n'est pas fermée).
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import re
 import sys
@@ -44,7 +48,7 @@ CREATIONS = [
     ("windows", "AddFontMemResourceEx", r"\bAddFontMemResourceEx\s*\(", None),
     ("windows", "RegisterClassExW", r"\bRegisterClassExW\s*\(", None),
     ("windows", "GdiplusStartup", r"\bGdiplusStartup\s*\(", None),
-    ("windows", "CreateWindowExW", r"\bCreateWindowExW\s*\(", None),
+    ("windows", "CreateWindowExW", r"\bCreateWindowExW\s*\(", r"DestroyWindow\s*\(\s*{v}\b"),
     ("windows", "Shell_NotifyIconW NIM_ADD", r"\bShell_NotifyIconW\s*\(\s*NIM_ADD", None),
     ("windows", "OpenProcess", r"\bOpenProcess\s*\(", r"CloseHandle\s*\(\s*{v}\b"),
     ("windows", "GlobalAlloc", r"\bGlobalAlloc\s*\(", r"GlobalFree\s*\(\s*{v}\b|SetClipboardData\s*\([^)]*{v}|CreateStreamOnHGlobal\s*\(\s*{v}"),
@@ -64,17 +68,45 @@ CREATIONS = [
     ("windows", "BeginPaint", r"\bBeginPaint\s*\(", r"EndPaint\s*\("),
     ("windows", "SaveDC", r"\bSaveDC\s*\(", r"RestoreDC\s*\([^;]*{v}\b"),
     # Objets graphiques (GDI et GDI+)
-    ("gdi", "CreateFontW", r"\bCreateFontW\s*\(", r"DeleteObject\s*\(\s*{v}\b"),
-    ("gdi", "CreatePen", r"\bCreatePen\s*\(", r"DeleteObject\s*\(\s*{v}\b"),
-    ("gdi", "CreateSolidBrush", r"\bCreateSolidBrush\s*\(", r"DeleteObject\s*\(\s*{v}\b"),
-    ("gdi", "CreateBitmap", r"\bCreateBitmap\s*\(", r"DeleteObject\s*\(\s*{v}\b"),
-    ("gdi", "CreateCompatibleBitmap", r"\bCreateCompatibleBitmap\s*\(", r"DeleteObject\s*\(\s*{v}\b"),
+    ("gdi", "CreateFontW", r"\bCreateFontW\s*\(", r"DeleteObject\s*\(\s*(?:ref\s+)?{v}\b"),
+    ("gdi", "CreatePen", r"\bCreatePen\s*\(", r"DeleteObject\s*\(\s*(?:ref\s+)?{v}\b"),
+    ("gdi", "CreateSolidBrush", r"\bCreateSolidBrush\s*\(", r"DeleteObject\s*\(\s*(?:ref\s+)?{v}\b"),
+    ("gdi", "CreateBitmap", r"\bCreateBitmap\s*\(", r"DeleteObject\s*\(\s*(?:ref\s+)?{v}\b"),
+    ("gdi", "CreateCompatibleBitmap", r"\bCreateCompatibleBitmap\s*\(", r"DeleteObject\s*\(\s*(?:ref\s+)?{v}\b"),
     ("gdi", "CreateCompatibleDC", r"\bCreateCompatibleDC\s*\(", r"DeleteDC\s*\(\s*{v}\b"),
     ("gdi", "CreateIconIndirect", r"\bCreateIconIndirect\s*\(", r"DestroyIcon\s*\(\s*{v}\b"),
     ("gdi", "GdipCreate", r"\bGdipCreate(?!HBITMAP)\w*\s*\(", r"Gdip(Delete\w+|DisposeImage)\s*\(\s*{v}\b"),
-    ("gdi", "GdipCreateHBITMAPFromBitmap", r"\bGdipCreateHBITMAPFromBitmap\s*\(", r"DeleteObject\s*\(\s*{v}\b"),
+    ("gdi", "GdipCreateHBITMAPFromBitmap", r"\bGdipCreateHBITMAPFromBitmap\s*\(", r"DeleteObject\s*\(\s*(?:ref\s+)?{v}\b"),
     ("gdi", "GdipGetImageGraphicsContext", r"\bGdipGetImageGraphicsContext\s*\(", r"GdipDeleteGraphics\s*\(\s*{v}\b"),
+    # Mémoire native et épinglage
+    ("memoire", "Marshal.AllocHGlobal", r"Marshal\.AllocHGlobal\s*\(", r"FreeHGlobal\s*\(\s*{v}\b"),
+    ("memoire", "Marshal.StringToHGlobalUni", r"Marshal\.StringToHGlobal\w*\s*\(", r"FreeHGlobal\s*\(\s*{v}\b"),
+    ("memoire", "GCHandle.Alloc", r"GCHandle\.Alloc\s*\(", r"{v}\s*\.\s*Free\s*\("),
+    ("windows", "LoadCursorW", r"\bLoadCursorW\s*\(", None),
 ]
+
+# Libération nommée cherchée dans tout le fichier quand la variable n'est pas locale :
+# api → motif (« {v} » = variable assignée quand il y en a une).
+NAMED_PARTNERS = {
+    "SetWindowsHookEx": r"UnhookWindowsHookEx\s*\(",
+    "SetWinEventHook": r"UnhookWinEvent\s*\(",
+    "WTSRegisterSessionNotification": r"WTSUnRegisterSessionNotification\s*\(",
+    "CoRegisterClassObject": r"CoRevokeClassObject\s*\(",
+    "Shell_NotifyIconW NIM_ADD": r"Shell_NotifyIconW\s*\(\s*NIM_DELETE",
+    "OpenClipboard": r"CloseClipboard\s*\(",
+    "SetCapture": r"ReleaseCapture\s*\(",
+    "CreateCaret": r"DestroyCaret\s*\(",
+    "DialogNavigation.Register": r"DialogNavigation\.Unregister\s*\(",
+}
+
+# Créations dont la libération est faite par Windows ou n'a pas d'objet : verdict d'office.
+RULE_VERDICTS = {
+    "LoadCursorW": "aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit",
+}
+
+# Verdicts lus à la main : docs/audit-ressources-verdicts.tsv (site → verdict), pour les
+# sites qu'aucune règle ne classe. Le script échoue si un site reste sans verdict.
+VERDICTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "audit-ressources-verdicts.tsv")
 
 DECL = re.compile(r"static\s+extern|static\s+partial|\[(DllImport|LibraryImport)|^\s*(internal|public|private)?\s*(static\s+)?(IntPtr|nint|bool|int|uint)\s+\w+\s*\([^)]*\)\s*(=>|;)")
 ASSIGN = re.compile(r"(?:\b(?:var|IntPtr|nint)\s+)?(?P<v>[_A-Za-z][\w\.]*)\s*(?:\?\?)?=\s*[^=]")
@@ -105,9 +137,87 @@ def logical_lines(lines):
         i += 1
 
 
+def find_all(rx, lines, rel, limit=3):
+    hits = [f"{rel}:{k + 1}" for k, line in enumerate(lines)
+            if rx.search(line) and not line.strip().startswith("//")]
+    return hits[:limit]
+
+
+def rule_partner(api, s, var, rel, lines, no):
+    """Verdict par règle quand la libération n'est pas dans la même méthode."""
+    if api in RULE_VERDICTS:
+        return RULE_VERDICTS[api]
+    release = next((r for c, a, p, r in CREATIONS if a == api), None)
+    # Champ (_x) : la libération est souvent dans Dispose ou WM_DESTROY, loin de la création.
+    if release and var and (var.startswith("_") or "." in var):
+        hits = find_all(re.compile(release.format(v=re.escape(var))), lines, rel)
+        if hits:
+            return "libéré : " + ", ".join(hits)
+    if api == "CreateWindowExW" and "WS_CHILD" in s and re.search(r",\s*_hWnd\s*,", s):
+        hits = find_all(re.compile(r"DestroyWindow\s*\(\s*_hWnd\b"), lines, rel)
+        if hits:
+            return "fenêtre enfant de _hWnd : détruite avec elle (" + ", ".join(hits) + ")"
+    if api == "SetTimer":
+        m = re.search(r"SetTimer\s*\(\s*(\w+)\s*,\s*(?:\(UIntPtr\)\s*)?(\w+)", s)
+        if m and m.group(1) in ("_hWnd", "hWnd"):
+            kills = find_all(re.compile(r"KillTimer\s*\([^,]+,\s*(?:\(UIntPtr\)\s*)?" + re.escape(m.group(2)) + r"\b"), lines, rel)
+            destroy = find_all(re.compile(r"DestroyWindow\s*\(\s*_hWnd\b"), lines, rel, 1)
+            if kills or destroy:
+                return ("minuterie de fenêtre, même id remplacé : "
+                        + (("KillTimer " + ", ".join(kills)) if kills else "aucun KillTimer")
+                        + (f" ; morte avec la fenêtre ({destroy[0]})" if destroy else ""))
+    if api == "event +=":
+        m = re.search(r"([\w\.]+)\s*\+=\s*(\w+)\s*;", s)
+        if m:
+            hits = find_all(re.compile(re.escape(m.group(1)) + r"\s*-=\s*" + re.escape(m.group(2)) + r"\b"), lines, rel)
+            if hits:
+                return "désabonné : " + ", ".join(hits)
+    if api == "SetWindowSubclass":
+        m = re.search(r"SetWindowSubclass\s*\(\s*[\w\.]+\s*,\s*(\w+)", s)
+        if m:
+            hits = find_all(re.compile(r"RemoveWindowSubclass\s*\([^;]*\b" + re.escape(m.group(1)) + r"\b"), lines, rel)
+            if hits:
+                return "retirée : " + ", ".join(hits)
+    if api == "FileStream" and re.match(r"\s*using\b", s):
+        return "using : fermé en fin de bloc"
+    if api in NAMED_PARTNERS:
+        hits = find_all(re.compile(NAMED_PARTNERS[api]), lines, rel)
+        if hits:
+            return "libéré : " + ", ".join(hits)
+    if api == "GdiplusStartup":
+        m = re.search(r"out\s+(?:IntPtr\s+)?(\w+)", s)
+        if m:
+            hits = find_all(re.compile(r"GdiplusShutdown\s*\(\s*" + re.escape(m.group(1)) + r"\b"), lines, rel)
+            if hits:
+                return "arrêté : " + ", ".join(hits)
+    return "à lire"
+
+
+def fr_typo(line):
+    """Espace insécable avant : ; ? ! » et après «, hors code et cibles de liens."""
+    parts = re.split(r"(`[^`]*`|\]\([^)]*\))", line)
+    for i in range(0, len(parts), 2):
+        parts[i] = re.sub(r" ([:;?!»])", " \\1", parts[i]).replace("« ", "« ")
+    return "".join(parts)
+
+
+def load_verdicts():
+    out = {}
+    if os.path.exists(VERDICTS):
+        with open(VERDICTS, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("#") or not line.strip() or line.startswith("site\t"):
+                    continue
+                site, verdict = line.rstrip("\n").split("\t", 1)
+                out[site] = verdict
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tsv")
+    ap.add_argument("--md", help="écrit l'inventaire complet en Markdown")
+    ap.add_argument("--check", action="store_true", help="échoue si un site n'a pas de verdict")
     args = ap.parse_args()
 
     declared_events = set()
@@ -151,22 +261,57 @@ def main():
                         if rx.search(lines[k]):
                             partner = f"{rel}:{k + 1}"
                             break
+                if partner == "à lire":
+                    partner = rule_partner(api, s, var, rel, lines, no)
                 rows.append((cat, api, f"{rel}:{no}", var or "", partner, s[:150]))
-                break
+
+    # Deux créations sur la même ligne logique : le site prend le nom de l'API en suffixe.
+    seen = Counter(r[2] for r in rows)
+    rows = [r[:2] + (f"{r[2]} {r[1]}",) + r[3:] if seen[r[2]] > 1 else r for r in rows]
+    # Libération trouvée dans la même méthode : « libéré : site ».
+    rows = [r if r[4] == "à lire" or not re.match(r"^[\w\./]+\.cs:\d+$", r[4]) else r[:4] + ("libéré : " + r[4],) + r[5:]
+            for r in rows]
+    manual = load_verdicts()
+    sites = {r[2] for r in rows}
+    stale = sorted(set(manual) - sites)
+    rows = [r[:4] + (manual[r[2]] + " (lu)",) + r[5:] if r[4] == "à lire" and r[2] in manual else r for r in rows]
 
     counts = Counter((r[0], r[1]) for r in rows)
     per_cat = Counter(r[0] for r in rows)
-    unread = sum(1 for r in rows if r[4] == "à lire")
+    unread = [r for r in rows if r[4] == "à lire"]
     if args.tsv:
         with open(args.tsv, "w", encoding="utf-8") as o:
             o.write("categorie\tapi\tsite\tvariable\tliberation\ttexte\n")
             for r in rows:
                 o.write("\t".join(r) + "\n")
+    if args.md:
+        o = io.StringIO()
+        o.write("# Inventaire des ressources de src/ (généré)\n\n")
+        o.write("Produit par `python scripts/audit-ressources-inventaire.py --md "
+                "docs/audit-ressources-inventaire.md` ; ne pas modifier à la main. Verdicts lus : "
+                "`docs/audit-ressources-verdicts.tsv`. Lecture : [audit-ressources.md](audit-ressources.md).\n\n")
+        o.write(f"{len(rows)} créations : " + ", ".join(f"{k} {v}" for k, v in sorted(per_cat.items())) + ".\n\n")
+        o.write("| Catégorie | API | Nombre |\n|---|---|---|\n")
+        for (cat, api), n in sorted(counts.items()):
+            o.write(f"| {cat} | {api} | {n} |\n")
+        for cat in sorted(per_cat):
+            o.write(f"\n## {cat} ({per_cat[cat]})\n\n| Site | API | Libération |\n|---|---|---|\n")
+            for r in sorted((r for r in rows if r[0] == cat), key=lambda r: (r[1], r[2])):
+                o.write(f"| `{r[2]}` | {r[1]} | {r[4].replace('|', '/')} |\n")
+        with open(args.md, "w", encoding="utf-8", newline="\n") as f:
+            f.writelines(fr_typo(line) for line in o.getvalue().splitlines(keepends=True))
     out = sys.stdout
     out.reconfigure(encoding="utf-8")
     for (cat, api), n in sorted(counts.items()):
         out.write(f"{cat:11} {api:32} {n}\n")
-    out.write(f"Total {len(rows)} : " + ", ".join(f"{k} {v}" for k, v in sorted(per_cat.items())) + f" ; partenaire à lire : {unread}\n")
+    out.write(f"Total {len(rows)} : " + ", ".join(f"{k} {v}" for k, v in sorted(per_cat.items()))
+              + f" ; sans verdict : {len(unread)} ; verdicts lus périmés : {len(stale)}\n")
+    if args.check and (unread or stale):
+        for r in unread:
+            out.write(f"sans verdict : {r[2]}\t{r[1]}\t{r[5]}\n")
+        for s in stale:
+            out.write(f"verdict lu sans site (ligne déplacée ?) : {s}\n")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
