@@ -40,8 +40,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-03 — Accueil : double clic sur « Suivant », case « Ne plus afficher » (moyen)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C7.1 (confirmé, moyen), C7.2 (confirmé, faible).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : C7.1 : `OnboardingWindow` ignore « Suivant » pendant le délai de double clic de Windows (`GetDoubleClickTime`) qui suit un changement d'étape (`IsSecondClickOfDoubleClick`, horloge et délai remplaçables : `Clock`, `DoubleClickDelay`) ; un clic posé après le délai agit comme avant. C7.2 : la case « Ne plus afficher » reprend à l'ouverture le réglage enregistré de l'utilisateur (`ShowOnboardingUserSetting`, pas la politique) et `Close` reçoit cet état affiché (`_dontShowShownChecked`) au lieu de `false` : décochée tant qu'aucun refus n'est enregistré (v0.9.7.1 conservée), Échap et la croix n'écrivent rien sans case changée (audit 24/09, B2 conservé). Tests : `MachinesEtatsLot7Tests`, quatre tests rouges avant le correctif, dont le test du double clic réécrit avec deux vrais clics (`BM_CLICK`), horloge injectée, et la vérification qu'un clic après le délai valide toujours ; un quatrième garde Échap et la case décochée à la main. Écart avec le ticket : aucun sur le fond ; le test de la copie en attente envoyait deux `WM_COMMAND`, il est remplacé. À vérifier à la main : un vrai double clic à la souris sur « Suivant » à l'étape 2 (l'accueil reste à l'étape 3), puis un clic voulu juste après le délai ; rouvrir l'accueil après un refus enregistré (case cochée), valider sans y toucher, le refus reste.
+- **Constats** : C7.1 (corrigé), C7.2 (corrigé).
 - **Effet C7.1** : un double clic sur « Suivant » à l'étape 2 produit deux clics ; le second tombe
   sur le bouton final de l'étape 3 et valide l'accueil sans que l'étape ait été vue. Les cases de
   l'étape 3 sont alors appliquées, dont « Lancer au démarrage », cochée par défaut.
@@ -55,8 +56,8 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
   l'état affiché (aujourd'hui `false` en dur, sinon décocher puis fermer par Échap ne
   s'enregistrerait pas). Cela nuance une décision documentée (v0.9.7.1 : case décochée par
   défaut) : elle reste décochée tant qu'aucun refus n'est enregistré.
-- **Tests** : `MachinesEtatsLot7Tests`, trois tests « Accueil_… ». Le test du double clic envoie
-  aujourd'hui deux commandes directes ; il sera réécrit avec deux vrais clics sur le bouton et une
+- **Tests** : `MachinesEtatsLot7Tests`, quatre tests « Accueil_… ». Le test du double clic envoie
+  deux commandes directes ; il est réécrit avec deux vrais clics sur le bouton (BM_CLICK) et une
   horloge injectée. Le double clic à la souris reste à vérifier à la main.
 - **Risque du correctif** : moyen (comportement de fermeture de l'accueil).
 
