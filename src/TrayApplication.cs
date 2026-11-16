@@ -123,6 +123,7 @@ sealed class TrayApplication : IDisposable
     private readonly Win32.WNDPROC _wndProcDelegate; // prevent GC
     private KeyboardHook? _hook;
     private KeyMapper? _mapper;
+    private bool _sessionLocked;
     private Layout? _layout;
     private VirtualKeyboard? _virtualKeyboard;
     private CharacterSearch? _characterSearch;
@@ -1101,7 +1102,10 @@ sealed class TrayApplication : IDisposable
                             sessionEvent == Win32.WTS_CONSOLE_CONNECT ||
                             sessionEvent == Win32.WTS_REMOTE_CONNECT;
                         if (depart || retour)
+                        {
+                            _sessionLocked = depart; // EW-4 : rappel et demande d'avis attendent le retour
                             _mapper?.SyncState();
+                        }
                         if (retour)
                             ReinstallHook(nudgeForeground: false);
                     }
@@ -1683,7 +1687,7 @@ sealed class TrayApplication : IDisposable
             var now = DateTime.Now;
             TrainingReminders.RepairFutureDates(DateOnly.FromDateTime(now));
             if (!ConfigManager.NotificationsEnabled) return;
-            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot()))
+            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot() with { SessionLocked = _sessionLocked }))
                 return;
 
             TrainingReminders.MarkReminderShown(DateOnly.FromDateTime(now));
@@ -2767,7 +2771,7 @@ sealed class TrayApplication : IDisposable
             // ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
             if (!ReviewPromptGate.ShouldTryAfterQuietTyping(UsageStats.EnrichedThresholdCrossed,
                     UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS,
-                    _reviewPromptDeferred || _onboarding is { IsVisible: true }))
+                    _reviewPromptDeferred || _sessionLocked || _onboarding is { IsVisible: true }))
                 return;
 
             bool shown = MaybeShowReviewPrompt(ReviewPromptTrigger.QuietTyping);

@@ -27,7 +27,11 @@ readonly record struct TrainingSignals(
     int CurrentStreak,
     long HelperOpens,               // recherche + clavier virtuel (compteurs globaux)
     DateOnly? ReviewPromptLastShown, // date persistée de la dernière sollicitation d'avis
-    bool ChallengeAvailable);        // DailyChallenge.Enabled : le rappel n'ouvre que le Défi
+    bool ChallengeAvailable)        // DailyChallenge.Enabled : le rappel n'ouvre que le Défi
+{
+    /// <summary>Session verrouillée ou déconnectée (EW-4) : une bulle n'y serait pas vue.</summary>
+    public bool SessionLocked { get; init; }
+}
 
 static class TrainingReminders
 {
@@ -55,6 +59,7 @@ static class TrainingReminders
     /// </summary>
     public static bool ShouldRemind(DateTime now, TrainingSignals s)
     {
+        if (s.SessionLocked) return false;                     // EW-4 : attendre le retour
         if (!s.ChallengeAvailable) return false;                // 1.3.0 : Défi masqué
         if (!s.Enabled) return false;
         if (s.IgnoredCount >= MaxIgnored) return false;         // arrêt définitif
