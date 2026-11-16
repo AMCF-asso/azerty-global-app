@@ -25,7 +25,8 @@ readonly record struct AutoStartSignals(
     bool AlreadyRegistered,
     bool NotificationsEnabled,
     DateOnly? FirstRemapDate,
-    int ActiveDaysCount);
+    int ActiveDaysCount,
+    AutoStartWindowsState WindowsState = AutoStartWindowsState.Disabled);
 
 static class AutoStartNudge
 {
@@ -39,6 +40,10 @@ static class AutoStartNudge
     {
         if (s.NudgeDone) return false;              // une seule fois sur la vie de l'installation
         if (s.AlreadyRegistered) return false;      // déjà actif, rien à proposer
+        // Refusé (utilisateur, stratégie) ou illisible : l'application ne peut pas l'obtenir, la
+        // proposition n'est ni émise ni consommée (elle pourra revenir si Windows change d'avis).
+        if (s.WindowsState is not AutoStartWindowsState.Disabled
+            and not AutoStartWindowsState.Enabled) return false;
         if (!s.NotificationsEnabled) return false;  // canal coupé : l'entrée du menu reste
         // Sans première frappe remappée, l'application n'a jamais servi : rien à ancrer.
         if (s.FirstRemapDate == null) return false;
@@ -47,12 +52,18 @@ static class AutoStartNudge
     }
 
     /// <summary>Photographie les signaux depuis AutoStart, ConfigManager et UsageStats.</summary>
-    public static AutoStartSignals Snapshot() => new(
-        NudgeDone: ConfigManager.AutoStartNudgeDone,
-        AlreadyRegistered: AutoStart.IsRegistered,
-        NotificationsEnabled: ConfigManager.NotificationsEnabled,
-        FirstRemapDate: UsageStats.FirstRemapDate,
-        ActiveDaysCount: UsageStats.ActiveDaysCount);
+    public static AutoStartSignals Snapshot()
+    {
+        // Une seule lecture de l'état Windows : « déjà actif » et « refusé » en sont tirés ensemble.
+        var windowsState = AutoStart.WindowsState;
+        return new(
+            NudgeDone: ConfigManager.AutoStartNudgeDone,
+            AlreadyRegistered: windowsState == AutoStartWindowsState.Enabled,
+            NotificationsEnabled: ConfigManager.NotificationsEnabled,
+            FirstRemapDate: UsageStats.FirstRemapDate,
+            ActiveDaysCount: UsageStats.ActiveDaysCount,
+            WindowsState: windowsState);
+    }
 
     /// <summary>Marque la proposition comme faite. Appelé AVANT l'affichage : une
     /// balloon qui échoue ne doit pas rendre une seconde tentative possible.</summary>

@@ -23,6 +23,7 @@ Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 
 - Série de jours, rappel et Défi du jour : les dates enregistrées se relisent de la même façon quel que soit le format régional de Windows (calendrier thaï bouddhiste, par exemple) ; la série ne retombe plus et le Défi ne se recompte plus le même jour.
 - Horloge ou fuseau qui recule d’un jour : la série, le Défi du jour et les rappels ne recomptent plus un jour déjà compté et ne repartent plus de zéro.
 - Leçons : une entrée mal formée dans le fichier de progression (modifié à la main) est ignorée au lieu d’empêcher la fenêtre de s’ouvrir.
+- Lancement automatique : quand Windows le refuse (Gestionnaire des tâches, Paramètres Windows, stratégie d’entreprise), la case des Paramètres et de l’accueil reste décochée, l’activation le dit et renvoie vers Paramètres Windows → Applications → Démarrage, et la proposition unique « Lancer au démarrage ? » n’est plus faite ni consommée. Témoin : `MachinesEtatsLot4Tests`.
 - Accueil : un double clic sur « Suivant » ne saute plus l’étape 3 et ne valide plus l’accueil à votre place ; la case « Ne plus afficher » s’ouvre cochée si vous l’aviez déjà cochée, et « C’est parti ! » ne défait plus ce choix.
 
 **Retouches de l’avis global (10 novembre, avant le Store)**

@@ -63,8 +63,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-04 — Lancement automatique dit actif alors que Windows le refuse (moyen)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C4.2 (confirmé pour l'accueil ; plausible pour les Paramètres), C4.4 (plausible).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Constats** : C4.2 (corrigé), C4.4 (corrigé).
+- **Fait** : C4.2 : `AutoStart.IsRegistered` vaut désormais « l'état Windows est `Enabled` » (version EXE : un raccourci refusé dans le Gestionnaire des tâches ou par stratégie n'est plus « enregistré » ; version packagée : prédicat inchangé, `Enabled` ou `EnabledByPolicy`, état illisible = faux). `Set(true)` rend donc `false` quand Windows refuse et n'écrit pas `autoStartEnabled` ; la case des Paramètres et de l'accueil reflète l'état réel ; `DefaultOnboardingCheck` teste le refus avant le raccourci présent. Le message d'échec (`GetFailureMessage`) devient, pour un refus utilisateur ou stratégie, « Windows refuse le lancement automatique… Réactivez-le dans Paramètres Windows → Applications → Démarrage » (`AutoStart_FailureMessageRefused`, français et anglais), pour les deux versions. C4.4 : `AutoStartSignals` porte `WindowsState` (lu une fois par `Snapshot`), `ShouldPrompt` rend faux pour `DisabledByUser`, `DisabledByPolicy` et `Unknown` ; `MarkPromptShown` n'étant appelé qu'après `ShouldPrompt`, la relance n'est ni proposée ni consommée. Points d'appui des tests : `AutoStart.WindowsStateReader`, `ShortcutExists`, `ShortcutEnabler`. Appelants d'`IsRegistered` relus : `Set` (même contrôle d'état final), `DefaultOnboardingCheck`, `AutoStartNudge.Snapshot`, cases et `wasRegistered` de `SettingsWindow` et `OnboardingWindow` ; `IsStartupTaskEnabled`, devenu inutile, est supprimé. Tests : `MachinesEtatsLot4Tests`, douze lignes rouges avant le correctif (Theory comprises), deux témoins verts d'office (état `Enabled`, état `Disabled`). À vérifier à la main : désactiver l'entrée dans le Gestionnaire des tâches puis cocher la case des Paramètres (message, case décochée) ; version MSIX : mêmes écrans, aucun changement attendu hors message de refus ; que Windows conserve le refus après suppression puis recréation du raccourci (non rejoué).
 - **Effet C4.2** : en version EXE, « enregistré » veut dire « le raccourci existe ». Si Windows a
   désactivé l'entrée (Gestionnaire des tâches, stratégie), la case reste cochée et l'activation se
   dit réussie, alors que l'application ne se lancera pas au démarrage.
@@ -78,8 +79,9 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 - **Correctif** : « effectif » = état Windows `Enabled` ; l'activation signale le refus de Windows
   et renvoie vers les Paramètres Windows ; la relance n'est ni proposée ni consommée quand l'état
   est refusé ou inconnu. Demande de rendre la lecture de l'état Windows remplaçable dans les tests.
-- **Tests** : `MachinesEtatsLot4Tests.Accueil_ne_coche_pas_la_case_quand_Windows_refuse_…` (2 cas) ;
-  à écrire : activation refusée, relance non proposée.
+- **Tests** : `MachinesEtatsLot4Tests` : accueil (2 cas), activation refusée (2 cas), case des
+  Paramètres et de l'accueil, message de refus (FR, EN), relance non proposée (4 états), signaux,
+  relance non consommée.
 - **Risque du correctif** : moyen (change le sens d'`IsRegistered` pour ses appelants ; texte
   d'interface à ajouter en français et en anglais).
 
