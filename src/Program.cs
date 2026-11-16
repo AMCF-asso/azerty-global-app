@@ -193,13 +193,12 @@ static class Program
         // Gestion des erreurs fatales (le handler ne peut pas empêcher la terminaison)
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
-            var logPath = Path.Combine(ConfigManager.LogDirectory, "error.log");
-            var safeMessage = ConfigManager.SanitizeException(e.ExceptionObject as Exception);
-            try { Directory.CreateDirectory(ConfigManager.LogDirectory); } catch { }
             try
             {
                 // Audit sécu 2026-05 SEV-A1-01 : sanitize au lieu de ex.ToString() complet.
-                File.AppendAllText(logPath, $"[{DateTime.Now:s}] FATAL: {safeMessage}\n");
+                // Audit des accès concurrents (T5) : sous le verrou du journal, après les lignes
+                // encore en file, qui mourraient sinon avec le processus.
+                ConfigManager.LogFatal(ConfigManager.SanitizeException(e.ExceptionObject as Exception));
             }
             catch { }
             Win32.MessageBoxW(IntPtr.Zero,

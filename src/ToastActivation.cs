@@ -65,8 +65,11 @@ internal static partial class ToastActivation
 
     /// <summary>
     /// Déclenché à chaque activation de toast, avec les arguments de lancement
-    /// (« action=review »…). ⚠️ Appelé sur un thread RPC COM, pas le thread UI —
-    /// l'abonné doit re-router (PostMessage) avant de toucher à l'UI.
+    /// (« action=review »…). Appelé sur le fil d'interface : <see cref="Register"/> y est
+    /// appelé, et ce fil est un STA, donc COM y livre les appels par la boucle de messages.
+    /// Il peut l'être au milieu d'un autre traitement, pendant une attente qui pompe (sonde
+    /// de saisie sécurisée, verrou contesté : docs/audit-acces-concurrents.md, § 1). L'abonné
+    /// re-route donc par PostMessage avant de toucher à l'interface.
     /// </summary>
     public static event Action<string>? Activated;
 

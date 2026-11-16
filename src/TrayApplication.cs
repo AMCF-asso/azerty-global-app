@@ -17,7 +17,7 @@ sealed class TrayApplication : IDisposable
     private const uint WM_APP_VKBD = WM_APP + 3;
     private const uint WM_APP_STATE = WM_APP + 6;
     private const uint WM_APP_SECURE_RECHECK = WM_APP + 7;
-    // Activation de toast COM re-routée du thread RPC vers le thread UI (v1.2.0).
+    // Activation de toast COM re-routée par la file de messages du fil UI (v1.2.0).
     // wParam = 1 : action=review, cible Store ; wParam = 2 : action=review, cible
     // page feedback (répartition tirée à l'affichage — un toast antérieur sans
     // segment target= vaut cible Store, comportement historique).
@@ -256,8 +256,8 @@ sealed class TrayApplication : IDisposable
         // Activateur de toast COM (v1.2.0) : Windows livre le clic sur un toast à CE
         // processus au lieu de relancer l'exécutable. Packagé uniquement — hors package,
         // les balloons Shell_NotifyIcon restent le canal (aucun AUMID enregistré).
-        // Le callback arrive sur un thread RPC COM → re-routage PostMessage vers le
-        // thread UI avant toute action.
+        // Le callback arrive sur ce fil (STA), éventuellement imbriqué dans une attente
+        // qui pompe → re-routage PostMessage avant toute action.
         if (ConfigManager.IsPackaged)
         {
             _toastActivatorRegistered = ToastActivation.Register();
@@ -832,7 +832,7 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case WM_APP_TOAST:
-                    // Clic sur un toast (activation COM re-routée du thread RPC).
+                    // Clic sur un toast (activation COM re-routée par PostMessage).
                     if (wParam == (IntPtr)1)
                         OpenReviewTarget(toStore: true);
                     else if (wParam == (IntPtr)2)
@@ -2294,6 +2294,15 @@ sealed class TrayApplication : IDisposable
     }
 
     private bool _lastCapsState;
+
+    /// <summary>
+    /// 1 tant qu'un WM_APP_STATE attend dans la file : coalesce les transitions d'une rafale.
+    /// Écrit et lu sur le seul fil d'interface (hook, boucle de messages), y compris quand le
+    /// hook s'exécute imbriqué dans une attente qui pompe : aucune course aujourd'hui
+    /// (docs/audit-acces-concurrents.md, T6). <c>Interlocked</c> est gardé à dessein, pour
+    /// un coût nul : si un autre fil levait un jour <c>StateChanged</c>, un simple booléen
+    /// pourrait faire perdre un rafraîchissement.
+    /// </summary>
     private int _stateRefreshQueued;
 
     /// <summary>
@@ -2478,6 +2487,8 @@ sealed class TrayApplication : IDisposable
         // Chacune dans son try : un échec ne doit couper ni l'autre ni le reste du nettoyage.
         try { UsageStats.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.Flush", ex); }
         try { ConfigManager.FlushFinal(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.FlushFinal", ex); }
+        // Les lignes d'error.log encore en file mourraient avec le processus (T5).
+        ConfigManager.FlushLog();
         ToastActivation.Unregister();
         Shell.Shell_NotifyIconW(NIM_DELETE, ref _nid);
         if (_hIcon != IntPtr.Zero)

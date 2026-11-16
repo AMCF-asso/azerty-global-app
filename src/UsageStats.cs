@@ -36,7 +36,9 @@ static class UsageStats
     // Audit du 25/09 : une écriture à la fois, dans l'ordre des instantanés. Toujours prise
     // avant _lock, jamais sous _lock.
     private static readonly object _fileLock = new();
-    private static int _backgroundFlushQueued;
+    /// <summary>Écriture en arrière-plan : 0 aucune, 1 une en file ou en cours, 2 en cours avec
+    /// une demande de plus à servir à la fin (<see cref="FlushInBackground"/>).</summary>
+    private static int _backgroundFlushState;
 
     /// <summary>Hook de test : appelé pendant l'écriture disque, hors de <c>_lock</c>.</summary>
     internal static Action? WritePhaseForTests;
@@ -661,17 +663,31 @@ static class UsageStats
     }
 
     /// <summary>Flush sur le pool de threads (minuteur de 5 min, changement de session) :
-    /// le fil du hook n'attend plus le disque. Une seule demande en vol à la fois.</summary>
+    /// le fil du hook n'attend plus le disque. Une seule écriture en vol à la fois ; une demande
+    /// arrivée pendant celle-ci est servie à sa fin, par un tour de plus, au lieu d'être jetée :
+    /// l'écriture en cours a pu prendre son instantané avant les dernières frappes (audit des
+    /// accès concurrents, B2 : le verrouillage de session n'écrivait alors rien).</summary>
     public static void FlushInBackground()
     {
-        if (Interlocked.Exchange(ref _backgroundFlushQueued, 1) == 1) return;
-        ThreadPool.QueueUserWorkItem(static _ =>
+        while (true)
+        {
+            int state = Volatile.Read(ref _backgroundFlushState);
+            if (state == 2) return; // un tour de plus est déjà demandé : il verra ces frappes
+            if (Interlocked.CompareExchange(ref _backgroundFlushState, state + 1, state) != state) continue;
+            if (state == 0) ThreadPool.QueueUserWorkItem(static _ => RunBackgroundFlushes());
+            return;
+        }
+    }
+
+    private static void RunBackgroundFlushes()
+    {
+        do
         {
             // Pool de threads : une exception non rattrapée ici terminerait le processus.
             try { Flush(); }
             catch (Exception ex) { ConfigManager.Log("UsageStats.FlushInBackground", ex); }
-            finally { Interlocked.Exchange(ref _backgroundFlushQueued, 0); }
-        });
+        }
+        while (Interlocked.Decrement(ref _backgroundFlushState) > 0);
     }
 
     /// <summary>Instantané JSON des compteurs, sous <c>_lock</c>, sans I/O. Null quand

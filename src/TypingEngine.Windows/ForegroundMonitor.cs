@@ -72,6 +72,16 @@ public sealed class ForegroundMonitor : IDisposable
     private volatile Snapshot? _snapshot;
     private Snapshot? _lastApplication;
 
+    /// <summary>
+    /// Numéro du dernier <see cref="Recompute"/> commencé (audit des accès concurrents, R1).
+    /// La sonde du champ mot de passe et le verrou de la sonde attendent sur le fil STA : ces
+    /// attentes distribuent les WinEvent, donc un Recompute imbriqué peut s'exécuter et écrire
+    /// l'état de la nouvelle fenêtre avant que l'appel externe reprenne. L'appel externe, dont
+    /// les lectures sont plus anciennes, n'écrit alors rien : l'appel imbriqué a déjà publié un
+    /// état plus récent et levé <see cref="ForegroundChanged"/>. Fil d'interface seul.
+    /// </summary>
+    private int _recomputeGeneration;
+
     /// <summary>Dernière application hors shell, destinée uniquement au menu de compatibilité.</summary>
     public string? LastApplicationProcessName => _lastApplication?.ProcessName;
     public string? LastApplicationFullPath => _lastApplication?.FullPath;
@@ -238,6 +248,7 @@ public sealed class ForegroundMonitor : IDisposable
     /// </summary>
     public void Recompute()
     {
+        int generation = ++_recomputeGeneration;
         try
         {
             string? processName = null;
@@ -274,6 +285,10 @@ public sealed class ForegroundMonitor : IDisposable
             // Sans suivi des fenêtres, tout est suspendu (UnknownForeground) : pas de sonde non plus.
             bool secureInput = !hasFg || (IsTrackingAvailable && !SkipsPasswordProbe(resolved.Reason)
                 && _api.IsWindowPasswordField(window));
+            // Un Recompute imbriqué pendant une attente qui pompe a déjà écrit un état plus
+            // récent : écrire le nôtre le remplacerait par une fenêtre qui n'est plus au
+            // premier plan (R1). Aucune attente qui pompe entre ce test et l'écriture.
+            if (generation != _recomputeGeneration) return;
             _secureRetryAfter = _clock() + 1000;
 
             // Snapshot atomique : une seule écriture de référence (atomique CLR sur ref types).
@@ -307,10 +322,12 @@ public sealed class ForegroundMonitor : IDisposable
         }
         catch (Exception ex)
         {
+            _host.Log("ForegroundMonitor.Recompute", ex);
+            // Même règle qu'au succès : un appel imbriqué plus récent a déjà publié son état.
+            if (generation != _recomputeGeneration) return;
             _snapshot = new Snapshot(IntPtr.Zero, null, null, IntPtr.Zero,
                 CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UnknownForeground, default, true);
             IsTransientShellForeground = false;
-            _host.Log("ForegroundMonitor.Recompute", ex);
             ForegroundChanged?.Invoke();
         }
     }
