@@ -203,6 +203,9 @@ static class DailyChallenge
     /// <summary>Identifiant du module synthétique dans le catalogue des leçons.</summary>
     public const string ModuleId = "defi";
 
+    /// <summary>Rang de l'extrait dans la leçon du jour (l'échauffement est au rang 0).</summary>
+    public const int ExtractExerciseIndex = 1;
+
     /// <summary>
     /// Construit le module « Défi du jour » du catalogue des leçons : une leçon du jour,
     /// deux exercices — échauffement (5 répétitions par caractère cible, dérivées de
@@ -227,7 +230,7 @@ static class DailyChallenge
         {
             new(ModuleId, lessonId, 0, "warmup",
                 L.Challenge_WarmupInstruction, warmupContent, LessonTypingMode.Strict),
-            new(ModuleId, lessonId, 1, "extract",
+            new(ModuleId, lessonId, ExtractExerciseIndex, "extract",
                 extractInstruction, WrapText(session.Extract.Text, 62), LessonTypingMode.Flexible),
         };
 

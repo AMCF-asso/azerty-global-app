@@ -42,6 +42,15 @@ internal sealed class PhysicalTextInputBuffer
         _entries.Enqueue(new Entry(text, now));
     }
 
+    public bool HasPending
+    {
+        get
+        {
+            DiscardExpiredEntries(_clock());
+            return _entries.Count > 0;
+        }
+    }
+
     public char Resolve(char received)
     {
         long now = _clock();
@@ -49,6 +58,16 @@ internal sealed class PhysicalTextInputBuffer
         if (_entries.Count > 0)
         {
             var entry = _entries.Peek();
+
+            // Un caractère de contrôle reçu (Ctrl+lettre, Retour arrière, Entrée, Tab) n'est
+            // jamais remplacé par du texte attendu : Ctrl+A tapait « a » (audit 09/11, E1, E12).
+            // Il ne consomme l'entrée que si elle attendait elle aussi un contrôle.
+            if (char.IsControl(received))
+            {
+                if (char.IsControl(entry.Text[entry.Index]) && ++entry.Index >= entry.Text.Length)
+                    _entries.Dequeue();
+                return received;
+            }
 
             char expected = entry.Text[entry.Index++];
             if (entry.Index >= entry.Text.Length)
@@ -69,11 +88,29 @@ internal sealed class PhysicalTextInputBuffer
     /// </summary>
     public void CaptureKey(Layout layout, uint scancode, KeyMapper mapper)
     {
+        // Raccourci (Ctrl, Alt ou Win tenu) : aucun texte n'est attendu. Sans cette garde,
+        // Ctrl+A tapait « a » et Ctrl+chiffre laissait une entrée fantôme d'une seconde qui
+        // décalait les lettres suivantes (audit 09/11, E1, E11).
+        if (IsShortcutChord(mapper.CtrlDown, mapper.AltDown, mapper.WinDown, mapper.AltGrDown))
+            return;
+        // Audit 09/11, E14 : une couche verrouillée (grecque, cyrillique…) n'est pas une touche morte
+        // armée (mapper.ActiveDeadKey ne rend que la couche d'un coup) : le moteur écrit « α », la file
+        // attendait « a » et le remplaçait.
+        var layer = mapper.MaintainableLayerState;
+        string? lockedLayer = layer.Mode == MaintainableLayerMode.Locked ? layer.LayerId : null;
         string? text = ExpectedText(layout, scancode, mapper.ShiftDown, mapper.AltGrDown,
-            mapper.CapsLockActive, mapper.ActiveDeadKey);
+            mapper.CapsLockActive, mapper.ActiveDeadKey, lockedLayer);
         if (!string.IsNullOrEmpty(text))
             Enqueue(text);
     }
+
+    /// <summary>
+    /// Ctrl, Alt ou Win tenu, hors Alt Gr : la frappe est un raccourci, pas du texte. Sous
+    /// Windows Alt Gr se signale comme Ctrl+Alt : le tester seul casserait toutes les
+    /// frappes Alt Gr des leçons (KeyMapper.IsAltGrDown).
+    /// </summary>
+    internal static bool IsShortcutChord(bool ctrl, bool alt, bool win, bool altGr) =>
+        (ctrl || alt || win) && !altGr;
 
     /// <summary>
     /// Texte d'une frappe : la sortie de la couche, transformée par la touche morte armée
@@ -81,11 +118,20 @@ internal sealed class PhysicalTextInputBuffer
     /// produit rien, sauf si elle en remplace une autre, dont l'accent sort alors.
     /// </summary>
     internal static string? ExpectedText(Layout layout, uint scancode, bool shift, bool altGr, bool capsLock,
-        string? activeDeadKey)
+        string? activeDeadKey, string? lockedLayer = null)
     {
         if (!layout.Keys.TryGetValue(scancode, out var keyDef)) return null;
         string? output = keyDef.GetOutput(shift, altGr, capsLock);
         if (string.IsNullOrEmpty(output)) return null;
+
+        // Couche verrouillée (KeyMapper : seulement hors touche morte armée et hors activation de
+        // couche) : la table de la couche transforme la frappe, l'espace reste un espace, une touche
+        // que la couche ne connaît pas sort telle quelle, la couche conservée.
+        if (lockedLayer != null && activeDeadKey == null && !output.StartsWith("dk_", StringComparison.Ordinal))
+        {
+            if (output == " ") return output;
+            return layout.DeadKeys.GetValueOrDefault(lockedLayer)?.Apply(output) ?? output;
+        }
 
         DeadKeyDefinition? active = null;
         if (activeDeadKey != null)

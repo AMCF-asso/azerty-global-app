@@ -36,8 +36,10 @@ internal sealed partial class LessonsWindow
     private Win32.RECT _homeMapZone;
     private (string Key, HomeSession Session)? _homeKeySessionCache;
 
+    // Texts : titres et consigne dans la langue du moment, pour les refaire quand elle change
+    // (HomeRetranslateComposed, RA12 du 10/11).
     private sealed record HomeComposed(LessonModule Module, LessonLesson Lesson, LessonExercise Exercise,
-        int ReturnExerciseIndex);
+        int ReturnExerciseIndex, Func<(string Module, string Lesson, string Instruction)> Texts);
 
     // ── Accroches de LessonsWindow.cs ────────────────────────────────────
 
@@ -61,7 +63,12 @@ internal sealed partial class LessonsWindow
         _homeOpenOnExercise = false;
         if (onExercise)
         {
+            // L'exercice positionné se voit, même si la fenêtre a été fermée en mode Libre, liste
+            // ou Paramètres ouverts (audit 09/11, L6 : le Défi restait caché derrière).
             _homePage = HomePage.Exercise; // même si la fenêtre était déjà ouverte sur l'accueil
+            _mode = WindowMode.Lessons;
+            _settingsOpen = false;
+            _pickerOpen = false;
             _focusedActionIndex = -1;
             return;
         }
@@ -137,13 +144,14 @@ internal sealed partial class LessonsWindow
     /// d'un exercice, sans entrer dans le catalogue ; la position du catalogue (celle de
     /// « Reprendre ») n'est pas modifiée et n'est pas enregistrée (StartCurrentSession).
     /// </summary>
-    private void HomeStartComposed(LessonExercise exercise, string moduleTitle, string lessonTitle,
+    private void HomeStartComposed(LessonExercise exercise, Func<(string Module, string Lesson, string Instruction)> texts,
         IReadOnlyList<string> characters)
     {
         HomeClearComposed();
+        var (moduleTitle, lessonTitle, _) = texts();
         var lesson = new LessonLesson(exercise.ModuleId, exercise.LessonId, lessonTitle, "", characters, new[] { exercise });
         var module = new LessonModule(exercise.ModuleId, moduleTitle, "", "", isSynthetic: true, new[] { lesson });
-        _homeComposed = new HomeComposed(module, lesson, exercise, _exerciseIndex);
+        _homeComposed = new HomeComposed(module, lesson, exercise, _exerciseIndex, texts);
         _exerciseIndex = 0;
         _settingsOpen = false;
         _pickerOpen = false;
@@ -151,6 +159,23 @@ internal sealed partial class LessonsWindow
         _homePage = HomePage.Exercise;
         _focusedActionIndex = -1;
         StartCurrentSession(savePosition: false);
+    }
+
+    /// <summary>
+    /// Langue changée pendant une séance composée (audit de régression du 10/11, RA12) : ses
+    /// titres et sa consigne gardaient la langue du lancement. Le texte à taper ne change pas,
+    /// donc ni l'empreinte ni la frappe déjà faite : seuls les textes affichés sont refaits.
+    /// </summary>
+    private void HomeRetranslateComposed()
+    {
+        if (_homeComposed is not { } composed) return;
+        var (moduleTitle, lessonTitle, instruction) = composed.Texts();
+        var old = composed.Exercise;
+        var exercise = new LessonExercise(old.ModuleId, old.LessonId, old.ExerciseIndex, old.Type, instruction,
+            old.Content, old.TypingMode);
+        var lesson = new LessonLesson(exercise.ModuleId, exercise.LessonId, lessonTitle, "", composed.Lesson.Characters, new[] { exercise });
+        var module = new LessonModule(exercise.ModuleId, moduleTitle, "", "", isSynthetic: true, new[] { lesson });
+        _homeComposed = composed with { Module = module, Lesson = lesson, Exercise = exercise };
     }
 
     /// <summary>Échap : de « Votre carte » ou « Votre texte » vers Aujourd'hui ; sur Aujourd'hui,
@@ -174,6 +199,25 @@ internal sealed partial class LessonsWindow
         else if (_homePage == HomePage.Text)
             HomeTextKey(vk);
         return true;
+    }
+
+    /// <summary>Ordre des onglets de l'en-tête de l'accueil ; « Toutes les leçons » mène à
+    /// l'écran d'exercice.</summary>
+    private static readonly HomePage[] HomeTabOrder = { HomePage.Today, HomePage.Map, HomePage.Exercise };
+
+    /// <summary>Ctrl+Tab et Ctrl+Maj+Tab : onglet suivant ou précédent (Aujourd'hui, Votre carte,
+    /// Toutes les leçons), comme dans un navigateur (audit 09/11, E21). « Votre texte » compte
+    /// pour Aujourd'hui, dont il vient. Sans onglets (mode Libre, Paramètres, parcours), rien :
+    /// Ctrl+Tab n'est jamais un second Tab.</summary>
+    private void HomeCycleTab(int delta)
+    {
+        if (_mode != WindowMode.Lessons || _settingsOpen || IsTutorialActive) return;
+        var current = _homePage == HomePage.Text ? HomePage.Today : _homePage;
+        int i = Array.IndexOf(HomeTabOrder, current);
+        var next = HomeTabOrder[(i + delta + HomeTabOrder.Length) % HomeTabOrder.Length];
+        if (next == HomePage.Exercise) HomeShowExercise();
+        else if (next == HomePage.Map) HomeShowMap();
+        else HomeShowPage(HomePage.Today);
     }
 
     private void HomeMoveMapKey(int delta)
@@ -236,13 +280,13 @@ internal sealed partial class LessonsWindow
     private bool HomePageHasSurface => _homePage == HomePage.Text;
 
     /// <summary>Le clic en cours : le point, retenu pour l'action de la carte ; le focus clavier
-    /// quitte la cible. Dans le champ de « Votre texte », le clic pose le curseur.</summary>
+    /// quitte la cible. Le champ de « Votre texte » a déjà posé son curseur à l'enfoncement
+    /// (OnFieldMouseDown) : le relâchement ne replie pas une sélection faite au double-clic.</summary>
     private void HomeNoteClick(int x, int y)
     {
         _homeClickPoint = (x, y);
         if (!HomeShown) return;
         _focusedActionIndex = -1;
-        if (_homePage == HomePage.Text) HomeTextClick(x, y);
     }
 
     private void HomeOnHide()
@@ -325,7 +369,8 @@ internal sealed partial class LessonsWindow
     {
         var review = HomeBuildSnapshot().Review;
         if (review.Exercise is not { } exercise) return;
-        HomeStartComposed(exercise, L.LessonsHome_ReviewTitle, L.LessonsHome_ReviewLessonTitle, review.Covered);
+        HomeStartComposed(exercise,
+            () => (L.LessonsHome_ReviewTitle, L.LessonsHome_ReviewLessonTitle, L.LessonsHome_ReviewInstruction), review.Covered);
     }
 
     // ── Dessin de la page ────────────────────────────────────────────────
@@ -354,7 +399,18 @@ internal sealed partial class LessonsWindow
         DrawFocusOutline(hdc, _clickActions[_focusedActionIndex].Rect, pal.Ink);
     }
 
-    private string HomeEllipsize(IntPtr hdc, string text, FontSpec font, int maxWidth)
+    /// <summary>Coupe de l'accueil ; chaque passage est signalé à <see cref="TruncationProbe"/>
+    /// (audit UX du 09/11, W24).</summary>
+    private string HomeEllipsize(IntPtr hdc, string text, FontSpec font, int maxWidth,
+        [System.Runtime.CompilerServices.CallerFilePath] string file = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        string shown = HomeEllipsizeCore(hdc, text, font, maxWidth);
+        TruncationProbe.Ellipsized(hdc, text, shown, font, maxWidth, file, line);
+        return shown;
+    }
+
+    private static string HomeEllipsizeCore(IntPtr hdc, string text, FontSpec font, int maxWidth)
     {
         if (maxWidth <= 0) return "";
         if (PaperText.Width(hdc, text, font) <= maxWidth) return text;
@@ -549,7 +605,7 @@ internal sealed partial class LessonsWindow
             {
                 runs.Add(new TextRun(L.LessonsHome_ReviewWords("\u0001")));
                 // Les mots en gras : le gabarit coupe autour d'un repère.
-                runs = HomeWordsRuns(L.LessonsHome_ReviewWords("\u0001"), string.Join(", ", review.Words));
+                runs = HomeWordsRuns(L.LessonsHome_ReviewWords("\u0001"), LessonsHomeLogic.JoinWords(review.Words));
                 if (review.Missing.Count > 0)
                     runs.Add(new TextRun(" " + L.LessonsHome_ReviewMissing(string.Join(", ", review.Missing))));
             }
@@ -599,13 +655,32 @@ internal sealed partial class LessonsWindow
         var moreFont = HomeFont(AppFonts.Text, 13);
         int pad = S(8), minCell = S(40), moreWidth = S(40);
         int glyphH = S(32);
+
+        // Verr. Maj. s'écrit en clair ; en sigle (« VM ») seulement si le nom en clair ferait perdre
+        // des caractères à revoir dans la largeur (avis global 1.3.0).
+        int Fitting(bool compact)
+        {
+            int used = 0, count = 0;
+            for (int i = 0; i < due.Count; i++)
+            {
+                var s = Gesture.Of(due[i].Character);
+                int gw = s.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, s, false, HomeScale, 0, 0, draw: false, compact);
+                int cw = Math.Max(minCell, Math.Max(gw, PaperText.Width(hdc, HomeGlyph(due[i].Character), glyphFont))) + 2 * pad;
+                if (used + cw + (i < due.Count - 1 ? moreWidth : 0) > area.right - area.left) break;
+                used += cw;
+                count++;
+            }
+            return count;
+        }
+        bool compactCaps = Fitting(false) < Fitting(true);
+
         int x = area.left;
         int shown = 0;
         for (int i = 0; i < due.Count; i++)
         {
             string glyph = HomeGlyph(due[i].Character);
             var steps = Gesture.Of(due[i].Character);
-            int gestureW = steps.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, 0, 0, draw: false);
+            int gestureW = steps.Count == 0 ? 0 : TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, 0, 0, draw: false, compactCaps);
             int cell = Math.Max(minCell, Math.Max(gestureW, PaperText.Width(hdc, glyph, glyphFont))) + 2 * pad;
             int reserve = i < due.Count - 1 ? moreWidth : 0;
             if (x + cell + reserve > area.right) break;
@@ -613,7 +688,7 @@ internal sealed partial class LessonsWindow
             PaperText.DrawLine(hdc, glyph, glyphFont,
                 new Win32.RECT { left = x, top = area.top, right = x + cell, bottom = area.top + glyphH }, pal.Ink, TextAlign.Center);
             if (steps.Count > 0)
-                TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, centre + gestureW / 2, area.top + glyphH + S(15));
+                TablatureRenderer.DrawShortGesture(hdc, steps, false, HomeScale, centre + gestureW / 2, area.top + glyphH + S(15), compact: compactCaps);
             x += cell;
             shown++;
             if (i < due.Count - 1 && x + moreWidth <= area.right)
@@ -632,7 +707,7 @@ internal sealed partial class LessonsWindow
         var (module, lesson, exerciseIndex) = HomeResumePosition();
         bool started = _progress.CountCompleted(_catalog) > 0;
         HomeCardHeading(hdc, card, started ? L.LessonsHome_ResumeTitle : L.LessonsHome_StartTitle,
-            $"{module.Title} · {lesson.Title}", pal);
+            LessonNames.Join(module.Title, lesson.Title, " · "), pal);
 
         int pad = S(16);
         int inner = card.right - card.left - 2 * pad;
@@ -963,7 +1038,8 @@ internal sealed partial class LessonsWindow
         if (!snapshot.Keys.TryGetValue(scancode, out var state)) return;
         var session = HomeKeySession(snapshot, scancode, state);
         if (session.Exercise is not { } exercise) return;
-        HomeStartComposed(exercise, L.LessonsHome_YourMap, L.LessonsHome_KeyTitle(HomeKeyCap(scancode)), session.Covered);
+        HomeStartComposed(exercise,
+            () => (L.LessonsHome_YourMap, L.LessonsHome_KeyTitle(HomeKeyCap(scancode)), L.LessonsHome_KeySessionInstruction), session.Covered);
     }
 
     private static string HomeKeySessionNote(HomeSession session) => session.Exercise == null
@@ -1132,7 +1208,7 @@ internal sealed partial class LessonsWindow
                 lines.Add(L.LessonsHome_DueSpoken(entry.Character, gesture));
             }
             if (snapshot.Review.Words.Count > 0)
-                lines.Add(L.LessonsHome_ReviewWords(string.Join(", ", snapshot.Review.Words)));
+                lines.Add(L.LessonsHome_ReviewWords(LessonsHomeLogic.JoinWords(snapshot.Review.Words)));
         }
         var (module, lesson, exerciseIndex) = HomeResumePosition();
         lines.Add(L.LessonsHome_ResumeTitle);

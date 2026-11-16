@@ -43,7 +43,7 @@ public class AvisApresSeanceTests : IDisposable
     // ReviewPromptTrigger est interne : il ne peut pas paraître dans la signature d'une
     // méthode de test publique, d'où les boucles plutôt que des [Theory].
     private static readonly ReviewPromptTrigger[] TousLesDeclencheurs =
-        { ReviewPromptTrigger.QuietTyping, ReviewPromptTrigger.Startup, ReviewPromptTrigger.Share };
+        { ReviewPromptTrigger.QuietTyping, ReviewPromptTrigger.Startup };
 
     [Fact]
     public void Refusee_pendant_une_seance()
@@ -70,9 +70,8 @@ public class AvisApresSeanceTests : IDisposable
     [Fact]
     public void Acceptee_apres_les_dix_minutes_hors_frappe()
     {
-        // Démarrage, relais de l'accueil et partage ne naissent pas d'une frappe.
+        // Démarrage et relais de l'accueil ne naissent pas d'une frappe.
         Assert.True(Autorise(ReviewPromptTrigger.Startup, false, depuisFin: Delai, depuisDerniereFrappe: Jamais));
-        Assert.True(Autorise(ReviewPromptTrigger.Share, false, depuisFin: Delai, depuisDerniereFrappe: Jamais));
     }
 
     [Fact]

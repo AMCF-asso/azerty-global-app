@@ -34,7 +34,7 @@ internal static partial class L
     public static string Settings_TabLanguageMaintenance => T("Langue", "Language");
 
     public static string Settings_ConfirmResetShortcuts => T(
-        "Réinitialiser les raccourcis aux valeurs par défaut\n(Ctrl + Maj + Q et Ctrl + Maj + W) ?",
+        "Réinitialiser les raccourcis aux valeurs par défaut\n(Ctrl + Maj + Q et Ctrl + Maj + W) ?",
         "Reset shortcuts to default values\n(Ctrl + Shift + Q and Ctrl + Shift + W)?");
     public static string Settings_ShortcutsReset => T("Raccourcis réinitialisés ✓", "Shortcuts reset ✓");
     public static string Settings_VirtualKeyboardWindowReset => T("Fenêtre du clavier virtuel réinitialisée ✓", "Virtual keyboard window reset ✓");
@@ -47,14 +47,22 @@ internal static partial class L
     public static string Settings_CompatAdd => T("Ajouter…", "Add…");
     public static string Settings_CompatRemove => T("Retirer", "Remove");
     public static string Settings_CompatModeAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
-    public static string Settings_CompatModeForceOn => T("Forcer la compatibilité jeu", "Force game compatibility");
+    public static string Settings_CompatModeForceOn => T("Mode jeu : saisie par combinaisons de touches", "Game mode: typing with key combinations");
     public static string Settings_CompatModeForceOff => T("Forcer la désactivation", "Force off");
     // Libellés courts affichés dans la liste, à côté du nom du process
-    public static string Settings_CompatListForceOn => T("compatibilité jeu", "game compatibility");
+    public static string Settings_CompatListForceOn => T("mode jeu", "game mode");
     public static string Settings_CompatListForceOff => T("désactivée", "disabled");
     public static string Settings_CompatAdded(string process) => T($"« {process} » ajoutée ✓", $"“{process}” added ✓");
     public static string Settings_CompatRemoved(string process) => T($"« {process} » retirée ✓", $"“{process}” removed ✓");
     public static string Settings_CompatUpdated(string process) => T($"« {process} » mise à jour ✓", $"“{process}” updated ✓");
+    /// <summary>« Auto » : l'application sort de la liste, c'est ce qu'elle dit (audit 09/11, W19).</summary>
+    public static string Settings_CompatAutomatic(string process) => T(
+        $"« {process} » repasse en automatique : elle sort de la liste ✓",
+        $"“{process}” goes back to automatic: it leaves the list ✓");
+    /// <summary>Ajouter une application déjà listée change son mode : le message dit de quel mode à quel mode.</summary>
+    public static string Settings_CompatReplaced(string process, string before, string after) => T(
+        $"« {process} » était déjà dans la liste ({before}) : elle passe à « {after} » ✓",
+        $"“{process}” was already in the list ({before}): it is now “{after}” ✓");
     public static string Settings_CompatFilterExe => T("Applications (*.exe)", "Applications (*.exe)");
     public static string Settings_CompatPickerTitle => T("Choisir une application", "Choose an app");
 }

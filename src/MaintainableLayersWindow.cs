@@ -19,6 +19,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private const int IDC_VISUAL = 5205;
     private const int IDC_DELAY = 5206;
     private const int IDC_SAVE = 5208;
+    private const int EN_KILLFOCUS = 0x0200;
 
     private static readonly string ClassName = ProductIdentity.WindowClass("MaintainableLayers");
     // Lot 130 A : WS_VSCROLL dès la création (la barre existe, FitWindow la masque quand tout
@@ -59,6 +60,12 @@ internal sealed class MaintainableLayersWindow : IDisposable
     private IntPtr _hFieldBrush;
     private IntPtr[] _checkboxes = Array.Empty<IntPtr>();
     private bool _visible;
+    // Audit 09/11, W7 : le texte de chaque contrôle, pour le réécrire quand la langue change.
+    private readonly List<(IntPtr Control, Func<string> Text)> _texts = new();
+    private IntPtr _hDelayNote;
+    // Les écritures du champ de délai ne sont pas celles de l'utilisateur pendant un chargement ou un nettoyage.
+    private bool _delayBusy;
+    private readonly Action<string> _onAppLanguageChanged;
 
     public event Action? SettingsChanged;
 
@@ -68,7 +75,29 @@ internal sealed class MaintainableLayersWindow : IDisposable
     {
         _wndProcDelegate = WndProc;
         CreateWindow();
+        // Abonnement comme les Paramètres : la fenêtre est gardée d'une ouverture à l'autre et restait
+        // dans la langue de sa première ouverture (audit 09/11, W7).
+        _onAppLanguageChanged = _ => OnLanguageChanged();
+        ConfigManager.AppLanguageChanged += _onAppLanguageChanged;
     }
+
+    /// <summary>Ouvre la fenêtre, ou la ramène au premier plan si elle l'est déjà : <see cref="Show"/>
+    /// relit la configuration et défait une case cochée sans être fermée (audit 09/11, W2).</summary>
+    public void ShowOrBringToFront()
+    {
+        if (_visible)
+        {
+            Win32.ShowWindow(_hWnd, 9); // SW_RESTORE : réaffiche aussi une fenêtre réduite
+            Win32.SetForegroundWindow(_hWnd);
+        }
+        else
+            Show();
+    }
+
+    /// <summary>Relit les cases dans la configuration. Le menu de la zone de notification bascule une
+    /// couche pendant que la fenêtre est ouverte : sans cette relecture, la fenêtre affichait
+    /// l'ancien état (audit 09/11, W4).</summary>
+    public void RefreshFromConfig() => LoadFromConfig();
 
     public void Show()
     {
@@ -128,25 +157,28 @@ internal sealed class MaintainableLayersWindow : IDisposable
         CreateFonts();
 
         // Le titre et l'explication reviennent à la ligne quand la largeur manque (lot 130 A).
-        CreateStatic(instance, L.Layers_Title, 24, 18, 480, 30, _hFontTitle, Role.Title);
+        CreateStatic(instance, () => L.Layers_Title, 24, 18, 480, 30, _hFontTitle, Role.Title);
         // Le second groupe de phrases wrappe sur deux lignes dans 470 px :
         // réserver trois lignes pleines pour ne rien tronquer.
-        CreateStatic(instance, L.Layers_Explainer, 24, 56, 470, 66, _hFont, Role.Wrapped);
+        CreateStatic(instance, () => L.Layers_Explainer, 24, 56, 470, 66, _hFont, Role.Wrapped);
 
-        _hMaster = CreateCheckbox(instance, IDC_MASTER, L.Layers_MasterCheckbox, 24, 134, 455, 28);
-        _hAvailableLabel = CreateStatic(instance, L.Layers_AvailableLabel, 45, 175, 250, 24, _hFont);
-        _hGreek = CreateCheckbox(instance, IDC_GREEK, L.Layers_GreekCheckbox, 45, 202, 210, 26);
-        _hCyrillic = CreateCheckbox(instance, IDC_CYRILLIC, L.Layers_CyrillicCheckbox, 270, 202, 220, 26);
-        _hScientific = CreateCheckbox(instance, IDC_SCIENTIFIC, L.Layers_ScientificCheckbox, 45, 234, 260, 26);
+        _hMaster = CreateCheckbox(instance, IDC_MASTER, () => L.Layers_MasterCheckbox, 24, 134, 455, 28);
+        _hAvailableLabel = CreateStatic(instance, () => L.Layers_AvailableLabel, 45, 175, 250, 24, _hFont);
+        _hGreek = CreateCheckbox(instance, IDC_GREEK, () => L.Layers_GreekCheckbox, 45, 202, 210, 26);
+        _hCyrillic = CreateCheckbox(instance, IDC_CYRILLIC, () => L.Layers_CyrillicCheckbox, 270, 202, 220, 26);
+        _hScientific = CreateCheckbox(instance, IDC_SCIENTIFIC, () => L.Layers_ScientificCheckbox, 45, 234, 260, 26);
 
-        _hVisual = CreateCheckbox(instance, IDC_VISUAL, L.Layers_VisualCheckbox, 24, 282, 360, 26);
-        _hDelayLabel = CreateStatic(instance, L.Layers_DelayLabel, 24, 322, 185, 26, _hFont);
+        _hVisual = CreateCheckbox(instance, IDC_VISUAL, () => L.Layers_VisualCheckbox, 24, 282, 360, 26);
+        _hDelayLabel = CreateStatic(instance, () => L.Layers_DelayLabel, 24, 322, 185, 26, _hFont);
         _hDelay = Win32.CreateWindowExW(0, "EDIT", "500",
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_BORDER | Win32.WS_TABSTOP | Win32.ES_NUMBER | Win32.ES_CENTER,
             210, 317, 70, 28, _hWnd, (IntPtr)IDC_DELAY, instance, IntPtr.Zero);
         SetFont(_hDelay, _hFont);
         Track(_hDelay, 210, 317, 70, 28, Role.Plain);
-        _hDelayUnit = CreateStatic(instance, L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
+        NumericField.Limit(_hDelay, 4); // 1000 au plus : le collage est tronqué lui aussi (E28)
+        _hDelayUnit = CreateStatic(instance, () => L.Layers_DelayUnit, 290, 322, 145, 26, _hFont);
+        // Audit 09/11, W20 : le délai ramené dans 150 à 1000 le dit, à gauche du bouton « Fermer ».
+        _hDelayNote = CreateStatic(instance, () => string.Empty, 24, 358, 320, 30, _hFont);
 
         // « Fermer » : la fenêtre enregistre à toute fermeture (croix, Échap, Entrée) et n'a
         // pas d'annulation ; « Enregistrer » laissait croire que les autres sorties perdaient.
@@ -154,6 +186,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_DEFPUSHBUTTON,
             350, 357, 140, 34, _hWnd, (IntPtr)IDC_SAVE, instance, IntPtr.Zero);
         SetFont(save, _hFont);
+        _texts.Add((save, () => L.Common_Close));
         // Lot 130 A et C : « Fermer » reste à 30 px du bord droit de ce qui est affiché.
         Track(save, 350, 357, 140, 34, Role.Anchored);
         // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système.
@@ -164,25 +197,41 @@ internal sealed class MaintainableLayersWindow : IDisposable
         FitWindow();
     }
 
-    private IntPtr CreateCheckbox(IntPtr instance, int id, string text, int x, int y, int w, int h)
+    private IntPtr CreateCheckbox(IntPtr instance, int id, Func<string> text, int x, int y, int w, int h)
     {
-        IntPtr control = Win32.CreateWindowExW(0, "BUTTON", text,
+        IntPtr control = Win32.CreateWindowExW(0, "BUTTON", text(),
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_AUTOCHECKBOX,
             x, y, w, h, _hWnd, (IntPtr)id, instance, IntPtr.Zero);
         SetFont(control, _hFont);
         Track(control, x, y, w, h, Role.Plain);
+        _texts.Add((control, text));
         return control;
     }
 
-    private IntPtr CreateStatic(IntPtr instance, string text, int x, int y, int w, int h, IntPtr font,
+    private IntPtr CreateStatic(IntPtr instance, Func<string> text, int x, int y, int w, int h, IntPtr font,
         Role role = Role.Plain)
     {
-        IntPtr control = Win32.CreateWindowExW(0, "STATIC", text,
+        IntPtr control = Win32.CreateWindowExW(0, "STATIC", text(),
             Win32.WS_CHILD | Win32.WS_VISIBLE,
             x, y, w, h, _hWnd, IntPtr.Zero, instance, IntPtr.Zero);
         SetFont(control, font);
         Track(control, x, y, w, h, role);
+        _texts.Add((control, text));
         return control;
+    }
+
+    /// <summary>Réécrit les textes dans la langue courante, puis remesure : les textes à retour à la
+    /// ligne changent de hauteur d'une langue à l'autre (audit 09/11, W7).</summary>
+    private void OnLanguageChanged()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        Win32.SetWindowTextW(_hWnd, $"{ProductIdentity.DisplayName} — {L.Layers_WindowTitleSuffix}");
+        foreach (var (control, text) in _texts)
+            if (control != _hDelayNote)
+                Win32.SetWindowTextW(control, text());
+        Win32.SetWindowTextW(_hDelayNote, string.Empty);
+        FitWindow();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
     private int S(int value) => WindowSizing.ScaleForDpi(value, _dpi);
@@ -192,7 +241,8 @@ internal sealed class MaintainableLayersWindow : IDisposable
     {
         AppFonts.EnsureLoaded();
         _hFont = Win32.CreateFontW(S(-TypeRamp.Body), 0, 0, 0, TypeRamp.Regular, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Text);
-        // -18 : le titre complet tient sur une seule ligne dans 470 px.
+        // Depuis T2-T4 (candidat 1.3.0) le titre dépasse une ligne dans 470 px : il revient à
+        // la ligne et la fenêtre grandit (FitWindow mesure le texte, quel que soit le DPI).
         _hFontTitle = Win32.CreateFontW(S(-TypeRamp.Title), 0, 0, 0, TypeRamp.Semibold, 0, 0, 0, 0, 0, 0, 5, 0, AppFonts.Title);
     }
 
@@ -287,7 +337,10 @@ internal sealed class MaintainableLayersWindow : IDisposable
         SetChecked(_hCyrillic, ConfigManager.MaintainableCyrillicEnabled);
         SetChecked(_hScientific, ConfigManager.MaintainableScientificEnabled);
         SetChecked(_hVisual, ConfigManager.MaintainableVisualFeedbackEnabled);
-        Win32.SetWindowTextW(_hDelay, ConfigManager.MaintainableDoubleTapMilliseconds.ToString());
+        _delayBusy = true;
+        try { Win32.SetWindowTextW(_hDelay, ConfigManager.MaintainableDoubleTapMilliseconds.ToString()); }
+        finally { _delayBusy = false; }
+        Win32.SetWindowTextW(_hDelayNote, string.Empty);
         UpdateEnabledState();
     }
 
@@ -318,14 +371,85 @@ internal sealed class MaintainableLayersWindow : IDisposable
         }
     }
 
-    private int ReadDelay()
+    internal const int DelayMin = 150, DelayMax = 1000, DelayDefault = 500;
+
+    /// <summary>Le délai du champ, ramené dans 150 à 1000 ms ; <paramref name="adjusted"/> dit s'il a fallu
+    /// le changer (audit 09/11, W20). Vide ou illisible : la valeur par défaut, sans message.</summary>
+    internal static int ClampDelay(string text, out string? adjusted)
+    {
+        adjusted = null;
+        if (!int.TryParse(NumericField.Digits(text), out int parsed))
+            return DelayDefault;
+        if (parsed < DelayMin) { adjusted = L.Layers_DelayRaised(DelayMin); return DelayMin; }
+        if (parsed > DelayMax) { adjusted = L.Layers_DelayLowered(DelayMax); return DelayMax; }
+        return parsed;
+    }
+
+    private int ReadDelay(bool announce = false)
     {
         var text = new StringBuilder(16);
         Win32.GetWindowTextW(_hDelay, text, text.Capacity);
-        int value = int.TryParse(text.ToString(), out int parsed) ? parsed : 500;
-        value = Math.Clamp(value, 150, 1000);
-        Win32.SetWindowTextW(_hDelay, value.ToString());
+        int value = ClampDelay(text.ToString(), out string? adjusted);
+        _delayBusy = true;
+        try { Win32.SetWindowTextW(_hDelay, value.ToString()); }
+        finally { _delayBusy = false; }
+        if (announce)
+            Win32.SetWindowTextW(_hDelayNote, adjusted ?? string.Empty);
         return value;
+    }
+
+    /// <summary>Un clic sur une case : elle s'écrit tout de suite (audit 09/11, W1). Avant, tout n'était
+    /// écrit qu'à la fermeture : Quitter depuis la zone de notification sans fermer la fenêtre perdait
+    /// les cases, et la fenêtre ouverte réécrivait ensuite un état que le menu avait changé (W4).</summary>
+    private void OnCheckboxClicked(int id)
+    {
+        switch (id)
+        {
+            case IDC_MASTER:
+            {
+                bool wasEnabled = ConfigManager.MaintainableLayersEnabled;
+                bool enabled = IsChecked(_hMaster);
+                ConfigManager.SetMaintainableLayersEnabled(enabled);
+                if (enabled)
+                    ConfigManager.SetMaintainableTutorialCompleted(true);
+                UpdateEnabledState();
+                SettingsChanged?.Invoke();
+                if (enabled && !wasEnabled)
+                    ShowMessageBox(_hWnd, L.Layers_ActivatedBody, ProductIdentity.DisplayName, 0x40);
+                return;
+            }
+            case IDC_GREEK: ConfigManager.SetMaintainableGreekEnabled(IsChecked(_hGreek)); break;
+            case IDC_CYRILLIC: ConfigManager.SetMaintainableCyrillicEnabled(IsChecked(_hCyrillic)); break;
+            case IDC_SCIENTIFIC: ConfigManager.SetMaintainableScientificEnabled(IsChecked(_hScientific)); break;
+            case IDC_VISUAL: ConfigManager.SetMaintainableVisualFeedbackEnabled(IsChecked(_hVisual)); break;
+            default: return;
+        }
+        SettingsChanged?.Invoke();
+    }
+
+    /// <summary>Frappe ou collage dans le champ de délai : le texte garde ses chiffres (E28), et une valeur
+    /// déjà valable s'écrit tout de suite. Une valeur hors bornes attend la sortie du champ, qui la ramène
+    /// et le dit : « 5 » en route vers « 500 » ne doit pas devenir 150 en cours de frappe.</summary>
+    private void OnDelayChanged()
+    {
+        if (_delayBusy || _hDelay == IntPtr.Zero) return;
+        _delayBusy = true;
+        try { NumericField.Sanitize(_hDelay); }
+        finally { _delayBusy = false; }
+        var text = new StringBuilder(16);
+        Win32.GetWindowTextW(_hDelay, text, text.Capacity);
+        if (int.TryParse(text.ToString(), out int value) && value >= DelayMin && value <= DelayMax)
+        {
+            Win32.SetWindowTextW(_hDelayNote, string.Empty);
+            ConfigManager.SetMaintainableDoubleTapMilliseconds(value);
+            SettingsChanged?.Invoke();
+        }
+    }
+
+    private void OnDelayLeft()
+    {
+        ConfigManager.SetMaintainableDoubleTapMilliseconds(ReadDelay(announce: true));
+        SettingsChanged?.Invoke();
     }
 
     private void UpdateEnabledState()
@@ -364,9 +488,17 @@ internal sealed class MaintainableLayersWindow : IDisposable
                         Hide();
                         return IntPtr.Zero;
                     }
-                    if (id == IDC_MASTER)
+                    int notification = (wParam.ToInt32() >> 16) & 0xFFFF;
+                    if (id == IDC_DELAY)
                     {
-                        UpdateEnabledState();
+                        if (notification == Win32.EN_CHANGE) OnDelayChanged();
+                        else if (notification == EN_KILLFOCUS) OnDelayLeft();
+                        return IntPtr.Zero;
+                    }
+                    if (id is IDC_MASTER or IDC_GREEK or IDC_CYRILLIC or IDC_SCIENTIFIC or IDC_VISUAL)
+                    {
+                        if (notification == 0) // BN_CLICKED
+                            OnCheckboxClicked(id);
                         return IntPtr.Zero;
                     }
                     if (id == IDC_SAVE)
@@ -436,6 +568,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
 
     public void Dispose()
     {
+        ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         if (_hWnd != IntPtr.Zero)
         {
             // Désinscrire AVANT de détruire : Windows recycle les HWND.

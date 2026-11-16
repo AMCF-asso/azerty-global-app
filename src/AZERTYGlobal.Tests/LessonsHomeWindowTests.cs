@@ -253,10 +253,15 @@ public class LessonsHomeWindowTests
             Assert.Equal("Text", Page(window));
             BancCapture.Call(window, "HomeTextForget"); // le presse-papiers de la machine n'entre pas dans le test
 
-            // La frappe va au champ, émoji compris (deux WM_CHAR) ; Entrée passe à la ligne.
-            foreach (char c in "Ñaŋ — ok 🙏\rNdar")
+            // La frappe va au champ, émoji compris (deux WM_CHAR) ; Entrée passe à la ligne (au
+            // keydown : son WM_CHAR '\r' n'écrit rien de plus).
+            foreach (char c in "Ñaŋ — ok 🙏")
                 BancCapture.Call(window, "OnChar", c);
-            Assert.Equal("Ñaŋ — ok 🙏\nNdar", BancCapture.Field<string>(window, "_homeText"));
+            BancCapture.Call(window, "OnKeyDown", 0x0D);
+            BancCapture.Call(window, "OnChar", '\r');
+            foreach (char c in "Ndar")
+                BancCapture.Call(window, "OnChar", c);
+            Assert.Equal("Ñaŋ — ok 🙏\nNdar", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
             Paint(window);
             Assert.Equal("Ñaŋ — ok 🙏\nNdar", Summary(window)); // le lecteur d'écran lit le champ
             var start = Assert.Single(Controls(window), c => c.Name.StartsWith(L.LessonsHome_TextStart, StringComparison.Ordinal));
@@ -264,11 +269,12 @@ public class LessonsHomeWindowTests
             Assert.True((bool)BancCapture.Call(window, "get_HasTypingSurface")!);
 
             // Retour arrière retire une grappe entière, Gauche puis Suppr celle d'après.
+            BancCapture.Call(window, "OnKeyDown", 0x08);
             BancCapture.Call(window, "OnChar", '\b');
-            Assert.Equal("Ñaŋ — ok 🙏\nNda", BancCapture.Field<string>(window, "_homeText"));
+            Assert.Equal("Ñaŋ — ok 🙏\nNda", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
             BancCapture.Call(window, "HomeHandleKey", 0x25);
             BancCapture.Call(window, "HomeHandleKey", 0x2E);
-            Assert.Equal("Ñaŋ — ok 🙏\nNd", BancCapture.Field<string>(window, "_homeText"));
+            Assert.Equal("Ñaŋ — ok 🙏\nNd", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
 
             // La séance : le texte sans 🙏, en séance composée, le catalogue intact.
             int exercise = BancCapture.Field<int>(window, "_exerciseIndex");
@@ -288,9 +294,9 @@ public class LessonsHomeWindowTests
             Assert.Equal(exercise, BancCapture.Field<int>(window, "_exerciseIndex"));
 
             // Le texte reste le temps de la fenêtre ; sa fermeture l'oublie.
-            Assert.Equal("Ñaŋ — ok 🙏\nNd", BancCapture.Field<string>(window, "_homeText"));
+            Assert.Equal("Ñaŋ — ok 🙏\nNd", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
             BancCapture.Call(window, "HomeOnHide");
-            Assert.Equal("", BancCapture.Field<string>(window, "_homeText"));
+            Assert.Equal("", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
         }
         finally { BancCapture.Teardown(window); }
     }
@@ -310,10 +316,10 @@ public class LessonsHomeWindowTests
             Assert.True(BancCapture.Field<int>(window, "_focusedActionIndex") >= 0);
             BancCapture.Call(window, "HomeTextChar", ' ');
             BancCapture.Call(window, "HomeTextChar", '\r');
-            Assert.Equal("a", BancCapture.Field<string>(window, "_homeText"));
+            Assert.Equal("a", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
             BancCapture.Call(window, "OnChar", 'b'); // une lettre rend le focus au champ
             Assert.Equal(-1, BancCapture.Field<int>(window, "_focusedActionIndex"));
-            Assert.Equal("ab", BancCapture.Field<string>(window, "_homeText"));
+            Assert.Equal("ab", BancCapture.Field<TextEditBuffer>(window, "_homeEdit").Text);
 
             BancCapture.Call(window, "OnKeyDown", 0x1B);
             Assert.Equal("Today", Page(window));

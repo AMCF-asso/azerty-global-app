@@ -52,12 +52,12 @@ internal static partial class L
     public static string LessonsHome_ResumeButton => T("Reprendre", "Resume");
     public static string LessonsHome_StartButton => T("Commencer", "Start");
     public static string LessonsHome_ResumeName(string module, string lesson, int exercise, int total) =>
-        T($"Reprendre : {module}, {lesson}, exercice {exercise} sur {total}",
-          $"Resume: {module}, {lesson}, exercise {exercise} of {total}");
+        T($"Reprendre : {LessonNames.Join(module, lesson, ", ")}, exercice {exercise} sur {total}",
+          $"Resume: {LessonNames.Join(module, lesson, ", ")}, exercise {exercise} of {total}");
 
     public static string LessonsHome_StartName(string module, string lesson, int exercise, int total) =>
-        T($"Commencer : {module}, {lesson}, exercice {exercise} sur {total}",
-          $"Start: {module}, {lesson}, exercise {exercise} of {total}");
+        T($"Commencer : {LessonNames.Join(module, lesson, ", ")}, exercice {exercise} sur {total}",
+          $"Start: {LessonNames.Join(module, lesson, ", ")}, exercise {exercise} of {total}");
 
     // Votre texte (carte de l’accueil)
     public static string LessonsHome_TextSub => T("Une leçon faite de vos mots", "A lesson made of your words");
@@ -153,8 +153,8 @@ internal static partial class L
     public static string LessonsHome_LayerName(HomeLayer layer) => layer switch
     {
         HomeLayer.Shift => Gesture_LineShift,
-        HomeLayer.AltGr => "AltGr",
-        HomeLayer.ShiftAltGr => Gesture_LineShift + " AltGr",
+        HomeLayer.AltGr => AltGrKey,
+        HomeLayer.ShiftAltGr => Gesture_LineShift + " + " + AltGrKey,
         _ => T("Touche seule", "Key alone"),
     };
     public static string LessonsHome_ThenLetter => T("puis la lettre", "then the letter");
@@ -195,5 +195,6 @@ internal static partial class L
     // Lecteur d’écran : résumé de la page (surface de lecture)
     public static string LessonsHome_SurfaceHelp => T("Résumé de la page. Tab atteint les boutons.", "Page summary. Tab reaches the buttons.");
     public static string LessonsHome_SpokenResume(string module, string lesson, int exercise, int total) =>
-        T($"{module}, {lesson}, exercice {exercise} sur {total}.", $"{module}, {lesson}, exercise {exercise} of {total}.");
+        T($"{LessonNames.Join(module, lesson, ", ")}, exercice {exercise} sur {total}.",
+          $"{LessonNames.Join(module, lesson, ", ")}, exercise {exercise} of {total}.");
 }

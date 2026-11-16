@@ -70,16 +70,25 @@ public class TutorialStepsTests : IDisposable
         {
             Assert.Equal(Textes[i], initiation[i].Content);
             Assert.Equal(i, initiation[i].ExerciseIndex);
-            Assert.Equal(LessonCatalogLoader.ComputeExerciseHash("practice", consignes[i], Textes[i]), initiation[i].Hash);
+            Assert.Equal(LessonCatalogLoader.ComputeExerciseHash("practice", Textes[i]), initiation[i].Hash);
+            // L'ancienne empreinte, consigne de la langue incluse, reste reconnue (audit UX L1).
+            Assert.Contains(LessonCatalogLoader.ComputeLegacyExerciseHash("practice", consignes[i], Textes[i]),
+                initiation[i].LegacyHashes);
         }
     }
 
     [Fact]
-    public void Les_empreintes_francaises_des_six_premiers_exercices_sont_inchangees()
+    public void Les_empreintes_francaises_des_six_premiers_exercices_restent_reconnues()
     {
-        L.Language = "fr";
-        var initiation = LessonCatalogLoader.LoadFromResource().Modules[0].Lessons[0].Exercises;
-        Assert.Equal(EmpreintesAnciennes, initiation.Take(6).Select(e => e.Hash));
+        // Depuis le 09/11 l'empreinte ne dépend plus de la consigne : les anciennes, calculées
+        // sur ac4ff72, doivent rester parmi les empreintes reconnues, quelle que soit la langue.
+        foreach (string langue in new[] { "fr", "en" })
+        {
+            L.Language = langue;
+            var initiation = LessonCatalogLoader.LoadFromResource().Modules[0].Lessons[0].Exercises;
+            for (int i = 0; i < EmpreintesAnciennes.Length; i++)
+                Assert.Contains(EmpreintesAnciennes[i], initiation[i].LegacyHashes);
+        }
     }
 
     [Fact]
@@ -157,5 +166,14 @@ public class TutorialStepsTests : IDisposable
             new[] { TutorialSteps.UsageDocuments, TutorialSteps.UsageCode, TutorialSteps.UsageAfrica },
             TutorialSteps.NormalizeUsages(new[] { "afrique", "inconnu", "code", "documents", "code" }));
         Assert.Empty(TutorialSteps.NormalizeUsages(null));
+    }
+
+    [Fact]
+    public void Chaque_exercice_d_usage_retrouve_son_usage_et_le_tronc_commun_aucun()
+    {
+        foreach (var (usage, step) in TutorialSteps.UsagesByPriority)
+            Assert.Equal(usage, TutorialSteps.UsageOf(step));
+        for (int i = 0; i < TutorialSteps.DoneThreshold; i++)
+            Assert.Null(TutorialSteps.UsageOf(i));
     }
 }

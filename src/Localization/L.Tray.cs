@@ -64,10 +64,10 @@ internal static partial class L
 
 
     // ── Tooltip ────────────────────────────────────────────────────────
-    public static string Tray_TooltipSuspendedCompat => T("Suspendu pour compatibilité", "Suspended for compatibility");
+    public static string Tray_TooltipSuspendedCompat => T($"Suspendu : cette application ne supporte pas la saisie d’{Product}", $"Suspended: this app does not support {Product} typing");
     public static string Tray_TooltipActive => T("Actif", "Active");
     public static string Tray_TooltipCapsLock => T("Verr. Maj.", "Caps Lock");
-    public static string Tray_TooltipDeadKey(string symbol) => T($"Touche morte : {symbol}", $"Dead key: {symbol}");
+    public static string Tray_TooltipDeadKey(string symbol) => T($"Touche morte {symbol} : attend la lettre suivante", $"Dead key {symbol}: waiting for the next letter");
 
     // ── Sollicitation d'avis ────────────────────────────────────────────
     // Entrée tray de bascule directe de langue : libellée dans la langue CIBLE (même
@@ -88,8 +88,8 @@ internal static partial class L
     // neutre : les règles du Store autorisent à solliciter un avis, pas à orienter vers
     // une note positive.
     public static string Tray_ReviewPromptTitle(int attempt) => attempt >= 2
-        ? T($"Votre avis sur {Product} ?", $"Your feedback on {Product}?")
-        : T($"{Product} vous plaît ?", $"Enjoying {Product}?");
+        ? T($"Votre avis sur {Product} ?", $"Your feedback on {Product}?")
+        : T($"{Product} vous plaît ?", $"Enjoying {Product}?");
 
     // Corps nommés par CIBLE du clic (Store ou page feedback) : depuis la v1.2.0 le
     // packagé vise toujours le Store, la page feedback ne sert plus qu'aux installations
@@ -131,10 +131,11 @@ internal static partial class L
     public static string Tray_MenuVirtualKeyboard(string key) => T($"Afficher le clavier virtuel\tCtrl+Maj+{key}", $"Show virtual keyboard\tCtrl+Shift+{key}");
     public static string Tray_MenuSearchCharacter(string key) => T($"Rechercher un caractère\tCtrl+Maj+{key}", $"Find a character\tCtrl+Shift+{key}");
     public static string Tray_MenuLessons => T("Leçons", "Lessons");
-    public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Replay the welcome tour");
+    public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Reopen the welcome screen");
 
     /// <summary>Titre du sous-menu des couches maintenables (décision S2-3 du 2026-09-02).</summary>
-    public static string Tray_MenuLayers => T("Couches", "Layers");
+    // Le nom de la fenêtre qu'il ouvre et de la fiche Store (audit UX du 09/11, W23).
+    public static string Tray_MenuLayers => Layers_WindowTitleSuffix;
 
     /// <summary>Titre du sous-menu d'apprentissage (menu court du 2026-09-19).</summary>
     public static string Tray_MenuLearn => T("Apprendre", "Learn");
@@ -164,7 +165,7 @@ internal static partial class L
         $"Every day, a passage to type in {Product}, the same one for everyone. Click to open.");
     // Relance unique du lancement automatique (v1.2.0, jamais réémise).
     public static string Tray_AutoStartNudgeTitle => T(
-        $"Lancer {Product} au démarrage ?",
+        $"Lancer {Product} au démarrage ?",
         $"Launch {Product} at startup?");
     public static string Tray_AutoStartNudgeBody => T(
         "L’application ne démarre pas encore avec Windows.\nCliquez pour activer le lancement au démarrage.",
@@ -180,31 +181,31 @@ internal static partial class L
     public static string Tray_SettingsResetTitle => T("Paramètres réinitialisés", "Settings reset");
     public static string Tray_SettingsResetBody => T(
         $"Le fichier des paramètres d’{Product} était illisible. Une copie en est gardée. Refaites vos choix dans l’accueil.",
-        $"{Product}’s settings file couldn’t be read. A copy of it is kept. Make your choices again in the welcome tour.");
+        $"{Product}’s settings file couldn’t be read. A copy of it is kept. Make your choices again on the welcome screen.");
     public static string Tray_ProgressResetTitle => T("Progression des leçons réinitialisée", "Lesson progress reset");
     public static string Tray_ProgressResetBody => T(
         $"Le fichier de progression d’{Product} était illisible. Une copie en est gardée, les leçons repartent du début.",
         $"{Product}’s lesson progress file couldn’t be read. A copy of it is kept, and lessons start over.");
     public static string Tray_MenuActiveApp(string procName) => T($"Application active : {procName}", $"Active app: {procName}");
     public static string Tray_MenuCompatAuto => T("Auto (détection automatique)", "Auto (automatic detection)");
-    public static string Tray_MenuCompatForceOn => T("Forcer la compatibilité jeu", "Force game compatibility");
+    public static string Tray_MenuCompatForceOn => T("Mode jeu : saisie par combinaisons de touches", "Game mode: typing with key combinations");
     public static string Tray_MenuCompatForceOff => T("Forcer la désactivation", "Force off");
-    public static string Tray_MenuCompatInfo => T("Comprendre la compatibilité…", "About app compatibility…");
+    public static string Tray_MenuCompatInfo => T($"Pourquoi {Product} se suspend…", $"Why {Product} pauses…");
     public static string Tray_MenuAppCompat => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoTitle => T("Compatibilité des applications", "App compatibility");
     public static string Tray_CompatInfoBody => T(
         $"{Product} adapte automatiquement son fonctionnement à l’application active.\n\n" +
         "Auto\nUtilise le mode normal, un mode spécial pour certains jeux, ou se suspend lorsque c’est nécessaire.\n\n" +
-        "Forcer la compatibilité jeu\nTape les caractères avec les combinaisons de touches de Windows dans l’application sélectionnée, pour les jeux qui ignorent les caractères insérés directement.\n\n" +
+        "Mode jeu : saisie par combinaisons de touches\nTape les caractères avec les combinaisons de touches de Windows dans l’application sélectionnée, pour les jeux qui ignorent les caractères insérés directement.\n\n" +
         $"Forcer la désactivation\nSuspend {Product} uniquement dans l’application sélectionnée.\n\n" +
-        $"Connexions à distance et machines virtuelles\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer, RustDesk, une console de machine virtuelle (Hyper-V, Windows Sandbox, VMware, VirtualBox) ou Citrix est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant. Une machine virtuelle garde sa propre disposition de clavier.\n\n" +
+        $"Connexions à distance et machines virtuelles\n{Product} se suspend automatiquement lorsque Parsec, le Bureau à distance Microsoft, AnyDesk, TeamViewer, RustDesk, une console de machine virtuelle (Hyper-V, Windows Sandbox, VMware, VirtualBox) ou Citrix (un logiciel de bureau à distance d’entreprise) est au premier plan. Cela évite de transformer deux fois les frappes si {Product} fonctionne aussi sur l’ordinateur distant. Une machine virtuelle garde sa propre disposition de clavier.\n\n" +
         $"Fenêtres lancées en administrateur\nDans une fenêtre lancée en administrateur (terminal, installeur…), {Product} ne peut pas agir : la disposition de Windows s’applique.\n\n" +
         "La détection reste entièrement locale. Aucun nom d’application n’est transmis.",
         $"{Product} automatically adapts its behavior to the active app.\n\n" +
         "Auto\nUses normal mode, a special mode for some games, or suspends itself when necessary.\n\n" +
-        "Force game compatibility\nTypes characters with Windows key combinations in the selected app, for games that ignore directly inserted characters.\n\n" +
+        "Game mode: typing with key combinations\nTypes characters with Windows key combinations in the selected app, for games that ignore directly inserted characters.\n\n" +
         $"Force off\nSuspends {Product} only in the selected app.\n\n" +
-        $"Remote connections and virtual machines\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, RustDesk, a virtual machine console (Hyper-V, Windows Sandbox, VMware, VirtualBox), or Citrix is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer. A virtual machine keeps its own keyboard layout.\n\n" +
+        $"Remote connections and virtual machines\n{Product} automatically suspends itself while Parsec, Microsoft Remote Desktop, AnyDesk, TeamViewer, RustDesk, a virtual machine console (Hyper-V, Windows Sandbox, VMware, VirtualBox), or Citrix (a company remote-desktop tool) is in the foreground. This prevents keystrokes from being transformed twice when {Product} also runs on the remote computer. A virtual machine keeps its own keyboard layout.\n\n" +
         $"Windows run as administrator\nIn a window run as administrator (terminal, installer…), {Product} cannot act: the Windows layout applies.\n\n" +
         "Detection stays entirely local. No app names are transmitted.");
     public static string Tray_MenuAbout => T("À propos", "About");

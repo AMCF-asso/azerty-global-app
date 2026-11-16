@@ -49,6 +49,21 @@ internal sealed class LessonModule
     public IReadOnlyList<LessonLesson> Lessons { get; }
 }
 
+/// <summary>
+/// Nom affiché d'une leçon dans son module. Quand les deux portent le même titre (« Prise en main »,
+/// « Majuscules accentuées »), le nom n'est écrit qu'une fois : avis global 1.3.0, C1. Les titres
+/// ne sont pas modifiés (ils n'entrent pas dans l'empreinte de progression, décision « un seul nom »).
+/// </summary>
+internal static class LessonNames
+{
+    public static bool SameTitle(string module, string lesson) =>
+        string.Equals(module?.Trim(), lesson?.Trim(), StringComparison.CurrentCultureIgnoreCase);
+
+    /// <summary>« Module séparateur Leçon », ou le seul titre quand les deux sont identiques.</summary>
+    public static string Join(string module, string lesson, string separator) =>
+        SameTitle(module, lesson) ? lesson : module + separator + lesson;
+}
+
 internal sealed class LessonLesson
 {
     public LessonLesson(string moduleId, string id, string title, string description, IReadOnlyList<string> characters, IReadOnlyList<LessonExercise> exercises)
@@ -87,11 +102,56 @@ internal sealed class LessonExercise
         Instruction = instruction;
         Content = content.Replace("\r\n", "\n");
         TypingMode = typingMode;
-        Hash = LessonCatalogLoader.ComputeExerciseHash(type, instruction, Content);
+        // Audit UX du 09/11 (L1) : l'empreinte ne dépend que de ce qu'on tape, jamais de la
+        // consigne traduite. Elle incluait la consigne : passer en anglais cachait toute la
+        // progression française. Les clés d'avant se reconnaissent par LegacyHashes.
+        Hash = LessonCatalogLoader.ComputeExerciseHash(type, Content);
         // Audit du 25/09 (L-06) : calculée une fois. Interpolée à chaque lecture, elle l'était
         // plus de 160 fois par repeint (IsCompleted, comptes de la barre latérale).
-        StableKey = $"{ModuleId}/{LessonId}/{ExerciseIndex}/{Hash}";
+        KeyPrefix = $"{ModuleId}/{LessonId}/{ExerciseIndex}/";
+        StableKey = KeyPrefix + Hash;
     }
+
+    /// <summary>« module/leçon/rang/ » : la clé de progression sans l'empreinte.</summary>
+    public string KeyPrefix { get; }
+
+    /// <summary>
+    /// Empreintes que les versions d'avant le 09/11/2026 donnaient à cet exercice : une par
+    /// consigne publiée (FR et EN, table figée `lesson-instruction-history.json`) et par la
+    /// consigne actuelle. Calculées avec le texte actuel : un texte modifié depuis se
+    /// retrouve par <see cref="SupersededKeys"/>, s'il est dans la table des anciennes formes.
+    /// </summary>
+    public IReadOnlyList<string> LegacyHashes => _legacyHashes ??= LessonInstructionHistory
+        .For(KeyPrefix.TrimEnd('/'))
+        .Append(Instruction)
+        .Distinct(StringComparer.Ordinal)
+        .Select(instruction => LessonCatalogLoader.ComputeLegacyExerciseHash(Type, instruction, Content))
+        .ToArray();
+
+    private string[]? _legacyHashes;
+
+    /// <summary>
+    /// Clés de progression complètes (« module/leçon/rang/empreinte ») que les versions
+    /// publiées donnaient aux anciennes formes de cet exercice : un autre texte à taper, ou
+    /// un autre rang dans la leçon (table `lesson-content-history.json`, audit de régression
+    /// du 10/11, RA2). Une par consigne connue, plus l'empreinte sans consigne. Une réussite
+    /// trouvée sous l'une d'elles est reprise sans ses scores
+    /// (<see cref="LessonProgressStore.MergeLegacy"/>). Un texte absent de la table reste
+    /// « à faire ».
+    /// </summary>
+    public IReadOnlyList<string> SupersededKeys => _supersededKeys ??= LessonContentHistory
+        .For(KeyPrefix.TrimEnd('/'))
+        .SelectMany(form => LessonInstructionHistory.For(form.Key)
+            .Concat(LessonInstructionHistory.For(KeyPrefix.TrimEnd('/')))
+            .Append(Instruction)
+            .Distinct(StringComparer.Ordinal)
+            .Select(instruction => LessonCatalogLoader.ComputeLegacyExerciseHash(Type, instruction, form.Content))
+            .Append(LessonCatalogLoader.ComputeExerciseHash(Type, form.Content))
+            .Select(hash => $"{form.Key}/{hash}"))
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
+
+    private string[]? _supersededKeys;
 
     public string ModuleId { get; }
     public string LessonId { get; }
@@ -172,7 +232,7 @@ internal static class LessonCatalogLoader
                     moduleId,
                     lessonId,
                     PickText(RequiredString(lessonEl, "title"), OptionalString(lessonEl, "titleEn")),
-                    PickText(OptionalString(lessonEl, "description"), OptionalString(lessonEl, "descriptionEn")),
+                    ExpandPlaceholders(PickText(OptionalString(lessonEl, "description"), OptionalString(lessonEl, "descriptionEn"))),
                     characters,
                     exercises));
             }
@@ -180,7 +240,7 @@ internal static class LessonCatalogLoader
             modules.Add(new LessonModule(
                 moduleId,
                 PickText(RequiredString(moduleEl, "title"), OptionalString(moduleEl, "titleEn")),
-                PickText(OptionalString(moduleEl, "description"), OptionalString(moduleEl, "descriptionEn")),
+                ExpandPlaceholders(PickText(OptionalString(moduleEl, "description"), OptionalString(moduleEl, "descriptionEn"))),
                 OptionalString(moduleEl, "icon"),
                 isSynthetic: false,
                 lessons));
@@ -189,12 +249,19 @@ internal static class LessonCatalogLoader
         return new LessonCatalog(modules);
     }
 
-    internal static string ComputeExerciseHash(string type, string instruction, string content)
-    {
-        string normalized = string.Join('\u001F', type, instruction, content.Replace("\r\n", "\n"));
-        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
+    /// <summary>Empreinte d'un exercice : type et texte à taper, indépendante de la langue
+    /// et de la formulation de la consigne (audit UX du 09/11, L1). Le préfixe « v2 » la
+    /// distingue des empreintes d'avant.</summary>
+    internal static string ComputeExerciseHash(string type, string content) =>
+        Sha256Hex(string.Join('\u001F', "v2", type, content.Replace("\r\n", "\n")));
+
+    /// <summary>Empreinte des versions d'avant le 09/11/2026, consigne traduite incluse :
+    /// sert seulement à reconnaître les progressions déjà enregistrées.</summary>
+    internal static string ComputeLegacyExerciseHash(string type, string instruction, string content) =>
+        Sha256Hex(string.Join('\u001F', type, instruction, content.Replace("\r\n", "\n")));
+
+    private static string Sha256Hex(string normalized) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
 
     private static LessonModule BuildInitiationModule()
     {
@@ -262,4 +329,13 @@ internal static class LessonCatalogLoader
     {
         return L.IsEnglish && !string.IsNullOrEmpty(en) ? en : fr;
     }
+
+    /// <summary>Texte affiché d'une consigne ou d'une description : {ALTGR}, {SHIFT} et {CAPS}
+    /// deviennent le nom des touches dans la langue de l'app (« Alt Gr » : <see cref="L.AltGrKey"/>).
+    /// La consigne brute reste dans <see cref="LessonExercise.Instruction"/> : les empreintes
+    /// d'avant le 09/11/2026 l'incluaient.</summary>
+    internal static string ExpandPlaceholders(string text) => text
+        .Replace("{ALTGR}", L.AltGrKey, StringComparison.OrdinalIgnoreCase)
+        .Replace("{SHIFT}", L.LessonsWin_PlaceholderShift, StringComparison.OrdinalIgnoreCase)
+        .Replace("{CAPS}", L.LessonsWin_PlaceholderCaps, StringComparison.OrdinalIgnoreCase);
 }

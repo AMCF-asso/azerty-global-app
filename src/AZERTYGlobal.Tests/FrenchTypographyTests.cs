@@ -7,7 +7,7 @@ namespace AZERTYGlobal.Tests;
 /// <summary>
 /// Verrou typographique FR (constat m14 de l'audit i18n, corrigé en v1.2.0) : les chaînes
 /// françaises de l'app doivent appliquer la typographie qu'AZERTY Global promeut —
-/// espace insécable avant : ; ? ! » (et après «), apostrophe typographique ’.
+/// espace insécable avant : ; ? ! » (U+202F avant ; ! ?, règle A541) et après «, apostrophe typographique ’.
 /// Le test énumère par réflexion toutes les propriétés et méthodes publiques de L
 /// retournant string, les évalue en langue française, et échoue à la moindre régression.
 /// </summary>
@@ -66,6 +66,8 @@ public class FrenchTypographyTests : IDisposable
             {
                 if (Array.IndexOf(DoublePunctuation, value[i]) >= 0 && value[i - 1] == ' ')
                     violations.Add($"{name}: espace normale avant '{value[i]}' dans \"{value}\"");
+                if (value[i] is ';' or '!' or '?' && value[i - 1] == '\u00A0')
+                    violations.Add($"{name}: U+00A0 avant '{value[i]}' (U+202F attendue, règle A541) dans \"{value}\"");
                 if (value[i - 1] == '«' && i < value.Length && value[i] == ' ')
                     violations.Add($"{name}: espace normale après '«' dans \"{value}\"");
             }
@@ -89,9 +91,9 @@ public class FrenchTypographyTests : IDisposable
             string text = TutorialSteps.All[step].Target;
             for (int i = 0; i < text.Length; i++)
             {
-                if (Array.IndexOf(DoublePunctuation, text[i]) >= 0 && (i == 0 || text[i - 1] is not (' ' or ' ')))
-                    violations.Add($"rang {step} : pas d'insécable avant '{text[i]}' dans \"{text}\"");
-                if (text[i] == '«' && (i + 1 >= text.Length || text[i + 1] is not (' ' or ' ')))
+                if (MissesSpaceBefore(text, i))
+                    violations.Add($"rang {step} : pas d'insécable avant '{text[i]}' (U+202F pour ; ! ?) dans \"{text}\"");
+                if (text[i] == '«' && (i + 1 >= text.Length || text[i + 1] is not ('\u00A0' or '\u202F')))
                     violations.Add($"rang {step} : pas d'insécable après '«' dans \"{text}\"");
                 if (text[i] == '\'')
                     violations.Add($"rang {step} : apostrophe droite dans \"{text}\"");
@@ -152,18 +154,87 @@ public class FrenchTypographyTests : IDisposable
             + string.Join("\n", violations.Take(40)));
     }
 
-    /// <summary>Insécable (U+00A0 ou U+202F) avant : ; ? ! » et après «, aucune apostrophe droite.</summary>
+    /// <summary>
+    /// Remontée 13b (07/11) : les explications « Pourquoi ici » du parcours, générées depuis le
+    /// brouillon validé, gardent la typographie française. Elles sortent d'un switch sur le
+    /// caractère, que le balayage des chaînes de L ne voit pas.
+    /// </summary>
+    [Fact]
+    public void TutorialExplanations_KeepFrenchTypography()
+    {
+        L.Language = "fr";
+        var violations = new List<string>();
+        int explained = 0;
+        foreach (var step in TutorialSteps.All)
+            foreach (char c in step.Target.Distinct())
+            {
+                if (L.TutorialExplanation(c) is not { } e) continue;
+                explained++;
+                CheckFrenchTypography($"explication de '{c}'", e.Why, violations);
+                if (e.Remember is { } remember)
+                    CheckFrenchTypography($"« Pour retenir » de '{c}'", remember, violations);
+            }
+        Assert.True(explained > 0, "Aucune explication lue");
+        Assert.True(violations.Count == 0, string.Join("\n", violations));
+    }
+
+    /// <summary>
+    /// Audit de régression du 10/11, RA14 : dans le même encadré, « Pourquoi » écrivait
+    /// « Verr. Maj » et « Pour retenir » « Verr. Maj. » ; et le point-virgule y était précédé
+    /// tantôt de U+202F, tantôt de U+00A0. Un seul nom de touche ; puis, règle A541 (10/11),
+    /// l'espace fine insécable U+202F devant ; ! ? et U+00A0 devant : seulement.
+    /// </summary>
+    [Fact]
+    public void TutorialExplanations_UseOneKeyNameAndOneNoBreakSpace()
+    {
+        L.Language = "fr";
+        var violations = new List<string>();
+        int explained = 0;
+        int thin = 0;
+        for (int code = 0x20; code <= 0xFFFF; code++)
+        {
+            if (L.TutorialExplanation((char)code) is not { } e) continue;
+            explained++;
+            foreach (string text in new[] { e.Why, e.Remember ?? "" })
+            {
+                thin += System.Text.RegularExpressions.Regex.Matches(text, "\u202F[;!?]").Count;
+                if (System.Text.RegularExpressions.Regex.IsMatch(text, @"Verr\. Maj(?!\.)"))
+                    violations.Add($"U+{code:X4} : « Verr. Maj » sans point dans \"{text}\"");
+                if (System.Text.RegularExpressions.Regex.IsMatch(text, @"[ \u00A0](?=[;!?])|[ \u202F](?=:)"))
+                    violations.Add($"U+{code:X4} : mauvaise espace devant un signe double (U+202F pour ; ! ?, U+00A0 pour :) dans \"{text}\"");
+            }
+        }
+        Assert.True(explained >= 29, $"Explications lues : {explained}");
+        Assert.True(thin > 0, "Aucune espace fine insécable U+202F devant ; ! ? dans les explications");
+        Assert.True(violations.Count == 0, string.Join("\n", violations));
+    }
+
+    /// <summary>Insécable avant : ; ? ! » (U+202F pour ; ! ?, U+00A0 pour : et »), U+00A0 après «, aucune apostrophe droite.</summary>
     private static void CheckFrenchTypography(string name, string text, List<string> violations)
     {
         for (int i = 0; i < text.Length; i++)
         {
-            if (Array.IndexOf(DoublePunctuation, text[i]) >= 0 && (i == 0 || text[i - 1] is not ('\u00A0' or '\u202F')))
-                violations.Add($"{name} : pas d'insécable avant '{text[i]}' dans \"{text}\"");
+            if (MissesSpaceBefore(text, i))
+                violations.Add($"{name} : pas d'insécable avant '{text[i]}' (U+202F pour ; ! ?) dans \"{text}\"");
             if (text[i] == '«' && (i + 1 >= text.Length || text[i + 1] is not ('\u00A0' or '\u202F')))
                 violations.Add($"{name} : pas d'insécable après '«' dans \"{text}\"");
             if (text[i] == '\'')
                 violations.Add($"{name} : apostrophe droite dans \"{text}\"");
         }
+    }
+
+    /// <summary>
+    /// Règle A541 (10/11) : U+202F devant ; ! ? ; U+00A0 ou U+202F devant : et ». Une espace
+    /// ordinaire, un U+00A0 devant ; ! ? ou l'absence d'espace sont des écarts.
+    /// </summary>
+    private static bool MissesSpaceBefore(string text, int i)
+    {
+        char c = text[i];
+        if (Array.IndexOf(DoublePunctuation, c) < 0) return false;
+        char? previous = i == 0 ? null : text[i - 1];
+        return c is ';' or '!' or '?'
+            ? previous != '\u202F'
+            : previous is not ('\u00A0' or '\u202F');
     }
 
     [Fact]

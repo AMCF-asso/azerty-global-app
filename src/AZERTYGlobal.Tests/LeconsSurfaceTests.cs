@@ -282,7 +282,7 @@ public class LeconsSurfaceTests
 
             // « x » au lieu de l'espace fine : la frappe physique donne la touche. Une espace
             // ordinaire ne serait pas une faute, l'Initiation la tolère (audit 1.3.0, B1).
-            BancCapture.Call(window, "OnRawKeyDown", X);
+            BancCapture.Call(window, "OnRawKeyDown", X, false);
             BancCapture.Call(window, "OnChar", 'x');
             Assert.Equal(X, BancCapture.Field<uint>(window, "_errorScancode"));
 
@@ -418,5 +418,44 @@ public class LeconsSurfaceTests
             }
             System.Threading.Thread.Sleep(10);
         }
+    }
+
+    // Remontée d'Antoine (07/11) : tenir Maj ou AltGr, ou allumer Verr. Maj., ne changeait
+    // rien au clavier des Leçons et du parcours ; il passe alors en couche active.
+    [Theory]
+    [InlineData(false, false, false, false)]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, false, true, true)]
+    public void Le_clavier_montre_la_couche_active_des_qu_un_modificateur_agit(bool maj, bool altGr, bool verrMaj,
+        bool coucheActive)
+    {
+        var etat = new PaperKeyboardState { Shift = maj, AltGr = altGr, CapsLock = verrMaj };
+        Assert.Equal(coucheActive ? PaperKeyboardMode.ActiveLayer : PaperKeyboardMode.Map, LessonsWindow.LessonKeyboardMode(etat));
+    }
+
+    // Remontée n° 10 d'Antoine (07/11) : à l'onboarding, la carte reste, la couche active
+    // passe en encre et les autres en retrait ; rien ne bouge quand un modificateur agit.
+    [Theory]
+    [InlineData(0x03u, false, false, false, "é")] // é au repos
+    [InlineData(0x03u, true, false, false, "2")]  // Maj : le chiffre gravé en haut
+    [InlineData(0x03u, false, false, true, "é")]  // Verr. Maj. : É se lit dans é
+    [InlineData(0x10u, false, false, false, "a")]
+    [InlineData(0x10u, true, false, false, "a")]  // Maj : A se lit dans a
+    public void La_carte_de_l_onboarding_fonce_la_couche_active(uint scancode, bool maj, bool altGr, bool verrMaj,
+        string legende)
+    {
+        var def = LayoutLoader.LoadFromResource().Keys[scancode];
+        Assert.Equal(legende, PaperKeyboard.ActiveLegend(def, scancode, maj, altGr, verrMaj));
+        // La lettre gravée montre ce que la touche tape : A sous Maj, É en Verr. Maj.
+        Assert.Equal(def.GetOutput(maj, altGr, verrMaj),
+            PaperKeyboard.ShownLegend(legende, PaperKeyboard.ActiveLegend(def, scancode, maj, altGr, verrMaj),
+                def.GetOutput(maj, altGr, verrMaj)));
+        // AltGr : la légende du bas à droite.
+        if (def.AltGr is { Length: > 0 } a)
+            Assert.Equal(a, PaperKeyboard.ActiveLegend(def, scancode, false, true, false));
+
+        var parcours = new PaperKeyboardState { EmphasizeActiveLayer = true, Shift = maj, AltGr = altGr, CapsLock = verrMaj };
+        Assert.Equal(PaperKeyboardMode.Map, LessonsWindow.LessonKeyboardMode(parcours));
     }
 }

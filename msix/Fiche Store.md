@@ -19,7 +19,7 @@ AZERTY Global - Clavier français amélioré
 > Limites : Microsoft Learn, *Add and edit Store listing info for MSIX app*, page mise à jour le 2026-08-24.
 
 ```text
-É, È, Ç et À en un appui, les guillemets « » et le point sans Maj, sur le clavier que vous avez déjà. Les lettres A à Z et les chiffres restent à leur place. Gratuit et libre, sans compte.
+É, È, Ç et À en un appui avec le Verr. Maj., les guillemets « » et le point sans Maj, sur le clavier que vous avez déjà. Les lettres A à Z et les chiffres restent à leur place. Gratuit et libre, sans compte.
 ```
 
 ### Description longue
@@ -29,7 +29,7 @@ AZERTY Global - Clavier français amélioré
 ```text
 Tapez É, Ç, « » ou œ sans code Alt ni copier-coller, avec l’AZERTY que vous connaissez déjà.
 
-Sur l’AZERTY de Windows, Verr. Maj. puis é donne 2. Avec AZERTY Global, vous obtenez É. Les lettres A à Z et les chiffres restent à leur place : 12 caractères seulement changent de touche, et 99 % de vos frappes sont préservées.
+Sur l’AZERTY de Windows, Verr. Maj. puis é donne 2. Avec AZERTY Global, vous obtenez É. Les lettres A à Z et les chiffres restent à leur place : 5 changements seulement, et 99 % de vos frappes sont préservées.
 
 Installez l’application, cliquez sur « Activer et essayer » dans l’accueil, et c’est prêt. Pas besoin de droits administrateur ni de compte. Ctrl+Maj+Verr. Maj. vous rend l’AZERTY d’origine quand vous le voulez.
 
@@ -38,7 +38,7 @@ Installez l’application, cliquez sur « Activer et essayer » dans l’accue
 Les majuscules accentuées É, È, Ç, À, Ù s’obtiennent avec le Verr. Maj., qui n’agit plus que sur les lettres. Guillemets « », apostrophe ’, œ et æ, points de suspension …, tirets — et –, espaces insécables normale et fine : tout est au clavier.
 
 CODER SANS SE TORDRE LES DOIGTS
-{ } \ | [ ] sont sur la rangée de repos, avec AltGr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement. Sur un clavier sans touche AltGr, Ctrl droit + Alt gauche la remplace.
+{ } \ | [ ] sont sur la rangée de repos, avec Alt Gr + D F G H J K. @ et # passent sur la touche en haut à gauche, à la place du ². #, ^ et ` s’obtiennent directement. Sur un clavier sans touche Alt Gr, Ctrl droit + Alt gauche la remplace.
 
 ÉCRIRE D’AUTRES LANGUES
 La touche à droite du M porte les accents aigu, grave et tilde : l’espagnol, le portugais ou l’italien se tapent sans changer de clavier. Vous avez aussi l’allemand, de nombreuses langues d’Afrique francophone (wolof, bambara, yoruba, haoussa…), les alphabets grec et cyrillique et les signes mathématiques. Pour écrire plusieurs lettres grecques d’affilée, une couche se verrouille d’un double appui, en option. Pour écrire en arabe ou dans un autre alphabet avec une disposition de Windows, mettez d’abord AZERTY Global en pause (menu de l’icône) ou désactivez-le (Ctrl+Maj+Verr. Maj.).
@@ -47,20 +47,20 @@ RETROUVER N’IMPORTE QUEL CARACTÈRE
 Ctrl+Maj+W ouvre la recherche : tapez le nom d’un caractère, Entrée l’insère dans votre texte et la recherche vous montre comment le taper. Ctrl+Maj+Q affiche le clavier virtuel, avec les quatre niveaux de chaque touche.
 
 S’Y METTRE À VOTRE RYTHME
-Un court tutoriel présente les changements dès l’installation. Les Leçons proposent ensuite des exercices progressifs, avec indices et clavier affiché, puis un mode libre. Votre progression reste sur votre appareil.
+Un court tutoriel présente les changements dès l’installation. Les Leçons proposent ensuite des exercices progressifs, avec indices et clavier affiché, puis l’Écriture libre. Votre progression reste sur votre appareil.
 
 CE QUI CHANGE, EXACTEMENT
 1. Verr. Maj. : il n’affecte que les lettres, donc É, È, Ç, À, Ù en un appui
 2. Le point s’obtient sans Maj, le point-virgule avec Maj
 3. @ et # sur la touche en haut à gauche, à la place du ²
-4. { } [ ] | \ sur la rangée de repos avec AltGr
+4. { } [ ] | \ sur la rangée de repos avec Alt Gr
 5. Accents aigu ´, grave ` et tilde ~ sur la touche ù ; le ù et le % sont déplacés
 
 VOTRE FRAPPE RESTE CHEZ VOUS
 Rien ne change sur votre clavier avant votre clic sur « Activer ». Aucune frappe n’est journalisée, stockée ni transmise, il n’y a ni télémétrie ni compte, et l’application n’envoie rien sur le réseau d’elle-même. Préférences, statistiques et progression restent sur votre appareil. Dans les champs de mot de passe, les couches et la recherche se mettent en pause. Les liens « Signaler un bug » et « Donner mon avis » ne s’ouvrent que si vous cliquez dessus, et indiquent la version de l’app et de Windows.
 
 JEUX ET BUREAU À DISTANCE
-AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance, les consoles de machines virtuelles (Hyper-V, Windows Sandbox, VMware, VirtualBox) et Citrix quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis. Dans une fenêtre lancée en administrateur, AZERTY Global ne peut pas agir : la disposition de Windows s’applique.
+AZERTY Global se met en pause tout seul dans les jeux reconnus comme protégés par un anti-triche, et dans les logiciels de bureau à distance, les consoles de machines virtuelles (Hyper-V, Windows Sandbox, VMware, VirtualBox) et Citrix quand ils sont au premier plan. Cette détection se fait sur votre PC ; aucun nom d’application n’est transmis. Dans une fenêtre lancée en administrateur, AZERTY Global ne peut pas agir : la disposition de Windows s’applique. L’écran de verrouillage, la saisie du mot de passe Windows, l’UAC et BitLocker sont dans le même cas : la disposition de Windows s’applique.
 
 GRATUIT ET LIBRE
 AZERTY Global est publié sous licence EUPL 1.2 et son code source est sur GitHub. L’entrée « Soutenir le projet » ouvre la page de soutien du site dans votre navigateur. Les dons y vont à l’AMCF, association loi 1901, et sont encaissés par HelloAsso. Microsoft n’est ni le collecteur ni le parrain de la collecte.
@@ -80,7 +80,7 @@ Le point sans Maj : point et point-virgule échangés
 @ et # en haut à gauche, à la place du ²
 ```
 ```text
-{ } [ ] | \ sur la rangée de repos avec AltGr
+{ } [ ] | \ sur la rangée de repos avec Alt Gr
 ```
 ```text
 Guillemets « », œ, æ, tirets, points de suspension et espaces insécables
@@ -89,7 +89,7 @@ Guillemets « », œ, æ, tirets, points de suspension et espaces insécables
 Accents aigu, grave et tilde pour l’espagnol, le portugais et d’autres langues
 ```
 ```text
-Lettres A à Z et chiffres à leur place : 12 caractères changent de touche
+Lettres A à Z et chiffres à leur place : 5 changements seulement
 ```
 ```text
 Recherche par nom (Ctrl+Maj+W) qui insère le caractère dans votre texte
@@ -113,8 +113,8 @@ Gratuit et libre (EUPL 1.2), sans droits administrateur
 
 ```text
 Version 1.3.0 :
-• Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (AltGr + Maj + *).
-• Accueil refait, avec une étape pour le peul, le wolof et le bambara ; ses exercices passent dans les Leçons et acceptent l’espace ordinaire et l’apostrophe droite.
+• Disposition 2026.1 : 95 caractères de plus, dont le cyrillique étendu (Alt Gr + Maj + *).
+• Accueil refait ; ses exercices passent dans les Leçons, selon vos usages (peul, wolof, bambara compris), et acceptent l’espace ordinaire et l’apostrophe droite.
 • Leçons refaites : Aujourd’hui propose une séance et la révision de vos fautes, « Votre texte » vous fait taper vos propres phrases, et le geste du caractère à taper s’écrit dessous.
 • La recherche de caractères (Ctrl+Maj+W) insère le caractère dans votre texte et trouve les lettres d’une langue : tapez « bambara », « lingala » ou « yoruba ».
 • Défi du jour, en option : le même extrait pour tout le monde, chaque jour. Cochez ses rappels dans l’accueil ou les Paramètres.
@@ -123,7 +123,7 @@ Version 1.3.0 :
 • Menu de l’icône plus court ; rien n’a été retiré.
 • Vous pouvez noter l’application sans quitter AZERTY Global.
 • Fenêtres claires et plus faciles à parcourir au clavier.
-• Corrections : en mode compatibilité jeu, les caractères faits avec AltGr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
+• Corrections : en Mode jeu, les caractères faits avec Alt Gr ne se perdent plus ; un accent en attente ne réapparaît plus dans une autre application ; un clic sur la barre des tâches ou certains Alt+Tab ne vous laissent plus en AZERTY traditionnel.
 ```
 
 ### Mots-clés de recherche (max 7, séparés par des points-virgules)
@@ -149,7 +149,7 @@ AZERTY Global - Improved French Keyboard
 ### Short description (up to 1,000 characters, 270 shown in some views)
 
 ```text
-É, È, Ç and À in one key press, French guillemets « » and the period without Shift, on the keyboard you already have. The letters A to Z and the digits stay in place. Free and open source, no account.
+É, È, Ç and À in one key press with Caps Lock, French guillemets « » and the period without Shift, on the keyboard you already have. The letters A to Z and the digits stay in place. Free and open source, no account.
 ```
 
 ### Long description
@@ -157,16 +157,16 @@ AZERTY Global - Improved French Keyboard
 ```text
 Type É, Ç, « » or œ without Alt codes or copy-paste, on the AZERTY keyboard you already know.
 
-On the traditional Windows French AZERTY, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 12 characters move to another key, and 99% of your keystrokes are preserved.
+On the traditional Windows French AZERTY, Caps Lock then é gives 2. With AZERTY Global, you get É. The letters A to Z and the digits stay in place: only 5 changes, and 99% of your keystrokes are preserved.
 
-Install the app, click “Turn on and try” in the welcome window, and you're done. No admin rights and no account needed. Ctrl+Shift+Caps Lock gives you back the original AZERTY whenever you want.
+Install the app, click “Turn on and try” in the welcome screen, and you're done. No admin rights and no account needed. Ctrl+Shift+Caps Lock gives you back the original AZERTY whenever you want.
 
 
 WRITE CORRECT FRENCH
 Accented capitals É, È, Ç, À, Ù come from Caps Lock, which now only affects letters. Guillemets « », typographic apostrophe ’, œ and æ, ellipsis …, dashes — and –, regular and narrow non-breaking spaces: everything is on the keyboard.
 
 CODE WITHOUT TWISTING YOUR FINGERS
-{ } \ | [ ] are on the home row, with AltGr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access. On a keyboard without an AltGr key, Right Ctrl + Left Alt does the same.
+{ } \ | [ ] are on the home row, with Alt Gr + D F G H J K. @ and # move to the top-left key, where ² usually is. #, ^ and backtick have direct access. On a keyboard without an Alt Gr key, Right Ctrl + Left Alt does the same.
 
 TYPE OTHER LANGUAGES
 The key to the right of M carries the acute, grave and tilde accents, so Spanish, Portuguese or Italian need no other keyboard. German is covered too, as are many francophone African languages (Wolof, Bambara, Yoruba, Hausa…), the Greek and Cyrillic alphabets and math symbols. To type several Greek letters in a row, an optional layer locks with a double press. To type Arabic or another script with a Windows layout, first pause AZERTY Global (icon menu) or turn it off (Ctrl+Shift+Caps Lock).
@@ -181,14 +181,14 @@ WHAT CHANGES, EXACTLY
 1. Caps Lock only affects letters, so É, È, Ç, À, Ù in one key press
 2. The period needs no Shift; the semicolon takes Shift
 3. @ and # on the top-left key, where ² usually is
-4. { } [ ] | \ on the home row with AltGr
+4. { } [ ] | \ on the home row with Alt Gr
 5. Acute ´, grave ` and tilde ~ accents on the ù key; ù and % move elsewhere
 
 YOUR TYPING STAYS ON YOUR PC
 Nothing changes on your keyboard until you click “Turn on”. Keystrokes are never logged, stored or transmitted, there is no telemetry and no account, and the app sends nothing over the network on its own. Preferences, statistics and progress stay on your device. In password fields, layers and search pause. The “Report a bug” and “Give feedback” links open only when you click them, and include the app and Windows version.
 
 GAMES AND REMOTE DESKTOP
-AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software, virtual machine consoles (Hyper-V, Windows Sandbox, VMware, VirtualBox) and Citrix when they are in the foreground. Detection runs on your PC; no app name is transmitted. In a window run as administrator, AZERTY Global cannot act: the Windows layout applies.
+AZERTY Global pauses by itself in games recognized as protected by an anti-cheat system, and in remote-desktop software, virtual machine consoles (Hyper-V, Windows Sandbox, VMware, VirtualBox) and Citrix when they are in the foreground. Detection runs on your PC; no app name is transmitted. In a window run as administrator, AZERTY Global cannot act: the Windows layout applies. The lock screen, the Windows password prompt, UAC and BitLocker work the same way: the Windows layout applies.
 
 FREE AND OPEN SOURCE
 AZERTY Global is licensed under EUPL 1.2 and its source code is on GitHub. The “Support the project” entry opens the project's support page in your browser. Donations there go to the AMCF, a French non-profit association, and are collected by HelloAsso. Microsoft is neither the fundraiser nor the sponsor.
@@ -208,7 +208,7 @@ Period without Shift: period and semicolon swapped
 @ and # on the top-left key, where ² usually is
 ```
 ```text
-{ } [ ] | \ on the home row with AltGr
+{ } [ ] | \ on the home row with Alt Gr
 ```
 ```text
 French guillemets « », œ, æ, dashes, ellipsis and non-breaking spaces
@@ -217,7 +217,7 @@ French guillemets « », œ, æ, dashes, ellipsis and non-breaking spaces
 Acute, grave and tilde accents for Spanish, Portuguese and more
 ```
 ```text
-The letters A to Z and the digits stay in place: 12 characters move to another key
+The letters A to Z and the digits stay in place: only 5 changes
 ```
 ```text
 Search by name (Ctrl+Shift+W) inserts the character into your text
@@ -239,17 +239,17 @@ Free and open source (EUPL 1.2), no admin rights needed
 
 ```text
 Version 1.3.0:
-• Layout 2026.1: 95 more characters, including Extended Cyrillic (AltGr + Shift + *).
-• Redesigned welcome window, with a step for Fula, Wolof and Bambara; its exercises move to Lessons and accept a regular space and the straight apostrophe.
+• Layout 2026.1: 95 more characters, including Extended Cyrillic (Alt Gr + Shift + *).
+• Redesigned welcome screen; its exercises move to Lessons, picked from what you write (Fula, Wolof and Bambara included), and accept a regular space and the straight apostrophe.
 • Redesigned Lessons: Today offers a session and a review of your mistakes, “Your text” lets you type your own sentences, and the gesture for the next character is written below it.
 • Character search (Ctrl+Shift+W) inserts the character into your text and finds the letters of a language: type “Bambara”, “Lingala” or “Yoruba”.
-• Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome window or in Settings.
+• Optional daily challenge: the same passage for everyone, every day. Tick its reminders in the welcome screen or in Settings.
 • Optional lockable Greek, Cyrillic and scientific layers: a double press keeps the alphabet, Esc releases it.
 • After the update, reopen AZERTY Global: your keyboard only changes after you agree, and you're asked once more.
 • Shorter icon menu; nothing was removed.
 • You can rate the app without leaving AZERTY Global.
 • Windows get a light look and are easier to use with the keyboard.
-• Fixes: in game compatibility mode, characters typed with AltGr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
+• Fixes: in Game mode, characters typed with Alt Gr are no longer lost; a pending accent no longer shows up in another app after you switch windows; clicking the taskbar or some Alt+Tab switches no longer leave you on the traditional AZERTY.
 ```
 
 ### Search terms (max 7, semicolon-separated)
@@ -291,8 +291,8 @@ contact@azerty.global
 > Retirer les deux marqueurs entre crochets après vérification, avant de coller : ils dépendent du bundle final (relance R09, rapport WACK). Sans eux, le bloc fait 1 960 caractères (1 969 si chaque retour à la ligne compte double ; mesuré le 30/10, après le retrait de « WACK : PASS » qui n’était prouvé pour aucun bundle de `main`). Le second marqueur reçoit le résultat lu dans le rapport WACK du bundle final, rien d’autre. Limite : Microsoft Learn donne 2 000 au plus pour les apps MSI/EXE, et rien pour MSIX. Lire le compteur après collage. Depuis le 21/10, les notes déclarent la réinstallation du hook toutes les 60 s et la sonde de 2 s (`TrayApplication.cs`, `HOOK_WATCHDOG_INTERVAL_MS` et `HOOK_PROBE_INTERVAL_MS` ; audit 1.3.0, A27 b).
 
 AZERTY Global 1.3.0 is a system-tray app that applies an improved French keyboard layout. It has no main window.
-How to test: 1) Launch the app; the welcome window opens. Click "Turn on and try" (French UI: "Activer et essayer"); a short exercise opens in Lessons. 2) The AG icon appears in the notification area (maybe under ^); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock toggles the layout. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts it). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z, also in the icon menu.
-Closed without activating, the welcome window reopens on relaunch from Start. [à vérifier sur le bundle final : correctif de relance]
+How to test: 1) Launch the app; the welcome screen opens. Click "Turn on and try" (French UI: "Activer et essayer"); a short exercise opens in Lessons. 2) The AG icon appears in the notification area (maybe under ^); right-click it for the menu. 3) Keys follow AZERTY positions: on a US keyboard, the A key types q. In Notepad: Caps Lock then the 2 key gives É; Ctrl+Shift+Caps Lock toggles the layout. 4) Ctrl+Shift+Q shows the virtual keyboard; Ctrl+Shift+W opens character search (Enter inserts it). US keyboard: Ctrl+Shift+A and Ctrl+Shift+Z, also in the icon menu.
+Closed without activating, the welcome screen reopens on relaunch from Start. [à vérifier sur le bundle final : correctif de relance]
 Technical notes:
 • Low-level keyboard hook (SetWindowsHookEx WH_KEYBOARD_LL), installed only after the user clicks Turn on, and reinstalled every 60 s. Every 2 s, GetAsyncKeyState is read as one boolean (any key pressed; no key kept) to detect a hook Windows removed silently. Output uses SendInput; no DLL or code is injected into other processes.
 • Read-only process information (SetWinEventHook, OpenProcess QUERY_LIMITED_INFORMATION | VM_READ, module names, running process names every 5 s) pauses the app in anti-cheat games and remote-desktop clients and detects remote-control hosts. Nothing is logged by name or transmitted.
@@ -327,26 +327,26 @@ EN
 AZERTY Global keeps every letter of the traditional Windows AZERTY where it was and adds what was missing: É, Ç, « », œ and programming symbols.
 ```
 
-#### 2. Clavier virtuel, AltGr tenu (`02-altgr.png`)
+#### 2. Clavier virtuel, Alt Gr tenu (`02-altgr.png`)
 
 FR
 ```text
-Le clavier virtuel (Ctrl+Maj+Q) montre ce que tape chaque touche. Tenez AltGr : €, { }, [ ], œ apparaissent, sans rien apprendre par cœur.
+Le clavier virtuel (Ctrl+Maj+Q) montre ce que tape chaque touche. Tenez Alt Gr : €, { }, [ ], œ apparaissent, sans rien apprendre par cœur.
 ```
 EN
 ```text
-The virtual keyboard (Ctrl+Shift+Q) shows what each key types. Hold AltGr to see €, { }, [ ], œ, with nothing to memorize.
+The virtual keyboard (Ctrl+Shift+Q) shows what each key types. Hold Alt Gr to see €, { }, [ ], œ, with nothing to memorize.
 ```
 
 #### 3. Avant / après (`03-avant-apres.png`)
 
 FR
 ```text
-Avec l’AZERTY traditionnel de Windows, É demande Alt + 0201 sur le pavé numérique. Avec AZERTY Global : Verr. Maj + é. Même chose pour Ç, et « » sont sur AltGr + W et X.
+Avec l’AZERTY traditionnel de Windows, É demande Alt + 0201 sur le pavé numérique. Avec AZERTY Global : Verr. Maj + é. Même chose pour Ç, et « » sont sur Alt Gr + W et X.
 ```
 EN
 ```text
-With the traditional Windows AZERTY, É takes Alt + 0201 on the numeric keypad. With AZERTY Global: Caps Lock + é. Same for Ç, and « » are on AltGr + W and X.
+With the traditional Windows AZERTY, É takes Alt + 0201 on the numeric keypad. With AZERTY Global: Caps Lock + é. Same for Ç, and « » are on Alt Gr + W and X.
 ```
 
 #### 4. Recherche et Leçons (`04-recherche-lecons.png`)
@@ -386,11 +386,11 @@ EN
 
 FR
 ```text
-Guillemets « » sur AltGr + W et X, espace fine insécable sur AltGr + Espace, apostrophe ’ sur AltGr + 4, œ sur AltGr + O, tiret long sur AltGr + Maj + T.
+Guillemets « » sur Alt Gr + W et X, espace fine insécable sur Alt Gr + Espace, apostrophe ’ sur Alt Gr + 4, œ sur Alt Gr + O, tiret long sur Alt Gr + Maj + T.
 ```
 EN
 ```text
-French quotation marks « » on AltGr + W and X, narrow no-break space on AltGr + Space, apostrophe ’ on AltGr + 4, œ on AltGr + O, em dash on AltGr + Shift + T.
+French quotation marks « » on Alt Gr + W and X, narrow no-break space on Alt Gr + Space, apostrophe ’ on Alt Gr + 4, œ on Alt Gr + O, em dash on Alt Gr + Shift + T.
 ```
 
 #### 8. Pause automatique (`08-vous-gardez-la-main.png`)
@@ -408,11 +408,11 @@ AZERTY Global pauses automatically in protected games and remote desktop. Ctrl +
 
 FR
 ```text
-{ } \ | [ ] ` ~ sont sous vos doigts avec AltGr, de D à L et sur N : plus besoin d’étirer la main droite pour coder.
+{ } \ | [ ] ` ~ sont sous vos doigts avec Alt Gr, de D à L et sur N : plus besoin d’étirer la main droite pour coder.
 ```
 EN
 ```text
-{ } \ | [ ] ` ~ sit under your fingers with AltGr, from D to L and on N: no more stretching your right hand to code.
+{ } \ | [ ] ` ~ sit under your fingers with Alt Gr, from D to L and on N: no more stretching your right hand to code.
 ```
 
 #### 10. Rien ne sort (`10-rien-ne-sort.png`)

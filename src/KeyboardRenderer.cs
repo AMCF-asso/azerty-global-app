@@ -272,7 +272,7 @@ internal static class KeyboardRenderer
         var sb = new System.Text.StringBuilder();
         AppendTooltipLayer(sb, "Base", keyDef.Base, activeDk, style);
         AppendTooltipLayer(sb, L.Keyboard_LayerShift, keyDef.Shift, activeDk, style);
-        AppendTooltipLayer(sb, "AltGr", keyDef.AltGr, activeDk, style);
+        AppendTooltipLayer(sb, L.AltGrKey, keyDef.AltGr, activeDk, style);
         AppendTooltipLayer(sb, L.Keyboard_LayerShiftAltGr, keyDef.ShiftAltGr, activeDk, style);
         return sb.ToString().TrimEnd('\n');
     }
@@ -539,7 +539,9 @@ internal static class KeyboardRenderer
         // Le tutoriel ne raccourcit pas ses libellés.
         uint flags = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX
             | (tutorial ? 0u : Win32.DT_END_ELLIPSIS);
-        Win32.DrawTextW(hdc, L.Keyboard_KeyCap(key.Label), -1, ref labelRect, flags);
+        string cap = L.Keyboard_KeyCap(key.Label);
+        TruncationProbe.DrawText(hdc, cap, labelRect, flags); // audit UX du 09/11, W24
+        Win32.DrawTextW(hdc, cap, -1, ref labelRect, flags);
     }
 
     private static void DrawKeyCharacters(
@@ -599,8 +601,9 @@ internal static class KeyboardRenderer
         {
             var oldFont = Win32.SelectObject(hdc, hFontMain);
             Win32.SetTextColor(hdc, CLR_CTX_TEXT);
-            Win32.DrawTextW(hdc, display, display.Length, ref charRect,
-                Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP | Win32.DT_END_ELLIPSIS);
+            const uint displayFormat = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_NOCLIP | Win32.DT_END_ELLIPSIS;
+            TruncationProbe.DrawText(hdc, display, charRect, displayFormat);
+            Win32.DrawTextW(hdc, display, display.Length, ref charRect, displayFormat);
             Win32.SelectObject(hdc, oldFont);
         }
 
@@ -608,8 +611,9 @@ internal static class KeyboardRenderer
         var oldLabelFont = Win32.SelectObject(hdc, hFontTiny);
         Win32.SetTextColor(hdc, CLR_KEY_LABEL);
         string keyCap = L.Keyboard_KeyCap(key.Label);
-        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect,
-            Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint keyCapFormat = Win32.DT_CENTER | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, keyCap, labelRect, keyCapFormat);
+        Win32.DrawTextW(hdc, keyCap, keyCap.Length, ref labelRect, keyCapFormat);
         Win32.SelectObject(hdc, oldLabelFont);
     }
 
@@ -653,8 +657,9 @@ internal static class KeyboardRenderer
         var textRect = new Win32.RECT { left = rect.left, top = rect.top, right = rect.right - 4, bottom = rect.bottom };
         var oldFont = Win32.SelectObject(hdc, hFont);
         Win32.SetTextColor(hdc, CLR_DK_ACTIVE_TEXT);
-        Win32.DrawTextW(hdc, text, text.Length, ref textRect,
-            Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint statusFormat = Win32.DT_RIGHT | Win32.DT_VCENTER | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, text, textRect, statusFormat);
+        Win32.DrawTextW(hdc, text, text.Length, ref textRect, statusFormat);
         Win32.SelectObject(hdc, oldFont);
     }
 

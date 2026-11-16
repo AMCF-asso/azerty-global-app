@@ -9,6 +9,11 @@ internal static partial class L
     /// <summary>Barre de titre : « AZERTY Global, Clavier virtuel ».</summary>
     public static string VirtualKeyboardPaper_Title => T("Clavier virtuel", "Virtual keyboard");
 
+    /// <summary>Description accessible : le clavier est un affichage, pas un clavier à cliquer (audit 09/11, W22).</summary>
+    public static string VirtualKeyboardPaper_Description =>
+        T("Affichage seul : le clavier montre ce que chaque touche tape, il ne se clique pas.",
+          "Display only: the keyboard shows what each key types, it cannot be clicked.");
+
     /// <summary>Rien n'est tenu : « Chaque touche montre ce qu'elle tape. Tenez **Maj** ou **AltGr**… »</summary>
     public static string VirtualKeyboardPaper_IdleLead =>
         T("Chaque touche montre ce qu’elle tape. Tenez ", "Each key shows what it types. Hold ");

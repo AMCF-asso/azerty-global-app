@@ -23,7 +23,7 @@
       <string id="NotificationsEnabled_Explain">Enabled: the application may show its notifications, and the user keeps their own setting. Disabled: no comfort notification is shown, including the review prompt, and the user setting is locked. Security warnings are shown in every case. Not configured: the user decides.</string>
 
       <string id="UsageStatsEnabled">Allow local usage statistics</string>
-      <string id="UsageStatsEnabled_Explain">Enabled: the application keeps its counters in %LocalAppData%\AZERTY Global\usage-stats.json. Disabled: no statistics file is created or updated. Not configured: on for the Microsoft Store version, off for the version distributed by the association. These counters never leave the machine.</string>
+      <string id="UsageStatsEnabled_Explain">Enabled: the application keeps its counters in %LocalAppData%\Packages\&lt;package family name&gt;\LocalCache\Local\AZERTY Global\usage-stats.json. Disabled: no statistics file is created or updated. Not configured: on for the Microsoft Store version, off for the version distributed by the association. These counters never leave the machine.</string>
 
       <string id="ExternalLinksEnabled">Allow external links</string>
       <string id="ExternalLinksEnabled_Explain">Enabled: the “Support the project”, “Rate on the Microsoft Store” entries and the Discord link are visible. Disabled: they are hidden. “Give feedback” and “Report a bug” remain available in every case. Not configured: visible on the Microsoft Store version, hidden on the version distributed by the association.</string>

@@ -104,6 +104,82 @@ public class ParcoursAccueilTests
         }
     }
 
+    /// <summary>Remontée n° 12 (07/11) : « Il ne faut pas brusquer l'utilisateur. » Le bilan du
+    /// parcours n'a ni vitesse, ni précision, ni erreurs ; celui des Leçons les garde.</summary>
+    [Fact]
+    public void Le_bilan_du_parcours_encourage_sans_chiffres_celui_des_Lecons_garde_les_mesures()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            window.BeginTutorial();
+            BancCapture.Call(window, "StartTutorialRoute");
+            Type(window, "É");
+            Assert.True(BancCapture.Field<bool>(window, "_showSummary"));
+            Assert.True(window.TutorialSummaryIsMessageOnly);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+
+        var lessons = Open();
+        try
+        {
+            Assert.True((bool)BancCapture.Call(lessons, "SelectExercise", LessonCatalogLoader.InitiationModuleId,
+                LessonCatalogLoader.InitiationLessonId, 0, false)!);
+            Type(lessons, "É");
+            Assert.True(BancCapture.Field<bool>(lessons, "_showSummary"));
+            Assert.False(lessons.TutorialSummaryIsMessageOnly);
+        }
+        finally
+        {
+            BancCapture.Teardown(lessons);
+        }
+
+        Assert.DoesNotContain(L.LessonsWin_TutorialEncouragement, char.IsDigit);
+    }
+
+    /// <summary>Remontée n° 13 (07/11) : dans le parcours, « Rejouer » reprend l'étape depuis le
+    /// début et « ‹ Précédent » revient à l'étape d'avant, même réussie, sans quitter le parcours.</summary>
+    [Fact]
+    public void Le_parcours_permet_de_rejouer_une_etape_et_de_revenir_a_la_precedente()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            window.BeginTutorial();
+            BancCapture.Call(window, "StartTutorialRoute");
+            Type(window, "É");
+            Assert.True(BancCapture.Field<bool>(window, "_showSummary"));
+
+            BancCapture.Call(window, "TutorialRestart");
+            Assert.False(BancCapture.Field<bool>(window, "_showSummary"));
+            Assert.Equal(0, BancCapture.Field<int>(window, "_exerciseIndex"));
+
+            // Première étape : « Précédent » ne sort pas du parcours.
+            BancCapture.Call(window, "PreviousExercise");
+            Assert.Equal(0, BancCapture.Field<int>(window, "_tutorialRoutePos"));
+            Assert.True(window.IsTutorialActive);
+
+            Type(window, "É");
+            BancCapture.Call(window, "NextExercise");
+            Assert.Equal(1, BancCapture.Field<int>(window, "_tutorialRoutePos"));
+
+            BancCapture.Call(window, "PreviousExercise");
+            Assert.Equal(0, BancCapture.Field<int>(window, "_tutorialRoutePos"));
+            Assert.Equal(0, BancCapture.Field<int>(window, "_exerciseIndex"));
+            Assert.False(BancCapture.Field<bool>(window, "_showSummary")); // l'étape réussie se rejoue
+            Assert.True(window.IsTutorialActive);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
     [Fact]
     public void Suivant_suit_le_parcours_jusqu_a_l_ecran_final_puis_Terminer_previent_l_accueil()
     {
@@ -272,6 +348,104 @@ public class ParcoursAccueilTests
         Assert.True(ConfigManager.LearningTutorialOpened);
     }
 
+    /// <summary>Décision du 07/11 nuit : les explications passent au bilan, une par texte
+    /// différent. « et » partagent la leur, í et ò aussi, les deux espaces insécables aussi.</summary>
+    [Fact]
+    public void Le_bilan_du_parcours_donne_une_explication_par_texte_different()
+    {
+        string avant = L.Language;
+        try
+        {
+            L.Language = "fr";
+            Assert.Single(LessonsWindow.TutorialSummaryExplanations("É"));
+
+            var maria = LessonsWindow.TutorialSummaryExplanations(TutorialSteps.All[TutorialSteps.Languages].Target);
+            Assert.Equal(new[] { "íò", "ã", "." }, maria.Select(g => g.Characters).ToArray());
+
+            var chef = LessonsWindow.TutorialSummaryExplanations(TutorialSteps.All[TutorialSteps.Documents].Target);
+            Assert.Equal(5, chef.Count);
+            Assert.Equal("«»", chef[0].Characters);
+            Assert.Equal("« »", LessonsWindow.TutorialSummaryTabLabel(chef[0].Characters));
+            Assert.Equal(L.Explanation_NbspTab, LessonsWindow.TutorialSummaryTabLabel(chef.Single(g => g.Characters.Contains('\u202F')).Characters));
+            Assert.False(chef.Single(g => g.Characters == "—").Explanation.HasRemember);
+
+            Assert.Empty(LessonsWindow.TutorialSummaryExplanations("abc"));
+        }
+        finally { L.Language = avant; }
+    }
+
+    /// <summary>Option A du 07/11 nuit (maquettes-13b) : dans le parcours, le clavier prend la
+    /// largeur sous la barre du parcours, entier. L'ancien plancher à 0,75 le faisait déborder
+    /// en bas de la fenêtre (capture d'Antoine, 07/11).</summary>
+    [Fact]
+    public void Dans_le_parcours_le_clavier_est_entier_et_prend_la_largeur()
+    {
+        const float baseUnit = 52f;
+        // Fenêtre de référence : corps de 1056 × 625 sous l'en-tête.
+        var body = new Win32.RECT { left = 24, top = 72, right = 24 + 1056, bottom = 72 + 625 };
+        foreach (int top in new[] { 72 + 256, 72 + 300, 72 + 400, 72 + 600 })
+        {
+            var (unit, left, kbTop) = LessonsWindow.TutorialKeyboardLayout(body, top, baseUnit);
+            var (kbW, kbH) = PaperKeyboard.Size(unit);
+            Assert.Equal(top, kbTop);
+            Assert.True(kbTop + kbH <= body.bottom, $"clavier coupé en bas (haut {top})");
+            Assert.True(left >= body.left && left + kbW <= body.right, $"clavier hors largeur (haut {top})");
+        }
+        var (fullUnit, _, _) = LessonsWindow.TutorialKeyboardLayout(body, 72 + 256, baseUnit);
+        var (fullW, _) = PaperKeyboard.Size(fullUnit);
+        Assert.InRange(fullW, 1056 - 4, 1056);
+    }
+
+    /// <summary>Remontée 13b : les 29 caractères déplacés ou nouveaux du parcours ont leur
+    /// explication, dans les deux langues ; ceux restés à leur place classique n'en ont pas ; le
+    /// « Pour retenir » disparaît quand la phrase du geste dit déjà tout (’, QCM du 07/11).</summary>
+    [Fact]
+    public void Les_caracteres_deplaces_du_parcours_ont_leur_explication()
+    {
+        const string expliques = "ÉÈÀÇ@«»’œ—  .;{}[]\\|íòãɛɔŋɲɓɗ";
+        string avant = L.Language;
+        try
+        {
+            foreach (var lang in new[] { "fr", "en" })
+            {
+                L.Language = lang;
+                var trouves = TutorialSteps.All.SelectMany(s => s.Target).Distinct()
+                    .Where(c => L.TutorialExplanation(c) is not null).ToHashSet();
+                Assert.Equal(expliques.ToHashSet(), trouves);
+                foreach (char c in expliques)
+                {
+                    var e = L.TutorialExplanation(c)!.Value;
+                    Assert.False(string.IsNullOrWhiteSpace(e.Why), $"'{c}' ({lang}) sans raison");
+                    Assert.Equal(c != '—', e.HasRemember);
+                }
+            }
+        }
+        finally { L.Language = avant; }
+        Assert.Null(L.TutorialExplanation('a'));
+        Assert.Null(L.TutorialExplanation('!'));
+    }
+
+    /// <summary>Remontée d'Antoine (07/11) : après « Réinitialiser l'accueil », l'étape 1 n'avait plus
+    /// « Essayer maintenant », parce que la progression gardée la remettait en état « fini ».</summary>
+    [Fact]
+    public void Reinitialiser_l_accueil_efface_la_progression_du_parcours()
+    {
+        using var isolation = new BancCapture.Isolation();
+        ConfigManager.SetLearningUsages(new[] { "code" });
+        var usages = ConfigManager.LearningUsages;
+        for (int i = 0; i < TutorialSteps.DoneThreshold; i++) ConfigManager.RecordLearningExerciseCompleted(i);
+        ConfigManager.RecordLearningExerciseCompleted(TutorialSteps.All.Length - 1);
+        Assert.Equal(TutorialSteps.DoneThreshold, ConfigManager.LearningMaxStepCompleted);
+        ConfigManager.MarkLearningTutorialOpened();
+
+        ConfigManager.ResetTutorialProgress();
+
+        Assert.Equal(0, ConfigManager.LearningMaxStepCompleted);
+        Assert.Empty(ConfigManager.LearningCompletedExercises);
+        Assert.False(ConfigManager.LearningTutorialOpened);
+        Assert.Equal(usages, ConfigManager.LearningUsages);
+    }
+
     /// <summary>Audit 1.3.0, D5 : l'en-tête comptait les huit exercices de l'Initiation (« 5 sur 8 »)
     /// quand la ligne du parcours en comptait cinq (« 5 sur 5 (bonus) »), et l'écran final
     /// affichait « 4 sur 8 ». L'en-tête suit la longueur du parcours, comme cette ligne.</summary>
@@ -295,10 +469,12 @@ public class ParcoursAccueilTests
             Assert.Equal(5, HeaderRoute(window)!.Length); // le bonus : 5 sur 5
             Assert.Equal(4, BancCapture.Field<int>(window, "_tutorialRoutePos"));
 
-            // Hors de l'étape (« ‹ » ramène à un autre exercice) : la leçon entière reprend.
+            // « ‹ Précédent » reste dans le parcours (remontée n° 13, 07/11) : l'étape d'avant.
             BancCapture.Call(window, "PreviousExercise");
-            Assert.Null(HeaderRoute(window));
+            Assert.Equal(5, HeaderRoute(window)!.Length);
+            Assert.Equal(3, BancCapture.Field<int>(window, "_tutorialRoutePos"));
 
+            BancCapture.Call(window, "AdvanceTutorialRoute"); // de nouveau le bonus
             BancCapture.Call(window, "AdvanceTutorialRoute"); // l'écran final
             Assert.Equal("Final", Page(window));
             Assert.Equal(5, HeaderRoute(window)!.Length);
@@ -308,6 +484,100 @@ public class ParcoursAccueilTests
             BancCapture.Teardown(window);
         }
     }
+
+    /// <summary>Remontée n° 6 d'Antoine (07/11) : « Il y a des boutons de partout. Si on clique
+    /// sur un bouton, ça nous fait quitter l'onboarding. » Pendant le parcours, l'en-tête n'offre
+    /// plus ni Aujourd'hui, ni Recommencer, ni Libre, ni Réglages, ni sélecteur, ni chevrons.</summary>
+    [Fact]
+    public void Pendant_le_parcours_rien_ne_fait_quitter_l_accueil()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            string[] leaving =
+            {
+                // « Recommencer » et « ‹ Précédent » restent dans le parcours (remontée n° 13).
+                L.LessonsHome_Today, L.LessonsPaper_FreeTyping, L.LessonsWin_SettingsTab,
+                L.LessonsWin_IconPrevious, L.LessonsWin_IconNext, L.LessonsWin_Title,
+            };
+
+            window.BeginTutorial();
+            Assert.Equal(L.Learning_WindowTitle, Caption(window));
+            Paint(window);
+            Assert.DoesNotContain(ControlNames(window), name => leaving.Contains(name));
+            Assert.Contains(L.Learning_BtnContinue, ControlNames(window));
+
+            BancCapture.Call(window, "StartTutorialRoute");
+            Paint(window);
+            var names = ControlNames(window);
+            Assert.DoesNotContain(names, name => leaving.Contains(name));
+            string picker = BancCapture.Call(window, "get_CurrentModule") is LessonModule module
+                ? LessonNames.Join(module.Title, ((LessonLesson)BancCapture.Call(window, "get_CurrentLesson")!).Title, " ") : "";
+            Assert.Equal(L.Learning_HeaderTitle, picker); // module et leçon de même titre : un seul nom (avis global 1.3.0, C1)
+            Assert.DoesNotContain(picker, names); // le sélecteur de leçon
+            Assert.Contains(L.LessonsWin_IconHint, names);
+            Assert.Contains(L.Learning_SkipForNow, names);
+
+            // Hors parcours, l'en-tête complet revient.
+            BancCapture.Call(window, "LeaveTutorialForNow");
+            Paint(window);
+            Assert.Contains(L.LessonsWin_SettingsTab, ControlNames(window));
+            Assert.Equal(L.LessonsWin_WindowTitle, Caption(window));
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    // Remontée n° 7 d'Antoine (07/11) : l'anneau de focus entourait « Des mails et des
+    // documents » dès l'ouverture de l'écran des usages ; il n'apparaît qu'après Tab.
+    [Fact]
+    public void L_anneau_de_focus_n_apparait_qu_apres_Tab()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        try
+        {
+            if ((bool)typeof(LessonsWindow).GetMethod("SystemKeyboardCues",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, null)!)
+                return; // réglage Windows « toujours souligner » : repère toujours visible, voulu
+            window.BeginTutorial(); // ouvre l'écran des usages
+            Paint(window);
+            Assert.True(BancCapture.Field<int>(window, "_focusedActionIndex") >= 0); // Entrée reste active
+            Assert.False((bool)BancCapture.Call(window, "get_FocusCuesVisible")!);
+
+            BancCapture.Call(window, "MoveKeyboardFocus", 1);
+            Assert.True((bool)BancCapture.Call(window, "get_FocusCuesVisible")!);
+
+            IntPtr hwnd = BancCapture.Handle(window);
+            Win32.SendMessageW(hwnd, 0x0202 /* WM_LBUTTONUP */, IntPtr.Zero, IntPtr.Zero);
+            Assert.False((bool)BancCapture.Call(window, "get_FocusCuesVisible")!);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
+    private static void Paint(LessonsWindow window)
+    {
+        IntPtr hwnd = BancCapture.Handle(window);
+        Win32.InvalidateRect(hwnd, IntPtr.Zero, false);
+        Win32.SendMessageW(hwnd, Win32.WM_PAINT, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    private static string Caption(LessonsWindow window)
+    {
+        var text = new System.Text.StringBuilder(256);
+        Win32.GetWindowTextW(BancCapture.Handle(window), text, text.Capacity);
+        return text.ToString();
+    }
+
+    private static string[] ControlNames(LessonsWindow window) =>
+        BancCapture.Field<System.Collections.Generic.List<LessonControlView>>(window, "_controlViews")!
+            .Select(control => control.Name).ToArray();
 
     private static TutorialSteps.RouteStep[]? HeaderRoute(LessonsWindow window) =>
         (TutorialSteps.RouteStep[]?)typeof(LessonsWindow)

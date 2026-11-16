@@ -27,7 +27,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private const uint HINT_FLASH_MS = 1000;
     private const uint FREE_STATS_REFRESH_MS = 1000;
     private const int PENDING_PHYSICAL_TEXT_TIMEOUT_MS = 1000;
-    private const int FREE_PREVIEW_MAX_CHARS = 220;
+    /// <summary>Longueur du champ du mode Libre. L'ancien plafond de 220 caractères coupait le
+    /// texte sans rien dire (audit 09/11, E6) ; au-delà de celui-ci, un message le dit.</summary>
+    internal const int FREE_MAX_CHARS = 20_000;
 
     // Refonte 1.3.0 (Tablature, maquette Leçons F du 07/10) : la fenêtre passe au papier.
     // A14 : en contraste élevé, le parcours d'exercice prend la palette de l'accueil des Leçons
@@ -53,6 +55,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private const uint MB_ICONWARNING = 0x00000030;
     private const int IDYES = 6;
     private const int HTCLIENT = 1;
+    private const uint WM_CAPTURECHANGED = 0x0215;
     private const int IDC_HAND = 32649;
 
     private enum WindowMode { Lessons, Free }
@@ -147,6 +150,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int _exerciseIndex;
     private LessonTypingSession _session;
     private bool _showSummary;
+    /// <summary>L'Espace vient d'activer un bouton : son WM_CHAR est avalé (E4).</summary>
+    private bool _swallowActivationSpace;
     private LessonAttemptStats? _lastCompletedStats;
     // Métrique « Record » du récapitulatif (QW-4, 2026-08-24) : meilleur score de
     // l'exercice, tentative courante comprise, et vrai si elle vient de l'établir.
@@ -167,6 +172,36 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int _hotX = int.MinValue, _hotY = int.MinValue;
     private int _hotActionIndex = -1;
     private int _focusedActionIndex = -1;
+
+    /// <summary>Ce qui décide de la liste des cibles cliquables : un autre écran a d'autres
+    /// boutons, et l'index focalisé n'y désigne plus le même (audit 09/11, L4 : une Entrée
+    /// pouvait « Recommencer » ou ouvrir les Paramètres sur l'écran suivant).</summary>
+    private readonly record struct FocusScreen(WindowMode Mode, bool Settings, bool Picker, HomePage Page,
+        bool Summary, TutorialPage Tutorial, int TutorialPos, int Exercise, bool Composed);
+
+    private FocusScreen CurrentFocusScreen => new(_mode, _settingsOpen, _pickerOpen, _homePage,
+        _showSummary, _tutorialPage, _tutorialRoutePos, _exerciseIndex, _homeComposed != null);
+
+    // L'écran dont _clickActions décrit les cibles (dernier repeint).
+    private FocusScreen? _clickActionsScreen;
+    // Écran pour lequel le focus vient d'être posé exprès (liste ouverte sur sa première ligne).
+    private FocusScreen? _focusPlacedFor;
+
+    /// <summary>Au repeint : un écran changé repart sans cible focalisée (la surface de frappe
+    /// ou rien), sauf si le focus vient d'y être posé exprès.</summary>
+    private void SyncFocusWithScreen()
+    {
+        var screen = CurrentFocusScreen;
+        if (_clickActionsScreen is { } shown && shown != screen && _focusPlacedFor != screen)
+            _focusedActionIndex = -1;
+        _clickActionsScreen = screen;
+        _focusPlacedFor = null;
+    }
+    // Remontée n° 7 d'Antoine (07/11) : comme Windows, l'anneau de focus ne se montre qu'après
+    // une navigation au clavier (Tab) ; un clic le cache à nouveau. La cible focalisée reste
+    // active (Entrée), seul son repère visuel attend. Réglage « toujours souligner » respecté.
+    private bool _focusCuesShown;
+    private bool FocusCuesVisible => _focusCuesShown || SystemKeyboardCues();
     private string? _hoverTooltip;
     private Win32.RECT _hoverTooltipAnchor;
     private bool _hoverTooltipPreferAbove;
@@ -175,15 +210,35 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private DateTimeOffset? _freeStartedAt;
     private int _freeChars;
     private int _freeBackspaces;
-    private string _freePreview = "";
-    private int _freeCursorIndex;
+    /// <summary>Le champ du mode Libre (TextEditBuffer.cs). Il vit le temps de l'application :
+    /// Échap ou la croix ferment la fenêtre sans effacer le texte (audit 09/11, E7) ; rien
+    /// n'est écrit sur le disque.</summary>
+    private readonly TextEditBuffer _free = new(FREE_MAX_CHARS);
+    private string _freePreview => _free.Text;
+    private int _freeCursorIndex => _free.Caret;
+    private bool _fieldDragging;
+    private bool _freeTruncated;
+    private char? _freeHighSurrogate;
+    private readonly Dictionary<string, int> _freeWidths = new(StringComparer.Ordinal);
+    private int _freeWidthsScale;
     private Win32.RECT _freePreviewRect;
+
+    /// <summary>Modificateurs tenus pendant la frappe en cours. Les tests le remplacent : le
+    /// clavier réel de la machine ne doit pas compter.</summary>
+    internal Func<EditModifiers> ReadEditModifiers { get; set; }
+
+    /// <summary>Presse-papiers des champs ; les tests en passent un factice.</summary>
+    internal ITextClipboard Clipboard { get; set; }
 
     public LessonsWindow(Layout layout, KeyMapper mapper, KeyboardHook hook)
     {
         _layout = layout;
         _mapper = mapper;
         _hook = hook;
+        ReadEditModifiers = () => new EditModifiers(
+            Ctrl: KeyHeld(0x11), Shift: KeyHeld(0x10), Alt: KeyHeld(0x12),
+            Win: KeyHeld(0x5B) || KeyHeld(0x5C), AltGr: _mapper.AltGrDown);
+        Clipboard = new WindowClipboard(() => _hWnd);
         _catalog = _challenge.LoadCatalog();
         _progress = new LessonProgressStore();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
@@ -203,7 +258,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         StartCurrentSession(savePosition: false);
 
         _mapper.StateChanged += OnMapperStateChanged;
-        _hook.RawKeyDown += OnRawKeyDown;
+        _hook.RawKeyDownDetailed += OnRawKeyDown;
         // Bascule de langue en cours de session (ex. depuis le menu tray) : recharger le
         // catalogue dans la nouvelle langue et repeindre, sans fermer la fenêtre ni perdre
         // la position (constat smoke test 2026-07-17).
@@ -217,14 +272,6 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     /// <summary>Handle de la fenêtre — propriétaire des boîtes de dialogue système.</summary>
     public IntPtr Handle => _hWnd;
-
-    /// <summary>
-    /// Émis à la fermeture de la fenêtre lorsque l'utilisateur a copié un résultat de défi
-    /// pendant la séance. Différé à la fermeture volontairement : demander un avis à
-    /// l'instant du clic couperait le geste en deux, alors que l'utilisateur est
-    /// précisément en train de partir coller son résultat ailleurs.
-    /// </summary>
-    public Action? ChallengeShared;
 
     /// <summary>Langue de l'UI au moment du parse du catalogue (les titres/instructions des
     /// leçons sont résolus au parse — cf. LessonCatalogLoader.PickText). Mise à jour au
@@ -242,10 +289,21 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _catalog = _challenge.LoadCatalog();
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         CatalogLanguage = L.Language;
+        _challenge.RefreshShareLanguage(); // le texte à partager suit la langue (audit UX du 09/11, L14)
         // Index défensivement bornés (structure identique entre langues, mais on ne suppose rien).
         _moduleIndex = Math.Clamp(_moduleIndex, 0, _catalog.Modules.Count - 1);
         _lessonIndex = Math.Clamp(_lessonIndex, 0, _catalog.Modules[_moduleIndex].Lessons.Count - 1); // le catalogue, pas la séance composée de l'accueil
         _exerciseIndex = Math.Clamp(_exerciseIndex, 0, _catalog.Modules[_moduleIndex].Lessons[_lessonIndex].Exercises.Count - 1);
+        // Audit de régression du 10/11, RA12. Le titre de la fenêtre (barre de titre, barre des
+        // tâches, Alt+Tab) restait dans l'ancienne langue ; la séance composée aussi.
+        SetTutorialCaption(IsTutorialActive);
+        HomeRetranslateComposed();
+        // Le catalogue rechargé porte le Défi du moment : fenêtre restée ouverte après minuit ou
+        // étape changée, l'exercice affiché n'est plus celui de la séance en cours, dont la
+        // frappe irait sous la clé et la date du nouveau. La séance repart sur l'exercice
+        // affiché ; même texte (seule la langue change), elle continue telle quelle.
+        if (!StringComparer.Ordinal.Equals(_session.Exercise.StableKey, CurrentExercise.StableKey))
+            StartCurrentSession(savePosition: false);
         if (_hWnd != IntPtr.Zero)
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
@@ -256,6 +314,17 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         _inputPaused = paused;
     }
+
+    /// <summary>
+    /// Audit de régression du 10/11, RA5 (suite d'E26, CharacterSearch.BlockedWhilePaused) : en
+    /// pause, la fenêtre refuse la frappe de l'exercice, pas la navigation. Échap (fermer), Tab et
+    /// Maj+Tab (changer de cible) passent, ainsi qu'Entrée ou Espace sur un bouton focalisé ;
+    /// sinon il ne restait qu'Alt+F4 au clavier. <paramref name="spaceActivates"/> : l'écran où
+    /// Espace active un bouton (ailleurs, c'est une frappe).
+    /// </summary>
+    internal static bool BlockedWhilePaused(int vk, bool buttonFocused, bool spaceActivates) =>
+        vk != 0x1B && vk != 0x09 &&
+        !(buttonFocused && (vk == 0x0D || (vk == 0x20 && spaceActivates)));
 
     /// <summary>
     /// Reconstruit le module Défi si la date ou l'étape a changé (fenêtre restée ouverte
@@ -283,6 +352,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// </summary>
     public bool ShowChallenge()
     {
+        if (!OpenChallenge()) return false;
+        Show();
+        return true;
+    }
+
+    /// <summary>État du Défi demandé, sans afficher la fenêtre (les tests ne prennent pas le
+    /// premier plan du poste).</summary>
+    internal bool OpenChallenge()
+    {
         if (!DailyChallenge.Enabled) return false; // 1.3.0 : Défi masqué
         _challenge.Request(); // offert même sans opt-in, reconstruit à la date et à l'étape du moment (A23)
         RefreshChallengeModuleIfStale();
@@ -290,10 +368,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         {
             if (_catalog.Modules[m].Id != DailyChallenge.ModuleId) continue;
             var lesson = _catalog.Modules[m].Lessons[0];
+            // Parcours de l'accueil en cours : il se clôt, sinon son en-tête, son bilan sans
+            // chiffres et sa frappe hors statistiques restaient sur le Défi (audit UX du 09/11, L16).
+            EndTutorial(completed: _tutorialPage == TutorialPage.Final);
             if (!SelectExercise(DailyChallenge.ModuleId, lesson.Id, 0, savePosition: false))
                 return false;
             _homeOpenOnExercise = true; // accueil des Leçons : le défi s'ouvre sur son exercice (LessonsWindow.Home.cs)
-            Show();
             return true;
         }
         return false;
@@ -301,6 +381,18 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     public void Show()
     {
+        // Audit UX du 09/11, W2 et E24 : un menu de la zone de notification qui rouvre une
+        // fenêtre déjà ouverte la ramène devant, sans la déplacer, sans revenir à « Aujourd'hui »
+        // ni éteindre Verr. Maj. Seule une demande explicite (le Défi) change d'écran.
+        if (_visible)
+        {
+            HomeOnShow(); // ne change d'écran que pour un exercice demandé (_homeOpenOnExercise)
+            Win32.ShowWindow(_hWnd, 9); // SW_RESTORE : réaffiche aussi une fenêtre réduite
+            Win32.SetForegroundWindow(_hWnd);
+            Win32.SetFocus(_hWnd);
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+            return;
+        }
         if (!RestoreSavedBoundsIfVisible())
             CenterOnActiveMonitor();
         UpdateRenderScaleFromCurrentClient(force: true);
@@ -1129,13 +1221,35 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     _hasFocus = false;
                     DestroySystemCaret(); // avant que la fenêtre suivante crée le sien
                     break; // traitement par défaut, comme avant
+                case Win32.WM_LBUTTONDOWN:
+                    _focusCuesShown = false;
+                    if (OnFieldMouseDown(lParam, wParam))
+                        return IntPtr.Zero;
+                    OnButtonMouseDown(lParam);
+                    break;
                 case Win32.WM_LBUTTONUP:
-                    OnClick(lParam);
+                    _focusCuesShown = false;
+                    if (_fieldDragging)
+                    {
+                        EndFieldDrag(); // fin d'une sélection à la souris dans un champ
+                        return IntPtr.Zero;
+                    }
+                    OnButtonMouseUp(lParam);
                     return IntPtr.Zero;
+                case WM_CAPTURECHANGED:
+                    _fieldDragging = false;
+                    _clickPressed = false; // capture perdue (Alt+Tab, menu) : le clic est annulé
+                    break;
                 case Win32.WM_LBUTTONDBLCLK:
                     OnDoubleClick(lParam);
+                    OnButtonMouseDown(lParam); // le second relâchement reste un clic, comme avant
                     return IntPtr.Zero;
                 case Win32.WM_MOUSEMOVE:
+                    if (_fieldDragging)
+                    {
+                        OnFieldMouseDrag(lParam);
+                        return IntPtr.Zero;
+                    }
                     OnMouseMove(lParam);
                     return IntPtr.Zero;
                 case Win32.WM_MOUSELEAVE:
@@ -1152,7 +1266,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                     }
                     break;
                 case Win32.WM_KEYDOWN:
-                    if (_inputPaused)
+                    if (_inputPaused && BlockedWhilePaused(wParam.ToInt32(), _focusedActionIndex >= 0, SpaceActivatesButtons))
                         return IntPtr.Zero;
                     OnKeyDown(wParam.ToInt32());
                     return IntPtr.Zero;
@@ -1164,7 +1278,16 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                 case Win32.WM_SYSCHAR:
                     if (_inputPaused)
                         return IntPtr.Zero;
-                    OnChar((char)wParam.ToInt32());
+                    // Alt Gr ou texte attendu au keydown : c'est une frappe. Sinon Alt+touche est
+                    // un raccourci : Alt+Espace ouvre le menu système, le reste ne tape rien
+                    // (audit 09/11, E2 : Alt+lettre entrait dans l'exercice).
+                    if (_mapper.AltGrDown || _pendingPhysicalText.HasPending)
+                    {
+                        OnChar((char)wParam.ToInt32());
+                        return IntPtr.Zero;
+                    }
+                    if (wParam.ToInt32() == ' ')
+                        return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
                     return IntPtr.Zero;
                 case Win32.WM_SYSDEADCHAR:
                     return IntPtr.Zero;
@@ -1175,6 +1298,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
                         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
                     if (_inputPaused)
                         return IntPtr.Zero;
+                    // Alt+Espace hors Alt Gr : menu système, jamais l'activation d'un bouton.
+                    if (vk == 0x20 && !_mapper.AltGrDown)
+                        return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
                     OnKeyDown(vk);
                     return IntPtr.Zero;
                 }
@@ -1302,6 +1428,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         GdiHelpers.FillSolidRect(hdc, rc, CLR_BG);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
+        SyncFocusWithScreen();
         _clickActions.Clear();
         _controlViews.Clear();
         _doubleClickActions.Clear();
@@ -1342,7 +1469,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Bornées à la partie visible, pas à toute la surface (audit du 30/10, M2).
         var tooltipBounds = _visibleCanvas.right > _visibleCanvas.left ? _visibleCanvas : rc;
         if (string.IsNullOrEmpty(_hoverTooltip))
-            DrawFocusedTooltip(hdc, tooltipBounds);
+        {
+            if (FocusCuesVisible)
+                DrawFocusedTooltip(hdc, tooltipBounds);
+        }
         else
             DrawHoverTooltip(hdc, tooltipBounds);
     }
@@ -1375,6 +1505,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void FocusFromAutomation(int index)
     {
         _focusedActionIndex = index;
+        _focusCuesShown = true; // un lecteur d'écran déplace le focus : le repère suit
         Win32.SetFocus(_hWnd);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
@@ -1484,23 +1615,39 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         int left = FreeTextLeft(preview);
         int y = FreeTextTop(preview);
         int lineH = FreeLineHeight();
+        string text = _free.Text;
 
-        if (_freePreview.Length == 0)
+        if (text.Length == 0)
         {
             PaperText.DrawLine(hdc, "...", FreeLineFont, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
                 CLR_MUTED);
         }
         else
         {
+            // Sélection : fond de sélection sous la part choisie de chaque ligne, texte par-dessus ;
+            // une fin de ligne sélectionnée se voit par un court bloc après la ligne.
+            int selStart = _free.SelectionStart, selEnd = _free.SelectionEnd;
+            uint selFill = _pal.HighContrast ? _pal.Action : PaperTheme.SelectionFill;
+            uint selInk = _pal.HighContrast ? _pal.OnAction : CLR_TEXT;
+            int right = preview.right - S(12);
             for (int i = firstVisibleLine; i < lines.Count; i++)
             {
                 if (y + lineH > preview.bottom - S(8))
                     break;
 
                 var line = lines[i];
-                string text = _freePreview.Substring(line.Start, line.Length);
-                PaperText.DrawLine(hdc, text, FreeLineFont, new Win32.RECT { left = left, top = y, right = preview.right - S(12), bottom = y + lineH },
-                    CLR_TEXT);
+                int lineEnd = line.Start + line.Length;
+                int a = Math.Clamp(selStart, line.Start, lineEnd), b = Math.Clamp(selEnd, line.Start, lineEnd);
+                bool breakSelected = _free.HasSelection && selStart <= lineEnd && selEnd > lineEnd &&
+                                     lineEnd < text.Length && text[lineEnd] == '\n';
+                int xa = left + FreeTextWidth(hdc, line.Start, a - line.Start);
+                int xb = xa + FreeTextWidth(hdc, a, b - a);
+                if (a < b || breakSelected)
+                    GdiHelpers.FillSolidRect(hdc, new Win32.RECT { left = xa, top = y + S(3), right = xb + (breakSelected ? S(6) : 0), bottom = y + lineH - S(1) }, selFill);
+
+                DrawFreeSegment(hdc, line.Start, a - line.Start, left, y, right, CLR_TEXT);
+                DrawFreeSegment(hdc, a, b - a, xa, y, right, selInk);
+                DrawFreeSegment(hdc, b, lineEnd - b, xb, y, right, CLR_TEXT);
                 y += lineH;
             }
         }
@@ -1508,14 +1655,20 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         DrawFreeCaret(hdc, preview, lines);
     }
 
+    private void DrawFreeSegment(IntPtr hdc, int start, int length, int x, int y, int right, uint color)
+    {
+        if (length <= 0 || x >= right) return;
+        PaperText.DrawLine(hdc, _free.Text.Substring(start, length), FreeLineFont,
+            new Win32.RECT { left = x, top = y, right = right, bottom = y + FreeLineHeight() }, color);
+    }
+
     private void DrawFreeCaret(IntPtr hdc, Win32.RECT preview, IReadOnlyList<FreeVisualLine> lines)
     {
-        int lineIndex = FindFreeLineIndex(lines, _freeCursorIndex);
+        int lineIndex = FindFreeLineIndex(lines, _free.Caret);
         int firstVisibleLine = GetFreeFirstVisibleLine(lines, preview);
         var line = lines[lineIndex];
-        int offset = Math.Clamp(_freeCursorIndex - line.Start, 0, line.Length);
-        string prefix = offset == 0 ? "" : _freePreview.Substring(line.Start, offset);
-        int x = FreeTextLeft(preview) + PaperText.Width(hdc, prefix, FreeLineFont);
+        int offset = Math.Clamp(_free.Caret - line.Start, 0, line.Length);
+        int x = FreeTextLeft(preview) + FreeTextWidth(hdc, line.Start, offset);
         int top = FreeTextTop(preview) + (lineIndex - firstVisibleLine) * FreeLineHeight() + S(4);
         int width = Math.Max(1, S(1));
         var caret = new Win32.RECT { left = x, top = top, right = x + width, bottom = top + S(18) };
@@ -1523,11 +1676,17 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _systemCaretRect = caret;
     }
 
+    /// <summary>
+    /// Lignes visuelles du champ : coupées aux fins de ligne, puis au dernier espace qui tient
+    /// (le mot passe entier à la ligne, comme dans un champ Windows) ; un mot plus long que la
+    /// ligne est coupé où il déborde. Les largeurs sont mesurées par grappe et gardées en cache :
+    /// sans plafond de 220 caractères, chaque repeint ne doit plus coûter une mesure par lettre.
+    /// </summary>
     private List<FreeVisualLine> BuildFreeVisualLines(IntPtr hdc, Win32.RECT preview)
     {
         var lines = new List<FreeVisualLine>();
         int maxWidth = Math.Max(1, preview.right - preview.left - S(24));
-        string text = _freePreview;
+        string text = _free.Text;
 
         if (text.Length == 0)
         {
@@ -1535,28 +1694,46 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             return lines;
         }
 
-        int start = 0;
-        int width = 0;
-        for (int i = 0; i < text.Length; i++)
+        var starts = System.Globalization.StringInfo.ParseCombiningCharacters(text);
+        int start = 0, width = 0;
+        int breakAt = -1, widthAtBreak = 0; // après le dernier espace de la ligne
+        for (int k = 0; k < starts.Length; k++)
         {
-            char ch = text[i];
-            if (ch == '\n')
+            int i = starts[k];
+            int end = k + 1 < starts.Length ? starts[k + 1] : text.Length;
+            if (text[i] == '\n')
             {
                 lines.Add(new FreeVisualLine(start, i - start, width));
-                start = i + 1;
+                start = end;
                 width = 0;
+                breakAt = -1;
                 continue;
             }
 
-            int charWidth = MeasureFreeCharWidth(hdc, ch);
-            if (i > start && width + charWidth > maxWidth)
+            int w = MeasureFreeGrapheme(hdc, text, i, end - i);
+            if (i > start && width + w > maxWidth && text[i] != ' ')
             {
-                lines.Add(new FreeVisualLine(start, i - start, width));
-                start = i;
-                width = 0;
+                if (breakAt > start)
+                {
+                    lines.Add(new FreeVisualLine(start, breakAt - start, widthAtBreak));
+                    width -= widthAtBreak;
+                    start = breakAt;
+                }
+                else
+                {
+                    lines.Add(new FreeVisualLine(start, i - start, width));
+                    start = i;
+                    width = 0;
+                }
+                breakAt = -1;
             }
 
-            width += charWidth;
+            width += w;
+            if (text[i] == ' ')
+            {
+                breakAt = end;
+                widthAtBreak = width;
+            }
         }
 
         lines.Add(new FreeVisualLine(start, text.Length - start, width));
@@ -1565,7 +1742,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private int FindFreeLineIndex(IReadOnlyList<FreeVisualLine> lines, int cursorIndex)
     {
-        int cursor = Math.Clamp(cursorIndex, 0, _freePreview.Length);
+        int cursor = Math.Clamp(cursorIndex, 0, _free.Text.Length);
         for (int i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
@@ -1587,30 +1764,37 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private int GetFreeFirstVisibleLine(IReadOnlyList<FreeVisualLine> lines, Win32.RECT preview)
     {
         int visibleLineCount = GetFreeVisibleLineCapacity(preview);
-        int cursorLine = FindFreeLineIndex(lines, _freeCursorIndex);
+        int cursorLine = FindFreeLineIndex(lines, _free.Caret);
         int maxFirstLine = Math.Max(0, lines.Count - visibleLineCount);
         if (cursorLine < visibleLineCount)
             return 0;
         return Math.Clamp(cursorLine - visibleLineCount + 1, 0, maxFirstLine);
     }
 
+    /// <summary>Index de la limite de grappe la plus proche de l'abscisse, dans la ligne.</summary>
     private int FindFreeIndexAtX(IntPtr hdc, FreeVisualLine line, int x)
     {
         if (line.Length <= 0)
             return line.Start;
 
+        string text = _free.Text;
         int width = 0;
-        for (int i = 0; i < line.Length; i++)
+        int i = line.Start, end = line.Start + line.Length;
+        while (i < end)
         {
-            int charWidth = MeasureFreeCharWidth(hdc, _freePreview[line.Start + i]);
-            if (x < width + charWidth / 2)
-                return line.Start + i;
-            width += charWidth;
+            int next = Math.Min(end, _free.NextBoundary(i));
+            int w = MeasureFreeGrapheme(hdc, text, i, next - i);
+            if (x < width + w / 2)
+                return i;
+            width += w;
+            i = next;
         }
-        return line.Start + line.Length;
+        // Après une coupure au dernier espace, le curseur se pose avant cet espace : sur la ligne.
+        return end > line.Start && end < text.Length && text[end - 1] == ' ' ? end - 1 : end;
     }
 
-    private void SetFreeCursorFromPoint(int x, int y)
+    /// <summary>Index du texte sous un point du champ (coordonnées du canevas).</summary>
+    private int FreeIndexAtPoint(int x, int y)
     {
         var hdc = Win32.GetDC(_hWnd);
         try
@@ -1620,36 +1804,45 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             int visibleLineIndex = Math.Clamp((y - FreeTextTop(_freePreviewRect)) / FreeLineHeight(), 0, GetFreeVisibleLineCapacity(_freePreviewRect) - 1);
             int lineIndex = Math.Clamp(firstVisibleLine + visibleLineIndex, 0, lines.Count - 1);
             int relativeX = Math.Max(0, x - FreeTextLeft(_freePreviewRect));
-            _freeCursorIndex = FindFreeIndexAtX(hdc, lines[lineIndex], relativeX);
-            EnsureFreeCursorInRange();
+            return FindFreeIndexAtX(hdc, lines[lineIndex], relativeX);
         }
         finally
         {
             Win32.ReleaseDC(_hWnd, hdc);
         }
+    }
+
+    private void SetFreeCursorFromPoint(int x, int y, bool extend)
+    {
+        _free.MoveTo(FreeIndexAtPoint(x, y), extend);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private bool MoveFreeCursorVertical(int direction)
+    private bool MoveFreeCursorVertical(int direction, bool extend)
     {
         if (_freePreviewRect.right <= _freePreviewRect.left)
-            return false;
+        {
+            _free.MoveTo(direction < 0 ? 0 : _free.Text.Length, extend);
+            return true;
+        }
 
         var hdc = Win32.GetDC(_hWnd);
         try
         {
             var lines = BuildFreeVisualLines(hdc, _freePreviewRect);
-            int currentLineIndex = FindFreeLineIndex(lines, _freeCursorIndex);
-            int targetLineIndex = Math.Clamp(currentLineIndex + direction, 0, lines.Count - 1);
-            if (targetLineIndex == currentLineIndex)
-                return true;
-
+            int currentLineIndex = FindFreeLineIndex(lines, _free.Caret);
+            int targetLineIndex = currentLineIndex + direction;
             var currentLine = lines[currentLineIndex];
-            int offset = Math.Clamp(_freeCursorIndex - currentLine.Start, 0, currentLine.Length);
-            string prefix = offset == 0 ? "" : _freePreview.Substring(currentLine.Start, offset);
-            int x = PaperText.Width(hdc, prefix, FreeLineFont);
-            _freeCursorIndex = FindFreeIndexAtX(hdc, lines[targetLineIndex], x);
-            EnsureFreeCursorInRange();
+            if (targetLineIndex < 0)
+                _free.MoveTo(0, extend); // Haut sur la première ligne : début du texte, comme Windows
+            else if (targetLineIndex >= lines.Count)
+                _free.MoveTo(_free.Text.Length, extend);
+            else
+            {
+                int offset = Math.Clamp(_free.Caret - currentLine.Start, 0, currentLine.Length);
+                int x = FreeTextWidth(hdc, currentLine.Start, offset);
+                _free.MoveTo(FindFreeIndexAtX(hdc, lines[targetLineIndex], x), extend);
+            }
         }
         finally
         {
@@ -1660,8 +1853,41 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return true;
     }
 
-    private int MeasureFreeCharWidth(IntPtr hdc, char ch)
-        => PaperText.Width(hdc, ch.ToString(), FreeLineFont);
+    /// <summary>Largeur d'une grappe dans la police du champ ; une fin de ligne ne mesure rien.</summary>
+    private int MeasureFreeGrapheme(IntPtr hdc, string text, int start, int length)
+    {
+        if (length <= 0 || text[start] == '\n') return 0;
+        int scale = S(1000);
+        if (scale != _freeWidthsScale)
+        {
+            _freeWidths.Clear();
+            _freeWidthsScale = scale;
+        }
+        string grapheme = text.Substring(start, length);
+        if (!_freeWidths.TryGetValue(grapheme, out int width))
+        {
+            width = PaperText.Width(hdc, grapheme, FreeLineFont);
+            _freeWidths[grapheme] = width;
+        }
+        return width;
+    }
+
+    /// <summary>Largeur d'un morceau du texte : la somme de ses grappes, mesure qui place aussi
+    /// le curseur et la sélection.</summary>
+    private int FreeTextWidth(IntPtr hdc, int start, int length)
+    {
+        string text = _free.Text;
+        int width = 0;
+        int i = start, end = Math.Min(text.Length, start + length);
+        while (i < end)
+        {
+            int next = Math.Min(end, _free.NextBoundary(i));
+            if (next <= i) break;
+            width += MeasureFreeGrapheme(hdc, text, i, next - i);
+            i = next;
+        }
+        return width;
+    }
 
     /// <summary>Texte de l'Écriture libre : AG Texte demi-gras, comme le reste des Leçons
     /// (audit 1.3.0, P5, décision d'Antoine du 20/10) ; <see cref="PaperText"/> complète un
@@ -1676,16 +1902,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         => rect.right > rect.left && rect.bottom > rect.top &&
            x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
-    private void EnsureFreeCursorInRange()
-    {
-        _freeCursorIndex = Math.Clamp(_freeCursorIndex, 0, _freePreview.Length);
-    }
-
-    private bool MoveFreeCursorToLineBoundary(bool toEnd)
+    private bool MoveFreeCursorToLineBoundary(bool toEnd, bool extend)
     {
         if (_freePreviewRect.right <= _freePreviewRect.left)
         {
-            _freeCursorIndex = toEnd ? _freePreview.Length : 0;
+            _free.MoveTo(toEnd ? _free.Text.Length : 0, extend);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
             return true;
         }
@@ -1694,9 +1915,12 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         try
         {
             var lines = BuildFreeVisualLines(hdc, _freePreviewRect);
-            var line = lines[FindFreeLineIndex(lines, _freeCursorIndex)];
-            _freeCursorIndex = toEnd ? line.Start + line.Length : line.Start;
-            EnsureFreeCursorInRange();
+            var line = lines[FindFreeLineIndex(lines, _free.Caret)];
+            int end = line.Start + line.Length;
+            // Fin d'une ligne coupée au dernier espace : avant cet espace, pour rester sur la ligne.
+            if (toEnd && end > line.Start && end < _free.Text.Length && _free.Text[end - 1] == ' ')
+                end--;
+            _free.MoveTo(toEnd ? end : line.Start, extend);
         }
         finally
         {
@@ -1707,90 +1931,172 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return true;
     }
 
-    private bool HandleFreeModeKeyDown(int vk)
+    private static bool KeyHeld(int vk) =>
+        (TypingEngine.Windows.Win32.GetKeyState(vk) & unchecked((short)0x8000)) != 0;
+
+    /// <summary>
+    /// Touches du champ du mode Libre, comme dans un champ Windows (QCM du 09/11) : flèches,
+    /// Origine et Fin (Ctrl : tout le texte), Maj pour sélectionner, Ctrl pour sauter un mot,
+    /// Retour arrière et Suppr (Ctrl : un mot), Entrée, Ctrl+A/C/X/V/Z/Y. Alt Gr tenu n'est
+    /// jamais un raccourci (TextEditKeys).
+    /// </summary>
+    private bool HandleFreeModeKeyDown(int vk) => HandleFreeModeKeyDown(vk, ReadEditModifiers());
+
+    private bool HandleFreeModeKeyDown(int vk, EditModifiers modifiers)
     {
-        EnsureFreeCursorInRange();
-        switch (vk)
+        var key = TextEditKeys.Map(vk, modifiers);
+        switch (key.Command)
         {
-            case 0x25: // Left
-                if (_freeCursorIndex > 0)
-                    _freeCursorIndex--;
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            case 0x27: // Right
-                if (_freeCursorIndex < _freePreview.Length)
-                    _freeCursorIndex++;
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            case 0x26: // Up
-                return MoveFreeCursorVertical(-1);
-
-            case 0x28: // Down
-                return MoveFreeCursorVertical(1);
-
-            case 0x24: // Home
-                return MoveFreeCursorToLineBoundary(toEnd: false);
-
-            case 0x23: // End
-                return MoveFreeCursorToLineBoundary(toEnd: true);
-
-            case 0x08: // Backspace
-                if (_freeCursorIndex > 0 && _freePreview.Length > 0)
-                {
-                    _freePreview = _freePreview.Remove(_freeCursorIndex - 1, 1);
-                    _freeCursorIndex--;
-                    _freeBackspaces++;
-                    ArmFreeStatsTimerIfNeeded();
-                }
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            case 0x2E: // Delete
-                if (_freeCursorIndex < _freePreview.Length)
-                {
-                    _freePreview = _freePreview.Remove(_freeCursorIndex, 1);
-                    _freeBackspaces++;
-                    ArmFreeStatsTimerIfNeeded();
-                }
-                Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
-                return true;
-
-            default:
+            case TextEditCommand.None:
                 return false;
+            case TextEditCommand.Left:
+            case TextEditCommand.Right:
+            case TextEditCommand.WordLeft:
+            case TextEditCommand.WordRight:
+                _free.MoveHorizontal(key.Command is TextEditCommand.Left or TextEditCommand.WordLeft ? -1 : 1,
+                    word: key.Command is TextEditCommand.WordLeft or TextEditCommand.WordRight, key.Extend);
+                break;
+            case TextEditCommand.Up:
+                return MoveFreeCursorVertical(-1, key.Extend);
+            case TextEditCommand.Down:
+                return MoveFreeCursorVertical(1, key.Extend);
+            case TextEditCommand.LineStart:
+                return MoveFreeCursorToLineBoundary(toEnd: false, key.Extend);
+            case TextEditCommand.LineEnd:
+                return MoveFreeCursorToLineBoundary(toEnd: true, key.Extend);
+            case TextEditCommand.DocumentStart:
+                _free.MoveTo(0, key.Extend);
+                break;
+            case TextEditCommand.DocumentEnd:
+                _free.MoveTo(_free.Text.Length, key.Extend);
+                break;
+            case TextEditCommand.Backspace:
+            case TextEditCommand.Delete:
+            case TextEditCommand.WordBackspace:
+            case TextEditCommand.WordDelete:
+                if (_free.Delete(backwards: key.Command is TextEditCommand.Backspace or TextEditCommand.WordBackspace,
+                        word: key.Command is TextEditCommand.WordBackspace or TextEditCommand.WordDelete))
+                {
+                    _freeBackspaces++;
+                    _freeTruncated = false;
+                    ArmFreeStatsTimerIfNeeded();
+                }
+                break;
+            case TextEditCommand.NewLine:
+                InsertFreeCharacter('\n');
+                return true;
+            case TextEditCommand.SelectAll:
+                _free.SelectAll();
+                break;
+            case TextEditCommand.Copy:
+                _free.Copy(Clipboard);
+                break;
+            case TextEditCommand.Cut:
+                if (_free.Cut(Clipboard)) _freeTruncated = false;
+                break;
+            case TextEditCommand.Paste:
+                // Un collage n'est pas une frappe : il ne compte ni dans la vitesse ni dans les caractères.
+                _freeTruncated = _free.Paste(Clipboard).Truncated;
+                break;
+            case TextEditCommand.Undo:
+                _free.Undo();
+                _freeTruncated = false;
+                break;
+            case TextEditCommand.Redo:
+                _free.Redo();
+                _freeTruncated = false;
+                break;
         }
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        return true;
     }
 
+    /// <summary>Un caractère tapé : il remplace la sélection. Un caractère hors du plan de base
+    /// (émoji) arrive en deux WM_CHAR : sa première moitié attend la seconde.</summary>
     private void InsertFreeCharacter(char c)
     {
-        EnsureFreeCursorInRange();
+        string typed;
+        if (char.IsHighSurrogate(c))
+        {
+            _freeHighSurrogate = c;
+            return;
+        }
+        if (char.IsLowSurrogate(c))
+        {
+            if (_freeHighSurrogate is not { } high) return;
+            typed = new string(new[] { high, c });
+        }
+        else
+            typed = c.ToString();
+        _freeHighSurrogate = null;
+
         _freeStartedAt ??= DateTimeOffset.UtcNow;
-        _freeChars++;
-        _freePreview = _freePreview.Insert(_freeCursorIndex, c.ToString());
-        _freeCursorIndex++;
-        TrimFreePreviewAroundCursor();
+        var result = _free.Insert(typed, typed: true);
+        _freeTruncated = result.Truncated;
+        if (result.Inserted > 0)
+            _freeChars++;
         ArmFreeStatsTimerIfNeeded();
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private void TrimFreePreviewAroundCursor()
+    /// <summary>Double-clic dans le champ : le mot sous le pointeur.</summary>
+    private bool SelectFreeWordAt(int x, int y)
     {
-        if (_freePreview.Length <= FREE_PREVIEW_MAX_CHARS)
-            return;
-
-        int overflow = _freePreview.Length - FREE_PREVIEW_MAX_CHARS;
-        if (_freeCursorIndex >= _freePreview.Length - overflow)
-        {
-            _freePreview = _freePreview[overflow..];
-            _freeCursorIndex -= overflow;
-        }
-        else
-        {
-            _freePreview = _freePreview.Remove(Math.Max(0, _freePreview.Length - overflow), overflow);
-        }
-        EnsureFreeCursorInRange();
+        if (_mode != WindowMode.Free || _settingsOpen || !IsPointInRect(_freePreviewRect, x, y)) return false;
+        _free.SelectWordAt(FreeIndexAtPoint(x, y));
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+        return true;
     }
+
+    /// <summary>Bouton gauche enfoncé dans un champ (mode Libre ou « Votre texte ») : pose le
+    /// curseur (Maj : étend la sélection) et suit la souris jusqu'au relâchement, pour
+    /// sélectionner en glissant.</summary>
+    private bool OnFieldMouseDown(IntPtr lParam, IntPtr wParam)
+    {
+        if (_settingsOpen || _pickerOpen) return false;
+        var (x, y) = ClientToCanvas(lParam);
+        const long MK_SHIFT = 0x0004;
+        bool extend = (wParam.ToInt64() & MK_SHIFT) != 0;
+        if (_mode == WindowMode.Free && IsPointInRect(_freePreviewRect, x, y) && HitClickAction(x, y) < 0)
+        {
+            _focusedActionIndex = -1;
+            SetFreeCursorFromPoint(x, y, extend);
+        }
+        else if (!HomeTextMouseDown(x, y, extend))
+            return false;
+        _fieldDragging = true;
+        SetCapture(_hWnd);
+        Win32.SetFocus(_hWnd);
+        return true;
+    }
+
+    private void OnFieldMouseDrag(IntPtr lParam)
+    {
+        var (x, y) = ClientToCanvas(lParam);
+        if (HomeShown)
+        {
+            if (_homePage == HomePage.Text) HomeTextMouseDrag(x, y);
+            return;
+        }
+        if (_mode != WindowMode.Free) return;
+        int before = _free.Caret;
+        _free.MoveTo(FreeIndexAtPoint(x, y), extend: true);
+        if (_free.Caret != before)
+            Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
+    }
+
+    private void EndFieldDrag()
+    {
+        if (!_fieldDragging) return;
+        _fieldDragging = false;
+        ReleaseCapture();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCapture(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
 
     private string BuildFreeStatsText()
     {
@@ -1803,13 +2109,13 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         return L.LessonsWin_FreeStatsFilled(wpm == 0 ? "—" : wpm.ToString(), cpm, (int)Math.Round(seconds), _freeBackspaces);
     }
 
+    /// <summary>« Effacer les statistiques » : les compteurs seulement. Le texte reste (audit
+    /// 09/11, L13 : le bouton effaçait aussi le texte sans le dire) ; Ctrl+A puis Suppr l'efface.</summary>
     private void ResetFreeStats()
     {
         _freeStartedAt = null;
         _freeChars = 0;
         _freeBackspaces = 0;
-        _freePreview = "";
-        _freeCursorIndex = 0;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
@@ -1884,9 +2190,18 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         }
     }
 
+    private const uint SPI_GETKEYBOARDCUES = 0x100A;
+
+    [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW")]
+    private static extern bool SystemParametersInfoBool(uint action, uint param, out bool value, uint winIni);
+
+    /// <summary>Réglage Windows « souligner les raccourcis et touches d'accès » : repères toujours visibles.</summary>
+    private static bool SystemKeyboardCues()
+        => SystemParametersInfoBool(SPI_GETKEYBOARDCUES, 0, out bool on, 0) && on;
+
     private void DrawFocusRing(IntPtr hdc)
     {
-        if (_focusedActionIndex < 0 || _clickActions.Count == 0)
+        if (_focusedActionIndex < 0 || _clickActions.Count == 0 || !FocusCuesVisible)
             return;
 
         if (_focusedActionIndex >= _clickActions.Count)
@@ -1939,6 +2254,33 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _hoverAreas.Add((rect, tooltip, preferAbove, compact));
     }
 
+    // Un clic se joue comme sur un bouton Windows (audit 09/11, E23) : enfoncé sur une cible et
+    // relâché sur la même. Un relâchement sans enfoncement ici (glissé depuis une autre
+    // fenêtre, double-clic de la barre de titre) ou sur une autre cible ne déclenche rien.
+    private bool _clickPressed;
+    private int _pressedClickAction = -1;
+
+    private void OnButtonMouseDown(IntPtr lParam)
+    {
+        var (x, y) = ClientToCanvas(lParam);
+        _pressedClickAction = _clickActionsScreen == CurrentFocusScreen ? HitClickAction(x, y) : -1;
+        _clickPressed = true;
+        SetCapture(_hWnd); // le relâchement arrive ici même hors de la fenêtre
+    }
+
+    private void OnButtonMouseUp(IntPtr lParam)
+    {
+        bool pressed = _clickPressed;
+        int pressedAction = _pressedClickAction;
+        _clickPressed = false;
+        _pressedClickAction = -1;
+        if (!pressed) return;
+        ReleaseCapture();
+        var (x, y) = ClientToCanvas(lParam);
+        if (HitClickAction(x, y) != pressedAction) return; // glissé hors de la cible : annulé
+        OnClick(lParam);
+    }
+
     private void OnClick(IntPtr lParam)
     {
         var (x, y) = ClientToCanvas(lParam);
@@ -1959,18 +2301,16 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.SetFocus(_hWnd);
             return;
         }
-        if (_mode == WindowMode.Free && IsPointInRect(_freePreviewRect, x, y))
-        {
-            SetFreeCursorFromPoint(x, y);
-            Win32.SetFocus(_hWnd);
-            return;
-        }
+        // Le champ du mode Libre pose son curseur à l'enfoncement (OnFieldMouseDown) : le
+        // relâchement ne doit pas défaire une sélection faite en glissant.
         Win32.SetFocus(_hWnd);
     }
 
     private void OnDoubleClick(IntPtr lParam)
     {
         var (x, y) = ClientToCanvas(lParam);
+        if (SelectFreeWordAt(x, y) || HomeTextSelectWordAt(x, y))
+            return;
         foreach (var (rect, action) in _doubleClickActions)
         {
             if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
@@ -2084,6 +2424,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void MoveKeyboardFocus(int direction)
     {
         _focusedActionIndex = NextFocusIndex(_focusedActionIndex, _clickActions.Count, direction, HasTypingSurface);
+        _focusCuesShown = true;
 
         // K4 : la navigation au clavier retire l'infobulle de survol pour laisser voir celle
         // de la cible focalisée ; le prochain mouvement de souris la rétablit.
@@ -2127,13 +2468,27 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (_focusedActionIndex < 0 || _focusedActionIndex >= _clickActions.Count)
             return false;
+        // L'écran a changé depuis le dernier repeint : les cibles connues sont celles de
+        // l'écran d'avant, n'en activer aucune (L4).
+        if (_clickActionsScreen != CurrentFocusScreen)
+        {
+            _focusedActionIndex = -1;
+            return false;
+        }
 
         _clickActions[_focusedActionIndex].Action();
         return true;
     }
 
+    /// <summary>Le bilan d'un exercice est à l'écran.</summary>
+    private bool SummaryShown => _showSummary && _mode == WindowMode.Lessons && !HomeShown && !TutorialPageShown;
+
+    /// <summary>Écrans sans frappe d'exercice : Espace y active le bouton focalisé, comme Entrée.</summary>
+    private bool SpaceActivatesButtons => _settingsOpen || HomeShown || TutorialPageShown || SummaryShown;
+
     private void OnKeyDown(int vk)
     {
+        _swallowActivationSpace = false; // ne vaut que pour le WM_CHAR de cette touche-ci
         if (vk == 0x1B)
         {
             if (_pickerOpen)
@@ -2155,16 +2510,34 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (vk == 0x09)
         {
             bool backwards = (TypingEngine.Windows.Win32.GetKeyState(0x10) & unchecked((short)0x8000)) != 0;
-            MoveKeyboardFocus(backwards ? -1 : 1);
+            bool ctrl = (TypingEngine.Windows.Win32.GetKeyState(0x11) & unchecked((short)0x8000)) != 0;
+            if (ctrl)
+                HomeCycleTab(backwards ? -1 : 1); // Ctrl+Tab : onglet, jamais un second Tab (E21)
+            else
+                MoveKeyboardFocus(backwards ? -1 : 1);
             return;
         }
-        if (vk == 0x0D || ((_settingsOpen || HomeShown || TutorialPageShown) && vk == 0x20))
+        bool summaryShown = SummaryShown;
+        if (vk == 0x0D || (SpaceActivatesButtons && vk == 0x20))
         {
             if (ActivateFocusedAction())
+            {
+                // L'Espace qui active un bouton n'est pas une frappe : son WM_CHAR ne doit pas
+                // entrer dans la séance suivante (audit 09/11, E4).
+                _swallowActivationSpace = vk == 0x20;
                 return;
+            }
+        }
+        if (_inputPaused) return; // en pause, rien au-delà de la navigation n'atteint l'exercice (RA5)
+        if (summaryShown && !_settingsOpen && !_pickerOpen && (vk == 0x0D || vk == 0x20))
+        {
+            // Bilan sans bouton focalisé : Entrée et Espace valent « Suivant » ou « Terminer » (L12).
+            _swallowActivationSpace = vk == 0x20;
+            NextExercise();
+            return;
         }
         if (HomeHandleKey(vk)) return; // accueil : rien n'atteint la séance cachée
-        if (_settingsOpen) return;
+        if (_settingsOpen || _pickerOpen) return; // liste ouverte : rien n'atteint l'exercice caché (E5)
         if (_mode == WindowMode.Free && HandleFreeModeKeyDown(vk))
         {
             ReturnFocusToSurface();
@@ -2189,8 +2562,19 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private void OnChar(char c)
     {
-        if (_settingsOpen) return;
+        // Paramètres ou liste des leçons ouverts : la frappe n'atteint pas l'exercice caché
+        // derrière (audit 09/11, E5).
+        if (_settingsOpen || _pickerOpen)
+        {
+            ResolveTypedCharacter(c); // consomme la frappe physique attendue, sans l'écrire
+            return;
+        }
         c = ResolveTypedCharacter(c);
+        if (_swallowActivationSpace)
+        {
+            _swallowActivationSpace = false;
+            if (c == ' ') return;
+        }
         if (HomeHandleChar(c)) return; // accueil : après la résolution de la frappe physique, rien n'atteint la séance cachée
         if (TutorialPageShown) return; // écran des usages ou final du parcours : rien à taper
         if (char.IsControl(c)) return; // dont le '\t' qui suit Tab : le focus reste où Tab l'a mis
@@ -2206,7 +2590,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (!result.Accepted) return;
         // La touche de la dernière faute reste cerclée sur le clavier jusqu'à sa correction.
         if (result.WasError)
+        {
             _errorScancode = _pressedScancode;
+            _automation?.Notify(TypingErrorAnnouncement(result.Actual ?? c, result.Expected, _session.NeedsBackspaceCorrection));
+        }
         else if (!_session.NeedsBackspaceCorrection && !CurrentLineHasWrongCell())
             _errorScancode = 0;
         ClearHint();
@@ -2226,6 +2613,28 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
+
+    /// <summary>
+    /// Ce que le lecteur d'écran dit d'une faute (audit de régression du 10/11, RA7) : la surface
+    /// expose la ligne attendue et le curseur, pas ce qui a été tapé. L'annonce vivait dans
+    /// l'ancien module d'apprentissage, supprimé quand le parcours est entré dans les Leçons.
+    /// </summary>
+    internal static string TypingErrorAnnouncement(char typed, char? expected, bool backspaceFixes)
+    {
+        string fault = expected is { } wanted
+            ? L.LessonsAutomation_TypingError(SpokenCharacter(typed), SpokenCharacter(wanted))
+            : L.LessonsAutomation_TypingExtra(SpokenCharacter(typed));
+        return fault + " " + (backspaceFixes ? L.LessonsAutomation_FixWithBackspace : L.LessonsAutomation_TypeAgain);
+    }
+
+    /// <summary>Un caractère tel qu'il se dit : les espaces par leur nom, les autres entre guillemets.</summary>
+    private static string SpokenCharacter(char c) => c switch
+    {
+        ' ' => L.LessonsAutomation_SpaceName,
+        ' ' => L.LessonsAutomation_NbspName,
+        ' ' => L.LessonsAutomation_NarrowNbspName,
+        _ => L.LessonsPaper_CharacterFallback(c.ToString()),
+    };
 
     private void OnTimer(uint timerId)
     {
@@ -2262,11 +2671,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (_showSummary) return;
 
-        bool challengeFinale = CurrentModule.Id == DailyChallenge.ModuleId &&
-                               _exerciseIndex == CurrentLesson.Exercises.Count - 1;
+        bool onChallenge = CurrentModule.Id == DailyChallenge.ModuleId;
+        bool challengeFinale = onChallenge && _exerciseIndex == CurrentLesson.Exercises.Count - 1;
         // Le meilleur score doit être lu AVANT RecordSuccess, qui l'écrase par le résultat
         // de la tentative courante : après l'appel, toute séance est son propre record.
-        int? previousBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
+        // Extrait du Défi : le record est celui de tous les Défis, pas celui de l'exercice du
+        // jour, neuf chaque matin (audit UX du 09/11, L10).
+        int? previousBestWpm = challengeFinale
+            ? ChallengeSessionState.PersonalBestWpm(_progress)
+            : _progress.GetValidProgress(CurrentExercise)?.BestWpm;
 
         _lastCompletedStats = _session.Stats;
         _progress.RecordSuccess(CurrentExercise, _session.Stats);
@@ -2277,7 +2690,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             ConfigManager.RecordLearningExerciseCompleted(CurrentExercise.ExerciseIndex);
         // Métrique « Record » (QW-4) : relue APRÈS RecordSuccess pour inclure la
         // tentative courante ; « nouveau » seulement si un score antérieur est battu.
-        _summaryBestWpm = _progress.GetValidProgress(CurrentExercise)?.BestWpm;
+        // Échauffement du Défi : cinq fois chaque caractère, différents chaque jour, pas de record.
+        _summaryBestWpm = challengeFinale
+            ? MaxWpm(previousBestWpm, _session.Stats.Wpm)
+            : onChallenge ? null : _progress.GetValidProgress(CurrentExercise)?.BestWpm;
         _summaryIsNewBest = previousBestWpm.HasValue && _session.Stats.Wpm.HasValue &&
                             _session.Stats.Wpm.Value > previousBestWpm.Value;
         _showSummary = true;
@@ -2289,6 +2705,31 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             _challenge.Complete(_session.Stats, previousBestWpm);
 
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
+    private static int? MaxWpm(int? a, int? b) => a is { } x && b is { } y ? Math.Max(x, y) : a ?? b;
+
+    /// <summary>La séance du Défi affichée est déjà comptée : dit avant le mode de frappe
+    /// (audit UX du 09/11, L10). Seulement si c'est bien elle qui a été finie, donc son dernier
+    /// exercice réussi : le jour où la 5e séance de prise en main est comptée, le premier Défi
+    /// commun ne compterait pas non plus, mais il n'a jamais été joué (RA9 du 10/11).</summary>
+    internal bool ChallengeAlreadyCounted =>
+        _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId && _challenge.AlreadyCounted &&
+        _progress.IsCompleted(CurrentLesson.Exercises[^1]);
+
+    /// <summary>Compteur « x/N exercices » de la liste, sans le Défi du jour : ses deux
+    /// exercices changent chaque jour, comptés ils faisaient baisser x le lendemain et varier N
+    /// avec l'offre du Défi (audit UX du 09/11, L10).</summary>
+    internal (int Done, int Total) PickerExerciseCount()
+    {
+        int done = 0, total = 0;
+        foreach (var exercise in _catalog.Exercises)
+        {
+            if (exercise.ModuleId == DailyChallenge.ModuleId) continue;
+            total++;
+            if (_progress.IsCompleted(exercise)) done++;
+        }
+        return (done, total);
     }
 
     private void OnCopyChallengeResult()
@@ -2381,7 +2822,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // Même guidage que le tutoriel, réglé pour les Leçons : la méthode recommandée,
         // armement puis touche finale (audit du 25/09, L-02).
         LessonHintProvider.Guide(state, _hintMethod, _hintCharacter?.ToString() ?? "", _mapper.ActiveDeadKey,
-            _mapper.CapsLockActive, GuideOptions.Lessons);
+            _mapper.CapsLockActive, LessonGuideOptions);
     }
 
     private void ToggleAutoHints()
@@ -2470,7 +2911,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             L.LessonsWin_ResetProgressConfirm,
             L.LessonsWin_WindowTitle, MB_YESNO | MB_ICONWARNING);
         if (result != IDYES) return;
+        ApplyProgressReset();
+    }
+
+    /// <summary>Remise à zéro confirmée : exercices, gestes de « Votre carte » et record du
+    /// Défi (audit UX du 09/11, L10 et L13).</summary>
+    internal void ApplyProgressReset()
+    {
         _progress.ResetAll();
+        ConfigManager.SetTrainingBestWpm(0);
         StartCurrentSession(savePosition: true);
     }
 
@@ -2500,60 +2949,127 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         StartCurrentSession(savePosition: true);
     }
 
+    /// <summary>
+    /// Position du catalogue après (<paramref name="step"/> = 1) ou avant (-1) l'exercice
+    /// affiché ; null en bout de parcours. On ne passe jamais d'un module ordinaire au Défi du
+    /// jour ni l'inverse : le Défi s'ouvre exprès et compte la séance du jour (audit UX du
+    /// 09/11, L3). Fonction pure pour les tests.
+    /// </summary>
+    internal static (int Module, int Lesson, int Exercise)? AdjacentPosition(
+        LessonCatalog catalog, int moduleIndex, int lessonIndex, int exerciseIndex, int step)
+    {
+        var module = catalog.Modules[moduleIndex];
+        var lesson = module.Lessons[lessonIndex];
+        if (step > 0)
+        {
+            if (exerciseIndex < lesson.Exercises.Count - 1) return (moduleIndex, lessonIndex, exerciseIndex + 1);
+            if (lessonIndex < module.Lessons.Count - 1) return (moduleIndex, lessonIndex + 1, 0);
+            int next = moduleIndex + 1;
+            if (next < catalog.Modules.Count && !CrossesChallenge(module, catalog.Modules[next]))
+                return (next, 0, 0);
+            return null;
+        }
+        if (exerciseIndex > 0) return (moduleIndex, lessonIndex, exerciseIndex - 1);
+        if (lessonIndex > 0)
+            return (moduleIndex, lessonIndex - 1, module.Lessons[lessonIndex - 1].Exercises.Count - 1);
+        int previous = moduleIndex - 1;
+        if (previous >= 0 && !CrossesChallenge(module, catalog.Modules[previous]))
+        {
+            var before = catalog.Modules[previous];
+            int lastLesson = before.Lessons.Count - 1;
+            return (previous, lastLesson, before.Lessons[lastLesson].Exercises.Count - 1);
+        }
+        return null;
+
+        static bool CrossesChallenge(LessonModule a, LessonModule b) =>
+            a.Id == DailyChallenge.ModuleId || b.Id == DailyChallenge.ModuleId;
+    }
+
+    private (int Module, int Lesson, int Exercise)? AdjacentPosition(int step) =>
+        AdjacentPosition(_catalog, _moduleIndex, _lessonIndex, _exerciseIndex, step);
+
+    /// <summary>Rien après cet exercice : fin du Défi ou du catalogue. Le bilan dit alors
+    /// « Terminer », qui ramène à « Aujourd'hui » (QCM du 09/11).</summary>
+    internal bool IsAtEndOfPath => !IsTutorialActive && _homeComposed == null && AdjacentPosition(1) == null;
+
+    /// <summary>Le chevron ‹ (›) a-t-il une cible ? Sinon il n'est pas dessiné : un bouton
+    /// dessiné n'est jamais mort (audit UX du 09/11, L2, L9).</summary>
+    internal bool HasPreviousExercise => IsTutorialActive || _homeComposed != null || AdjacentPosition(-1) != null;
+
     private void PreviousExercise()
     {
+        if (TutorialPrevious()) return; // parcours de l'accueil : son étape précédente (LessonsWindow.Tutorial.cs)
         if (_homeComposed != null) // séance composée : un seul exercice, on repart de son début
         {
             StartCurrentSession(savePosition: false);
             return;
         }
-        if (_exerciseIndex > 0)
-        {
-            _exerciseIndex--;
-            StartCurrentSession(savePosition: true);
-            return;
-        }
-        if (_lessonIndex > 0)
-        {
-            _lessonIndex--;
-            _exerciseIndex = CurrentLesson.Exercises.Count - 1;
-            StartCurrentSession(savePosition: true);
-        }
+        if (AdjacentPosition(-1) is { } previous)
+            GoTo(previous);
     }
 
     private void NextExercise()
     {
         if (TutorialNext()) return; // parcours de l'accueil : son étape suivante (LessonsWindow.Tutorial.cs)
         if (HomeFinishComposed()) return; // séance composée : retour à « Aujourd'hui »
-        if (_exerciseIndex < CurrentLesson.Exercises.Count - 1)
+        if (AdjacentPosition(1) is { } next)
         {
-            _exerciseIndex++;
-            StartCurrentSession(savePosition: true);
+            GoTo(next);
             return;
         }
-        if (_lessonIndex < CurrentModule.Lessons.Count - 1)
-        {
-            _lessonIndex++;
-            _exerciseIndex = 0;
-            StartCurrentSession(savePosition: true);
-            return;
-        }
-        if (_moduleIndex < _catalog.Modules.Count - 1)
-        {
-            _moduleIndex++;
-            _lessonIndex = 0;
-            _exerciseIndex = 0;
-            StartCurrentSession(savePosition: true);
-        }
+        FinishPath();
     }
 
-    private static string FormatLessonInstruction(string instruction)
+    private void GoTo((int Module, int Lesson, int Exercise) position)
     {
-        return instruction
-            .Replace("{ALTGR}", "AltGr", StringComparison.OrdinalIgnoreCase)
-            .Replace("{SHIFT}", L.LessonsWin_PlaceholderShift, StringComparison.OrdinalIgnoreCase)
-            .Replace("{CAPS}", L.LessonsWin_PlaceholderCaps, StringComparison.OrdinalIgnoreCase);
+        _moduleIndex = position.Module;
+        _lessonIndex = position.Lesson;
+        _exerciseIndex = position.Exercise;
+        StartCurrentSession(savePosition: true);
     }
+
+    /// <summary>Fin du Défi ou du catalogue : « Terminer » ramène à « Aujourd'hui ». L'exercice
+    /// caché derrière repart de zéro : « Reprendre » n'ouvre jamais un exercice fini sans bilan.</summary>
+    private void FinishPath()
+    {
+        StartCurrentSession(savePosition: false);
+        HomeShowPage(HomePage.Today);
+    }
+
+    /// <summary>
+    /// À la fermeture (audit 09/11, L5) : un bilan affiché vaut lu, comme « Suivant » (l'exercice
+    /// suivant attend, une séance composée rend le catalogue) ; le Défi, qui ne s'ouvre que par
+    /// ShowChallenge, rend la place du catalogue d'où l'on venait. Sans cela, la réouverture
+    /// rendait l'ancien bilan, et le Défi périmé renvoyait à l'Initiation.
+    /// </summary>
+    private void SettleSessionOnHide()
+    {
+        if (_mode != WindowMode.Lessons || IsTutorialActive) return;
+        bool onChallenge = _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId;
+        if (_showSummary)
+        {
+            if (HomeFinishComposed()) return;
+            if (!onChallenge && AdjacentPosition(1) is { } next)
+            {
+                GoTo(next);
+                return;
+            }
+            if (!onChallenge)
+            {
+                StartCurrentSession(savePosition: false); // fin du catalogue : comme « Terminer »
+                return;
+            }
+        }
+        if (onChallenge)
+            PickInitialSelection(); // la dernière position du catalogue, sinon le premier exercice à faire
+    }
+
+    /// <summary>« Rejouer » au bilan : le même exercice, depuis le début. Un Défi rejoué ne
+    /// recompte pas la séance du jour (ChallengeSessionState.Complete, A23).</summary>
+    private void ReplayExercise() => StartCurrentSession(savePosition: false);
+
+    private static string FormatLessonInstruction(string instruction)
+        => LessonCatalogLoader.ExpandPlaceholders(instruction);
 
     private string BuildTypingStatus()
     {
@@ -2562,7 +3078,8 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             : L.LessonsWin_StatusFlexible;
         // Audit 1.3.0, A2 : la tolérance se dit ici, hors de la consigne, qui entre dans
         // l'empreinte de l'exercice (changer Lessons_Init* effacerait les réussites).
-        return _session.IsTolerant ? status + " " + L.LessonsWin_StatusTolerated : status;
+        if (_session.IsTolerant) status += " " + L.LessonsWin_StatusTolerated;
+        return ChallengeAlreadyCounted ? L.Challenge_AlreadyDone + " " + status : status;
     }
 
     private string FormatHintButtonText()
@@ -2613,7 +3130,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             {
                 "Shift" => L.Settings_ShortcutModifier2,
                 "Caps" => L.Onboarding_CapsLockWord,
-                "AltGr" => "AltGr",
+                "AltGr" => L.AltGrKey,
                 _ => part
             }));
     }
@@ -2636,7 +3153,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             "BracketRight" => "]",
             "Backslash" => "\\",
             "Semicolon" => ";",
-            "Quote" => "'",
+            "Quote" => "´", // T3 : le signe de la touche à droite du M, plus l'apostrophe
             "Comma" => ",",
             "Period" => ".",
             "Slash" => "/",
@@ -2677,12 +3194,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
-    private void OnRawKeyDown(uint scancode)
+    private void OnRawKeyDown(uint scancode, bool extended)
     {
         if (_inputPaused) return;
         if (!_visible || _settingsOpen) return;
         _pressedScancode = scancode;
-        CaptureExpectedTextForPhysicalKey(scancode);
+        // Touche étendue (pavé « / », flèches, Entrée du pavé) : jamais une touche de la
+        // disposition, aucun texte attendu (audit 09/11, E3).
+        if (!extended)
+            CaptureExpectedTextForPhysicalKey(scancode);
         Win32.SetTimer(_hWnd, (UIntPtr)TIMER_KEYPRESS, KEYPRESS_DURATION_MS, IntPtr.Zero);
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
@@ -2723,31 +3243,24 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         // allumée derrière elle (Show l'éteint déjà à l'ouverture).
         _mapper.RequestCapsLockOff();
         SaveWindowBounds();
+        SettleSessionOnHide();
         _visible = false;
         _challenge.EndRequest();
-        // Avant ChallengeShared ci-dessous : la fin de séance est datée quand le partage
-        // se présente, et les dix minutes sans avis s'appliquent aussi à lui.
         LearningSessionTracker.Closed(this);
         _settingsOpen = false;
         HomeOnHide(); // accueil des Leçons : oublie le clic et le texte collé (LessonsWindow.Home.cs)
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_CLEAR);
         Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HINT_FLASH_CLEAR);
-        _freePreview = "";
-        _freeCursorIndex = 0;
+        // Mode Libre : le texte reste pour la prochaine ouverture (audit 09/11, E7 : Échap
+        // l'effaçait sans prévenir) ; les statistiques mesurent une séance et repartent de zéro.
+        EndFieldDrag();
+        _freeHighSurrogate = null;
         _freeChars = 0;
         _freeBackspaces = 0;
         _freeStartedAt = null;
         ClearPendingPhysicalText();
         Win32.ShowWindow(_hWnd, 0);
-
-        // Le partage a eu lieu pendant cette séance : c'est maintenant, la fenêtre refermée,
-        // que la sollicitation d'avis peut se présenter sans couper quoi que ce soit.
-        if (_challenge.TakeSharedThisSession())
-        {
-            try { ChallengeShared?.Invoke(); }
-            catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeShared", ex); }
-        }
     }
 
     public void Dispose()
@@ -2758,7 +3271,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (_onAppLanguageChanged != null)
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         _mapper.StateChanged -= OnMapperStateChanged;
-        _hook.RawKeyDown -= OnRawKeyDown;
+        _hook.RawKeyDownDetailed -= OnRawKeyDown;
         _automation?.Dispose(); // tant que le HWND existe
         _automation = null;
         if (_hWnd != IntPtr.Zero)

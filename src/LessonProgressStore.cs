@@ -66,17 +66,90 @@ internal sealed class LessonProgressStore
     public IReadOnlySet<int> OnboardingSyncedExercises => _onboardingSynced;
     public IReadOnlyDictionary<string, LessonExerciseProgress> Exercises => _exercises;
 
+    /// <summary>
+    /// Progression de l'exercice, en lecture : la clé actuelle, sinon la fusion des clés
+    /// écrites sous l'ancienne empreinte (consigne FR ou EN incluse), sans rien modifier.
+    /// </summary>
     public LessonExerciseProgress? GetValidProgress(LessonExercise exercise)
     {
-        return _exercises.TryGetValue(exercise.StableKey, out var progress) &&
-               StringComparer.Ordinal.Equals(progress.Hash, exercise.Hash)
-            ? progress
-            : null;
+        if (_exercises.TryGetValue(exercise.StableKey, out var progress) &&
+            StringComparer.Ordinal.Equals(progress.Hash, exercise.Hash))
+            return progress;
+        return MergeLegacy(exercise);
+    }
+
+    /// <summary>
+    /// Fusionne les progressions enregistrées sous les anciennes empreintes de l'exercice
+    /// (une par langue au plus) : réussi si l'une l'est, meilleurs scores, tentatives et
+    /// indices additionnés. S'y ajoute la réussite, sans scores, d'une ancienne forme de
+    /// l'exercice (<see cref="LessonExercise.SupersededKeys"/>). Null si aucune. Les anciennes
+    /// entrées restent dans le fichier : une version précédente de l'app les relit telles quelles.
+    /// </summary>
+    internal LessonExerciseProgress? MergeLegacy(LessonExercise exercise)
+    {
+        LessonExerciseProgress? merged = null;
+        foreach (string legacyHash in exercise.LegacyHashes)
+        {
+            if (!_exercises.TryGetValue(exercise.KeyPrefix + legacyHash, out var old) ||
+                !StringComparer.Ordinal.Equals(old.Hash, legacyHash))
+                continue;
+            merged ??= new LessonExerciseProgress(exercise.StableKey, exercise.Hash);
+            merged.Completed |= old.Completed;
+            merged.SuccessfulAttempts += old.SuccessfulAttempts;
+            merged.HintsUsed += old.HintsUsed;
+            merged.BestWpm = Max(merged.BestWpm, old.BestWpm);
+            merged.BestAccuracyPercent = Max(merged.BestAccuracyPercent, old.BestAccuracyPercent);
+            merged.BestSeconds = merged.BestSeconds is { } a && old.BestSeconds is { } b
+                ? Math.Min(a, b)
+                : merged.BestSeconds ?? old.BestSeconds;
+            if (old.LastCompletedUtc > merged.LastCompletedUtc || merged.LastCompletedUtc == null)
+                merged.LastCompletedUtc = old.LastCompletedUtc ?? merged.LastCompletedUtc;
+        }
+
+        // Anciennes formes de l'exercice (texte ou rang changé depuis une version publiée,
+        // audit de régression du 10/11, RA2) : la réussite seule est reprise, sans scores.
+        foreach (string key in exercise.SupersededKeys)
+        {
+            if (!_exercises.TryGetValue(key, out var old) || !old.Completed ||
+                !key.EndsWith("/" + old.Hash, StringComparison.Ordinal))
+                continue;
+            merged ??= new LessonExerciseProgress(exercise.StableKey, exercise.Hash);
+            merged.Completed = true;
+            merged.SuccessfulAttempts = Math.Max(1, merged.SuccessfulAttempts);
+        }
+        return merged;
+
+        static int? Max(int? a, int? b) => a is { } x && b is { } y ? Math.Max(x, y) : a ?? b;
     }
 
     public bool IsCompleted(LessonExercise exercise)
     {
         return GetValidProgress(exercise)?.Completed == true;
+    }
+
+    /// <summary>
+    /// Meilleure vitesse enregistrée sur un extrait du Défi, tous jours confondus (audit UX du
+    /// 09/11, L10) : les clés « defi/defi-aaaammjj/1/empreinte » des jours passés restent dans
+    /// le fichier, y compris celles d'avant la 1.3.0. Null si aucun extrait n'a de vitesse.
+    /// </summary>
+    public int? BestChallengeWpm()
+    {
+        int? best = null;
+        foreach (var (key, progress) in _exercises)
+        {
+            if (progress.BestWpm is not int wpm || !IsChallengeExtractKey(key)) continue;
+            if (best is null || wpm > best) best = wpm;
+        }
+        return best;
+    }
+
+    /// <summary>Clé « module/leçon/rang/empreinte » d'un extrait du Défi.</summary>
+    private static bool IsChallengeExtractKey(string key)
+    {
+        string[] parts = key.Split('/');
+        return parts.Length == 4 &&
+               StringComparer.Ordinal.Equals(parts[0], DailyChallenge.ModuleId) &&
+               StringComparer.Ordinal.Equals(parts[2], DailyChallenge.ExtractExerciseIndex.ToString(CultureInfo.InvariantCulture));
     }
 
     public int CountCompleted(LessonCatalog catalog)
@@ -133,7 +206,10 @@ internal sealed class LessonProgressStore
                 ? stats.ElapsedSeconds
                 : Math.Min(progress.BestSeconds.Value, stats.ElapsedSeconds);
 
-        SetLastPositionNoSave(exercise);
+        // Le Défi ne s'ouvre que par ShowChallenge, reconstruit au jour et à l'étape : ce n'est
+        // jamais la place de « Reprendre » (audit 09/11, L5).
+        if (exercise.ModuleId != DailyChallenge.ModuleId)
+            SetLastPositionNoSave(exercise);
         CommitOrRollback(snapshot, "LessonProgressStore.RecordSuccess");
     }
 
@@ -235,7 +311,9 @@ internal sealed class LessonProgressStore
         if (!_exercises.TryGetValue(exercise.StableKey, out var progress) ||
             !StringComparer.Ordinal.Equals(progress.Hash, exercise.Hash))
         {
-            progress = new LessonExerciseProgress(exercise.StableKey, exercise.Hash);
+            // Première écriture sous la nouvelle empreinte : reprend la progression des
+            // anciennes clés (audit UX du 09/11, L1) au lieu de repartir de zéro.
+            progress = MergeLegacy(exercise) ?? new LessonExerciseProgress(exercise.StableKey, exercise.Hash);
             _exercises[exercise.StableKey] = progress;
         }
         return progress;

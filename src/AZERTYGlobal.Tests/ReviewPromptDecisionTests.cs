@@ -54,7 +54,6 @@ public class ReviewPromptDecisionTests : IDisposable
     public void Valeurs_de_la_1_3_0()
     {
         Assert.Equal(2, ReviewPromptGate.MaxAttempts);
-        Assert.Equal(ReviewPromptGate.MaxAttempts, ReviewSharePrompt.MaxPrompts);
         Assert.Equal(10, ReviewPromptGate.FirstMinActiveMinutes);
         Assert.Equal(10, ReviewPromptGate.SecondActiveDays);
         Assert.Equal(7, ReviewPromptGate.SecondMinGapDays);

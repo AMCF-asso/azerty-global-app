@@ -67,6 +67,17 @@ internal static partial class L
         "Cette touche ne peut pas servir. Choisissez une lettre, un chiffre ou F1 à F12.",
         "This key can’t be used. Choose a letter, a digit or F1 to F12.");
 
+    /// <summary>Ctrl tenu seul (sans Maj) dans la case : le raccourci est toujours Ctrl + Maj +
+    /// la touche, la case ne reçoit que la touche. Ctrl+A ne doit pas enregistrer « A ».</summary>
+    public static string SettingsClarity_ShortcutCtrlOnly => T(
+        $"Appuyez sur la touche seule, sans Ctrl : le raccourci sera toujours {SettingsClarity_Combo("touche")}.",
+        $"Press the key on its own, without Ctrl: the shortcut will always be {SettingsClarity_Combo("key")}.");
+
+    /// <summary>Retour arrière dans la case : la touche d'origine est rendue.</summary>
+    public static string SettingsClarity_ShortcutRestored(string key) => T(
+        $"Touche d’origine rétablie : {SettingsClarity_Combo(key)} ✓",
+        $"Default key restored: {SettingsClarity_Combo(key)} ✓");
+
     // Sous-titres des réglages : ce que l'on constate, pas le mécanisme.
     public static string SettingsClarity_HintKeyboardShortcut => T(
         "Affiche ou masque le clavier à l’écran.",
@@ -78,11 +89,20 @@ internal static partial class L
         $"{Product} s’ouvre tout seul quand vous ouvrez votre session Windows.",
         $"{Product} opens by itself when you sign in to Windows.");
     public static string SettingsClarity_HintNotifications => T(
-        "Petits messages en bas à droite de l’écran. Les avis de pause (jeux, connexion à distance) s’affichent toujours.",
-        "Small pop-ups at the bottom right of the screen. Pause notices (games, remote connections) always appear.");
-    public static string SettingsClarity_HintOnboarding => T(
-        "La fenêtre de bienvenue s’ouvre au lancement tant que ses trois premiers exercices ne sont pas faits.",
-        "The welcome window opens at launch until its first three exercises are done.");
+        "Petits messages à l’écran : bulles de la zone de notification et indicateur de Ctrl + Maj + Verr. Maj. Les avis de pause (jeux, connexion à distance) s’affichent toujours.",
+        "Small pop-ups on screen: notification-area bubbles and the Ctrl + Shift + Caps Lock indicator. Pause notices (games, remote connections) always appear.");
+    /// <summary>Audit 09/11, W24 : une fois les trois exercices faits, la case n'a plus d'effet (la fenêtre ne
+    /// s'ouvre plus d'elle-même) ; l'aide le dit au lieu de promettre une ouverture qui n'arrive pas.</summary>
+    public static string SettingsClarity_HintOnboarding =>
+        ConfigManager.LearningMaxStepCompleted >= TutorialSteps.DoneThreshold
+            ? SettingsClarity_HintOnboardingDone
+            : SettingsClarity_HintOnboardingPending;
+    public static string SettingsClarity_HintOnboardingPending => T(
+        "L’accueil s’ouvre au lancement tant que ses trois premiers exercices ne sont pas faits.",
+        "The welcome screen opens at launch until its first three exercises are done.");
+    public static string SettingsClarity_HintOnboardingDone => T(
+        "Les trois premiers exercices sont faits : l’accueil ne s’ouvre plus de lui-même au lancement. Il reste dans le menu de la zone de notification.",
+        "The first three exercises are done: the welcome screen no longer opens by itself at launch. It stays in the notification-area menu.");
     public static string SettingsClarity_HintResetWindow => T(
         "La replace au centre de l’écran, utile si elle est sortie de la vue.",
         "Moves it back to the center of the screen, handy if it went off-screen.");

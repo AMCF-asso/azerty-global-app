@@ -15,9 +15,38 @@ internal static partial class L
     public static string Learning_UsageLanguages => T("D’autres langues que le français", "Languages other than French");
     public static string Learning_UsageAfrica => T("Une langue d’Afrique : bambara, peul, wolof…", "An African language: Bambara, Fula, Wolof…");
 
+    // Ligne d'aide sous chaque case : ce que l'exercice de l'usage fait taper (remontée n° 7,
+    // maquette « fusion B + A » validée le 07/11).
+    public static string Learning_UsageDocumentsHelp => T("Guillemets, œ, tiret long", "Quotation marks, œ, em dash");
+    public static string Learning_UsageMessagesHelp => T("À et Ç en début de phrase", "À and Ç at the start of a sentence");
+    public static string Learning_UsageCodeHelp => T("Accolades, crochets, barre verticale", "Braces, brackets, vertical bar");
+    public static string Learning_UsageLanguagesHelp => T("í, ò, ã : espagnol, italien, portugais", "í, ò, ã: Spanish, Italian, Portuguese");
+    public static string Learning_UsageAfricaHelp => T("Lettres africaines de l’alphabet latin", "African letters of the Latin alphabet");
+
+    // Panneau du parcours, à droite des cases : il suit les cases cochées.
+    public static string Learning_PlanTitle(int count) =>
+        T($"Prise en main : {count} exercices", $"Getting started: {count} exercises"); // le nom de la fenêtre (QCM du 10/11, RA13)
+    public static string Learning_PlanSubtitle => T("Elle suit vos choix.", "It follows your choices.");
+    public static string Learning_PlanCapital => T("La majuscule accentuée", "The accented capital");
+    public static string Learning_PlanCapitals => T("Les capitales accentuées et le Ç", "Accented capitals and Ç");
+    public static string Learning_PlanAt => T("L’arobase", "The at sign");
+    public static string Learning_TagDocuments => T("Mails", "Emails");
+    public static string Learning_TagMessages => T("Messages", "Messages");
+    public static string Learning_TagCode => T("Code", "Code");
+    public static string Learning_TagLanguages => T("Langues", "Languages");
+    public static string Learning_TagAfrica => T("Afrique", "Africa");
+    public static string Learning_TagBonus(string tag) => T($"{tag} · bonus", $"{tag} · bonus");
+    public static string Learning_TagDefault => T("par défaut", "default");
+
+    // En-tête réduit de la fenêtre pendant le parcours (remontée n° 6 d'Antoine, 07/11).
+    public static string Learning_HeaderTitle => T("Prise en main", "Getting started");
+    public static string Learning_WindowTitle => T($"{Product} — Prise en main", $"{Product} — Getting started");
+
     // ── Boutons et ligne du parcours ───────────────────────────────────
     public static string Learning_BtnSkip => T("Passer cet exercice", "Skip this exercise");
-    public static string Learning_BtnFinish => T("Terminer", "Finish");
+    // « Fermer » : le bouton ferme la fenêtre, alors que « Terminer » mène ailleurs à
+    // Aujourd'hui (QCM d'Antoine du 10/11, audit UX L15).
+    public static string Learning_BtnFinish => T("Fermer", "Close");
     public static string Learning_BtnContinue => T("Continuer", "Continue");
     public static string Learning_SkipForNow => T("Passer pour l’instant", "Skip for now");
     public static string Learning_SkipForNowTooltip => T(
@@ -35,7 +64,7 @@ internal static partial class L
     public static string Learning_DeadKeyConnector => T(" — touche morte ", " — dead key ");
 
     // ── Écran final ─────────────────────────────────────────────────────
-    public static string Learning_FinalTitle => T("Bravo !", "Well done!");
+    public static string Learning_FinalTitle => T("Bravo !", "Well done!");
     public static string Learning_FinalRecap => T("Ce que vous avez tapé", "What you typed");
     public static string Learning_FinalSubtitle => T($"Vous maîtrisez les bases d’{Product}.", $"You’ve mastered the basics of {Product}.");
     public static string Learning_BtnContinueLessons => T("Continuer les leçons", "Continue the lessons");

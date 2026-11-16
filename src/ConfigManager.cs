@@ -256,6 +256,19 @@ static class ConfigManager
         SetStringList("learningUsages", TutorialSteps.NormalizeUsages(usages));
 
     /// <summary>
+    /// Remet le parcours de l’accueil à zéro : exercices réussis et parcours ouvert. Sert à
+    /// « Réinitialiser l’accueil » (Debug) : sans cela, l’accueil relisait la progression
+    /// gardée et revenait à « Suivant » seul, sans « Essayer maintenant » (remontée d’Antoine,
+    /// 07/11). Les usages choisis restent.
+    /// </summary>
+    public static void ResetTutorialProgress()
+    {
+        SetUInt("learningMaxStepCompleted", 0);
+        SetIntList("learningCompletedExercises", Array.Empty<int>());
+        SetBool("learningTutorialOpened", false);
+    }
+
+    /// <summary>
     /// Le parcours d'exercices de l'accueil a été ouvert au moins une fois (audit 1.3.0, A1) :
     /// l'étape 1 de l'accueil garde alors « Suivant », même sans exercice réussi, et les étapes
     /// suivantes (dont « Ne plus afficher ») restent atteignables d'un démarrage à l'autre.
@@ -795,6 +808,11 @@ static class ConfigManager
     /// <summary>Date (yyyy-MM-dd) de la dernière séance terminée — une séance par jour max.</summary>
     public static string? TrainingLastSessionDate => GetString("trainingLastSessionDate");
     public static void SetTrainingLastSessionDate(string date) => SetString("trainingLastSessionDate", date);
+
+    /// <summary>Meilleure vitesse (mots/min) à l'extrait du Défi, tous jours confondus ; 0 = aucune.
+    /// Audit UX du 09/11, L10 : le record de l'exercice du jour repartait de zéro chaque matin.</summary>
+    public static uint TrainingBestWpm => GetUInt("trainingBestWpm");
+    public static void SetTrainingBestWpm(uint wpm) => SetUInt("trainingBestWpm", wpm);
 
     /// <summary>Date (yyyy-MM-dd) du dernier rappel émis — jamais deux rappels le même jour.</summary>
     public static string? TrainingLastReminderDate => GetString("trainingLastReminderDate");

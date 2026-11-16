@@ -168,8 +168,8 @@ internal static class LessonsHomeLogic
         {
             var step = character.Steps[i];
             string label = step.ShortLabel;
-            if (step.AltGr) label = "AltGr " + label;
-            if (step.Shift) label = L.Gesture_LineShift + " " + label;
+            if (step.AltGr) label = L.AltGrKey + " + " + label;
+            if (step.Shift) label = L.Gesture_LineShift + " + " + label;
             parts.Add(label);
         }
         return string.Join(' ', parts);
@@ -351,11 +351,44 @@ internal static class LessonsHomeLogic
     private static IReadOnlyList<string> SampleWords(LessonExercise? exercise, IReadOnlyList<string> covered)
     {
         if (exercise == null) return Array.Empty<string>();
-        var words = exercise.Content.Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var tokens = exercise.Content.Split(new[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        return PickWords(tokens, covered);
+    }
+
+    /// <summary>Les mots séparés par une virgule, sans en doubler une que le mot porte déjà
+    /// (cas d'un mot gardé avec sa virgule parce que « , » est le caractère à revoir).</summary>
+    internal static string JoinWords(IEnumerable<string> words)
+    {
+        var list = words.ToList();
+        return string.Concat(list.Select((w, i) =>
+            i == list.Count - 1 ? w : w.EndsWith(',') ? w + " " : w + ", "));
+    }
+
+    /// <summary>Les signes de ponctuation qui s'accrochent à un mot dans le texte (« MONTRÉAL, »,
+    /// « fin. ») : l'écran les sépare lui-même par « , » et finit sa phrase par « . ».</summary>
+    private static readonly char[] WordEdgePunctuation = { ',', ';', ':', '.', '!', '?', '…' };
+
+    /// <summary>
+    /// Jusqu'à trois mots, un par caractère couvert. Le mot est coupé de la ponctuation qui le suit
+    /// dans le texte (sinon « MONTRÉAL, » + « , » donne « MONTRÉAL,, » à l'écran, avis global 1.3.0) ;
+    /// si le caractère couvert est cette ponctuation (« , », « ! »), le mot la garde.
+    /// </summary>
+    internal static IReadOnlyList<string> PickWords(IEnumerable<string> tokens, IReadOnlyList<string> covered)
+    {
+        var words = tokens.ToList();
         var picked = new List<string>();
         foreach (string c in covered)
         {
-            string? word = words.FirstOrDefault(w => w.Contains(c, StringComparison.Ordinal) && !picked.Contains(w));
+            string? word = null;
+            foreach (string token in words)
+            {
+                if (!token.Contains(c, StringComparison.Ordinal)) continue;
+                string trimmed = token.TrimEnd(WordEdgePunctuation);
+                string shown = trimmed.Length > 0 && trimmed.Contains(c, StringComparison.Ordinal) ? trimmed : token;
+                if (picked.Contains(shown)) continue;
+                word = shown;
+                break;
+            }
             if (word != null) picked.Add(word);
             if (picked.Count == 3) break;
         }

@@ -69,7 +69,7 @@ sealed class AboutWindow : IDisposable
 
     /// <summary>Langue de l'UI à la création : titre, liens et bouton sont figés au
     /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
-    public string UiLanguage { get; } = L.Language;
+    public string UiLanguage { get; private set; } = L.Language;
 
     /// <summary>
     /// Liens de la fenêtre, dans l'ordre de tabulation. Site, code source et licence sont des
@@ -101,6 +101,7 @@ sealed class AboutWindow : IDisposable
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
+        ConfigManager.AppLanguageChanged += OnLanguageChanged;
         // Plafonnée dès la création : sans cela, seule une fenêtre qui change d'échelle l'était.
         ResizeWindow();
         RepositionControls();
@@ -466,8 +467,9 @@ sealed class AboutWindow : IDisposable
         Win32.SetTextColor(hdc, _pal.Muted);
         int fontsY = amcfY + S(26);
         var fontsRect = new Win32.RECT { left = margin, top = fontsY, right = cw - margin, bottom = fontsY + S(20) };
-        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect,
-            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint fontsFormat = Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, L.About_FontCredit, fontsRect, fontsFormat); // audit UX du 09/11, W24
+        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect, fontsFormat);
 
         // Separateur juste au-dessus des liens
         int sepY = S(BASE_WIN_H - 100);
@@ -477,8 +479,26 @@ sealed class AboutWindow : IDisposable
             Win32.GdipDeleteGraphics(gfx);
     }
 
+    /// <summary>Audit 09/11, W8 : la langue change pendant que la fenêtre est ouverte. Les textes
+    /// peints suivent d'eux-mêmes (L.* relu à chaque peinture) ; les contrôles, eux, portaient le texte
+    /// de la création. Le titre, les liens et « Fermer » sont réécrits.</summary>
+    internal void OnLanguageChanged(string language)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        UiLanguage = L.Language;
+        Win32.SetWindowTextW(_hWnd, L.About_WindowTitle);
+        Win32.SetWindowTextW(_hWndLinkSite, L.About_LinkSite);
+        Win32.SetWindowTextW(_hWndLinkGithub, L.About_LinkGithub);
+        Win32.SetWindowTextW(_hWndLinkLicense, L.About_LinkLicense);
+        if (_hWndLinkAmcf != IntPtr.Zero)
+            Win32.SetWindowTextW(_hWndLinkAmcf, L.About_LinkAmcf);
+        Win32.SetWindowTextW(_hWndBtnClose, L.About_Close);
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
     public void Dispose()
     {
+        ConfigManager.AppLanguageChanged -= OnLanguageChanged;
         _links.Detach();
         if (_hWnd != IntPtr.Zero)
         {

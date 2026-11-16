@@ -94,6 +94,7 @@ public sealed class KeyMapper
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
     public bool AltDown => _leftAltDown;
+    public bool WinDown => _leftWinDown || _rightWinDown;
 
     /// <summary>Événement déclenché quand l'état change (pour rafraîchir l'UI).</summary>
     public event Action? StateChanged;
@@ -338,6 +339,9 @@ public sealed class KeyMapper
         // Si result >= 0 et qu'il y avait une DK en attente d'un appel précédent,
         // ToUnicode l'a consommée en combinant — c'est le comportement voulu.
     }
+
+    private static bool IsModifierVk(uint vk) => vk is
+        0x10 or 0x11 or 0x12 or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5 or VK_LWIN or VK_RWIN;
 
     private bool IsShiftDown => _leftShiftDown || _rightShiftDown;
     // AltGr = Right Alt (envoie aussi un phantom LCtrl)
@@ -626,6 +630,32 @@ public sealed class KeyMapper
                 StateChanged?.Invoke();
                 return false; // Laisser Windows traiter le Backspace normalement
             }
+        }
+
+        // Entrée (principale ou pavé numérique) et Tab : annuler la touche morte armée
+        // et laisser passer la touche. Sans cela l'accent restait en attente et
+        // s'accolait au premier caractère de la ligne ou du champ suivant.
+        if ((vkCode == 0x0D || vkCode == 0x09) && isKeyDown && _composition.Cancel())
+        {
+            StateChanged?.Invoke();
+            return false;
+        }
+
+        // Échap ou raccourci (Ctrl, Alt ou Win + touche) : la touche morte armée est abandonnée
+        // sans rien écrire, et la touche suit son chemin habituel (remappage Ctrl compris).
+        // Sans cela, après « ^ » puis Ctrl+X ou Échap, l'accent restait en attente et
+        // s'accolait à la lettre suivante (audit 09/11, E15). La couche ponctuelle (grec d'un coup,
+        // armée pour une seule lettre) suit la même règle : un raccourci annule toute composition
+        // en attente, sans quoi la lettre suivante sortait en grec après un copier-coller (audit
+        // de régression 10/11, RA3, décision d'Antoine). La couche verrouillée n'est pas touchée.
+        if (isKeyDown && !IsModifierVk(vkCode) &&
+            (vkCode == VK_ESCAPE || (IsCtrlDown && !IsAltGrDown) || (_leftAltDown && !_rightCtrlDown) ||
+             _leftWinDown || _rightWinDown))
+        {
+            bool abandoned = _composition.ActiveDeadKey != null && _composition.Cancel();
+            abandoned |= _maintainableLayers.CancelOneShot();
+            if (abandoned)
+                StateChanged?.Invoke();
         }
 
         // Une répétition déjà transmise reste physique. Backspace et Échap ont

@@ -24,6 +24,6 @@ internal static partial class L
         "Si des caractères ne s’écrivent pas dans un jeu : ils sont tapés comme de vraies touches.",
         "If some characters don’t appear in a game: they are typed as real keys.");
     public static string SettingsPaper_CompatHintForceOff => T(
-        $"{ProductIdentity.DisplayName} ne tape rien dans cette application ; le clavier Windows reprend.",
+        $"{ProductIdentity.DisplayName} ne tape rien dans cette application ; le clavier Windows reprend.",
         $"{ProductIdentity.DisplayName} types nothing in this app; the Windows keyboard takes over.");
 }

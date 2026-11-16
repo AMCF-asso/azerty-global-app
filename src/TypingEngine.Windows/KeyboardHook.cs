@@ -63,6 +63,12 @@ public sealed class KeyboardHook : IDisposable
     /// <summary>Événement déclenché pour chaque keydown (scancode) — pour animation clavier virtuel.</summary>
     public event Action<uint>? RawKeyDown;
 
+    /// <summary>
+    /// Même keydown, avec le bit « touche étendue ». Le « / » du pavé numérique partage le
+    /// scancode 0x35 de la touche « ! » : sans ce bit, les Leçons attendaient « ! » (audit 09/11, E3).
+    /// </summary>
+    public event Action<uint, bool>? RawKeyDownDetailed;
+
     /// <summary>Événement déclenché quand Ctrl+Maj+W est pressé (ouvrir recherche de caractère).</summary>
     public event Action? SearchRequested;
 
@@ -381,7 +387,10 @@ public sealed class KeyboardHook : IDisposable
                 // A20 (audit 1.3.0, SEC-1) : rien en saisie sécurisée. Clavier virtuel, Leçons
                 // et tutoriel surlignaient sinon les touches d'un mot de passe, à l'écran.
                 if (ShouldNotifyRawKeyDown(isKeyDown, _passThroughAll, _mapper.KeyDisplaySuppressed))
+                {
                     RawKeyDown?.Invoke(hookStruct.scanCode);
+                    RawKeyDownDetailed?.Invoke(hookStruct.scanCode, (hookStruct.flags & 0x01) != 0);
+                }
 
                 if (_enabled)
                 {

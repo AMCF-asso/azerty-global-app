@@ -30,6 +30,7 @@ internal sealed partial class LessonsWindow
     {
         _pickerOpen = !_pickerOpen;
         _focusedActionIndex = _pickerOpen ? 0 : -1;
+        if (_pickerOpen) _focusPlacedFor = CurrentFocusScreen; // le repeint garde ce focus (L4)
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
     }
 
@@ -42,7 +43,19 @@ internal sealed partial class LessonsWindow
         return false;
     }
 
-    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth)
+    /// <summary>Texte coupé avec des points de suspension pour tenir dans
+    /// <paramref name="maxWidth"/> pixels. Chaque passage est signalé à
+    /// <see cref="TruncationProbe"/> (audit UX du 09/11, W24).</summary>
+    private static string Ellipsize(IntPtr hdc, string text, FontSpec font, int maxWidth,
+        [System.Runtime.CompilerServices.CallerFilePath] string file = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
+    {
+        string shown = EllipsizeCore(hdc, text, font, maxWidth);
+        TruncationProbe.Ellipsized(hdc, text, shown, font, maxWidth, file, line);
+        return shown;
+    }
+
+    private static string EllipsizeCore(IntPtr hdc, string text, FontSpec font, int maxWidth)
     {
         if (maxWidth <= 0) return "";
         if (PaperText.Width(hdc, text, font) <= maxWidth) return text;
@@ -132,6 +145,13 @@ internal sealed partial class LessonsWindow
 
     private void DrawPaperHeader(IntPtr hdc, Win32.RECT rc)
     {
+        // Parcours de l'accueil : en-tête réduit (LessonsWindow.Tutorial.cs), rien n'y fait
+        // quitter le parcours.
+        if (IsTutorialActive)
+        {
+            DrawTutorialHeader(hdc, rc);
+            return;
+        }
         int mid = S(29);
         int x = S(24);
         var titleFont = F(AppFonts.Title, 24, TypeRamp.Semibold);
@@ -145,9 +165,17 @@ internal sealed partial class LessonsWindow
         {
             // Accueil des Leçons (LessonsWindow.Home.cs) : « Aujourd'hui » ramène à sa page.
             links.Add((L.LessonsHome_Today, false, HomeShowToday, L.LessonsHome_BackToTodayTooltip, null));
-            string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_IconHint : FormatHintButtonText();
-            links.Add((L.LessonsWin_IconHint, _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, hintTooltip, ToggleAutoHints));
-            links.Add((L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true), null, null));
+            // « Indice » seulement face à un texte à taper : au bilan, à l'accueil ou sur une page
+            // du parcours, il n'y a rien à indiquer et le bouton serait mort (audit 09/11, L11).
+            if (!_showSummary && !HomeShown && !TutorialPageShown)
+            {
+                string hintTooltip = (!_hintBackspace && _hintMethod == null) ? L.LessonsWin_HintTooltip : FormatHintButtonText();
+                links.Add((L.LessonsWin_IconHint, _hintButtonActive || ConfigManager.LessonAutoHintsEnabled, ShowHint, hintTooltip, ToggleAutoHints));
+            }
+            // « Recommencer » pendant la frappe, « Rejouer » au bilan : un mot par moment, un
+            // seul bouton pour un seul geste (QCM d'Antoine du 10/11, audit UX L14).
+            if (!_showSummary)
+                links.Add((L.LessonsWin_IconRestart, false, () => StartCurrentSession(savePosition: true), null, null));
             links.Add((L.LessonsPaper_FreeTyping, false, () => SwitchMode(WindowMode.Free), null, null));
         }
         else
@@ -168,8 +196,12 @@ internal sealed partial class LessonsWindow
         int linksLeft = rc.right - S(24) - linksWidth;
 
         int available = linksLeft - S(24) - x;
+        // Paramètres ouverts : ni liste ni ‹ ›, qui changeaient l'exercice caché derrière
+        // (audit UX du 09/11, L13) ; « Leçons », à droite, y ramène.
         if (_mode == WindowMode.Lessons)
-            DrawHeaderLessonPart(hdc, x, mid, available);
+        {
+            if (!_settingsOpen) DrawHeaderLessonPart(hdc, x, mid, available);
+        }
         else
             PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_FreeTitle, F(AppFonts.Text, 15, TypeRamp.Semibold), available),
                 F(AppFonts.Text, 15, TypeRamp.Semibold), new Win32.RECT { left = x, top = 0, right = x + available, bottom = S(58) },
@@ -185,6 +217,9 @@ internal sealed partial class LessonsWindow
 
     /// <summary>Sélecteur « Module Leçon ▾ », jalons des exercices entre ‹ et ›, « Exercice n
     /// sur N ». Ce qui ne tient pas cède dans l'ordre : le texte, puis la largeur du sélecteur.</summary>
+    internal const int ChevronWidth = 26;
+    internal const int ChevronHeight = 26; // mid ± 13
+
     private void DrawHeaderLessonPart(IntPtr hdc, int x, int mid, int available)
     {
         var moduleFont = F(AppFonts.Text, 15);
@@ -195,7 +230,9 @@ internal sealed partial class LessonsWindow
         var route = TutorialRouteForHeader;
         int exercises = route?.Length ?? CurrentLesson.Exercises.Count;
         int current = route != null ? _tutorialRoutePos : _exerciseIndex; // écran final : après le dernier
-        int segment = S(18), segGap = S(3), chevron = S(22);
+        // A9 : les chevrons ‹ › sont des cibles de pointage d'au moins 24 px (WCAG 2.5.8) ;
+        // hauteur déjà de 26 px.
+        int segment = S(18), segGap = S(3), chevron = S(ChevronWidth);
         int jalonsMax = S(220);
         if (exercises * (segment + segGap) > jalonsMax)
             segment = Math.Max(S(4), jalonsMax / Math.Max(1, exercises) - segGap);
@@ -204,9 +241,11 @@ internal sealed partial class LessonsWindow
         string countText = L.LessonsPaper_ExerciseOf(Math.Min(current + 1, exercises), exercises);
         int countW = PaperText.Width(hdc, countText, countFont);
 
-        string module = CurrentModule.Title;
+        // Module et leçon de même titre (« Prise en main », « Majuscules accentuées ») : un seul nom (C1).
+        string module = LessonNames.SameTitle(CurrentModule.Title, CurrentLesson.Title) ? "" : CurrentModule.Title;
         string lesson = CurrentLesson.Title;
-        int pickerNatural = S(12) + PaperText.Width(hdc, module, moduleFont) + S(8) + PaperText.Width(hdc, lesson, lessonFont)
+        int moduleGap = module.Length > 0 ? S(8) : 0;
+        int pickerNatural = S(12) + PaperText.Width(hdc, module, moduleFont) + moduleGap + PaperText.Width(hdc, lesson, lessonFont)
                             + S(12) + PaperText.Width(hdc, "▾", arrowFont) + S(12);
         int pickerW = Math.Min(pickerNatural, S(340));
         bool showCount = pickerW + S(20) + stepperW + S(10) + countW <= available;
@@ -224,30 +263,37 @@ internal sealed partial class LessonsWindow
         int moduleW = PaperText.Width(hdc, module, moduleFont);
         int lessonW = PaperText.Width(hdc, lesson, lessonFont);
         int room = textRight - tx;
-        if (moduleW + S(8) + lessonW > room)
+        if (moduleW + moduleGap + lessonW > room)
         {
             // La leçon passe d'abord : le module cède jusqu'à un tiers.
-            int moduleRoom = Math.Max(Math.Min(moduleW, room / 3), room - S(8) - lessonW);
-            module = Ellipsize(hdc, module, moduleFont, moduleRoom);
+            int moduleRoom = Math.Max(Math.Min(moduleW, room / 3), room - moduleGap - lessonW);
+            if (module.Length > 0)
+                module = Ellipsize(hdc, module, moduleFont, moduleRoom);
             moduleW = PaperText.Width(hdc, module, moduleFont);
-            lesson = Ellipsize(hdc, lesson, lessonFont, room - moduleW - S(8));
+            lesson = Ellipsize(hdc, lesson, lessonFont, room - moduleW - moduleGap);
         }
-        tx += PaperText.DrawLine(hdc, module, moduleFont, new Win32.RECT { left = tx, top = picker.top, right = textRight, bottom = picker.bottom },
-            CLR_MUTED, TextAlign.Left) + S(8);
+        if (module.Length > 0)
+            tx += PaperText.DrawLine(hdc, module, moduleFont, new Win32.RECT { left = tx, top = picker.top, right = textRight, bottom = picker.bottom },
+                CLR_MUTED, TextAlign.Left) + moduleGap;
         PaperText.DrawLine(hdc, lesson, lessonFont, new Win32.RECT { left = tx, top = picker.top, right = textRight, bottom = picker.bottom },
             CLR_TEXT, TextAlign.Left);
         PaperText.DrawLine(hdc, "▾", arrowFont, new Win32.RECT { left = picker.right - S(12) - arrowW, top = picker.top, right = picker.right - S(12), bottom = picker.bottom },
             CLR_MUTED, TextAlign.Left);
-        AddClick(picker, TogglePicker, $"{CurrentModule.Title} {CurrentLesson.Title}");
+        AddClick(picker, TogglePicker, LessonNames.Join(CurrentModule.Title, CurrentLesson.Title, " "));
         AddLinkTooltip(picker, L.LessonsPaper_ChooseLesson);
 
         // Jalons entre les chevrons.
         int sx = picker.right + S(20);
         var chevronFont = F(AppFonts.Text, 20);
         var prev = new Win32.RECT { left = sx, top = mid - S(13), right = sx + chevron, bottom = mid + S(13) };
-        PaperText.DrawLine(hdc, "‹", chevronFont, prev, IsHot(prev) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
-        AddClick(prev, PreviousExercise, L.LessonsWin_IconPrevious);
-        AddLinkTooltip(prev, L.LessonsWin_IconPrevious);
+        // Sans cible (1er exercice du catalogue, échauffement du Défi), le chevron n'est pas
+        // dessiné : un bouton dessiné n'est jamais mort (audit UX du 09/11, L9).
+        if (HasPreviousExercise)
+        {
+            PaperText.DrawLine(hdc, "‹", chevronFont, prev, IsHot(prev) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
+            AddClick(prev, PreviousExercise, L.LessonsWin_IconPrevious);
+            AddLinkTooltip(prev, L.LessonsWin_IconPrevious);
+        }
         int jx = prev.right + S(6);
         for (int i = 0; i < exercises; i++)
         {
@@ -258,9 +304,13 @@ internal sealed partial class LessonsWindow
         }
         jx = prev.right + S(6) + jalonsW + S(6);
         var next = new Win32.RECT { left = jx, top = mid - S(13), right = jx + chevron, bottom = mid + S(13) };
-        PaperText.DrawLine(hdc, "›", chevronFont, next, IsHot(next) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
-        AddClick(next, NextExercise, L.LessonsWin_IconNext);
-        AddLinkTooltip(next, L.LessonsWin_IconNext);
+        // Fin du Défi ou du catalogue : pas de ›, le bilan propose « Terminer » (L2, L3).
+        if (!IsAtEndOfPath)
+        {
+            PaperText.DrawLine(hdc, "›", chevronFont, next, IsHot(next) ? CLR_ACCENT : CLR_MUTED, TextAlign.Center);
+            AddClick(next, NextExercise, L.LessonsWin_IconNext);
+            AddLinkTooltip(next, L.LessonsWin_IconNext);
+        }
 
         if (showCount)
             PaperText.DrawLine(hdc, countText, countFont,
@@ -281,7 +331,7 @@ internal sealed partial class LessonsWindow
         _doubleClickActions.Clear();
         _hoverAreas.Clear();
         _keyboardHover = null;
-        AddClick(_pickerButtonRect, TogglePicker, $"{CurrentModule.Title} {CurrentLesson.Title}");
+        AddClick(_pickerButtonRect, TogglePicker, LessonNames.Join(CurrentModule.Title, CurrentLesson.Title, " "));
 
         var moduleFont = F(AppFonts.Text, 15, TypeRamp.Semibold);
         var lessonFont = F(AppFonts.Text, 15);
@@ -305,8 +355,8 @@ internal sealed partial class LessonsWindow
         int saved = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, panel.left + 1, panel.top + 1, panel.right - 1, panel.bottom - 1);
         int y = panel.top + pad;
-        int done = _progress.CountCompleted(_catalog);
-        PaperText.DrawLine(hdc, L.LessonsWin_ExerciseCount(done, _catalog.TotalExerciseCount), countFont,
+        var (doneCount, exerciseCount) = PickerExerciseCount();
+        PaperText.DrawLine(hdc, L.LessonsWin_ExerciseCount(doneCount, exerciseCount), countFont,
             new Win32.RECT { left = panel.left + S(16), top = y, right = panel.right - S(16), bottom = y + headH }, CLR_MUTED, TextAlign.Left);
         y += headH;
 
@@ -358,24 +408,44 @@ internal sealed partial class LessonsWindow
 
     private void DrawPaperLesson(IntPtr hdc, Win32.RECT rc, Win32.RECT body)
     {
-        var style = TablatureStyle.LessonsText(PaperScale);
-        int partH = 1 + S(22) + style.Height + S(10) + NotationAreaHeight() + S(14) + 1;
+        // Parcours (option A du 07/11 nuit) : ligne en 44 px, geste à sa hauteur mesurée.
+        var style = IsTutorialActive ? TablatureStyle.TutorialText(PaperScale) : TablatureStyle.LessonsText(PaperScale);
+        _notationReserve = IsTutorialActive ? TutorialNotationHeight(hdc) : NotationAreaHeight();
+        int partH = 1 + S(22) + style.Height + S(10) + _notationReserve + S(14) + 1;
         var part = new Win32.RECT { left = body.left, top = body.top, right = body.right, bottom = body.top + partH };
 
         int textTop = part.bottom + S(14);
+        int belowText = textTop + S(44);
         if (_showSummary && _lastCompletedStats != null)
         {
-            DrawPaperSummary(hdc, part, _lastCompletedStats);
+            if (TutorialSummaryIsMessageOnly)
+            {
+                // Le bilan du parcours prend la zone de frappe et la consigne, plus s'il le faut.
+                int height = TutorialSummaryHeight(hdc, part.right - part.left, belowText - S(4) - part.top);
+                var box = new Win32.RECT { left = part.left, top = part.top, right = part.right, bottom = part.top + height };
+                DrawPaperSummary(hdc, box, _lastCompletedStats);
+                belowText = box.bottom + S(12);
+            }
+            else
+            {
+                DrawPaperSummary(hdc, part, _lastCompletedStats);
+            }
         }
         else
         {
             DrawPartition(hdc, part, style);
             DrawLessonTextLines(hdc, part, textTop);
         }
-        int belowText = textTop + S(44);
         belowText = DrawTutorialRouteBar(hdc, part.left, part.right, belowText); // parcours de l'accueil (LessonsWindow.Tutorial.cs)
 
-        if (ConfigManager.LessonKeyboardVisible)
+        if (IsTutorialActive && ConfigManager.LessonKeyboardVisible)
+        {
+            // Parcours : sans panneau du geste (la consigne nomme le caractère), le clavier prend
+            // la largeur, entier.
+            var (tutorialUnit, kbLeft, tutorialKbTop) = TutorialKeyboardLayout(body, belowText + S(12), 52f * PaperScale);
+            DrawPaperKeyboard(hdc, PaperKeyboard.PlaceAt(kbLeft, tutorialKbTop, tutorialUnit), lessons: true);
+        }
+        else if (ConfigManager.LessonKeyboardVisible)
         {
             float unit = 52f * PaperScale;
             var (kbW, kbH) = PaperKeyboard.Size(unit);
@@ -551,8 +621,12 @@ internal sealed partial class LessonsWindow
             int c = glyphColumn[i];
             cells[i] = new Win32.RECT { left = lefts[c], top = grid.top, right = lefts[c + 1], bottom = grid.top + style.GlyphRowHeight };
         }
+        // « Séance du jour déjà comptée » : peinte dans la ligne d'état, dite ici (RA9 du 10/11).
+        string surfaceHelp = $"{CurrentLesson.Title}. {FormatLessonInstruction(CurrentExercise.Instruction)}";
+        if (ChallengeAlreadyCounted)
+            surfaceHelp += " " + L.Challenge_AlreadyDone;
         _surfaceView = new LessonSurfaceView(L.LessonsWin_AutomationLineName,
-            $"{CurrentLesson.Title}. {FormatLessonInstruction(CurrentExercise.Instruction)}", new string(text),
+            surfaceHelp, new string(text),
             Math.Clamp(_session.CursorPosition, 0, text.Length), part, cells, _systemCaretRect);
 
         if (_hasFocus && _focusedActionIndex < 0)
@@ -609,7 +683,8 @@ internal sealed partial class LessonsWindow
             else if (CurrentNotation() != LessonNotation.Recipe)
             {
                 // La Recette se lit déjà sous le caractère : pas deux fois la même phrase.
-                var steps = Gesture.Of(next.Value.ToString(), FollowingExpectedCharacter(), _mapper.CapsLockActive);
+                var steps = Gesture.Of(next.Value.ToString(), FollowingExpectedCharacter(), _mapper.CapsLockActive,
+                    CapsLockExercise);
                 if (steps.Count > 0)
                     runs.AddRange(Gesture.Sentence(steps));
             }
@@ -649,6 +724,13 @@ internal sealed partial class LessonsWindow
     /// l'Indice y ajoute le caractère et l'ordre des temps. Retient de quoi construire
     /// l'infobulle d'une touche au survol (L-06).
     /// </summary>
+    /// <summary>Remontée d'Antoine (07/11) : la carte de toutes les couches au repos ; dès que
+    /// Maj ou AltGr est tenue, ou Verr. Maj. allumée, chaque touche montre seulement ce qu'elle
+    /// tape, comme le clavier flottant. Avant, tenir un modificateur ne changeait rien.</summary>
+    internal static PaperKeyboardMode LessonKeyboardMode(PaperKeyboardState state)
+        => state.EmphasizeActiveLayer || !(state.Shift || state.AltGr || state.CapsLock)
+            ? PaperKeyboardMode.Map : PaperKeyboardMode.ActiveLayer;
+
     private void DrawPaperKeyboard(IntPtr hdc, KeyboardPlacement placement, bool lessons)
     {
         // A20 (audit 1.3.0) : Leçons ouvertes à côté d'un champ mot de passe, ni
@@ -680,7 +762,11 @@ internal sealed partial class LessonsWindow
                 _hints.AddRequiredDeadKey(_hintCharacter.Value, state.LessonVisibleCharacters);
             }
 
-            if (!_showSummary)
+            if (_showSummary)
+            {
+                GuideSummaryTab(state); // bilan du parcours : touches de l'explication ouverte
+            }
+            else
             {
                 if (_hintBackspace || _hintMethod != null)
                 {
@@ -703,7 +789,7 @@ internal sealed partial class LessonsWindow
                     if (!string.IsNullOrEmpty(method.DeadKeyToken))
                         state.LessonVisibleCharacters.Add(method.DeadKeyToken);
                     LessonHintProvider.Guide(state, method, next.ToString(), _mapper.ActiveDeadKey,
-                        _mapper.CapsLockActive, GuideOptions.Lessons);
+                        _mapper.CapsLockActive, LessonGuideOptions);
                     if (CurrentNotation() == LessonNotation.NumberedKeyboard)
                         AddNumberedBadges(stepBadges, next);
                 }
@@ -722,6 +808,8 @@ internal sealed partial class LessonsWindow
             ErrorScancode = state.ErrorScancode,
             Profile = profile,
             HintCharacter = state.HintCharacter,
+            // Remontée n° 10 (07/11) : le parcours garde la carte, couche active en encre.
+            EmphasizeActiveLayer = IsTutorialActive,
         };
         foreach (var sc in state.HighlightedScancodes) paper.TargetScancodes.Add(sc);
         foreach (var id in state.HighlightedContextIds) paper.TargetContextLabels.Add(id);
@@ -729,7 +817,7 @@ internal sealed partial class LessonsWindow
         foreach (var ch in state.LessonVisibleCharacters) paper.LessonVisibleCharacters.Add(ch);
         foreach (var (sc, step) in stepBadges) paper.StepBadges[sc] = step;
 
-        PaperKeyboard.Draw(hdc, placement, _layout, PaperKeyboardMode.Map, paper);
+        PaperKeyboard.Draw(hdc, placement, _layout, LessonKeyboardMode(paper), paper);
         _keyboardHover = (placement, profile, state);
     }
 
@@ -744,20 +832,39 @@ internal sealed partial class LessonsWindow
 
     // ── Récapitulatif ────────────────────────────────────────────────
 
+    /// <summary>Remontée n° 12 (Antoine, 07/11) : « Il ne faut pas brusquer l'utilisateur. » Dans le
+    /// parcours de l'accueil, le bilan dit seulement « Exercice réussi » et encourage : ni vitesse,
+    /// ni précision, ni erreurs, ni caractères à retravailler. Les Leçons gardent leur bilan complet.</summary>
+    internal bool TutorialSummaryIsMessageOnly => IsTutorialActive;
+
     private void DrawPaperSummary(IntPtr hdc, Win32.RECT box, LessonAttemptStats stats)
     {
         PaperDraw.RoundBox(hdc, box, CLR_PANEL, CLR_BORDER, 0);
+        // Audit de régression du 10/11, RA6 : le bilan était peint sans rien exposer. Comme les
+        // pages de l'accueil (HomeSurface), une surface en lecture le porte ; elle garde le
+        // focus de la ligne qu'on vient de finir, hors du cycle de Tab (HasTypingSurface).
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_ExerciseSuccess, "", SummarySpokenText(stats), 0, box,
+            Array.Empty<Win32.RECT>(), null);
+        if (TutorialSummaryIsMessageOnly)
+        {
+            DrawTutorialSummary(hdc, box); // LessonsWindow.Explanations.cs
+            return;
+        }
         int pad = S(28);
         int x = box.left + pad;
         int right = box.right - pad;
         var titleFont = F(AppFonts.Title, 26, TypeRamp.Semibold);
 
-        // Suivant, en bas à droite ; le partage du défi, lien sur la ligne du titre. Une séance
-        // composée de l'accueil n'a pas de suite : « Terminer » ramène à Aujourd'hui.
-        string nextText = HomeIsComposedSession ? L.LessonsHome_Finish : L.LessonsWin_IconNext;
+        // Suivant, en bas à droite, Rejouer à sa gauche ; le partage du défi, lien sur la ligne
+        // du titre. Sans suite (séance composée, fin du Défi ou du catalogue), « Terminer »
+        // ramène à Aujourd'hui (QCM du 09/11 ; « Suivant » y était mort, L2).
+        string nextText = HomeIsComposedSession || IsAtEndOfPath ? L.LessonsHome_Finish : L.LessonsWin_IconNext;
         int nextW = Math.Max(S(120), OutlineButtonWidth(hdc, nextText));
         var nextRect = new Win32.RECT { left = right - nextW, top = box.bottom - S(22) - S(36), right = right, bottom = box.bottom - S(22) };
         DrawOutlineButton(hdc, nextRect, nextText, NextExercise, primary: true);
+        int replayW = Math.Max(S(120), OutlineButtonWidth(hdc, L.LessonsWin_Replay));
+        var replayRect = new Win32.RECT { left = nextRect.left - S(12) - replayW, top = nextRect.top, right = nextRect.left - S(12), bottom = nextRect.bottom };
+        DrawOutlineButton(hdc, replayRect, L.LessonsWin_Replay, ReplayExercise);
 
         int titleRight = right;
         if (_challenge.ShareText != null)
@@ -793,8 +900,46 @@ internal sealed partial class LessonsWindow
             ? L.LessonsWin_DetailNoHardChar(seconds)
             : L.LessonsWin_DetailHardChars(seconds, string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString()))));
         var small = F(AppFonts.Text, 14);
-        var detailRect = new Win32.RECT { left = x, top = nextRect.top, right = nextRect.left - S(24), bottom = nextRect.bottom };
+        var detailRect = new Win32.RECT { left = x, top = nextRect.top, right = replayRect.left - S(24), bottom = nextRect.bottom };
         PaperText.DrawLine(hdc, Ellipsize(hdc, detail, small, detailRect.right - detailRect.left), small, detailRect, CLR_MUTED, TextAlign.Left);
+    }
+
+    /// <summary>
+    /// Le bilan tel que le lecteur d'écran le lit, avec ce que l'écran montre et rien de plus :
+    /// dans le parcours, l'encouragement et l'explication de l'onglet ouvert ; dans les Leçons,
+    /// les chiffres et le détail, sauf si le réglage les cache.
+    /// </summary>
+    private string SummarySpokenText(LessonAttemptStats stats)
+    {
+        var parts = new List<string>();
+        if (TutorialSummaryIsMessageOnly)
+        {
+            parts.Add(L.LessonsWin_TutorialEncouragement);
+            var groups = CurrentSummaryExplanations();
+            if (groups.Count > 0)
+            {
+                var explanation = groups[_summaryTab].Explanation;
+                parts.Add(L.LessonsPaper_WhyHereLabel + explanation.Why);
+                if (explanation.HasRemember)
+                    parts.Add(L.Explanation_RememberLabel + explanation.Remember);
+            }
+            return string.Join(" ", parts);
+        }
+        if (!ConfigManager.LessonSummaryVisible)
+            return "";
+
+        static string Sentence(string label, string value) => L.LessonsAutomation_Metric(label, value) + ".";
+        parts.Add(Sentence(L.LessonsWin_MetricSpeed, FormatWpm(stats.Wpm)));
+        parts.Add(Sentence(L.LessonsWin_MetricAccuracy, FormatNullable(stats.AccuracyPercent, " %")));
+        parts.Add(Sentence(L.LessonsWin_MetricErrors, stats.ErrorCount.ToString()));
+        if (_summaryBestWpm.HasValue)
+            parts.Add(Sentence(L.LessonsWin_MetricBest, FormatWpm(_summaryBestWpm)));
+        var hard = stats.GetHardestCharacters(3);
+        int seconds = (int)Math.Round(stats.ElapsedSeconds);
+        parts.Add(hard.Count == 0
+            ? L.LessonsWin_DetailNoHardChar(seconds)
+            : L.LessonsWin_DetailHardChars(seconds, string.Join("   ", hard.Select(ch => FormatVisibleCharacter(ch.ToString())))));
+        return string.Join(" ", parts);
     }
 
     private void DrawPaperMetric(IntPtr hdc, int x, int y, int width, string label, string value, uint color)
@@ -874,13 +1019,16 @@ internal sealed partial class LessonsWindow
         if (_hasFocus && _focusedActionIndex < 0)
             DrawFocusOutline(hdc, preview, CLR_ACCENT);
         // Géométrie des caractères non relevée ici : l'aperçu entier en tient lieu.
-        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, L.LessonsWin_FreeDescription, _freePreview,
-            Math.Clamp(_freeCursorIndex, 0, _freePreview.Length), preview, Array.Empty<Win32.RECT>(), _systemCaretRect);
+        _surfaceView = new LessonSurfaceView(L.LessonsWin_FreeTitle, L.LessonsWin_FreeDescription, _free.Text,
+            _free.Caret, preview, Array.Empty<Win32.RECT>(), _systemCaretRect, SelectionAnchor: _free.Anchor);
 
         var font = F(AppFonts.Text, 15);
         int y = preview.bottom + S(14);
-        PaperText.DrawLine(hdc, Ellipsize(hdc, L.LessonsWin_FreeDescription, font, body.right - body.left), font,
-            new Win32.RECT { left = body.left, top = y, right = body.right, bottom = y + S(22) }, CLR_MUTED, TextAlign.Left);
+        // Champ plein : le dire à la place de la description, plutôt que couper en silence (E6).
+        string under = _freeTruncated ? L.LessonsWin_FreeFull(FREE_MAX_CHARS) : L.LessonsWin_FreeDescription;
+        PaperText.DrawLine(hdc, Ellipsize(hdc, under, font, body.right - body.left), font,
+            new Win32.RECT { left = body.left, top = y, right = body.right, bottom = y + S(22) },
+            _freeTruncated ? CLR_BAD : CLR_MUTED, TextAlign.Left);
         y += S(26);
         if (ConfigManager.LessonFreeStatsVisible)
         {

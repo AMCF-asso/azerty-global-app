@@ -82,7 +82,7 @@ public partial class KeyboardContextBench
                 if (state.ErrorScancode != 0 && i == state.Typed.Length - 1)
                 {
                     BancCapture.SetField(window, "_visible", true);
-                    BancCapture.Call(window, "OnRawKeyDown", state.ErrorScancode);
+                    BancCapture.Call(window, "OnRawKeyDown", state.ErrorScancode, false);
                     BancCapture.SetField(window, "_visible", false);
                 }
                 BancCapture.Call(window, "OnChar", state.Typed[i]);
