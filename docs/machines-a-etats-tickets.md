@@ -24,7 +24,7 @@ Les constats (`C<lot>.<n>`) et leurs statuts y sont décrits ; ce fichier les r
 | ME-03 | Accueil : double clic sur « Suivant », case « Ne plus afficher » | moyen | C7.1, C7.2 | 3 tests en échec |
 | ME-04 | Lancement automatique dit actif alors que Windows le refuse | moyen | C4.2, C4.4 | 1 test en échec (accueil) ; le reste à la lecture |
 | ME-05 | Couches : Maj d'activation, répétition du déclencheur | faible | C1.4, C1.6 | C1.4 et C1.6 corrigés (2 tests) |
-| ME-06 | Leçons : caractère attendu faux sous une couche | faible | C1.2, C1.3 | 4 tests en échec |
+| ME-06 | Leçons : caractère attendu faux sous une couche | faible | C1.2, C1.3 | C1.2 et C1.3 corrigés (4 tests) |
 | ME-01 | Dates relues sans culture invariante | faible | C5.1 | 3 tests en échec |
 | ME-02 | Progression des Leçons : une entrée mal formée bloque la fenêtre | faible | C5.6 | 2 tests en échec |
 | ME-07 | Petits états périmés dans quatre fenêtres | faible | C5.5, C6.2, C8.2, C1.7 | 4 tests en échec ; C1.7 à la lecture |
@@ -98,15 +98,13 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-06 — Leçons : caractère attendu faux sous une couche (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C1.2, C1.3 (confirmés).
-- **Effet** : la fenêtre des Leçons recalcule le caractère attendu au lieu de reprendre celui que le
-  moteur émet. Sous une couche (accord tenu, Maj d'activation encore enfoncé, second appui du
-  déclencheur, touche morte), l'exercice attend un autre caractère ou une frappe fantôme. Sans effet
-  hors des Leçons.
-- **Où** : `PhysicalTextInputBuffer.cs`, appelé par `LessonsWindow.cs:3225`.
-- **Correctif** : reprendre le résultat réel du moteur et ne rien attendre quand il n'émet rien.
-- **Tests** : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests`, quatre tests « FileDesLecons_… ».
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : le moteur annonce sa décision pour chaque appui (`KeyMapper.KeyDecided`, `KeyDecision` : touche absorbée ou non, texte réellement émis, répétition du déclencheur tenu comprise). Les Leçons s'y abonnent (`LessonsWindow.OnMapperKeyDecided`) ; `PhysicalTextInputBuffer.ApplyEngineDecision` remplace l'entrée provisoire posée par `CaptureKey` par le texte réellement émis, et la retire quand le moteur absorbe la touche sans rien émettre. Une touche laissée passer au système garde l'attendu de la disposition (le système écrit le caractère natif). Le correctif du ticket (reprendre le résultat du moteur) est suivi tel quel ; il garde l'entrée provisoire parce que `CaptureKey` s'exécute avant le moteur et que les touches laissées passer n'émettent rien.
+- **Constats** : C1.2 (corrigé), C1.3 (corrigé).
+- **Effet** : sous une couche (accord tenu, Maj d'activation encore enfoncé, second appui du déclencheur, touche morte), l'exercice attendait un autre caractère ou une frappe fantôme. Sans effet hors des Leçons.
+- **Où** : `TypingEngine.Windows/KeyMapper.cs` (`ProcessKey`, `KeyDecided`), `TypingEngine.Windows/KeyDecision.cs`, `PhysicalTextInputBuffer.cs`, `LessonsWindow.cs`.
+- **Tests** : `MachinesEtatsLot1Tests` (`FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet`, `FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet`, `FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere`, `FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere`), rouges avant le correctif, verts après. Écart avec la copie en attente : les tests abonnent la file à `KeyDecided`, comme `LessonsWindow`, avant d'appeler `CaptureKey` puis `ProcessKey`.
+- **À vérifier à la main** : dans les Leçons, couche grecque (Maj + `*`) : tenir Maj+`*` puis taper a, puis a de nouveau en gardant Maj : alpha, puis « a » ; double appui sur Maj+`*` (verrouillage) puis une lettre : lettre grecque attendue sans caractère décalé ; touche morte (accent aigu) après un appui bref du déclencheur ; frappe normale, Maj+lettre, AltGr+lettre et touches mortes ordinaires inchangées.
 - **Risque du correctif** : moyen (interface entre le moteur et les Leçons).
 
 ## ME-01 — Dates relues sans culture invariante (faible)

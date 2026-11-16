@@ -259,6 +259,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
         _mapper.StateChanged += OnMapperStateChanged;
         _hook.RawKeyDownDetailed += OnRawKeyDown;
+        _mapper.KeyDecided += OnMapperKeyDecided;
         // Bascule de langue en cours de session (ex. depuis le menu tray) : recharger le
         // catalogue dans la nouvelle langue et repeindre, sans fermer la fenêtre ni perdre
         // la position (constat smoke test 2026-07-17).
@@ -3227,6 +3228,10 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _pendingPhysicalText.CaptureKey(_layout, scancode, _mapper);
     }
 
+    // Ce que le moteur a réellement écrit pour la frappe capturée (ticket ME-06, C1.2 et C1.3).
+    private void OnMapperKeyDecided(KeyDecision decision) =>
+        _pendingPhysicalText.ApplyEngineDecision(decision.Handled, decision.EmittedText);
+
     private char ResolveTypedCharacter(char received)
     {
         return _pendingPhysicalText.Resolve(received);
@@ -3274,6 +3279,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;
         _mapper.StateChanged -= OnMapperStateChanged;
         _hook.RawKeyDownDetailed -= OnRawKeyDown;
+        _mapper.KeyDecided -= OnMapperKeyDecided;
         _automation?.Dispose(); // tant que le HWND existe
         _automation = null;
         if (_hWnd != IntPtr.Zero)

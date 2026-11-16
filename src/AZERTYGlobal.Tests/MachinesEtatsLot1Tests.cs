@@ -12,6 +12,8 @@ public sealed class MachinesEtatsLot1Tests
 {
     private const uint SC_TRIGGER_ALPHABET = 0x2B;  // SC02B : Maj = grec, AltGr = cyrillique
     private const uint VK_TRIGGER_ALPHABET = 0xDC;
+    private const uint SC_ACUTE = 0x28;             // SC028 : touche morte accent aigu
+    private const uint VK_ACUTE = 0xC0;
     private const uint SC_A = 0x10;
     private const uint VK_A = 0x41;
     private const uint SC_LSHIFT = 0x2A;
@@ -49,6 +51,23 @@ public sealed class MachinesEtatsLot1Tests
         mapper.TrackModifiers(VK_LSHIFT, SC_LSHIFT, 0, false);
     }
 
+    /// <summary>Appui bref du déclencheur Maj+SC02B, Maj relâché : un coup grec armé.</summary>
+    private static void AppuiBrefDeclencheur(KeyMapper mapper, MockWin32Api mock)
+    {
+        MajEnfoncee(mapper, mock);
+        mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true);
+        mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, false);
+        MajRelachee(mapper, mock);
+    }
+
+    /// <summary>La file des Leçons suit la décision du moteur, comme LessonsWindow.</summary>
+    private static PhysicalTextInputBuffer FileDesLeconsSuivant(KeyMapper mapper)
+    {
+        var buffer = new PhysicalTextInputBuffer(1000, () => 0);
+        mapper.KeyDecided += d => buffer.ApplyEngineDecision(d.Handled, d.EmittedText);
+        return buffer;
+    }
+
     private static char DernierCaractereEmis(MockWin32Api mock)
     {
         Assert.NotEmpty(mock.SendInputCalls);
@@ -74,6 +93,114 @@ public sealed class MachinesEtatsLot1Tests
         indicateur.Update(new MaintainableLayerState("dk_greek", MaintainableLayerMode.OneShot, default), secureInput: false);
 
         Assert.Empty(invalidations);
+    }
+
+    // ── C1.2 ──
+
+    // Constat C1.2 (variante A)
+    // Maj tenu, déclencheur SC02B tenu, puis a : le moteur émet alpha (accord, un coup consommé)
+    // mais CaptureKey, appelé avant ProcessKey, attend « A ». Invariant M1.7 I4 : la file reflète
+    // ce que le moteur émet réellement.
+    // Modèle suivi : Audit0911Lot8bTests.Leçons_CoucheGrecqueUnCoup_LaFrappeResteGrecque.
+    [Fact]
+    public void FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet()
+    {
+        var (mapper, mock, monitor) = CreerMapper();
+        using (monitor)
+        {
+            var layout = LayoutLoader.LoadFromResource();
+            var buffer = FileDesLeconsSuivant(mapper);
+
+            MajEnfoncee(mapper, mock);
+            mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true); // déclencheur tenu
+
+            buffer.CaptureKey(layout, SC_A, mapper);   // le hook capture avant le moteur
+            mapper.ProcessKey(VK_A, SC_A, 0, true);
+
+            char emis = DernierCaractereEmis(mock);
+            Assert.Equal('α', emis);
+            Assert.Equal(emis, buffer.Resolve(emis));
+            Assert.False(buffer.HasPending);
+        }
+    }
+
+    // Constat C1.2 (variante B)
+    // Appui bref du déclencheur, Maj d'activation encore tenu, puis a : le moteur neutralise le
+    // Maj d'activation et émet alpha ; CaptureKey calcule la majuscule Alpha.
+    // Modèle suivi : Audit0911Lot8bTests.Leçons_CoucheGrecqueUnCoup_LaFrappeResteGrecque.
+    [Fact]
+    public void FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet()
+    {
+        var (mapper, mock, monitor) = CreerMapper();
+        using (monitor)
+        {
+            var layout = LayoutLoader.LoadFromResource();
+            var buffer = FileDesLeconsSuivant(mapper);
+
+            MajEnfoncee(mapper, mock);
+            mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true);
+            mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, false); // Maj reste tenu
+            Assert.Equal(MaintainableLayerMode.OneShot, mapper.MaintainableLayerState.Mode);
+
+            buffer.CaptureKey(layout, SC_A, mapper);
+            mapper.ProcessKey(VK_A, SC_A, 0, true);
+
+            char emis = DernierCaractereEmis(mock);
+            Assert.Equal('α', emis);
+            Assert.Equal(emis, buffer.Resolve(emis));
+            Assert.False(buffer.HasPending);
+        }
+    }
+
+    // ── C1.3 ──
+
+    // Constat C1.3 (variante déclencheur)
+    // Un coup armé, second appui du déclencheur (qui verrouille la couche) : le moteur n'émet rien
+    // mais CaptureKey met « µ » en file. Invariant M1.7 I5 : toute entrée correspond à un WM_CHAR à venir.
+    // Modèle suivi : Audit0911Lot8bTests.Leçons_CoucheGrecqueVerrouillée_LaFrappeResteGrecque_PasReplaceeParLeLatin.
+    [Fact]
+    public void FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere()
+    {
+        var (mapper, mock, monitor) = CreerMapper();
+        using (monitor)
+        {
+            var layout = LayoutLoader.LoadFromResource();
+            var buffer = FileDesLeconsSuivant(mapper);
+
+            AppuiBrefDeclencheur(mapper, mock);
+            MajEnfoncee(mapper, mock);
+            mock.SendInputCalls.Clear();
+
+            buffer.CaptureKey(layout, SC_TRIGGER_ALPHABET, mapper);
+            mapper.ProcessKey(VK_TRIGGER_ALPHABET, SC_TRIGGER_ALPHABET, 0, true);
+
+            Assert.Empty(mock.SendInputCalls); // le moteur n'émet aucun texte
+            Assert.False(buffer.HasPending);
+        }
+    }
+
+    // Constat C1.3 (variante touche morte)
+    // Un coup armé, puis la touche morte accent aigu : le moteur n'émet rien (composition armée)
+    // mais CaptureKey met l'accent isolé en file.
+    // Modèle suivi : Audit0911Lot8bTests.Leçons_CoucheGrecqueUnCoup_LaFrappeResteGrecque.
+    [Fact]
+    public void FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere()
+    {
+        var (mapper, mock, monitor) = CreerMapper();
+        using (monitor)
+        {
+            var layout = LayoutLoader.LoadFromResource();
+            var buffer = FileDesLeconsSuivant(mapper);
+
+            AppuiBrefDeclencheur(mapper, mock);
+            mock.SendInputCalls.Clear();
+
+            buffer.CaptureKey(layout, SC_ACUTE, mapper);
+            mapper.ProcessKey(VK_ACUTE, SC_ACUTE, 0, true);
+
+            Assert.Empty(mock.SendInputCalls);
+            Assert.False(buffer.HasPending);
+        }
     }
 
     // ── C1.4 ──
