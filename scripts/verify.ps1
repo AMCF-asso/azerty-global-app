@@ -56,7 +56,10 @@ function Invoke-Commande([string]$Programme, [string[]]$Arguments) {
 $ignoresAttendus = @(
     'CurseurSimuleTests.UnClicheLaisseLaVraieSourisOuElleEtait',
     'CurseurSimuleTests.LesLeconsLaissentLaVraieSourisOuElleEtait',
-    'CurseurSimuleTests.LaCoucheRendLaPositionDeLaVraieSouris'
+    'CurseurSimuleTests.LaCoucheRendLaPositionDeLaVraieSouris',
+    # Constat C3.6 confirmé (docs/audit-frappe-hasard.md § 4, § 7) : rouge tant que NIM_ADD n'est
+    # pas réessayé. Retirer cette ligne et le Skip du test avec le correctif.
+    'CoutureTrayTests.C3_6_NimAddRefuse_EstReessaye'
 )
 
 function Invoke-Tests([string]$Projet, [string]$Filtre = '', [switch]$BureauCourant, [string[]]$Attendus = @()) {

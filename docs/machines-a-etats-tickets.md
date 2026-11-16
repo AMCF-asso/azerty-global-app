@@ -35,9 +35,9 @@ Essais à la main, du plus important au moins important : [machines-a-etats-essa
 | ME-10 | Horloge ou fuseau qui recule | faible | C5.7 | corrigé (`879ab09` ; suite du 16 novembre 2026) | `MachinesEtatsLot5Tests` : 6 tests rouges avant le correctif ; la suite ajoute 2 tests rouges avant et 1 garde ; la relecture des correctifs ajoute 2 tests, un par appel de la réparation |
 | ME-11 | Presse-papiers : échec muet, et un test qui dépend du presse-papiers réel | faible | C8.1 | corrigé (`53a9d9c`) | `MachinesEtatsLot8Tests` : 6 tests, dont 5 rouges avant le correctif ; `SummaryButtonsInvariantTests` ne dépend plus du presse-papiers réel |
 | ME-12 | Comportements à trancher (conception) | faible | C1.1, C1.5, C2.2, C6.1, C2.1, C2.4, C5.2 | partiel (suite du 16 novembre 2026) : C1.1, C1.5, C2.2 et C6.1 corrigés selon la décision du 16 novembre ; C2.1, C2.4 et C5.2 plausibles, documentés | `MachinesEtatsLot1Tests` (C1.1, C1.5 : 8 cas rouges avant le correctif ; 2 théories de caractérisation, vertes d'emblée), `MachinesEtatsLot2Tests` et `SecureInputProbeTests` (C2.2 : 10 tests), `MachinesEtatsLot6Tests` (C6.1 : 3 tests) ; C2.1, C2.4, C5.2 : lecture du code |
-| ME-13 | Zone de notification : clics, menu, bulles, icône | faible | C3.1 à C3.7 | laissé, documenté | lecture du code seulement |
+| ME-13 | Zone de notification : clics, menu, bulles, icône | faible | C3.1 à C3.7 | partiel : C3.1 confirmé puis corrigé, C3.6 confirmé, correctif à décider (audit par frappe au hasard, 16 novembre 2026) ; C3.2 à C3.5 et C3.7 laissés, documentés | `ConstatsZoneNotificationTests` (C3.1 : rouge avant le correctif, 2 témoins) ; `CoutureTrayTests` (C3.6 : rouge, ignoré en attendant le correctif) ; C3.2 à C3.5 et C3.7 : lecture du code |
 
-Total : 36 constats répartis, au 16 novembre 2026 : 25 corrigés, 11 plausibles (C2.1, C2.4, C3.1 à C3.7, C5.2, C7.5), aucun à trancher ; 3 constats
+Total : 36 constats répartis, au 16 novembre 2026 : 26 corrigés, 1 confirmé à corriger (C3.6), 9 plausibles (C2.1, C2.4, C3.2 à C3.5, C3.7, C5.2, C7.5), aucun à trancher ; 3 constats
 réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket. État de départ sur `250c4ef` : 15 confirmés, 4 atteints à trancher, 17 plausibles, 3 réfutés.
 
 ## ME-03 — Accueil : double clic sur « Suivant », case « Ne plus afficher » (moyen)
@@ -272,6 +272,10 @@ sont probables à la lecture. Chacun a demandé une décision avant tout correct
 ## ME-13 — Zone de notification : clics, menu, bulles, icône (faible)
 
 - **Décision** : laissé, documenté (décision du 16 novembre 2026) ; à reprendre en 1.3.1 si besoin.
+- **Mise à jour du 16 novembre 2026** (`docs/audit-frappe-hasard.md`) : C3.1 confirmé par le vrai
+  `WndProcCallback` (sonde `KillTimer`), puis corrigé (`_lButtonUpEndsDoubleClick`). C3.6 confirmé par la
+  couture `ITrayShell` (`CoutureTrayTests` : un `NIM_ADD` refusé après `TaskbarCreated` n'est
+  jamais réessayé), correctif à décider. C3.2 à C3.5 et C3.7 restent plausibles.
 - **Constats** : C3.1 à C3.7, tous plausibles (aucun test : `TrayApplication` n'offre pas de point
   d'accroche pour ces chemins).
 - **Effets décrits** : action de simple clic après un double clic (C3.1) ; commande de menu appliquée

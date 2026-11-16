@@ -357,6 +357,21 @@ static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern uint RegisterWindowMessageW(string lpString);
 
+    // Heure du dernier message POSTÉ retiré de la file, même base que KBDLLHOOKSTRUCT.time
+    // (AFH-4). Pendant un message envoyé, elle date du message posté précédent : voir
+    // TrayApplication.SessionTransitionTime.
+    [DllImport("user32.dll")]
+    public static extern int GetMessageTime();
+
+    // ISMEX_NOSEND (0) : le message en cours a été posté (ou envoyé par ce même thread).
+    public const uint ISMEX_NOSEND = 0x00000000;
+
+    [DllImport("user32.dll")]
+    public static extern uint InSendMessageEx(IntPtr lpReserved);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetTickCount();
+
     // SetLastError : NativeWindow.RegisterClass lit l'erreur 1410 (classe déjà enregistrée).
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern ushort RegisterClassExW(ref WNDCLASSEXW lpwcx);

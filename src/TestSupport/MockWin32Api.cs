@@ -55,6 +55,8 @@ internal sealed class MockWin32Api : IWin32Api
     public IntPtr WinEventHookHandle { get; set; } = (IntPtr)0xCAFE;
     public bool ShouldFailSetWinEventHook { get; set; }
     public bool UnhookWinEventCalled { get; private set; }
+    /// <summary>Plages d'événements demandées à SetWinEventHook, dans l'ordre.</summary>
+    public List<(uint Min, uint Max)> WinEventRanges { get; } = new();
 
     /// <summary>
     /// Simule un changement de foreground en invoquant le delegate capturé
@@ -209,6 +211,7 @@ internal sealed class MockWin32Api : IWin32Api
     public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb)
     {
         if (ShouldFailSetWinEventHook) return IntPtr.Zero;
+        WinEventRanges.Add((eventMin, eventMax));
         CapturedWinEventDelegate = cb;
         return WinEventHookHandle;
     }

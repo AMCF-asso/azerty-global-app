@@ -34,6 +34,7 @@
   <ItemGroup>
     <Compile Remove="**/*(# Name clash *).cs" />
     <Compile Include="..\TestSupport\MockWin32Api.cs" Link="TestSupport\MockWin32Api.cs" />
+    <Compile Include="..\TestSupport\FauxTrayShell.cs" Link="TestSupport\FauxTrayShell.cs" />
   </ItemGroup>
 
 </Project>

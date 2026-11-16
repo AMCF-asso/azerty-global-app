@@ -46,6 +46,15 @@ public sealed class ForegroundMonitor : IDisposable
     private IntPtr _winEventHook = IntPtr.Zero;
     private IntPtr _focusEventHook = IntPtr.Zero;
     private IntPtr _switchEventHook = IntPtr.Zero;
+    private IntPtr _desktopSwitchEventHook = IntPtr.Zero;
+
+    /// <summary>
+    /// Le bureau d'entrée a changé : aller ou retour d'un écran sécurisé (Ctrl+Alt+Suppr, UAC,
+    /// verrouillage). Les relâches faites là-bas n'atteignent pas le hook (AFH-4). Levé sur le
+    /// fil qui a créé le moniteur, avant le recalcul du premier plan. Argument : heure de
+    /// l'événement (<c>dwmsEventTime</c>, même base que <c>KBDLLHOOKSTRUCT.time</c>).
+    /// </summary>
+    public event Action<uint>? InputDesktopSwitched;
 
     // Snapshot immuable atomique pour cohérence cross-thread. Tous les champs sont
     // mis à jour en une seule écriture de référence (atomique CLR pour les types ref).
@@ -182,6 +191,11 @@ public sealed class ForegroundMonitor : IDisposable
             // chien de garde de l'hôte couvre le même cas.
             _switchEventHook = _api.SetWinEventHook(
                 Win32.EVENT_SYSTEM_SWITCHSTART, Win32.EVENT_SYSTEM_SWITCHEND, _winEventDelegate);
+            // Passage par un écran sécurisé : hors IsTrackingAvailable aussi. Sans lui, une
+            // relâche perdue là-bas fait passer l'appui suivant pour une répétition (AFH-4) ;
+            // le verrouillage reste couvert par WM_WTSSESSION_CHANGE côté hôte.
+            _desktopSwitchEventHook = _api.SetWinEventHook(
+                Win32.EVENT_SYSTEM_DESKTOPSWITCH, Win32.EVENT_SYSTEM_DESKTOPSWITCH, _winEventDelegate);
             // Un échec de l'un des deux suivis impose une suspension de précaution.
         }
         catch (Exception ex)
@@ -199,6 +213,11 @@ public sealed class ForegroundMonitor : IDisposable
     {
         // Le snapshot de frappe suit aussi le focus dans une même fenêtre
         // (champ de mot de passe), sans garder l'identité précédente pendant 100 ms.
+        if (eventType == Win32.EVENT_SYSTEM_DESKTOPSWITCH)
+        {
+            try { InputDesktopSwitched?.Invoke(dwmsEventTime); }
+            catch (Exception ex) { _host.Log("ForegroundMonitor.InputDesktopSwitched", ex); }
+        }
         Recompute();
     }
 
@@ -352,6 +371,11 @@ public sealed class ForegroundMonitor : IDisposable
         {
             try { _api.UnhookWinEvent(_switchEventHook); } catch { }
             _switchEventHook = IntPtr.Zero;
+        }
+        if (_desktopSwitchEventHook != IntPtr.Zero)
+        {
+            try { _api.UnhookWinEvent(_desktopSwitchEventHook); } catch { }
+            _desktopSwitchEventHook = IntPtr.Zero;
         }
         _winEventDelegate = null;
     }

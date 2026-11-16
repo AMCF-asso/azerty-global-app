@@ -374,6 +374,21 @@ public sealed class KeyMapper
     }
 
     /// <summary>
+    /// Un raccourci abandonne sans rien écrire la touche morte armée et le coup de couche
+    /// (M1.1 I3). La couche verrouillée n'est pas touchée. Appelé par le chemin des raccourcis
+    /// Ctrl, Alt et Win ci-dessous, et par le hook pour les raccourcis qu'il sert lui-même
+    /// (recherche, clavier virtuel), qui ne passent jamais par <see cref="ProcessKey"/> :
+    /// sans cela l'accent restait armé après Ctrl+Maj+W (audit par frappe au hasard, AFH-2).
+    /// </summary>
+    internal void AbandonPendingForShortcut()
+    {
+        bool abandoned = _composition.ActiveDeadKey != null && _composition.Cancel();
+        abandoned |= _maintainableLayers.CancelOneShot();
+        if (abandoned)
+            StateChanged?.Invoke();
+    }
+
+    /// <summary>
     /// Toute touche hors disposition annule le coup de couche armé : la lettre suivante sort en
     /// français, seule la toute prochaine touche peut sortir dans l'autre alphabet (ME-12, constat
     /// C1.5, décisions d'Antoine du 16 novembre 2026 : « Toutes annulent », « Le chiffre annule »).
@@ -553,9 +568,39 @@ public sealed class KeyMapper
     /// </summary>
     private readonly Dictionary<(uint Scan, bool Extended), bool> _keyDownOwnership = new();
 
+    // Appuis de _keyDownOwnership antérieurs au dernier passage par un écran sécurisé, un
+    // verrouillage ou un décrochage du hook : leur relâche a pu se perdre. Un nouvel appui de
+    // la touche est neuf ; une relâche tardive garde la décision de l'ancien appui (M1.4 I4).
+    private readonly HashSet<(uint Scan, bool Extended)> _staleKeyDowns = new();
+
+    /// <summary>
+    /// Oublie les appuis en cours : à appeler à chaque passage par un écran sécurisé
+    /// (Ctrl+Alt+Suppr, UAC, écran de verrouillage), une ouverture de session ou un hook
+    /// décroché, où les relâches n'atteignent pas le hook. Sans cela, l'appui suivant d'une
+    /// touche dont la relâche s'est perdue passait pour une répétition et rejouait l'ancienne
+    /// décision (audit par frappe au hasard, AFH-4 ; décision d'Antoine du 16 novembre 2026,
+    /// « Corriger »). Le déclencheur de couche en attente est abandonné sans armer de coup.
+    /// </summary>
+    /// <param name="pressedBeforeTransition">
+    /// Vrai pour une touche (scancode, étendue) dont le dernier appui précède le passage ;
+    /// null : toutes. Une touche tapée après le passage, traitée avant son avis, reste en cours.
+    /// </param>
+    public void ForgetHeldKeys(Func<(uint Scan, bool Extended), bool>? pressedBeforeTransition = null)
+    {
+        foreach (var key in _keyDownOwnership.Keys)
+            if (pressedBeforeTransition == null || pressedBeforeTransition(key))
+                _staleKeyDowns.Add(key);
+        if (_maintainableLayers.PendingTriggerScanCode is uint trigger &&
+            (pressedBeforeTransition == null || pressedBeforeTransition((trigger, false))) &&
+            _maintainableLayers.AbandonPendingTrigger())
+            StateChanged?.Invoke();
+    }
+
     public bool ProcessKey(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
     {
         var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
+        if (_staleKeyDowns.Remove(key) && isKeyDown)
+            _keyDownOwnership.Remove(key);
         if (IsEmissionSuspended)
         {
             ArbitratePendingDeadKeyWhileSuspended();
@@ -587,7 +632,16 @@ public sealed class KeyMapper
             if (hadDown) handled = consumed;
             _keyDownOwnership[key] = handled;
         }
-        else _keyDownOwnership.Remove(key);
+        else
+        {
+            // La relâche suit la décision de l'appui (M1.4 I3 et I4), pas les modificateurs du
+            // moment : ProcessKeyCore a fait ses nettoyages (touche virtuelle relâchée, trace
+            // de passage), mais un appui absorbé puis Ctrl, Alt ou Win enfoncé, ou AltGr
+            // relâché, laissait partir sa relâche seule vers l'application (audit par frappe
+            // au hasard, AFH-1).
+            if (hadDown) handled = consumed;
+            _keyDownOwnership.Remove(key);
+        }
         if (recording)
             KeyDecided?.Invoke(new KeyDecision(scanCode, handled, _keyEmitted.ToString()));
         return handled;
@@ -596,6 +650,7 @@ public sealed class KeyMapper
     internal void TrackPassThroughKey(uint scanCode, uint flags, bool isKeyDown)
     {
         var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
+        _staleKeyDowns.Remove(key);   // l'appui ou la relâche remplace la trace périmée
         if (isKeyDown) _keyDownOwnership[key] = false;
         else _keyDownOwnership.Remove(key);
         // La cible suspendue peut différer de celle qui a reçu l'ancien down.
@@ -738,10 +793,7 @@ public sealed class KeyMapper
             (vkCode == VK_ESCAPE || (IsCtrlDown && !IsAltGrDown) || (_leftAltDown && !_rightCtrlDown) ||
              _leftWinDown || _rightWinDown))
         {
-            bool abandoned = _composition.ActiveDeadKey != null && _composition.Cancel();
-            abandoned |= _maintainableLayers.CancelOneShot();
-            if (abandoned)
-                StateChanged?.Invoke();
+            AbandonPendingForShortcut();
         }
 
         // Une répétition déjà transmise reste physique. Backspace et Échap ont
@@ -890,7 +942,14 @@ public sealed class KeyMapper
         string? output = keyDef.GetOutput(effectiveShift, effectiveAltGr, _capsLockState);
 
         if (output == null || output == "")
+        {
+            // Touche sans caractère à ce niveau (ex. Maj+AltGr+S) : comme toute touche sans
+            // caractère, elle annule le coup de couche (M1.2 I5, « Toutes annulent », audit par
+            // frappe au hasard AFH-5). La touche morte et la couche verrouillée ne bougent pas.
+            if (_maintainableLayers.CancelOneShot())
+                StateChanged?.Invoke();
             return true; // Bloquer quand même pour éviter que le layout Windows sous-jacent ne produise un caractère
+        }
 
         // Couche ponctuelle ou verrouillée. Les tables des touches mortes
         // restent l'unique source de transformation. Win enfoncé = raccourci système :

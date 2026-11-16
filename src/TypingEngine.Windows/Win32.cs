@@ -54,6 +54,8 @@ public static class Win32
     // snapshot restait donc figé sur le sélecteur et toute émission était refusée.
     public const uint EVENT_SYSTEM_SWITCHSTART = 0x0014;
     public const uint EVENT_SYSTEM_SWITCHEND = 0x0015;
+    // Changement du bureau d'entrée : écran sécurisé (Ctrl+Alt+Suppr, UAC, verrouillage) et retour.
+    public const uint EVENT_SYSTEM_DESKTOPSWITCH = 0x0020;
     public const uint EVENT_OBJECT_FOCUS = 0x8005;
     public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
     public const uint LIST_MODULES_ALL = 0x03;

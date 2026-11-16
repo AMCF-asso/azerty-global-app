@@ -311,6 +311,33 @@ internal sealed class MaintainableLayerManager
         return true;
     }
 
+    /// <summary>
+    /// Abandonne le déclencheur en attente sans armer de coup ni de verrou : sa relâche a pu
+    /// se perdre (écran sécurisé, verrouillage, hook décroché). Le coup et le verrou déjà
+    /// armés restent, sauf le coup armé par un accord de ce déclencheur, qui ne survit pas
+    /// à sa relâche (même règle que <see cref="EndTrigger"/>). Retourne true si un
+    /// déclencheur était en attente.
+    /// </summary>
+    public bool AbandonPendingTrigger()
+    {
+        if (_pressedLayer == null)
+            return false;
+        var before = CurrentState;
+        if (_pressedUsedAsChord && _oneShotLayer != null && _oneShotOwner == _pressedOwner &&
+            string.Equals(_oneShotLayer, _pressedLayer, StringComparison.Ordinal))
+        {
+            _oneShotLayer = null;
+            _oneShotOwner = default;
+        }
+        _pressedLayer = null;
+        _pressedScanCode = 0;
+        _pressedOwner = default;
+        _pressedUsedAsChord = false;
+        ClearTapHistory();
+        NotifyIfChanged(before);
+        return true;
+    }
+
     public void ResetTransientState()
     {
         var before = CurrentState;
