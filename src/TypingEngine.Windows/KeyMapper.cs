@@ -516,6 +516,12 @@ public sealed class KeyMapper
             return false;
         }
         bool hadDown = _keyDownOwnership.TryGetValue(key, out bool consumed);
+        // Répétition du déclencheur de couche tenu : la décision de l'appui initial suffit.
+        // Rejouer ProcessKeyCore après le relâchement du modificateur d'activation lirait la
+        // touche sans Maj (étoile émise, ou scancode périmé dans _passedThroughKeys).
+        if (isKeyDown && hadDown && consumed && !key.Item2 &&
+            _maintainableLayers.PendingTriggerScanCode == scanCode)
+            return true;
         bool handled = ProcessKeyCore(vkCode, scanCode, flags, isKeyDown);
         if (isKeyDown)
         {
@@ -870,7 +876,7 @@ public sealed class KeyMapper
 
         // Caractère normal — si le layout Windows natif produit le même caractère,
         // laisser passer la touche originale (compatibilité jeux/DirectInput)
-        if (CanPassThrough(vkCode, scanCode, output, keyDef))
+        if (CanPassThrough(vkCode, scanCode, output, keyDef, effectiveShift, effectiveAltGr))
         {
             lock (_passedThroughKeysLock) _passedThroughKeys.Add(scanCode);
             return false;
@@ -884,10 +890,15 @@ public sealed class KeyMapper
     /// Vérifie si le layout Windows natif produit le même caractère pour ce scancode.
     /// Si oui, on peut laisser passer la touche originale (compatibilité jeux).
     /// </summary>
-    private bool CanPassThrough(uint vkCode, uint scanCode, string output, KeyDefinition keyDef)
+    private bool CanPassThrough(uint vkCode, uint scanCode, string output, KeyDefinition keyDef,
+        bool effectiveShift, bool effectiveAltGr)
     {
+        // Le système lit les modificateurs physiques : si l'un d'eux est neutralisé (celui qui
+        // a activé une couche, tenu), la touche native sortirait un autre caractère (A, pas a).
+        if (effectiveShift != IsShiftDown || effectiveAltGr != IsAltGrDown) return false;
+
         // Seulement pour les caractères simples, pas AltGr (qui produit des chars spéciaux).
-        if (output.Length != 1 || IsAltGrDown) return false;
+        if (output.Length != 1 || effectiveAltGr) return false;
 
         char outChar = output[0];
         char upper = char.ToUpperInvariant(outChar);
@@ -926,7 +937,7 @@ public sealed class KeyMapper
         bool shiftIrrelevant = keyDef.Base != null && keyDef.Base == keyDef.Shift;
 
         return charVk == (byte)vk
-            && (shiftIrrelevant || needsShift == IsShiftDown)
+            && (shiftIrrelevant || needsShift == effectiveShift)
             && !needsCtrl && !needsAlt;
     }
 

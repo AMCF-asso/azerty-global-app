@@ -23,7 +23,7 @@ Les constats (`C<lot>.<n>`) et leurs statuts y sont décrits ; ce fichier les r
 |---|---|---|---|---|
 | ME-03 | Accueil : double clic sur « Suivant », case « Ne plus afficher » | moyen | C7.1, C7.2 | 3 tests en échec |
 | ME-04 | Lancement automatique dit actif alors que Windows le refuse | moyen | C4.2, C4.4 | 1 test en échec (accueil) ; le reste à la lecture |
-| ME-05 | Couches : Maj d'activation, répétition du déclencheur | faible | C1.4, C1.6 | 2 tests en échec |
+| ME-05 | Couches : Maj d'activation, répétition du déclencheur | faible | C1.4, C1.6 | C1.4 et C1.6 corrigés (2 tests) |
 | ME-06 | Leçons : caractère attendu faux sous une couche | faible | C1.2, C1.3 | 4 tests en échec |
 | ME-01 | Dates relues sans culture invariante | faible | C5.1 | 3 tests en échec |
 | ME-02 | Progression des Leçons : une entrée mal formée bloque la fenêtre | faible | C5.6 | 2 tests en échec |
@@ -87,17 +87,14 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-05 — Couches : Maj d'activation, répétition du déclencheur (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C1.4, C1.6 (confirmés).
-- **Effet** : après une saisie de couche avec Maj tenu, la lettre suivante sort en majuscule native
-  (C1.4) ; la répétition automatique du déclencheur après relâchement du modificateur émet un
-  caractère parasite (C1.6). Concerne les utilisateurs des couches ; C1.6 est rare et dépend de la
-  disposition Windows installée sous l'application.
-- **Où** : `TypingEngine.Windows/KeyMapper.cs` (passage natif `:894-895, 929` ; déclencheur `:672-676`).
-- **Correctif** : passer les modificateurs effectifs au passage natif ; traiter la répétition d'une
-  touche déjà prise en charge par la décision mémorisée.
-- **Tests** : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests`, deux tests.
-- **Risque du correctif** : moyen (cœur du moteur de frappe ; à vérifier au clavier).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Fait** : C1.4, `CanPassThrough` reçoit les modificateurs effectifs (`KeyMapper.cs`) et refuse le passage natif dès que Maj ou AltGr effectif diffère de celui qui est physiquement tenu (le système lirait le physique) ; les comparaisons Maj de la fin de la fonction utilisent aussi le Maj effectif. C1.6, `ProcessKey` rend la décision mémorisée, sans rejouer `ProcessKeyCore`, pour la répétition du déclencheur de couche tenu (`PendingTriggerScanCode`) ; les lettres tenues continuent de répéter. Écart au plan : le plan disait « toute touche déjà prise en charge », ce qui aurait cassé la répétition des lettres (chaque répétition émet) ; le court-circuit est donc limité au déclencheur.
+- **Constats** : C1.4 (corrigé), C1.6 (corrigé).
+- **Effet** : après une saisie de couche avec Maj tenu, la lettre suivante sortait en majuscule native (C1.4) ; la répétition automatique du déclencheur après relâchement du modificateur émettait un caractère parasite (C1.6).
+- **Où** : `TypingEngine.Windows/KeyMapper.cs` (`ProcessKey`, `CanPassThrough`).
+- **Tests** : `MachinesEtatsLot1Tests` (`MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`, `RepetitionDuDeclencheur_ApresRelachementDeMaj_NEmetRienEtNeSuitRien`), rouges avant le correctif, verts après.
+- **À vérifier à la main** : au clavier, couche grecque active (Maj + la touche `*`), taper deux fois la même lettre en gardant Maj tenu (a puis a) : alpha puis « a » minuscule, jamais « A » ; tenir Maj+`*`, relâcher Maj, garder `*` enfoncé jusqu'à la répétition automatique : pas d'étoile ; frappe normale, Maj+lettre, AltGr+lettre, jeux (touche tenue) inchangés.
+- **Risque du correctif** : moyen (cœur du moteur de frappe).
 
 ## ME-06 — Leçons : caractère attendu faux sous une couche (faible)
 
