@@ -10,6 +10,7 @@ les temporisations et réessais, puis les états ou transitions invalides que le
 réellement d'atteindre.
 
 - Base de l'analyse : commit `250c4ef` (branche `claude/ag-correctifs-avis-130`), le 15 novembre 2026.
+- État des correctifs : branche `claude/ag-machines-etats-130`, 12 commits depuis `250c4ef` (le document et les tickets, puis onze correctifs ME-01 à ME-11), suivis des suites du 16 novembre 2026 et de ME-12 (C1.1, C1.5, C2.2, C6.1), au 16 novembre 2026.
 - Périmètre : `src/*.cs`, `src/TypingEngine.Core`, `src/TypingEngine.Windows` (45 181 lignes de C# hors tests).
 - Tickets issus des constats : [machines-a-etats-tickets.md](machines-a-etats-tickets.md).
 
@@ -17,12 +18,15 @@ réellement d'atteindre.
 
 1. Huit lots de code ont été lus séparément, chacun rendant ses machines et ses constats avec les
    lignes de code à l'appui.
-2. Chaque constat a été relu par un vérificateur chargé de le réfuter : il tient, il est incertain
+2. Chaque constat a été relu par un relecteur chargé de le réfuter : il tient, il est incertain
    (comportement réel mais peut-être voulu, ou scénario non établi) ou il est réfuté.
 3. Un test de régression a été écrit pour chaque constat non réfuté, quand le code offre déjà un
    point d'accroche. Le test affirme le comportement correct : il échoue tant que le défaut existe.
 4. La liste des tickets a été relue par un relecteur chargé de la contredire ; six statuts ou
    gravités ont été ramenés à ce qui est réellement prouvé.
+5. Les constats ont ensuite été corrigés, un commit par ticket, chaque correctif avec son test
+   rouge avant et vert après. Une relecture des correctifs a relevé des points mineurs ; ceux que le code a confirmés
+   ont donné les « suites du 16 novembre 2026 » citées dans les tickets.
 
 Vocabulaire des statuts :
 
@@ -128,21 +132,21 @@ Chaque lot précise son propre modèle de fils en tête de section.
 
 ## Constats : états et transitions invalides atteignables
 
-Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la section « Méthode » ; la gravité est celle retenue après les deux relectures (celle de chaque constat, puis celle de la liste des tickets). Aucun constat n'est critique ni fort.
+Trente-neuf constats ont été relevés sur `250c4ef` : 15 confirmés, 4 atteints à trancher, 17 plausibles, 3 réfutés. Au 16 novembre 2026, après les correctifs : 25 corrigés, 11 plausibles, 3 réfutés, aucun à trancher. Le statut suit le vocabulaire de la section « Méthode » ; la gravité est celle retenue après les deux relectures (celle de chaque constat, puis celle de la liste des tickets). Aucun constat n'est critique ni fort.
 
 | Id | Machine | Constat | Statut | Gravité | Ticket | Preuve |
 |---|---|---|---|---|---|---|
-| C1.1 | M1.2 | Un coup de couche et une composition de touche morte coexistent (grec après l'accent aigu) | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
-| C1.2 | M1.7 | File des Leçons : le caractère attendu diverge de l'émis si l'accord est tenu ou si le Maj d'activation est encore enfoncé | corrigé | faible | ME-06 | `TypingEngine.Windows/KeyMapper.cs` (`KeyDecided`), `PhysicalTextInputBuffer.cs` (`ApplyEngineDecision`), `LessonsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet`, `FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet`) |
+| C1.1 | M1.2 | Un coup de couche et une composition de touche morte coexistent (grec après l'accent aigu) | corrigé | faible | ME-12 | `TypingEngine.Windows/KeyMapper.cs` (voie composition : la touche morte qui arme une composition annule le coup) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`UnCoupDeCouche_EtUneCompositionDeToucheMorte_NeCoexistentJamais`, `UnCoupDeCouche_PuisAccent_LaLettreSuivanteEstFrancaiseAccentuee`, `UnCoupDeCouche_PuisAccent_LIndicateurSuitLAnnulation`) |
+| C1.2 | M1.7 | File des Leçons : le caractère attendu diverge de l'émis si l'accord est tenu ou si le Maj d'activation est encore enfoncé | corrigé | faible | ME-06 | `TypingEngine.Windows/KeyMapper.cs` (`KeyDecided`), `PhysicalTextInputBuffer.cs` (`ApplyEngineDecision`), `LessonsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet`, `FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet`, suites : `FileDesLecons_LotPartiel_GardeUnAttenduCoherentAvecCeQuiAPuPartir`, `FileDesLecons_LotRefuStrictement_NAttendRien`, `FileDesLecons_TexteDePlusieursCaracteresCoupe_AnnonceLesCaracteresCommences` ; `TypingEngine.Windows.Tests/CharsStartedByTests.cs`) |
 | C1.3 | M1.7 | File des Leçons : entrée fantôme quand un déclencheur ou une touche morte est pressé sous un coup armé | corrigé | faible | ME-06 | `TypingEngine.Windows/KeyMapper.cs` (`KeyDecided`), `PhysicalTextInputBuffer.cs` (`ApplyEngineDecision`), `LessonsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere`, `FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere`) |
 | C1.4 | M1.3 | Le passage natif des lettres lit le Maj physique alors que le Maj d'activation est neutralisé (A au lieu de a) | corrigé | faible | ME-05 | `TypingEngine.Windows/KeyMapper.cs` (`CanPassThrough` reçoit les modificateurs effectifs) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`) |
-| C1.5 | M1.2 | Un coup de couche survit à Entrée et à Tab, sans expiration | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` |
+| C1.5 | M1.2 | Un coup de couche survit à Entrée et à Tab, sans expiration | corrigé | faible | ME-12 | `TypingEngine.Windows/KeyMapper.cs` (Entrée et Tab appellent `CancelOneShot`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`UnCoupDeCouche_EstAnnuleParEntreeEtTab`, `UnCoupDeCouche_AnnuleParEntreeOuTab_LIndicateurSuitLAnnulation`, `UnCoupDeCouche_UnModificateurSeul_NAnnuleJamaisLAttente`, `UnCoupDeCouche_AvecMaj_LaMajusculeDeLAutreAlphabetSort`, `UnCoupDeCouche_SecondDeclencheurTenuPuisEntreeTabOuRetourArriere_LAccordSePromeutEtLaLettreSortEnGrec`, `UnCoupDeCouche_AccordDejaPromuPuisEntreeTabOuRetourArriere_LeCoupEstAnnuleEtRienNeReste`) |
 | C1.6 | M1.4 | Répétition automatique du déclencheur après relâchement du modificateur d'activation : étoile émise ou code de touche périmé dans `_passedThroughKeys` | corrigé | faible | ME-05 | `TypingEngine.Windows/KeyMapper.cs` (`ProcessKey` : répétition du déclencheur tenu) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`RepetitionDuDeclencheur_ApresRelachementDeMaj_NEmetRienEtNeSuitRien`) |
 | C1.7 | M1.8 | `LayerIndicatorWindow` sans fenêtre : `InvalidateRect` avec un HWND nul | corrigé (test rouge avant le correctif : confirmé) | faible | ME-07 | `AZERTYGlobal/LayerIndicatorWindow.cs` (`Update`, `RefreshPosition`, `Hide` ; points d'appui `InvalidateWindow` et constructeur interne à enregistrement de classe injectable) ; test `AZERTYGlobal.Tests/MachinesEtatsLot1Tests.cs` (`IndicateurDeCouche_SansFenetre_NeRepeintRien`) |
 | C2.1 | M2.2 | La sonde de silence réinstalle le hook toutes les ~4 s pendant la frappe dans une fenêtre de niveau d'intégrité supérieur | plausible (preuve en réel seulement) | faible | ME-12 | lecture du code |
-| C2.2 | M2.5 | Un ouvrier UIA unique bloqué rend « sécurisé » le premier plan de toutes les applications | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `TypingEngine.Windows.Tests/MachinesEtatsLot2Tests.cs` |
-| C2.3 | M2.4 | Premier plan absent traité Default/None (fail-open) alors que l'inconnu est traité fail-closed | réfuté | — | — | relecture adversariale |
-| C2.4 | M2.4 | Recompute attend sur un fil STA : pompe imbriquée possible pendant l'attente UIA | plausible (preuve en réel seulement) | faible | ME-12 | lecture du code ; le test `TypingEngine.Windows.Tests/MachinesEtatsLot2Tests.cs` simule l'imbrication |
+| C2.2 | M2.5 | Un ouvrier UIA unique bloqué rend « sécurisé » le premier plan de toutes les applications | corrigé | faible | ME-12 | `TypingEngine.Windows/SecureInputProbe.cs` (abandon de l’ouvrier bloqué après un délai, générations), `SecureInputDetector.cs` (`_automation` par fil, relâchée à toute sortie du fil par la couture `workerExit`) ; tests `TypingEngine.Windows.Tests/MachinesEtatsLot2Tests.cs` (`Ouvrier_bloque_sur_une_fenetre_ne_garde_pas_une_autre_fenetre_securisee_indefiniment`, `Ouvrier_arrete_libere_son_instance_sur_son_propre_fil`, `Ouvrier_abandonne_qui_revient_libere_son_instance_et_pas_celle_du_remplacant`, `Ouvrier_dont_l_initialisation_echoue_ou_leve_libere_aussi`, `Le_detecteur_branche_ReleaseAutomation_sur_la_sortie_de_l_ouvrier`) et `SecureInputProbeTests.cs` (`Worker_bloque_n_est_ni_multiplie_ni_abandonne_avant_le_delai`, `Worker_bloque_est_abandonne_apres_le_delai_et_une_nouvelle_detection_repart`, `Retour_tardif_d_un_worker_abandonne_n_ecrase_pas_la_detection_recente`, `Workers_abandonnes_sont_bornes_puis_la_sonde_reste_securisee`, `Apres_le_retour_des_workers_abandonnes_la_sonde_repart_normalement`) |
+| C2.3 | M2.4 | Premier plan absent traité Default/None (fail-open) alors que l'inconnu est traité fail-closed | réfuté | — | — | relecture critique |
+| C2.4 | M2.4 | Recompute attend sur un fil STA : pompe imbriquée possible pendant l'attente UIA | plausible (preuve en réel seulement) | faible | ME-12 | lecture du code ; preuve hors dépôt : test simulé non retenu (il simulait l'imbrication sans prouver qu'elle se produit) |
 | C3.1 | M3.7 | Un double clic sur l'icône réarme la minuterie de simple clic après son `KillTimer` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.2 | M3.1 | Commandes de menu appliquées à l'état courant et non à l'état affiché | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.3 | M3.5 | `_layoutPopupOpen` posé avant la construction de la fenêtre, sans `try/finally` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
@@ -152,17 +156,17 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C3.7 | M3.5 | Fenêtre de conflit de disposition sans garde sur l'état de l'application | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C4.1 | M4.1 | Mutex `Local\` créé par une instance élevée : le lancement non élevé plante avant tout gestionnaire d'erreur | corrigé | faible | ME-09 | `AZERTYGlobal/Program.cs` (`AcquireSingleInstance`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Mutex_local_refuse_par_une_instance_elevee_est_une_seconde_instance`, `Acquisition_des_deux_mutex_dit_qui_l_on_est`, `Mutex_global_indisponible_laisse_demarrer_en_mode_degrade`) |
 | C4.2 | M4.4 | Version non packagée : `IsRegistered` ignore le refus de Windows, donc `Set(true)` rend vrai sans effet réel | corrigé | moyenne | ME-04 | `AZERTYGlobal/AutoStart.cs` (`IsRegistered`, `DefaultOnboardingCheck`, `GetFailureMessage`), `Localization/L.Startup.cs` (`AutoStart_FailureMessageRefused`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Accueil_ne_coche_pas_la_case_quand_Windows_refuse_meme_si_le_raccourci_existe`, `Activation_refusee_par_Windows_n_est_pas_dite_reussie`, `Case_des_Parametres_et_de_l_accueil_refletent_le_refus_de_Windows`, `Refus_de_Windows_renvoie_vers_les_Parametres_Windows`) |
-| C4.3 | M4.2 | Écriture de fermeture ratée : réglages perdus, aucune reprise synchrone | corrigé | faible | ME-09 | `AZERTYGlobal/ConfigManager.cs` (`FlushFinal`), `TrayApplication.cs` (`WM_QUERYENDSESSION`, `Cleanup`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Ecriture_de_fermeture_reessaie_puis_ecrit_le_reglage`, `Ecriture_de_fermeture_impossible_rend_la_main_sous_le_plafond_et_journalise_la_perte`, `Arret_et_sortie_du_tray_passent_par_l_ecriture_de_fermeture`) |
+| C4.3 | M4.2 | Écriture de fermeture ratée : réglages perdus, aucune reprise synchrone | corrigé | faible | ME-09 | `AZERTYGlobal/ConfigManager.cs` (`FlushFinal`), `TrayApplication.cs` (`WM_QUERYENDSESSION`, `Cleanup`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Ecriture_de_fermeture_reessaie_puis_ecrit_le_reglage`, `Ecriture_de_fermeture_impossible_rend_la_main_sous_le_plafond_et_journalise_la_perte`, `Arret_confirme_et_sortie_du_tray_passent_par_l_ecriture_de_fermeture`, `Demande_d_arret_annulee_n_endort_pas_le_fil_d_interface`, `Demande_d_arret_appelle_OnQueryEndSession_et_n_ecrit_pas_la_fermeture_dans_le_case`) |
 | C4.4 | M4.4 | La relance unique du lancement automatique est proposée même quand Windows ou la politique refuse | corrigé | faible | ME-04 | `AZERTYGlobal/AutoStartNudge.cs` (`AutoStartSignals.WindowsState`, `ShouldPrompt`, `Snapshot`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Relance_unique_n_est_pas_proposee_quand_l_etat_est_refuse_ou_inconnu`, `Signaux_de_la_relance_portent_l_etat_Windows`, `Relance_refusee_ne_consomme_pas_la_proposition`) |
 | C4.5 | M4.3 | Seconde instance : `config.json` lu et mis de côté avant le mutex, `_loadFailed` reste collé et la notice est perdue | corrigé | faible | ME-09 | `AZERTYGlobal/Program.cs`, `ConfigManager.cs` (`AppLanguageWithoutLoading`, `EnsureLoaded`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Fichier_corrompu_deja_mis_de_cote_par_l_autre_instance_ne_bloque_pas_les_ecritures`, `Langue_lue_au_demarrage_ne_met_pas_le_fichier_corrompu_de_cote`, `Langue_lue_au_demarrage_est_celle_du_chargement_normal`) |
 | C5.1 | M5.3 | Dates analysées sans culture invariante : série et Défi faussés sous un calendrier non grégorien | corrigé | faible | ME-01 | `AZERTYGlobal/StoredDate.cs` (analyseur unique), `UsageStats.cs`, `TrainingReminders.cs`, `UsageStatsWindow.cs` ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`, `Rappel_UnSeulParJour_QuelleQueSoitLaCulture`, `Statistiques_UneDateEcriteEnInvariantSeRelitAIdentique_QuelleQueSoitLaCulture`, `Statistiques_DeuxJoursQuiSeSuivent_FontUneSerie_QuelleQueSoitLaCulture`) |
 | C5.2 | M5.4 | Exclusion de frappe liée à l'ouverture du tutoriel et non au focus | plausible (couture à ajouter) | faible | ME-12 | lecture du code |
-| C5.3 | M5.7 | États absorbants _loadFailed et _readFailed jusqu'au redémarrage | réfuté | — | — | relecture adversariale |
-| C5.4 | M5.7 | ResetAll partiel : état de progression résiduel | réfuté | — | — | relecture adversariale |
+| C5.3 | M5.7 | États absorbants _loadFailed et _readFailed jusqu'au redémarrage | réfuté | — | — | relecture critique |
+| C5.4 | M5.7 | ResetAll partiel : état de progression résiduel | réfuté | — | — | relecture critique |
 | C5.5 | M5.6 | Prédicat de mise en page différent de celui de la peinture dans la fenêtre Statistiques | corrigé | faible | ME-07 | `AZERTYGlobal/UsageStatsWindow.cs` (`OnTrainingEnabledChanged`), `ConfigManager.cs` (`TrainingEnabledChanged`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_SectionDefiMasqueePendantLOuverture_LaHauteurDeMiseEnPageSuit`) |
 | C5.6 | M5.8 | Entrée d'exercice non objet : TryGetProperty lève et fait échouer tout le chargement | corrigé | faible | ME-02 | `AZERTYGlobal/LessonProgressStore.cs` (`Load`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Progression_UneEntreeNonObjet_NeFaitPasEchouerLeChargement`, `Progression_EntreesMalFormees_IgnoreesSansPerdreLesExercicesValides`) |
-| C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | corrigé | faible | ME-10 | `AZERTYGlobal/UsageStats.cs` (`RecordActivityLocked`, `CurrentStreak`), `TrainingReminders.cs` (`WouldCount`, `ShouldRemind`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte`, `…_LaSerieEnCoursNEstPasRemiseAZero`, `…_LaSerieAfficheeNeTombePasAZero`, `DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`, `Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui`, `Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`) |
-| C6.1 | M6.3 | Garde IsTutorialActive inopérante dans SettleSessionOnHide | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
+| C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | corrigé | faible | ME-10 | `AZERTYGlobal/UsageStats.cs` (`RecordActivityLocked`, `CurrentStreak`), `TrainingReminders.cs` (`WouldCount`, `ShouldRemind`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte`, `…_LaSerieEnCoursNEstPasRemiseAZero`, `…_LaSerieAfficheeNeTombePasAZero`, `DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`, `Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui`, `Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`, suite : `Rappel_DatesLointainesDansLeFutur_LeLendemainLeRappelRepart`, `DefiCommun_SeanceDateeDe400Jours_LeLendemainLaSeanceCompteDeNouveau`, `Rappel_DatesDuJourOuPassees_RepairFutureDatesNeLesChangePas`, `FinDeSeance_RepareUneDateLointaineDansLeFutur` (fin de séance), `MaybeShowTrainingReminder_ReparePuisSeulementEnsuiteLaGardeDesNotifications` (rappel) ; `TrainingReminders.RepairFutureDates`) |
+| C6.1 | M6.3 | Garde IsTutorialActive inopérante dans SettleSessionOnHide | corrigé | faible | ME-12 | `AZERTYGlobal/LessonsWindow.cs` (`Hide`, `HideWindow`, `SettleSessionOnHide`), `LessonsWindow.Tutorial.cs` (`FinishTutorial`, `LeaveTutorialForNow`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` (`Fermeture_PendantLeParcours_NeSoldePasLaSeanceNiNAvanceLaPosition`, `PasserPourLInstant_AuBilanDuParcours_NeSoldePasLaSeance`, garde-fou `Fermeture_HorsParcours_AuBilan_SoldeToujoursLaSeance`) |
 | C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | corrigé | faible | ME-07 | `AZERTYGlobal/LessonProgressStore.cs` (`SetLastPosition`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` (`ReinitialiserLaProgression_SurLeDefi_NEnregistrePasLeDefiCommePosition`, `ReinitialiserLaProgression_SurLeDefi_PuisFermer_RendLaPlaceDuCatalogue`) |
 | C7.1 | M7.1 | Double clic sur « Suivant » à l'étape 2 : l'accueil se valide sans que l'étape 3 ait été vue | corrigé | moyenne | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`IsSecondClickOfDoubleClick`, `GoToNextStep`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`) |
 | C7.2 | M7.2 | « Ne plus afficher » toujours affichée décochée : « C'est parti ! » réécrit à true un refus déjà persisté | corrigé | faible | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`Show`, `Close`, `_dontShowShownChecked`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé`, `Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`) |
@@ -182,7 +186,7 @@ Périmètre lu en entier : `CompositionEngine.cs`, `Layout.cs`, `LayoutJsonPars
 |---|---|---|
 | Rappel du hook `HookCallback` → `TrackModifiers`, `ProcessKey`, `RawKeyDown*` | Fil principal (celui qui a posé le hook et qui pompe les messages). Un hook WH_KEYBOARD_LL est livré au fil qui a appelé `SetWindowsHookEx`. | `TypingEngine.Windows/KeyboardHook.cs:151` `_hookId = Win32.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, Win32.GetModuleHandleW(null), 0);` posé par `TrayApplication.ActivateWithConsent` (`TrayApplication.cs:1389` `_hook.Install();`). Aveu de l'auteur : `TypingEngine.Windows/KeyMapper.cs:1279-1280` « Thread affinity: UI thread uniquement (LL hook callback exécute sur le thread qui a appelé SetWindowsHookEx, soit notre main thread) ». |
 | `ForegroundMonitor.OnWinEvent` → `Recompute` → `ForegroundChanged` → `TrayApplication.OnForegroundChanged` → `KeyMapper.RefreshForegroundContext` | Même fil principal (WinEvent hors contexte, livré au fil qui a appelé `SetWinEventHook`). | `TypingEngine.Windows/ForegroundMonitor.cs:4-6` (commentaire), `:197-203` `private void OnWinEvent(...) { Recompute(); }`, `TrayApplication.cs:2949-2952`. |
-| Minuteries de `TrayApplication` (`SetTimer(_hWnd, id, ms, IntPtr.Zero)`) | Fil principal, via `WM_TIMER` dans la procédure de fenêtre. Aucune `System.Threading.Timer` n'agit sur le moteur. | `TrayApplication.cs:663-679` (tous les `Win32.SetTimer(_hWnd, ...)`). Les seules `System.Threading.Timer` / `ThreadPool` du dépôt hors tests : `ConfigManager.cs:932,1011,1330,1392,1400`, `UsageStats.cs:662`, `TrayApplication.cs:1358` (sonde session distante), `SecureInputProbe.cs:42` (fil « SecureInputDetector »). |
+| Minuteries de `TrayApplication` (`SetTimer(_hWnd, id, ms, IntPtr.Zero)`) | Fil principal, via `WM_TIMER` dans la procédure de fenêtre. Aucune `System.Threading.Timer` n'agit sur le moteur. | `TrayApplication.cs:663-679` (tous les `Win32.SetTimer(_hWnd, ...)`). Les seules `System.Threading.Timer` / `ThreadPool` du dépôt hors tests : `ConfigManager.cs:932,1011,1330,1392,1400`, `UsageStats.cs:662`, `TrayApplication.cs:1358` (sonde session distante), `SecureInputProbe.cs:82` (fil « SecureInputDetector »). |
 | `OnStateChanged` → `WM_APP_STATE` → `ApplyStateChange` → `LayerIndicatorWindow.Update` | `StateChanged` est levé dans le hook ; le travail UI est reporté par `PostMessageW` sur la pompe (même fil), coalescé par `Interlocked.Exchange(ref _stateRefreshQueued, ...)`. | `TrayApplication.cs:2191-2196`, `:2199-2216`, `:812-813`. |
 | Fil du pool `ProbeRemoteHost` | Écrit `KeyboardHook.RemoteSessionActive` (booléen `volatile`) ; ne touche aucune variable du lot. | `TrayApplication.cs:1355-1380`, `TypingEngine.Windows/KeyboardHook.cs:54`. |
 | Fil « SecureInputDetector » | Appelé depuis `Recompute` (fil principal) avec budget d'attente ; résultat tardif → `ResultChangedLate` → nouveau `Recompute` sur la pompe. Hors lot (lot ForegroundMonitor). | `TrayApplication.cs:428`. |
@@ -244,7 +248,7 @@ Aucune minuterie propre au lot : l'expiration du double appui (`MaintainableLay
 
 Aucune temporisation : une touche morte armée n'expire pas (Windows natif non plus). Aucun réessai : une émission refusée par `SendInput` ne réarme pas la touche (`KeyMapper.cs:863-865` ignore le `TextEmissionResult`) ; limite connue AG130-09, reportée 1.3.1 (`KeyMapper.cs:1200-1207`).
 
-Note : aucune transition invalide trouvée dans `CompositionEngine` lui-même ; l'état produit `Armée(x)` avec une couche d'un coup simultanément armée est traité en M1.2 (C1.1).
+Note : aucune transition invalide trouvée dans `CompositionEngine` lui-même ; l'état produit `Armée(x)` avec une couche d'un coup simultanément armée est traité en M1.2 (C1.1, corrigé : la touche morte annule le coup).
 
 #### États ou transitions invalides atteignables
 
@@ -285,8 +289,8 @@ C1.1.
 - I2 : un coup et un verrou ne s'appliquent jamais à un autre processus que celui où ils ont été armés. Garanti par `owner == _foreground` (`:181, 219, 259`) et `ResetTransient` au changement de processus (`:132-136`). L'identité contient l'heure de création du processus contre la réutilisation de PID (`:13`, test `ReusedPid_DoesNotInheritLock`).
 - I3 : un coup non consommé disparaît au relâchement d'un déclencheur promu en accord. Garanti par `:215-226`.
 - I4 : en saisie sécurisée, aucune couche n'est active et rien ne reste armé. Garanti par `:132-136` et `:256`.
-- I5 : un coup armé disparaît quand l'utilisateur fait autre chose que taper un caractère de couche (Retour arrière, raccourci, Échap). Garanti par `KeyMapper.cs:627, 656`. **Non garanti** pour Entrée, Tab (C1.5) et pour une touche morte ordinaire (C1.1).
-- I6 : un coup et une composition de touche morte ne coexistent jamais. Invariant déduit, écrit nulle part dans le code (décision de conception non prise). **Non garanti** (C1.1) : la voie couche n'a pas priorité sur la composition, elle est gardée par `_composition.ActiveDeadKey == null` et `!output.StartsWith("dk_")` (`KeyMapper.cs:813-815`) ; une touche morte frappée sur un coup armé va donc à la composition, le coup survit sans être consommé et la lettre suivante sort de la composition (`e` donne é), puis la suivante de la couche.
+- I5 : un coup armé disparaît quand l'utilisateur fait autre chose que taper un caractère de couche (Retour arrière, Entrée, Tab, raccourci, Échap, touche morte armant une composition, toute touche sans caractère, touche du pavé numérique comprise). Garanti par `CancelOneShot` dans `KeyMapper.ProcessKeyCore` (Retour arrière, Entrée et Tab, raccourci et Échap), dans `CancelOneShotOnKeyOutsideLayout` (toute autre touche sans caractère) et dans la voie composition (touche morte). Rétabli par ME-12 pour Entrée et Tab (C1.5, décision d'Antoine du 16 novembre 2026 : « Annuler l'attente »), puis pour toute touche sans caractère (même constat, même jour : « Toutes annulent ») et pour les touches du pavé numérique qui écrivent un caractère (« Le chiffre annule »), sauf Maj, Ctrl, Alt, AltGr, Verr. maj et Verr. num : voir la table « Touches sans caractère » ci-dessous.
+- I6 : un coup et une composition de touche morte ne coexistent jamais. Rétabli par ME-12 (C1.1, décision d'Antoine du 16 novembre 2026 : « L'accent annule le grec ») : dans la voie composition de `KeyMapper.ProcessKeyCore`, une touche morte qui arme une composition appelle `CancelOneShot`. Seul l'accent compte, la lettre suivante est une lettre française accentuée (`e` donne é, puis la frappe d'après est ordinaire) ; une seule attente à la fois. La voie couche reste gardée par `_composition.ActiveDeadKey == null` et `!output.StartsWith("dk_")` : elle ne voit plus de composition sous un coup, puisque le coup n'existe plus. Le verrou n'est pas touché (une touche morte sous une couche verrouillée arme la composition, le verrou reste).
 - I7 : le modificateur d'activation reste neutralisé tant qu'il est enfoncé, pour toutes les voies de sortie. Garanti depuis ME-05 : la voie « laisser passer la touche native » reçoit les modificateurs effectifs (`CanPassThrough(…, effectiveShift, effectiveAltGr)`) et refuse dès que l'un d'eux diffère du modificateur physiquement tenu, puisque le système lirait le physique (C1.4 corrigé).
 - I8 : la relâche du déclencheur est toujours vue du gestionnaire. Garanti hors suspension (`KeyMapper.cs:559-562`) ; si une suspension tombe pendant l'appui, `_pressedLayer` reste tant que `SyncState` (`KeyMapper.cs:235`) ou un changement de processus (`:132`) ne l'efface.
 
@@ -296,14 +300,14 @@ C1.1.
 |---|---|---|---|---|---|---|
 | T1.2.1 | déclencheur au repos | `BeginTrigger(L, sc)` | `!_secureInput`, `_foreground.IsValid`, `IsLayerEnabled(L)` | enfoncé (appui simple) | un coup armé précédent effacé ; le verrou n'est pas touché ; `NotifyIfChanged` | `MaintainableLayerManager.cs:143-164` |
 | T1.2.2 | enfoncé | `BeginTrigger(L, sc)` même scancode | répétition automatique, modificateur d'activation toujours tenu ; si le modificateur est déjà relâché, `ProcessKey` rend la décision de l'appui initial (consommée) sans rejouer `ProcessKeyCore` (C1.6 corrigé) | inchangé, rend true | — | `:149-150`, `KeyMapper.cs` (`ProcessKey`, `PendingTriggerScanCode`) |
-| T1.2.3 | enfoncé | `BeginTrigger(L2, sc2)` scancode différent | — | inchangé, rend false : la touche est traitée par l'appelant comme une touche morte ordinaire. Avant cela, la frappe de `sc2` a déjà promu le premier déclencheur en accord (T1.2.4 : un coup armé, coexistence transitoire avec la composition, reprise au relâchement du premier, T1.2.8) | voir C1.1 | `:149-150`, `KeyMapper.cs:672-676, 850-869` |
+| T1.2.3 | enfoncé | `BeginTrigger(L2, sc2)` scancode différent | — | inchangé, rend false : la touche est traitée par l'appelant comme une touche morte ordinaire (composition armée sur `dk_L2`). Avant cela, la frappe de `sc2` a déjà promu le premier déclencheur en accord (T1.2.4 : un coup armé, repris au relâchement du premier, T1.2.8) ; la touche morte armant une composition, ce coup est annulé (T1.2.20, C1.1 corrigé) | — | `:149-150`, `KeyMapper.cs` (voie composition) |
 | T1.2.4 | enfoncé (appui simple) | autre touche enfoncée | `_pressedOwner == _foreground`, pas secure | enfoncé (accord) + OneShot(L) | `ClearTapHistory` | `:238-252`, `KeyMapper.cs:672-676` |
 | T1.2.5 | enfoncé (appui simple) | `EndTrigger(sc)` | `Locked(L)` sur ce processus | déclencheur au repos, Inactive | verrou retiré | `:181-188` |
 | T1.2.6 | enfoncé (appui simple) | `EndTrigger(sc)` | double appui : même couche, même propriétaire, `0 <= now-_lastTapAt <= délai` | au repos, Locked(L) | un coup effacé, historique effacé | `:192-204` |
 | T1.2.7 | enfoncé (appui simple) | `EndTrigger(sc)` | sinon | au repos, OneShot(L) | `_lastTap*` renseigné | `:205-212` |
 | T1.2.8 | enfoncé (accord) | `EndTrigger(sc)` | un coup de cet accord non consommé | au repos, Inactive (ou Locked inchangé) | historique effacé | `:215-226` |
 | T1.2.9 | OneShot | `ConsumeOneShot()` | `_oneShotOwner == _foreground` | Inactive ou Locked précédent | historique effacé | `:268-278`, appelé `KeyMapper.cs:844-845` |
-| T1.2.10 | OneShot | `CancelOneShot()` (Retour arrière, raccourci, Échap) | — | Inactive/Locked | — | `:280-291`, `KeyMapper.cs:627, 656` |
+| T1.2.10 | OneShot | `CancelOneShot()` (Retour arrière, Entrée, Tab, raccourci, Échap, toute touche sans caractère : T1.2.22) | — | Inactive/Locked | Entrée et Tab : ajoutées par ME-12 (C1.5) ; la touche passe à l'application | `:280-291`, `KeyMapper.cs` (blocs Retour arrière, Entrée et Tab, raccourci) |
 | T1.2.11 | Locked | `HandleEscape(keyDown)` | verrou du processus, pas secure | Inactive ; `_consumeEscapeKeyUp = true` | keydown absorbé | `:293-312`, `KeyMapper.cs:620-621` |
 | T1.2.12 | tout | `HandleEscape(keyUp)` | — | `_consumeEscapeKeyUp = false` | keyup absorbé si le drapeau l'était | `:295-299` |
 | T1.2.13 | tout | `SetForeground(autre processus)` | `identity != _foreground` | transitoires et historique effacés ; verrous gardés | notification | `:126-141` |
@@ -312,18 +316,48 @@ C1.1.
 | T1.2.16 | tout | `ApplySettings` retirant une couche | couche armée/verrouillée retirée | état de cette couche effacé | — | `:99-118` |
 | T1.2.17 | tout | `ResetTransientState()` (`SyncState`) | — | transitoires et historique effacés ; verrous gardés | — | `:314-320`, `KeyMapper.cs:235` |
 | T1.2.18 | Locked(processus p) | `RemoveDeadProcessLocks` | `!isAlive(p)` | verrou retiré | appelé à chaque `RefreshForegroundContext` | `:322-331`, `KeyMapper.cs:153-155` |
+| T1.2.19 | OneShot | touche morte ordinaire armant une composition (accent aigu SC028…) | `output` commence par `dk_`, la composition s'arme | Inactive/Locked, composition Armée(dk_x) | ME-12 (C1.1) : une seule attente à la fois, `StateChanged` (l'indicateur de couche disparaît, la touche morte à visualiser est l'accent) | `KeyMapper.cs` (voie composition) |
+| T1.2.20 | OneShot (accord tenu) | touche morte d'un autre scancode que le déclencheur tenu | `BeginTrigger` rend false | idem T1.2.19 | voir T1.2.3 | `KeyMapper.cs` (voie composition) |
+| T1.2.21 | OneShot (accord déjà promu, déclencheur encore tenu) | Entrée, Tab ou Retour arrière (keydown) | `CancelOneShot()` rend true (ou une composition est annulée) | Inactive/Locked ; l'accord reste « utilisé » | `ProcessKeyCore` sort par `return false` avant l'étape de promotion du déclencheur en attente : sans effet, car `PromotePendingTriggerToOneShot` ne fait rien sur un accord déjà promu ; les trois touches se comportent de la même façon ; un coup et un déclencheur en attente non promu ne coexistent jamais (`BeginTrigger` efface le coup, T1.2.1) ; tests `UnCoupDeCouche_AccordDejaPromuPuisEntreeTabOuRetourArriere_LeCoupEstAnnuleEtRienNeReste` et `UnCoupDeCouche_SecondDeclencheurTenuPuisEntreeTabOuRetourArriere_LAccordSePromeutEtLaLettreSortEnGrec` | `KeyMapper.cs` (blocs Retour arrière, Entrée et Tab, promotion) |
+| T1.2.22 | OneShot | touche hors disposition, premier appui : flèches, Début, Fin, Page préc., Page suiv., Inser, Suppr, Applications, Impr. écran, F1 à F24, Arrêt défil, Pause, Win seule, volume et multimédia, pavé numérique (Verr. num éteint : Début, Fin, flèches ; Verr. num allumé : chiffres, + - * /, séparateur décimal, VK 0x60 à 0x6F) | `CancelsOneShot` : touche étendue ou absente de la disposition, hors Maj, Ctrl, Alt, AltGr, Verr. maj et Verr. num ; pas de répétition automatique (`_keyDownOwnership`) | Inactive ; le verrou et la composition d'une touche morte seule ne sont pas touchés | ME-12 (C1.5, décisions du 16 novembre 2026 : « Toutes annulent », puis « Le chiffre annule » pour le pavé numérique) : `CancelOneShotOnKeyOutsideLayout` ; la touche passe à l'application (jamais absorbée ni transformée : un chiffre du pavé numérique sort normalement), `StateChanged` levé, la lettre suivante sort en français ; Win seule passe par le `case` des modificateurs de `ProcessKeyCore` ; l'annulation précède la promotion du déclencheur en attente (T1.2.4), qui garde son résultat ; tests `UnCoupDeCouche_EstAnnuleParToutesLesTouchesSansCaractere`, `UnCoupDeCouche_AnnuleParUneToucheSansCaractere_LIndicateurSuitLAnnulation`, `UneCoucheVerrouillee_NEstPasDefaiteParUneToucheSansCaractere`, `UneToucheMorteSeule_N_EstPasAnnuleeParUneToucheSansCaractere`, `UneToucheSansCaractereQuiSeRepete_NAnnuleQueAuPremierAppui`, `UnCoupDeCouche_UneToucheDuPaveNumeriqueQuiEcritUnCaractere_SortNormalementEtAnnuleLAttente`, `UnCoupDeCouche_AnnuleParUneToucheDuPaveNumerique_LIndicateurSuitLAnnulation`, `UneCoucheVerrouillee_NEstPasDefaiteParUneToucheDuPaveNumerique`, `UneToucheMorteSeule_N_EstPasAnnuleeParUnChiffreDuPaveNumerique` | `KeyMapper.cs` (`CancelsOneShot`, `CancelOneShotOnKeyOutsideLayout`, `case` Win, bloc après Entrée et Tab) |
 
 #### Temporisations et réessais
 
 - Double appui : 150 à 1000 ms (`:91`), comparaison d'horodatages à l'événement suivant, jamais de minuterie. Le décompte repart de l'appui simple précédent ; il est annulé par `ClearTapHistory` (consommation, accord, annulation, changement de processus).
-- Un coup : aucune expiration. Il vit jusqu'à une frappe de caractère de couche, Retour arrière, Échap, raccourci, changement de processus, entrée en saisie sécurisée, `SyncState` (voir C1.5).
+- Un coup : aucune expiration. Il vit jusqu'à une frappe de caractère de couche, Retour arrière, Entrée, Tab, Échap, raccourci, touche morte armant une composition, toute touche sans caractère, changement de processus, entrée en saisie sécurisée, `SyncState` (C1.5 corrigé pour Entrée, Tab et toute touche sans caractère).
 - Pas de réessai.
 
 Note non retenue : `_consumeEscapeKeyUp` périmé (voir plus bas).
 
 #### États ou transitions invalides atteignables
 
-C1.1, C1.5.
+C1.1 corrigé (ticket ME-12) : invariant I6 rétabli, tests `MachinesEtatsLot1Tests.UnCoupDeCouche_EtUneCompositionDeToucheMorte_NeCoexistentJamais` et `UnCoupDeCouche_PuisAccent_LaLettreSuivanteEstFrancaiseAccentuee`.
+
+C1.5 corrigé (ticket ME-12) : invariant I5 rétabli pour Entrée et Tab, puis pour toute touche sans caractère (T1.2.22, voir la table ci-dessous), tests `MachinesEtatsLot1Tests.UnCoupDeCouche_EstAnnuleParEntreeEtTab` et `UnCoupDeCouche_AnnuleParEntreeOuTab_LIndicateurSuitLAnnulation`. La sortie de `ProcessKeyCore` avant la promotion d'un déclencheur en attente, quand Entrée ou Tab annule un coup, est sans effet et identique à celle de Retour arrière (T1.2.21), tests `UnCoupDeCouche_SecondDeclencheurTenuPuisEntreeTabOuRetourArriere_LAccordSePromeutEtLaLettreSortEnGrec` et `UnCoupDeCouche_AccordDejaPromuPuisEntreeTabOuRetourArriere_LeCoupEstAnnuleEtRienNeReste`.
+
+Ordre inverse (accent puis touche spéciale), comportement actuel, non modifié : après un accent, la garde `_composition.ActiveDeadKey == null` empêche le déclencheur de couche de s'armer ; la touche est traitée comme une touche morte `dk_greek` dans la composition en cours. L'accent est émis isolé (`´`), la composition passe à `dk_greek` (une seule attente à la fois, aucun coup armé) et la lettre suivante est grecque (`e` donne ε), puis la frappe d'après est ordinaire. Il n'y a donc pas de coexistence ; le grec l'emporte ici sur l'accent, à l'inverse de l'ordre direct (mesuré au banc, non vérifié au clavier).
+
+#### Touches sans caractère : ce que chacune fait aujourd'hui d'un coup armé
+
+Mesuré au banc (`KeyMapper.ProcessKey`, coup grec armé par un appui bref de Maj+SC02B, couche non verrouillée). Décision d'Antoine du 16 novembre 2026 : Entrée et Tab, puis les touches mortes, puis « Toutes annulent » pour toutes les autres touches sans caractère ; « avant » désigne l'état mesuré avant cette dernière décision.
+
+| touche | effet sur le coup | touche absorbée | décision |
+|---|---|---|---|
+| Entrée, Entrée du pavé, Tab | annule | non (passe) | prise (C1.5) |
+| touche morte (accent aigu, tréma…) | annule, la composition s'arme | oui | prise (C1.1) |
+| Retour arrière | annule | non | antérieure (audit 10/11) |
+| Échap | annule (couche non verrouillée) | non | antérieure (audit 10/11) |
+| Ctrl, Alt, Win + touche (raccourci) | annule | selon la touche | antérieure (RA3) |
+| Maj, Ctrl, Alt, AltGr, Verr. maj, Verr. num seuls | ne touche pas : le coup reste armé | non | borne : jamais d'annulation (majuscule de l'autre alphabet) ; test `UnCoupDeCouche_UnModificateurSeul_NAnnuleJamaisLAttente` (Verr. num ajouté) |
+| Espace | consomme le coup (espace émis par la voie couche) | oui | existant |
+| flèches, Début, Fin, Page préc., Page suiv., Inser, Suppr, Applications, Impr. écran, Début du pavé numérique (Verr. num éteint) | annule (avant : le coup restait armé) | non (passe) | prise (C1.5, « Toutes annulent ») ; test `UnCoupDeCouche_EstAnnuleParToutesLesTouchesSansCaractere` |
+| F1 à F24, Arrêt défil, Pause | annule (avant : le coup restait armé, mesuré) | non (passe) | prise (idem) |
+| Win seule, volume, multimédia, navigateur, messagerie | annule (avant : le coup restait armé, mesuré) | non (passe) | prise (idem) |
+| chiffres et opérateurs du pavé numérique (Verr. num allumé, VK 0x60 à 0x6F) | annule (avant : le coup restait armé) ; le caractère sort normalement | non (passe, non transformée) | prise (C1.5, « Le chiffre annule ») ; test `UnCoupDeCouche_UneToucheDuPaveNumeriqueQuiEcritUnCaractere_SortNormalementEtAnnuleLAttente` |
+
+Entrée frappée pendant que le déclencheur est encore tenu : le coup n'est pas annulé (l'accord le promeut juste après), mais il disparaît au relâchement du déclencheur (T1.2.8) : mesuré au banc, aucune lettre grecque ne reste armée. Le même geste après un appui qui remplace le coup (le déclencheur tenu de nouveau efface le coup, T1.2.1) promeut l'accord et la lettre sort en grec ; accord déjà promu par une touche étendue (flèche), puis Entrée, Tab ou Retour arrière : le coup est annulé, la lettre sort en français, rien ne reste armé au relâchement. Les trois touches donnent le même résultat (tests de T1.2.21).
+
+Règle (ME-12, C1.5, décision d'Antoine du 16 novembre 2026 : « Toutes annulent ») : après un coup armé, toute touche qui n'écrit pas de caractère l'annule ; seules Maj, Ctrl, Alt, AltGr, Verr. maj et Verr. num font exception. Le moteur sait déjà dire qu'une touche n'écrit rien (touche étendue, ou absente de la disposition `AZERTY Global 2026.json`, qui ne contient que les touches alphanumériques, la touche `<>` et Espace) : `CancelsOneShot` s'appuie là-dessus, sans liste de codes, avec une seule borne : les six exceptions. Les touches du pavé numérique qui écrivent un caractère (VK 0x60 à 0x6F, Verr. num allumé) annulent aussi (décision du 16 novembre 2026 : « Le chiffre annule ») : le caractère sort normalement, la lettre suivante sort en français, seule la toute prochaine touche peut sortir dans l'autre alphabet. La touche n'est jamais absorbée ; le verrou de couche et l'attente d'une touche morte seule gardent leur comportement (tests `UneCoucheVerrouillee_NEstPasDefaiteParUneToucheSansCaractere` et `UneToucheMorteSeule_N_EstPasAnnuleeParUneToucheSansCaractere`). Seul le premier appui annule : l'auto-répétition d'une touche tenue ne défait pas le coup qu'un accord vient de promouvoir (test `UneToucheSansCaractereQuiSeRepete_NAnnuleQueAuPremierAppui`). Win seule passe par le `case` des modificateurs de `ProcessKeyCore`, qui sortait avant tout. Où l'annulation peut surprendre : Win (appuyer sur Windows pour ouvrir le menu Démarrer défait le coup), Impr. écran, Applications et les touches multimédia, frappées sans lien avec le texte ; une touche de fonction spéciale d'un portable qui se déclare sans caractère annule aussi ; Verr. num éteint, les touches du pavé numérique deviennent Début, Fin et flèches et annulent. Tests : `UnCoupDeCouche_EstAnnuleParToutesLesTouchesSansCaractere` (41 touches : non absorbée, couche inactive, lettre suivante en français) et `UnCoupDeCouche_AnnuleParUneToucheSansCaractere_LIndicateurSuitLAnnulation` ; 44 cas rouges avant le correctif, tous verts après ; les gardes (Verr. num, verrou, accent seul, répétition) sont verts d'emblée. Pavé numérique : 19 cas rouges avant (16 touches, 3 pour l'indicateur), tous verts après, `UneCoucheVerrouillee_NEstPasDefaiteParUneToucheDuPaveNumerique` vert d'emblée. Mesuré : un chiffre du pavé numérique sur un accent en attente (sans coup de couche) sort normalement et laisse l'accent armé pour la lettre suivante (é), comme les autres touches hors disposition ; test `UneToucheMorteSeule_N_EstPasAnnuleeParUnChiffreDuPaveNumerique`.
 
 C1.4 corrigé (ticket ME-05) : invariant I7 rétabli, test `MachinesEtatsLot1Tests.MajDActivationNeutralise_LaSecondeLettreNeFuitPasEnMajusculeNative`.
 
@@ -584,6 +618,7 @@ Aucun constat.
 | T1.7.7 | file | temps | `now - CreatedAt > 1000` | entrée retirée | — | `:151-155` |
 | T1.7.8 | file avec entrée provisoire | `ApplyEngineDecision(handled, texte)` (fin de `ProcessKey`) | touche absorbée ou texte émis | entrée provisoire retirée ; +1 entrée du texte réellement émis s'il n'est pas vide | rien attendu quand le moteur n'émet rien (C1.2, C1.3) | `ApplyEngineDecision` |
 | T1.7.9 | file avec entrée provisoire | `ApplyEngineDecision(false, vide)` | touche laissée passer sans texte émis | inchangé | Windows écrira le caractère natif ; l'attendu de la disposition reste | `ApplyEngineDecision` |
+| T1.7.10 | file avec entrée provisoire | `ApplyEngineDecision(true, préfixe)` | lot `SendInput` partiel : au moins un événement parti, pas tous | entrée provisoire retirée ; +1 entrée du préfixe de caractères dont au moins un événement est parti | l'attendu reste cohérent avec ce qui a pu s'écrire ; l'entrée provisoire n'est jamais retirée quand un caractère a pu partir (suite du 16 novembre) | `KeyMapper.BuildAndSendText` (`CharsStartedBy`), `ApplyEngineDecision` |
 
 #### Temporisations et réessais
 
@@ -593,7 +628,7 @@ Une seconde de péremption paresseuse (`Enqueue`, `HasPending`, `Resolve`). Pas 
 
 C1.2 corrigé (ticket ME-06) : invariants I4 et I6 rétablis, tests `MachinesEtatsLot1Tests.FileDesLecons_AccordTenu_AttendCeQueLeMoteurEmet` et `MachinesEtatsLot1Tests.FileDesLecons_MajDActivationEncoreTenu_AttendCeQueLeMoteurEmet`.
 
-C1.3 corrigé (ticket ME-06) : invariant I5 rétabli, tests `MachinesEtatsLot1Tests.FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere` et `MachinesEtatsLot1Tests.FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere`.
+C1.3 corrigé (ticket ME-06) : invariant I5 rétabli, tests `MachinesEtatsLot1Tests.FileDesLecons_SecondAppuiDuDeclencheurSousUnCoup_NAttendAucunCaractere` et `MachinesEtatsLot1Tests.FileDesLecons_ToucheMorteSousUnCoup_NAttendAucunCaractere`. Suite du 16 novembre : un lot `SendInput` partiel n'est plus annoncé « rien émis » (`KeyDecision.EmittedText` porte les caractères dont au moins un événement est parti), tests `MachinesEtatsLot1Tests.FileDesLecons_LotPartiel_GardeUnAttenduCoherentAvecCeQuiAPuPartir` et `FileDesLecons_LotRefuStrictement_NAttendRien`. Texte de plusieurs caractères : `FileDesLecons_TexteDePlusieursCaracteresCoupe_AnnonceLesCaracteresCommences` (« ´h », quatre événements, coupé à 1, 2, 3 et 4 : entre l'appui et le relâchement du premier caractère, entre les deux caractères, entre l'appui et le relâchement du second, lot complet) et `CharsStartedByTests` (texte de plusieurs lettres, substitut isolé, paire de substitution). Un caractère sans événement existe (le substitut isolé, que `BuildAndSendText` saute) mais n'est compté comme parti que si un caractère suivant a commencé, jamais à la coupure : pas de défaut, code inchangé. Limite connue : un caractère dont seuls certains événements sont partis (appui sans relâchement) est supposé écrit ; si Windows l'ignore (séquence Alt+code interrompue), l'entrée attendue expire après une seconde.
 
 ### M1.8 — Indicateur de couche (`LayerIndicatorWindow`)
 
@@ -644,11 +679,11 @@ C1.7 corrigé (ticket ME-07) : invariant I2 rétabli, test `MachinesEtatsLot1Te
 
 ### Constats du lot (renvoi)
 
-- C1.1 un coup et composition coexistent
+- C1.1 un coup et composition coexistent (corrigé, ME-12)
 - C1.2 file de texte attendu : accord du déclencheur et Maj neutralisé ignorés (y compris Maj tenu après un appui bref : coup armé, Maj d'activation neutralisé, `CaptureKey` calcule Α, le moteur émet α)
 - C1.3 file de texte attendu : entrée fantôme quand le coup armé est lu comme touche morte active : second appui du double appui qui verrouille la couche (cas direct), touche morte ou autre déclencheur frappé sur un coup armé
 - C1.4 Maj d'activation neutralisé mais pris tel quel par le passage natif des lettres
-- C1.5 un coup survit à Entrée et Tab
+- C1.5 un coup survit à Entrée et Tab (corrigé, ME-12)
 - C1.6 déclencheur enfoncé : répétition après relâchement du modificateur
 - C1.7 indicateur sans fenêtre : `InvalidateRect(NULL)`
 
@@ -678,14 +713,14 @@ Chemins relatifs au dépôt. Le code fait foi ; les rapports `docs/audit-*` n'o
 | Fil | Ce qui y tourne | Preuve |
 |---|---|---|
 | **Fil principal (STA, pompe de messages)** | Rappel `WH_KEYBOARD_LL` (`KeyboardHook.HookCallback`), `WndProc` et tous les `WM_TIMER`, rappels `SetWinEventHook` (`OnWinEvent`), `ForegroundMonitor.Recompute`, `ReinstallHook`, `ProbeHookSilence`, `OnForegroundChanged`, `ApplyHookState`, `Cleanup` | `src/Program.cs:36` `[STAThread]` ; hook posé sur ce fil : `src/TrayApplication.cs:695` (`_hook!.Install()` dans `Run`) et `:1389` (`ActivateWithConsent`, appelé par le rappel de l'accueil) ; `RealWin32Api.cs:183` `SetWinEventHook(..., 0, 0, WINEVENT_OUTOFCONTEXT)` appelé depuis le constructeur de `ForegroundMonitor` (`ForegroundMonitor.cs:174`) sur ce même fil, donc rappels livrés par sa pompe (commentaire `ForegroundMonitor.cs:5-6`) ; minuteries `SetTimer(_hWnd, …, IntPtr.Zero)` (`TrayApplication.cs:663-679`) : `WM_TIMER` sur ce fil |
-| **Fil de travail UIA « SecureInputDetector »** (MTA, un seul, `IsBackground`) | `SecureInputProbe.Run` : `_query` (COM UIA `GetFocusedElement`…), déclenchement de `ResultChangedLate` | `SecureInputProbe.cs:42,56-80` ; `SecureInputDetector.cs:44` `CoInitializeEx(…, COINIT_MULTITHREADED)` |
+| **Fil de travail UIA « SecureInputDetector »** (MTA, un seul actif, `IsBackground` ; au plus 3 fils abandonnés encore bloqués dans COM, soit 4 en tout) | `SecureInputProbe.Run` : `_query` (COM UIA `GetFocusedElement`…), déclenchement de `ResultChangedLate` | `SecureInputProbe.cs:82,96-144` ; `SecureInputDetector.cs:44` `CoInitializeEx(…, COINIT_MULTITHREADED)` |
 | **Pool de threads** | `ProbeRemoteHost` (`GameRegistry.FindActiveRemoteSession` + écriture de `KeyboardHook.RemoteSessionActive`), vidage du journal différé (`LogCompatCriticalEvent` de `Reinstall` via `AzertyGlobalWindowsTypingHost.cs:27-28`), `UsageStats.FlushInBackground` | `TrayApplication.cs:1355-1380` ; `AzertyGlobalWindowsTypingHost.cs:27-28` |
 
 Conséquences utiles :
 
 - Le rappel du hook, `Recompute`, les minuteries et `ReinstallHook` partagent **un seul fil** : entre eux, pas de course, seulement de la réentrance. Les champs `volatile`/`Interlocked` de `KeyboardHook` et `ForegroundMonitor` ne protègent donc en pratique que les lecteurs/écrivains du pool (`_remoteSessionActive`) ; le `_snapshot volatile` (`ForegroundMonitor.cs:63`) est surdimensionné mais inoffensif. `_lastCallbackTicks` n'est lu que par `ProbeHookSilence` (même fil).
 - Seule frontière réellement inter-fils du lot : **fil principal <-> fil UIA** (`SecureInputProbe`, protégé par `_gate`, `Volatile`, deux `AutoResetEvent`) et **pool -> fil principal** (`RemoteSessionActive`, `volatile`).
-- Attente bloquante sur le fil principal : `SecureInputProbe.Query` fait `_done.WaitOne(remaining)` (`SecureInputProbe.cs:47-51`), jusqu'à 30 ms (`SecureInputDetector.cs:28`), depuis `Recompute` (`ForegroundMonitor.cs:246-247` -> `RealWin32Api.cs:137`). Le fil principal est STA (`[STAThread]`), mais le code n'établit pas que cette attente pompe des messages : c'est une hypothèse sur le runtime NativeAOT, dont C2.4 dépend entièrement.
+- Attente bloquante sur le fil principal : `SecureInputProbe.Query` fait `_done.WaitOne(remaining)` (`SecureInputProbe.cs:87-91`), jusqu'à 30 ms (`SecureInputDetector.cs:28`), depuis `Recompute` (`ForegroundMonitor.cs:246-247` -> `RealWin32Api.cs:137`). Le fil principal est STA (`[STAThread]`), mais le code n'établit pas que cette attente pompe des messages : c'est une hypothèse sur le runtime NativeAOT, dont C2.4 dépend entièrement.
 - Écritures disque : `LogCompatCriticalEvent` (synchrone, sur le fil principal) est appelé par `ProbeHookSilence` (`TrayApplication.cs:1157`) ; `LogCompatibilityCriticalEvent` de l'hôte est différé sur le pool (`ConfigManager.cs:1007-1012`). Aucun fichier d'état n'est tenu par ce lot.
 
 
@@ -925,7 +960,7 @@ C2.3, C2.4
 
 ### M2.5 — Sonde de saisie sécurisée (`SecureInputProbe` / `SecureInputDetector`)
 
-**Nature** : implicite (identifiants de requête, résultat, ouvrier, `retryAfter`) ; fil de travail unique. **Fichiers** : `SecureInputProbe.cs`, `SecureInputDetector.cs`, `RealWin32Api.cs:107-139`.
+**Nature** : implicite (identifiants de requête, résultat, ouvrier, génération d'ouvrier, `retryAfter`) ; un seul fil de travail actif, les ouvriers bloqués sont abandonnés (C2.2). **Fichiers** : `SecureInputProbe.cs`, `SecureInputDetector.cs`, `RealWin32Api.cs:107-139`.
 
 #### Variables d'état
 
@@ -936,8 +971,10 @@ C2.3, C2.4
 | `_worker` | `Thread?` | `:16` | `Query` (sous `_gate`) | `_gate` |
 | `_retryAfter` | `long` | `:18` | `Run` (`finally`), `Query` | `Volatile.Write`, lecture simple sous `_gate` |
 | `_stopping` | `volatile bool` | `:19` | `Dispose` / worker | `volatile` |
+| `_generation`, `_busySince`, `_abandoned` | `int`, `long`, `int` | `:27-29` | écrits par `Query` et par `Run`, toujours sous `_gate` | `_gate` |
+| `_abandonAfter`, `_clock` | `int`, `Func<long>` | `:19-20` | lus par `Query` et `Run` | lecture seule, injectables pour les tests |
 | `_wake`, `_done` | `AutoResetEvent` | `:14-15` | les deux | primitives |
-| `SecureInputDetector._automation` | `IntPtr` | `SecureInputDetector.cs:49` | worker seul | fil unique (worker) |
+| `SecureInputDetector._automation` | `IntPtr` (`[ThreadStatic]`) | `SecureInputDetector.cs:51-52` | le fil qui l'utilise | une instance par fil : un ouvrier abandonné ne partage pas celle de son remplaçant |
 
 #### États
 
@@ -945,39 +982,43 @@ C2.3, C2.4
 |---|---|
 | S0 Sans ouvrier | `_worker == null` ou `!IsAlive` |
 | S1 Ouvrier en attente | worker vivant, bloqué sur `_wake.WaitOne()` (`:63`) |
-| S2 Ouvrier occupé | worker dans `_query` (COM cross-process) |
+| S2 Ouvrier occupé | worker dans `_query` (COM cross-process), `_busySince != 0` |
+| S4 Ouvrier abandonné | ancien worker toujours bloqué dans `_query` après abandon : `generation != _generation` ; il n'est plus `_worker`, et son retour est ignoré. Au plus 3 (`MaxAbandonedWorkers`) |
 | S3 Arrêté | `_stopping == true` : `Query` rend `true` (`:37`) |
 | résultat | « frais » si `_result.Request == id` demandé ; sinon la requête rend `true` (sécurisé) |
 
 #### Invariants
 
 - I1 : une requête sans résultat frais est sécurisée (fail-closed) : garanti (`:53` `result.Request != request.Id || result.Secure`).
-- I2 : jamais plus d'un ouvrier vivant : garanti (`:40`, test `Worker_bloque_ne_reutilise_pas…`). Conséquence : tant qu'un ouvrier est bloqué (S2), les requêtes suivantes expirent et rendent « sécurisé » (fail-closed voulu, pinné par `SecureInputProbeTests.cs:57-60`) ; la privation n'est pas définitive, l'ouvrier reprend la dernière requête dès son retour (`SecureInputProbe.cs:65`) (C2.2).
-- I3 : un résultat périmé n'est jamais renvoyé à une requête plus récente : garanti par l'identifiant (`:47,53`).
-- I4 : `ResultChangedLate` n'est levé que si la requête a dépassé son délai ET que le résultat diffère du **précédent résultat**, quelle que soit la fenêtre qui l'a produit (`:69-75`) : le « précédent » n'est pas comparé à la même fenêtre -> pas de garantie de levée pour un résultat tardif correct (voir C2.2).
-- I5 : `_done` peut rester signalé sans résultat utile : la boucle de `Query` revérifie `_result` (`:47-51`) : sans conséquence.
-- I6 : instance COM créée/relâchée par le seul worker : garanti ; recréée après tout `HRESULT` négatif (`SecureInputDetector.cs:90-94,104-109`) donc `CoCreateInstance` à chaque requête tant que l'erreur persiste.
+- I2 : jamais plus d'un ouvrier ACTIF (courant) ; un ouvrier occupé n'est pas multiplié avant le délai d'abandon (`:70`, test `Worker_bloque_n_est_ni_multiplie_ni_abandonne_avant_le_delai`). Un ouvrier occupé depuis `abandonAfter` ms (2 s par défaut) est abandonné : la génération change, un nouvel ouvrier repart (`:70-84`, tests `Ouvrier_bloque_sur_une_fenetre_ne_garde_pas_une_autre_fenetre_securisee_indefiniment`, `Worker_bloque_est_abandonne_apres_le_delai_et_une_nouvelle_detection_repart`). Au plus 3 ouvriers abandonnés restent bloqués, donc 4 fils au maximum ; au-delà, plus aucun fil n'est lancé et la sonde reste sécurisée tant qu'un abandonné ne revient pas (test `Workers_abandonnes_sont_bornes_puis_la_sonde_reste_securisee`). Avant l'abandon et pendant qu'un nouvel ouvrier n'a pas répondu, la requête rend « sécurisé » (I1, fail-closed : choix déjà pris par le code quand il ne sait pas, le plus sûr pour l'utilisateur car il ne laisse jamais passer à tort une saisie de mot de passe) (C2.2 corrigé).
+- I3 : un résultat périmé n'est jamais renvoyé à une requête plus récente : garanti par l'identifiant (`:87,93`). Le retour tardif d'un ouvrier abandonné n'écrit ni `_result` ni `ResultChangedLate` : la génération est vérifiée sous `_gate` avant toute écriture (`:116-127`, test `Retour_tardif_d_un_worker_abandonne_n_ecrase_pas_la_detection_recente`).
+- I4 : `ResultChangedLate` n'est levé que si la requête a dépassé son délai ET que le résultat diffère du **précédent résultat**, quelle que soit la fenêtre qui l'a produit (`:125-132`) : le « précédent » n'est pas comparé à la même fenêtre -> pas de garantie de levée pour un résultat tardif correct ; reste ainsi après C2.2, car l'ouvrier abandonné ne lève plus rien et que l'ouvrier courant est relancé par la relance sécurisée de 1 s de `ForegroundMonitor`.
+- I5 : `_done` peut rester signalé sans résultat utile : la boucle de `Query` revérifie `_result` (`:87-91`) : sans conséquence.
+- I6 : instance COM créée/relâchée par le seul worker : garanti ; recréée après tout `HRESULT` négatif (`SecureInputDetector.cs:90-94,104-109`) donc `CoCreateInstance` à chaque requête tant que l'erreur persiste. Depuis la suite de ME-12, l'instance de chaque fil (`[ThreadStatic]`) est relâchée par ce fil à toute sortie de `Run` : arrêt, abandon suivi d'un retour tardif, initialisation en échec ou qui lève (`workerExit`, branché sur `ReleaseAutomation`) ; un ouvrier abandonné ne relâche jamais l'instance de son remplaçant (tests `Ouvrier_arrete_libere_son_instance_sur_son_propre_fil`, `Ouvrier_abandonne_qui_revient_libere_son_instance_et_pas_celle_du_remplacant`, `Ouvrier_dont_l_initialisation_echoue_ou_leve_libere_aussi`).
 
 #### Table de transition
 
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
-| T5.1 | S0 | `Query` | `TickCount >= _retryAfter` | S1 puis S2 | nouveau `Thread` ; `_wake.Set()` | `SecureInputProbe.cs:38-46` |
-| T5.2 | S0 | `Query` | `TickCount < _retryAfter` | S0 | attend 30 ms puis rend `true` | `:40,47-53` |
-| T5.3 | S1 | `_wake` | `_stopping == false` | S2 | lit `_requested` | `:63-65` |
-| T5.4 | S2 | `_query` retourne | — | S1 | `_result = Result(id, secure)` ; `_done.Set()` ; levée tardive si `now > deadline && previous.Secure != secure` | `:66-75` |
-| T5.5 | S2 | `_query` lève | `catch` | S1 | `secure = true` | `:67-68` |
-| T5.6 | S0/S1 | `_initialize` rend `false`, ou exception | — | S0 | `_retryAfter = now + 1000` | `:60,78-79` |
-| T5.7 | tout | `Dispose` | — | S3 | `_wake.Set()`, `Join(100)` | `:82-89` |
+| T5.1 | S0 | `Query` | `clock >= _retryAfter` | S1 puis S2 | nouveau `Thread` de la génération courante ; `_wake.Set()` | `SecureInputProbe.cs:67-86` |
+| T5.2 | S0 | `Query` | `clock < _retryAfter` | S0 | attend 30 ms puis rend `true` | `:79,87-93` |
+| T5.3 | S1 | `_wake` | `_stopping == false` et génération courante | S2 | lit `_requested` ; `_busySince = clock` | `:103-111` |
+| T5.4 | S2 | `_query` retourne | génération courante | S1 | `_busySince = 0` ; `_result = Result(id, secure)` ; `_done.Set()` ; levée tardive si `clock > deadline && previous.Secure != secure` | `:112-132` |
+| T5.5 | S2 | `_query` lève | `catch` | S1 | `secure = true` | `:113-114` |
+| T5.6 | S0/S1 | `_initialize` rend `false`, ou exception | génération courante | S0 | `_retryAfter = now + 1000` ; `workerExit` relâche l'instance du fil | `:100,135-143` |
+| T5.9 | S2 | `Query` | `clock - _busySince >= abandonAfter` (2 s) et `_abandoned < 3` | S4 (l'ancien) ; S0 puis S1/S2 (le nouveau) | `_generation++`, `_abandoned++`, `_worker = null` ; nouveau `Thread` ; la requête rend `true` tant que le nouveau n'a pas répondu | `:70-84` |
+| T5.10 | S4 | `_query` retourne ou lève | génération périmée | fin du fil | `_abandoned--` ; ni `_result`, ni `_done`, ni `ResultChangedLate`, ni `_retryAfter` ; puis `workerExit` sur ce fil : l'instance UIA de l'ouvrier abandonné est relâchée | `:116-123,136-143` |
+| T5.11 | S2 | `Query` | `clock - _busySince >= abandonAfter` et `_abandoned == 3` | S2 | aucun nouveau fil ; la requête rend `true` | `:70-71` |
+| T5.7 | tout | `Dispose` | — | S3 | `_wake.Set()`, `Join(100)` ; l'ouvrier qui s'arrête relâche son instance (`workerExit`) | `:82-89` |
 | T5.8 | tout | `Query` | `_stopping` | S3 | rend `true` | `:37` |
 
 #### Temporisations et réessais
 
-Délai de requête 30 ms (`SecureInputDetector.cs:28`), reprise de l'ouvrier après 1 s (`retryDelay`, `:79`), relance du snapshot sécurisé 1 s côté `ForegroundMonitor`. Pas de délai maximal côté worker (`_query` bloque tant que la requête COM n'est pas rendue). `Dispose` n'est jamais appelé sur la sonde statique (vie du processus).
+Délai de requête 30 ms (`SecureInputDetector.cs:28`), reprise de l'ouvrier après 1 s (`retryDelay`, `:141`), relance du snapshot sécurisé 1 s côté `ForegroundMonitor`. Abandon d'un ouvrier bloqué : 2 s (`DefaultAbandonAfter`, `SecureInputProbe.cs:41`), soit deux relances sécurisées de 1 s et plus de quatre fois la durée « plusieurs centaines de ms » d'un appel UIA lent mais vivant ; injectable (`abandonAfter`) avec l'horloge (`clock`) pour les tests. Borne : 3 ouvriers abandonnés bloqués au plus (`MaxAbandonedWorkers`), donc 4 fils. `Dispose` n'est jamais appelé sur la sonde statique (vie du processus).
 
 #### États ou transitions invalides atteignables
 
-C2.2
+C2.2 corrigé (ticket ME-12) : invariant rétabli, test `MachinesEtatsLot2Tests.Ouvrier_bloque_sur_une_fenetre_ne_garde_pas_une_autre_fenetre_securisee_indefiniment`. Suite : l'instance UIA de chaque ouvrier (arrêté ou abandonné) est relâchée à sa sortie, tests `Ouvrier_arrete_libere_son_instance_sur_son_propre_fil`, `Ouvrier_abandonne_qui_revient_libere_son_instance_et_pas_celle_du_remplacant` et `Ouvrier_dont_l_initialisation_echoue_ou_leve_libere_aussi` (couture `workerExit`), `Le_detecteur_branche_ReleaseAutomation_sur_la_sortie_de_l_ouvrier` (branchement du détecteur, texte source).
 
 
 ### Frontières avec les autres lots
@@ -1036,11 +1077,13 @@ Preuves :
 
 Impact : fonctions avancées (recherche, clavier virtuel, couches maintenables) indisponibles dans les autres applications pendant le blocage ; coût de 30 ms par seconde sur le fil du hook. Le remappage lui-même n'est pas coupé par `SecureInput` dans ce lot.
 
-Ce que j'ai vérifié pour l'écarter : le comportement pendant le blocage est voulu (fail-closed), pinné par le test `Worker_bloque_ne_reutilise_pas_le_resultat_non_securise_precedent` (`SecureInputProbeTests.cs:57-60`) et ne doit pas être présenté comme invalide ; seule la durée du blocage, non bornée côté ouvrier, reste en question ; la durée réelle d'un blocage UIA n'est pas lisible dans le code.
+Ce que j'ai vérifié pour l'écarter : le comportement pendant le blocage est voulu (fail-closed), fixé alors par un test de la sonde, réécrit depuis par le correctif (`Worker_bloque_n_est_ni_multiplie_ni_abandonne_avant_le_delai`, voir le statut ci-dessous) et ne doit pas être présenté comme invalide ; seule la durée du blocage, non bornée côté ouvrier, reste en question ; la durée réelle d'un blocage UIA n'est pas lisible dans le code.
 
 Tests existants : `SecureInputProbeTests.cs` (ouvrier bloqué, un seul ouvrier, échec initialisation).
 
 Esquisse de test : avec `SecureInputProbe(() => true, query, timeout: 50)` où `query` bloque sur la fenêtre 1 puis répond vite sur la fenêtre 2 ; vérifier qu'une requête pour la fenêtre 2 ne reste pas sécurisée indéfiniment (par exemple en abandonnant l'ouvrier bloqué et en démarrant un second ouvrier au bout d'un délai borné). Le test existant montre la couture (délégué `_query` injecté).
+
+Statut : corrigé (ticket ME-12, décision d'Antoine du 16 novembre 2026 : « Abandonner la détection bloquée après un délai »). Un ouvrier occupé depuis 2 s dans une requête est abandonné ; un nouvel ouvrier repart (nouvelle génération) ; le retour COM tardif de l'ancien est ignoré (ni résultat, ni `ResultChangedLate`) ; au plus 3 ouvriers abandonnés restent bloqués, donc 4 fils. Pendant le blocage et tant que le nouvel ouvrier n'a pas répondu, la sonde reste « sécurisée » (fail-closed, le choix que le code prend déjà quand il ne sait pas). Le test existant `Worker_bloque_ne_reutilise_pas…` affirmait l'ancien comportement : il est réécrit (`Worker_bloque_n_est_ni_multiplie_ni_abandonne_avant_le_delai`) et rendu déterministe par une horloge injectée. Test du constat : `MachinesEtatsLot2Tests.Ouvrier_bloque_sur_une_fenetre_ne_garde_pas_une_autre_fenetre_securisee_indefiniment`.
 
 #### C2.3 — Premier plan absent traité comme `Default/None` (fail-open) alors que l'inconnu est traité fail-closed
 
@@ -1077,7 +1120,7 @@ Scénario :
 
 Preuves :
 - `src/Program.cs:36` : `[STAThread]`.
-- `SecureInputProbe.cs:47-51` : `while (Volatile.Read(ref _result).Request < request.Id) { ... if (remaining <= 0 || !_done.WaitOne((int)remaining)) break; }`
+- `SecureInputProbe.cs:87-91` : `while (Volatile.Read(ref _result).Request < request.Id) { ... if (remaining <= 0 || !_done.WaitOne((int)remaining)) break; }`
 - `ForegroundMonitor.cs:218-253` : `window` capturé au début, snapshot écrit à la fin, aucune garde de réentrance (pas de drapeau « Recompute en cours »).
 
 Impact : au pire un snapshot périmé pendant ≤ 250 ms (sans émission, fail-closed) ; pas de perte durable. Le rappel du hook lui-même peut aussi s'exécuter pendant cette attente si elle pompe les messages envoyés (le hook est livré ainsi), ce qui n'est pas non plus un défaut avéré.
@@ -1574,7 +1617,7 @@ C4.1 corrigé (ticket ME-09) : invariant I4 rétabli, test `MachinesEtatsLot4Te
 - I3 : écritures dans l'ordre des instantanés — garanti par `_fileLock` (`ConfigManager.cs:1421`).
 - I4 : un réglage posé n'est jamais perdu tant que le processus vit — garanti : l'échec remet `_dirty = true` (`ConfigManager.cs:1453`), un `MarkDirty` concurrent ne l'efface pas, un succès avec `_dirty` reposé est suivi d'un nouvel essai (la minuterie de `MarkDirty` reste armée).
 - I5 : `_failedWrites` compte les échecs d'affilée du dernier instantané — non garanti à la nanoseconde : un échec après un `MarkDirty` concurrent donne 1 au lieu de 0+1 et remplace la minuterie de 400 ms par 1 s (`ConfigManager.cs:1454-1455`). Sans effet de perte.
-- I6 : un réglage posé avant la fermeture est durable à la sortie — garanti depuis ME-09 dans une limite : `FlushFinal` (`Cleanup`, `WM_QUERYENDSESSION`) refait jusqu'à 3 essais synchrones espacés de 250 ms (750 ms de pause au plus) ; un verrou plus long fait perdre le réglage, et la perte est journalisée (`ConfigFinalWriteLost`) (C4.3 corrigé).
+- I6 : un réglage posé avant la fermeture est durable à la sortie — garanti depuis ME-09 dans une limite : `FlushFinal` (appelée par `Cleanup`, donc à la sortie normale et à `WM_ENDSESSION` confirmé) refait jusqu'à 3 essais synchrones espacés de 250 ms (750 ms de pause au plus) ; un verrou plus long fait perdre le réglage, et la perte est journalisée (`ConfigFinalWriteLost`) (C4.3 corrigé). `WM_QUERYENDSESSION` n'est qu'une demande, qu'une autre application peut annuler : elle ne fait qu'un `Flush` immédiat sans attente (`TrayApplication.OnQueryEndSession`), la minuterie de reprise couvrant l'app qui continue de vivre (suite du 16 novembre).
 - I7 : fichier jamais tronqué en cas de coupure — garanti : temp + `Flush(true)` + `File.Replace`/`File.Move` (`ConfigManager.cs:1516-1526`).
 - I8 : deux processus ne s'écrasent pas par le temp — garanti par `BuildTempPath(pid)` ; ne protège pas du « dernier écrivain gagne » sur le fichier final.
 
@@ -1594,8 +1637,8 @@ C4.1 corrigé (ticket ME-09) : invariant I4 rétabli, test `MachinesEtatsLot4Te
 | T10 | W3 | fin d'écriture échouée | — | W4 avec k = 1 | `_failedWrites` passe de 0 à 1, minuterie remplacée par 1 s | `ConfigManager.cs:1453-1455` |
 | T11 | tout état avec `_loadFailed` et fichier présent | `Flush` | — | W0 (réglages jamais écrits) | journal « Sauvegarde ignorée » ; `true` rendu | `ConfigManager.cs:1506-1510` |
 | T12 | W1/W4 | `WM_WTSSESSION_CHANGE` (tout événement) | — | W2 sur le pool | `FlushInBackground` | `TrayApplication.cs:1076`, `ConfigManager.cs:1399` |
-| T13 | W1/W4 | `WM_QUERYENDSESSION` | — | W2 sur la pompe | `FlushFinal` : `Flush` synchrone puis jusqu'à 3 reprises espacées de 250 ms, bloque la pompe tant que `_fileLock` est tenu et pendant ces pauses (750 ms au plus) | `TrayApplication.cs:1088` |
-| T14 | W1/W4 | `Cleanup` (menu Quitter, `WM_ENDSESSION`) | `_cleaned` faux | W6 | `FlushFinal` (après le `Dispose` des fenêtres) ; échec persistant = perte journalisée (`ConfigFinalWriteLost`) | `TrayApplication.cs:2331-2360` |
+| T13 | W1/W4 | `WM_QUERYENDSESSION` (demande d'arrêt, annulable, peut se répéter) | — | W2 sur la pompe | `OnQueryEndSession` : un `Flush` synchrone puis `UsageStats.Flush`, sans pause ; un échec est repris par la minuterie de reprise (W4), l'app vivant toujours ; répond vrai | `TrayApplication.OnQueryEndSession` ; le `case` est gardé par un test de texte source |
+| T14 | W1/W4 | `Cleanup` (menu Quitter, `WM_ENDSESSION` avec wParam non nul, arrêt confirmé) | `_cleaned` faux | W6 | `FlushFinal` (après le `Dispose` des fenêtres) : 3 reprises de 250 ms au plus, seule attente de la fermeture ; échec persistant = perte journalisée (`ConfigFinalWriteLost`) | `TrayApplication.cs:2331-2360` |
 | T15 | tout | `RecordReviewPromptShown` | — | W2 sur la pompe | `Flush` immédiat hors `_lock` | `ConfigManager.cs:496-512` |
 
 #### Temporisations et réessais
@@ -1604,7 +1647,7 @@ Départ 400 ms après le dernier geste (`ConfigManager.cs:1334`). Reprises 1 s, 
 
 #### États ou transitions invalides atteignables
 
-C4.3 corrigé (ticket ME-09) : invariant I6 rétabli, test `MachinesEtatsLot4Tests.Ecriture_de_fermeture_reessaie_puis_ecrit_le_reglage`.
+C4.3 corrigé (ticket ME-09) : invariant I6 rétabli, test `MachinesEtatsLot4Tests.Ecriture_de_fermeture_reessaie_puis_ecrit_le_reglage`. Suite : une demande d'arrêt annulée ne gèle plus l'app, test `Demande_d_arret_annulee_n_endort_pas_le_fil_d_interface`. Le `case` du message est lui aussi gardé : le test de texte source `Demande_d_arret_appelle_OnQueryEndSession_et_n_ecrit_pas_la_fermeture_dans_le_case` échoue si le `case` de `WM_QUERYENDSESSION` appelle autre chose que `OnQueryEndSession` ou y remet `FlushFinal` (le test précédent, qui appelle `OnQueryEndSession` directement, restait alors vert).
 
 
 ### M4.3 — Chargement de config.json et mise de côté d'un fichier illisible
@@ -1699,7 +1742,7 @@ Relance unique : N0 `autoStartNudgeDone == false` (éligible ou non selon `Shou
 - I2 : `autoStartEnabled` suit la dernière réussite de `Set` — garanti (`AutoStart.cs:136`) ; vaut cache, jamais source de vérité (`ConfigManager.cs:283`).
 - I3 : un refus Windows n'est jamais contourné par l'accueil — garanti par `DefaultOnboardingCheck` pour l'état `DisabledByUser`/`DisabledByPolicy` quelle que soit la présence du raccourci, et pour `Unknown` quand aucune trace d'un choix passé existe (`AutoStart.cs:177-188`) : le refus est testé avant `isRegistered` depuis ME-04.
 - I4 : la relance unique ne part qu'une fois — garanti (`AutoStartNudge.cs:40`, `MarkPromptShown` avant l'affichage, `TrayApplication.cs:1597`).
-- I5 : la relance ne propose que ce que l'app peut obtenir — garanti depuis ME-04 : `AutoStartSignals.WindowsState` est lu une fois par `Snapshot`, et `ShouldPrompt` rend faux pour `DisabledByUser`, `DisabledByPolicy` et `Unknown` (`AutoStartNudge.cs:45-46`) ; la relance n'est alors ni proposée ni consommée (`MarkPromptShown` n'est appelé qu'après `ShouldPrompt`).
+- I5 : la relance ne propose que ce que l'app peut obtenir — garanti depuis ME-04 : `AutoStartSignals.WindowsState` est lu une fois par `Snapshot`, et `ShouldPrompt` rend faux pour `DisabledByUser`, `DisabledByPolicy` et `Unknown` (`AutoStartNudge.cs:45-46`) ; la relance n'est alors ni proposée ni consommée (`MarkPromptShown` n'est appelé qu'après `ShouldPrompt`). Choix retenu : un état illisible (`Unknown`, exception de l'API `StartupTask` en version packagée) ne déclenche pas la proposition, car on ne demande pas d'activer ce qui l'est peut-être déjà ; mais la relance n'est pas consommée, et elle repart au lancement suivant si l'état redevient lisible (`Disabled`). Test `MachinesEtatsLot4Tests.Relance_non_consommee_par_un_etat_illisible_repart_quand_il_redevient_lisible`.
 - I6 : `Set` n'appelle pas `RequestEnableAsync` si déjà actif — garanti (`AutoStart.cs:314-315`).
 
 #### Table de transition
@@ -1714,7 +1757,7 @@ Relance unique : N0 `autoStartNudgeDone == false` (éligible ou non selon `Shou
 | T6 | Enabled | `Set(true)` packagé | déjà actif | Enabled | aucun appel Windows | `AutoStart.cs:314-315` |
 | T7 | Enabled/EnabledByPolicy | `Set(false)` packagé | — | Disabled, ou Enabled si imposé par politique | `task.Disable()` ; vérité relue ; politique : `Set` rend `false` | `AutoStart.cs:324-325,132-134` |
 | T8 | tout (packagé) | exception WinRT dans `SetStartupTask` | relecture : `enabled ? actif : true` | selon relecture | journal ; une exception de relecture donne `false` | `AutoStart.cs:328-341` |
-| T9 | N0 éligible | démarrage de l'app, aucune autre bulle | `ShouldPrompt` (faux si Windows refuse ou état illisible : N0 conservé) | N1 | `SetAutoStartNudgeDone`, toast ou bulle | `TrayApplication.cs:328-329,1589-1606` |
+| T9 | N0 éligible | démarrage de l'app, aucune autre bulle | `ShouldPrompt` (faux si Windows refuse ou état illisible : N0 conservé, relance non consommée, reposée au lancement suivant si l'état redevient lisible) | N1 | `SetAutoStartNudgeDone`, toast ou bulle | `TrayApplication.cs:328-329,1589-1606` |
 | T10 | N0 | choix manuel Paramètres ou accueil, `Set` réussi | Paramètres : état réellement changé (`autoStart != autoStartWasRegistered`). Accueil : `userChoice \|\| autoStart != wasRegistered \|\| autoStart != _autoStartShownChecked` | N1 | `MarkPromptShown` | `SettingsWindow.cs:1488-1489`, `OnboardingWindow.cs:677-678` |
 | T11 | N1 | clic sur le toast (même tardif, ou répété) ou clic sur la bulle (une seule fois utile) | bulle : `_pendingBalloon` remis à `None` avant d'agir, un clic répété ne rejoue pas l'action ; toast COM : `WM_APP_TOAST` sans garde | N1 | `AutoStart.Set(true)` ; succès ou bulle d'erreur | `TrayApplication.cs:753-767,777-785,1617-1625` |
 
@@ -1725,7 +1768,7 @@ Aucun réessai automatique. Les appels WinRT sont bloquants sur la pompe (`AutoS
 #### États ou transitions invalides atteignables
 
 C4.2 corrigé (ticket ME-04) : invariants I1 et I3 rétablis, test `MachinesEtatsLot4Tests.Activation_refusee_par_Windows_n_est_pas_dite_reussie`.
-C4.4 corrigé (ticket ME-04) : invariant I5 rétabli, test `MachinesEtatsLot4Tests.Relance_unique_n_est_pas_proposee_quand_l_etat_est_refuse_ou_inconnu`.
+C4.4 corrigé (ticket ME-04) : invariant I5 rétabli, test `MachinesEtatsLot4Tests.Relance_unique_n_est_pas_proposee_quand_l_etat_est_refuse_ou_inconnu`. Suite : l'état illisible supprime la proposition sans la consommer, test `…Relance_non_consommee_par_un_etat_illisible_repart_quand_il_redevient_lisible`.
 
 
 ### M4.5 — Cache de politiques d'entreprise et canal de distribution
@@ -2308,7 +2351,7 @@ Aucun constat.
 |---|---|
 | Séquence en cours | `TrainingSequenceIndex < DailyChallenge.SequenceLength` |
 | Défi commun | `TrainingSequenceIndex >= SequenceLength` |
-| Fait aujourd'hui | `StoredDate.Parse(TrainingLastSessionDate) >= today` (une date future vaut aujourd'hui, ME-10) |
+| Fait aujourd'hui | `StoredDate.Parse(TrainingLastSessionDate) >= today` (une date future vaut aujourd'hui, ME-10 ; `RepairFutureDates` la réécrit à aujourd'hui, donc le lendemain la séance compte de nouveau) |
 
 #### Invariants
 
@@ -2331,7 +2374,7 @@ Aucune.
 
 #### États ou transitions invalides atteignables
 
-C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Tests.DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : `WouldCount` lit une séance datée d'après aujourd'hui comme faite aujourd'hui, test `MachinesEtatsLot5Tests.DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`.
+C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Tests.DefiCommun_UneSeanceDejaFaiteAujourdhui_NeCompteJamaisDeuxFois_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : `WouldCount` lit une séance datée d'après aujourd'hui comme faite aujourd'hui, test `MachinesEtatsLot5Tests.DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`. Suite : la date future est réécrite à aujourd'hui (`RepairFutureDates`), test `…DefiCommun_SeanceDateeDe400Jours_LeLendemainLaSeanceCompteDeNouveau`. Les deux appels de la réparation ont chacun leur test : la fin de séance (`ChallengeSessionState.Complete`, jour réel et non celui du module), test de comportement `FinDeSeance_RepareUneDateLointaineDansLeFutur` ; le rappel (`MaybeShowTrainingReminder`, appel avant la garde `NotificationsEnabled`), test de texte source `MaybeShowTrainingReminder_ReparePuisSeulementEnsuiteLaGardeDesNotifications`.
 
 ### M5.12 — Rappel d'entraînement (balloon)
 
@@ -2358,6 +2401,7 @@ C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Te
 - I1 : un seul rappel par jour — garanti (`src/TrainingReminders.cs:66`).
 - I2 : jamais deux balloons cliquables le même jour, l'avis prime — garanti (`src/TrainingReminders.cs:63`, garde symétrique côté avis).
 - I3 : trois rappels ignorés arrêtent définitivement — garanti (`src/TrainingReminders.cs:60,120-121`).
+- I4 : une date de rappel ou de séance postérieure à aujourd'hui ne bloque que la journée en cours — garanti depuis la suite de ME-10 : `RepairFutureDates` la ramène à aujourd'hui et la réécrit à chaque tick et à chaque fin de séance.
 
 #### Table de transition
 
@@ -2366,6 +2410,8 @@ C5.1 corrigé (ticket ME-01) : invariant I2 rétabli, test `MachinesEtatsLot5Te
 | 1 | Actif | tick après 17 h | `ShouldRemind` | Ballon en attente | date marquée avant affichage | `src/TrainingReminders.cs:56-92,112` |
 | 2 | Ballon en attente | NIN_BALLOONUSERCLICK | — | Actif | ignorés = 0 | `src/TrainingReminders.cs:116` |
 | 3 | Ballon en attente | NIN_BALLOONTIMEOUT | — | Actif ou Arrêté | ignorés + 1 | `src/TrainingReminders.cs:120-121` |
+| 4 | Actif | tick (toute heure) | date de dernier rappel ou de dernière séance > aujourd'hui | Actif | dates réécrites à aujourd'hui (ME-10, suite) | `TrainingReminders.RepairFutureDates`, `src/TrayApplication.cs` (`MaybeShowTrainingReminder`) ; test de texte source `MaybeShowTrainingReminder_ReparePuisSeulementEnsuiteLaGardeDesNotifications` |
+| 5 | Séquence en cours ou Défi commun | séance finie (`ChallengeSessionState.Complete`) | date de dernier rappel ou de dernière séance > aujourd'hui (jour réel) | idem | dates réécrites à aujourd'hui avant `MarkSessionCompleted` | `src/ChallengeSessionState.cs` (`Complete`), test `FinDeSeance_RepareUneDateLointaineDansLeFutur` |
 
 #### Temporisations et réessais
 
@@ -2373,7 +2419,7 @@ Pas avant 17 h (`:38`) ; un seul rappel par jour ; arrêt au 3e ignoré. Pas d
 
 #### États ou transitions invalides atteignables
 
-C5.1 corrigé (ticket ME-01) : gardes `LastReminderDate` et `LastSessionDate` rétablies, test `MachinesEtatsLot5Tests.Rappel_UnSeulParJour_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : `ShouldRemind` traite un rappel ou une séance datés d'après aujourd'hui comme datés d'aujourd'hui (`>= today`), tests `MachinesEtatsLot5Tests.Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui` et `…Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`.
+C5.1 corrigé (ticket ME-01) : gardes `LastReminderDate` et `LastSessionDate` rétablies, test `MachinesEtatsLot5Tests.Rappel_UnSeulParJour_QuelleQueSoitLaCulture`. C5.7 corrigé (ticket ME-10) : `ShouldRemind` traite un rappel ou une séance datés d'après aujourd'hui comme datés d'aujourd'hui (`>= today`), tests `MachinesEtatsLot5Tests.Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui` et `…Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`. Suite : les dates lointaines sont réécrites à aujourd'hui (`RepairFutureDates`), test `…Rappel_DatesLointainesDansLeFutur_LeLendemainLeRappelRepart`. Le test `MaybeShowTrainingReminder_ReparePuisSeulementEnsuiteLaGardeDesNotifications` lit la méthode : la réparation précède la garde `NotificationsEnabled`, sans quoi un utilisateur qui a coupé les notifications garderait une date lointaine que rien ne répare.
 
 ### Frontières avec les autres lots
 
@@ -2472,7 +2518,7 @@ Aucun constat.
 
 - I1 : `CompleteExercise` ne s'exécute qu'une fois par séance — garanti (`if (_showSummary) return;`, l.2672).
 - I2 : toute nouvelle séance repart de `StartCurrentSession` (l.1096) — garanti : `ReplayExercise`, `GoTo` et `SelectExercise` y passent. Cela ne garantit pas la position enregistrée (voir I4).
-- I3 : fermer la fenêtre solde un bilan lu — garanti sauf en mode Libre (`_mode != Lessons`, l.3047). La garde `IsTutorialActive` (l.3047) est morte : `Hide` appelle `EndTutorial` (l.3241) avant `SettleSessionOnHide` (l.3246), donc le solde s'exécute aussi après un parcours du tutoriel (C6.1).
+- I3 : fermer la fenêtre solde un bilan lu — garanti sauf en mode Libre (`_mode != Lessons`) et pendant le parcours de l'accueil. Depuis ME-12 (C6.1, décision du 16 novembre 2026 : « Rendre la garde active »), `HideWindow` lit `IsTutorialActive` avant `EndTutorial` et le passe à `SettleSessionOnHide(tutorialWasActive)` : la fermeture, « Terminer » et « Passer pour l'instant » du parcours ne soldent rien, le bilan d'une étape n'avance pas la position du catalogue. Avant : `EndTutorial` remettait le parcours à zéro avant la garde, qui était toujours fausse.
 - I4 : la position enregistrée ne désigne jamais le Défi — garanti depuis ME-07 par le magasin : `SetLastPosition` ignore un exercice du Défi, comme `RecordSuccess` (`LessonProgressStore.cs`). Avant : le bouton de remise à zéro est dans l'onglet Réglages (`LessonsWindow.Paper.cs:1001`), module courant inchangé ; après `ShowChallenge`, `ApplyProgressReset` enregistrait le Défi comme position (`StartCurrentSession(savePosition: true)`) (C6.2 corrigé).
 
 #### Table de transition
@@ -2484,7 +2530,7 @@ Aucun constat.
 | 3 | Bilan | Rejouer | — | Frappe | `ReplayExercise` | l.3069 (bouton `LessonsWindow.Paper.cs:867`) |
 | 4 | Bilan | Terminer (fin catalogue) | `AdjacentPosition` nul | Frappe | `StartCurrentSession(false)` puis page « Aujourd'hui » | `FinishPath` l.3033-3037 |
 | 5 | Frappe/Bilan | choisir module/leçon | index valide | Frappe | `HomeClearComposed`, `_settingsOpen=false` | `SelectModule` l.2926, `SelectLesson` l.2939 |
-| 6 | Frappe ou Bilan | Hide | `_mode == Lessons` (la garde `IsTutorialActive` est morte, voir C6.1 : le solde s'exécute aussi après un tutoriel) | Frappe | `SettleSessionOnHide` : bilan lu soldé par `HomeFinishComposed`, `GoTo` (l.3052-3056) ou `StartCurrentSession(false)` en fin de catalogue (l.3057-3061) | l.3238-3246, 3045-3065 |
+| 6 | Frappe ou Bilan | Hide | `_mode == Lessons` et parcours de l'accueil non ouvert à l'appel (`tutorialWasActive` faux, ME-12 C6.1) | Frappe | `SettleSessionOnHide` : bilan lu soldé par `HomeFinishComposed`, `GoTo` ou `StartCurrentSession(false)` en fin de catalogue ; pendant le parcours, rien n'est soldé | `Hide`, `HideWindow`, `SettleSessionOnHide` |
 | 7 | Défi | Hide | — | catalogue | `PickInitialSelection` | l.3063 |
 | 8 | tout | reset confirmé | IDYES | Frappe | `ApplyProgressReset` ; sur le Défi, la séance repart sans enregistrer de position (ME-07) | l.2908-2924 |
 
@@ -2494,7 +2540,7 @@ Aucun constat.
 
 #### États ou transitions invalides atteignables
 
-C6.1
+C6.1 corrigé (ticket ME-12) : invariant I3 rétabli pendant le parcours, tests `MachinesEtatsLot6Tests.Fermeture_PendantLeParcours_NeSoldePasLaSeanceNiNAvanceLaPosition` et `…PasserPourLInstant_AuBilanDuParcours_NeSoldePasLaSeance`.
 C6.2 corrigé (ticket ME-07) : invariant I4 rétabli, tests `MachinesEtatsLot6Tests.ReinitialiserLaProgression_SurLeDefi_NEnregistrePasLeDefiCommePosition` et `…_PuisFermer_RendLaPlaceDuCatalogue`.
 
 ### M6.3 — Tutoriel de l'accueil (_tutorialPage, _tutorialRoute)
@@ -2541,7 +2587,7 @@ Aucune.
 
 #### États ou transitions invalides atteignables
 
-C6.1
+C6.1 corrigé (ticket ME-12) : la garde `IsTutorialActive` de `SettleSessionOnHide` agit, test `MachinesEtatsLot6Tests.Fermeture_PendantLeParcours_NeSoldePasLaSeanceNiNAvanceLaPosition`.
 
 ### M6.4 — Accueil des Leçons (_homePage, séance composée, texte collé)
 
@@ -2723,7 +2769,7 @@ Même objet que M1.7 (lot 1, `PhysicalTextInputBuffer`), décrit en entier là 
 
 #### C6.1 — Garde `IsTutorialActive` inopérante dans `SettleSessionOnHide`
 
-`Hide` appelle `EndTutorial` (l.3241) avant `SettleSessionOnHide` (l.3246) ; la garde `IsTutorialActive` (l.3047) est donc toujours fausse à cet appel. Le comportement observable (solder un bilan) reste correct ; code mort et commentaire trompeur. Gravité faible, confiance basse, non confirmé (aucun test rouge possible sans changer l'ordre).
+`Hide` appelait `EndTutorial` avant `SettleSessionOnHide` ; la garde `IsTutorialActive` était donc toujours fausse à cet appel, et fermer les Leçons sur un bilan du parcours avançait la position du catalogue (test rouge : (0, 0, 0) attendu, (0, 0, 1) obtenu). « Terminer » et « Passer pour l'instant » clôturaient le parcours avant `Hide` : même défaut. Gravité faible. Corrigé par ME-12 (décision d'Antoine, 16 novembre 2026, « Rendre la garde active ») : `HideWindow(tutorialCompleted)` lit l'état du parcours avant de le clore et le passe à `SettleSessionOnHide(tutorialWasActive)` ; `FinishTutorial` et `LeaveTutorialForNow` passent par `HideWindow` sans clore le parcours avant. Les autres lectures de `IsTutorialActive` sont inchangées.
 
 #### C6.2 — La remise à zéro des Leçons enregistre le Défi comme dernière position
 
@@ -2768,6 +2814,7 @@ Protection des états du lot : champs d'instance de l'accueil et de À propos =
 | `OnboardingStep.Count/Last` | const | `src/OnboardingStep.cs:16-19` | — | constantes |
 | `_step3Reached` | bool | `:156` | pompe seule | fil unique |
 | `_stepChangedAt` | long? (ms, horloge `Clock`) | `:164` | pompe seule | fil unique ; posé par `GoToNextStep` et `GoToPreviousStep`, remis à nul par `Show` ; lu par `IsSecondClickOfDoubleClick` (`:680`) |
+| `_nextMouseDoubleClick` | bool | `OnboardingWindow.cs` (après `_stepChangedAt`) | pompe seule | fil unique ; vrai de la réception de `WM_LBUTTONDBLCLK` par « Suivant » à la fin du `WM_LBUTTONUP` qui suit ; effacé par un nouvel appui, `WM_KILLFOCUS`, `WM_CANCELMODE` ; posé et effacé dans `ButtonArrowSubclassProc`, lu par `IsSecondClickOfDoubleClick` |
 | `_visible` | bool | `:268` | pompe seule | fil unique |
 | `_scroll` (position) | `WindowScroll` | `:277` | pompe seule | fil unique |
 
@@ -2784,18 +2831,18 @@ Protection des états du lot : champs d'instance de l'accueil et de À propos =
 
 - I1 : `0 <= _currentStep <= Last`. Garanti par `src/OnboardingWindow.cs:884` `if (_currentStep >= OnboardingStep.Last) return;` et `:893` `if (_currentStep <= 0) return;`. Seul autre écrivain : `Show()` (`:917`), `ResetState()` (`:959`, Debug) et le banc de test.
 - I2 : `_step3Reached` vrai ⇒ l'étape 3 a été affichée depuis le dernier `Show()`. Garanti par `:886` (posé à la transition) et `:919` (remis à faux au `Show`). Remis à faux aussi dans `Close` (`:1026`).
-- I3 : atteindre l'étape 3 ne vaut pas validation ; seul `Close(validated: true)` valide. Garanti pour clavier (`FocusAfterStepChange` sort le focus des boutons) et, depuis ME-03, pour la souris : un `IDC_BTN_NEXT` reçu moins de `GetDoubleClickTime()` après un changement d'étape est ignoré (`IsSecondClickOfDoubleClick`, `:680-685`, garde à `:1157`) ; un clic posé après ce délai agit comme avant. Seule la conversion d'un vrai double clic à la souris en deux clics reste à vérifier à la main.
+- I3 : atteindre l'étape 3 ne vaut pas validation ; seul `Close(validated: true)` valide. Garanti pour clavier (`FocusAfterStepChange` sort le focus des boutons) et, depuis ME-03, pour la souris : un `IDC_BTN_NEXT` reçu moins de `GetDoubleClickTime()` après un changement d'étape ET produit par un `WM_LBUTTONDBLCLK` du bouton (second clic d'un double clic de souris) est ignoré (`IsSecondClickOfDoubleClick`, garde à `:1157`) ; un clic posé après ce délai agit comme avant. Suite du 16 novembre : le filtre ne vise que ce second clic de souris ; Entrée, Espace, flèche, invocation par l'accessibilité (`BM_CLICK`) et « Précédent » puis « Suivant » enchaînés agissent toujours, même dans le délai. Seule la conversion d'un vrai double clic à la souris en `WM_LBUTTONDBLCLK` par le bouton système reste à vérifier à la main.
 - I4 : le focus n'est jamais sur un contrôle masqué. Garanti par deux mécanismes distincts. (1) Contrôles de la dernière étape (cases, liens) : `:701-702` (`if (step3Vis == 0 && IsLastStepControl(GetFocus())) SetFocus(_hWndBtnNext)`), garde limitée à ces contrôles (`IsLastStepControl` `:876-878`). (2) « Suivant » masqué en état A de l'étape 1 (`:754`) : `Show()` place alors le focus sur « Essayer » (`:949`, `_currentStep == 0 && !_learningModuleDone`), jamais sur « Suivant ».
-- I5 : un seul clic ne franchit qu'une étape. Garanti (une `WM_COMMAND` = un `GoToNextStep`) ; deux clics rapprochés (moins que le délai de double clic de Windows) n'en franchissent plus qu'une depuis ME-03. La flèche → / ↓ (T1.2) n'est pas soumise au délai.
+- I5 : un seul clic ne franchit qu'une étape. Garanti (une `WM_COMMAND` = un `GoToNextStep`) ; les deux clics d'un double clic de souris (moins que le délai de double clic de Windows) n'en franchissent plus qu'une depuis ME-03. Deux activations au clavier ou par l'accessibilité en franchissent deux (suite du 16 novembre). La flèche → / ↓ (T1.2) n'est pas soumise au filtre.
 
 #### Table de transition
 
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
-| T1.1 | étape 1 ou 2 | clic/Entrée sur « Suivant » (`IDC_BTN_NEXT`) | `_currentStep < Last` et hors du délai de double clic suivant un changement d'étape (sinon ignoré, sans effet) | étape +1 | `_step3Reached = true` si cible = dernière ; `UpdateStepVisibility` ; `FocusAfterStepChange` (focus → 1re case si dernière) | `:1130-1133`, `:882-889` |
+| T1.1 | étape 1 ou 2 | clic/Entrée sur « Suivant » (`IDC_BTN_NEXT`) | `_currentStep < Last` ; ignoré, sans effet, seulement si c'est le second clic d'un double clic de souris (`WM_LBUTTONDBLCLK` reçu par le bouton) dans le délai de double clic suivant un changement d'étape ; jamais pour Entrée, Espace ou l'accessibilité | étape +1 | `_step3Reached = true` si cible = dernière ; `UpdateStepVisibility` ; `FocusAfterStepChange` (focus → 1re case si dernière) | `:1130-1133`, `:882-889` |
 | T1.2 | étape 1 ou 2 | flèche → ou ↓ | `ForwardArrowAction == Next` | étape +1 | idem T1.1 | `:1229-1236`, `:976-983` |
 | T1.3 | étape 2 ou 3 | « Précédent » ou flèche ← / ↑ | `_currentStep > 0` | étape −1 | `UpdateStepVisibility` ; masque liens/cases ; focus → « Suivant » si focus sur la dernière étape | `:1142-1144`, `:1242-1245`, `:891-897` |
-| T1.4 | étape 3 | « C'est parti ! » | `RequestActivation()` vrai et hors du délai de double clic suivant l'arrivée à l'étape 3 | Fermé | voir M7.2 T2.5 | `:1133-1134` |
+| T1.4 | étape 3 | « C'est parti ! » | `RequestActivation()` vrai ; second clic d'un double clic de souris dans le délai suivant l'arrivée à l'étape 3 ignoré, appui clavier ou accessibilité jamais | Fermé | voir M7.2 T2.5 | `:1133-1134` |
 | T1.5 | étape 3 | flèche → / ↓ avec focus sur « Suivant » et activation acceptée | `ForwardArrowAction == Finish` | Fermé | `Close(validated: true)` | `:1237` |
 | T1.6 | étape 1 ou 2 | flèche ← sur étape 1 / « Précédent » absent | `_currentStep <= 0` | inchangé | aucun | `:893` |
 | T1.7 | toute | `WM_DPICHANGED` / `WM_SETTINGCHANGE` / `AppLanguageChanged` | — | inchangé | recomposition (`UpdateStepVisibility`, polices, palette) ; jamais d'annonce d'étape | `:1075-1087`, `:1105-1109`, `:1430-1435` |
@@ -2807,7 +2854,7 @@ Aucune minuterie propre. Aucun réessai.
 
 #### États ou transitions invalides atteignables
 
-C7.1 corrigé (ticket ME-03) : invariants I3 et I5 rétablis, test `MachinesEtatsLot7Tests.Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`.
+C7.1 corrigé (ticket ME-03) : invariants I3 et I5 rétablis, test `MachinesEtatsLot7Tests.Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`. Suite : le filtre ne perd plus le second appui d'un clavier ou d'un lecteur d'écran, tests `Accueil_DeuxActivationsAuClavierRapprochées_AvancentDeDeuxÉtapes`, `Accueil_PrécédentPuisSuivantEnchaînés_AgissentTousLesDeux`, `Accueil_DoubleClicAbandonné_NeFiltrePasLActivationAuClavierSuivante`.
 
 ### M7.2 — Accueil : cycle de vie, activation et enregistrement des préférences
 

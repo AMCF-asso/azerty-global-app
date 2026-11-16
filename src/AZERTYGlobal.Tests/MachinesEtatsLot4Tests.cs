@@ -173,6 +173,41 @@ public class MachinesEtatsLot4Tests : IDisposable
         Assert.False(ConfigManager.AutoStartNudgeDone);
     }
 
+    // Constat C4.4 (garde, suite ME-04)
+    // Un état Windows illisible supprime la proposition mais ne la consomme pas : au lancement
+    // suivant, quand l'état redevient lisible (Disabled), la relance unique repart.
+    [Fact]
+    public void Relance_non_consommee_par_un_etat_illisible_repart_quand_il_redevient_lisible()
+    {
+        AutoStart.ShortcutExists = () => false;
+        AutoStart.ShortcutEnabler = () => true;
+
+        // Premier lancement : état illisible.
+        AutoStart.WindowsStateReader = () => AutoStartWindowsState.Unknown;
+        var illisible = AutoStartNudge.Snapshot() with
+        {
+            NudgeDone = false,
+            NotificationsEnabled = true,
+            FirstRemapDate = new DateOnly(2026, 8, 10),
+            ActiveDaysCount = AutoStartNudge.MinActiveDays,
+        };
+        Assert.Equal(AutoStartWindowsState.Unknown, illisible.WindowsState);
+        Assert.False(AutoStartNudge.ShouldPrompt(illisible));
+        Assert.False(ConfigManager.AutoStartNudgeDone, "un état illisible ne doit pas consommer la relance");
+
+        // Lancement suivant : l'état est lisible, la relance repart.
+        AutoStart.WindowsStateReader = () => AutoStartWindowsState.Disabled;
+        var lisible = AutoStartNudge.Snapshot() with
+        {
+            NotificationsEnabled = true,
+            FirstRemapDate = new DateOnly(2026, 8, 10),
+            ActiveDaysCount = AutoStartNudge.MinActiveDays,
+        };
+        Assert.Equal(AutoStartWindowsState.Disabled, lisible.WindowsState);
+        Assert.False(lisible.NudgeDone);
+        Assert.True(AutoStartNudge.ShouldPrompt(lisible));
+    }
+
     // ───────────────────────── ME-09 : instance unique et fermeture ─────────────────────────
 
     // Constat C4.5
@@ -312,22 +347,70 @@ public class MachinesEtatsLot4Tests : IDisposable
     }
 
     // Constat C4.3
-    // Les deux sorties du processus passent par l'écriture de fermeture : WM_QUERYENDSESSION
-    // (arrêt annoncé) et Cleanup (menu Quitter, WM_ENDSESSION). Un simple Flush y perdrait le
-    // réglage sur un échec d'écriture.
+    // Les sorties du processus passent par l'écriture de fermeture : Cleanup (menu Quitter) et
+    // WM_ENDSESSION confirmé (wParam non nul), qui appelle Cleanup. Un simple Flush y perdrait le
+    // réglage sur un échec d'écriture. Suite ME-09 : WM_QUERYENDSESSION, qui n'est qu'une demande,
+    // n'y passe plus (voir le test suivant) ; l'écriture de fermeture garde sa place à l'arrêt confirmé.
     [Fact]
-    public void Arret_et_sortie_du_tray_passent_par_l_ecriture_de_fermeture()
+    public void Arret_confirme_et_sortie_du_tray_passent_par_l_ecriture_de_fermeture()
+    {
+        string source = File.ReadAllText(SourceDeLApp("TrayApplication.cs"));
+        int debut = source.IndexOf("case Win32.WM_ENDSESSION:", StringComparison.Ordinal);
+        int fin = source.IndexOf("case Win32.WM_DESTROY:", StringComparison.Ordinal);
+        Assert.True(debut > 0 && fin > debut, "WM_ENDSESSION introuvable dans TrayApplication.cs");
+        string confirme = source[debut..fin];
+
+        Assert.Contains("if (wParam != IntPtr.Zero)", confirme);
+        Assert.Contains("Cleanup();", confirme);
+        Assert.Contains("try { ConfigManager.FlushFinal(); }", source);
+        Assert.DoesNotContain("try { ConfigManager.Flush(); }", source);
+    }
+
+    // Constat C4.3 (suite ME-09 : WM_QUERYENDSESSION n'est qu'une demande)
+    // Une autre application peut annuler l'arrêt, et le message peut arriver plusieurs fois : l'app
+    // reste en vie et son fil d'interface ne doit pas dormir. Écriture impossible : trois demandes
+    // d'arrêt rendent la main sans attente (FlushFinal dormait 750 ms par appel) et sans déclarer
+    // la perte définitive (l'app vit, la minuterie de reprise est armée).
+    [Fact]
+    public void Demande_d_arret_annulee_n_endort_pas_le_fil_d_interface()
+    {
+        FaireEchouerLEcriture(int.MaxValue);
+        ConfigManager.AcceptActivation();
+        _armes.Clear();
+
+        var chrono = System.Diagnostics.Stopwatch.StartNew();
+        for (int demande = 0; demande < 3; demande++) TrayApplication.OnQueryEndSession();
+        chrono.Stop();
+
+        Assert.True(chrono.ElapsedMilliseconds < ConfigManager.FinalFlushDelayMilliseconds,
+            $"trois WM_QUERYENDSESSION ont pris {chrono.ElapsedMilliseconds} ms : le fil d'interface dort");
+        Assert.NotEmpty(_armes);
+        string journal = Path.Combine(_dir, "error.log");
+        if (File.Exists(journal))
+        {
+            using var flux = new FileStream(journal, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var lecteur = new StreamReader(flux);
+            Assert.DoesNotContain("ConfigFinalWriteLost", lecteur.ReadToEnd());
+        }
+    }
+
+    // Constat C4.3 (suite ME-09 : le message lui-même)
+    // Le test précédent appelle OnQueryEndSession directement : il ne voit pas ce que fait le case
+    // de WM_QUERYENDSESSION. Ce test lit le case : il appelle OnQueryEndSession, et rien d'autre
+    // qu'une réponse ; l'écriture de fermeture (qui dort jusqu'à 750 ms) n'y revient pas.
+    [Fact]
+    public void Demande_d_arret_appelle_OnQueryEndSession_et_n_ecrit_pas_la_fermeture_dans_le_case()
     {
         string source = File.ReadAllText(SourceDeLApp("TrayApplication.cs"));
         int debut = source.IndexOf("case Win32.WM_QUERYENDSESSION:", StringComparison.Ordinal);
         int fin = source.IndexOf("case Win32.WM_ENDSESSION:", StringComparison.Ordinal);
         Assert.True(debut > 0 && fin > debut, "WM_QUERYENDSESSION introuvable dans TrayApplication.cs");
-        string arret = source[debut..fin];
+        string demande = source[debut..fin];
 
-        Assert.Contains("ConfigManager.FlushFinal();", arret);
-        Assert.DoesNotContain("ConfigManager.Flush();", arret);
-        Assert.Contains("try { ConfigManager.FlushFinal(); }", source);
-        Assert.DoesNotContain("try { ConfigManager.Flush(); }", source);
+        Assert.Contains("OnQueryEndSession();", demande);
+        Assert.DoesNotContain("FlushFinal", demande);
+        Assert.DoesNotContain("Cleanup", demande);
+        Assert.DoesNotContain("Thread.Sleep", demande);
     }
 
     private static string SourceDeLApp(string fichier)
