@@ -246,8 +246,7 @@ sealed class TrayApplication : IDisposable
             szInfo = "",
             szInfoTitle = ""
         };
-        PrepareTrayIconForAdd(ref _nid);
-        Shell.Shell_NotifyIconW(NIM_ADD, ref _nid);
+        AddTrayIcon(firstAttempt: true);
 
         // Le tooltip du tray garde son texte tant que l'état ne change pas : le rafraîchir
         // explicitement quand la langue change (Paramètres ou onboarding).
@@ -570,6 +569,16 @@ sealed class TrayApplication : IDisposable
     private const uint TIMER_REVIEW_QUIET = 9050;
     private const uint REVIEW_QUIET_POLL_MS = 5_000;
     private const long REVIEW_QUIET_SILENCE_MS = 15_000;
+
+    // C3.6 (audit par frappe au hasard, décision d'Antoine du 16 novembre 2026) : un
+    // Explorer qui redémarre peut refuser le NIM_ADD envoyé sur TaskbarCreated, sa zone de
+    // notification n'étant pas encore prête. Sans réessai, l'icône restait absente jusqu'au
+    // redémarrage suivant d'Explorer. Réessai à intervalle fixe, borné : 15 × 2 s couvrent
+    // un démarrage lent sans tourner indéfiniment si le shell n'a pas de zone de notification.
+    private const uint TIMER_TRAY_ADD_RETRY = 9070;
+    private const uint TRAY_ADD_RETRY_INTERVAL_MS = 2_000;
+    private const int TRAY_ADD_MAX_RETRIES = 15;
+    private int _trayAddRetries;
 
     // Message TaskbarCreated (Explorer restart / chargement tardif au boot)
     private readonly uint _wmTaskbarCreated = Win32.RegisterWindowMessageW("TaskbarCreated");
@@ -1092,6 +1101,11 @@ sealed class TrayApplication : IDisposable
                         // Timer récurrent : présence d'un hôte de prise en main à distance (C5).
                         ProbeRemoteHost();
                     }
+                    else if (timerId == TIMER_TRAY_ADD_RETRY)
+                    {
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY);
+                        AddTrayIcon(firstAttempt: false);
+                    }
                     return IntPtr.Zero;
 
                 case Win32.WM_INPUTLANGCHANGE:
@@ -1156,8 +1170,7 @@ sealed class TrayApplication : IDisposable
                     // TaskbarCreated : Explorer a (re)démarré — réenregistrer l'icône et le hook
                     if (_wmTaskbarCreated != 0 && msg == _wmTaskbarCreated)
                     {
-                        PrepareTrayIconForAdd(ref _nid);
-                        Shell.Shell_NotifyIconW(NIM_ADD, ref _nid);
+                        AddTrayIcon(firstAttempt: true);
                         ReinstallHook();
                         return IntPtr.Zero;
                     }
@@ -2423,6 +2436,9 @@ sealed class TrayApplication : IDisposable
         Shell.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG);
         Shell.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE);
         Shell.KillTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH);
+        // Un réessai en attente remettrait l'icône après le NIM_DELETE ci-dessous (WM_ENDSESSION
+        // nettoie sans détruire la fenêtre, donc sans tuer ses minuteries).
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY);
         Win32.WTSUnRegisterSessionNotification(_hWnd);
         _mapper?.ClearPassedThroughKeys();
         SecureInputDetector.ResultChangedLate -= OnSecureInputLateResult;
@@ -2467,6 +2483,36 @@ sealed class TrayApplication : IDisposable
         // Après un redémarrage d'Explorer, NIM_ADD doit donc réannoncer explicitement
         // le callback, l'icône et le tooltip pour reconstruire une entrée tray complète.
         data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+    }
+
+    /// <summary>
+    /// Ajoute l'icône de la zone de notification, et la réessaie si Explorer la refuse (C3.6).
+    /// <paramref name="firstAttempt"/> (démarrage, TaskbarCreated) remet le compte d'essais à
+    /// zéro : un nouvel Explorer mérite une nouvelle série. Un NIM_ADD refusé alors que l'entrée
+    /// existe déjà (TaskbarCreated répété) est reconnu par un NIM_MODIFY accepté : rien à refaire.
+    /// </summary>
+    private void AddTrayIcon(bool firstAttempt)
+    {
+        if (_cleaned) return;
+        if (firstAttempt)
+        {
+            _trayAddRetries = 0;
+            Shell.KillTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY);
+        }
+
+        PrepareTrayIconForAdd(ref _nid);
+        if (Shell.Shell_NotifyIconW(NIM_ADD, ref _nid)) return;
+        PrepareTrayIconForAdd(ref _nid);
+        if (Shell.Shell_NotifyIconW(NIM_MODIFY, ref _nid)) return;
+
+        if (_trayAddRetries >= TRAY_ADD_MAX_RETRIES)
+        {
+            ConfigManager.LogCompatEvent("TrayIconAddFailed",
+                $"NIM_ADD refused {TRAY_ADD_MAX_RETRIES + 1} times, icon absent until the next TaskbarCreated");
+            return;
+        }
+        _trayAddRetries++;
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY, TRAY_ADD_RETRY_INTERVAL_MS, IntPtr.Zero);
     }
 
     /// <summary>

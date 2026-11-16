@@ -16,6 +16,7 @@ namespace AZERTYGlobal.Tests;
 public sealed class CoutureTrayTests
 {
     private const uint TimerPause = 9030;          // TrayApplication.TIMER_PAUSE
+    private const uint TimerAjoutIcone = 9070;     // TrayApplication.TIMER_TRAY_ADD_RETRY
     private const uint NimAdd = 0;
     private const int WtsSessionLock = 0x7;
     private const int PbtApmSuspend = 0x4;
@@ -80,10 +81,10 @@ public sealed class CoutureTrayTests
         Assert.True(faux.IconePresente);
     }
 
-    // C3.6 confirmé par la couture : Explorer qui redémarre refuse le premier NIM_ADD (il n'a
-    // pas fini de créer la zone de notification) ; l'application ne réessaie jamais et
-    // l'icône reste absente jusqu'au prochain redémarrage d'Explorer.
-    [Fact(Skip = "C3.6 confirmé le 16 novembre 2026 (rouge sur l'assertion finale, aucun réessai de NIM_ADD) : correctif soumis à Antoine ; listé dans scripts/verify.ps1 ($ignoresAttendus)")]
+    // C3.6 confirmé par la couture, puis corrigé (décision d'Antoine du 16 novembre 2026) :
+    // Explorer qui redémarre refuse le premier NIM_ADD (il n'a pas fini de créer la zone de
+    // notification) ; sans réessai, l'icône restait absente jusqu'au redémarrage suivant.
+    [Fact]
     public void C3_6_NimAddRefuse_EstReessaye()
     {
         using var iso = new BancCapture.Isolation();
@@ -99,6 +100,60 @@ public sealed class CoutureTrayTests
         foreach (var id in faux.Minuteries.ToArray())
             wndProc((IntPtr)0x1234, Win32.WM_TIMER, (IntPtr)id, IntPtr.Zero);
         Assert.True(faux.IconePresente, "C3.6 : NIM_ADD refusé après TaskbarCreated, aucun réessai");
+        Assert.Empty(faux.Minuteries);   // l'icône posée, plus de réessai en attente
+    }
+
+    // C3.6, borne : un shell qui refuse toujours n'entraîne pas de réessai sans fin.
+    // 1 essai sur TaskbarCreated + TRAY_ADD_MAX_RETRIES (15) réessais, puis plus rien.
+    [Fact]
+    public void C3_6_NimAddToujoursRefuse_ReessaisBornes()
+    {
+        using var iso = new BancCapture.Isolation();
+        var (_, faux, wndProc) = Tray();
+        faux.ResultatIcone = m => m != NimAdd;
+        wndProc((IntPtr)0x1234, Win32.RegisterWindowMessageW("TaskbarCreated"), IntPtr.Zero, IntPtr.Zero);
+        for (int tick = 0; tick < 40 && faux.Minuteries.Contains(TimerAjoutIcone); tick++)
+            wndProc((IntPtr)0x1234, Win32.WM_TIMER, (IntPtr)TimerAjoutIcone, IntPtr.Zero);
+        Assert.Equal(16, faux.AjoutsDepuis(0));
+        Assert.DoesNotContain(TimerAjoutIcone, faux.Minuteries);
+        Assert.False(faux.IconePresente);
+
+        // Un nouvel Explorer ouvre une nouvelle série.
+        faux.ResultatIcone = _ => true;
+        wndProc((IntPtr)0x1234, Win32.RegisterWindowMessageW("TaskbarCreated"), IntPtr.Zero, IntPtr.Zero);
+        Assert.True(faux.IconePresente);
+    }
+
+    // C3.6, TaskbarCreated répété alors que l'icône existe : NIM_ADD échoue, NIM_MODIFY
+    // l'accepte, aucun réessai n'est armé.
+    [Fact]
+    public void C3_6_IconeDejaPresente_AucunReessai()
+    {
+        using var iso = new BancCapture.Isolation();
+        var (_, faux, wndProc) = Tray();
+        faux.IconePresente = true;
+        wndProc((IntPtr)0x1234, Win32.RegisterWindowMessageW("TaskbarCreated"), IntPtr.Zero, IntPtr.Zero);
+        Assert.True(faux.IconePresente);
+        Assert.DoesNotContain(TimerAjoutIcone, faux.Minuteries);
+    }
+
+    // C3.6, nettoyage : un réessai en attente ne remet pas l'icône après Cleanup (WM_ENDSESSION
+    // nettoie sans détruire la fenêtre).
+    [Fact]
+    public void C3_6_Cleanup_AnnuleLeReessaiEnAttente()
+    {
+        using var iso = new BancCapture.Isolation();
+        var (tray, faux, wndProc) = Tray();
+        faux.ResultatIcone = m => m != NimAdd;
+        wndProc((IntPtr)0x1234, Win32.RegisterWindowMessageW("TaskbarCreated"), IntPtr.Zero, IntPtr.Zero);
+        Assert.Contains(TimerAjoutIcone, faux.Minuteries);
+        Appeler(tray, "Cleanup");
+        Assert.DoesNotContain(TimerAjoutIcone, faux.Minuteries);
+        faux.ResultatIcone = _ => true;
+        int ajouts = faux.AjoutsDepuis(0);
+        wndProc((IntPtr)0x1234, Win32.WM_TIMER, (IntPtr)TimerAjoutIcone, IntPtr.Zero);   // tick déjà en file
+        Assert.Equal(ajouts, faux.AjoutsDepuis(0));
+        Assert.False(faux.IconePresente);
     }
 
     // M3.8 I3, voie AFH-4 : verrouillage et veille oublient les appuis en cours ; l'heure d'un

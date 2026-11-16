@@ -152,7 +152,7 @@ Trente-neuf constats ont été relevés sur `250c4ef` : 15 confirmés, 4 atteint
 | C3.3 | M3.5 | `_layoutPopupOpen` posé avant la construction de la fenêtre, sans `try/finally` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.4 | M3.1 | Le raccourci global exécute tout `OnToggle`/`StopPause` dans le rappel du hook clavier | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.5 | M3.3 | Bulles à usage unique marquées faites avant l'affichage, dans la foulée du `NIM_ADD` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
-| C3.6 | M3.6 | `NIM_ADD` sans contrôle de retour ni réessai, y compris sur `TaskbarCreated` | confirmé (couture `ITrayShell`, 16 novembre 2026), correctif à décider | faible | ME-13 | `CoutureTrayTests.C3_6_NimAddRefuse_EstReessaye` (rouge, ignoré) |
+| C3.6 | M3.6 | `NIM_ADD` sans contrôle de retour ni réessai, y compris sur `TaskbarCreated` | confirmé (couture `ITrayShell`), puis corrigé, 16 novembre 2026 : réessai borné | faible | ME-13 | `CoutureTrayTests.C3_6_*` (4 tests : réessai, borne, doublon, nettoyage) |
 | C3.7 | M3.5 | Fenêtre de conflit de disposition sans garde sur l'état de l'application | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C4.1 | M4.1 | Mutex `Local\` créé par une instance élevée : le lancement non élevé plante avant tout gestionnaire d'erreur | corrigé | faible | ME-09 | `AZERTYGlobal/Program.cs` (`AcquireSingleInstance`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Mutex_local_refuse_par_une_instance_elevee_est_une_seconde_instance`, `Acquisition_des_deux_mutex_dit_qui_l_on_est`, `Mutex_global_indisponible_laisse_demarrer_en_mode_degrade`) |
 | C4.2 | M4.4 | Version non packagée : `IsRegistered` ignore le refus de Windows, donc `Set(true)` rend vrai sans effet réel | corrigé | moyenne | ME-04 | `AZERTYGlobal/AutoStart.cs` (`IsRegistered`, `DefaultOnboardingCheck`, `GetFailureMessage`), `Localization/L.Startup.cs` (`AutoStart_FailureMessageRefused`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Accueil_ne_coche_pas_la_case_quand_Windows_refuse_meme_si_le_raccourci_existe`, `Activation_refusee_par_Windows_n_est_pas_dite_reussie`, `Case_des_Parametres_et_de_l_accueil_refletent_le_refus_de_Windows`, `Refus_de_Windows_renvoie_vers_les_Parametres_Windows`) |
@@ -1383,7 +1383,7 @@ Icône absente, présente ; fenêtre de bascule masquée, visible (2 s).
 
 #### Invariants
 
-- I1 L'icône existe tant que l'application tourne : non garanti (C3.6). `Win32.Shell_NotifyIconW(NIM_ADD, ref _nid); ReinstallHook();` (1109-1110, retour ignoré).
+- I1 L'icône existe tant que l'application tourne : garanti depuis le correctif de C3.6 (16 novembre 2026 : `AddTrayIcon`, réessai toutes les 2 s, 15 fois au plus, puis au prochain `TaskbarCreated`). Avant : `Win32.Shell_NotifyIconW(NIM_ADD, ref _nid); ReinstallHook();` (1109-1110, retour ignoré).
 - I2 `ToggleNotification` se ferme 2 s après la dernière bascule : garanti (`KillTimer` puis `SetTimer 2000`, `src/ToggleNotification.cs:104-105`).
 
 #### Table de transition

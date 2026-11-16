@@ -13,7 +13,7 @@ internal sealed class FauxTrayShell : ITrayShell
 
     public HashSet<uint> Minuteries { get; } = new();
     public List<uint> Icone { get; } = new();                 // NIM_* reçus, dans l'ordre
-    public bool IconePresente { get; private set; }
+    public bool IconePresente { get; set; }
     /// <summary>Appels de Shell_NotifyIconW refusés par <see cref="ResultatIcone"/>.</summary>
     public int Refus { get; private set; }
     /// <summary>Résultat de Shell_NotifyIconW selon le NIM_* (défaut : vrai).</summary>
@@ -40,6 +40,10 @@ internal sealed class FauxTrayShell : ITrayShell
         Icone.Add(message);
         bool ok = ResultatIcone(message);
         if (!ok) Refus++;
+        // Comme Explorer : NIM_ADD d'une entrée existante, ou NIM_MODIFY / NIM_DELETE d'une
+        // entrée absente, échouent (sans compter dans Refus, réservé aux refus injectés).
+        if (ok && message == NimAdd && IconePresente) return false;
+        if (ok && message != NimAdd && !IconePresente) return false;
         if (ok && message == NimAdd) IconePresente = true;
         if (ok && message == NimDelete) IconePresente = false;
         return ok;
