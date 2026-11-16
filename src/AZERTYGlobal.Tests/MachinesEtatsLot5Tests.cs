@@ -243,6 +243,111 @@ public sealed class MachinesEtatsLot5Tests
         Assert.False(TrainingReminders.ShouldRemind(soir, TrainingReminders.Snapshot()));
     }
 
+    // Constat C5.7 (suite ME-10 : la date lointaine est réécrite)
+    // Une date de rappel ou de séance à +400 jours (horloge avancée puis remise) ne bloque que la
+    // journée en cours : RepairFutureDates la ramène à aujourd'hui et la réécrit, le lendemain le
+    // rappel repart et la séance du Défi commun compte de nouveau.
+    [Fact]
+    public void Rappel_DatesLointainesDansLeFutur_LeLendemainLeRappelRepart()
+    {
+        using var isolation = new BancCapture.Isolation();
+        ConfigManager.SetTrainingEnabled(true);
+        TrainingReminders.MarkReminderShown(Jour.AddDays(400));
+        ConfigManager.SetTrainingLastSessionDate(JourTexte(Jour.AddDays(400)));
+
+        TrainingReminders.RepairFutureDates(Jour);
+
+        Assert.Equal(JourTexte(Jour), ConfigManager.TrainingLastReminderDate);
+        Assert.Equal(JourTexte(Jour), ConfigManager.TrainingLastSessionDate);
+        var soir = Jour.ToDateTime(new TimeOnly(TrainingReminders.EarliestHour + 1, 0));
+        Assert.False(TrainingReminders.ShouldRemind(soir, TrainingReminders.Snapshot()),
+            "le jour même, le rappel reste bloqué");
+        Assert.True(TrainingReminders.ShouldRemind(soir.AddDays(1), TrainingReminders.Snapshot()),
+            "le lendemain, le rappel repart");
+    }
+
+    [Fact]
+    public void DefiCommun_SeanceDateeDe400Jours_LeLendemainLaSeanceCompteDeNouveau()
+    {
+        using var isolation = new BancCapture.Isolation();
+        ConfigManager.SetTrainingSequenceIndex(DailyChallenge.SequenceLength);
+        ConfigManager.SetTrainingLastSessionDate(JourTexte(Jour.AddDays(400)));
+
+        TrainingReminders.RepairFutureDates(Jour);
+
+        Assert.False(TrainingReminders.WouldCount(Jour, DailyChallenge.SequenceLength));
+        Assert.True(TrainingReminders.WouldCount(Jour.AddDays(1), DailyChallenge.SequenceLength));
+    }
+
+    // Constat C5.7 (garde : une date passée ou du jour n'est pas touchée)
+    [Fact]
+    public void Rappel_DatesDuJourOuPassees_RepairFutureDatesNeLesChangePas()
+    {
+        using var isolation = new BancCapture.Isolation();
+        TrainingReminders.MarkReminderShown(Jour);
+        ConfigManager.SetTrainingLastSessionDate(JourTexte(Jour.AddDays(-3)));
+
+        TrainingReminders.RepairFutureDates(Jour);
+
+        Assert.Equal(JourTexte(Jour), ConfigManager.TrainingLastReminderDate);
+        Assert.Equal(JourTexte(Jour.AddDays(-3)), ConfigManager.TrainingLastSessionDate);
+    }
+
+    // Constat C5.7 (suite ME-10 : les deux appels de réparation)
+    // Les tests ci-dessus n'appellent que RepairFutureDates. Retirer l'appel de la fin de séance du
+    // Défi, ou celui du rappel, les laissait verts : deux tests les couvrent maintenant.
+    // Fin de séance : une date de rappel à +400 jours est ramenée à aujourd'hui par Complete (la
+    // séance elle-même ne touche pas à la date de rappel), et la date de séance à +400 jours, qui
+    // empêcherait de compter la séance du jour, l'est aussi.
+    [Fact]
+    public void FinDeSeance_RepareUneDateLointaineDansLeFutur()
+    {
+        using var isolation = new BancCapture.Isolation();
+        ConfigManager.SetTrainingEnabled(true);
+        ConfigManager.SetTrainingSequenceIndex(DailyChallenge.SequenceLength);
+        var aujourdhui = DateOnly.FromDateTime(DateTime.Now);
+        ConfigManager.SetTrainingLastReminderDate(JourTexte(aujourdhui.AddDays(400)));
+        ConfigManager.SetTrainingLastSessionDate(JourTexte(aujourdhui.AddDays(400)));
+        var etat = new ChallengeSessionState();
+        etat.LoadCatalog();
+
+        etat.Complete(new LessonAttemptStats(), previousBestWpm: null);
+
+        Assert.Equal(JourTexte(aujourdhui), ConfigManager.TrainingLastReminderDate);
+        Assert.Equal(JourTexte(aujourdhui), ConfigManager.TrainingLastSessionDate);
+    }
+
+    // Rappel : la réparation précède la garde NotificationsEnabled, sinon un utilisateur qui a coupé
+    // les notifications garderait une date lointaine que rien ne répare. MaybeShowTrainingReminder
+    // est une méthode d'instance privée de TrayApplication (fenêtre cachée) : test de texte source, dans le style
+    // des tests voisins (voir MachinesEtatsLot4Tests).
+    [Fact]
+    public void MaybeShowTrainingReminder_ReparePuisSeulementEnsuiteLaGardeDesNotifications()
+    {
+        string source = File.ReadAllText(SourceDeLApp("TrayApplication.cs"));
+        int debut = source.IndexOf("private void MaybeShowTrainingReminder()", StringComparison.Ordinal);
+        Assert.True(debut > 0, "MaybeShowTrainingReminder introuvable dans TrayApplication.cs");
+        int fin = source.IndexOf("catch (Exception ex)", debut, StringComparison.Ordinal);
+        Assert.True(fin > debut, "fin de MaybeShowTrainingReminder introuvable");
+        string methode = source[debut..fin];
+
+        int reparation = methode.IndexOf("TrainingReminders.RepairFutureDates(", StringComparison.Ordinal);
+        int garde = methode.IndexOf("ConfigManager.NotificationsEnabled", StringComparison.Ordinal);
+        Assert.True(reparation >= 0, "RepairFutureDates n'est plus appelé par MaybeShowTrainingReminder");
+        Assert.True(garde >= 0, "la garde NotificationsEnabled a disparu");
+        Assert.True(reparation < garde, "RepairFutureDates doit précéder la garde NotificationsEnabled");
+    }
+
+    private static string SourceDeLApp(string fichier)
+    {
+        for (var dossier = new DirectoryInfo(AppContext.BaseDirectory); dossier != null; dossier = dossier.Parent)
+        {
+            string chemin = Path.Combine(dossier.FullName, "src", fichier);
+            if (File.Exists(chemin)) return chemin;
+        }
+        throw new FileNotFoundException(fichier);
+    }
+
     // Constat C5.5
     // Statistiques ouverte avec la section « Défi du jour » visible (opt-in coché) ; l'opt-in est
     // décoché depuis les Paramètres (fenêtre non modale) pendant l'ouverture. La peinture relit le

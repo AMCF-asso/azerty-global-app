@@ -141,7 +141,11 @@ internal sealed class ChallengeSessionState
                 ConfigManager.SetTrainingBestWpm((uint)best);
         }
         catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeBest", ex); }
-        try { TrainingReminders.MarkSessionCompleted(_moduleDate, _moduleSequenceIndex); }
+        try
+        {
+            TrainingReminders.RepairFutureDates(DateOnly.FromDateTime(DateTime.Now)); // jour réel, pas celui du module
+            TrainingReminders.MarkSessionCompleted(_moduleDate, _moduleSequenceIndex);
+        }
         catch (Exception ex) { ConfigManager.Log("LessonsWindow.ChallengeCompleted", ex); }
     }
 

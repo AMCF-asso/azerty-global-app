@@ -3044,10 +3044,14 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// suivant attend, une séance composée rend le catalogue) ; le Défi, qui ne s'ouvre que par
     /// ShowChallenge, rend la place du catalogue d'où l'on venait. Sans cela, la réouverture
     /// rendait l'ancien bilan, et le Défi périmé renvoyait à l'Initiation.
+    /// Pendant le parcours de l'accueil, rien n'est soldé : le bilan d'une étape ne fait pas
+    /// avancer le catalogue (ME-12, C6.1, QCM du 16/11/2026). <paramref name="tutorialWasActive"/>
+    /// est lu par l'appelant avant EndTutorial, qui remet le parcours à zéro : lire
+    /// IsTutorialActive ici rendait la garde toujours fausse.
     /// </summary>
-    private void SettleSessionOnHide()
+    private void SettleSessionOnHide(bool tutorialWasActive)
     {
-        if (_mode != WindowMode.Lessons || IsTutorialActive) return;
+        if (_mode != WindowMode.Lessons || tutorialWasActive) return;
         bool onChallenge = _homeComposed == null && CurrentModule.Id == DailyChallenge.ModuleId;
         if (_showSummary)
         {
@@ -3242,15 +3246,22 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _pendingPhysicalText.Clear();
     }
 
-    private void Hide()
+    private void Hide() => HideWindow(tutorialCompleted: _tutorialPage == TutorialPage.Final);
+
+    /// <summary>Ferme la fenêtre. Le parcours de l'accueil, s'il est ouvert, est clos ici :
+    /// <paramref name="tutorialCompleted"/> dit si l'écran final vaut réussite. « Terminer » et
+    /// « Passer pour l'instant » passent aussi par cette méthode, sans clore le parcours avant :
+    /// le solde de la séance doit encore savoir qu'il était ouvert (C6.1).</summary>
+    private void HideWindow(bool tutorialCompleted)
     {
+        bool tutorialWasActive = IsTutorialActive;
         // Parcours de l'accueil : fermer la fenêtre le clôt ; l'écran final atteint vaut réussite.
-        EndTutorial(completed: _tutorialPage == TutorialPage.Final);
+        EndTutorial(completed: tutorialCompleted);
         // Audit 1.3.0, A3 : les exercices font allumer Verr. Maj. ; la fenêtre ne la laisse pas
         // allumée derrière elle (Show l'éteint déjà à l'ouverture).
         _mapper.RequestCapsLockOff();
         SaveWindowBounds();
-        SettleSessionOnHide();
+        SettleSessionOnHide(tutorialWasActive);
         _visible = false;
         _challenge.EndRequest();
         LearningSessionTracker.Closed(this);

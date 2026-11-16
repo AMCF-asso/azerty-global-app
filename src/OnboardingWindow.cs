@@ -162,6 +162,9 @@ sealed class OnboardingWindow : IDisposable
     private bool _dontShowShownChecked;
     // Instant du dernier changement d'étape (C7.1), nul tant qu'aucun depuis l'ouverture.
     private long? _stepChangedAt;
+    // Vrai entre le WM_LBUTTONDBLCLK reçu par « Suivant » et la fin du relâchement qui en fait un clic :
+    // le WM_COMMAND produit dans cet intervalle est le second clic d'un double clic de souris (C7.1).
+    private bool _nextMouseDoubleClick;
     // Vrai des qu'on lance le parcours une premiere fois (gardé dans la config, audit 1.3.0, A1).
     // Distincte de _learningModuleDone (qui n'est mis a true qu'a la complete reussite des
     // exercices du parcours). Etat B (essaye non complete) sert a afficher « Suivant » a cote de
@@ -676,9 +679,14 @@ sealed class OnboardingWindow : IDisposable
     /// le second clic d'un double clic sur « Suivant » validait l'accueil sans que l'étape 3 ait été
     /// vue. Un clic reçu pendant le délai de double clic de Windows après un changement d'étape est
     /// donc ignoré ; un clic posé après ce délai agit comme avant.
+    /// Suite : seul le second clic d'un double clic de SOURIS est visé. Le bouton le reconnaît au
+    /// WM_LBUTTONDBLCLK qu'il reçoit (<see cref="ButtonArrowSubclassProc"/>) ; une activation au clavier
+    /// (Entrée, Espace, flèche), par l'accessibilité ou « Précédent » puis « Suivant » n'en émet pas :
+    /// elle agit toujours, même dans le délai.
     /// </summary>
     private bool IsSecondClickOfDoubleClick()
     {
+        if (!_nextMouseDoubleClick) return false;
         if (_stepChangedAt is not long at) return false;
         long elapsed = Clock() - at;
         return elapsed >= 0 && elapsed < DoubleClickDelay();
@@ -1539,6 +1547,28 @@ sealed class OnboardingWindow : IDisposable
             {
                 Win32.SendMessageW(_hWnd, Win32.WM_KEYDOWN, wParam, lParam);
                 return IntPtr.Zero;
+            }
+        }
+
+        // C7.1 (suite) : repérer le second clic d'un double clic de souris sur « Suivant ». Le bouton
+        // système traite WM_LBUTTONDBLCLK comme un appui, puis le relâchement envoie le WM_COMMAND
+        // pendant ce même WM_LBUTTONUP : le repère vit donc de l'un à l'autre, et tout ce qui peut
+        // interrompre ce geste (nouvel appui, perte du focus, annulation du mode) l'efface.
+        if (uIdSubclass == (UIntPtr)20)
+        {
+            switch (msg)
+            {
+                case Win32.WM_LBUTTONDBLCLK:
+                    _nextMouseDoubleClick = true;
+                    break;
+                case Win32.WM_LBUTTONDOWN:
+                case Win32.WM_KILLFOCUS:
+                case 0x001F: // WM_CANCELMODE
+                    _nextMouseDoubleClick = false;
+                    break;
+                case Win32.WM_LBUTTONUP:
+                    try { return Win32.DefSubclassProc(hWnd, msg, wParam, lParam); }
+                    finally { _nextMouseDoubleClick = false; }
             }
         }
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);

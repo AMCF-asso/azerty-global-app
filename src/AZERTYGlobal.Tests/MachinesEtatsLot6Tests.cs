@@ -29,6 +29,11 @@ public sealed class MachinesEtatsLot6Tests
         Assert.True(BancCapture.Field<bool>(fenêtre, "_showSummary"));
     }
 
+    private static (int Module, int Lecon, int Exercice) Position(LessonsWindow fenêtre) =>
+        (BancCapture.Field<int>(fenêtre, "_moduleIndex"),
+         BancCapture.Field<int>(fenêtre, "_lessonIndex"),
+         BancCapture.Field<int>(fenêtre, "_exerciseIndex"));
+
     // Constat C6.2
     // Le Défi est l'exercice courant (OpenChallenge), puis « Réinitialiser la progression » est
     // confirmée : ApplyProgressReset relance la séance avec savePosition: true et enregistre le
@@ -71,6 +76,76 @@ public sealed class MachinesEtatsLot6Tests
 
             var courant = (LessonModule)BancCapture.Call(fenêtre, "get_CurrentModule")!;
             Assert.NotEqual(DailyChallenge.ModuleId, courant.Id);
+        }
+        finally { BancCapture.Teardown(fenêtre); }
+    }
+
+    // Constat C6.1 (décision d'Antoine, QCM du 16 novembre 2026 : « Rendre la garde active »)
+    // Fenêtre fermée pendant le parcours de prise en main, sur un bilan : Hide appelait EndTutorial
+    // avant SettleSessionOnHide, donc la garde IsTutorialActive était toujours fausse et le solde
+    // avançait la position du catalogue. Pendant le parcours, la fermeture ne solde pas la séance.
+    // Modèle suivi : FocusAndStateTests.Closing_on_a_summary_moves_on_to_the_next_exercise
+    // (Hide par BancCapture.Call) et Audit0911Lot8Tests.Passer_cet_exercice_disparait_au_bilan
+    // (parcours amorcé par BeginTutorial et StartTutorialRoute).
+    [Fact]
+    public void Fermeture_PendantLeParcours_NeSoldePasLaSeanceNiNAvanceLaPosition()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var fenêtre = Ouvrir();
+        try
+        {
+            fenêtre.BeginTutorial();
+            BancCapture.Call(fenêtre, "StartTutorialRoute");
+            Assert.True(fenêtre.IsTutorialActive);
+            Taper(fenêtre);
+            var avant = Position(fenêtre);
+
+            BancCapture.Call(fenêtre, "Hide");
+
+            Assert.Equal(avant, Position(fenêtre));
+        }
+        finally { BancCapture.Teardown(fenêtre); }
+    }
+
+    // Constat C6.1 (variante : « Passer pour l'instant », qui clôt le parcours puis ferme)
+    // LeaveTutorialForNow appelait EndTutorial puis Hide : le tutoriel était déjà inactif quand
+    // la garde était lue. Même invariant : le bilan d'une étape du parcours n'avance rien.
+    [Fact]
+    public void PasserPourLInstant_AuBilanDuParcours_NeSoldePasLaSeance()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var fenêtre = Ouvrir();
+        try
+        {
+            fenêtre.BeginTutorial();
+            BancCapture.Call(fenêtre, "StartTutorialRoute");
+            Taper(fenêtre);
+            var avant = Position(fenêtre);
+
+            BancCapture.Call(fenêtre, "LeaveTutorialForNow");
+
+            Assert.False(fenêtre.IsTutorialActive);
+            Assert.Equal(avant, Position(fenêtre));
+        }
+        finally { BancCapture.Teardown(fenêtre); }
+    }
+
+    // Constat C6.1 (garde-fou : hors parcours, le solde à la fermeture reste actif, invariant I3)
+    // Un bilan lu des Leçons, fenêtre fermée : l'exercice suivant attend.
+    [Fact]
+    public void Fermeture_HorsParcours_AuBilan_SoldeToujoursLaSeance()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var fenêtre = Ouvrir();
+        try
+        {
+            Assert.False(fenêtre.IsTutorialActive);
+            Taper(fenêtre);
+            var avant = Position(fenêtre);
+
+            BancCapture.Call(fenêtre, "Hide");
+
+            Assert.NotEqual(avant, Position(fenêtre));
         }
         finally { BancCapture.Teardown(fenêtre); }
     }
