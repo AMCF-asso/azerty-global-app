@@ -136,6 +136,7 @@ sealed class UsageStatsWindow : IDisposable
         CreateFonts();
         CreateMainWindow();
         ConfigManager.AppLanguageChanged += OnLanguageChanged;
+        ConfigManager.TrainingEnabledChanged += OnTrainingEnabledChanged;
         CreateControls();
         ApplyFontsToControls();
 
@@ -537,6 +538,16 @@ sealed class UsageStatsWindow : IDisposable
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
     }
 
+    /// <summary>ME-07, C5.5 : l'opt-in du Défi change pendant que la fenêtre est ouverte (les
+    /// Paramètres ne sont pas modaux). La peinture relit le prédicat de la section ; la hauteur et
+    /// les boutons, eux, ne se calculaient qu'à l'ouverture : on refait la mise en page.</summary>
+    internal void OnTrainingEnabledChanged(bool enabled)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        FitWindow();
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
     /// <summary>C1 : « Noter l'application » — la demande d'avis vient de ce clic, et d'aucun
     /// autre geste de la fenêtre. TrayApplication ouvre la boîte de notation du Store.</summary>
     private void OnRate()
@@ -752,6 +763,7 @@ sealed class UsageStatsWindow : IDisposable
     public void Dispose()
     {
         ConfigManager.AppLanguageChanged -= OnLanguageChanged;
+        ConfigManager.TrainingEnabledChanged -= OnTrainingEnabledChanged;
         _links.Detach();
         if (_hWnd != IntPtr.Zero)
         {

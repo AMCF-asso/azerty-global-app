@@ -155,14 +155,16 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-07 — Petits états périmés dans quatre fenêtres (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C5.5, C6.2, C8.2 (confirmés), C1.7 (plausible).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
+- **Constats** : C5.5 (corrigé), C6.2 (corrigé), C8.2 (corrigé), C1.7 (corrigé : le test, écrit avant le correctif, était rouge, donc confirmé).
+- **Fait** : C5.5 : `ConfigManager.SetTrainingEnabled` déclenche un nouvel événement `TrainingEnabledChanged` quand la valeur change ; `UsageStatsWindow` s'y abonne (désabonnement dans `Dispose`) et refait sa mise en page (`FitWindow`) et sa peinture : la hauteur et les boutons suivent la section Défi, que la fenêtre soit visible ou non. C6.2 : `LessonProgressStore.SetLastPosition` ignore un exercice du Défi, comme `RecordSuccess` (le correctif est à la source et non dans `ApplyProgressReset` : tout chemin est couvert ; au Défi, la remise à zéro laisse la position vide et la fermeture rend la première leçon à faire). C8.2 : `CharacterSearch.Show` remet à faux « Copié » et « Copie impossible » et tue la minuterie de 1500 ms encore en vol. C1.7 : `LayerIndicatorWindow.Update` et `RefreshPosition` sortent sans fenêtre, `Hide` n'appelle `ShowWindow` que si la fenêtre existe. Points d'appui ajoutés au code : `LayerIndicatorWindow.InvalidateWindow` (invalidation remplaçable) et un constructeur interne qui reçoit l'enregistrement de classe, pour éprouver l'indicateur sans fenêtre. Tests : `MachinesEtatsLot5Tests` (1), `MachinesEtatsLot6Tests` (2, fichier créé), `MachinesEtatsLot8Tests` (1), `MachinesEtatsLot1Tests` (1, fichier créé), tous rouges avant le correctif, verts après. À vérifier à la main : ouvrir Statistiques, décocher l'entraînement dans les Paramètres, la fenêtre se resserre sans bandeau vide (et se rallonge si on le recoche) ; sur le Défi, « Réinitialiser la progression » puis fermer : la fenêtre rouverte propose la première leçon, pas le Défi ; copier un caractère dans la recherche hors cible, rouvrir aussitôt (moins de 1,5 s) : pas de « Copié » ; l'échec réel de création de la fenêtre de l'indicateur n'est pas reproductible à la main.
 - **Effets** : la fenêtre Statistiques garde la hauteur de la section Défi après son masquage
   (C5.5) ; « Réinitialiser la progression » depuis le Défi enregistre le Défi comme position de
   reprise (C6.2) ; la recherche de caractère rouverte affiche encore « Copié » pendant 1,5 s au plus
   (C8.2) ; l'indicateur de couche demande un repeint alors que sa fenêtre n'a pas pu être créée (C1.7).
 - **Correctif** : un correctif local par fenêtre, sans lien entre eux.
-- **Tests** : `MachinesEtatsLot5Tests` (1), `MachinesEtatsLot6Tests` (2), `MachinesEtatsLot8Tests` (1).
+- **Tests** : `MachinesEtatsLot5Tests` (1), `MachinesEtatsLot6Tests` (2), `MachinesEtatsLot8Tests` (1),
+  `MachinesEtatsLot1Tests` (1, C1.7).
 - **Risque du correctif** : faible.
 
 ## ME-08 — Demande d'avis : mauvais moment, minuterie perdue, double appel (faible)

@@ -843,6 +843,11 @@ sealed class CharacterSearch : IDisposable
         // jamais le contenu des requêtes (décision 2026-07-22).
         UsageStats.RecordSearchOpened();
         _enterFoundNothing = false;
+        // ME-07, C8.2 : « Copié » et « Copie impossible » sont propres à une ouverture ; la minuterie
+        // de 1,5 s encore en vol ne doit pas non plus s'abattre sur la fenêtre rouverte.
+        Win32.KillTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK);
+        _showCopiedFeedback = false;
+        _showCopyFailedFeedback = false;
 
         // N8 : la langue a pu changer depuis la création (la fenêtre vit tout le processus).
         Win32.SetWindowTextW(_hEditLabel, L.Search_WindowTitle);

@@ -788,12 +788,18 @@ static class ConfigManager
 
     /// <summary>Opt-in explicite (fin d'onboarding ou Paramètres). Décoché par défaut.</summary>
     public static bool TrainingEnabled => GetBool("trainingEnabled");
+    /// <summary>Déclenché après un changement effectif de l'opt-in (arg : nouvelle valeur) : une
+    /// fenêtre ouverte qui en dépend (Statistiques, section Défi) refait sa mise en page.</summary>
+    public static event Action<bool>? TrainingEnabledChanged;
+
     public static void SetTrainingEnabled(bool enabled)
     {
+        bool changed = TrainingEnabled != enabled;
         SetBool("trainingEnabled", enabled);
         // Réactivation = nouveau consentement : le compteur de rappels ignorés repart à zéro
         // (garde-fou « 3 ignorés → arrêt définitif », réactivable à tout moment).
         if (enabled) SetUInt("trainingIgnoredCount", 0);
+        if (changed) TrainingEnabledChanged?.Invoke(enabled);
     }
 
     /// <summary>Rappels consécutifs ignorés (timeout sans clic). 3 → arrêt définitif.</summary>
