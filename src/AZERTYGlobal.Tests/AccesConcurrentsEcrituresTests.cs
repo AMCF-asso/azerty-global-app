@@ -83,7 +83,7 @@ public class AccesConcurrentsEcrituresTests : IDisposable
     /// Constat B2 (UsageStats.cs:667-673). Une demande d'écriture en arrière-plan arrivée
     /// pendant une autre est ignorée, même si l'écriture en cours a déjà pris son instantané.
     /// Ce qui a été compté entre les deux attend le minuteur de 5 min ou la sortie : le
-    /// verrouillage de session (TrayApplication.cs:1078, « écrire ce qui attend ») n'écrit rien.
+    /// verrouillage de session (TrayApplication.cs:1093, « écrire ce qui attend ») n'écrit rien.
     /// </summary>
     [Fact]
     public void Stats_DemandePendantUneEcritureEnCours_EstServie()
