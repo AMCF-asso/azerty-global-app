@@ -240,7 +240,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             Win: KeyHeld(0x5B) || KeyHeld(0x5C), AltGr: _mapper.AltGrDown);
         Clipboard = new WindowClipboard(() => _hWnd);
         _catalog = _challenge.LoadCatalog();
-        _progress = new LessonProgressStore();
+        _progress = LessonProgressStore.Shared; // AF-02 : changements en attente gardés si la fenêtre est recréée
         _progress.SyncOnboardingProgress(_catalog, ConfigManager.LearningCompletedExercises);
         _hints = new LessonHintProvider();
         _wndProcDelegate = WndProc;
@@ -3275,7 +3275,11 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         EndTutorial(completed: false); // referme la plage de frappe exclue du parcours
         LearningSessionTracker.Closed(this);
-        _progress.RetryPendingSave(); // AF-02 : dernier essai à la fermeture de l'application
+        // AF-02 : dernier essai. La fenêtre est aussi recréée au changement de langue : le magasin
+        // partagé garde alors la file. Ce qui reste non écrit est au moins journalisé.
+        if (!_progress.RetryPendingSave())
+            ConfigManager.Log("LessonsWindow.Dispose",
+                new IOException($"Progression non écrite : {_progress.PendingChangeCount} changement(s) en attente."));
         ConfigManager.WindowBoundsCleared -= OnWindowBoundsCleared;
         if (_onAppLanguageChanged != null)
             ConfigManager.AppLanguageChanged -= _onAppLanguageChanged;

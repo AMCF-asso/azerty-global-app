@@ -941,13 +941,23 @@ static class ConfigManager
     /// Relit un entier de position de fenêtre (AF-05, audit des fichiers 1.3.0). Écrit en
     /// culture invariante depuis ce correctif ; avant, il suivait le format régional du moment,
     /// dont le signe moins peut être U+2212 (suédois, norvégien, finnois) : une coordonnée
-    /// négative ne se relisait plus après un changement de format. Le seul écart possible d'un
-    /// entier formaté par défaut est ce signe : on le ramène au trait d'union, puis on relit en
+    /// négative ne se relisait plus après un changement de format. Un entier formaté par défaut
+    /// ne diffère que par son signe moins (U+2212, ou trait d'union précédé d'une marque de
+    /// direction) : on retire les marques, on ramène U+2212 au trait d'union, puis on relit en
     /// culture invariante.
     /// </summary>
-    private static bool TryParseStoredInt(string text, out int value) =>
-        int.TryParse(text.Trim().Replace('−', '-'), NumberStyles.AllowLeadingSign,
-            CultureInfo.InvariantCulture, out value);
+    private static bool TryParseStoredInt(string text, out int value)
+    {
+        // Revue d'AF-05 : sous ICU, les formats arabe, hébreu et persan font précéder le signe
+        // moins d'une marque de direction (U+061C, U+200E, U+200F), de catégorie « Format ».
+        var digits = new StringBuilder(text.Length);
+        foreach (char c in text)
+        {
+            if (char.GetUnicodeCategory(c) == UnicodeCategory.Format || char.IsWhiteSpace(c)) continue;
+            digits.Append(c == '−' ? '-' : c);
+        }
+        return int.TryParse(digits.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value);
+    }
 
     public static void ClearWindowBounds(string key)
     {

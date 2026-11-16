@@ -431,4 +431,91 @@ public class AuditFichiersTests : IDisposable
         Assert.Equal(-1500, rect.left);
         Assert.Equal(-20, rect.top);
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Revue des correctifs (16/11) : cas qui échappaient au premier correctif
+    // ═══════════════════════════════════════════════════════════════
+
+    // Revue d'AF-05 : une position ancienne écrite sous un format arabe, hébreu ou persan (ICU)
+    // porte une marque de direction devant le signe moins.
+    [Theory]
+    [InlineData("؜-1500")]
+    [InlineData("‎-1500")]
+    [InlineData("‏−" + "1500")]
+    public void Config_position_avec_marque_de_direction_se_relit(string gauche)
+    {
+        File.WriteAllText(ConfigPath, "{\"" + ConfigManager.LessonsWindowBoundsKey + "\":\"" + gauche + ",20,800,600\"}");
+        Assert.True(ConfigManager.TryGetWindowBounds(ConfigManager.LessonsWindowBoundsKey, out var rect));
+        Assert.Equal(-1500, rect.left);
+    }
+
+    // Revue d'AF-02 : après un échec d'écriture, un autre écrivain change le fichier, puis la
+    // relecture tombe sur un verrou. La réussite en attente ne doit pas être abandonnée.
+    [Fact]
+    public void Progression_attente_survit_a_une_relecture_verrouillee()
+    {
+        var premier = Exercice(0);
+        var autre = Exercice(1);
+        var troisieme = Exercice(2);
+        var store = new LessonProgressStore(ProgressPath);
+        store.SetLastPosition(premier);
+        using (new FileStream(ProgressPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            store.RecordSuccess(premier, Reussite(premier)); // écriture refusée : en attente
+        new LessonProgressStore(ProgressPath).RecordSuccess(autre, Reussite(autre)); // autre écrivain
+
+        using (new FileStream(ProgressPath, FileMode.Open, FileAccess.Read, FileShare.None))
+            store.RecordSuccess(troisieme, Reussite(troisieme)); // relecture impossible
+        Assert.True(store.RetryPendingSave());
+
+        var relu = new LessonProgressStore(ProgressPath);
+        Assert.True(relu.IsCompleted(premier));
+        Assert.True(relu.IsCompleted(autre));
+        Assert.True(relu.IsCompleted(troisieme));
+    }
+
+    // Revue d'AF-02 : un rejeu des heures plus tard garde l'heure réelle du geste.
+    [Fact]
+    public void Progression_rejeu_garde_l_heure_du_geste()
+    {
+        var t1 = new DateTimeOffset(2026, 11, 16, 10, 0, 0, TimeSpan.Zero);
+        var maintenant = t1;
+        var store = new LessonProgressStore(ProgressPath, () => maintenant);
+        store.SetLastPosition(Exercice(0));
+        using (new FileStream(ProgressPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            store.RecordGestures(Reussite(Exercice(0)), _ => true);
+        new LessonProgressStore(ProgressPath).SetLastPosition(Exercice(1)); // force relecture et rejeu
+
+        maintenant = t1.AddHours(5);
+        Assert.True(store.RetryPendingSave());
+        Assert.Equal(t1, store.Gestures["a"].LastReviewUtc);
+    }
+
+    // Revue d'AF-02 : sur un échec durable, la file ne grandit pas à chaque navigation.
+    [Fact]
+    public void Progression_file_d_attente_bornee_sur_echec_durable()
+    {
+        Directory.CreateDirectory(ProgressPath); // un dossier à la place du fichier : écriture toujours refusée
+        var store = new LessonProgressStore(ProgressPath);
+        for (int rang = 0; rang < 5; rang++)
+            store.SetLastPosition(Exercice(rang));
+        Assert.Equal(1, store.PendingChangeCount);
+        Assert.Equal(4, store.LastExerciseIndex);
+    }
+
+    // Revue d'AF-02 : la fenêtre des Leçons recréée (changement de langue) reprend le même
+    // magasin, donc la même file d'attente.
+    [Fact]
+    public void Progression_magasin_partage_garde_l_attente_entre_deux_fenetres()
+    {
+        var exercise = Exercice();
+        var premier = LessonProgressStore.Shared;
+        premier.SetLastPosition(exercise);
+        using (new FileStream(ProgressPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            premier.RecordSuccess(exercise, Reussite(exercise));
+
+        var second = LessonProgressStore.Shared;
+        Assert.Same(premier, second);
+        Assert.True(second.RetryPendingSave());
+        Assert.True(new LessonProgressStore(ProgressPath).IsCompleted(exercise));
+    }
 }

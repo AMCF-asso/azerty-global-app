@@ -167,12 +167,13 @@ internal sealed class LessonProgressStore
         // Le Défi n'est jamais la place de « Reprendre » (ME-07, C6.2) : même garde que
         // RecordSuccess, pour tous les chemins (relance de séance après « Réinitialiser »).
         if (exercise.ModuleId == DailyChallenge.ModuleId) return;
+        // Une position remplace la précédente : en attente, elle aussi (file bornée, revue d'AF-02).
         Mutate("LessonProgressStore.SetLastPosition", () =>
         {
             LastModuleId = exercise.ModuleId;
             LastLessonId = exercise.LessonId;
             LastExerciseIndex = exercise.ExerciseIndex;
-        });
+        }, replacesPendingKind: "position");
     }
 
     public void RecordSuccess(LessonExercise exercise, LessonAttemptStats stats) =>
@@ -185,13 +186,15 @@ internal sealed class LessonProgressStore
         // Révision ou texte collé : contenu composé, rien à retenir par exercice (L-13).
         if (LessonCatalogLoader.IsComposed(exercise.ModuleId))
         {
-            Mutate("LessonProgressStore.RecordReview", () => RecordGesturesNoSave(stats, isTracked));
+            var reviewedAt = _clock();
+            Mutate("LessonProgressStore.RecordReview", () => RecordGesturesNoSave(stats, isTracked, reviewedAt));
             return;
         }
         var completedUtc = DateTimeOffset.UtcNow;
+        var gestureNow = _clock();
         Mutate("LessonProgressStore.RecordSuccess", () =>
         {
-            RecordGesturesNoSave(stats, isTracked);
+            RecordGesturesNoSave(stats, isTracked, gestureNow);
             RecordSuccessNoSave(exercise, stats, completedUtc);
         });
     }
@@ -230,19 +233,44 @@ internal sealed class LessonProgressStore
     /// </summary>
     public static void RecordTutorialGestures(LessonAttemptStats stats)
     {
-        try { new LessonProgressStore().RecordGestures(stats, GestureMastery.IsTracked); }
+        try { Shared.RecordGestures(stats, GestureMastery.IsTracked); }
         catch (Exception ex) { ConfigManager.Log("LessonProgressStore.RecordTutorialGestures", ex); }
     }
 
-    internal void RecordGestures(LessonAttemptStats stats, Func<char, bool> isTracked) =>
-        Mutate("LessonProgressStore.RecordGestures", () => RecordGesturesNoSave(stats, isTracked));
+    private static LessonProgressStore? _shared;
+
+    /// <summary>
+    /// Magasin unique du fichier de l'utilisateur, pour tout le processus (revue d'AF-02,
+    /// 16/11) : un changement gardé après un échec d'écriture survit ainsi à la fenêtre des
+    /// Leçons recréée (changement de langue) et aux gestes du tutoriel, au lieu de mourir avec
+    /// un magasin jetable. Relit le fichier s'il a changé depuis. Fil de l'interface seulement.
+    /// </summary>
+    internal static LessonProgressStore Shared
+    {
+        get
+        {
+            string path = Path.Combine(ConfigManager.LogDirectory, FileName);
+            if (_shared == null || !string.Equals(_shared._path, path, StringComparison.OrdinalIgnoreCase))
+                _shared = new LessonProgressStore(path);
+            else
+                _shared.ReloadIfChangedOnDisk();
+            return _shared;
+        }
+    }
+
+    internal void RecordGestures(LessonAttemptStats stats, Func<char, bool> isTracked)
+    {
+        var now = _clock();
+        Mutate("LessonProgressStore.RecordGestures", () => RecordGesturesNoSave(stats, isTracked, now));
+    }
 
     public void MarkCompletedNeutral(LessonExercise exercise) =>
         Mutate("LessonProgressStore.MarkCompletedNeutral", () => MarkCompletedNeutralNoSave(exercise));
 
-    private void RecordGesturesNoSave(LessonAttemptStats stats, Func<char, bool> isTracked)
+    /// <param name="now">Heure du geste, figée par l'appelant : un rejeu après un échec
+    /// d'écriture (AF-02) garde l'heure réelle, pas celle du rejeu.</param>
+    private void RecordGesturesNoSave(LessonAttemptStats stats, Func<char, bool> isTracked, DateTimeOffset now)
     {
-        var now = _clock();
         foreach (var (expected, attempts, errors) in stats.GetCharacterCounts())
         {
             if (!isTracked(expected)) continue;
@@ -372,14 +400,34 @@ internal sealed class LessonProgressStore
             DateTime? current = File.Exists(_path) ? File.GetLastWriteTimeUtc(_path) : null;
             if (current != _knownWriteUtc)
             {
+                // Revue d'AF-02 : une relecture qui tombe sur un verrou passager ne doit pas
+                // emporter les changements en attente. On garde alors la mémoire, la file et la
+                // date connue ; aucune écriture tant que la relecture n'a pas réussi (elle
+                // écraserait ce que l'autre écrivain a mis dans le fichier).
+                var keep = _pendingChanges.Count > 0 ? CaptureSnapshot() : null;
+                var keepUnknown = keep != null ? _unknownRootFields.ToArray() : null;
+                var knownBefore = _knownWriteUtc;
                 Load();
+                if (keep != null && _loadFailed && _lastLoadWasReadFailure)
+                {
+                    RestoreSnapshot(keep);
+                    _unknownRootFields.Clear();
+                    _unknownRootFields.AddRange(keepUnknown!);
+                    _knownWriteUtc = knownBefore;
+                    _loadFailed = false;
+                    _reloadDeferred = true;
+                    return;
+                }
+                _reloadDeferred = false;
                 // AF-02 : les changements pas encore écrits sont rejoués sur l'état relu, comme
                 // s'ils venaient d'être faits : ni ceux de l'autre écrivain ni les nôtres ne
-                // sont perdus. Un fichier devenu non chargeable les abandonne (la mémoire suit
-                // alors le disque, qu'on ne réécrira pas).
+                // sont perdus. Un fichier d'un format plus récent ou mis de côté les abandonne
+                // (la mémoire suit alors le disque).
                 if (_loadFailed) _pendingChanges.Clear();
-                else foreach (var change in _pendingChanges) change();
+                else foreach (var (_, change) in _pendingChanges) change();
             }
+            else
+                _reloadDeferred = false;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -394,10 +442,20 @@ internal sealed class LessonProgressStore
     /// même après une écriture suivante réussie. Ils s'écrivent avec le changement suivant, à la
     /// fermeture de la fenêtre des Leçons ou de l'application (<see cref="RetryPendingSave"/>).
     /// </summary>
-    private readonly List<Action> _pendingChanges = new();
+    private readonly List<(string? Kind, Action Change)> _pendingChanges = new();
+
+    /// <summary>Relecture repoussée par un verrou passager : rien ne s'écrit avant elle.</summary>
+    private bool _reloadDeferred;
+
+    /// <summary>Le dernier <see cref="Load"/> a échoué sur une lecture impossible (verrou,
+    /// droits), et non sur un format plus récent ou un contenu corrompu.</summary>
+    private bool _lastLoadWasReadFailure;
 
     /// <summary>Vrai tant qu'un changement attend d'être écrit.</summary>
     internal bool HasPendingSave => _pendingChanges.Count > 0;
+
+    /// <summary>Changements en attente (témoins de la file bornée).</summary>
+    internal int PendingChangeCount => _pendingChanges.Count;
 
     /// <summary>
     /// Toute écriture de la progression : relit le fichier s'il a changé, applique le
@@ -405,27 +463,35 @@ internal sealed class LessonProgressStore
     /// le prochain essai (AF-02) ; un fichier non chargé (format plus récent, lecture
     /// impossible) n'est jamais écrit, et la mémoire revient à son état pour ne pas diverger.
     /// </summary>
-    private void Mutate(string operation, Action change)
+    /// <param name="replacesPendingKind">Genre d'un changement qui remplace le précédent du
+    /// même genre (la position de reprise) : la file reste bornée par les vrais changements
+    /// sur un échec durable (fichier en lecture seule, disque plein).</param>
+    private void Mutate(string operation, Action change, string? replacesPendingKind = null)
     {
         ReloadIfChangedOnDisk();
         var snapshot = CaptureSnapshot();
         change();
-        if (Save(operation))
+        if (!_reloadDeferred && Save(operation))
             _pendingChanges.Clear();
         else if (_loadFailed)
             RestoreSnapshot(snapshot);
         else
-            _pendingChanges.Add(change);
+        {
+            if (replacesPendingKind != null)
+                _pendingChanges.RemoveAll(p => p.Kind == replacesPendingKind);
+            _pendingChanges.Add((replacesPendingKind, change));
+        }
     }
 
     /// <summary>Réessaie d'écrire les changements gardés après un échec (AF-02). Sans effet
-    /// quand rien n'attend.</summary>
-    public void RetryPendingSave()
+    /// quand rien n'attend. Rend faux si des changements restent non écrits.</summary>
+    public bool RetryPendingSave()
     {
-        if (_pendingChanges.Count == 0) return;
+        if (_pendingChanges.Count == 0) return true;
         ReloadIfChangedOnDisk();
-        if (_pendingChanges.Count > 0 && Save("LessonProgressStore.RetryPendingSave"))
+        if (_pendingChanges.Count > 0 && !_reloadDeferred && Save("LessonProgressStore.RetryPendingSave"))
             _pendingChanges.Clear();
+        return _pendingChanges.Count == 0;
     }
 
     /// <summary>Champs de la racine que cette version lit et écrit.</summary>
@@ -449,6 +515,7 @@ internal sealed class LessonProgressStore
         _unknownRootFields.Clear();
         _loadFailed = false;
         _knownWriteUtc = null;
+        _lastLoadWasReadFailure = false;
         if (!File.Exists(_path)) return;
         bool legacyErrorMatrixFound = false;
         try { _knownWriteUtc = File.GetLastWriteTimeUtc(_path); }
@@ -560,6 +627,7 @@ internal sealed class LessonProgressStore
                 // Lecture impossible pour l'instant (verrou, droits) : sans doute intact.
                 // Aucune écriture pendant la session, le prochain lancement relit.
                 _loadFailed = true;
+                _lastLoadWasReadFailure = true;
             }
             else if (FileQuarantine.IsCorruption(ex))
             {
