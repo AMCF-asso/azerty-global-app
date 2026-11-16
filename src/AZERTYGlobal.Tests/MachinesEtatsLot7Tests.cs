@@ -1,3 +1,6 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using AZERTYGlobal;
 using Xunit;
 
@@ -9,12 +12,16 @@ namespace AZERTYGlobal.Tests;
 /// </summary>
 public sealed class MachinesEtatsLot7Tests : IDisposable
 {
+    private const BindingFlags Instance = BindingFlags.Instance | BindingFlags.NonPublic;
+    private const BindingFlags Statique = BindingFlags.Static | BindingFlags.NonPublic;
+
     private readonly Func<bool, bool> _setterOrigin = OnboardingWindow.AutoStartSetter;
     private readonly Func<bool> _registeredOrigin = OnboardingWindow.AutoStartIsRegistered;
     private readonly Func<IntPtr, string, string, uint, int> _boxOrigin = OnboardingWindow.ShowMessageBox;
     private readonly Func<long> _clockOrigin = OnboardingWindow.Clock;
     private readonly Func<int> _delayOrigin = OnboardingWindow.DoubleClickDelay;
     private readonly string _languageOrigin = L.Language;
+    private readonly Action<IntPtr, bool> _minuterieOrigin = TrayApplication.ReviewTimerSwitch;
 
     public void Dispose()
     {
@@ -24,6 +31,7 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
         OnboardingWindow.Clock = _clockOrigin;
         OnboardingWindow.DoubleClickDelay = _delayOrigin;
         L.Language = _languageOrigin;
+        TrayApplication.ReviewTimerSwitch = _minuterieOrigin;
     }
 
     private static OnboardingWindow OpenOnboarding()
@@ -163,5 +171,154 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
             Assert.True(ConfigManager.ShowOnboardingAtStartup, "décocher puis fermer doit enregistrer « afficher »");
         }
         finally { BancCapture.Teardown(window); }
+    }
+
+
+    // Constat C7.3
+    // L'accueil, rouvert depuis le menu (donc _reviewPromptDeferred faux), est visible ; le signal de
+    // frappe est armé et la quiétude atteinte. Le tick ne doit pas consommer l'essai 1 par-dessus
+    // l'accueil : il est différé, signal conservé.
+    // Modèle suivi : SollicitationAvisCaracterisationTests.Tick_accueil_ouvert_differe.
+    [Fact]
+    public void Avis_AccueilRouvertDepuisLeMenu_DiffèreLaSollicitationAuTickDeQuiétude()
+    {
+        using var env = new EnvAvis();
+        UsageStats.ArmEnrichedThresholdSignal();
+        DerniereFrappeIlYa(20_000);
+
+        var accueil = (OnboardingWindow)RuntimeHelpers.GetUninitializedObject(typeof(OnboardingWindow));
+        typeof(OnboardingWindow).GetField("_visible", Instance)!.SetValue(accueil, true);
+        Assert.True(accueil.IsVisible);
+
+        var tray = (TrayApplication)RuntimeHelpers.GetUninitializedObject(typeof(TrayApplication));
+        typeof(TrayApplication).GetField("_versionFirstRun", Instance)!
+            .SetValue(tray, new ConfigManager.VersionFirstRun("1.3.0", Aujourdhui, false));
+        typeof(TrayApplication).GetField("_reviewPromptDeferred", Instance)!.SetValue(tray, false);
+        typeof(TrayApplication).GetField("_onboarding", Instance)!.SetValue(tray, accueil);
+
+        typeof(TrayApplication).GetMethod("MaybeShowReviewAfterQuietTyping", Instance)!.Invoke(tray, null);
+
+        Assert.Equal(0, ConfigManager.ReviewPromptCount);
+        Assert.Null(ConfigManager.ReviewPromptLastShown);
+        Assert.True(UsageStats.EnrichedThresholdCrossed, "le signal doit rester armé : l'avis est différé, pas annulé");
+    }
+
+    // Constat C7.4
+    // Notifications coupées au lancement : la minuterie de quiétude n'est pas posée. Rallumées dans
+    // les Paramètres (même processus), la fenêtre prévient le tray, qui la repose : l'essai 1 n'attend
+    // plus le prochain lancement.
+    [Fact]
+    public void Avis_NotificationsRallumeesDansLesParametres_ReposentLaMinuterieDeQuietude()
+    {
+        using var env = new EnvAvis();
+        var appels = new List<bool>();
+        TrayApplication.ReviewTimerSwitch = (_, on) => appels.Add(on);
+        ConfigManager.SetNotifications(false);
+
+        var tray = (TrayApplication)RuntimeHelpers.GetUninitializedObject(typeof(TrayApplication));
+        tray.EnsureReviewTimer(); // démarrage : rien à solliciter
+        Assert.False(tray.ReviewTimerArmed);
+
+        using var parametres = new SettingsWindow();
+        typeof(TrayApplication).GetMethod("ConfigureSettingsWindow", Instance)!.Invoke(tray, new object[] { parametres });
+        ConfigManager.SetNotifications(true);
+        parametres.NotificationsChanged?.Invoke();
+
+        Assert.True(tray.ReviewTimerArmed, "la minuterie doit être reposée quand les notifications sont rallumées");
+        Assert.Equal(new[] { true }, appels);
+    }
+
+    // Constat C7.4 (côté fenêtre : la case des Paramètres prévient le tray après avoir écrit le réglage)
+    [Fact]
+    public void Parametres_CaseNotifications_PrevientLeTrayApresEcriture()
+    {
+        using var env = new EnvAvis();
+        ConfigManager.SetNotifications(false); // la case se construit décochée
+        using var parametres = new SettingsWindow();
+        bool? valeurVue = null;
+        parametres.NotificationsChanged = () => valeurVue = ConfigManager.NotificationsEnabled;
+
+        ConfigManager.SetNotifications(true); // réglage antérieur différent de la case
+        typeof(SettingsWindow).GetMethod("ApplyNotifications", Instance)!.Invoke(parametres, null);
+
+        Assert.False(ConfigManager.NotificationsEnabled);
+        Assert.False(valeurVue, "le tray doit être prévenu après l'écriture, et voir la nouvelle valeur");
+    }
+
+    // Constat C7.4 (cycle complet : arrêt par le tick pendant la coupure, puis reprise au rallumage)
+    [Fact]
+    public void Avis_TickPendantLaCoupure_ArreteLaMinuterie_PuisLeRallumageLaRepose()
+    {
+        using var env = new EnvAvis();
+        var appels = new List<bool>();
+        TrayApplication.ReviewTimerSwitch = (_, on) => appels.Add(on);
+
+        var tray = (TrayApplication)RuntimeHelpers.GetUninitializedObject(typeof(TrayApplication));
+        tray.EnsureReviewTimer();
+        Assert.True(tray.ReviewTimerArmed);
+
+        ConfigManager.SetNotifications(false);
+        typeof(TrayApplication).GetMethod("MaybeShowReviewAfterQuietTyping", Instance)!.Invoke(tray, null);
+        Assert.False(tray.ReviewTimerArmed);
+
+        ConfigManager.SetNotifications(true);
+        tray.EnsureReviewTimer();
+        tray.EnsureReviewTimer(); // idempotente
+        Assert.True(tray.ReviewTimerArmed);
+        Assert.Equal(new[] { true, false, true }, appels);
+    }
+
+    private static DateOnly Aujourdhui => DateOnly.FromDateTime(DateTime.Now);
+
+    private static void DerniereFrappeIlYa(long ms) =>
+        typeof(UsageStats).GetField("_lastRemapTickCount", Statique)!
+            .SetValue(null, Environment.TickCount64 - ms);
+
+    /// <summary>Config et statistiques isolées : essai 1 tout juste atteint, notifications actives.</summary>
+    private sealed class EnvAvis : IDisposable
+    {
+        private readonly string _dossier;
+        private readonly IDisposable _politique;
+        private readonly IDisposable _canal;
+
+        public EnvAvis()
+        {
+            _dossier = Path.Combine(Path.GetTempPath(), "AZGLot7_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_dossier);
+            _politique = PolicyManager.OverrideForTests((_, _) => null);
+            _canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+            LearningSessionTracker.ResetForTests();
+            typeof(ConfigManager).GetField("_lastErrorUtc", Statique)!.SetValue(null, null);
+
+            string config = Path.Combine(_dossier, "config.json");
+            File.WriteAllText(config, JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["notificationsEnabled"] = true,
+            }));
+            ConfigManager.OverrideConfigPathForTests(config);
+
+            string stats = Path.Combine(_dossier, "usage-stats.json");
+            string Jour(DateOnly d) => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            File.WriteAllText(stats, JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["activeDaysCount"] = 10,
+                ["totalActiveMinutes"] = 10L,
+                ["accentedUppercaseCount"] = 20L,
+                ["firstRemapDate"] = Jour(Aujourdhui.AddDays(-30)),
+                ["lastActiveDate"] = Jour(Aujourdhui),
+            }));
+            UsageStats.OverrideStatsPathForTests(stats);
+        }
+
+        public void Dispose()
+        {
+            UsageStats.ClearEnrichedThresholdSignal();
+            LearningSessionTracker.ResetForTests();
+            _canal.Dispose();
+            _politique.Dispose();
+            ConfigManager.OverrideConfigPathForTests(Path.Combine(_dossier, "fin.json"));
+            UsageStats.OverrideStatsPathForTests(Path.Combine(_dossier, "fin-stats.json"));
+            try { Directory.Delete(_dossier, true); } catch { }
+        }
     }
 }

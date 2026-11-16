@@ -28,7 +28,7 @@ Les constats (`C<lot>.<n>`) et leurs statuts y sont décrits ; ce fichier les r
 | ME-01 | Dates relues sans culture invariante | faible | C5.1 | 3 tests en échec |
 | ME-02 | Progression des Leçons : une entrée mal formée bloque la fenêtre | faible | C5.6 | 2 tests en échec |
 | ME-07 | Petits états périmés dans quatre fenêtres | faible | C5.5, C6.2, C8.2, C1.7 | 4 tests en échec ; C1.7 à la lecture |
-| ME-08 | Demande d'avis : mauvais moment, minuterie perdue, double appel | faible | C7.3, C7.4, C7.5 | 1 test en échec ; le reste à la lecture |
+| ME-08 | Demande d'avis : mauvais moment, minuterie perdue, double appel | faible | C7.3, C7.4, C7.5 | C7.3 et C7.4 corrigés (4 tests) ; C7.5 laissé plausible |
 | ME-09 | Réglages : seconde instance, écriture de fermeture, instance élevée | faible | C4.5, C4.3, C4.1 | 1 test en échec ; le reste à la lecture |
 | ME-10 | Horloge ou fuseau qui recule | faible | C5.7 | 3 tests en échec |
 | ME-11 | Presse-papiers : échec muet, et un test qui dépend du presse-papiers réel | faible | C8.1 | lecture du code ; 1 test existant en échec |
@@ -65,7 +65,7 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 - **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; corrigé.
 - **Constats** : C4.2 (corrigé), C4.4 (corrigé).
-- **Fait** : C4.2 : `AutoStart.IsRegistered` vaut désormais « l'état Windows est `Enabled` » (version EXE : un raccourci refusé dans le Gestionnaire des tâches ou par stratégie n'est plus « enregistré » ; version packagée : prédicat inchangé, `Enabled` ou `EnabledByPolicy`, état illisible = faux). `Set(true)` rend donc `false` quand Windows refuse et n'écrit pas `autoStartEnabled` ; la case des Paramètres et de l'accueil reflète l'état réel ; `DefaultOnboardingCheck` teste le refus avant le raccourci présent. Le message d'échec (`GetFailureMessage`) devient, pour un refus utilisateur ou stratégie, « Windows refuse le lancement automatique… Réactivez-le dans Paramètres Windows → Applications → Démarrage » (`AutoStart_FailureMessageRefused`, français et anglais), pour les deux versions. C4.4 : `AutoStartSignals` porte `WindowsState` (lu une fois par `Snapshot`), `ShouldPrompt` rend faux pour `DisabledByUser`, `DisabledByPolicy` et `Unknown` ; `MarkPromptShown` n'étant appelé qu'après `ShouldPrompt`, la relance n'est ni proposée ni consommée. Points d'appui des tests : `AutoStart.WindowsStateReader`, `ShortcutExists`, `ShortcutEnabler`. Appelants d'`IsRegistered` relus : `Set` (même contrôle d'état final), `DefaultOnboardingCheck`, `AutoStartNudge.Snapshot`, cases et `wasRegistered` de `SettingsWindow` et `OnboardingWindow` ; `IsStartupTaskEnabled`, devenu inutile, est supprimé. Tests : `MachinesEtatsLot4Tests`, douze lignes rouges avant le correctif (Theory comprises), deux témoins verts d'office (état `Enabled`, état `Disabled`). À vérifier à la main : désactiver l'entrée dans le Gestionnaire des tâches puis cocher la case des Paramètres (message, case décochée) ; version MSIX : mêmes écrans, aucun changement attendu hors message de refus ; que Windows conserve le refus après suppression puis recréation du raccourci (non rejoué).
+- **Fait** : C4.2 : `AutoStart.IsRegistered` vaut désormais « l'état Windows est `Enabled` » (version EXE : un raccourci refusé dans le Gestionnaire des tâches ou par stratégie n'est plus « enregistré » ; version packagée : prédicat inchangé, `Enabled` ou `EnabledByPolicy`, état illisible = faux). `Set(true)` rend donc `false` quand Windows refuse et n'écrit pas `autoStartEnabled` ; la case des Paramètres et de l'accueil reflète l'état réel ; `DefaultOnboardingCheck` teste le refus avant le raccourci présent. Le message d'échec (`GetFailureMessage`) devient, pour un refus utilisateur ou stratégie, « Windows refuse le lancement automatique… Réactivez-le dans Paramètres Windows → Applications → Démarrage » (`AutoStart_FailureMessageRefused`, français et anglais), pour les deux versions. C4.4 : `AutoStartSignals` porte `WindowsState` (lu une fois par `Snapshot`), `ShouldPrompt` rend faux pour `DisabledByUser`, `DisabledByPolicy` et `Unknown` ; `MarkPromptShown` n'étant appelé qu'après `ShouldPrompt`, la relance n'est ni proposée ni consommée. Points d'appui des tests : `AutoStart.WindowsStateReader`, `ShortcutExists`, `ShortcutEnabler`. Appelants d'`IsRegistered` relus : `Set` (même contrôle d'état final), `DefaultOnboardingCheck`, `AutoStartNudge.Snapshot`, cases et `wasRegistered` de `SettingsWindow` et `OnboardingWindow` ; `IsStartupTaskEnabled`, devenu inutile, est supprimé. Tests : `MachinesEtatsLot4Tests`, douze lignes rouges avant le correctif (Theory comprises), deux témoins verts d'office (état `Enabled`, état `Disabled`). À vérifier à la main : désactiver l'entrée dans le Gestionnaire des tâches puis cocher la case des Paramètres (message, case décochée) ; version MSIX : mêmes écrans, aucun changement attendu hors message de refus ; que Windows conserve le refus après suppression puis recréation du raccourci (non rejoué).
 - **Effet C4.2** : en version EXE, « enregistré » veut dire « le raccourci existe ». Si Windows a
   désactivé l'entrée (Gestionnaire des tâches, stratégie), la case reste cochée et l'activation se
   dit réussie, alors que l'application ne se lancera pas au démarrage.
@@ -79,7 +79,7 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 - **Correctif** : « effectif » = état Windows `Enabled` ; l'activation signale le refus de Windows
   et renvoie vers les Paramètres Windows ; la relance n'est ni proposée ni consommée quand l'état
   est refusé ou inconnu. Demande de rendre la lecture de l'état Windows remplaçable dans les tests.
-- **Tests** : `MachinesEtatsLot4Tests` : accueil (2 cas), activation refusée (2 cas), case des
+- **Tests** : `MachinesEtatsLot4Tests` : accueil (2 cas), activation refusée (2 cas), case des
   Paramètres et de l'accueil, message de refus (FR, EN), relance non proposée (4 états), signaux,
   relance non consommée.
 - **Risque du correctif** : moyen (change le sens d'`IsRegistered` pour ses appelants ; texte
@@ -169,15 +169,16 @@ réfutés (C2.3, C5.3, C5.4) n'ont pas de ticket.
 
 ## ME-08 — Demande d'avis : mauvais moment, minuterie perdue, double appel (faible)
 
-- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; à corriger.
-- **Constats** : C7.3 (confirmé), C7.4 (plausible), C7.5 (plausible, vérifiable seulement avec un vrai paquet Store).
+- **Décision** : 1.3.0 (QCM du 16 novembre 2026) ; partiellement corrigé (C7.3 et C7.4) ; C7.5 laissé plausible.
+- **Fait** : C7.3, l'essai de frappe est reporté tant que l'accueil est visible, y compris rouvert depuis le menu (`_onboarding is { IsVisible: true }` ajouté à la garde du tick de quiétude, signal conservé). C7.4, `EnsureReviewTimer` pose ou retire la minuterie d'après `ReviewPromptStillPossible` (appelée au `Run`, au tick et par le nouveau `SettingsWindow.NotificationsChanged`, déclenché après chaque clic sur la case des notifications ; branchement extrait dans `ConfigureSettingsWindow`). C7.5 : non corrigé, le défaut ne se prouve qu'avec un vrai paquet Store signé (double clic sur « Noter sur le Microsoft Store ») et aucun test honnête n'existe ; la garde `Interlocked` prévue reste à écrire si l'observation la confirme. Tests : `MachinesEtatsLot7Tests`, quatre tests ; le test C7.3 et le test de câblage côté Paramètres étaient rouges avant le correctif (compteur d'essais à 1 au lieu de 0 ; tray jamais prévenu), les deux autres couvrent les seams ajoutées (`TrayApplication.ReviewTimerSwitch`, `ReviewTimerArmed`). Écart avec le correctif prévu : la minuterie est réarmée par un rappel de la fenêtre des Paramètres vers le tray, qu'il fallait créer (rien ne les reliait), et non par un abonnement existant. À vérifier à la main : rallumer les notifications dans les Paramètres puis taper au-delà du seuil, et rouvrir l'accueil depuis le menu pendant un silence de 15 s (aucun toast d'avis ne doit apparaître) ; double clic réel sur « Noter sur le Microsoft Store » (C7.5).
+- **Constats** : C7.3 (corrigé), C7.4 (corrigé), C7.5 (plausible, vérifiable seulement avec un vrai paquet Store).
 - **Effet** : un des deux essais de demande d'avis part pendant que l'accueil, rouvert depuis le menu,
   est à l'écran (C7.3) ; si les notifications sont coupées puis rétablies, l'essai attend le
   prochain lancement (C7.4) ; rien n'empêche deux appels de la boîte d'avis du Store (C7.5).
 - **Où** : `TrayApplication.cs` (demande d'avis), `StoreReview`.
 - **Correctif** : « accueil visible » vaut report ; minuterie réarmée aussi quand le réglage des
   notifications change ; un seul appel à la fois pour la boîte du Store.
-- **Tests** : `MachinesEtatsLot7Tests.Avis_AccueilRouvertDepuisLeMenu_…` ; C7.4 à écrire.
+- **Tests** : `MachinesEtatsLot7Tests` (`Avis_AccueilRouvertDepuisLeMenu_…`, `Avis_NotificationsRallumeesDansLesParametres_…`, `Parametres_CaseNotifications_PrevientLeTrayApresEcriture`, `Avis_TickPendantLaCoupure_…`).
 - **Risque du correctif** : faible.
 
 ## ME-09 — Réglages : seconde instance, écriture de fermeture, instance élevée (faible)

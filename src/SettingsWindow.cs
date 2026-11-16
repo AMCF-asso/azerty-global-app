@@ -284,6 +284,9 @@ sealed partial class SettingsWindow : IDisposable
     /// texte, masquage des gestes maîtrisés) : la fenêtre Leçons, si elle est ouverte, doit
     /// relire ces réglages et se redessiner. À brancher dans TrayApplication.</summary>
     public Action? LessonDisplayChanged;
+    /// <summary>Déclenché après l'écriture du réglage des notifications (case cochée ou décochée) :
+    /// la minuterie de la demande d'avis doit être remise d'accord avec lui (C7.4).</summary>
+    public Action? NotificationsChanged;
 
     // Abonnement AppLanguageChanged (bascule initiée depuis le tray ou l'onboarding) —
     // désabonné dans Dispose (événement statique, sinon référence pendante).
@@ -1496,6 +1499,7 @@ sealed partial class SettingsWindow : IDisposable
     {
         if (_managedNotifications) return;
         ConfigManager.SetNotifications(IsChecked(_hWndChkNotifications));
+        NotificationsChanged?.Invoke();
     }
 
     private void ApplyOnboarding()
