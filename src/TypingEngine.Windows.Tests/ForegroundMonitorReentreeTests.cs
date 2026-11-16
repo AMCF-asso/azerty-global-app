@@ -49,6 +49,43 @@ public sealed class ForegroundMonitorReentreeTests
         Assert.False(bilan.Perime);
     }
 
+    /// <summary>
+    /// Même ré-entrée, déterministe : la sonde de W1 lance elle-même le Recompute imbriqué (ce
+    /// que fait le WinEvent distribué par l'attente), puis rend la main ou lève une exception.
+    /// Les deux sorties de l'appel externe (succès et repli du catch) ne doivent rien écrire.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RecomputeImbrique_LAppelExterneNEcrasePasLEtatPlusRecent(bool sondeEnEchec)
+    {
+        var mock = new MockWin32Api { ForegroundWindow = W0, ScriptedProcessName = "w0.exe" };
+        ForegroundMonitor? monitor = null;
+        int changements = 0;
+        var api = new ApiSondeScriptee(mock, window =>
+        {
+            if (window != W1) return false;
+            mock.ScriptedProcessName = "w2.exe";
+            mock.ForegroundWindow = W2;
+            monitor!.Recompute();
+            if (sondeEnEchec) throw new InvalidOperationException("UIA indisponible (simulé)");
+            return false;
+        });
+        using (monitor = new ForegroundMonitor(api, IntPtr.Zero, new TestWindowsTypingHost()))
+        {
+            monitor.ForegroundChanged += () => changements++;
+            mock.ScriptedProcessName = "w1.exe";
+            mock.ForegroundWindow = W1;
+            monitor.Recompute();
+
+            Assert.Equal("w2.exe", monitor.CurrentProcessName);
+            Assert.False(monitor.IsWindowStale);
+            Assert.Equal(CompatibilityMode.Default, monitor.CurrentMode);
+            Assert.Equal("w2.exe", monitor.LastApplicationProcessName);
+            Assert.Equal(1, changements); // celui de l'appel imbriqué seulement
+        }
+    }
+
     private sealed record Bilan(int ProfondeurMax, IntPtr PremierPlan, string? Processus, bool Perime);
 
     private static Bilan SurUnFilSta(bool leveePendantLaSonde)
@@ -152,6 +189,29 @@ public sealed class ForegroundMonitorReentreeTests
             finally { _profondeur--; }
         }
 
+        public short VkKeyScanExW(char ch, IntPtr hkl) => mock.VkKeyScanExW(ch, hkl);
+        public uint MapVirtualKeyExW(uint code, uint mapType, IntPtr hkl) => mock.MapVirtualKeyExW(code, mapType, hkl);
+        public short GetKeyState(int vk) => mock.GetKeyState(vk);
+        public short GetAsyncKeyState(int vk) => mock.GetAsyncKeyState(vk);
+        public IntPtr GetKeyboardLayout(uint threadId) => mock.GetKeyboardLayout(threadId);
+        public int ToUnicode(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags) =>
+            mock.ToUnicode(vk, scan, state, buffer, capacity, flags);
+        public int ToUnicodeEx(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags, IntPtr hkl) =>
+            mock.ToUnicodeEx(vk, scan, state, buffer, capacity, flags, hkl);
+        public uint SendInput(Win32.INPUT[] inputs) => mock.SendInput(inputs);
+        public IntPtr GetForegroundWindow() => mock.GetForegroundWindow();
+        public bool TryGetWindowProcess(IntPtr window, out string? processName, out string? fullPath, out IntPtr hkl, out uint pid) =>
+            mock.TryGetWindowProcess(window, out processName, out fullPath, out hkl, out pid);
+        public bool TryGetProcessStartTime(uint pid, out long startTimeTicks) => mock.TryGetProcessStartTime(pid, out startTimeTicks);
+        public bool TryEnumProcessModules(uint pid, out string[] moduleFileNames) => mock.TryEnumProcessModules(pid, out moduleFileNames);
+    }
+
+    /// <summary>Délègue tout au mock, sauf la sonde du mot de passe, scriptée par le test.</summary>
+    private sealed class ApiSondeScriptee(MockWin32Api mock, Func<IntPtr, bool> sonde) : IWin32Api
+    {
+        public bool IsWindowPasswordField(IntPtr window) => sonde(window);
+        public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb) => mock.SetWinEventHook(eventMin, eventMax, cb);
+        public bool UnhookWinEvent(IntPtr hook) => mock.UnhookWinEvent(hook);
         public short VkKeyScanExW(char ch, IntPtr hkl) => mock.VkKeyScanExW(ch, hkl);
         public uint MapVirtualKeyExW(uint code, uint mapType, IntPtr hkl) => mock.MapVirtualKeyExW(code, mapType, hkl);
         public short GetKeyState(int vk) => mock.GetKeyState(vk);
