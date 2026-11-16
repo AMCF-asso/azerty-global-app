@@ -48,8 +48,7 @@ internal static class TrayIcon
 
     private static uint[]? RenderLogo(int size)
     {
-        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) != 0) return null;
+        if (!GdiPlus.EnsureStarted()) return null;
         IntPtr logo = IntPtr.Zero, bitmap = IntPtr.Zero;
         var pixels = new uint[size * size];
         var pin = GCHandle.Alloc(pixels, GCHandleType.Pinned);
@@ -71,7 +70,6 @@ internal static class TrayIcon
             if (bitmap != IntPtr.Zero) Win32.GdipDisposeImage(bitmap);
             if (logo != IntPtr.Zero) Win32.GdipDisposeImage(logo);
             pin.Free();
-            Win32.GdiplusShutdown(token);
         }
     }
 
@@ -159,8 +157,7 @@ internal static class TrayIcon
     /// <summary>HICON 32 bits à alpha à partir des pixels ; zéro si un maillon échoue.</summary>
     private static IntPtr FromPixels(uint[] pixels, int size)
     {
-        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) != 0) return IntPtr.Zero;
+        if (!GdiPlus.EnsureStarted()) return IntPtr.Zero;
         var pin = GCHandle.Alloc(pixels, GCHandleType.Pinned);
         IntPtr bitmap = IntPtr.Zero;
         try
@@ -180,7 +177,6 @@ internal static class TrayIcon
         {
             if (bitmap != IntPtr.Zero) Win32.GdipDisposeImage(bitmap);
             pin.Free();
-            Win32.GdiplusShutdown(token);
         }
     }
 }

@@ -2,7 +2,7 @@
 
 Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-ressources-inventaire.md` ; ne pas modifier à la main. Verdicts lus : `docs/audit-ressources-verdicts.tsv`. Lecture : [audit-ressources.md](audit-ressources.md).
 
-387 créations : abonnement 39, gdi 110, memoire 15, minuterie 32, windows 191.
+381 créations : abonnement 39, gdi 110, memoire 15, minuterie 32, windows 185.
 
 | Catégorie | API | Nombre |
 |---|---|---|
@@ -36,7 +36,7 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | windows | CreateStreamOnHGlobal | 1 |
 | windows | CreateWindowExW | 71 |
 | windows | FileStream | 5 |
-| windows | GdiplusStartup | 7 |
+| windows | GdiplusStartup | 1 |
 | windows | GetDC | 29 |
 | windows | GlobalAlloc | 2 |
 | windows | LoadCursorW | 7 |
@@ -60,23 +60,23 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | Site | API | Libération |
 |---|---|---|
 | `Program.cs:194` | AppDomain | jamais : gestionnaire d'exceptions du processus, posé une fois dans Main (lu) |
-| `AboutWindow.cs:168` | DialogNavigation.Register | libéré : AboutWindow.cs:506 |
+| `AboutWindow.cs:166` | DialogNavigation.Register | libéré : AboutWindow.cs:504 |
 | `LayoutConflictWindow.cs:172` | DialogNavigation.Register | libéré : LayoutConflictWindow.cs:523 |
 | `MaintainableLayersWindow.cs:113` | DialogNavigation.Register | libéré : MaintainableLayersWindow.cs:127, MaintainableLayersWindow.cs:575 |
-| `OnboardingWindow.cs:981` | DialogNavigation.Register | libéré : OnboardingWindow.cs:2228 |
+| `OnboardingWindow.cs:979` | DialogNavigation.Register | libéré : OnboardingWindow.cs:2226 |
 | `PauseDurationDialog.cs:159` | DialogNavigation.Register | libéré : PauseDurationDialog.cs:557 |
-| `SettingsWindow.cs:431` | DialogNavigation.Register | libéré : SettingsWindow.cs:2530 |
+| `SettingsWindow.cs:429` | DialogNavigation.Register | libéré : SettingsWindow.cs:2528 |
 | `UsageStatsWindow.cs:203` | DialogNavigation.Register | libéré : UsageStatsWindow.cs:771 |
-| `AboutWindow.cs:104` | event += | désabonné : AboutWindow.cs:501 |
+| `AboutWindow.cs:102` | event += | désabonné : AboutWindow.cs:499 |
 | `LessonsWindow.cs:259` | event += | désabonné : LessonsWindow.cs:3292 |
 | `LessonsWindow.cs:263` | event += | désabonné : LessonsWindow.cs:3295 |
 | `LessonsWindow.cs:264` | event += | désabonné : LessonsWindow.cs:3296 |
 | `LessonsWindow.cs:265` | event += | désabonné : LessonsWindow.cs:3297 |
 | `LessonsWindow.cs:270` | event += | désabonné : LessonsWindow.cs:3294 |
 | `MaintainableLayersWindow.cs:81` | event += | désabonné : MaintainableLayersWindow.cs:571 |
-| `OnboardingWindow.cs:341` | event += | désabonné : OnboardingWindow.cs:2221 |
+| `OnboardingWindow.cs:339` | event += | désabonné : OnboardingWindow.cs:2219 |
 | `PauseDurationDialog.cs:170` | event += | désabonné : PauseDurationDialog.cs:551 |
-| `SettingsWindow.cs:322` | event += | désabonné : SettingsWindow.cs:2520 |
+| `SettingsWindow.cs:320` | event += | désabonné : SettingsWindow.cs:2518 |
 | `TrayApplication.cs:241` | event += | jamais : abonnement de l'instance unique du tray, une fois par processus (lu) |
 | `TrayApplication.cs:253` | event += | jamais : abonnement de l'instance unique du tray, une fois par processus (lu) |
 | `TrayApplication.cs:359` | event += | jamais : KeyMapper possédé par le tray, même durée de vie (une fois par processus) (lu) |
@@ -104,14 +104,14 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | Site | API | Libération |
 |---|---|---|
 | `GdiHelpers.cs:100` | CreateBitmap | libéré : GdiHelpers.cs:103 |
-| `TrayApplication.cs:3244` | CreateBitmap | libéré : TrayApplication.cs:3255 |
-| `TrayIcon.cs:172` | CreateBitmap | libéré : TrayIcon.cs:175 |
+| `TrayApplication.cs:3242` | CreateBitmap | libéré : TrayApplication.cs:3253 |
+| `TrayIcon.cs:169` | CreateBitmap | libéré : TrayIcon.cs:172 |
 | `DevRects.cs:337` | CreateCompatibleBitmap | libéré : DevRects.cs:357 |
 | `LessonsWindow.Home.cs:805` | CreateCompatibleBitmap | libéré : LessonsWindow.Home.cs:828 |
 | `LessonsWindow.cs:1385` | CreateCompatibleBitmap | libéré : LessonsWindow.cs:1420 |
 | `LessonsWindow.cs:999` | CreateCompatibleBitmap | libéré : LessonsWindow.cs:1023 |
 | `PaintBuffer.cs:52` | CreateCompatibleBitmap | libéré : PaintBuffer.cs:70 |
-| `TrayApplication.cs:3197` | CreateCompatibleBitmap | libéré : TrayApplication.cs:3256 |
+| `TrayApplication.cs:3195` | CreateCompatibleBitmap | libéré : TrayApplication.cs:3254 |
 | `VirtualKeyboard.cs:960` | CreateCompatibleBitmap | libéré : VirtualKeyboard.cs:979 |
 | `DevRects.cs:336` | CreateCompatibleDC | libéré : DevRects.cs:358 |
 | `LessonsWindow.Home.cs:804` | CreateCompatibleDC | libéré : LessonsWindow.Home.cs:829 |
@@ -119,9 +119,9 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LessonsWindow.cs:1384` | CreateCompatibleDC | libéré : LessonsWindow.cs:1422 |
 | `LessonsWindow.cs:998` | CreateCompatibleDC | libéré : LessonsWindow.cs:1016 |
 | `PaintBuffer.cs:51` | CreateCompatibleDC | libéré : PaintBuffer.cs:58 |
-| `TrayApplication.cs:3196` | CreateCompatibleDC | libéré : TrayApplication.cs:3257 |
+| `TrayApplication.cs:3194` | CreateCompatibleDC | libéré : TrayApplication.cs:3255 |
 | `VirtualKeyboard.cs:959` | CreateCompatibleDC | libéré : VirtualKeyboard.cs:980 |
-| `AppFonts.cs:183` | CreateFontW | rendu à l'appelant (AppFonts.Create) : AppFonts.Get le garde pour la vie du processus (tailles qui ne suivent que le DPI, une par écran) ; WindowFonts le détruit quand l'échelle de sa fenêtre change et à la fermeture (correctif C1 et C2) (lu) |
+| `AppFonts.cs:196` | CreateFontW | rendu à l'appelant (AppFonts.Create) : AppFonts.Get le garde pour la vie du processus (tailles qui ne suivent que le DPI, une par écran) ; WindowFonts le détruit quand l'échelle de sa fenêtre change et à la fermeture (correctif C1 et C2) (lu) |
 | `LessonsWindow.cs:434` | CreateFontW | libéré : LessonsWindow.cs:464 |
 | `LessonsWindow.cs:435` | CreateFontW | libéré : LessonsWindow.cs:465 |
 | `LessonsWindow.cs:436` | CreateFontW | libéré : LessonsWindow.cs:466 |
@@ -138,14 +138,14 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LessonsWindow.cs:447` | CreateFontW | libéré : LessonsWindow.cs:477 |
 | `MaintainableLayersWindow.cs:243` | CreateFontW | libéré : MaintainableLayersWindow.cs:579 |
 | `MaintainableLayersWindow.cs:246` | CreateFontW | libéré : MaintainableLayersWindow.cs:580 |
-| `OnboardingWindow.cs:393` | CreateFontW | libéré : OnboardingWindow.cs:399 |
+| `OnboardingWindow.cs:391` | CreateFontW | libéré : OnboardingWindow.cs:397 |
 | `PauseDurationDialog.cs:195` | CreateFontW | libéré : PauseDurationDialog.cs:207 |
-| `TrayApplication.cs:3232` | CreateFontW | libéré : TrayApplication.cs:3239 |
+| `TrayApplication.cs:3230` | CreateFontW | libéré : TrayApplication.cs:3237 |
 | `TypeRamp.cs:29` | CreateFontW | aucun appelant dans src/ (TypeRamp.Create inutilisé) ; la HFONT appartiendrait à l'appelant (lu) |
 | `TypeRamp.cs:40` | CreateFontW | fabrique : la HFONT appartient à l'appelant ; 6 appelants, tous en champ détruit au Dispose ou au changement d'échelle (AboutWindow.cs:130, LayoutConflictWindow.cs:130-133, UsageStatsWindow.cs:163) (lu) |
 | `GdiHelpers.cs:102` | CreateIconIndirect | fabrique : l'icône appartient à l'appelant ; NativeWindow.LogoIcon la garde en cache par taille (jamais détruite, bornée : 16 et 32 px par DPI) ; TrayApplication.CreateLogoIcon la remplace et détruit l'ancienne (TrayApplication.cs:2952) (lu) |
-| `TrayApplication.cs:3252` | CreateIconIndirect | fabrique CreateTextIcon : l'icône appartient à l'appelant, ancienne détruite au remplacement (TrayApplication.cs:2553, 2952) ; bitmaps et police de travail détruits sur place (3239, 3255-3256) (lu) |
-| `TrayIcon.cs:174` | CreateIconIndirect | fabrique FromPixels : l'icône appartient à l'appelant (TrayApplication._hIcon, ancienne détruite à TrayApplication.cs:2553) (lu) |
+| `TrayApplication.cs:3250` | CreateIconIndirect | fabrique CreateTextIcon : l'icône appartient à l'appelant, ancienne détruite au remplacement (TrayApplication.cs:2553, 2952) ; bitmaps et police de travail détruits sur place (3239, 3255-3256) (lu) |
+| `TrayIcon.cs:171` | CreateIconIndirect | fabrique FromPixels : l'icône appartient à l'appelant (TrayApplication._hIcon, ancienne détruite à TrayApplication.cs:2553) (lu) |
 | `CharacterSearch.cs:1381` | CreatePen | libéré : CharacterSearch.cs:1390 |
 | `GdiHelpers.cs:148` | CreatePen | libéré : GdiHelpers.cs:155 |
 | `GdiHelpers.cs:209` | CreatePen | libéré : GdiHelpers.cs:216 |
@@ -156,7 +156,7 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LightButton.cs:116` | CreatePen | libéré : LightButton.cs:122 |
 | `MiniKeyboardRenderer.cs:252` | CreatePen | libéré : MiniKeyboardRenderer.cs:258 |
 | `MiniKeyboardRenderer.cs:266` | CreatePen | libéré : MiniKeyboardRenderer.cs:272 |
-| `OnboardingWindow.cs:1339` | CreatePen | libéré : OnboardingWindow.cs:1345 |
+| `OnboardingWindow.cs:1337` | CreatePen | libéré : OnboardingWindow.cs:1343 |
 | `PaperDraw.cs:107` | CreatePen | libéré : PaperDraw.cs:113 |
 | `PaperDraw.cs:28` | CreatePen | libéré : PaperDraw.cs:42 |
 | `PaperKeyboard.cs:324` | CreatePen | libéré : PaperKeyboard.cs:330 |
@@ -177,25 +177,25 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `MiniKeyboardRenderer.cs:251` | CreateSolidBrush | libéré : MiniKeyboardRenderer.cs:259 |
 | `MiniKeyboardRenderer.cs:265` | CreateSolidBrush | libéré : MiniKeyboardRenderer.cs:273 |
 | `NativeWindow.cs:108` | CreateSolidBrush | pinceau de classe : l'ancien détruit au remplacement (NativeWindow.cs:110-111), le dernier libéré par Windows à l'UnregisterClass de chaque fenêtre (12 classes de fenêtres, toutes désinscrites au Dispose) (lu) |
-| `OnboardingWindow.cs:1311` | CreateSolidBrush | libéré : OnboardingWindow.cs:1310, OnboardingWindow.cs:2236 |
-| `OnboardingWindow.cs:318` | CreateSolidBrush | libéré : OnboardingWindow.cs:1310, OnboardingWindow.cs:2236 |
+| `OnboardingWindow.cs:1309` | CreateSolidBrush | libéré : OnboardingWindow.cs:1308, OnboardingWindow.cs:2233 |
+| `OnboardingWindow.cs:317` | CreateSolidBrush | libéré : OnboardingWindow.cs:1308, OnboardingWindow.cs:2233 |
 | `PaperDraw.cs:27` | CreateSolidBrush | libéré : PaperDraw.cs:43 |
 | `PaperKeyboard.cs:323` | CreateSolidBrush | libéré : PaperKeyboard.cs:331 |
 | `PaperKeyboard.cs:589` | CreateSolidBrush | libéré : PaperKeyboard.cs:597 |
 | `PauseDurationDialog.cs:150` | CreateSolidBrush | libéré : PauseDurationDialog.cs:573 |
 | `SettingsWindow.Paper.cs:88` | CreateSolidBrush | libéré : l'ancien pinceau détruit au remplacement (SettingsWindow.Paper.cs:89), le dernier au Dispose (SettingsWindow.cs:2535) (lu) |
-| `SettingsWindow.cs:300` | CreateSolidBrush | libéré : SettingsWindow.cs:2535 |
+| `SettingsWindow.cs:299` | CreateSolidBrush | libéré : SettingsWindow.cs:2533 |
 | `ToggleNotification.cs:34` | CreateSolidBrush | libéré : ToggleNotification.cs:181 |
-| `TrayApplication.cs:3202` | CreateSolidBrush | libéré : TrayApplication.cs:3205 |
-| `TrayApplication.cs:3211` | CreateSolidBrush | libéré : TrayApplication.cs:3213 |
-| `TrayApplication.cs:3220` | CreateSolidBrush | libéré : TrayApplication.cs:3222 |
-| `AboutWindow.cs:385` | GdipCreate | libéré : AboutWindow.cs:479 |
+| `TrayApplication.cs:3200` | CreateSolidBrush | libéré : TrayApplication.cs:3203 |
+| `TrayApplication.cs:3209` | CreateSolidBrush | libéré : TrayApplication.cs:3211 |
+| `TrayApplication.cs:3218` | CreateSolidBrush | libéré : TrayApplication.cs:3220 |
+| `AboutWindow.cs:383` | GdipCreate | libéré : AboutWindow.cs:477 |
 | `GdiHelpers.cs:91` | GdipCreate | libéré : GdiHelpers.cs:109 |
 | `GdiImageLoader.cs:45` | GdipCreate | fabrique : l'image GDI+ appartient à l'appelant ; 7 appelants, tous disposés (AboutWindow.cs:520, NativeWindow.cs:182, OnboardingWindow.cs:2231-2233, TrayApplication.cs:2972, TrayIcon.cs:72) (lu) |
-| `OnboardingWindow.cs:1415` | GdipCreate | libéré : OnboardingWindow.cs:1421 |
-| `OnboardingWindow.cs:1629` | GdipCreate | libéré : OnboardingWindow.cs:1646 |
-| `OnboardingWindow.cs:2042` | GdipCreate | libéré : OnboardingWindow.cs:2044 |
-| `OnboardingWindow.cs:2114` | GdipCreate | libéré : OnboardingWindow.cs:2121 |
+| `OnboardingWindow.cs:1413` | GdipCreate | libéré : OnboardingWindow.cs:1419 |
+| `OnboardingWindow.cs:1627` | GdipCreate | libéré : OnboardingWindow.cs:1644 |
+| `OnboardingWindow.cs:2040` | GdipCreate | libéré : OnboardingWindow.cs:2042 |
+| `OnboardingWindow.cs:2112` | GdipCreate | libéré : OnboardingWindow.cs:2119 |
 | `PaperChoice.cs:165` | GdipCreate | libéré : PaperChoice.cs:212 |
 | `PaperChoice.cs:230` | GdipCreate | libéré : PaperChoice.cs:251 |
 | `PaperChoice.cs:240` | GdipCreate | libéré : PaperChoice.cs:243 |
@@ -207,32 +207,32 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `PaperDraw.cs:62` | GdipCreate | libéré : PaperDraw.cs:87 |
 | `PaperDraw.cs:78` | GdipCreate | libéré : PaperDraw.cs:86 |
 | `PaperDraw.cs:79` | GdipCreate | libéré : PaperDraw.cs:85 |
-| `TrayIcon.cs:168` | GdipCreate | libéré : TrayIcon.cs:181 |
-| `TrayIcon.cs:60` | GdipCreate | libéré : TrayIcon.cs:71 |
+| `TrayIcon.cs:165` | GdipCreate | libéré : TrayIcon.cs:178 |
+| `TrayIcon.cs:59` | GdipCreate | libéré : TrayIcon.cs:70 |
 | `GdiHelpers.cs:97` | GdipCreateHBITMAPFromBitmap | libéré : GdiHelpers.cs:103 |
-| `TrayIcon.cs:170` | GdipCreateHBITMAPFromBitmap | libéré : TrayIcon.cs:175 |
+| `TrayIcon.cs:167` | GdipCreateHBITMAPFromBitmap | libéré : TrayIcon.cs:172 |
 | `GdiHelpers.cs:92` | GdipGetImageGraphicsContext | libéré : GdiHelpers.cs:96 |
-| `TrayIcon.cs:62` | GdipGetImageGraphicsContext | libéré : TrayIcon.cs:66 |
+| `TrayIcon.cs:61` | GdipGetImageGraphicsContext | libéré : TrayIcon.cs:65 |
 
 ## memoire (15)
 
 | Site | API | Libération |
 |---|---|---|
 | `CharacterSearch.cs:1131` | GCHandle.Alloc | libéré : CharacterSearch.cs:1139 |
-| `TrayIcon.cs:164` | GCHandle.Alloc | libéré : TrayIcon.cs:182 |
-| `TrayIcon.cs:55` | GCHandle.Alloc | libéré : TrayIcon.cs:73 |
-| `AppFonts.cs:146` | Marshal.AllocHGlobal | libéré : AppFonts.cs:151 |
+| `TrayIcon.cs:161` | GCHandle.Alloc | libéré : TrayIcon.cs:179 |
+| `TrayIcon.cs:54` | GCHandle.Alloc | libéré : TrayIcon.cs:72 |
+| `AppFonts.cs:159` | Marshal.AllocHGlobal | libéré : AppFonts.cs:164 |
 | `LayoutConflictWindow.cs:304` | Marshal.AllocHGlobal | libéré : LayoutConflictWindow.cs:313 |
 | `PauseDurationDialog.cs:320` | Marshal.AllocHGlobal | libéré : PauseDurationDialog.cs:327 |
 | `SettingsWindow.Paper.cs:165` | Marshal.AllocHGlobal | libéré : SettingsWindow.Paper.cs:172 |
-| `SettingsWindow.cs:1041` | Marshal.AllocHGlobal | libéré : SettingsWindow.cs:1047 |
-| `SettingsWindow.cs:2189` | Marshal.AllocHGlobal | libéré : SettingsWindow.cs:2216 |
+| `SettingsWindow.cs:1039` | Marshal.AllocHGlobal | libéré : SettingsWindow.cs:1045 |
+| `SettingsWindow.cs:2187` | Marshal.AllocHGlobal | libéré : SettingsWindow.cs:2214 |
 | `VirtualKeyboard.cs:399` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:407 |
 | `VirtualKeyboard.cs:423` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:431 |
 | `VirtualKeyboard.cs:445` | Marshal.AllocHGlobal | libéré : VirtualKeyboard.cs:453 |
 | `LayoutConflictWindow.cs:295` | Marshal.StringToHGlobalUni | libéré : LayoutConflictWindow.cs:297 |
-| `SettingsWindow.cs:1037` | Marshal.StringToHGlobalUni | libéré : SettingsWindow.cs:1049 |
-| `SettingsWindow.cs:2110` | Marshal.StringToHGlobalUni | libéré : SettingsWindow.cs:2112 |
+| `SettingsWindow.cs:1035` | Marshal.StringToHGlobalUni | libéré : SettingsWindow.cs:1047 |
+| `SettingsWindow.cs:2108` | Marshal.StringToHGlobalUni | libéré : SettingsWindow.cs:2110 |
 
 ## minuterie (32)
 
@@ -271,16 +271,16 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TrayApplication.cs:1371` | ThreadPool | aucun objet gardé : sonde ponctuelle du pool, une seule en vol (garde _remoteHostProbeRunning) (lu) |
 | `UsageStats.cs:668` | ThreadPool | aucun objet gardé : tâche ponctuelle du pool, une seule en vol (garde _backgroundFlushQueued) (lu) |
 
-## windows (191)
+## windows (185)
 
 | Site | API | Libération |
 |---|---|---|
-| `AppFonts.cs:148` | AddFontMemResourceEx | jamais : polices privées chargées une fois par processus (garde _loaded) ; mémoire gardée jusqu'à la sortie, bornée (lu) |
+| `AppFonts.cs:161` | AddFontMemResourceEx | jamais : polices privées chargées une fois par processus (garde _loaded) ; mémoire gardée jusqu'à la sortie, bornée (lu) |
 | `ChipButton.cs:48` | BeginPaint | libéré : ChipButton.cs:50 |
 | `LayerIndicatorWindow.cs:134` | BeginPaint | libéré : LayerIndicatorWindow.cs:137 |
 | `LessonsWindow.cs:1348` | BeginPaint | libéré : LessonsWindow.cs:1361 |
 | `LightButton.cs:60` | BeginPaint | libéré : LightButton.cs:62 |
-| `OnboardingWindow.cs:1597` | BeginPaint | libéré : OnboardingWindow.cs:1618 |
+| `OnboardingWindow.cs:1595` | BeginPaint | libéré : OnboardingWindow.cs:1616 |
 | `PaintBuffer.cs:28` | BeginPaint | libéré : PaintBuffer.cs:83 |
 | `UsageStatsWindow.cs:581` | BeginPaint | libéré : UsageStatsWindow.cs:603 |
 | `VirtualKeyboard.cs:950` | BeginPaint | libéré : VirtualKeyboard.cs:955 |
@@ -301,12 +301,12 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `TrayApplication.cs:1898` | CreatePopupMenu | libéré : TrayApplication.cs:1899 |
 | `TrayApplication.cs:1906` | CreatePopupMenu | libéré : TrayApplication.cs:1910 |
 | `GdiImageLoader.cs:37` | CreateStreamOnHGlobal | libéré : flux relâché dans le finally (GdiImageLoader.cs:51), la mémoire HGLOBAL part avec lui (fDeleteOnRelease) ; GlobalFree si la création échoue (40) (lu) |
-| `AboutWindow.cs:162` | CreateWindowExW | libéré : AboutWindow.cs:507 |
-| `AboutWindow.cs:176` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:507) |
-| `AboutWindow.cs:182` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:507) |
-| `AboutWindow.cs:188` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:507) |
-| `AboutWindow.cs:198` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:507) |
-| `AboutWindow.cs:205` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:507) |
+| `AboutWindow.cs:160` | CreateWindowExW | libéré : AboutWindow.cs:505 |
+| `AboutWindow.cs:174` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:505) |
+| `AboutWindow.cs:180` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:505) |
+| `AboutWindow.cs:186` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:505) |
+| `AboutWindow.cs:196` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:505) |
+| `AboutWindow.cs:203` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (AboutWindow.cs:505) |
 | `CharacterSearch.cs:641` | CreateWindowExW | libéré : CharacterSearch.cs:1619 |
 | `CharacterSearch.cs:668` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (CharacterSearch.cs:1619) |
 | `CharacterSearch.cs:673` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (CharacterSearch.cs:1619) |
@@ -320,48 +320,48 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `MaintainableLayersWindow.cs:185` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (MaintainableLayersWindow.cs:576) |
 | `MaintainableLayersWindow.cs:202` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (MaintainableLayersWindow.cs:576) |
 | `MaintainableLayersWindow.cs:214` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (MaintainableLayersWindow.cs:576) |
-| `OnboardingWindow.cs:490` | CreateWindowExW | libéré : OnboardingWindow.cs:2229 |
-| `OnboardingWindow.cs:511` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:517` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:527` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:552` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:558` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:565` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:571` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:577` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:603` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
-| `OnboardingWindow.cs:628` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2229) |
+| `OnboardingWindow.cs:488` | CreateWindowExW | libéré : OnboardingWindow.cs:2227 |
+| `OnboardingWindow.cs:509` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:515` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:525` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:550` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:556` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:563` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:569` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:575` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:601` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
+| `OnboardingWindow.cs:626` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (OnboardingWindow.cs:2227) |
 | `PauseDurationDialog.cs:144` | CreateWindowExW | libéré : PauseDurationDialog.cs:558 |
 | `PauseDurationDialog.cs:263` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (PauseDurationDialog.cs:558) |
 | `PauseDurationDialog.cs:275` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (PauseDurationDialog.cs:558) |
 | `PauseDurationDialog.cs:288` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (PauseDurationDialog.cs:558) |
 | `PauseDurationDialog.cs:304` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (PauseDurationDialog.cs:558) |
 | `PauseDurationDialog.cs:333` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (PauseDurationDialog.cs:558) |
-| `SettingsWindow.cs:1004` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:1966` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) (lu) |
-| `SettingsWindow.cs:425` | CreateWindowExW | libéré : SettingsWindow.cs:2531 |
-| `SettingsWindow.cs:444` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:456` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:465` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:476` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:481` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:486` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:492` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:499` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:509` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:528` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:533` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:546` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:551` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:561` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:570` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:575` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:582` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:587` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:592` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:603` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:607` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) |
-| `SettingsWindow.cs:630` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) (lu) |
+| `SettingsWindow.cs:1002` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:1964` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) (lu) |
+| `SettingsWindow.cs:423` | CreateWindowExW | libéré : SettingsWindow.cs:2529 |
+| `SettingsWindow.cs:442` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:454` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:463` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:474` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:479` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:484` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:490` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:497` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:507` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:526` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:531` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:544` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:549` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:559` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:568` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:573` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:580` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:585` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:590` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:601` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:605` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2529) |
+| `SettingsWindow.cs:628` | CreateWindowExW | fenêtre enfant de _hWnd : détruite avec elle (SettingsWindow.cs:2531) (lu) |
 | `ToggleNotification.cs:55` | CreateWindowExW | libéré : ToggleNotification.cs:176 |
 | `TrayApplication.cs:198` | CreateWindowExW | libéré : DestroyWindow à l'arrêt (TrayApplication.cs:2346) ; fenêtre unique du processus (lu) |
 | `UsageStatsWindow.cs:194` | CreateWindowExW | libéré : UsageStatsWindow.cs:772 |
@@ -377,14 +377,8 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LessonCatalog.cs:188` | FileStream | using : fermé en fin de bloc |
 | `LessonProgressStore.cs:545` | FileStream | using : fermé en fin de bloc |
 | `UsageStats.cs:726` | FileStream | using : fermé en fin de bloc |
-| `AboutWindow.cs:97` | GdiplusStartup | arrêté : AboutWindow.cs:525 |
-| `NativeWindow.cs:176` | GdiplusStartup | arrêté : NativeWindow.cs:184 |
-| `OnboardingWindow.cs:329` | GdiplusStartup | arrêté : OnboardingWindow.cs:2234 |
-| `SettingsWindow.cs:308` | GdiplusStartup | arrêté : SettingsWindow.cs:2539 |
-| `TrayApplication.cs:2962` | GdiplusStartup | arrêté : TrayApplication.cs:2973 |
-| `TrayIcon.cs:163` | GdiplusStartup | arrêté : TrayIcon.cs:74, TrayIcon.cs:183 |
-| `TrayIcon.cs:52` | GdiplusStartup | arrêté : TrayIcon.cs:74, TrayIcon.cs:183 |
-| `AboutWindow.cs:91` | GetDC | libéré : AboutWindow.cs:93 |
+| `GdiPlus.cs:29` | GdiplusStartup | arrêté : GdiPlus.cs:47 |
+| `AboutWindow.cs:90` | GetDC | libéré : AboutWindow.cs:92 |
 | `CharacterSearch.cs:1096` | GetDC | libéré : CharacterSearch.cs:1099 |
 | `CharacterSearch.cs:714` | GetDC | libéré : CharacterSearch.cs:716 |
 | `CharacterSearch.cs:769` | GetDC | libéré : CharacterSearch.cs:771 |
@@ -399,17 +393,17 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LessonsWindow.cs:252` | GetDC | libéré : LessonsWindow.cs:254 |
 | `LessonsWindow.cs:991` | GetDC | libéré : LessonsWindow.cs:1017 |
 | `MaintainableLayersWindow.cs:287` | GetDC | libéré : MaintainableLayersWindow.cs:313 |
-| `OnboardingWindow.cs:1788` | GetDC | libéré : OnboardingWindow.cs:1849 |
-| `OnboardingWindow.cs:1863` | GetDC | libéré : OnboardingWindow.cs:1873 |
-| `OnboardingWindow.cs:321` | GetDC | libéré : OnboardingWindow.cs:323 |
-| `OnboardingWindow.cs:786` | GetDC | libéré : OnboardingWindow.cs:789 |
-| `OnboardingWindow.cs:801` | GetDC | libéré : OnboardingWindow.cs:804 |
+| `OnboardingWindow.cs:1786` | GetDC | libéré : OnboardingWindow.cs:1847 |
+| `OnboardingWindow.cs:1861` | GetDC | libéré : OnboardingWindow.cs:1871 |
+| `OnboardingWindow.cs:320` | GetDC | libéré : OnboardingWindow.cs:322 |
+| `OnboardingWindow.cs:784` | GetDC | libéré : OnboardingWindow.cs:787 |
+| `OnboardingWindow.cs:799` | GetDC | libéré : OnboardingWindow.cs:802 |
 | `PaintBuffer.cs:50` | GetDC | libéré : PaintBuffer.cs:53 |
-| `SettingsWindow.cs:1876` | GetDC | libéré : SettingsWindow.cs:1884 |
-| `SettingsWindow.cs:302` | GetDC | libéré : SettingsWindow.cs:304 |
-| `SettingsWindow.cs:356` | GetDC | libéré : SettingsWindow.cs:383 |
+| `SettingsWindow.cs:1874` | GetDC | libéré : SettingsWindow.cs:1882 |
+| `SettingsWindow.cs:301` | GetDC | libéré : SettingsWindow.cs:303 |
+| `SettingsWindow.cs:354` | GetDC | libéré : SettingsWindow.cs:381 |
 | `ToggleNotification.cs:36` | GetDC | libéré : ToggleNotification.cs:38 |
-| `TrayApplication.cs:3195` | GetDC | libéré : TrayApplication.cs:3258 |
+| `TrayApplication.cs:3193` | GetDC | libéré : TrayApplication.cs:3256 |
 | `UsageStatsWindow.cs:131` | GetDC | libéré : UsageStatsWindow.cs:133 |
 | `UsageStatsWindow.cs:319` | GetDC | libéré : UsageStatsWindow.cs:329 |
 | `VirtualKeyboard.cs:958` | GetDC | libéré : VirtualKeyboard.cs:962 |
@@ -418,9 +412,9 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `LessonsWindow.cs:1269` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `LinkBehavior.cs:72` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `NativeWindow.cs:50` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
-| `OnboardingWindow.cs:1224` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
-| `OnboardingWindow.cs:1230` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
-| `SettingsWindow.cs:1794` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
+| `OnboardingWindow.cs:1222` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
+| `OnboardingWindow.cs:1228` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
+| `SettingsWindow.cs:1792` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `VirtualKeyboard.cs:825` | LoadCursorW | aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit |
 | `Program.cs:49` | Mutex | libéré : using var jusqu'à la fin de Main (Program.cs:137, 149) (lu) |
 | `TextEditBuffer.cs:30` | OpenClipboard | libéré : TextEditBuffer.cs:32 |
@@ -439,7 +433,7 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `SettingsWindow.Paper.cs:280` | SaveDC | libéré : SettingsWindow.Paper.cs:283 |
 | `SettingsWindow.Paper.cs:348` | SaveDC | libéré : SettingsWindow.Paper.cs:357 |
 | `SettingsWindow.Paper.cs:391` | SaveDC | libéré : SettingsWindow.Paper.cs:395 |
-| `SettingsWindow.cs:1538` | SaveDC | libéré : SettingsWindow.cs:1540 |
+| `SettingsWindow.cs:1536` | SaveDC | libéré : SettingsWindow.cs:1538 |
 | `TablatureRenderer.cs:237` | SaveDC | libéré : TablatureRenderer.cs:302 |
 | `UsageStatsWindow.cs:700` | SaveDC | libéré : UsageStatsWindow.cs:703 |
 | `LessonsWindow.cs:2073` | SetCapture | libéré : LessonsWindow.cs:2097, LessonsWindow.cs:2104, LessonsWindow.cs:2283 |
@@ -453,13 +447,13 @@ Produit par `python scripts/audit-ressources-inventaire.py --md docs/audit-resso
 | `ChipButton.cs:37` | SetWindowSubclass | retirée : ChipButton.cs:60 |
 | `LightButton.cs:49` | SetWindowSubclass | retirée : LightButton.cs:71 |
 | `LinkBehavior.cs:81` | SetWindowSubclass | retirée : LinkBehavior.cs:89 |
-| `OnboardingWindow.cs:535` | SetWindowSubclass | retirée : OnboardingWindow.cs:2224, OnboardingWindow.cs:2225, OnboardingWindow.cs:2226 |
-| `OnboardingWindow.cs:536` | SetWindowSubclass | retirée : OnboardingWindow.cs:2224, OnboardingWindow.cs:2225, OnboardingWindow.cs:2226 |
-| `OnboardingWindow.cs:537` | SetWindowSubclass | retirée : OnboardingWindow.cs:2224, OnboardingWindow.cs:2225, OnboardingWindow.cs:2226 |
+| `OnboardingWindow.cs:533` | SetWindowSubclass | retirée : OnboardingWindow.cs:2222, OnboardingWindow.cs:2223, OnboardingWindow.cs:2224 |
+| `OnboardingWindow.cs:534` | SetWindowSubclass | retirée : OnboardingWindow.cs:2222, OnboardingWindow.cs:2223, OnboardingWindow.cs:2224 |
+| `OnboardingWindow.cs:535` | SetWindowSubclass | retirée : OnboardingWindow.cs:2222, OnboardingWindow.cs:2223, OnboardingWindow.cs:2224 |
 | `SettingsWindow.CompatScroll.cs:43` | SetWindowSubclass | retirée : SettingsWindow.CompatScroll.cs:63 |
-| `SettingsWindow.cs:1017` | SetWindowSubclass | retirée : SettingsWindow.cs:2526 |
-| `SettingsWindow.cs:462` | SetWindowSubclass | retirée : SettingsWindow.cs:2522, SettingsWindow.cs:2524 |
-| `SettingsWindow.cs:471` | SetWindowSubclass | retirée : SettingsWindow.cs:2522, SettingsWindow.cs:2524 |
+| `SettingsWindow.cs:1015` | SetWindowSubclass | retirée : SettingsWindow.cs:2524 |
+| `SettingsWindow.cs:460` | SetWindowSubclass | retirée : SettingsWindow.cs:2520, SettingsWindow.cs:2522 |
+| `SettingsWindow.cs:469` | SetWindowSubclass | retirée : SettingsWindow.cs:2520, SettingsWindow.cs:2522 |
 | `TypingEngine.Windows/KeyboardHook.cs:151` | SetWindowsHookEx | libéré : TypingEngine.Windows/KeyboardHook.cs:185, TypingEngine.Windows/KeyboardHook.cs:451 |
 | `TypingEngine.Windows/KeyboardHook.cs:171` | SetWindowsHookEx | libéré : TypingEngine.Windows/KeyboardHook.cs:185, TypingEngine.Windows/KeyboardHook.cs:451 |
 | `TrayApplication.cs:1122` | Shell_NotifyIconW NIM_ADD | libéré : TrayApplication.cs:2383 |

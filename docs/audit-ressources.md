@@ -1,10 +1,10 @@
 # Audit des ressources longue durée — app AZERTY Global 1.3.0 (16/11/2026)
 
-- **Inventaire** : 387 créations de minuteries, d'abonnements, d'objets Windows et de mémoire native dans `src/`, chacune avec sa libération ou « jamais » ([inventaire généré](audit-ressources-inventaire.md)) ; 0 site sans verdict (`--check`), contrôle bloquant dans `verify.ps1` et la CI (T2).
-- **2 constats confirmés, même cause, impact faible, corrigés** : redimensionner les Leçons (C1) ou le clavier virtuel (C2) remplissait le cache de polices partagé `AppFonts.Get`, qui ne détruit rien : +48 et +47 objets GDI pour 20 tailles traversées. Correctif (T1) : chaque fenêtre possède ses polices à l'échelle (`WindowFonts`) et les détruit au changement d'échelle et à la fermeture. Après : GDI −1 et +0, cache partagé immobile ; les deux tests des constats passent au vert.
+- **Inventaire** : 381 créations de minuteries, d'abonnements, d'objets Windows et de mémoire native dans `src/`, chacune avec sa libération ou « jamais » ([inventaire généré](audit-ressources-inventaire.md)) ; 0 site sans verdict (`--check`), contrôle bloquant dans `verify.ps1` et la CI (T2).
+- **3 constats confirmés et corrigés.** C1 et C2, même cause, impact faible : redimensionner les Leçons (C1) ou le clavier virtuel (C2) remplissait le cache de polices partagé `AppFonts.Get`, qui ne détruit rien : +48 et +47 objets GDI pour 20 tailles traversées. Correctif (T1) : chaque fenêtre possède ses polices à l'échelle (`WindowFonts`) et les détruit au changement d'échelle et à la fermeture. Après : GDI −1 et +0, cache partagé immobile ; les deux tests des constats passent au vert.
 - **0 fuite** sur 11 fenêtres ouvertes, peintes et fermées, puis laissées ouvertes sous changements d'écran, de couleurs et de langue, puis rouvertes : GDI 0 ; USER sans croissance d'un cycle à l'autre (un décalage ponctuel de +9 au plus, borné : Accueil +8 sur 100 cycles, +9 sur 300).
-- **Réfuté après mesure** : la fuite USER de GDI+ démarré puis arrêté à chaque icône du tray (+52 sur 100 cycles) était un artefact du banc, qui ne pompait pas les messages ; en pompant comme le tray : +2.
-- **Décisions d'Antoine (QCM du 16/11)** : T1 par « polices par fenêtre », T2 « dans verify ». Les deux sont faits.
+- **C3, confirmé en CI** : démarrer puis arrêter GDI+ à chaque icône du tray gardait un objet USER par icône sur le runner Windows de la CI (+10 sur 10 cycles), presque rien sur le poste (+2 sur 100). Correctif : GDI+ démarré une fois pour tout le processus (`GdiPlus`), arrêté à la sortie ; 0 démarrage de plus en dessinant.
+- **Décisions d'Antoine (QCM du 16/11)** : T1 par « polices par fenêtre », T2 « dans verify ». Les deux sont faits ; C3 par « GDI+ ouvert une fois » (QCM du 16/11 au soir).
 
 Base : `396e449`, branche `claude/ag-audit-ressources-130`. L'audit (`741c34b`, `6732f86`) ne touche que les tests et les scripts ; T2 est `dbd198e` ; seul le correctif T1 modifie `src/`.
 
@@ -41,13 +41,13 @@ Base : `396e449`, branche `claude/ag-audit-ressources-130`. L'audit (`741c34b`,
 | minuterie | 32 | SetTimer 25, ThreadPool 5, Threading.Timer 1, Thread 1 |
 | mémoire | 15 | Marshal.AllocHGlobal 9, StringToHGlobalUni 3, GCHandle.Alloc 3 |
 
-Verdicts sur les 387 sites :
+Verdicts sur les 381 sites :
 - libéré : 223 ;
 - fenêtre enfant détruite avec sa fenêtre parente : 57 ;
 - minuterie de fenêtre : 24 ;
 - désabonné : 16 ;
 - sous-classe retirée : 11 ;
-- GDI+ arrêté : 7 ;
+- GDI+ arrêté (à la sortie, `GdiPlus.Shutdown`) : 1 ;
 - `using` : 5 ;
 - curseur système partagé : 7 ;
 - aucun objet gardé (pool de fils) : 5 ;
@@ -94,6 +94,15 @@ Les 21 « jamais » durent tous une fois par processus, ou par objet possédé
 - **Ordre des tests** : avant le correctif, le cache était commun au processus. Lancé juste après celui du clavier, le test des Leçons ne voyait plus que +28. Les chiffres « avant » sont ceux de chaque test lancé sans l'autre avant lui.
 - **Recherche des autres appelants** : seuls les Leçons et le clavier virtuel ont une échelle qui suit la taille de la fenêtre. Les autres fenêtres suivent le DPI (`_dpiScale`, `dpi / 96f`), d'où un jeu par écran, borné. L'accueil (`OnboardingWindow`) dessine aussi `PaperKeyboard`, mais son unité vient du DPI et de la largeur de la zone de travail, pas de la taille de sa fenêtre : il reste sur le cache partagé (`fonts: null`, commenté dans le code).
 
+### C3 — confirmé en CI puis corrigé : GDI+ démarré puis arrêté à chaque dessin
+
+- **Où** : sept endroits démarraient GDI+ puis l'arrêtaient autour d'un dessin : l'icône du tray (`TrayIcon.RenderLogo`, `TrayIcon.FromPixels`, refaite à chaque bascule, Verr. Maj. ou pause), le logo en icône (`TrayApplication.CreateLogoIcon`, `NativeWindow`), l'À propos, les Réglages et l'Accueil.
+- **Mesure sur le poste, 16/11** : sans pomper les messages, USER +52 sur 100 cycles ; en pompant comme la boucle du tray, +2 ; avec un GDI+ gardé ouvert ailleurs, 0. Le constat avait été classé réfuté sur ce seul poste.
+- **Mesure en CI, 16/11 (run 43952848446, runner Windows de GitHub)** : en pompant, USER +10 sur 10 cycles puis encore +10 sur 10 de plus ; même chose par `TrayIcon.Create` (+10 puis +9) ; avec un GDI+ gardé ouvert, 0. La file de messages ne rend pas ces objets partout : une icône par bascule les accumulerait chez un utilisateur dont le Windows se comporte comme le runner.
+- **Pourquoi les tests de fenêtres ne le voyaient pas** : le banc ouvre les fenêtres dans `BancCapture`, qui démarre son propre GDI+ (`CaptureSupport.cs:270`) ; leurs couples démarrage/arrêt ne faisaient donc que compter une référence de plus.
+- **Correctif (choix d'Antoine du 16/11 : « l'allumer une seule fois »)** : `GdiPlus.EnsureStarted` (`GdiPlus.cs`) démarre GDI+ au premier dessin et le garde ouvert ; `Program.Main` l'arrête après la fermeture des fenêtres, qui libèrent leurs images GDI+ dans leur `Dispose`. Les sept endroits l'appellent.
+- **Test** : `RessourcesLongueDureeTests.Aucun_dessin_ne_redemarre_GDIplus` (20 × 2 icônes et un À propos : 0 démarrage de plus). L'ancien test, qui démarrait et arrêtait GDI+ lui-même, mesurait Windows et non l'app : il est retiré.
+
 ### Plausibles (sans test en échec)
 
 - **P1** — `AppFonts.EnsureLoaded` : les polices embarquées sont chargées une fois par processus (`AddFontMemResourceEx`). La mémoire copiée reste allouée jusqu'à la sortie. C'est borné et non répété, donc pas un ticket.
@@ -107,12 +116,7 @@ Par mesure (tests verts, `RessourcesLongueDureeTests`) :
 - **Même instance fermée puis rouverte** (9 fenêtres que le tray garde en un exemplaire) : idem.
 - **Leçons recréées sur le KeyMapper et le KeyboardHook partagés**, comme le fait `EnsureLessonsWindow` : 0 abonné laissé sur le moteur après 23 fenêtres. Le premier banc donnait un moteur neuf à chaque cycle et ne pouvait pas le voir.
 - **ForegroundMonitor créé puis disposé 100 fois** : 300 crochets WinEvent posés, 300 retirés.
-- **Icône du tray refaite 100 fois** (`TrayIcon.Create`, `CreateTextIcon`) : GDI 0, USER +4 et 0.
-- **GDI+ démarré puis arrêté**, à chaque icône et à chaque fenêtre :
-  - sans pomper les messages, USER +52 sur 100 cycles, encore là après 2 s d'attente ;
-  - en pompant entre deux cycles comme la boucle du tray, +2 ;
-  - avec un GDI+ gardé ouvert ailleurs, 0.
-  - GDI+ libère ses objets USER par la file de messages du fil qui l'arrête. Tous les appels de `src/` passent par un fil qui a une boucle de messages.
+- **Icône du tray refaite 100 fois** (`TrayIcon.Create`, `CreateTextIcon`) : GDI 0, USER +4 et 0 sur le poste (sur le runner de la CI, voir C3).
 
 Par lecture (le site et la libération sont dans l'inventaire) :
 - recrochetage du clavier (`KeyboardHook.cs:171-186`, l'ancien crochet est décroché) ;
@@ -130,6 +134,7 @@ Par lecture (le site et la libération sont dans l'inventaire) :
 | Ticket | Impact | État |
 |---|---|---|
 | T1 | faible | fait : C1 et C2 corrigés par les polices par fenêtre |
+| T3 | faible à moyen selon le Windows | fait : C3 corrigé, GDI+ démarré une fois (`GdiPlus`) |
 | T2 | prévention | fait : `verify.ps1 -Etape ressources`, étape de la CI (`dbd198e`) |
 
 - **T1, correctif retenu (QCM du 16/11)** :

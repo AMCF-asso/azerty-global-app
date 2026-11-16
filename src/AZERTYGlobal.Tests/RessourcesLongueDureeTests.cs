@@ -457,36 +457,30 @@ public sealed class RessourcesLongueDureeTests
         });
     }
 
-    /// <summary>Ce que TrayIcon.FromPixels fait autour de l'icône à chaque appel, seul :
-    /// démarrer GDI+ puis l'arrêter (GdiplusStartup / GdiplusShutdown).
-    ///
-    /// Mesure du 16/11 : sans pomper les messages entre deux cycles, USER +52 sur 100 cycles,
-    /// encore là après 2 s d'attente ; en pompant comme la boucle du tray, +2 ; avec un GDI+
-    /// gardé ouvert ailleurs, 0. GDI+ libère ses objets USER par la file de messages du fil
-    /// qui l'arrête : le tray la vide, le constat est réfuté. Une boucle serrée sans pompage
-    /// (fil de fond, outil en ligne de commande) fuirait.</summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Demarrer_puis_arreter_GDIplus_ne_garde_rien(bool gdiplusDejaOuvert)
+    /// <summary>Constat C3 : avant le 16/11, l'icône du tray, le logo des fenêtres, l'À propos,
+    /// les Réglages et l'Accueil démarraient puis arrêtaient GDI+ autour de chaque dessin.
+    /// Sur le runner Windows de la CI, chaque GdiplusStartup / GdiplusShutdown gardait un objet
+    /// USER même en vidant la file de messages (+10 sur 10 cycles, puis encore +10, run
+    /// 43952848446) ; sur le poste, +2 sur 100. GDI+ gardé ouvert : 0 partout. Désormais
+    /// GdiPlus le démarre une fois pour le processus : aucun dessin ne le redémarre.</summary>
+    [Fact]
+    public void Aucun_dessin_ne_redemarre_GDIplus()
     {
-        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        IntPtr exterieur = IntPtr.Zero;
-        if (gdiplusDejaOuvert) // ce que ferait un GDI+ démarré une fois pour tout le processus
-            Assert.Equal(0, Win32.GdiplusStartup(out exterieur, ref input, IntPtr.Zero));
-        try
+        Assert.True(GdiPlus.EnsureStarted());
+        int demarrages = GdiPlus.Starts;
+        for (int tour = 0; tour < Cycles; tour++)
         {
-            AssertCycleSansFuite($"GdiplusStartup puis GdiplusShutdown (GDI+ déjà ouvert : {gdiplusDejaOuvert})", () =>
-            {
-                Assert.Equal(0, Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero));
-                Win32.GdiplusShutdown(token);
-                BancCapture.Pump(2); // la boucle de messages du tray tourne entre deux icônes
-            });
+            bool actif = tour % 2 == 0, majuscules = tour % 3 == 0;
+            IntPtr icone = TrayIcon.Create(actif, majuscules, suspended: !actif);
+            Assert.NotEqual(IntPtr.Zero, icone);
+            Win32.DestroyIcon(icone);
+            icone = TrayApplication.CreateTextIcon("AG", actif, majuscules);
+            Assert.NotEqual(IntPtr.Zero, icone);
+            Win32.DestroyIcon(icone);
         }
-        finally
-        {
-            if (exterieur != IntPtr.Zero) Win32.GdiplusShutdown(exterieur);
-        }
+        using (new AboutWindow()) { }
+        _out.WriteLine($"{Cycles} × 2 icônes et un À propos : GdiplusStartup réussis {GdiPlus.Starts - demarrages} de plus");
+        Assert.Equal(demarrages, GdiPlus.Starts);
     }
 
     // ── Leçons redimensionnées : le contenu suit la taille de la fenêtre ──────
