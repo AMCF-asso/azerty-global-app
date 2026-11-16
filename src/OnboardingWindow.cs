@@ -537,14 +537,11 @@ sealed class OnboardingWindow : IDisposable
         Win32.SetWindowSubclass(_hWndBtnTry, _buttonArrowSubclassProc, (UIntPtr)22, IntPtr.Zero);
         // Audit UX 1.3.0, #3 : boutons clairs de Windows 11, « Suivant » porte l'accent.
         // Refonte du 15/10 : palette papier, le bleu des cadres de l'étape 1.
-        // A14 : en contraste élevé, les boutons gardent le dessin du système (LightButton ignore
-        // le réglage, et la sous-classe ne se retire pas). Le réglage est lu à la création.
-        if (!_pal.HighContrast)
-        {
-            LightButton.Attach(_hWndBtnNext, paper: true);
-            LightButton.Attach(_hWndBtnPrev, paper: true);
-            LightButton.Attach(_hWndBtnTry, paper: true);
-        }
+        // A14 : en contraste élevé, les boutons gardent le dessin du système. T5 (EW-15) :
+        // LightButton le décide à chaque dessin, le réglage peut changer fenêtre ouverte.
+        LightButton.Attach(_hWndBtnNext, paper: true);
+        LightButton.Attach(_hWndBtnPrev, paper: true);
+        LightButton.Attach(_hWndBtnTry, paper: true);
 
         // ══ Étape 3 — Liens et checkboxes ══
         // Positions initiales temporaires — repositionnés dans RepositionControls
@@ -1097,6 +1094,10 @@ sealed class OnboardingWindow : IDisposable
     {
         try
         {
+        // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+        // affichée ou cachée, revient dans la zone de travail de son écran.
+        if (NativeWindow.IsDisplayChange(msg, wParam))
+            NativeWindow.KeepInWorkArea(hWnd);
         switch (msg)
         {
             case Win32.WM_PAINT:
@@ -1311,6 +1312,7 @@ sealed class OnboardingWindow : IDisposable
         _hPanelBrush = Win32.CreateSolidBrush(_pal.Surface);
         if (_hWnd != IntPtr.Zero)
         {
+            NativeWindow.ApplyFrame(_hWnd, dark: false); // T5 (EW-15) : la barre de titre suit
             _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         }

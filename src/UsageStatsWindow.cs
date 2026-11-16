@@ -83,7 +83,7 @@ sealed class UsageStatsWindow : IDisposable
     // ── Couleurs ────────────────────────────────────────────────────
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
     // création, comme l'accueil).
-    private readonly PaperPalette _pal = PaperPalette.Now();
+    private PaperPalette _pal = PaperPalette.Now(); // T5 : relue sur WM_SETTINGCHANGE
     private uint LinkHover => _pal.HighContrast ? _pal.Action : PaperDraw.Blend(_pal.Ink, _pal.Action, 0.25f);
 
     private IntPtr _hWnd;
@@ -245,13 +245,10 @@ sealed class UsageStatsWindow : IDisposable
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
         // Audit UX 1.3.0, #3 : boutons clairs de Windows 11, « Fermer » porte l'accent.
-        // A9 : boutons papier ; en contraste élevé, le dessin du système.
-        if (!_pal.HighContrast)
-        {
-            LightButton.Attach(_hWndBtnCopy, paper: true);
-            LightButton.Attach(_hWndBtnRate, paper: true);
-            LightButton.Attach(_hWndBtnClose, paper: true);
-        }
+        // A9 : boutons papier ; en contraste élevé, le dessin du système (T5 : décidé au dessin).
+        LightButton.Attach(_hWndBtnCopy, paper: true);
+        LightButton.Attach(_hWndBtnRate, paper: true);
+        LightButton.Attach(_hWndBtnClose, paper: true);
 
         FitWindow();
     }
@@ -334,11 +331,13 @@ sealed class UsageStatsWindow : IDisposable
     /// <summary>Affiche la fenêtre. Les compteurs sont relus à chaque ouverture (pas de cache).</summary>
     public void Show()
     {
+        RefreshPalette(); // T5 : le réglage a pu changer fenêtre cachée
         _showCopiedFeedback = false;
         _copyFailed = false;
         // La visibilité de la section « Défi du jour » peut changer entre deux ouvertures :
         // la hauteur se recalcule à chaque affichage ; la fenêtre se rouvre en haut.
         FitWindow();
+        NativeWindow.KeepInWorkArea(_hWnd); // T6 (EW-18) : l'écran de la dernière ouverture a pu partir
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
@@ -358,10 +357,29 @@ sealed class UsageStatsWindow : IDisposable
         _visible = false;
     }
 
+    /// <summary>
+    /// T5 (EW-15) : relit la palette (contraste élevé activé ou coupé fenêtre ouverte) ;
+    /// fond, pinceaux, barre de titre et contrôles suivent. Rien quand elle n'a pas changé.
+    /// </summary>
+    private void RefreshPalette()
+    {
+        if (_hWnd == IntPtr.Zero || !NativeWindow.RefreshPalette(_hWnd, ref _pal))
+            return;
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        NativeWindow.RepaintAll(_hWnd);
+    }
+
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
         {
+            // T5 (EW-15) : contraste élevé ou couleurs du système changés, fenêtre ouverte.
+            if (NativeWindow.IsThemeChange(msg))
+                RefreshPalette();
+            // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+            // affichée ou cachée, revient dans la zone de travail de son écran.
+            if (NativeWindow.IsDisplayChange(msg, wParam))
+                NativeWindow.KeepInWorkArea(hWnd);
             switch (msg)
             {
                 case Win32.WM_PAINT:

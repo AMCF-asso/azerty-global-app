@@ -1428,6 +1428,7 @@ sealed partial class SettingsWindow : IDisposable
         _focusedShortcut = IntPtr.Zero;
 
         RepositionControls();
+        NativeWindow.KeepInWorkArea(_hWnd); // T6 (EW-18) : l'écran de la dernière ouverture a pu partir
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
@@ -1519,6 +1520,11 @@ sealed partial class SettingsWindow : IDisposable
         {
         if (_inputPaused && IsPausedInputMessage(msg))
             return IntPtr.Zero;
+
+        // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+        // affichée ou cachée, revient dans la zone de travail de son écran.
+        if (NativeWindow.IsDisplayChange(msg, wParam))
+            NativeWindow.KeepInWorkArea(hWnd);
 
         switch (msg)
         {

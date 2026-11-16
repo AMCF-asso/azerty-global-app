@@ -25,15 +25,16 @@ static class ChipButton
     private const int BST_HOT = 0x0200;
     private static readonly UIntPtr SubclassId = (UIntPtr)0x4348; // « CH »
 
-    // Garde le délégué en vie, et la palette de chaque pastille (retirée à sa destruction).
+    // Garde le délégué en vie tant que des pastilles l'utilisent.
     private static readonly Win32.SUBCLASSPROC Proc = SubclassProc;
-    private static readonly Dictionary<IntPtr, PaperPalette> Palettes = new();
+
+    /// <summary>T5 (EW-15) : faux en contraste élevé, où le système dessine le bouton.</summary>
+    internal static bool PaintsPaper => !HighContrast.IsOn();
 
     /// <summary>Peint <paramref name="chip"/> en pastille ; sans effet sur un handle nul.</summary>
-    public static void Attach(IntPtr chip, PaperPalette palette)
+    public static void Attach(IntPtr chip)
     {
         if (chip == IntPtr.Zero) return;
-        Palettes[chip] = palette;
         Win32.SetWindowSubclass(chip, Proc, SubclassId, IntPtr.Zero);
         Win32.InvalidateRect(chip, IntPtr.Zero, true);
     }
@@ -41,6 +42,10 @@ static class ChipButton
     private static IntPtr SubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam,
         UIntPtr uIdSubclass, IntPtr dwRefData)
     {
+        // T5 (EW-15) : en contraste élevé, le dessin du système, décidé à chaque dessin : la
+        // sous-classe reste posée et suit le réglage changé fenêtre ouverte.
+        if (!PaintsPaper && (msg == Win32.WM_PAINT || msg == Win32.WM_PRINTCLIENT || msg == Win32.WM_ERASEBKGND))
+            return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
         switch (msg)
         {
             case Win32.WM_PAINT:
@@ -56,7 +61,6 @@ static class ChipButton
             case Win32.WM_ERASEBKGND:
                 return (IntPtr)1;
             case WM_NCDESTROY:
-                Palettes.Remove(hWnd);
                 Win32.RemoveWindowSubclass(hWnd, Proc, uIdSubclass);
                 break;
             case Win32.WM_SETFOCUS:
@@ -79,7 +83,8 @@ static class ChipButton
 
     private static void Paint(IntPtr hWnd, IntPtr hdc)
     {
-        if (!Palettes.TryGetValue(hWnd, out var pal)) return;
+        // Hors contraste élevé (PaintsPaper), la palette est le papier.
+        var pal = PaperPalette.Default;
         Win32.GetClientRect(hWnd, out var rect);
         int dpi = Math.Max(96, Win32.GetDpiForWindow(hWnd));
         int S(int v) => (int)Math.Round(v * dpi / 96.0);
