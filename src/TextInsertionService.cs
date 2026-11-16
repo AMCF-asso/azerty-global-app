@@ -2,7 +2,10 @@ using TypingEngine.Windows;
 
 namespace AZERTYGlobal;
 
-internal enum TextInsertionOutcome { Inserted, NotInserted, Partial, Blocked }
+/// <summary>Issue d'une insertion. <see cref="ElevatedTarget"/> : la fenêtre cible tourne à un
+/// niveau d'intégrité supérieur (fenêtre administrateur) ; Windows refuserait les frappes
+/// simulées sans le signaler, rien n'est émis et la recherche copie le caractère (EW-7).</summary>
+internal enum TextInsertionOutcome { Inserted, NotInserted, Partial, Blocked, ElevatedTarget }
 
 /// <summary>
 /// Restaure une fenêtre cible puis délègue l'émission au même moteur Unicode que
@@ -14,10 +17,13 @@ internal sealed class TextInsertionService
     private readonly Func<bool> _canInsert;
     private readonly Action _refreshTarget;
     private readonly Func<IntPtr, bool> _activateTarget;
+    private readonly Func<IntPtr, bool> _targetAboveUs;
 
     public TextInsertionService(Func<string, TextEmissionResult> emitText,
-        Func<IntPtr, bool>? activateTarget = null, Func<bool>? canInsert = null, Action? refreshTarget = null)
+        Func<IntPtr, bool>? activateTarget = null, Func<bool>? canInsert = null, Action? refreshTarget = null,
+        Func<IntPtr, bool>? targetAboveUs = null)
     {
+        _targetAboveUs = targetAboveUs ?? TargetIntegrity.IsWindowAboveUs;
         _emitText = emitText;
         _canInsert = canInsert ?? (() => true);
         _refreshTarget = refreshTarget ?? (() => { });
@@ -34,6 +40,12 @@ internal sealed class TextInsertionService
         // Le changement de focus peut suspendre l'app ou révéler un champ protégé.
         // Forcer une lecture synchrone avant d'émettre depuis la recherche.
         _refreshTarget();
+        // EW-7 : fenêtre de niveau supérieur (administrateur). Vérifiée avant la seconde
+        // lecture : la sonde du champ mot de passe (UIA) y échoue et répond « protégé »,
+        // ce qui bloquerait sans copie ni bulle. La copie n'injecte rien : sans risque
+        // pour un champ mot de passe ou un jeu protégé. Pause et consentement sont déjà
+        // vérifiés en tête. La fenêtre activée reste au premier plan, Ctrl+V y colle.
+        if (_targetAboveUs(targetWindow)) return TextInsertionOutcome.ElevatedTarget;
         if (!_canInsert()) return TextInsertionOutcome.Blocked;
         var result = _emitText(text);
         if (result.Blocked) return TextInsertionOutcome.Blocked;

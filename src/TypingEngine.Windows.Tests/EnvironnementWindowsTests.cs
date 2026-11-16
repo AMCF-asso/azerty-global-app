@@ -291,3 +291,61 @@ public sealed class EnvironnementWindowsDispositionTests
         }
     }
 }
+
+/// <summary>
+/// Audit de l'environnement Windows, constat EW-6 : une fenêtre lancée en administrateur
+/// mène-t-elle au motif « jeu protégé » (UnknownForeground) ? Le code répond selon ce que
+/// Windows refuse de lire. Modules illisibles (EnumProcessModules refusé) : aucune
+/// suspension, l'application reste remappée. Nom du processus illisible alors que la fenêtre
+/// a un PID (OpenProcess refusé) : suspension prudente « inconnu ». Lequel des deux refus
+/// une vraie fenêtre administrateur produit, l'essai à la main E4 le dit.
+/// </summary>
+public sealed class EnvironnementWindowsPremierPlanTests
+{
+    [Fact]
+    public void EW6_ModulesIllisibles_RestentEnModeNormal()
+    {
+        var api = new MockWin32Api
+        {
+            ScriptedProcessName = "regedit.exe",
+            ScriptedFullPath = @"C:\Windows\regedit.exe",
+            ScriptedModules = null,
+            ForegroundWindow = (IntPtr)0x1234,
+        };
+        using var monitor = new ForegroundMonitor(api, IntPtr.Zero, new TestWindowsTypingHost());
+
+        Assert.Equal(CompatibilityMode.Default, monitor.CurrentMode);
+        Assert.Equal(CompatibilitySuspendReason.None, monitor.CurrentSuspendReason);
+    }
+
+    [Fact]
+    public void EW6_NomIllisibleAvecPid_SuspendEnInconnu()
+    {
+        var api = new MockWin32Api
+        {
+            ShouldFailForegroundInspection = true,
+            ScriptedPid = 4321,
+            ForegroundWindow = (IntPtr)0x1234,
+        };
+        using var monitor = new ForegroundMonitor(api, IntPtr.Zero, new TestWindowsTypingHost());
+
+        Assert.Equal(CompatibilityMode.DisabledAntiCheat, monitor.CurrentMode);
+        Assert.Equal(CompatibilitySuspendReason.UnknownForeground, monitor.CurrentSuspendReason);
+    }
+
+    /// <summary>Témoin : sans PID (bureau vide), rien n'est suspendu.</summary>
+    [Fact]
+    public void EW6_Temoin_NomIllisibleSansPid_ModeNormal()
+    {
+        var api = new MockWin32Api
+        {
+            ShouldFailForegroundInspection = true,
+            ScriptedPid = 0,
+            ForegroundWindow = (IntPtr)0x1234,
+        };
+        using var monitor = new ForegroundMonitor(api, IntPtr.Zero, new TestWindowsTypingHost());
+
+        Assert.Equal(CompatibilityMode.Default, monitor.CurrentMode);
+        Assert.Equal(CompatibilitySuspendReason.None, monitor.CurrentSuspendReason);
+    }
+}

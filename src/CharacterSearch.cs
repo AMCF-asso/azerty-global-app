@@ -131,6 +131,9 @@ sealed class CharacterSearch : IDisposable
 
     /// <summary>Déclenché quand l'insertion directe a dû retomber sur la copie.</summary>
     public event Action<string>? FallbackCopied;
+    /// <summary>Déclenché quand la cible est une fenêtre administrateur et que le caractère a
+    /// été copié à la place (EW-7) : la bulle dit pourquoi, au lieu de la bulle générique.</summary>
+    public event Action<string>? ElevatedTargetCopied;
     public event Action? InsertionIncomplete;
 
     /// <summary>Déclenché quand ni l'insertion ni la copie de secours n'ont abouti (C8.1).</summary>
@@ -1205,8 +1208,10 @@ sealed class CharacterSearch : IDisposable
         var outcome = _insertionService.Insert(target, entry.Character);
         if (outcome == TextInsertionOutcome.Partial)
             InsertionIncomplete?.Invoke();
-        // Seul un échec sans événement envoyé autorise la copie de secours.
-        if (outcome != TextInsertionOutcome.NotInserted)
+        // Seul un échec sans événement envoyé autorise la copie de secours ; une fenêtre
+        // administrateur (EW-7) n'a rien reçu non plus : rien n'a été émis vers elle.
+        bool elevated = outcome == TextInsertionOutcome.ElevatedTarget;
+        if (outcome != TextInsertionOutcome.NotInserted && !elevated)
             return;
 
         if (!ClipboardWriter(_hWnd, entry.Character))
@@ -1226,7 +1231,10 @@ sealed class CharacterSearch : IDisposable
         _showCopyFailedFeedback = false;
         _showCopiedFeedback = true;
         _copiedChar = entry.Character;
-        FallbackCopied?.Invoke(entry.Character);
+        if (elevated)
+            ElevatedTargetCopied?.Invoke(entry.Character);
+        else
+            FallbackCopied?.Invoke(entry.Character);
         Win32.SetTimer(_hWnd, (UIntPtr)IDC_TIMER_COPYFEEDBACK, 1500, IntPtr.Zero);
         // A18 : « Copié » s'entend aussi, pas seulement dans le pied peint.
         Announce(L.Search_CopiedFeedback(entry.Character), notify: true);
