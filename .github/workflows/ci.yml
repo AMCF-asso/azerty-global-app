@@ -90,6 +90,12 @@ jobs:
       - name: Aucun littéral d'identité hors ProductIdentity
         run: ./scripts/verify.ps1 -Etape identite
 
+      # Sort en 1 dès qu'une création de ressource de src/ (minuterie, abonnement, objet
+      # Windows, mémoire native) n'a ni libération trouvée ni verdict lu, ou qu'un verdict lu
+      # ne correspond plus à aucun appel. Environ 2 s, avant le build comme l'identité.
+      - name: Chaque ressource créée a sa libération connue
+        run: ./scripts/verify.ps1 -Etape ressources
+
       # Ces trois étapes bloquent le build, contrairement au job provenance : elles ne
       # dépendent que du dépôt, et empaqueter une disposition malformée livrerait une
       # application qui démarre sans touches mortes.
