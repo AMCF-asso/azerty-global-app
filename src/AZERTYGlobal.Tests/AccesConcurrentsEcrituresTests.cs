@@ -116,7 +116,7 @@ public class AccesConcurrentsEcrituresTests : IDisposable
     /// gelait la boucle de messages, donc le hook clavier.
     /// </summary>
     [Fact]
-    public void Journal_LogCompatEventNAttendPasUneEcritureEnCours()
+    public async Task Journal_LogCompatEventNAttendPasUneEcritureEnCours()
     {
         using var dansLÉcriture = new ManualResetEventSlim();
         using var reprendre = new ManualResetEventSlim();
@@ -130,9 +130,9 @@ public class AccesConcurrentsEcrituresTests : IDisposable
         Assert.True(dansLÉcriture.Wait(5_000), "l'écriture du pool n'a pas commencé");
 
         var appel = Task.Run(() => ConfigManager.LogCompatEvent("CompatMode", "Default → Default"));
-        bool rendu = appel.Wait(1_000);
+        bool rendu = await Task.WhenAny(appel, Task.Delay(1_000)) == appel;
         reprendre.Set();
-        Assert.True(appel.Wait(10_000));
+        await appel.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.True(rendu, "LogCompatEvent attend la fin d'une écriture du journal sur le pool");
         Assert.True(Attendre(() => LignesDuJournal().Any(l => l.Contains("CompatMode"))),
             "la ligne CompatMode n'est jamais arrivée dans error.log");
