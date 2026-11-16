@@ -105,6 +105,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private (int Index, string Name)? _pendingInvoke;
     private float _dpiScale = 1f;
     private float _windowScale = 1f;
+    /// <summary>Polices à l'échelle de la fenêtre (<see cref="PaperFonts"/>, <see cref="HomeFonts"/>) :
+    /// détruites quand l'échelle change et à la fermeture (audit des ressources, C1).</summary>
+    private readonly WindowFonts _scaledFonts = new();
     private int _baseClientW;
     private int _baseClientH;
     private int _nonClientW;
@@ -447,6 +450,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private void DestroyFonts()
     {
         DestroyScaledFonts();
+        _scaledFonts.Dispose();
     }
 
     private void RecreateScaledFonts()
@@ -2165,7 +2169,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         int pad = S(8);
         string[] lines = text.Split('\n');
         int lineH = S(18);
-        var tipFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, PaperScale);
+        var tipFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Regular, PaperFonts);
         int textWidth = lines.Max(line => PaperText.Width(hdc, line, tipFont));
         int minWidth = compact ? 0 : S(80);
         int width = Math.Max(minWidth, textWidth) + pad * 2;

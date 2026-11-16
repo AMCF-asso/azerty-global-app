@@ -46,7 +46,7 @@ public sealed class ContoursBench
                     PaperText.Draw(hdc, v.Name, title, pad, pad + 40, PaperTheme.Ink);
                     var state = new PaperKeyboardState { CenteredBase = true };
                     state.FramedScancodes.UnionWith(OnboardingWindow.Step1ChangedKeys);
-                    PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(pad, pad + labelH, unit), layout, PaperKeyboardMode.Map, state);
+                    PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(pad, pad + labelH, unit), layout, PaperKeyboardMode.Map, state, fonts: null);
                 });
             }
         }
@@ -88,7 +88,7 @@ public sealed class ContoursBench
                     PaperText.Draw(hdc, v.Name, title, pad, pad + 40, PaperTheme.Ink);
                     var state = new PaperKeyboardState { CenteredBase = true };
                     state.FramedScancodes.UnionWith(OnboardingWindow.Step1ChangedKeys);
-                    PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(pad, pad + labelH, unit), layout, PaperKeyboardMode.Map, state);
+                    PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(pad, pad + labelH, unit), layout, PaperKeyboardMode.Map, state, fonts: null);
                 });
             }
         }
