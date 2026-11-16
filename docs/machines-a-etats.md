@@ -164,8 +164,8 @@ Trente-neuf constats ont été relevés. Le statut suit le vocabulaire de la sec
 | C5.7 | M5.12 | Horloge ou fuseau qui recule : séries, intervalles et rappels incohérents | corrigé | faible | ME-10 | `AZERTYGlobal/UsageStats.cs` (`RecordActivityLocked`, `CurrentStreak`), `TrainingReminders.cs` (`WouldCount`, `ShouldRemind`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot5Tests.cs` (`Statistiques_DerniereActiviteDansLeFutur_LeJourNEstPasRecompte`, `…_LaSerieEnCoursNEstPasRemiseAZero`, `…_LaSerieAfficheeNeTombePasAZero`, `DefiCommun_SeanceDatee_DuLendemain_NeSeRecomptePasAujourdhui`, `Rappel_DernierRappelDateDuLendemain_NeRepartPasAujourdhui`, `Rappel_DerniereSeanceDateeDuLendemain_VautAujourdhui`) |
 | C6.1 | M6.3 | Garde IsTutorialActive inopérante dans SettleSessionOnHide | atteignable, à trancher | faible | ME-12 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
 | C6.2 | M6.2 | Réentrance de ResetProgress : position enregistrée sur le Défi | confirmé | faible | ME-07 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot6Tests.cs` |
-| C7.1 | M7.1 | Double clic sur « Suivant » à l'étape 2 : l'accueil se valide sans que l'étape 3 ait été vue | confirmé | moyenne | ME-03 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
-| C7.2 | M7.2 | « Ne plus afficher » toujours affichée décochée : « C'est parti ! » réécrit à true un refus déjà persisté | confirmé | faible | ME-03 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
+| C7.1 | M7.1 | Double clic sur « Suivant » à l'étape 2 : l'accueil se valide sans que l'étape 3 ait été vue | corrigé | moyenne | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`IsSecondClickOfDoubleClick`, `GoToNextStep`) ; test `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`) |
+| C7.2 | M7.2 | « Ne plus afficher » toujours affichée décochée : « C'est parti ! » réécrit à true un refus déjà persisté | corrigé | faible | ME-03 | `AZERTYGlobal/OnboardingWindow.cs` (`Show`, `Close`, `_dontShowShownChecked`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` (`Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé`, `Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`) |
 | C7.3 | M7.4 | La demande d'avis peut partir pendant que l'accueil, rouvert depuis le menu, est ouvert | confirmé | faible | ME-08 | test en échec sur `250c4ef` : `AZERTYGlobal.Tests/MachinesEtatsLot7Tests.cs` |
 | C7.4 | M7.5 | La minuterie de quiétude de l'avis n'est jamais réarmée après coupure puis rétablissement des notifications | plausible (couture à ajouter) | faible | ME-08 | lecture du code |
 | C7.5 | M7.7 | Aucun garde de double appel de la boîte d'avis du Store | plausible (preuve en réel seulement) | faible | ME-08 | lecture du code |
@@ -2757,6 +2757,7 @@ Protection des états du lot : champs d'instance de l'accueil et de À propos =
 | `_currentStep` | int (0..2) | `src/OnboardingWindow.cs:146` | pompe seule | fil unique ; bornes tenues par `GoToNextStep` (`:884`) et `GoToPreviousStep` (`:893`) |
 | `OnboardingStep.Count/Last` | const | `src/OnboardingStep.cs:16-19` | — | constantes |
 | `_step3Reached` | bool | `:156` | pompe seule | fil unique |
+| `_stepChangedAt` | long? (ms, horloge `Clock`) | `:164` | pompe seule | fil unique ; posé par `GoToNextStep` et `GoToPreviousStep`, remis à nul par `Show` ; lu par `IsSecondClickOfDoubleClick` (`:680`) |
 | `_visible` | bool | `:268` | pompe seule | fil unique |
 | `_scroll` (position) | `WindowScroll` | `:277` | pompe seule | fil unique |
 
@@ -2773,18 +2774,18 @@ Protection des états du lot : champs d'instance de l'accueil et de À propos =
 
 - I1 : `0 <= _currentStep <= Last`. Garanti par `src/OnboardingWindow.cs:884` `if (_currentStep >= OnboardingStep.Last) return;` et `:893` `if (_currentStep <= 0) return;`. Seul autre écrivain : `Show()` (`:917`), `ResetState()` (`:959`, Debug) et le banc de test.
 - I2 : `_step3Reached` vrai ⇒ l'étape 3 a été affichée depuis le dernier `Show()`. Garanti par `:886` (posé à la transition) et `:919` (remis à faux au `Show`). Remis à faux aussi dans `Close` (`:1026`).
-- I3 : atteindre l'étape 3 ne vaut pas validation ; seul `Close(validated: true)` valide. Garanti pour clavier (`FocusAfterStepChange` `:906-913` sort le focus des boutons) ; **non garanti pour la souris** (voir C7.1).
+- I3 : atteindre l'étape 3 ne vaut pas validation ; seul `Close(validated: true)` valide. Garanti pour clavier (`FocusAfterStepChange` sort le focus des boutons) et, depuis ME-03, pour la souris : un `IDC_BTN_NEXT` reçu moins de `GetDoubleClickTime()` après un changement d'étape est ignoré (`IsSecondClickOfDoubleClick`, `:680-685`, garde à `:1157`) ; un clic posé après ce délai agit comme avant. Seule la conversion d'un vrai double clic à la souris en deux clics reste à vérifier à la main.
 - I4 : le focus n'est jamais sur un contrôle masqué. Garanti par deux mécanismes distincts. (1) Contrôles de la dernière étape (cases, liens) : `:701-702` (`if (step3Vis == 0 && IsLastStepControl(GetFocus())) SetFocus(_hWndBtnNext)`), garde limitée à ces contrôles (`IsLastStepControl` `:876-878`). (2) « Suivant » masqué en état A de l'étape 1 (`:754`) : `Show()` place alors le focus sur « Essayer » (`:949`, `_currentStep == 0 && !_learningModuleDone`), jamais sur « Suivant ».
-- I5 : un seul clic ne franchit qu'une étape. Garanti (une `WM_COMMAND` = un `GoToNextStep`). Deux clics rapprochés en franchissent deux (C7.1).
+- I5 : un seul clic ne franchit qu'une étape. Garanti (une `WM_COMMAND` = un `GoToNextStep`) ; deux clics rapprochés (moins que le délai de double clic de Windows) n'en franchissent plus qu'une depuis ME-03. La flèche → / ↓ (T1.2) n'est pas soumise au délai.
 
 #### Table de transition
 
 | n° | état source | événement | garde | état cible | effets | code |
 |---|---|---|---|---|---|---|
-| T1.1 | étape 1 ou 2 | clic/Entrée sur « Suivant » (`IDC_BTN_NEXT`) | `_currentStep < Last` | étape +1 | `_step3Reached = true` si cible = dernière ; `UpdateStepVisibility` ; `FocusAfterStepChange` (focus → 1re case si dernière) | `:1130-1133`, `:882-889` |
+| T1.1 | étape 1 ou 2 | clic/Entrée sur « Suivant » (`IDC_BTN_NEXT`) | `_currentStep < Last` et hors du délai de double clic suivant un changement d'étape (sinon ignoré, sans effet) | étape +1 | `_step3Reached = true` si cible = dernière ; `UpdateStepVisibility` ; `FocusAfterStepChange` (focus → 1re case si dernière) | `:1130-1133`, `:882-889` |
 | T1.2 | étape 1 ou 2 | flèche → ou ↓ | `ForwardArrowAction == Next` | étape +1 | idem T1.1 | `:1229-1236`, `:976-983` |
 | T1.3 | étape 2 ou 3 | « Précédent » ou flèche ← / ↑ | `_currentStep > 0` | étape −1 | `UpdateStepVisibility` ; masque liens/cases ; focus → « Suivant » si focus sur la dernière étape | `:1142-1144`, `:1242-1245`, `:891-897` |
-| T1.4 | étape 3 | « C'est parti ! » | `RequestActivation()` vrai | Fermé | voir M7.2 T2.5 | `:1133-1134` |
+| T1.4 | étape 3 | « C'est parti ! » | `RequestActivation()` vrai et hors du délai de double clic suivant l'arrivée à l'étape 3 | Fermé | voir M7.2 T2.5 | `:1133-1134` |
 | T1.5 | étape 3 | flèche → / ↓ avec focus sur « Suivant » et activation acceptée | `ForwardArrowAction == Finish` | Fermé | `Close(validated: true)` | `:1237` |
 | T1.6 | étape 1 ou 2 | flèche ← sur étape 1 / « Précédent » absent | `_currentStep <= 0` | inchangé | aucun | `:893` |
 | T1.7 | toute | `WM_DPICHANGED` / `WM_SETTINGCHANGE` / `AppLanguageChanged` | — | inchangé | recomposition (`UpdateStepVisibility`, polices, palette) ; jamais d'annonce d'étape | `:1075-1087`, `:1105-1109`, `:1430-1435` |
@@ -2796,7 +2797,7 @@ Aucune minuterie propre. Aucun réessai.
 
 #### États ou transitions invalides atteignables
 
-C7.1.
+C7.1 corrigé (ticket ME-03) : invariants I3 et I5 rétablis, test `MachinesEtatsLot7Tests.Accueil_DoubleClicSuivantÀLÉtape2_NeValidePasSansAvoirVuLÉtape3`.
 
 ### M7.2 — Accueil : cycle de vie, activation et enregistrement des préférences
 
@@ -2812,6 +2813,7 @@ C7.1.
 | `_step3Reached` | bool | `:156` | pompe | fil unique ; consommé dès l'entrée de `Close` (`:1025-1026`) |
 | `_autoStartChecked`, `_dontShowChecked`, `_trainingChecked` | bool | `:245-247` | pompe | fil unique |
 | `_autoStartShownChecked` | bool | `:159` | pompe | fil unique |
+| `_dontShowShownChecked` | bool | `:162` | pompe | fil unique ; posé par `Show` d'après `ConfigManager.ShowOnboardingUserSetting`, lu par `Close` |
 | `ShowOnboardingAtStartup` (config) | bool (clé `showOnboardingAtStartup`) | `src/ConfigManager.cs:160-191` | pompe (accueil, Paramètres), pool (écriture disque) | `_lock` ; écriture différée 400 ms (`:1334`) |
 | `_reviewPromptDeferred` | bool | `src/TrayApplication.cs:147` | pompe | fil unique |
 | `_pendingOnboardingShow` | bool | `src/TrayApplication.cs:142` | pompe | fil unique |
@@ -2832,8 +2834,8 @@ C7.1.
 
 - I1 : jamais deux affichages (`Show`) concurrents ; un second appel ramène devant sans remettre à l'étape 1. Garanti par `src/TrayApplication.cs:1324-1328` (`ShowOnboardingNow`), `:883-887` (menu), `:1445-1448` (relance Démarrer). **Non garanti** pour la branche Debug `IDM_RESET_ONBOARDING` (`:951-967`, hors Release).
 - I2 : aucune préférence n'est écrite sans accord d'activation ni étape 3 vue. Garanti par `src/OnboardingWindow.cs:652` et `:1027`.
-- I3 : sur croix, Échap, `WM_CLOSE`, seule une case modifiée par l'utilisateur est persistée. Garanti par `ShouldApplyPreferenceOnClose` (`:993-998`).
-- I4 : la case « Ne plus afficher » affichée reflète le réglage persisté. **Non garanti** : `Show()` la pose toujours décochée (`:931`) quel que soit `showOnboardingAtStartup` (C7.2).
+- I3 : sur croix, Échap, `WM_CLOSE`, seule une case modifiée par l'utilisateur est persistée. Garanti par `ShouldApplyPreferenceOnClose` (`:993-998`), qui compare chaque case à son état affiché (`_dontShowShownChecked`, `_autoStartShownChecked`).
+- I4 : la case « Ne plus afficher » affichée reflète le réglage persisté. Garanti depuis ME-03 : `Show()` la pose d'après le réglage de l'utilisateur seul (`ConfigManager.ShowOnboardingUserSetting`, pas la politique) : décochée tant qu'aucun refus n'est enregistré (décision v0.9.7.1 conservée), cochée sinon (`:956-957`). `Close` reçoit cet état affiché comme référence (`_dontShowShownChecked`) : la validation, case inchangée, réécrit la valeur déjà enregistrée ; Échap et la croix n'écrivent rien.
 - I5 : `Close` est idempotent. Garanti en partie : `_step3Reached` consommé (`:1026`) ; mais `OnClosed` est rappelé à chaque `Close` (`:1056`) et `ShowWindow(0)` est rejoué. Sans effet d'état tant que `_reviewPromptDeferred` est déjà levé (`src/TrayApplication.cs:1427-1428`).
 - I6 : la sollicitation d'avis ne s'affiche pas par-dessus l'accueil. Garanti **seulement** pour l'accueil ouvert au démarrage (`_reviewPromptDeferred`, `:313`) ; **non garanti** pour l'accueil ouvert depuis le menu (C7.3).
 - I7 : `_activationAccepted` vrai ⇔ `ConfigManager.ActivationConsent` vrai. Garanti par `src/TrayApplication.cs:1390-1391` ; mais la réentrance de `ActivateWithConsent` pendant sa boîte d'erreur rend l'appelant incohérent (voir « Temporisations et réessais »).
@@ -2846,7 +2848,7 @@ C7.1.
 | T2.2 | Absent | démarrage avec popup de conflit | `_layoutPopupOpen` | Différé | `_pendingOnboardingShow = true`, `_reviewPromptDeferred = true` | `:313-321` |
 | T2.3 | Différé | « Garder l'app » | `_pendingOnboardingShow` | Ouvert | `ShowOnboardingNow` | `:1301-1312` |
 | T2.4 | Masqué ou Absent | menu « Accueil », double-clic sans accord, `ShowLessonsWindow` sans accord, relance Démarrer sans accord | non visible | Ouvert | `Show()` ; ne touche **pas** `_reviewPromptDeferred` | `:881-898`, `:748`, `:1474`, `:1453-1456` |
-| T2.5 | Ouvert étape 3 | « C'est parti ! » ou flèche | `RequestActivation()` vrai | Masqué | `Close(validated: true)` : écrit `showOnboardingAtStartup = !_dontShowChecked` et `ApplyAutoStart(_autoStartChecked)` ; `ShowWindow(0)` ; `OnClosed` | `src/OnboardingWindow.cs:1014-1057` |
+| T2.5 | Ouvert étape 3 | « C'est parti ! » ou flèche | `RequestActivation()` vrai | Masqué | `Close(validated: true)` : écrit `showOnboardingAtStartup = !_dontShowChecked` (case reprise du réglage à l'ouverture, C7.2 corrigé) et `ApplyAutoStart(_autoStartChecked)` ; `ShowWindow(0)` ; `OnClosed` | `src/OnboardingWindow.cs:1014-1057` |
 | T2.6 | Ouvert | croix, Échap, `WM_CLOSE`, Échap sur un lien | — | Masqué | `Close(false)` : n'écrit qu'une case modifiée (et seulement avec accord + étape 3 vue) | `:970`, `:1250-1252`, `src/LinkBehavior.cs:136-139` |
 | T2.7 | Ouvert sans accord | « Essayer/Activer » ou « Activer » (étape 3) | `ActivationRequested()` vrai | Ouvert avec accord | `_activationAccepted = true`, texte du bouton, `UpdateStepVisibility` | `:193-210`, `src/TrayApplication.cs:1382-1397` |
 | T2.8 | Ouvert sans accord | idem | `ActivationRequested()` faux (hook non posé, `MessageBoxW`) | Ouvert, activation refusée | `_activationRefused = true`, « Suivant » apparaît | `:196-203`, `src/TrayApplication.cs:1402-1408` |
@@ -2861,7 +2863,7 @@ Aucune minuterie. Réessai de l'activation : l'utilisateur peut relancer « Es
 
 #### États ou transitions invalides atteignables
 
-C7.1, C7.2, C7.3.
+C7.3. C7.2 corrigé (ticket ME-03) : invariant I4 rétabli, tests `MachinesEtatsLot7Tests.Accueil_RefusPersisté_NEstPasDéfaitParUneValidationSansToucherLaCase`, `…Accueil_CaseNePlusAfficher_EstCochéeÀLOuvertureQuandLeRéglageEstRefusé` et `…Accueil_CaseReprise_ÉchapNeValideRien_MaisUnChoixDécochéEstEnregistré`.
 
 ### M7.3 — Accueil : essai de frappe intégré (états A, B, C de l'étape 1)
 
