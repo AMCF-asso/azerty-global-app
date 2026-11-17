@@ -132,7 +132,7 @@ Chaque lot précise son propre modèle de fils en tête de section.
 
 ## Constats : états et transitions invalides atteignables
 
-Trente-neuf constats ont été relevés sur `250c4ef` : 15 confirmés, 4 atteints à trancher, 17 plausibles, 3 réfutés. Au 16 novembre 2026, après les correctifs : 25 corrigés, 11 plausibles, 3 réfutés, aucun à trancher. Le statut suit le vocabulaire de la section « Méthode » ; la gravité est celle retenue après les deux relectures (celle de chaque constat, puis celle de la liste des tickets). Aucun constat n'est critique ni fort.
+Trente-neuf constats ont été relevés sur `250c4ef` : 15 confirmés, 4 atteints à trancher, 17 plausibles, 3 réfutés. Au 17 novembre 2026, après les correctifs : 29 corrigés (dont C3.1 et C3.6 le 16 novembre, C3.2 et C3.4 le 17, par l'audit par frappe au hasard), 6 plausibles, 1 confirmé et voulu (C3.5 : règle M3.3 I2 réécrite « jamais deux fois », décision d'Antoine), 3 réfutés, aucun à trancher. Le statut suit le vocabulaire de la section « Méthode » ; la gravité est celle retenue après les deux relectures (celle de chaque constat, puis celle de la liste des tickets). Aucun constat n'est critique ni fort.
 
 | Id | Machine | Constat | Statut | Gravité | Ticket | Preuve |
 |---|---|---|---|---|---|---|
@@ -1475,11 +1475,11 @@ C3.4
 
 ### Constats
 
-- C3.4 (moyenne) : le raccourci global exécute `OnToggle` et `StopPause` dans le callback du hook (`src/TypingEngine.Windows/KeyboardHook.cs:359`, `src/TypingEngine.Windows/KeyMapper.cs:467`, `src/TrayApplication.cs:1930-2062`), avec `Shell_NotifyIcon`, GDI+ et création de fenêtre.
+- C3.4 (moyenne) : le raccourci global exécute `OnToggle` et `StopPause` dans le callback du hook (`src/TypingEngine.Windows/KeyboardHook.cs:359`, `src/TypingEngine.Windows/KeyMapper.cs:467`, `src/TrayApplication.cs:1930-2062`), avec `Shell_NotifyIcon`, GDI+ et création de fenêtre. Corrigé en 1.3.0 (17 novembre 2026) : bascule postée (`WM_APP_TOGGLE`).
 - C3.1 (faible) : double-clic sur l'icône suivi d'un menu contextuel tardif (`src/TrayApplication.cs:737-751`).
 - C3.6 (faible à moyenne) : `NIM_ADD` sans contrôle de retour ni réessai (237, 1109).
-- C3.2 (faible) : commande de menu relative à un état périmé (827-831, 1758-1761, 990-993, 1972-2025).
-- C3.5 (faible) : bulles à usage unique consommées avant l'affichage (328-329, 1555, 1597, 2769).
+- C3.2 (faible) : commande de menu relative à un état périmé (827-831, 1758-1761, 990-993, 1972-2025). Corrigé en 1.3.0 (17 novembre 2026) : état affiché retenu (`MenuShownState`).
+- C3.5 (faible) : bulles à usage unique consommées avant l'affichage (328-329, 1555, 1597, 2769). Comportement voulu (17 novembre 2026, décision d'Antoine) : règle M3.3 I2 réécrite « jamais deux fois ».
 - C3.7 (faible) : popup de conflit sans porte d'état (1288-1315).
 - C3.3 (faible) : `_layoutPopupOpen` jamais remis à faux si la construction lève (1291).
 
