@@ -7,13 +7,14 @@
   stratégies de groupe, à un moment où personne du projet n'est là pour préciser.
 -->
 <policyDefinitionResources xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
-                           revision="1.0" schemaVersion="1.0">
+                           revision="1.1" schemaVersion="1.0">
   <displayName>AZERTY Global</displayName>
   <description>Réglages d'AZERTY Global imposables par une organisation.</description>
   <resources>
     <stringTable>
       <string id="AZERTYGlobal">AZERTY Global</string>
       <string id="SUPPORTED_AZERTY_GLOBAL_1_2_0">AZERTY Global 1.2.0 ou version ultérieure</string>
+      <string id="SUPPORTED_AZERTY_GLOBAL_1_3_0">AZERTY Global 1.3.0 ou version ultérieure</string>
 
       <string id="NotificationsEnabled">Autoriser les notifications de l'application</string>
       <string id="NotificationsEnabled_Explain">Activé : l'application peut afficher ses notifications, et l'utilisateur garde son réglage. Désactivé : aucune notification de confort n'est affichée, sollicitation d'avis comprise, et le réglage utilisateur est verrouillé. Les avertissements de sécurité s'affichent dans tous les cas. Non configuré : l'utilisateur décide.</string>
@@ -31,6 +32,15 @@
       <string id="Language_Explain">Impose la langue de l'application et verrouille les trois endroits qui permettent de la changer. Valeurs acceptées : fr, en. Une autre valeur est ignorée et tracée dans error.log, et la langue reste celle de l'utilisateur. Non configuré : l'utilisateur choisit.</string>
       <string id="Language_fr">Français (fr)</string>
       <string id="Language_en">Anglais (en)</string>
+
+      <string id="RemoveOutboundLinks">Masquer tous les liens vers Internet</string>
+      <string id="RemoveOutboundLinks_Explain">Activé : tout lien qui ouvre le navigateur ou le Microsoft Store est masqué : « Donner mon avis », « Signaler un bug », le site, le code source, la licence, le guide, la politique de confidentialité, les ressources, Discord, le soutien au projet, la notation sur le Microsoft Store et la sollicitation d'avis. L'application n'ouvre alors aucun site tiers. La valeur OutboundLinksEnabled est écrite à 0. Désactivé (la valeur est écrite à 1), ou non configuré : aucun effet ; cette stratégie ne rallume pas les liens de soutien que la version distribuée par l'association ou la stratégie « Autoriser les liens externes » ont coupés. Effet au prochain démarrage de l'application.</string>
+
+      <string id="AutoStartEnabled">Lancement à l'ouverture de session</string>
+      <string id="AutoStartEnabled_Explain">Activé : à chaque démarrage, l'application active son lancement à l'ouverture de session ; la valeur AutoStartEnabled est écrite à 1. Désactivé : elle le coupe ; la valeur est écrite à 0. Dans les deux cas, la case des Paramètres est grisée et indique « Géré par votre organisation ». Limites fixées par Windows : l'effet ne commence qu'après un premier lancement de l'application par chaque utilisateur (règle des tâches de démarrage des applications MSIX) ; et un refus que l'utilisateur a exprimé dans Windows (Gestionnaire des tâches, Paramètres, Applications, Démarrage) reste respecté, l'application ne le contourne pas. Non configuré : l'utilisateur décide. Effet au prochain démarrage de l'application.</string>
+
+      <string id="RemoveLessons">Masquer Leçons et Défi du jour</string>
+      <string id="RemoveLessons_Explain">Activé : Leçons et Défi du jour disparaissent de l'application : entrées du menu Apprendre, rappels, lien de l'accueil et section Défi des Statistiques. L'entrée « Revoir l'accueil » reste disponible. La valeur LessonsEnabled est écrite à 0. Désactivé (la valeur est écrite à 1), ou non configuré : aucun effet. Effet au prochain démarrage de l'application.</string>
     </stringTable>
     <presentationTable>
       <presentation id="Language">

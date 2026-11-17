@@ -4,7 +4,7 @@
 version-app: 1.3.0
 -->
 
-AZERTY Global fonctionne entièrement sur le poste. L'application n'effectue aucun envoi réseau : rien ne part sans un clic de l'utilisateur, ce qui se vérifie au pare-feu, par exemple pendant le pilote. Seule exception, à son initiative : les liens « Signaler un bug » et « Donner mon avis » ouvrent le navigateur sur le site de l'AMCF en indiquant la version de l'application, celle de Windows et l'endroit de l'application d'où part le lien, rien d'autre.
+AZERTY Global fonctionne entièrement sur le poste. L'application n'effectue aucun envoi réseau : rien ne part sans un clic de l'utilisateur, ce qui se vérifie au pare-feu, par exemple pendant le pilote. Seule exception, à son initiative : les liens « Signaler un bug » et « Donner mon avis » ouvrent le navigateur sur le site de l'AMCF en indiquant la version de l'application, celle de Windows et l'endroit de l'application d'où part le lien, rien d'autre. Une stratégie de groupe supprime même cette exception : avec `OutboundLinksEnabled` à 0, l'application n'ouvre plus aucun site tiers (voir « Éteindre et effacer »).
 
 ## Ce qui est écrit sur le poste
 
@@ -33,11 +33,11 @@ Le nom du conteneur dépend du canal d'installation. Il se résout par :
 (Get-AppxPackage *AZERTYGlobal*).PackageFamilyName
 ```
 
-Hors package (exécutable lancé seul), les mêmes fichiers sont écrits à côté de l'exécutable, sans passer par `%LocalAppData%`.
+Hors package (exécutable lancé seul), les mêmes fichiers sont écrits à côté de l'exécutable, sans passer par `%LocalAppData%`. Depuis la 1.3.0, ce canal est sobre comme le MSIX signé AMCF : voir « Éteindre et effacer ».
 
 ## Éteindre et effacer
 
-Sur le canal MSIX signé AMCF, les statistiques d'usage sont **éteintes par défaut** : aucun `usage-stats.json` n'est créé. Sur le canal Microsoft Store, elles sont actives par défaut et s'éteignent par politique.
+Sur le canal MSIX signé AMCF et, depuis la 1.3.0, sur l'exécutable hors package, les statistiques d'usage sont **éteintes par défaut** : aucun `usage-stats.json` n'est créé. Ces deux canaux ne sollicitent pas d'avis, ne proposent pas de notation sur le Microsoft Store et n'affichent aucun lien de soutien (HelloAsso, Discord, « Soutenir le projet »). Sur le canal Microsoft Store, les statistiques sont actives par défaut et s'éteignent par politique.
 
 Deux valeurs sous `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\AZERTYGlobal`, en REG_DWORD :
 
@@ -46,7 +46,17 @@ Deux valeurs sous `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\AZERTYGlobal`, en REG_DW
 | `UsageStatsEnabled` | Aucun compteur n'est écrit sur le disque. |
 | `NotificationsEnabled` | Aucune notification Windows. |
 
-Le modèle d'administration est fourni avec cette note : `AZERTYGlobal.admx`, ses libellés `fr-FR` et `en-US`, et `politiques-exemple.reg`. Les commentaires de `politiques-exemple.reg` décrivent les cinq réglages qu'une structure peut imposer : les deux ci-dessus, plus `ExternalLinksEnabled`, `ShowOnboarding` et `Language`.
+Trois autres valeurs, ajoutées en 1.3.0, sont aussi en REG_DWORD sous la même clé :
+
+| Valeur | Effet | Conformité |
+|---|---|---|
+| `OutboundLinksEnabled` à 0 | Masque tout lien qui ouvre le navigateur ou le Microsoft Store : avis, bug, site, code source, licence, guide, confidentialité, ressources, Discord, soutien, notation Store, sollicitation d'avis. À 1 ou absente : aucun effet. | L'application n'ouvre plus aucun site tiers, ni celui de l'AMCF : plus aucune version de l'application ni de Windows ne peut partir sur un clic. |
+| `AutoStartEnabled` à 1, ou à 0 | Active ou coupe le lancement à l'ouverture de session. La case des Paramètres est grisée, « Géré par votre organisation ». | Aucune donnée. L'effet ne vient qu'après un premier lancement par chaque utilisateur, et un refus exprimé dans Windows reste respecté. |
+| `LessonsEnabled` à 0 | Masque Leçons et Défi du jour (menu Apprendre, rappels, lien de l'accueil, section Défi des Statistiques). « Revoir l'accueil » reste. | Aucune donnée. Un `lessons-progress.json` déjà écrit reste en place : la stratégie ne supprime aucun fichier. |
+
+Ces trois stratégies ne créent aucune donnée nouvelle ni aucun envoi. Elles se lisent une fois, au démarrage : redémarrer l'application pour les appliquer. Elles valent sur tous les canaux, Microsoft Store compris.
+
+Le modèle d'administration est fourni avec cette note : `AZERTYGlobal.admx`, ses libellés `fr-FR` et `en-US`, et `politiques-exemple.reg`. Les commentaires de `politiques-exemple.reg` décrivent les huit réglages qu'une structure peut imposer : les cinq déjà cités (`UsageStatsEnabled`, `NotificationsEnabled`, `ExternalLinksEnabled`, `ShowOnboarding`, `Language`), plus les trois ci-dessus.
 
 Pour effacer : supprimer le dossier indiqué plus haut, ou désinstaller l'application. La désinstallation d'une application packagée retire son conteneur de données.
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Modèle d'administration d'AZERTY Global — les cinq valeurs lues par src/PolicyManager.cs.
+  Modèle d'administration d'AZERTY Global — les huit valeurs lues par src/PolicyManager.cs.
 
   Ce fichier vit à côté du code qui lit ces valeurs, à dessein : un renommage de clé et un
   modèle périmé apparaissent alors dans le même diff, et scripts/tests/test_admx_agreement.py
@@ -14,18 +14,27 @@
   Activer la stratégie écrit donc 0. Décision du 2026-08-19 pour la valeur, du 2026-08-20 pour
   le sens du libellé — les trois états de la console correspondent ainsi à trois comportements
   réellement distincts.
+
+  1.3.0 (décisions d'Antoine du 2026-11-17, segmentation Store / MSIX entreprise) : trois
+  stratégies de plus. « Masquer tous les liens vers Internet » et « Masquer Leçons et Défi du
+  jour » suivent la même inversion que la fenêtre de bienvenue : OutboundLinksEnabled et
+  LessonsEnabled ne contraignent qu'à 0, donc « Activé » écrit 0. « Lancement à l'ouverture de
+  session » contraint dans les deux sens, comme NotificationsEnabled ; son texte d'aide dit ce
+  que Windows ne permet pas à une application MSIX d'imposer.
 -->
 <policyDefinitions xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
-                   revision="1.0" schemaVersion="1.0">
+                   revision="1.1" schemaVersion="1.0">
   <policyNamespaces>
     <target prefix="azertyglobal" namespace="AMCF.Policies.AZERTYGlobal" />
     <using prefix="windows" namespace="Microsoft.Policies.Windows" />
   </policyNamespaces>
-  <resources minRequiredRevision="1.0" />
+  <resources minRequiredRevision="1.1" />
   <supportedOn>
     <definitions>
       <definition name="SUPPORTED_AZERTY_GLOBAL_1_2_0"
                   displayName="$(string.SUPPORTED_AZERTY_GLOBAL_1_2_0)" />
+      <definition name="SUPPORTED_AZERTY_GLOBAL_1_3_0"
+                  displayName="$(string.SUPPORTED_AZERTY_GLOBAL_1_3_0)" />
     </definitions>
   </supportedOn>
   <categories>
@@ -92,6 +101,42 @@
           </item>
         </enum>
       </elements>
+    </policy>
+    <!--
+      Inversion assumée, comme RemoveOnboarding : « Activé » masque les liens, donc écrit 0.
+    -->
+    <policy name="RemoveOutboundLinks" class="Machine"
+            displayName="$(string.RemoveOutboundLinks)"
+            explainText="$(string.RemoveOutboundLinks_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="OutboundLinksEnabled">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_3_0" />
+      <enabledValue><decimal value="0" /></enabledValue>
+      <disabledValue><decimal value="1" /></disabledValue>
+    </policy>
+    <policy name="AutoStartEnabled" class="Machine"
+            displayName="$(string.AutoStartEnabled)"
+            explainText="$(string.AutoStartEnabled_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="AutoStartEnabled">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_3_0" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+    <!--
+      Inversion assumée, comme RemoveOnboarding : « Activé » masque Leçons et Défi, donc écrit 0.
+    -->
+    <policy name="RemoveLessons" class="Machine"
+            displayName="$(string.RemoveLessons)"
+            explainText="$(string.RemoveLessons_Explain)"
+            key="SOFTWARE\Policies\AZERTYGlobal"
+            valueName="LessonsEnabled">
+      <parentCategory ref="AZERTYGlobal" />
+      <supportedOn ref="SUPPORTED_AZERTY_GLOBAL_1_3_0" />
+      <enabledValue><decimal value="0" /></enabledValue>
+      <disabledValue><decimal value="1" /></disabledValue>
     </policy>
   </policies>
 </policyDefinitions>
