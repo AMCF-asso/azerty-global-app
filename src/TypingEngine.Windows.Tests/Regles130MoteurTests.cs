@@ -251,20 +251,28 @@ public sealed class Regles130MoteurTests
     }
 
     /// <summary>
-    /// M1.6-I5 : le nombre d'essais de réparation est borné. NON GARANTI selon le document
-    /// (« aucune limite, un échec persistant se répète à chaque frappe ») : ce test énonce la
-    /// propriété, il est rouge. Sous refus persistant, le nombre de lots envoyés doit cesser de croître :
-    /// après 20 frappes il doit être celui d'après 40.
+    /// M1.6-I5 : le nombre d'essais de réparation est borné. Tenu depuis 1.3.0 : au bout de
+    /// KeyMapper.MaxInputRecoveryAttempts essais refusés, la réparation est abandonnée et journalisée
+    /// (ReparationAbandonnee). Sous refus persistant, le nombre de lots de réparation (lots faits
+    /// uniquement de relâchements) doit cesser de croître : après 20 frappes il doit être celui
+    /// d'après 40. Ajusté : témoin couplé à l'ancienne implémentation (il comptait tous les lots ;
+    /// après l'abandon, chaque frappe repart sur le chemin normal et émet son propre lot, refusé et
+    /// compté comme perte : ce n'est pas un essai de réparation).
     /// </summary>
     [Fact]
     public void M1_6_I5_NombreDEssaisDeReparationBorne_SousRefusPersistant()
     {
-        var (api, mapper) = MapperEmettant();
+        var api = new MockWin32Api();
+        var host = new TestWindowsTypingHost();
+        var layout = new Layout();
+        layout.Keys[BancRegles130Hook.SC_E] = new KeyDefinition { Position = "D01", Scancode = BancRegles130Hook.SC_E, Base = "ê", Shift = "Ê" };
+        var mapper = new KeyMapper(layout, api, host);
         api.SendInputResults.Enqueue(1);   // l'émission du « ê » (2 événements) est partielle
         api.SendInputResult = 0;           // puis Windows refuse tout, sans fin
         Assert.True(mapper.ProcessKey(BancRegles130Hook.VK_A, BancRegles130Hook.SC_E, 0, true));
-        int apresLaPremiere = api.SendInputCalls.Count;   // l'émission et la première tentative
-        Assert.Equal(2, apresLaPremiere);
+        int Reparations() => api.SendInputCalls.Skip(1).Count(lot => lot.All(i => EstUnRelachement(i, 'ê')));
+        int apresLaPremiere = Reparations();   // la première tentative suit l'émission
+        Assert.Equal(1, apresLaPremiere);
 
         void Frappes(int n)
         {
@@ -276,14 +284,17 @@ public sealed class Regles130MoteurTests
         }
 
         Frappes(5);
-        int apres5 = api.SendInputCalls.Count;
+        int apres5 = Reparations();
         Assert.True(apres5 > apresLaPremiere, "montage : aucune nouvelle tentative de réparation");
         Frappes(15);
-        int apres20 = api.SendInputCalls.Count;
+        int apres20 = Reparations();
         Frappes(20);
-        int apres40 = api.SendInputCalls.Count;
+        int apres40 = Reparations();
         Assert.True(apres40 == apres20,
-            $"essais non bornés : {apres20} lots après 20 frappes, {apres40} après 40 (refus persistant)");
+            $"essais non bornés : {apres20} lots de réparation après 20 frappes, {apres40} après 40 (refus persistant)");
+        // Compléments, une fois la borne tenue : elle vaut le plafond annoncé, et l'abandon est journalisé une fois.
+        Assert.Equal(KeyMapper.MaxInputRecoveryAttempts, apres20);
+        Assert.Single(host.CriticalEvents, e => e.EventName == "ReparationAbandonnee");
     }
 
     private static bool EstUnRelachement(Win32.INPUT input, char caractere) =>

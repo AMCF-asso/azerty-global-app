@@ -551,7 +551,7 @@ Aucun constat.
 - I2 : une réparation en attente est rejouée avant toute nouvelle émission ou injection : `KeyMapper.cs:198, 261, 564, 1018`.
 - I3 : un modificateur que l'utilisateur a relâché entre-temps n'est pas rebloqué. Garanti par `InputRecovery.cs:36-38` (`_deferred` ajoute `GetAsyncKeyState`).
 - I4 : NumLock est remis à l'état voulu seulement si l'utilisateur n'y a pas touché. Garanti par `KeyMapper.cs:358-359` et `InputRecovery.cs:50-62`.
-- I5 : le nombre d'essais est borné. **Non garanti** : aucune limite (ni compteur ni durée), un échec persistant se répète à chaque frappe tant que le lot de réparation est refusé.
+- I5 : le nombre d'essais est borné. Garanti depuis 1.3.0 (17 novembre 2026) : au bout de `KeyMapper.MaxInputRecoveryAttempts` (8) essais refusés (`InputRecovery.RecordFailedAttempt`), la réparation est abandonnée et journalisée en événement critique `ReparationAbandonnee` ; les frappes suivantes repartent sur le chemin normal. Test : `Regles130MoteurTests.M1_6_I5_NombreDEssaisDeReparationBorne_SousRefusPersistant`.
 - I6 : deux réparations ne se superposent pas. Garanti par le garde de `FlushInputRecovery` avant tout `SendInputsWithRecovery` (`KeyMapper.cs:198, 1018`) ; unique écrivain `:1160`.
 
 #### Table de transition

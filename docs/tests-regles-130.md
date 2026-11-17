@@ -2,7 +2,7 @@
 
 Base c16866b, branche claude/ag-tests-regles-130. Règle, test, verdict. Généré le 2026-11-17 à partir des rapports de lot.
 
-Lignes : 92 (ids distincts 92). Vertes 85, rouges 4, autres 3.
+Lignes : 92 (ids distincts 92). Vertes 86, rouges 3, autres 3.
 
 Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa dernière assertion, témoins avant. Les 3 tests `EntreeReelle` (fichier Regles130EntreeReelleTests.cs) sont écrits et compilés mais jamais joués : ils envoient de vraies frappes (SendInput) sur le bureau ; ils tournent par l'étape tests-entree-reelle de scripts/verify.ps1.
 
@@ -10,7 +10,7 @@ Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa de
 |---|---|---|---|
 | M1.2-I8 | M1_2_I8_RelacheDuDeclencheur_VueHorsSuspension_PuisEffaceeApresSuspension | vert | Regles130MoteurTests.cs |
 | M1.5-I4 | M1_5_I4_UnSeulAppel_LitLaSuspensionDeManiereCoherente | vert (corrigé 1.3.0) | Regles130MoteurTests.cs |
-| M1.6-I5 | M1_6_I5_NombreDEssaisDeReparationBorne_SousRefusPersistant | rouge | Regles130MoteurTests.cs |
+| M1.6-I5 | M1_6_I5_NombreDEssaisDeReparationBorne_SousRefusPersistant | vert (corrigé 1.3.0) | Regles130MoteurTests.cs |
 | M1.6-I6 | M1_6_I6_DeuxReparationsNeSeSuperposentPas | vert | Regles130MoteurTests.cs |
 | M1.7-I1 | M1_7_I1_FileFifo_RendLesAttendusDansLOrdreDesFrappes | vert | Regles130PurTests.cs |
 | M1.7-I2 | M1_7_I2_CaractereDeControle_JamaisRemplaceParDuTexte | vert | Regles130PurTests.cs |

@@ -1378,6 +1378,15 @@ public sealed class KeyMapper
         return sent;
     }
 
+    /// <summary>
+    /// M1.6 I5 (1.3.0) : plafond des essais de réparation d'un lot incomplet. Sous un refus
+    /// persistant (UIPI, bureau sécurisé, session verrouillée), chaque frappe retentait la
+    /// réparation sans fin, et la frappe passait en natif tant qu'elle était en attente. Au
+    /// plafond, la réparation est abandonnée et journalisée : les frappes suivantes repartent
+    /// sur le chemin normal (refus total compté par <see cref="RecordEmissionLoss"/>).
+    /// </summary>
+    internal const int MaxInputRecoveryAttempts = 8;
+
     private bool FlushInputRecovery()
     {
         if (_pendingInputRecovery == null) return true;
@@ -1385,7 +1394,16 @@ public sealed class KeyMapper
         var recovery = _pendingInputRecovery.Build(_api, IsPhysicalModifierDown);
         uint sent = SendInputs(recovery);
         _pendingInputRecovery.MarkDeferred();
-        if (sent != (uint)recovery.Length) return false;
+        if (sent == (uint)recovery.Length)
+        {
+            _pendingInputRecovery = null;
+            return true;
+        }
+        if (_pendingInputRecovery.RecordFailedAttempt() < MaxInputRecoveryAttempts) return false;
+        _host.LogCompatibilityCriticalEvent(
+            "ReparationAbandonnee",
+            $"{MaxInputRecoveryAttempts} essais de reparation refuses ; dernier : {sent}/{recovery.Length} evenement(s), " +
+            $"erreur Win32 {_api.LastSendInputError} ; touches du lot laissees a l'etat ou Windows les tient");
         _pendingInputRecovery = null;
         return true;
     }

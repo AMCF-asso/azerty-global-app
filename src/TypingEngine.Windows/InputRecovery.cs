@@ -14,7 +14,12 @@ internal sealed class InputRecovery
         if (toggles > 0) _numLockTarget = numLockBefore ^ ((toggles & 1) != 0);
     }
 
+    private int _failedAttempts;
+
     internal void MarkDeferred() => _deferred = true;
+
+    /// <summary>Compte un essai de réparation refusé (M1.6 I5) ; rend le total.</summary>
+    internal int RecordFailedAttempt() => ++_failedAttempts;
     internal void CancelNumLockRestoration() => _numLockTarget = null;
 
     internal Win32.INPUT[] Build(IWin32Api api, Func<ushort, bool> physicallyDown)
