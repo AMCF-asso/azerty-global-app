@@ -442,23 +442,65 @@ public sealed class Regles130TrayBullesTests
         Assert.Equal(0, OutilsTray130.Modifs(faux));
     }
 
-    // M3.3 I2 : une sollicitation à usage unique n'est marquée « faite » qu'une fois réellement montrée.
-    // Non garanti (C3.5) : l'annonce du Défi est marquée avant l'affichage, et le retour de
-    // Shell_NotifyIconW est ignoré. ROUGE attendu aujourd'hui. Formulation ambiguë : les commentaires du
-    // produit revendiquent « jamais deux fois, même si la balloon échoue ensuite » ; à trancher.
+    // M3.3 I2 : une sollicitation à usage unique n'est jamais montrée deux fois. Décision d'Antoine du
+    // 17/11/2026 (C3.5 marqué attendu) : chaque sollicitation est marquée faite avant l'affichage, même si
+    // le shell refuse la bulle ; mieux vaut une sollicitation perdue qu'une sollicitation répétée. Règle
+    // réécrite : l'ancienne formulation (« marquée seulement si montrée ») contredisait ce choix. Les trois
+    // points de marquage sont joués, shell refusant la bulle : annonce du Défi (SetChallengeAnnounceDone),
+    // relance du lancement automatique (AutoStartNudge.MarkPromptShown), demande d'avis
+    // (RecordReviewPromptShown). Chaque fois : marquée malgré le refus, puis aucune seconde tentative.
     [Fact]
-    public void M3_3_I2_SollicitationAUsageUnique_MarqueeSeulementSiMontree()
+    public void M3_3_I2_SollicitationAUsageUnique_JamaisDeuxFois()
     {
         using var iso = new BancCapture.Isolation();
-        var (tray, faux, _) = OutilsTray130.Tray();
-        faux.ResultatIcone = m => m != OutilsTray130.NimModify;   // le shell refuse la bulle
-        Assert.False(ConfigManager.ChallengeAnnounceDone);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        var lecteurAvant = AutoStart.WindowsStateReader;
+        OutilsTray130.SemerStatistiquesDAvis();                    // jours actifs et première frappe : relance et avis dus
+        OutilsTray130.DerniereFrappeIlYa(20_000);
+        try
+        {
+            var (tray, faux, _) = OutilsTray130.Tray();
+            faux.ResultatIcone = m => m != OutilsTray130.NimModify;   // le shell refuse toute bulle
 
-        bool partie = (bool)BancCapture.Call(tray, "MaybeShowChallengeAnnouncement")!;
-        Assert.True(partie);                                      // témoin : l'annonce a été tentée
-        Assert.Equal(1, faux.Refus);                               // témoin : le shell a refusé la bulle
-        Assert.False(ConfigManager.ChallengeAnnounceDone,
-            "C3.5 : l'annonce unique est marquée faite alors que la bulle a été refusée par le shell");
+            // 1. Annonce du Défi du jour.
+            Assert.False(ConfigManager.ChallengeAnnounceDone);
+            Assert.True((bool)BancCapture.Call(tray, "MaybeShowChallengeAnnouncement")!);   // témoin : tentée
+            Assert.Equal(1, faux.Refus);                                                     // témoin : refusée
+            Assert.True(ConfigManager.ChallengeAnnounceDone);                                // marquée malgré le refus
+
+            // 2. Relance du lancement automatique (état Windows simulé : inactif, activable).
+            AutoStart.WindowsStateReader = () => AutoStartWindowsState.Disabled;
+            Assert.False(ConfigManager.AutoStartNudgeDone);
+            Assert.True((bool)BancCapture.Call(tray, "MaybeShowAutoStartNudge")!);          // témoin : tentée
+            Assert.Equal(2, faux.Refus);                                                     // témoin : refusée
+            Assert.True(ConfigManager.AutoStartNudgeDone);                                   // marquée malgré le refus
+
+            // 3. Demande d'avis, essai 1.
+            BancCapture.SetField(tray, "_versionFirstRun",
+                new ConfigManager.VersionFirstRun("1.3.0", DateOnly.FromDateTime(DateTime.Now), false));
+            Assert.True((bool)BancCapture.Call(tray, "MaybeShowReviewPrompt", ReviewPromptTrigger.QuietTyping)!);   // témoin
+            Assert.Equal(3, faux.Refus);                                                     // témoin : refusée
+            Assert.Equal(1, ConfigManager.ReviewPromptCount);                                // marquée malgré le refus
+
+            // Le shell accepterait désormais : aucune des trois n'est retentée.
+            faux.ResultatIcone = _ => true;
+            int modifs = OutilsTray130.Modifs(faux);
+            Assert.False((bool)BancCapture.Call(tray, "MaybeShowChallengeAnnouncement")!,
+                "M3.3-I2 : l'annonce du Défi a été tentée une seconde fois");
+            Assert.False((bool)BancCapture.Call(tray, "MaybeShowAutoStartNudge")!,
+                "M3.3-I2 : la relance du lancement automatique a été tentée une seconde fois");
+            Assert.False((bool)BancCapture.Call(tray, "MaybeShowReviewPrompt", ReviewPromptTrigger.QuietTyping)!,
+                "M3.3-I2 : la demande d'avis a été tentée une seconde fois");
+            Assert.Equal(modifs, OutilsTray130.Modifs(faux));                                // aucune bulle de plus
+            Assert.Equal(1, ConfigManager.ReviewPromptCount);
+        }
+        finally
+        {
+            AutoStart.WindowsStateReader = lecteurAvant;
+            UsageStats.ClearEnrichedThresholdSignal();
+            OutilsTray130.DerniereFrappeIlYa(-1);
+            LearningSessionTracker.ResetForTests();
+        }
     }
 
     // M7.6 I1 : toute nouvelle balloon remplace la précédente et invalide la cible, par ShowBalloon et

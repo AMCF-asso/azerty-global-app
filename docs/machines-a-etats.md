@@ -151,7 +151,7 @@ Trente-neuf constats ont été relevés sur `250c4ef` : 15 confirmés, 4 atteint
 | C3.2 | M3.1 | Commandes de menu appliquées à l'état courant et non à l'état affiché | confirmé (couture `ITrayShell`), puis corrigé, 17 novembre 2026 : état affiché retenu (`MenuShownState`) | faible | ME-13 | `Regles130TrayEtatTests.M3_1_I4_*` (rouge avant le correctif) |
 | C3.3 | M3.5 | `_layoutPopupOpen` posé avant la construction de la fenêtre, sans `try/finally` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.4 | M3.1 | Le raccourci global exécute tout `OnToggle`/`StopPause` dans le rappel du hook clavier | confirmé (couture `ITrayShell`), puis corrigé, 17 novembre 2026 : bascule postée (`WM_APP_TOGGLE`) | faible | ME-13 | `Regles130TrayEtatTests.M3_1_I5_*` (rouge avant le correctif) |
-| C3.5 | M3.3 | Bulles à usage unique marquées faites avant l'affichage, dans la foulée du `NIM_ADD` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
+| C3.5 | M3.3 | Bulles à usage unique marquées faites avant l'affichage, dans la foulée du `NIM_ADD` | confirmé (couture `ITrayShell`), comportement voulu (décision d'Antoine, 17 novembre 2026) : règle M3.3 I2 réécrite « jamais deux fois » | faible | ME-13 | `Regles130TrayBullesTests.M3_3_I2_*` |
 | C3.6 | M3.6 | `NIM_ADD` sans contrôle de retour ni réessai, y compris sur `TaskbarCreated` | confirmé (couture `ITrayShell`), puis corrigé, 16 novembre 2026 : réessai borné | faible | ME-13 | `CoutureTrayTests.C3_6_*` (4 tests : réessai, borne, doublon, nettoyage) |
 | C3.7 | M3.5 | Fenêtre de conflit de disposition sans garde sur l'état de l'application | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C4.1 | M4.1 | Mutex `Local\` créé par une instance élevée : le lancement non élevé plante avant tout gestionnaire d'erreur | corrigé | faible | ME-09 | `AZERTYGlobal/Program.cs` (`AcquireSingleInstance`) ; tests `AZERTYGlobal.Tests/MachinesEtatsLot4Tests.cs` (`Mutex_local_refuse_par_une_instance_elevee_est_une_seconde_instance`, `Acquisition_des_deux_mutex_dit_qui_l_on_est`, `Mutex_global_indisponible_laisse_demarrer_en_mode_degrade`) |
@@ -1263,7 +1263,7 @@ None, Review, Training, Announcement, AutoStart : le type de la dernière bulle
 #### Invariants
 
 - I1 Les bulles et nudges respectent `NotificationsEnabled` : garanti (portes présentes).
-- I2 Une sollicitation à usage unique n'est marquée « faite » qu'une fois réellement montrée : non garanti (C3.5). `ConfigManager.SetChallengeAnnounceDone(); // avant l'affichage` (1555), `AutoStartNudge.MarkPromptShown();` (1597), `ConfigManager.RecordReviewPromptShown(signals.Today);` (2769).
+- I2 Une sollicitation à usage unique n'est jamais montrée deux fois : garanti (règle réécrite le 17 novembre 2026, décision d'Antoine : C3.5 est le comportement voulu). Elle est marquée faite avant l'affichage, même si le shell refuse la bulle : mieux vaut une annonce perdue qu'une annonce répétée. Test : `Regles130TrayBullesTests.M3_3_I2_SollicitationAUsageUnique_JamaisDeuxFois`. Points de marquage : `ConfigManager.SetChallengeAnnounceDone(); // avant l'affichage` (1555), `AutoStartNudge.MarkPromptShown();` (1597), `ConfigManager.RecordReviewPromptShown(signals.Today);` (2769).
 
 #### Table de transition
 
