@@ -136,6 +136,19 @@ sealed class TrayApplication : IDisposable
         get => _shell ?? Win32TrayShell.Instance;
         set => _shell = value;
     }
+
+    /// <summary>
+    /// Heure murale de la pause (audit temps et horloge du 17/11, TH-04, couture décidée par le
+    /// QCM du 17/11) : l'horloge système en production, une horloge réglable dans les tests.
+    /// Même repli que <see cref="Shell"/> pour un objet créé sans constructeur.
+    /// </summary>
+    internal Func<DateTimeOffset> UtcClock
+    {
+        get => _utcClock ?? DefaultUtcClock;
+        set => _utcClock = value;
+    }
+    private Func<DateTimeOffset>? _utcClock;
+    private static readonly Func<DateTimeOffset> DefaultUtcClock = () => DateTimeOffset.UtcNow;
     private readonly Win32.WNDPROC _wndProcDelegate; // prevent GC
     private KeyboardHook? _hook;
     private KeyMapper? _mapper;
@@ -172,6 +185,7 @@ sealed class TrayApplication : IDisposable
     private bool _startupFailed;
     private bool _enabled = ConfigManager.ActivationConsent;
     private DateTimeOffset? _pauseUntilUtc;
+    private DateTimeOffset _pauseLastTickUtc; // heure murale du dernier tic de pause (TH-04)
 
     // Nature de la dernière balloon cliquable affichée : le clic sur une balloon est
     // routé selon cette valeur (avis → page d'avis, défi → séance). Invalidé dès qu'une
@@ -1082,7 +1096,17 @@ sealed class TrayApplication : IDisposable
                     }
                     else if (timerId == TIMER_PAUSE)
                     {
-                        if (_pauseUntilUtc.HasValue && DateTimeOffset.UtcNow >= _pauseUntilUtc.Value)
+                        // Audit temps et horloge du 17/11, TH-04 : l'échéance est une heure murale.
+                        // Une heure qui recule depuis le tic précédent (horloge avancée au moment
+                        // de la pause puis remise, resynchronisation) prolongeait la pause d'autant,
+                        // jusqu'à des semaines. Le recul est retiré de l'échéance : la durée réelle
+                        // restante ne change pas. Une heure qui avance (veille, réglage) compte
+                        // comme du temps écoulé : la pause finit au plus tôt, jamais plus tard.
+                        var now = UtcClock();
+                        if (_pauseUntilUtc is { } until && now < _pauseLastTickUtc)
+                            _pauseUntilUtc = until - (_pauseLastTickUtc - now);
+                        _pauseLastTickUtc = now;
+                        if (_pauseUntilUtc.HasValue && now >= _pauseUntilUtc.Value)
                             StopPause(expired: true);
                         else
                             UpdateTooltip();
@@ -1940,11 +1964,11 @@ sealed class TrayApplication : IDisposable
         if (IsPaused)
         {
             Win32.AppendMenuW(hMenu, MF_STRING, IDM_PAUSE,
-                L.Tray_MenuResumeNow(PauseSchedule.DescribeResume(DateTime.Now, _pauseUntilUtc!.Value.LocalDateTime)));
+                L.Tray_MenuResumeNow(PauseSchedule.DescribeResume(UtcClock().LocalDateTime, _pauseUntilUtc!.Value.LocalDateTime)));
         }
         else
         {
-            DateTime now = DateTime.Now;
+            DateTime now = UtcClock().LocalDateTime;
             DateTime morning = PauseSchedule.NextMorning(now);
             var hPauseMenu = Win32.CreatePopupMenu();
             Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_15, L.Tray_MenuPause15);
@@ -2298,7 +2322,7 @@ sealed class TrayApplication : IDisposable
     private void StartPause(TimeSpan duration)
     {
         int totalMinutes = Math.Clamp((int)Math.Round(duration.TotalMinutes), 1, 1439);
-        StartPauseUntil(DateTimeOffset.UtcNow.AddMinutes(totalMinutes),
+        StartPauseUntil(UtcClock().AddMinutes(totalMinutes),
             L.Tray_PausedForDurationTitle(FormatDuration(totalMinutes)));
     }
 
@@ -2309,7 +2333,7 @@ sealed class TrayApplication : IDisposable
     {
         if (!CanStartPause(_enabled, _pauseDialogOpen))
             return;
-        DateTime now = DateTime.Now;
+        DateTime now = UtcClock().LocalDateTime;
         DateTime morning = PauseSchedule.NextMorning(now);
         StartPauseUntil(new DateTimeOffset(morning).ToUniversalTime(),
             L.Tray_PausedUntilMorningTitle(morning.Date > now.Date, PauseSchedule.FormatClock(morning)));
@@ -2330,6 +2354,7 @@ sealed class TrayApplication : IDisposable
         }
         _pauseSerial++;
         _pauseUntilUtc = untilUtc;
+        _pauseLastTickUtc = UtcClock();
         _mapper?.ClearPassedThroughKeys();
         ApplyHookState();
         UpdateIcon();
@@ -2376,7 +2401,7 @@ sealed class TrayApplication : IDisposable
         if (!_pauseUntilUtc.HasValue)
             return "00:00";
 
-        var remaining = _pauseUntilUtc.Value - DateTimeOffset.UtcNow;
+        var remaining = _pauseUntilUtc.Value - UtcClock();
         if (remaining < TimeSpan.Zero)
             remaining = TimeSpan.Zero;
 
@@ -3051,6 +3076,12 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
+            // Audit temps et horloge du 17/11, TH-02 : heure remise depuis le démarrage, les dates
+            // d'avis écrites horloge en avance valent aujourd'hui et se réécrivent.
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            ConfigManager.RepairFutureReviewDates(today);
+            if (_versionFirstRun is { } firstRun && firstRun.Date > today)
+                _versionFirstRun = firstRun with { Date = today };
             var signals = ReviewPromptGate.Snapshot(_versionFirstRun);
             if (!ReviewPromptGate.ShouldShowNotification(trigger, signals, out int attempt))
                 return false;

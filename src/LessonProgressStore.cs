@@ -599,11 +599,12 @@ internal sealed class LessonProgressStore
 
             if (root.TryGetProperty("gestures", out var gesturesEl) && gesturesEl.ValueKind == JsonValueKind.Object)
             {
+                var now = _clock();
                 foreach (var item in gesturesEl.EnumerateObject())
                 {
                     var el = item.Value;
                     if (item.Name.Length == 0 || el.ValueKind != JsonValueKind.Object) continue;
-                    _gestures[item.Name] = new GestureMasteryEntry(item.Name)
+                    var entry = new GestureMasteryEntry(item.Name)
                     {
                         Attempts = Math.Max(0, ReadInt(el, "attempts")),
                         Errors = Math.Max(0, ReadInt(el, "errors")),
@@ -611,6 +612,15 @@ internal sealed class LessonProgressStore
                         LastReviewUtc = ReadDate(el, "lastReviewUtc"),
                         DueUtc = ReadDate(el, "dueUtc"),
                     };
+                    // Audit temps et horloge du 17/11, TH-03 : révision faite horloge en avance,
+                    // puis heure remise. L'échéance future sortait le caractère de la Révision du
+                    // jour et le comptait « maîtrisé » jusqu'à ce que la vraie date la rattrape.
+                    // Une révision ne peut pas être postérieure à maintenant, ni une échéance plus
+                    // lointaine que l'intervalle de sa boîte ; réécrit à la prochaine sauvegarde.
+                    if (entry.LastReviewUtc > now) entry.LastReviewUtc = now;
+                    var latestDue = now + GestureMastery.IntervalFor(entry.Box);
+                    if (entry.DueUtc > latestDue) entry.DueUtc = latestDue;
+                    _gestures[item.Name] = entry;
                 }
             }
 
