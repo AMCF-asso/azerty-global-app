@@ -229,7 +229,7 @@ sealed class PauseDurationDialog : IDisposable
         _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 126, 54, EDIT_W, 28);
         _hSpinHours = CreateSpin(hInstance, _hEditHours, MaxHours, 1, 126 + EDIT_W, 54, 28);
         _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 190, 59, 20, 22);
-        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(), 214, 54, EDIT_W, 28);
+        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture), 214, 54, EDIT_W, 28);
         _hSpinMinutes = CreateSpin(hInstance, _hEditMinutes, MaxMinutes, MinutesStep, 214 + EDIT_W, 54, 28);
         _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 278, 59, 38, 22);
         _hResume = CreateStatic(hInstance, string.Empty, 18, 96, 294, 22);
@@ -535,8 +535,8 @@ sealed class PauseDurationDialog : IDisposable
     /// <summary>Une pastille remplit les deux champs : la ligne de reprise suit (EN_CHANGE).</summary>
     private void SetDuration(int totalMinutes)
     {
-        Win32.SetWindowTextW(_hEditHours, (totalMinutes / 60).ToString());
-        Win32.SetWindowTextW(_hEditMinutes, (totalMinutes % 60).ToString());
+        Win32.SetWindowTextW(_hEditHours, (totalMinutes / 60).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Win32.SetWindowTextW(_hEditMinutes, (totalMinutes % 60).ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private void ValidateAndClose()
@@ -549,14 +549,14 @@ sealed class PauseDurationDialog : IDisposable
     private static void Step(IntPtr edit, int delta, int max)
     {
         int value = Math.Clamp(ReadInt(edit) + delta, 0, max);
-        Win32.SetWindowTextW(edit, value.ToString());
+        Win32.SetWindowTextW(edit, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private static int ReadInt(IntPtr hwnd)
     {
         var sb = new StringBuilder(16);
         Win32.GetWindowTextW(hwnd, sb, sb.Capacity);
-        return int.TryParse(sb.ToString(), out int value) ? value : 0;
+        return int.TryParse(sb.ToString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value) ? value : 0;
     }
 
     private void Close(TimeSpan? result)

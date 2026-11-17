@@ -580,7 +580,7 @@ internal sealed partial class LessonsWindow
             int contentH = withWhat ? S(24) + S(18) : S(24);
             int lineTop = y + (stepH - contentH) / 2;
             var number = new Win32.RECT { left = innerLeft, top = lineTop, right = innerLeft + S(24), bottom = lineTop + S(24) };
-            PaperText.DrawLine(hdc, (i + 1).ToString(), small, number, fresh ? CLR_ACCENT : CLR_MUTED, TextAlign.Left);
+            PaperText.DrawLine(hdc, (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), small, number, fresh ? CLR_ACCENT : CLR_MUTED, TextAlign.Left);
             int textLeft = innerLeft + S(36), textRight = innerRight;
             if (tag != null)
             {

@@ -340,7 +340,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         SetChecked(_hScientific, ConfigManager.MaintainableScientificEnabled);
         SetChecked(_hVisual, ConfigManager.MaintainableVisualFeedbackEnabled);
         _delayBusy = true;
-        try { Win32.SetWindowTextW(_hDelay, ConfigManager.MaintainableDoubleTapMilliseconds.ToString()); }
+        try { Win32.SetWindowTextW(_hDelay, ConfigManager.MaintainableDoubleTapMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
         finally { _delayBusy = false; }
         Win32.SetWindowTextW(_hDelayNote, string.Empty);
         UpdateEnabledState();
@@ -380,7 +380,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
     internal static int ClampDelay(string text, out string? adjusted)
     {
         adjusted = null;
-        if (!int.TryParse(NumericField.Digits(text), out int parsed))
+        if (!int.TryParse(NumericField.Digits(text), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int parsed))
             return DelayDefault;
         if (parsed < DelayMin) { adjusted = L.Layers_DelayRaised(DelayMin); return DelayMin; }
         if (parsed > DelayMax) { adjusted = L.Layers_DelayLowered(DelayMax); return DelayMax; }
@@ -393,7 +393,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         Win32.GetWindowTextW(_hDelay, text, text.Capacity);
         int value = ClampDelay(text.ToString(), out string? adjusted);
         _delayBusy = true;
-        try { Win32.SetWindowTextW(_hDelay, value.ToString()); }
+        try { Win32.SetWindowTextW(_hDelay, value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
         finally { _delayBusy = false; }
         if (announce)
             Win32.SetWindowTextW(_hDelayNote, adjusted ?? string.Empty);
@@ -440,7 +440,7 @@ internal sealed class MaintainableLayersWindow : IDisposable
         finally { _delayBusy = false; }
         var text = new StringBuilder(16);
         Win32.GetWindowTextW(_hDelay, text, text.Capacity);
-        if (int.TryParse(text.ToString(), out int value) && value >= DelayMin && value <= DelayMax)
+        if (int.TryParse(text.ToString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value) && value >= DelayMin && value <= DelayMax)
         {
             Win32.SetWindowTextW(_hDelayNote, string.Empty);
             ConfigManager.SetMaintainableDoubleTapMilliseconds(value);

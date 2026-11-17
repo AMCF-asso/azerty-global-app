@@ -1331,7 +1331,7 @@ static class ConfigManager
         lock (_lock)
         {
             EnsureLoaded();
-            using var doc = JsonDocument.Parse(value.ToString());
+            using var doc = JsonDocument.Parse(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             SetValueLocked(key, doc.RootElement.Clone());
         }
     }

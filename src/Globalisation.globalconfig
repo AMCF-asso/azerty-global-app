@@ -1,0 +1,17 @@
+# Conversions et comparaisons sans culture explicite : erreur de build dans les projets du produit.
+# Audit des formats régionaux (docs/audit-formats-regionaux.md, ticket T3, 17/11/2026) :
+# verify.ps1 ne lit pas les avertissements, une règle en avertissement ne serait jamais vue.
+# Ne couvre pas les interpolations avec format ($"{date:yyyyMMdd}") : voir § 1 du document
+# et docs/audit-formats-regionaux/inventaire/lancer.ps1 pour les relever.
+is_global = true
+
+# char/string.ToUpper/ToLower sans culture (casse turque : Ctrl+I, FR-01)
+dotnet_diagnostic.CA1304.severity = error
+# ToString/Parse/TryParse sans IFormatProvider
+dotnet_diagnostic.CA1305.severity = error
+# string.Equals/Compare en culture plutôt qu'en ordinal
+dotnet_diagnostic.CA1309.severity = error
+# StartsWith/EndsWith/Compare sans StringComparison
+dotnet_diagnostic.CA1310.severity = error
+# ToUpper/ToLower sans culture (variante .NET 7+)
+dotnet_diagnostic.CA1311.severity = error

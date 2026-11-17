@@ -48,7 +48,7 @@ internal sealed class ChallengeSessionState
     public bool IsStale()
     {
         string key = Offered
-            ? $"{DateOnly.FromDateTime(DateTime.Now):yyyyMMdd}/{ConfigManager.TrainingSequenceIndex}/{L.Language}"
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{DateOnly.FromDateTime(DateTime.Now):yyyyMMdd}/{ConfigManager.TrainingSequenceIndex}/{L.Language}")
             : "off";
         if (_lessonKey == key) return false;
         _lessonKey = key;

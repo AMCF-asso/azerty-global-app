@@ -217,7 +217,7 @@ static class DailyChallenge
         var session = SessionFor(date, sequenceIndex);
         if (session == null) return null;
 
-        string lessonId = $"defi-{date:yyyyMMdd}";
+        string lessonId = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"defi-{date:yyyyMMdd}");
         // Échauffement : une ligne par caractère cible, 5 répétitions espacées.
         string warmupContent = string.Join("\n",
             session.WarmupChars.Select(c => string.Join(" ", Enumerable.Repeat(c, WarmupRepetitions))));

@@ -1245,7 +1245,7 @@ sealed class VirtualKeyboard : IDisposable
         {
             // Autre touche morte → masquer, sauf la touche morte active :
             // double-pression = GetIsolated() → caractère A, puis Apply(A) → caractère B
-            if (output.StartsWith("dk_"))
+            if (output.StartsWith("dk_", StringComparison.Ordinal))
             {
                 if (output == _activeDeadKey && _layout.DeadKeys.TryGetValue(_activeDeadKey, out var selfDk))
                 {
@@ -1317,11 +1317,11 @@ sealed class VirtualKeyboard : IDisposable
             if (hitIndex >= 0 && !_visualKeys[hitIndex].IsContextual)
             {
                 string? ch2 = GetDisplayChar(_visualKeys[hitIndex].Scancode);
-                if (ch2 != null && !ch2.StartsWith("dk_") && CharacterIndex.Shared.Names.TryGetValue(ch2, out var name))
+                if (ch2 != null && !ch2.StartsWith("dk_", StringComparison.Ordinal) && CharacterIndex.Shared.Names.TryGetValue(ch2, out var name))
                     UpdateTooltipText(L.IsEnglish
                         ? (name.En.Length > 0 ? name.En : name.Fr)
                         : (name.Fr.Length > 0 ? name.Fr : name.En));
-                else if (ch2 != null && ch2.StartsWith("dk_"))
+                else if (ch2 != null && ch2.StartsWith("dk_", StringComparison.Ordinal))
                 {
                     UpdateTooltipText(GetDeadKeyDisplayName(ch2));
                 }

@@ -2130,7 +2130,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         double minutes = seconds / 60d;
         int wpm = _freeChars >= 10 ? (int)Math.Round((_freeChars / 5d) / minutes) : 0;
         int cpm = (int)Math.Round(_freeChars / minutes);
-        return L.LessonsWin_FreeStatsFilled(wpm == 0 ? "—" : wpm.ToString(), cpm, (int)Math.Round(seconds), _freeBackspaces);
+        return L.LessonsWin_FreeStatsFilled(wpm == 0 ? "—" : wpm.ToString(System.Globalization.CultureInfo.InvariantCulture), cpm, (int)Math.Round(seconds), _freeBackspaces);
     }
 
     /// <summary>« Effacer les statistiques » : les compteurs seulement. Le texte reste (audit

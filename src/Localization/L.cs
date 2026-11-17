@@ -41,7 +41,7 @@ internal static partial class L
         }
         catch (System.Globalization.CultureNotFoundException)
         {
-            return date.ToString("yyyy-MM-dd");
+            return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
@@ -57,7 +57,7 @@ internal static partial class L
         }
         catch (System.Globalization.CultureNotFoundException)
         {
-            return date.ToString("yyyy-MM-dd");
+            return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 }
