@@ -31,7 +31,7 @@ static class UsageStats
     private static bool _loaded;
     private static bool _dirty;
     // Audit du 25/09 (A-11) : le fichier existait mais n'a pas pu être lu. Il n'est jamais
-    // réécrit pendant cette session ; le prochain lancement relit.
+    // écrasé ; CE-T2 : il est relu par Preload et Flush, puis la session s'y ajoute (Merge).
     private static bool _readFailed;
     // Audit du 25/09 : une écriture à la fois, dans l'ordre des instantanés. Toujours prise
     // avant _lock, jamais sous _lock.
@@ -568,87 +568,273 @@ static class UsageStats
     /// Charge usage-stats.json en mémoire, à appeler au démarrage depuis le thread UI.
     /// Garantit que la première frappe remappée ne déclenche pas le chargement paresseux :
     /// RecordEmittedText reste sans aucune I/O sur le chemin du hook clavier.
+    ///
+    /// CE-T2 (CE-06) : la lecture se fait hors de <c>_lock</c>, avec quelques essais courts
+    /// (<see cref="FileQuarantine.ReadAllTextWithRetries"/>) ; le hook n'attend jamais le disque.
+    /// Un fichier resté illisible est relu ici, à chaque écriture (<see cref="Flush"/>) et à
+    /// l'ouverture de la fenêtre des statistiques, jamais depuis le hook.
     /// </summary>
     public static void Preload()
     {
-        lock (_lock) EnsureLoaded();
+        string path;
+        bool firstLoad;
+        lock (_lock)
+        {
+            if (_loaded && !_readFailed) return;
+            if (!CollectionEnabled)
+            {
+                EnsureLoaded();
+                return;
+            }
+            path = _statsPath;
+            firstLoad = !_loaded;
+        }
+        var result = ReadStatsFile(path, withRetries: firstLoad);
+        lock (_lock)
+        {
+            // Même fichier seulement : un test a pu rediriger les statistiques entre-temps.
+            if (path == _statsPath) ApplyReadLocked(result);
+        }
     }
 
+    /// <summary>CE-T2 : relit, en un essai et hors de <c>_lock</c>, un fichier resté illisible.
+    /// Sans effet quand rien n'attend.</summary>
+    private static void RetryPendingRead()
+    {
+        string path;
+        lock (_lock)
+        {
+            if (!_loaded || !_readFailed) return;
+            path = _statsPath;
+        }
+        var result = ReadStatsFile(path, withRetries: false);
+        lock (_lock)
+        {
+            if (path == _statsPath) ApplyReadLocked(result);
+        }
+    }
+
+    /// <summary>Chargement paresseux, sous <c>_lock</c>, en un essai : seulement quand
+    /// <see cref="Preload"/> n'est pas passé avant (témoins, accès précoce).</summary>
     private static void EnsureLoaded()
     {
         if (_loaded) return;
-        _loaded = true;
 
         // Collecte éteinte : on ne lit pas non plus. Les compteurs de la session partent de
         // zéro et y retournent à la fermeture. Afficher des chiffres relus d'un fichier qu'on
         // n'écrit plus contredirait ce que la fenêtre annonce, et ferait dépendre l'affichage
         // d'un reliquat laissé par une installation précédente.
-        if (!CollectionEnabled) return;
+        if (!CollectionEnabled)
+        {
+            _loaded = true;
+            return;
+        }
+        ApplyReadLocked(ReadStatsFile(_statsPath, withRetries: false));
+    }
 
+    private enum ReadOutcome { Absent, Read, Unreadable, Corrupt }
+
+    /// <summary>Compteurs tels qu'écrits dans usage-stats.json.</summary>
+    internal sealed record StatsFile(
+        string? FirstRemapDate, string? LastActiveDate, int ActiveDaysCount, int CurrentStreak, int BestStreak,
+        long TotalActiveMinutes, long AccentedUppercaseCount, long FrenchTypographyCount, long InternationalCount,
+        long SymbolsCount, long SearchOpenCount, long VirtualKeyboardOpenCount, long ChallengesCompletedCount,
+        string? LastSpecialCharDate,
+        IReadOnlyList<KeyValuePair<string, JsonElement>>? UnknownFields = null);
+
+    /// <summary>Champs inconnus du fichier (version plus récente), gardés tels quels et réécrits.</summary>
+    private static List<KeyValuePair<string, JsonElement>>? ReadUnknownFields(JsonElement root)
+    {
+        List<KeyValuePair<string, JsonElement>>? unknown = null;
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (KnownFields.Contains(prop.Name)) continue;
+            unknown ??= new List<KeyValuePair<string, JsonElement>>();
+            unknown.Add(new(prop.Name, prop.Value.Clone()));
+        }
+        return unknown;
+    }
+
+    /// <summary>Lit et analyse le fichier, sans toucher à l'état : appelable hors de <c>_lock</c>.</summary>
+    private static (ReadOutcome Outcome, StatsFile? Data, Exception? Error) ReadStatsFile(string path, bool withRetries)
+    {
         try
         {
-            if (File.Exists(_statsPath))
-            {
-                var json = File.ReadAllText(_statsPath);
-                using var doc = FileQuarantine.ParseUserFile(json);
-                var root = doc.RootElement;
-                // Un JSON valide mais non-objet ("[]", "null"…) ferait jeter TryGetProperty
-                // (InvalidOperationException, hors filtre) : le convertir en corruption ordinaire.
-                if (root.ValueKind != JsonValueKind.Object)
-                    throw new JsonException("Racine JSON inattendue (objet requis).");
-                _firstRemapDate = GetStringProp(root, "firstRemapDate");
-                _lastActiveDate = GetStringProp(root, "lastActiveDate");
-                _activeDaysCount = GetIntProp(root, "activeDaysCount");
-                _currentStreak = GetIntProp(root, "currentStreak");
-                _bestStreak = GetIntProp(root, "bestStreak");
-                _totalActiveMinutes = GetLongProp(root, "totalActiveMinutes");
-                _accentedUppercaseCount = GetLongProp(root, "accentedUppercaseCount");
-                _frenchTypographyCount = GetLongProp(root, "frenchTypographyCount");
-                _internationalCount = GetLongProp(root, "internationalCount");
-                _symbolsCount = GetLongProp(root, "symbolsCount");
-                _searchOpenCount = GetLongProp(root, "searchOpenCount");
-                _virtualKeyboardOpenCount = GetLongProp(root, "virtualKeyboardOpenCount");
-                _challengesCompletedCount = GetLongProp(root, "challengesCompletedCount");
-                _lastSpecialCharDate = GetStringProp(root, "lastSpecialCharDate");
-                foreach (var prop in root.EnumerateObject())
-                {
-                    if (KnownFields.Contains(prop.Name)) continue;
-                    _unknownFields ??= new List<KeyValuePair<string, JsonElement>>();
-                    _unknownFields.Add(new(prop.Name, prop.Value.Clone()));
-                }
-            }
-            FileQuarantine.RemoveOrphanTemps(_statsPath); // AF-06
+            if (!File.Exists(path)) return (ReadOutcome.Absent, null, null);
+            var json = withRetries ? FileQuarantine.ReadAllTextWithRetries(path) : File.ReadAllText(path);
+            using var doc = FileQuarantine.ParseUserFile(json); // AF-01
+            var root = doc.RootElement;
+            // Un JSON valide mais non-objet ("[]", "null"…) ferait jeter TryGetProperty
+            // (InvalidOperationException, hors filtre) : le convertir en corruption ordinaire.
+            if (root.ValueKind != JsonValueKind.Object)
+                throw new JsonException("Racine JSON inattendue (objet requis).");
+            return (ReadOutcome.Read, new StatsFile(
+                GetStringProp(root, "firstRemapDate"),
+                GetStringProp(root, "lastActiveDate"),
+                GetIntProp(root, "activeDaysCount"),
+                GetIntProp(root, "currentStreak"),
+                GetIntProp(root, "bestStreak"),
+                GetLongProp(root, "totalActiveMinutes"),
+                GetLongProp(root, "accentedUppercaseCount"),
+                GetLongProp(root, "frenchTypographyCount"),
+                GetLongProp(root, "internationalCount"),
+                GetLongProp(root, "symbolsCount"),
+                GetLongProp(root, "searchOpenCount"),
+                GetLongProp(root, "virtualKeyboardOpenCount"),
+                GetLongProp(root, "challengesCompletedCount"),
+                GetStringProp(root, "lastSpecialCharDate"),
+                ReadUnknownFields(root)), null);
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException
                                    or (IOException and not FileNotFoundException and not DirectoryNotFoundException))
         {
-            // Audit du 25/09 (A-11) : fichier présent mais illisible pour l'instant (verrou d'un
-            // antivirus ou d'une sauvegarde, droits). Il est sans doute intact : repartir de
-            // zéro en mémoire, mais ne jamais l'écraser avec ces compteurs-là.
-            ResetInMemoryState();
-            _readFailed = true;
-            ConfigManager.Log("UsageStats.EnsureLoaded", ex);
+            return (ReadOutcome.Unreadable, null, ex);
+        }
+        catch (Exception ex) when (ex is IOException)
+        {
+            return (ReadOutcome.Absent, null, null); // disparu entre File.Exists et la lecture
         }
         catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
         {
-            // Fichier corrompu : redémarrer avec des statistiques vides plutôt que de planter
-            // l'app (cf. Plan implémentation v1.1.md § 1d). AF-04 (audit des fichiers 1.3.0,
-            // décision d'Antoine du 16/11) : l'ancien contenu est d'abord mis de côté, comme
-            // config.json et la progression, au lieu d'être écrasé ; sans message, les
-            // statistiques n'étant pas des réglages. Renommage raté avec le fichier encore là :
-            // même règle qu'une lecture impossible, rien ne l'écrase.
-            ResetInMemoryState();
-            ConfigManager.Log("UsageStats.EnsureLoaded", ex);
-            if (FileQuarantine.TryMoveAside(_statsPath, "UsageStats.Quarantine") == null && File.Exists(_statsPath))
-                _readFailed = true;
-        }
-        catch (IOException ex)
-        {
-            // Fichier disparu entre File.Exists et la lecture : comme une installation neuve.
-            ResetInMemoryState();
-            ConfigManager.Log("UsageStats.EnsureLoaded", ex);
+            return (ReadOutcome.Corrupt, null, ex);
         }
     }
+
+    /// <summary>Applique une lecture, sous <c>_lock</c> : premier chargement, ou relecture d'un
+    /// fichier resté illisible.</summary>
+    private static void ApplyReadLocked((ReadOutcome Outcome, StatsFile? Data, Exception? Error) result)
+    {
+        if (!_loaded)
+        {
+            _loaded = true;
+            switch (result.Outcome)
+            {
+                case ReadOutcome.Read:
+                    SetLocked(result.Data!);
+                    FileQuarantine.RemoveOrphanTemps(_statsPath); // AF-06
+                    break;
+                case ReadOutcome.Absent:
+                    FileQuarantine.RemoveOrphanTemps(_statsPath); // AF-06
+                    break;
+                case ReadOutcome.Unreadable:
+                    // Audit du 25/09 (A-11) : fichier présent mais illisible malgré les essais
+                    // courts (verrou d'un antivirus ou d'une sauvegarde, droits). Il est sans doute
+                    // intact : repartir de zéro en mémoire, ne jamais l'écraser avec ces compteurs-là,
+                    // et le relire plus tard (CE-T2) pour y ajouter ceux de la session.
+                    ResetInMemoryState();
+                    _readFailed = true;
+                    ConfigManager.Log("UsageStats.EnsureLoaded", result.Error!);
+                    break;
+                case ReadOutcome.Corrupt:
+                    // Fichier corrompu : redémarrer avec des statistiques vides plutôt que de planter
+                    // l'app (cf. Plan implémentation v1.1.md § 1d). AF-04 (audit des fichiers 1.3.0,
+                    // décision d'Antoine du 16/11) : l'ancien contenu est d'abord mis de côté, comme
+                    // config.json et la progression, au lieu d'être écrasé ; sans message, les
+                    // statistiques n'étant pas des réglages. Renommage raté avec le fichier encore là :
+                    // même règle qu'une lecture impossible, rien ne l'écrase.
+                    ResetInMemoryState();
+                    ConfigManager.Log("UsageStats.EnsureLoaded", result.Error!);
+                    if (FileQuarantine.TryMoveAside(_statsPath, "UsageStats.Quarantine") == null && File.Exists(_statsPath))
+                        _readFailed = true;
+                    break;
+            }
+            return;
+        }
+
+        if (!_readFailed) return;
+        switch (result.Outcome)
+        {
+            case ReadOutcome.Unreadable:
+                return; // toujours tenu : le premier échec est déjà journalisé
+            case ReadOutcome.Read:
+                // CE-T2 : le fichier devient la base, la session s'y ajoute.
+                SetLocked(Merge(result.Data!, CurrentLocked()));
+                ConfigManager.LogCompatEventDeferred("UsageStatsReadRecovered", "merged=1");
+                break;
+            case ReadOutcome.Corrupt:
+                ConfigManager.Log("UsageStats.Reread", result.Error!);
+                // AF-04 : mis de côté avant d'écrire ; renommage raté, fichier encore là : rien ne l'écrase.
+                if (FileQuarantine.TryMoveAside(_statsPath, "UsageStats.Quarantine") == null && File.Exists(_statsPath))
+                    return;
+                break; // comme au chargement : on repart des compteurs de la session
+        }
+        _readFailed = false;
+        _dirty = true;
+    }
+
+    private static StatsFile CurrentLocked() => new(
+        _firstRemapDate, _lastActiveDate, _activeDaysCount, _currentStreak, _bestStreak,
+        _totalActiveMinutes, _accentedUppercaseCount, _frenchTypographyCount, _internationalCount,
+        _symbolsCount, _searchOpenCount, _virtualKeyboardOpenCount, _challengesCompletedCount,
+        _lastSpecialCharDate);
+
+    private static void SetLocked(StatsFile d)
+    {
+        _firstRemapDate = d.FirstRemapDate;
+        _lastActiveDate = d.LastActiveDate;
+        _activeDaysCount = d.ActiveDaysCount;
+        _currentStreak = d.CurrentStreak;
+        _bestStreak = d.BestStreak;
+        _totalActiveMinutes = d.TotalActiveMinutes;
+        _accentedUppercaseCount = d.AccentedUppercaseCount;
+        _frenchTypographyCount = d.FrenchTypographyCount;
+        _internationalCount = d.InternationalCount;
+        _symbolsCount = d.SymbolsCount;
+        _searchOpenCount = d.SearchOpenCount;
+        _virtualKeyboardOpenCount = d.VirtualKeyboardOpenCount;
+        _challengesCompletedCount = d.ChallengesCompletedCount;
+        _lastSpecialCharDate = d.LastSpecialCharDate;
+        _unknownFields = d.UnknownFields?.ToList();
+    }
+
+    /// <summary>
+    /// CE-T2 : compteurs du fichier relu plus ceux de la session, comptés depuis zéro pendant
+    /// que le fichier était illisible. Fonction pure.
+    ///
+    /// Les totaux s'additionnent ; première date au plus tôt, dernières dates au plus tard. Les
+    /// jours : la session part de zéro, donc sa date de première frappe est son premier jour
+    /// actif. Un jour commun aux deux (la session reprend le jour de la dernière activité du
+    /// fichier) n'est compté qu'une fois. La série du fichier se prolonge si la session commence
+    /// le même jour ou le lendemain et n'a pas de trou ; sinon la série est celle de la session.
+    /// </summary>
+    internal static StatsFile Merge(StatsFile disk, StatsFile session)
+    {
+        string? first = MinDate(disk.FirstRemapDate, session.FirstRemapDate);
+        string? lastSpecial = MaxDate(disk.LastSpecialCharDate, session.LastSpecialCharDate);
+        int days = disk.ActiveDaysCount, current = disk.CurrentStreak, best = disk.BestStreak;
+        string? lastActive = disk.LastActiveDate;
+        if (session.LastActiveDate != null && session.FirstRemapDate is { } sessionFirst)
+        {
+            bool sameDay = disk.LastActiveDate == sessionFirst;
+            bool continues = sameDay ||
+                (disk.LastActiveDate != null && IsConsecutiveDay(disk.LastActiveDate, sessionFirst));
+            bool sessionWithoutGap = session.CurrentStreak == session.ActiveDaysCount;
+            days = disk.ActiveDaysCount + session.ActiveDaysCount - (sameDay ? 1 : 0);
+            current = continues && sessionWithoutGap
+                ? disk.CurrentStreak + session.CurrentStreak - (sameDay ? 1 : 0)
+                : session.CurrentStreak;
+            best = Math.Max(Math.Max(disk.BestStreak, session.BestStreak), current);
+            lastActive = MaxDate(disk.LastActiveDate, session.LastActiveDate);
+        }
+        return new StatsFile(first, lastActive, days, current, best,
+            disk.TotalActiveMinutes + session.TotalActiveMinutes,
+            disk.AccentedUppercaseCount + session.AccentedUppercaseCount,
+            disk.FrenchTypographyCount + session.FrenchTypographyCount,
+            disk.InternationalCount + session.InternationalCount,
+            disk.SymbolsCount + session.SymbolsCount,
+            disk.SearchOpenCount + session.SearchOpenCount,
+            disk.VirtualKeyboardOpenCount + session.VirtualKeyboardOpenCount,
+            disk.ChallengesCompletedCount + session.ChallengesCompletedCount,
+            lastSpecial,
+            disk.UnknownFields);
+    }
+
+    // Dates « yyyy-MM-dd » : l'ordre des chaînes est celui des jours.
+    private static string? MinDate(string? a, string? b) =>
+        a == null ? b : b == null ? a : string.CompareOrdinal(a, b) <= 0 ? a : b;
+
+    private static string? MaxDate(string? a, string? b) =>
+        a == null ? b : b == null ? a : string.CompareOrdinal(a, b) >= 0 ? a : b;
 
     private static string? GetStringProp(JsonElement root, string name) =>
         root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
@@ -675,6 +861,9 @@ static class UsageStats
     {
         lock (_fileLock)
         {
+            // CE-T2 : un fichier resté illisible est relu avant d'écrire, hors de _lock ; sinon
+            // les compteurs de la session n'étaient jamais écrits.
+            RetryPendingRead();
             string path;
             byte[]? content;
             lock (_lock)

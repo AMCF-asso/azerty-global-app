@@ -482,7 +482,8 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
-    [DllImport("user32.dll")]
+    // SetLastError : la cause d'un refus se journalise (CE-T3, pause sans minuterie).
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern UIntPtr SetTimer(IntPtr hWnd, UIntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
 
     [DllImport("user32.dll")]

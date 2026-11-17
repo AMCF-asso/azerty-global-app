@@ -1123,6 +1123,8 @@ sealed class TrayApplication : IDisposable
                         // Rappel Défi du jour (v1.2.0) : décision pure à chaque tick, tous
                         // les gardes (opt-in, un par jour, fenêtre horaire) sont dedans.
                         MaybeShowTrainingReminder();
+                        // CE-T3 (CE-10) : nouvel essai d'une minuterie d'avis refusée par Windows.
+                        EnsureReviewTimer();
                     }
                     else if (timerId == TIMER_REVIEW_QUIET)
                     {
@@ -2315,10 +2317,20 @@ sealed class TrayApplication : IDisposable
 
     private void StartPauseUntil(DateTimeOffset untilUtc, string balloonTitle)
     {
+        // CE-T3 (CE-09) : seul le tick de TIMER_PAUSE lève la pause. Minuterie refusée (quota
+        // d'objets USER épuisé, fenêtre en cours de destruction) : pas de pause sans échéance, le
+        // clavier reste actif et une bulle le dit (décision d'Antoine du 17 novembre 2026). La
+        // minuterie est posée avant tout état : rien à défaire, pas même les relâchements
+        // synthétiques de ClearPassedThroughKeys.
+        if (Shell.SetTimer(_hWnd, (UIntPtr)TIMER_PAUSE, 1000, IntPtr.Zero) == UIntPtr.Zero)
+        {
+            ConfigManager.LogCompatEvent("PauseTimerRefused", $"error={Marshal.GetLastWin32Error()}");
+            ShowBalloon(L.Tray_PauseFailedTitle, L.Tray_PauseFailedBody);
+            return;
+        }
         _pauseSerial++;
         _pauseUntilUtc = untilUtc;
         _mapper?.ClearPassedThroughKeys();
-        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_PAUSE, 1000, IntPtr.Zero);
         ApplyHookState();
         UpdateIcon();
         UpdateTooltip();
@@ -2398,8 +2410,13 @@ sealed class TrayApplication : IDisposable
     private void OnStateChanged()
     {
         if (_hWnd == IntPtr.Zero) return;
-        if (Interlocked.Exchange(ref _stateRefreshQueued, 1) == 0)
-            Shell.PostMessageW(_hWnd, WM_APP_STATE, IntPtr.Zero, IntPtr.Zero);
+        // CE-T3 (CE-07) : le drapeau dit « un message est en file ». S'il n'a pas pu partir (file
+        // pleine, fenêtre en cours de destruction), il retombe : le changement d'état suivant
+        // reposte. Sans cela, l'icône ne suivait plus l'état de toute la session. Aucun journal
+        // ici : on est dans le rappel du hook.
+        if (Interlocked.Exchange(ref _stateRefreshQueued, 1) == 0 &&
+            !Shell.PostMessageW(_hWnd, WM_APP_STATE, IntPtr.Zero, IntPtr.Zero))
+            Interlocked.Exchange(ref _stateRefreshQueued, 0);
     }
 
     /// <summary>Travail UI réel de OnStateChanged, exécuté hors du hook.</summary>
@@ -2903,11 +2920,13 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>Pose ou retire la minuterie de quiétude. Couture des tests : SetTimer/KillTimer
-    /// sur une fenêtre réelle ne s'observent pas.</summary>
-    internal static Action<IntPtr, bool> ReviewTimerSwitch = static (hWnd, on) =>
+    /// sur une fenêtre réelle ne s'observent pas. Rend vrai si la minuterie tourne après l'appel
+    /// (CE-T3, CE-10 : un SetTimer refusé n'est plus déclaré posé).</summary>
+    internal static Func<IntPtr, bool, bool> ReviewTimerSwitch = static (hWnd, on) =>
     {
-        if (on) Win32.SetTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero);
-        else Win32.KillTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+        if (on) return Win32.SetTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero) != UIntPtr.Zero;
+        Win32.KillTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+        return false;
     };
 
     private bool _reviewTimerArmed;
@@ -2925,8 +2944,10 @@ sealed class TrayApplication : IDisposable
     {
         bool possible = ReviewPromptStillPossible();
         if (possible == _reviewTimerArmed) return;
-        ReviewTimerSwitch(_hWnd, possible);
-        _reviewTimerArmed = possible;
+        // CE-T3 (CE-10) : posée seulement si SetTimer l'a acceptée. Un refus laisse le drapeau
+        // faux, et le tick de TIMER_STATS_FLUSH (5 min) retente : la demande d'avis n'est plus
+        // perdue pour la session.
+        _reviewTimerArmed = ReviewTimerSwitch(_hWnd, possible);
     }
 
     /// <summary>

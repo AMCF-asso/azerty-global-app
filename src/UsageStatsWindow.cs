@@ -334,6 +334,9 @@ sealed class UsageStatsWindow : IDisposable
         RefreshPalette(); // T5 : le réglage a pu changer fenêtre cachée
         _showCopiedFeedback = false;
         _copyFailed = false;
+        // CE-T2 : un usage-stats.json resté illisible au démarrage est relu ici, pour que la
+        // fenêtre montre le cumul et pas les seuls compteurs de la session.
+        UsageStats.Preload();
         // La visibilité de la section « Défi du jour » peut changer entre deux ouvertures :
         // la hauteur se recalcule à chaque affichage ; la fenêtre se rouvre en haut.
         FitWindow();

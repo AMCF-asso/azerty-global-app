@@ -245,13 +245,14 @@ public class GameRegistryTests
     }
 
     [Fact]
-    public void RemoteAccessHostProcesses_ExclutLesClientsDeBureauVirtuel()
+    public void RemoteSessionMarkers_ExcluentLesClientsDeBureauVirtuel()
     {
         // Citrix et Horizon sont des clients : côté hôte, leur entrée n'est pas traitée
-        // comme une injection de prise en main à distance.
+        // comme une injection de prise en main à distance. (La liste côté hôte s'appelle
+        // RemoteSessionMarkers depuis 38266c1 ; RemoteAccessHostProcesses dans 6988428.)
         foreach (var client in new[] { "wfica32.exe", "CDViewer.exe", "vmware-view.exe", "vmware-remotemks.exe" })
-            Assert.DoesNotContain(GameRegistry.RemoteAccessHostProcesses,
-                h => string.Equals(h, client, StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(GameRegistry.RemoteSessionMarkers,
+                m => string.Equals(m.Process, client, StringComparison.OrdinalIgnoreCase));
     }
 
     // Gestionnaires et services de VM : on y tape du texte ordinaire (noms, chemins), le

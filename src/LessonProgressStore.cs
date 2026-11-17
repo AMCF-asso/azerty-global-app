@@ -15,6 +15,11 @@ internal sealed class LessonProgressStore
     private readonly Dictionary<string, GestureMasteryEntry> _gestures = new(StringComparer.Ordinal);
     private readonly Func<DateTimeOffset> _clock;
     private bool _loadFailed;
+    // CE-T2 (CE-05) : le fichier existe mais n'a pas pu être lu pour l'instant (verrou passager,
+    // droits). Il est relu au prochain accès ; d'ici là la mémoire garde ce qu'elle avait et
+    // Save refuse d'écraser un fichier dont on n'a pas lu le contenu. Distinct de _loadFailed seul
+    // (format plus récent, quarantaine ratée), qui reste collant.
+    private bool _readPending;
     // Date d'écriture du fichier lors de notre dernière lecture ou écriture.
     private DateTime? _knownWriteUtc;
     // Fichier corrompu mis de côté (audit du 25/09, L-14) : message à montrer une seule
@@ -32,10 +37,17 @@ internal sealed class LessonProgressStore
     {
         _path = path ?? Path.Combine(ConfigManager.LogDirectory, FileName);
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
-        Load();
+        Load(firstLoad: true);
     }
 
-    public IReadOnlyDictionary<string, GestureMasteryEntry> Gestures => _gestures;
+    public IReadOnlyDictionary<string, GestureMasteryEntry> Gestures
+    {
+        get
+        {
+            if (_readPending) ReloadIfChangedOnDisk(); // CE-T2, voir GetValidProgress
+            return _gestures;
+        }
+    }
 
     /// <summary>Les caractères à revoir maintenant, les plus fragiles d'abord.</summary>
     public IReadOnlyList<GestureMasteryEntry> DueGestures(int maxCount)
@@ -64,7 +76,14 @@ internal sealed class LessonProgressStore
     }
 
     public IReadOnlySet<int> OnboardingSyncedExercises => _onboardingSynced;
-    public IReadOnlyDictionary<string, LessonExerciseProgress> Exercises => _exercises;
+    public IReadOnlyDictionary<string, LessonExerciseProgress> Exercises
+    {
+        get
+        {
+            if (_readPending) ReloadIfChangedOnDisk(); // CE-T2, voir GetValidProgress
+            return _exercises;
+        }
+    }
 
     /// <summary>
     /// Progression de l'exercice, en lecture : la clé actuelle, sinon la fusion des clés
@@ -72,6 +91,9 @@ internal sealed class LessonProgressStore
     /// </summary>
     public LessonExerciseProgress? GetValidProgress(LessonExercise exercise)
     {
+        // CE-T2 : un fichier resté illisible est relu dès la lecture suivante, pas seulement à la
+        // prochaine écriture. Rien à faire hors d'une panne : aucune I/O ajoutée.
+        if (_readPending) ReloadIfChangedOnDisk();
         if (_exercises.TryGetValue(exercise.StableKey, out var progress) &&
             StringComparer.Ordinal.Equals(progress.Hash, exercise.Hash))
             return progress;
@@ -394,27 +416,19 @@ internal sealed class LessonProgressStore
     /// </summary>
     private void ReloadIfChangedOnDisk()
     {
-        if (_loadFailed) return;
+        if (_loadFailed && !_readPending) return; // format plus récent, quarantaine ratée : collant
         try
         {
             DateTime? current = File.Exists(_path) ? File.GetLastWriteTimeUtc(_path) : null;
-            if (current != _knownWriteUtc)
+            if (_readPending || current != _knownWriteUtc)
             {
-                // Revue d'AF-02 : une relecture qui tombe sur un verrou passager ne doit pas
-                // emporter les changements en attente. On garde alors la mémoire, la file et la
-                // date connue ; aucune écriture tant que la relecture n'a pas réussi (elle
-                // écraserait ce que l'autre écrivain a mis dans le fichier).
-                var keep = _pendingChanges.Count > 0 ? CaptureSnapshot() : null;
-                var keepUnknown = keep != null ? _unknownRootFields.ToArray() : null;
-                var knownBefore = _knownWriteUtc;
-                Load();
-                if (keep != null && _loadFailed && _lastLoadWasReadFailure)
+                // Revue d'AF-02 et CE-T2 (CE-05) : Load lit avant de vider. Une relecture qui tombe
+                // sur un verrou passager laisse donc la mémoire, la file des changements et la date
+                // connue intactes (_readPending) ; aucune écriture tant que la relecture n'a pas
+                // réussi (elle écraserait ce que l'autre écrivain a mis dans le fichier).
+                Load(firstLoad: false);
+                if (_readPending)
                 {
-                    RestoreSnapshot(keep);
-                    _unknownRootFields.Clear();
-                    _unknownRootFields.AddRange(keepUnknown!);
-                    _knownWriteUtc = knownBefore;
-                    _loadFailed = false;
                     _reloadDeferred = true;
                     return;
                 }
@@ -446,10 +460,6 @@ internal sealed class LessonProgressStore
 
     /// <summary>Relecture repoussée par un verrou passager : rien ne s'écrit avant elle.</summary>
     private bool _reloadDeferred;
-
-    /// <summary>Le dernier <see cref="Load"/> a échoué sur une lecture impossible (verrou,
-    /// droits), et non sur un format plus récent ou un contenu corrompu.</summary>
-    private bool _lastLoadWasReadFailure;
 
     /// <summary>Vrai tant qu'un changement attend d'être écrit.</summary>
     internal bool HasPendingSave => _pendingChanges.Count > 0;
@@ -508,22 +518,50 @@ internal sealed class LessonProgressStore
     /// </summary>
     private readonly List<KeyValuePair<string, JsonElement>> _unknownRootFields = new();
 
-    private void Load()
+    private void Load(bool firstLoad)
     {
+        // CE-T2 (CE-05) : lire d'abord, ne vider la mémoire qu'après une lecture réussie. Avant,
+        // une relecture refusée (verrou passager après l'écriture du tutoriel) vidait la
+        // progression déjà lue et posait _loadFailed pour la vie du magasin : la fenêtre Leçons
+        // affichait tout « à faire » et refusait les réussites suivantes.
+        string? json = null;
+        DateTime? writeUtc = null;
+        if (File.Exists(_path))
+        {
+            try { writeUtc = File.GetLastWriteTimeUtc(_path); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            try
+            {
+                // Essais courts au premier chargement seulement ; une relecture n'essaie qu'une fois.
+                json = firstLoad ? FileQuarantine.ReadAllTextWithRetries(_path) : File.ReadAllText(_path);
+            }
+            catch (Exception ex) when (FileQuarantine.IsReadFailure(ex))
+            {
+                if (!_readPending) ConfigManager.Log("LessonProgressStore.Load", ex);
+                _readPending = true;
+                if (firstLoad) _loadFailed = true; // rien en mémoire : le fichier n'est pas écrasé
+                return;
+            }
+            catch (IOException)
+            {
+                writeUtc = null; // disparu entre File.Exists et la lecture : comme absent
+            }
+        }
+
+        if (_readPending)
+            ConfigManager.LogCompatEventDeferred("LessonProgressReadRecovered", json == null ? "absent" : "read");
+        _readPending = false;
         _exercises.Clear();
         _gestures.Clear();
         _unknownRootFields.Clear();
         _loadFailed = false;
-        _knownWriteUtc = null;
-        _lastLoadWasReadFailure = false;
-        if (!File.Exists(_path)) return;
+        _knownWriteUtc = writeUtc;
+        if (json == null) return;
         bool legacyErrorMatrixFound = false;
-        try { _knownWriteUtc = File.GetLastWriteTimeUtc(_path); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
 
         try
         {
-            using var doc = FileQuarantine.ParseUserFile(File.ReadAllText(_path)); // AF-01
+            using var doc = FileQuarantine.ParseUserFile(json); // AF-01
             var root = doc.RootElement;
             if (IsNewerFormat(root))
             {
@@ -627,7 +665,6 @@ internal sealed class LessonProgressStore
                 // Lecture impossible pour l'instant (verrou, droits) : sans doute intact.
                 // Aucune écriture pendant la session, le prochain lancement relit.
                 _loadFailed = true;
-                _lastLoadWasReadFailure = true;
             }
             else if (FileQuarantine.IsCorruption(ex))
             {
@@ -659,7 +696,7 @@ internal sealed class LessonProgressStore
         string tempPath = $"{_path}.{Environment.ProcessId}.tmp";
         try
         {
-            if (_loadFailed && File.Exists(_path))
+            if ((_loadFailed || _readPending) && File.Exists(_path))
             {
                 ConfigManager.Log(operation, new IOException("Sauvegarde ignoree: lessons-progress.json existant non charge."));
                 return false;

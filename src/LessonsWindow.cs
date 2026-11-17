@@ -1482,8 +1482,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     {
         if (_automation == null || _automationEventPending)
             return;
-        _automationEventPending = true;
-        Win32.PostMessageW(_hWnd, WM_APP_AUTOMATION, IntPtr.Zero, IntPtr.Zero);
+        // CE-T3 (CE-08) : rien n'est en attente si le message n'est pas parti ; sinon le drapeau
+        // restait vrai et le lecteur d'écran ne suivait plus la fenêtre de la session.
+        _automationEventPending = Win32.PostMessageW(_hWnd, WM_APP_AUTOMATION, IntPtr.Zero, IntPtr.Zero);
     }
 
     LessonSurfaceView? ILessonsAutomationHost.SurfaceView => _surfaceView;

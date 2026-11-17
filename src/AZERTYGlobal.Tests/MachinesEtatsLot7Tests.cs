@@ -21,7 +21,7 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
     private readonly Func<long> _clockOrigin = OnboardingWindow.Clock;
     private readonly Func<int> _delayOrigin = OnboardingWindow.DoubleClickDelay;
     private readonly string _languageOrigin = L.Language;
-    private readonly Action<IntPtr, bool> _minuterieOrigin = TrayApplication.ReviewTimerSwitch;
+    private readonly Func<IntPtr, bool, bool> _minuterieOrigin = TrayApplication.ReviewTimerSwitch;
 
     public void Dispose()
     {
@@ -314,7 +314,7 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
     {
         using var env = new EnvAvis();
         var appels = new List<bool>();
-        TrayApplication.ReviewTimerSwitch = (_, on) => appels.Add(on);
+        TrayApplication.ReviewTimerSwitch = (_, on) => { appels.Add(on); return on; };
         ConfigManager.SetNotifications(false);
 
         var tray = (TrayApplication)RuntimeHelpers.GetUninitializedObject(typeof(TrayApplication));
@@ -353,7 +353,7 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
     {
         using var env = new EnvAvis();
         var appels = new List<bool>();
-        TrayApplication.ReviewTimerSwitch = (_, on) => appels.Add(on);
+        TrayApplication.ReviewTimerSwitch = (_, on) => { appels.Add(on); return on; };
 
         var tray = (TrayApplication)RuntimeHelpers.GetUninitializedObject(typeof(TrayApplication));
         tray.EnsureReviewTimer();

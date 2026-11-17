@@ -210,7 +210,7 @@ public sealed class PaperBench
         {
             PaperDraw.Fill(hdc, 0, 0, 854, 330, PaperTheme.Paper);
             var dead = new PaperKeyboardState { ActiveDeadKey = "dk_misc_symbols" };
-            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 20, 52f), layout, PaperKeyboardMode.ActiveLayer, dead);
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 20, 52f), layout, PaperKeyboardMode.ActiveLayer, dead, fonts: null);
         });
     }
 

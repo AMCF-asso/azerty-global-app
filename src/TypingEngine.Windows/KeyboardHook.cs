@@ -403,7 +403,7 @@ public sealed class KeyboardHook : IDisposable
 
                 // Ctrl+Shift relâché sans touche intermédiaire → possible changement de layout
                 if (wasCtrlShift && !isCtrlShift && !_nonModifierPressed)
-                    LayoutMayHaveChanged?.Invoke();
+                    SubscriberGuard.Raise(LayoutMayHaveChanged, _host, "KeyboardHook.LayoutMayHaveChanged");
 
                 // Appui neuf ou répétition (M1.4 I1) : seul un appui neuf peut devenir raccourci.
                 bool firstPress = false;
@@ -450,7 +450,7 @@ public sealed class KeyboardHook : IDisposable
                 {
                     _shortcutKeysHeld.Add(hookStruct.vkCode);
                     _mapper.AbandonPendingForShortcut(); // M1.1 I3 : un raccourci abandonne l'accent (AFH-2)
-                    SearchRequested?.Invoke();
+                    SubscriberGuard.Raise(SearchRequested, _host, "KeyboardHook.SearchRequested");
                     return (IntPtr)1;
                 }
 
@@ -463,7 +463,7 @@ public sealed class KeyboardHook : IDisposable
                 {
                     _shortcutKeysHeld.Add(hookStruct.vkCode);
                     _mapper.AbandonPendingForShortcut(); // M1.1 I3 : un raccourci abandonne l'accent (AFH-2)
-                    VirtualKeyboardRequested?.Invoke();
+                    SubscriberGuard.Raise(VirtualKeyboardRequested, _host, "KeyboardHook.VirtualKeyboardRequested");
                     return (IntPtr)1;
                 }
 
@@ -472,8 +472,8 @@ public sealed class KeyboardHook : IDisposable
                 // et tutoriel surlignaient sinon les touches d'un mot de passe, à l'écran.
                 if (ShouldNotifyRawKeyDown(isKeyDown, _passThroughAll, _mapper.KeyDisplaySuppressed))
                 {
-                    RawKeyDown?.Invoke(hookStruct.scanCode);
-                    RawKeyDownDetailed?.Invoke(hookStruct.scanCode, (hookStruct.flags & 0x01) != 0);
+                    SubscriberGuard.Raise(RawKeyDown, hookStruct.scanCode, _host, "KeyboardHook.RawKeyDown");
+                    SubscriberGuard.Raise(RawKeyDownDetailed, hookStruct.scanCode, (hookStruct.flags & 0x01) != 0, _host, "KeyboardHook.RawKeyDownDetailed");
                 }
 
                 if (_enabled)

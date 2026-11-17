@@ -4,6 +4,12 @@
 
 Préparée dans ce dépôt pour le Microsoft Store. La soumission prévue le 16 octobre a été suspendue le 20 octobre, après l’audit de l’application ; la date de cette version sera fixée au gel du nouveau candidat. La 1.2.0 ne l’a pas été non plus : pour un utilisateur venant de la 1.1.0 servie par le Store, cette version apporte aussi tout ce que liste la 1.2.0 ci-dessous, Défi du jour compris : masqué le 24 septembre, il est réactivé le 7 octobre (voir « Défi du jour et Leçons »). Numérotée 1.3.0 et non 1.2.1 parce qu’une réorganisation de menu est une fonctionnalité, pas un correctif (décision d’Antoine du 2026-09-19).
 
+**Correctifs de l’audit des chemins d’erreur (décisions d’Antoine des 16 et 17 novembre)**
+
+- Moteur de frappe : quand une partie de l’application lève une erreur pendant une frappe (fenêtre des Leçons en cours de fermeture, par exemple), la touche n’est plus doublée ni laissée enfoncée pour Windows, et Verr. Maj. n’est plus transmise pendant le raccourci de bascule ; un changement de fenêtre au premier plan n’est plus remplacé par l’état de repli. Témoins : `CheminsErreurHookTests`, `CheminsErreurMoniteurTests`, `AbonnesDuMoteurTests`.
+- Fichiers tenus un instant par un antivirus ou une sauvegarde : les réglages, les statistiques et la progression des Leçons sont relus quelques fois (350 ms au plus) au lieu de démarrer avec les valeurs par défaut ; la langue de l’interface suit le fichier. Si le fichier reste tenu plus longtemps, il n’est jamais écrasé et il est relu au prochain accès : un réglage changé entre-temps l’emporte, les statistiques de la session s’ajoutent à celles du fichier, et la progression déjà affichée n’est plus effacée. Témoins : `CheminsErreurDonneesTests`, `RelectureApresPanneTests`.
+- Quand Windows refuse un message ou une minuterie : l’icône de la zone de notification et le lecteur d’écran des Leçons continuent de suivre l’état ; une pause que Windows ne peut pas programmer n’est pas commencée, et une bulle « Pause impossible » le dit, au lieu d’une pause sans fin ; la demande d’avis retente sa minuterie toutes les 5 minutes. Témoins : `CheminsErreurMessagesTests`.
+
 **Correctifs de l’audit de régression (décisions d’Antoine du 10 novembre)**
 
 - Mise à jour depuis une version antérieure : les exercices déjà réussis le restent, même ceux dont le texte a changé depuis (Prise en main, majuscules accentuées) ; leurs scores repartent de zéro.
