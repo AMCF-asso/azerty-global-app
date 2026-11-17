@@ -209,6 +209,11 @@ public sealed class ForegroundMonitor : IDisposable
     /// </summary>
     public void Recompute()
     {
+        // CE-T1 (CE-02) : l'abonné est prévenu hors du try du calcul. Avant, son exception tombait
+        // dans le catch ci-dessous : le bon état était remplacé par le repli « premier plan inconnu,
+        // champ sécurisé », puis l'abonné rappelé hors de tout try faisait remonter l'exception dans
+        // le rappel WinEvent. Le catch ne couvre plus que le calcul de l'état.
+        bool notify;
         try
         {
             string? processName = null;
@@ -267,14 +272,11 @@ public sealed class ForegroundMonitor : IDisposable
                     + $"pid={pid}, tracking={IsTrackingAvailable})");
             }
 
-            if (oldMode != mode || oldSnapshot?.Identity != identity ||
+            // Toujours notifier sur changement effectif de process pour permettre à
+            // au produit hôte de mettre à jour son état UI (override changes, etc.)
+            notify = oldMode != mode || oldSnapshot?.Identity != identity ||
                 oldSnapshot?.SecureInput != secureInput ||
-                (oldMode == mode && processName != null))
-            {
-                // Toujours notifier sur changement effectif de process pour permettre à
-                // au produit hôte de mettre à jour son état UI (override changes, etc.)
-                ForegroundChanged?.Invoke();
-            }
+                (oldMode == mode && processName != null);
         }
         catch (Exception ex)
         {
@@ -282,8 +284,10 @@ public sealed class ForegroundMonitor : IDisposable
                 CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UnknownForeground, default, true);
             IsTransientShellForeground = false;
             _host.Log("ForegroundMonitor.Recompute", ex);
-            ForegroundChanged?.Invoke();
+            notify = true;
         }
+        if (notify)
+            SubscriberGuard.Raise(ForegroundChanged, _host, "ForegroundMonitor.ForegroundChanged");
     }
 
     /// <summary>

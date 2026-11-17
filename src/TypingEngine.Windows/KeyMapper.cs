@@ -109,6 +109,10 @@ public sealed class KeyMapper
     /// </summary>
     public event Action<KeyDecision>? KeyDecided;
 
+    // CE-T1 (CE-01) : ces trois événements partent du rappel du hook. Chaque abonné est prévenu
+    // à part ; son exception est journalisée et ne décide plus du sort de la touche.
+    private void RaiseStateChanged() => SubscriberGuard.Raise(StateChanged, _host, "KeyMapper.StateChanged");
+
     private readonly System.Text.StringBuilder _keyEmitted = new();
     private bool _recordingKey;
 
@@ -121,7 +125,7 @@ public sealed class KeyMapper
         _composition = new CompositionEngine(layout);
         _api = api;
         _host = host ?? NullWindowsTypingHost.Instance;
-        _maintainableLayers.StateChanged += () => StateChanged?.Invoke();
+        _maintainableLayers.StateChanged += () => RaiseStateChanged();
         // Lire l'état initial du Caps Lock
         _capsLockState = (_api.GetKeyState(0x14) & 0x0001) != 0;
         // Vider le buffer de touche morte du layout Windows sous-jacent
@@ -211,7 +215,7 @@ public sealed class KeyMapper
         _capsLockState = false;
         // Notifier seulement si l'etat logique interne a effectivement change. Evite un repaint
         // UI inutile dans le cas de desync (Windows ON / interne deja OFF).
-        if (wasOn) StateChanged?.Invoke();
+        if (wasOn) RaiseStateChanged();
     }
 
     /// <summary>
@@ -255,7 +259,7 @@ public sealed class KeyMapper
         ClearPassedThroughKeys();
 
         if (changed)
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     /// <summary>
@@ -387,7 +391,7 @@ public sealed class KeyMapper
         if (!CancelsOneShot(vkCode, scanCode, isExtended)) return;
         if (_keyDownOwnership.ContainsKey((scanCode, isExtended))) return;
         if (_maintainableLayers.CancelOneShot())
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     private bool IsShiftDown => _leftShiftDown || _rightShiftDown;
@@ -446,7 +450,7 @@ public sealed class KeyMapper
         // Notifier si l'état d'un modificateur a changé (pour le clavier virtuel)
         if (notify && (IsShiftDown != oldShift || IsAltGrDown != oldAltGr ||
             IsCtrlDown != oldCtrl || _leftAltDown != oldAlt))
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     /// <summary>Vérifie si Ctrl+Shift sont enfoncés (pour le raccourci toggle). Win exclu
@@ -511,7 +515,7 @@ public sealed class KeyMapper
     {
         // Ne PAS toucher à _capsLockState — ce raccourci active/désactive le remapping,
         // pas le Caps Lock. Le CapsLock est bloqué dans le hook.
-        ToggleRequested?.Invoke();
+        SubscriberGuard.Raise(ToggleRequested, _host, "KeyMapper.ToggleRequested");
     }
 
     /// <summary>
@@ -544,7 +548,7 @@ public sealed class KeyMapper
             _rightWinDown = false;
 
         if (changed)
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     /// <summary>
@@ -569,7 +573,7 @@ public sealed class KeyMapper
         if (isKeyDown && hadDown && consumed && !key.Item2 &&
             _maintainableLayers.PendingTriggerScanCode == scanCode)
         {
-            KeyDecided?.Invoke(new KeyDecision(scanCode, true, string.Empty));
+            SubscriberGuard.Raise(KeyDecided, new KeyDecision(scanCode, true, string.Empty), _host, "KeyMapper.KeyDecided");
             return true;
         }
         bool recording = isKeyDown && KeyDecided != null;
@@ -589,7 +593,7 @@ public sealed class KeyMapper
         }
         else _keyDownOwnership.Remove(key);
         if (recording)
-            KeyDecided?.Invoke(new KeyDecision(scanCode, handled, _keyEmitted.ToString()));
+            SubscriberGuard.Raise(KeyDecided, new KeyDecision(scanCode, handled, _keyEmitted.ToString()), _host, "KeyMapper.KeyDecided");
         return handled;
     }
 
@@ -657,7 +661,7 @@ public sealed class KeyMapper
         if (_capsLockState != actualCaps && vkCode != VK_CAPITAL)
         {
             _capsLockState = actualCaps;
-            StateChanged?.Invoke();
+            RaiseStateChanged();
         }
 
         // Resynchroniser les modificateurs uniquement pour les touches non-modificateur.
@@ -682,7 +686,7 @@ public sealed class KeyMapper
             if (isKeyDown)
             {
                 _capsLockState = !_capsLockState;
-                StateChanged?.Invoke();
+                RaiseStateChanged();
             }
             return false; // Laisser Windows gérer la LED
         }
@@ -698,7 +702,7 @@ public sealed class KeyMapper
             bool oneShotCancelled = _maintainableLayers.CancelOneShot();
             if (compositionCancelled || oneShotCancelled)
             {
-                StateChanged?.Invoke();
+                RaiseStateChanged();
                 return false; // Laisser Windows traiter le Backspace normalement
             }
         }
@@ -715,7 +719,7 @@ public sealed class KeyMapper
             bool oneShotCancelled = _maintainableLayers.CancelOneShot();
             if (compositionCancelled || oneShotCancelled)
             {
-                StateChanged?.Invoke();
+                RaiseStateChanged();
                 return false;
             }
         }
@@ -741,7 +745,7 @@ public sealed class KeyMapper
             bool abandoned = _composition.ActiveDeadKey != null && _composition.Cancel();
             abandoned |= _maintainableLayers.CancelOneShot();
             if (abandoned)
-                StateChanged?.Invoke();
+                RaiseStateChanged();
         }
 
         // Une répétition déjà transmise reste physique. Backspace et Échap ont
@@ -956,7 +960,7 @@ public sealed class KeyMapper
             if (result.Text.Length > 0)
                 EmitText(result.Text);
             if (result.StateChanged)
-                StateChanged?.Invoke();
+                RaiseStateChanged();
             return true;
         }
 
@@ -1226,7 +1230,7 @@ public sealed class KeyMapper
     private void ArbitratePendingDeadKeyWhileSuspended()
     {
         if (!IsSuspendedByForeground) return;
-        if (_composition.Cancel()) StateChanged?.Invoke();
+        if (_composition.Cancel()) RaiseStateChanged();
     }
 
     private ForegroundProcessIdentity _lastApplicationIdentity;
@@ -1264,7 +1268,7 @@ public sealed class KeyMapper
     {
         if (ShouldAbandonDeadKeyOnApplicationChange(_lastApplicationIdentity, application)
             && _composition.Cancel())
-            StateChanged?.Invoke();
+            RaiseStateChanged();
         _lastApplicationIdentity = application;
     }
 

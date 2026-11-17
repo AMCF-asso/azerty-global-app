@@ -351,7 +351,7 @@ public sealed class KeyboardHook : IDisposable
 
                 // Ctrl+Shift relâché sans touche intermédiaire → possible changement de layout
                 if (wasCtrlShift && !isCtrlShift && !_nonModifierPressed)
-                    LayoutMayHaveChanged?.Invoke();
+                    SubscriberGuard.Raise(LayoutMayHaveChanged, _host, "KeyboardHook.LayoutMayHaveChanged");
 
                 // Détecter Ctrl+Shift+CapsLock même quand désactivé
                 if (hookStruct.vkCode == 0x14 && isKeyDown && _mapper.IsToggleShortcut())
@@ -368,7 +368,7 @@ public sealed class KeyboardHook : IDisposable
                     ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkSearch) &&
                     _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode))
                 {
-                    SearchRequested?.Invoke();
+                    SubscriberGuard.Raise(SearchRequested, _host, "KeyboardHook.SearchRequested");
                     return (IntPtr)1;
                 }
 
@@ -379,7 +379,7 @@ public sealed class KeyboardHook : IDisposable
                     ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkVirtualKeyboard) &&
                     _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode))
                 {
-                    VirtualKeyboardRequested?.Invoke();
+                    SubscriberGuard.Raise(VirtualKeyboardRequested, _host, "KeyboardHook.VirtualKeyboardRequested");
                     return (IntPtr)1;
                 }
 
@@ -388,8 +388,8 @@ public sealed class KeyboardHook : IDisposable
                 // et tutoriel surlignaient sinon les touches d'un mot de passe, à l'écran.
                 if (ShouldNotifyRawKeyDown(isKeyDown, _passThroughAll, _mapper.KeyDisplaySuppressed))
                 {
-                    RawKeyDown?.Invoke(hookStruct.scanCode);
-                    RawKeyDownDetailed?.Invoke(hookStruct.scanCode, (hookStruct.flags & 0x01) != 0);
+                    SubscriberGuard.Raise(RawKeyDown, hookStruct.scanCode, _host, "KeyboardHook.RawKeyDown");
+                    SubscriberGuard.Raise(RawKeyDownDetailed, hookStruct.scanCode, (hookStruct.flags & 0x01) != 0, _host, "KeyboardHook.RawKeyDownDetailed");
                 }
 
                 if (_enabled)
