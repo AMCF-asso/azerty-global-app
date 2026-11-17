@@ -149,6 +149,8 @@ sealed class TrayApplication : IDisposable
     private ToggleNotification? _toggleNotification;
     private LessonsWindow? _lessons;
     private IntPtr _lastForegroundBeforeTrayMenu;
+    /// <summary>État affiché par le dernier menu contextuel (M3.1 I4), lu par sa commande.</summary>
+    private MenuShownState? _menuShownState;
 
     // Si conflit layout systeme detecte au demarrage, l'onboarding est differe et n'est
     // affiche qu'apres que l'utilisateur a clique « Garder l'app » dans LayoutConflictWindow.
@@ -880,8 +882,13 @@ sealed class TrayApplication : IDisposable
                 case Win32.WM_COMMAND:
                     switch (wParam.ToInt32() & 0xFFFF)
                     {
-                        case IDM_TOGGLE: OnToggle(); break;
+                        case IDM_TOGGLE:
+                            if (MenuCommandStillApplies(IDM_TOGGLE, TakeMenuShownState(), _enabled, IsPaused))
+                                OnToggle();
+                            break;
                         case IDM_PAUSE:
+                            if (!MenuCommandStillApplies(IDM_PAUSE, TakeMenuShownState(), _enabled, IsPaused))
+                                break;
                             if (IsPaused)
                                 StopPause(expired: false);
                             else
@@ -1841,6 +1848,33 @@ sealed class TrayApplication : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 
+    /// <summary>État que le menu contextuel montrait à son ouverture (M3.1 I4).</summary>
+    internal readonly record struct MenuShownState(bool Enabled, bool Paused);
+
+    /// <summary>
+    /// M3.1 I4 (1.3.0) : une commande du menu s'applique à l'état que le menu affichait. Le menu
+    /// est modal et l'état peut changer pendant qu'il est ouvert (raccourci global, fin de pause) ;
+    /// la commande suit alors l'intention affichée. « Désactiver » ou « Activer » ne fait rien si
+    /// l'activation a déjà changé (l'intention est atteinte) ; « Reprendre maintenant » ou
+    /// « Pause personnalisée… » ne fait rien si l'état de pause a changé. Sans état affiché
+    /// (commande hors menu), la commande s'applique à l'état courant, comme avant.
+    /// </summary>
+    internal static bool MenuCommandStillApplies(int command, MenuShownState? shown, bool enabled, bool paused) =>
+        shown is not { } s || command switch
+        {
+            IDM_TOGGLE => s.Enabled == enabled,
+            IDM_PAUSE => s.Paused == paused,
+            _ => true,
+        };
+
+    /// <summary>Rend l'état affiché par le dernier menu et l'oublie : une commande, une lecture.</summary>
+    private MenuShownState? TakeMenuShownState()
+    {
+        var shown = _menuShownState;
+        _menuShownState = null;
+        return shown;
+    }
+
     /// <summary>Libellé de l'entrée d'activation : en pause, « Désactiver » met fin à la pause.</summary>
     internal static string ToggleMenuLabel(bool enabled, bool paused) =>
         !enabled ? L.Tray_MenuEnable : paused ? L.TrayClarity_MenuDisableEndsPause : L.Tray_MenuDisable;
@@ -2032,6 +2066,8 @@ sealed class TrayApplication : IDisposable
         if (_lastForegroundBeforeTrayMenu == _hWnd)
             _lastForegroundBeforeTrayMenu = IntPtr.Zero;
         Win32.SetForegroundWindow(_hWnd);
+        // M3.1 I4 : l'état affiché, que la commande choisie comparera à l'état courant.
+        _menuShownState = new MenuShownState(_enabled, IsPaused);
         Shell.TrackPopupMenuEx(hMenu, TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, _hWnd, IntPtr.Zero);
         Shell.PostMessageW(_hWnd, 0, IntPtr.Zero, IntPtr.Zero); // WM_NULL — fermeture propre du menu
         Win32.DestroyMenu(hMenu);
