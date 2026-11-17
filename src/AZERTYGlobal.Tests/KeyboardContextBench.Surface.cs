@@ -104,7 +104,7 @@ public partial class KeyboardContextBench
             if (state.Settings)
                 BancCapture.Call(window, "ToggleSettings");
             if (state.Free)
-                BancCapture.SetField(window, "_freeStartedAt", null); // statistiques sans horloge
+                BancCapture.SetField(window, "_freeStartedElapsed", null); // statistiques sans horloge
             BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
             IntPtr hwnd = window.Handle;
             Win32.ShowWindow(hwnd, 1);

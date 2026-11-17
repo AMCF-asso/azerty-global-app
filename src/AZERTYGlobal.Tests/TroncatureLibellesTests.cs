@@ -179,10 +179,11 @@ public sealed partial class TroncatureLibellesTests
     private static void Taper(LessonsWindow fenêtre)
     {
         var stats = BancCapture.Field<LessonTypingSession>(fenêtre, "_session").Stats;
-        var début = DateTimeOffset.UtcNow;
-        (typeof(LessonAttemptStats).GetField("_clock", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new MissingFieldException(nameof(LessonAttemptStats), "_clock"))
-            .SetValue(stats, (Func<DateTimeOffset>)(() => début + TimeSpan.FromSeconds(stats.ProductiveKeystrokes * 0.08)));
+        // Durée réaliste (0,08 s par frappe) sur l'horloge des durées (audit temps et horloge,
+        // TT-2) : le bilan affiche alors une vitesse plausible, de largeur réaliste.
+        (typeof(LessonAttemptStats).GetField("_elapsedClock", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new MissingFieldException(nameof(LessonAttemptStats), "_elapsedClock"))
+            .SetValue(stats, (Func<TimeSpan>)(() => TimeSpan.FromSeconds(stats.ProductiveKeystrokes * 0.08)));
         for (int garde = 0; garde < 5000 && !BancCapture.Field<bool>(fenêtre, "_showSummary"); garde++)
         {
             var séance = BancCapture.Field<LessonTypingSession>(fenêtre, "_session");
@@ -232,7 +233,7 @@ public sealed partial class TroncatureLibellesTests
             BancCapture.Call(fenêtre, "ToggleSettings");
 
             BancCapture.Call(fenêtre, "SwitchMode", Énum("WindowMode", "Free"));
-            BancCapture.SetField(fenêtre, "_freeStartedAt", null); // statistiques sans horloge
+            BancCapture.SetField(fenêtre, "_freeStartedElapsed", null); // statistiques sans horloge
             relevé.Visiter("Leçons · Écriture libre", hwnd);
             BancCapture.Call(fenêtre, "SwitchMode", Énum("WindowMode", "Lessons"));
 

@@ -588,6 +588,25 @@ static class ConfigManager
     /// <paramref name="hadUsageBefore"/> doit être lu avant toute frappe de ce lancement
     /// (<c>UsageStats.FirstRemapDate != null</c> dans le constructeur du tray).
     /// </summary>
+    /// <summary>
+    /// Ramène à <paramref name="today"/>, et réécrit, les dates de la sollicitation d'avis
+    /// postérieures à aujourd'hui (horloge avancée puis remise : audit temps et horloge du
+    /// 17/11, TH-02). Une date de dernier essai future repoussait l'essai 2 à cette date plus
+    /// <see cref="ReviewPromptGate.SecondMinGapDays"/> jours ; une date de premier lancement
+    /// future bloquait l'essai 1. Même règle que ME-10 pour la série et le rappel.
+    /// </summary>
+    internal static void RepairFutureReviewDates(DateOnly today)
+    {
+        string text = today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        lock (_lock)
+        {
+            if (StoredDate.Parse(GetString("reviewPromptLastShown")) > today)
+                SetString("reviewPromptLastShown", text);
+            if (StoredDate.Parse(GetString("currentVersionFirstRunDate")) > today)
+                SetString("currentVersionFirstRunDate", text);
+        }
+    }
+
     internal static VersionFirstRun EnsureCurrentVersionFirstRun(string version, DateOnly today, bool hadUsageBefore)
     {
         lock (_lock)
@@ -598,7 +617,19 @@ static class ConfigManager
                 DateOnly.TryParseExact(rawDate, "yyyy-MM-dd",
                     System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.None, out var storedDate))
+            {
+                // Audit temps et horloge du 17/11, TH-02 : premier lancement fait horloge en
+                // avance, puis heure remise. La date future bloquait l'essai 1 de l'avis
+                // (today > date) jusqu'à ce que la vraie date la rattrape ; comme ME-10, elle
+                // vaut aujourd'hui et se réécrit.
+                if (storedDate > today)
+                {
+                    storedDate = today;
+                    SetString("currentVersionFirstRunDate",
+                        today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+                }
                 return new VersionFirstRun(version, storedDate, GetBool("currentVersionUpgradedWithUsage"));
+            }
 
             SetString("currentVersionFirstRunVersion", version);
             SetBool("currentVersionUpgradedWithUsage", hadUsageBefore);

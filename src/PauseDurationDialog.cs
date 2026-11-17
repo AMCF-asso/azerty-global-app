@@ -508,8 +508,11 @@ sealed class PauseDurationDialog : IDisposable
         TimeSpan? duration = CurrentDuration();
         _durationValid = duration.HasValue;
         DateTime now = Clock();
+        // Audit temps et horloge du 17/11, TH-05 : la pause finit à UtcNow + durée ; « now + d »
+        // en heure locale naïve affichait une heure d'écart quand la pause chevauche un
+        // changement d'heure. Même calcul que le menu de la zone de notification.
         Win32.SetWindowTextW(_hResume, duration is { } d
-            ? L.Pause_Resumes(PauseSchedule.DescribeResume(now, now + d))
+            ? L.Pause_Resumes(PauseSchedule.DescribeResume(now, (new DateTimeOffset(now).ToUniversalTime() + d).LocalDateTime))
             : L.Pause_InvalidDuration);
         Win32.InvalidateRect(_hResume, IntPtr.Zero, true);
         Win32.EnableWindow(_hBtnOk, _durationValid);

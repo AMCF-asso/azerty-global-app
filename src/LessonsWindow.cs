@@ -207,7 +207,22 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     private bool _hoverTooltipPreferAbove;
     private bool _hoverTooltipCompact;
 
-    private DateTimeOffset? _freeStartedAt;
+    /// <summary>Début de la frappe du mode Libre, lu sur <see cref="ElapsedClock"/> : une heure
+    /// qui recule ne fausse plus la vitesse affichée, la veille ne compte pas (TT-2).</summary>
+    private TimeSpan? _freeStartedElapsed;
+
+    /// <summary>
+    /// Horloge des durées du mode Libre (audit temps et horloge du 17/11, TH-01, TT-2) :
+    /// <see cref="MonotonicClock"/> en production, réglable dans les tests. Même repli que
+    /// <c>TrayApplication.UtcClock</c> pour un objet créé sans constructeur.
+    /// </summary>
+    internal Func<TimeSpan> ElapsedClock
+    {
+        get => _elapsedClock ?? DefaultElapsedClock;
+        set => _elapsedClock = value;
+    }
+    private Func<TimeSpan>? _elapsedClock;
+    private static readonly Func<TimeSpan> DefaultElapsedClock = MonotonicClock.Now;
     private int _freeChars;
     private int _freeBackspaces;
     /// <summary>Le champ du mode Libre (TextEditBuffer.cs). Il vit le temps de l'application :
@@ -344,7 +359,15 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             // Le module a disparu (opt-out) : revenir au premier module proprement.
             _moduleIndex = 0; _lessonIndex = 0; _exerciseIndex = 0;
             StartCurrentSession(savePosition: false);
+            return;
         }
+        // Audit temps et horloge du 17/11, TH-06 : Leçons fermées sur le Défi avant minuit puis
+        // rouvertes, la séance gardait l'extrait d'hier alors que le module, sa date comprise,
+        // est celui du jour ; « Toutes les leçons » la reprenait telle quelle et la finir
+        // comptait le Défi du jour. Comme RefreshLanguage : la séance repart sur l'exercice
+        // affiché dès qu'il a changé.
+        if (!StringComparer.Ordinal.Equals(_session.Exercise.StableKey, CurrentExercise.StableKey))
+            StartCurrentSession(savePosition: false);
     }
 
     /// <summary>
@@ -2026,7 +2049,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
             typed = c.ToString();
         _freeHighSurrogate = null;
 
-        _freeStartedAt ??= DateTimeOffset.UtcNow;
+        _freeStartedElapsed ??= ElapsedClock();
         var result = _free.Insert(typed, typed: true);
         _freeTruncated = result.Truncated;
         if (result.Inserted > 0)
@@ -2096,9 +2119,9 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
 
     private string BuildFreeStatsText()
     {
-        if (!_freeStartedAt.HasValue || _freeChars == 0)
+        if (!_freeStartedElapsed.HasValue || _freeChars == 0)
             return L.LessonsWin_FreeStatsEmpty;
-        double seconds = Math.Max(1, (DateTimeOffset.UtcNow - _freeStartedAt.Value).TotalSeconds);
+        double seconds = Math.Max(1, (ElapsedClock() - _freeStartedElapsed.Value).TotalSeconds);
         double minutes = seconds / 60d;
         int wpm = _freeChars >= 10 ? (int)Math.Round((_freeChars / 5d) / minutes) : 0;
         int cpm = (int)Math.Round(_freeChars / minutes);
@@ -2109,7 +2132,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// 09/11, L13 : le bouton effaçait aussi le texte sans le dire) ; Ctrl+A puis Suppr l'efface.</summary>
     private void ResetFreeStats()
     {
-        _freeStartedAt = null;
+        _freeStartedElapsed = null;
         _freeChars = 0;
         _freeBackspaces = 0;
         Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
@@ -2655,7 +2678,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         else if (timerId == TIMER_FREE_STATS)
         {
             Win32.KillTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS);
-            if (_visible && _mode == WindowMode.Free && !_settingsOpen && _freeStartedAt.HasValue && ConfigManager.LessonFreeStatsVisible)
+            if (_visible && _mode == WindowMode.Free && !_settingsOpen && _freeStartedElapsed.HasValue && ConfigManager.LessonFreeStatsVisible)
             {
                 Win32.InvalidateRect(_hWnd, IntPtr.Zero, false);
                 Win32.SetTimer(_hWnd, (UIntPtr)TIMER_FREE_STATS, FREE_STATS_REFRESH_MS, IntPtr.Zero);
@@ -2896,7 +2919,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         if (!_visible ||
             _settingsOpen ||
             _mode != WindowMode.Free ||
-            !_freeStartedAt.HasValue ||
+            !_freeStartedElapsed.HasValue ||
             !ConfigManager.LessonFreeStatsVisible)
             return;
 
@@ -3271,7 +3294,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
         _freeHighSurrogate = null;
         _freeChars = 0;
         _freeBackspaces = 0;
-        _freeStartedAt = null;
+        _freeStartedElapsed = null;
         ClearPendingPhysicalText();
         Win32.ShowWindow(_hWnd, 0);
     }
