@@ -214,10 +214,7 @@ sealed class UsageStatsWindow : IDisposable
         // le même procédé que Discord ci-dessous — créé, jamais affiché.
         uint feedbackStyle = Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP;
         if (PolicyManager.OutboundLinksEnabledNow) feedbackStyle |= Win32.WS_VISIBLE;
-        _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkFeedback,
-            feedbackStyle,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
+        _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkFeedback, feedbackStyle, 0, 0, 0, 0, _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkFeedback, 1);
 
         // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. Le contrôle
