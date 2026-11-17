@@ -651,9 +651,9 @@ internal sealed partial class LessonsWindow
 
         int boxTop = area.top + S(34);
         int padTop = S(14), padBottom = S(10);
-        float natural = TablatureStyle.Lessons(HomeScale).Height + padTop + padBottom;
+        float natural = TablatureStyle.Lessons(HomeFonts).Height + padTop + padBottom;
         float fit = Math.Min(1f, (area.bottom - boxTop) / natural);
-        var style = TablatureStyle.Lessons(HomeScale * fit);
+        var style = TablatureStyle.Lessons(HomeFonts.Times(fit));
         var box = new Win32.RECT { left = area.left, top = boxTop, right = area.right, bottom = boxTop + style.Height + (int)((padTop + padBottom) * fit) };
         PaperDraw.RoundBox(hdc, box, PaperTheme.Surface, pal.Border, 0);
 

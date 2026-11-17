@@ -18,7 +18,11 @@ internal static class PaperText
 {
     private readonly record struct Piece(string Text, FontSpec Font, int Width);
 
-    private static readonly Dictionary<(FontSpec, string), bool> Coverage = new();
+    /// <summary>Couverture des grappes, par famille et graisse : la table des glyphes d'une
+    /// police ne dépend pas de sa hauteur. Indexée par la FontSpec entière, elle gardait une
+    /// entrée par hauteur traversée et le jeu de polices de chaque fenêtre (audit des
+    /// ressources, C1 et C2).</summary>
+    private static readonly Dictionary<(string Family, int Weight, string Cluster), bool> Coverage = new();
     private static readonly object Gate = new();
 
     /// <summary>Hauteurs au-dessus et au-dessous de la ligne de base de la police principale.</summary>
@@ -319,7 +323,7 @@ internal static class PaperText
         if (font.Family == AppFonts.System) return true;
         lock (Gate)
         {
-            if (Coverage.TryGetValue((font, cluster), out bool known))
+            if (Coverage.TryGetValue((font.Family, font.Weight, cluster), out bool known))
                 return known;
         }
         var old = Win32.SelectObject(hdc, font.Handle);
@@ -328,7 +332,7 @@ internal static class PaperText
         Win32.SelectObject(hdc, old);
         bool covers = Array.TrueForAll(indices, index => index != 0xFFFF);
         lock (Gate)
-            Coverage[(font, cluster)] = covers;
+            Coverage[(font.Family, font.Weight, cluster)] = covers;
         return covers;
     }
 }

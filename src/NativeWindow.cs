@@ -228,8 +228,7 @@ static class NativeWindow
                 return cached;
 
             IntPtr icon = IntPtr.Zero;
-            var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-            if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) == 0)
+            if (GdiPlus.EnsureStarted())
             {
                 IntPtr logo = GdiImageLoader.LoadFromEmbeddedResource(typeof(NativeWindow), ProductIdentity.LogoResourceName);
                 if (logo != IntPtr.Zero)
@@ -237,7 +236,6 @@ static class NativeWindow
                     icon = GdiHelpers.CreateLogoIcon(logo, size);
                     Win32.GdipDisposeImage(logo);
                 }
-                Win32.GdiplusShutdown(token);
             }
             if (icon != IntPtr.Zero)
                 LogoIcons[size] = icon;

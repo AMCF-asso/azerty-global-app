@@ -209,7 +209,9 @@ static class Program
         // Polices du site (refonte 1.3.0), privées au processus.
         AppFonts.EnsureLoaded();
 
-        using var app = new TrayApplication();
-        app.Run();
+        using (var app = new TrayApplication())
+            app.Run();
+        // Après la fermeture des fenêtres, qui libèrent leurs images GDI+ dans leur Dispose.
+        GdiPlus.Shutdown();
     }
 }

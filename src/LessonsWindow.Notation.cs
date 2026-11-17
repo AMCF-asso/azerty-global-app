@@ -110,26 +110,26 @@ internal sealed partial class LessonsWindow
                 case LessonNotation.MiniKeyboard:
                 {
                     float unit = MiniUnit * PaperScale;
-                    var (mw, _) = MiniKeyboardRenderer.MeasureNumbered(hdc, unit, g.Steps, PaperScale);
+                    var (mw, _) = MiniKeyboardRenderer.MeasureNumbered(hdc, unit, g.Steps, PaperFonts);
                     int ml = Math.Clamp(center - mw / 2, minLeft, Math.Max(minLeft, maxRight - mw));
-                    MiniKeyboardRenderer.DrawNumbered(hdc, ml, top, unit, g.Steps, PaperScale);
+                    MiniKeyboardRenderer.DrawNumbered(hdc, ml, top, unit, g.Steps, PaperFonts);
                     break;
                 }
                 case LessonNotation.Frames:
                 {
                     float unit = FrameUnit * PaperScale;
-                    var (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperScale);
+                    var (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperFonts);
                     if (fw > maxRight - minLeft)
                     {
                         unit = FrameUnitSmall * PaperScale;
-                        (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperScale);
+                        (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperFonts);
                     }
                     int fl = Math.Clamp(center - fw / 2, minLeft, Math.Max(minLeft, maxRight - fw));
-                    MiniKeyboardRenderer.DrawFrames(hdc, fl, top, unit, g.Steps, PaperScale);
+                    MiniKeyboardRenderer.DrawFrames(hdc, fl, top, unit, g.Steps, PaperFonts);
                     break;
                 }
                 default:
-                    var style = KeyNotationStyle.Lessons(PaperScale);
+                    var style = KeyNotationStyle.Lessons(PaperFonts);
                     var (w, _) = KeyNotation.Measure(hdc, g.Steps, style, g.Notes);
                     int left = Math.Clamp(center - w / 2, minLeft, Math.Max(minLeft, maxRight - w));
                     // Collée sous le caractère : une réserve pour deux pavés la détachait de

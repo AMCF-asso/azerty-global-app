@@ -226,8 +226,7 @@ sealed partial class SettingsWindow : IDisposable
     // Fond blanc de la liste des applications (WM_CTLCOLORLISTBOX).
     private IntPtr _hSurfaceBrush;
 
-    // GDI+ : cercles des boutons radio et coche des cases, lissés.
-    private IntPtr _gdipToken;
+    // GDI+ (cercles des boutons radio et coche des cases, lissés) : GdiPlus.EnsureStarted.
 
     private bool _visible;
     private bool _inputPaused;
@@ -304,8 +303,7 @@ sealed partial class SettingsWindow : IDisposable
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
         _dpiScale = dpi / 96f;
 
-        var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
+        GdiPlus.EnsureStarted();
         LoadShortcutStateFromConfig();
 
         CreateMainWindow();
@@ -2544,12 +2542,6 @@ sealed partial class SettingsWindow : IDisposable
         {
             Win32.DeleteObject(_hSurfaceBrush);
             _hSurfaceBrush = IntPtr.Zero;
-        }
-
-        if (_gdipToken != IntPtr.Zero)
-        {
-            Win32.GdiplusShutdown(_gdipToken);
-            _gdipToken = IntPtr.Zero;
         }
 
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("Settings"));

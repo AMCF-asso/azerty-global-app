@@ -48,7 +48,6 @@ sealed class AboutWindow : IDisposable
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
 
-    private IntPtr _gdipToken;
     private IntPtr _gdipLogo;
     private IntPtr _hIcon;
 
@@ -93,8 +92,7 @@ sealed class AboutWindow : IDisposable
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
         _dpiScale = dpi / 96f;
 
-        var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
+        GdiPlus.EnsureStarted();
         _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(AboutWindow), ProductIdentity.LogoResourceName);
 
         CreateFonts();
@@ -540,11 +538,6 @@ sealed class AboutWindow : IDisposable
         {
             Win32.GdipDisposeImage(_gdipLogo);
             _gdipLogo = IntPtr.Zero;
-        }
-        if (_gdipToken != IntPtr.Zero)
-        {
-            Win32.GdiplusShutdown(_gdipToken);
-            _gdipToken = IntPtr.Zero;
         }
 
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("About"));

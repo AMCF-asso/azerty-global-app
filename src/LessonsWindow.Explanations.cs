@@ -87,7 +87,7 @@ internal sealed partial class LessonsWindow
         var notation = CurrentNotation();
         if (notation is LessonNotation.Recipe or LessonNotation.NumberedKeyboard or LessonNotation.MiniKeyboard or LessonNotation.Frames)
             return NotationAreaHeight();
-        var style = KeyNotationStyle.Lessons(PaperScale);
+        var style = KeyNotationStyle.Lessons(PaperFonts);
         int height = S(20); // l'avis de geste maîtrisé
         var line = _session.GetCurrentLineSnapshot();
         for (int i = 0; i < line.Count; i++)

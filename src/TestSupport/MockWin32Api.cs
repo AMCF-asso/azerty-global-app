@@ -217,17 +217,23 @@ internal sealed class MockWin32Api : IWin32Api
         return ScriptedSecureInput;
     }
 
+    /// <summary>Crochets posés et retirés depuis la création du mock (audit des ressources).</summary>
+    public int WinEventHooksSet { get; private set; }
+    public int WinEventHooksRemoved { get; private set; }
+
     public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb)
     {
         if (ShouldFailSetWinEventHook) return IntPtr.Zero;
         WinEventRanges.Add((eventMin, eventMax));
         CapturedWinEventDelegate = cb;
+        WinEventHooksSet++;
         return WinEventHookHandle;
     }
 
     public bool UnhookWinEvent(IntPtr hook)
     {
         UnhookWinEventCalled = true;
+        WinEventHooksRemoved++;
         return true;
     }
 }
