@@ -30,6 +30,12 @@ internal static partial class L
         : T($"En pause jusqu’à {clock}", $"Paused until {clock}");
     public static string Tray_PauseEndedTitle => T("Pause terminée", "Pause ended");
     public static string Tray_PauseStoppedTitle => T("Pause arrêtée", "Pause stopped");
+    // CE-T3 (CE-09) : Windows a refusé la minuterie qui termine la pause ; sans elle, la pause
+    // ne finirait jamais. Le clavier reste donc actif.
+    public static string Tray_PauseFailedTitle => T("Pause impossible", "Couldn’t pause");
+    public static string Tray_PauseFailedBody => T(
+        $"Windows n’a pas pu programmer la fin de la pause : {Product} reste actif. Réessayez dans un instant.",
+        $"Windows couldn’t schedule the end of the pause, so {Product} stays on. Try again in a moment.");
     public static string Tray_PrecautionTitle => T("En pause par précaution", "Paused as a precaution");
     public static string Tray_ToggleRefusedTitle(string proc) =>
         T($"Activation refusée dans {proc}", $"Can’t turn on in {proc}");

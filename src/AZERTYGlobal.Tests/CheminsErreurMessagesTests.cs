@@ -18,7 +18,7 @@ public sealed class CheminsErreurMessagesTests : IDisposable
     private const BindingFlags Statique = BindingFlags.Static | BindingFlags.NonPublic;
 
     private readonly List<string> _dossiers = new();
-    private readonly Action<IntPtr, bool> _minuterieOrigine = TrayApplication.ReviewTimerSwitch;
+    private readonly Func<IntPtr, bool, bool> _minuterieOrigine = TrayApplication.ReviewTimerSwitch;
 
     public void Dispose()
     {
