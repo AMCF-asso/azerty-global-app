@@ -31,6 +31,9 @@ static class ConfigManager
             _cache = null;
             _compatibilityCache = null;
             _loadFailed = false;
+            _readPending = false;
+            _changedWhileUnread.Clear();
+            _compatChangedWhileUnread.Clear();
             _dirty = false;
             _failedWrites = 0;
             _quarantineNoticePending = false;
@@ -121,6 +124,15 @@ static class ConfigManager
     private static Dictionary<string, string>? _compatibilityCache; // sous-objet compatibility (process → "forceOn"/"forceOff")
     private static readonly object _lock = new();
     private static bool _loadFailed;
+    // CE-T2 (CE-03) : config.json présent mais illisible pour l'instant (verrou d'un antivirus,
+    // d'une sauvegarde, droits). _loadFailed reste vrai (le fichier n'est jamais écrasé) et
+    // chaque accès le relit, en un essai, jusqu'à la réussite. Une quarantaine ratée, elle, reste
+    // collante : _loadFailed sans _readPending.
+    private static bool _readPending;
+    // Réglages changés pendant la panne de lecture : ils gagnent sur le fichier relu (décision
+    // d'Antoine du 17 novembre 2026), puis tout est écrit. Valeur nulle : clé retirée.
+    private static readonly Dictionary<string, JsonElement?> _changedWhileUnread = new();
+    private static readonly Dictionary<string, string?> _compatChangedWhileUnread = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Accord explicite ; une ancienne configuration n'en tient pas lieu.</summary>
     public static bool ActivationConsent
@@ -417,7 +429,9 @@ static class ConfigManager
         try
         {
             if (!File.Exists(path)) return DerivedAppLanguage();
-            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            // CE-T2 (CE-04) : mêmes essais courts que le chargement. Un seul essai rendait « fr »
+            // pour toute la session quand un verrou passager tenait un fichier qui dit « en ».
+            using var doc = JsonDocument.Parse(FileQuarantine.ReadAllTextWithRetries(path));
             if (doc.RootElement.ValueKind != JsonValueKind.Object) return DerivedAppLanguage();
             return doc.RootElement.TryGetProperty("appLanguage", out var value)
                    && value.ValueKind == JsonValueKind.String && value.GetString() == "en"
@@ -815,6 +829,7 @@ static class ConfigManager
                 _compatibilityCache.Remove(processName);
             else
                 _compatibilityCache[processName] = mode;
+            if (_readPending) _compatChangedWhileUnread[processName] = mode;
             MarkDirty();
         }
     }
@@ -932,6 +947,8 @@ static class ConfigManager
         {
             EnsureLoaded();
             changed = _cache!.Remove(key);
+            // CE-T2 : retirée aussi du fichier relu, même absente du cache de la panne.
+            if (_readPending) _changedWhileUnread[key] = null;
             if (changed)
                 MarkDirty();
         }
@@ -1272,45 +1289,30 @@ static class ConfigManager
 
     private static void EnsureLoaded()
     {
-        if (_cache != null) return;
+        if (_cache != null)
+        {
+            if (_readPending) TryRereadLocked();
+            return;
+        }
         _cache = new Dictionary<string, JsonElement>();
         _loadFailed = false;
+        _readPending = false;
+        _changedWhileUnread.Clear();
+        _compatChangedWhileUnread.Clear();
         try
         {
             if (File.Exists(_configPath))
-            {
-                var json = File.ReadAllText(_configPath);
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                    throw new JsonException("La configuration doit être un objet JSON.");
-                foreach (var prop in doc.RootElement.EnumerateObject())
-                {
-                    if (prop.Name == "compatibility" && prop.Value.ValueKind == JsonValueKind.Object)
-                    {
-                        // Sous-objet compatibility : process → "forceOn"/"forceOff"
-                        _compatibilityCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                        foreach (var entry in prop.Value.EnumerateObject())
-                        {
-                            if (entry.Value.ValueKind == JsonValueKind.String)
-                            {
-                                var v = entry.Value.GetString();
-                                if (v == "forceOn" || v == "forceOff")
-                                    _compatibilityCache[entry.Name] = v;
-                            }
-                        }
-                        continue;
-                    }
-                    _cache[prop.Name] = prop.Value.Clone();
-                }
-            }
+                (_cache, _compatibilityCache) = ParseConfig(FileQuarantine.ReadAllTextWithRetries(_configPath));
         }
         catch (Exception ex) when (FileQuarantine.IsReadFailure(ex))
         {
-            // Lecture impossible pour l'instant (verrou d'un antivirus ou d'une sauvegarde,
-            // droits) : le fichier est sans doute intact. Aucune écriture pendant cette
-            // session (WriteFile refuse d'écraser un fichier non chargé), le prochain
-            // lancement relit. L'accord reste absent pour la session : rien ne s'active seul.
+            // Lecture impossible malgré les essais courts (verrou d'un antivirus ou d'une
+            // sauvegarde, droits) : le fichier est sans doute intact. Réglages par défaut en
+            // attendant, aucune écriture sur ce fichier (WriteFile refuse d'écraser un fichier non
+            // chargé), et relecture au prochain accès (CE-T2, choix d'Antoine du 16 novembre 2026) :
+            // avant, l'accord et les réglages restaient perdus pour toute la session.
             _loadFailed = true;
+            _readPending = true;
             Log("ConfigManager.EnsureLoaded", ex);
         }
         catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
@@ -1351,6 +1353,98 @@ static class ConfigManager
             _cache["appLanguage"] = doc.RootElement.Clone();
             MarkDirty();
         }
+    }
+
+    /// <summary>Analyse le contenu de config.json : réglages, et sous-objet compatibility
+    /// (processus → "forceOn"/"forceOff"). Lève <see cref="JsonException"/> sur une racine qui
+    /// n'est pas un objet.</summary>
+    private static (Dictionary<string, JsonElement> Cache, Dictionary<string, string>? Compatibility) ParseConfig(string json)
+    {
+        var cache = new Dictionary<string, JsonElement>();
+        Dictionary<string, string>? compatibility = null;
+        using var doc = JsonDocument.Parse(json);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new JsonException("La configuration doit être un objet JSON.");
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (prop.Name == "compatibility" && prop.Value.ValueKind == JsonValueKind.Object)
+            {
+                compatibility = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in prop.Value.EnumerateObject())
+                {
+                    if (entry.Value.ValueKind == JsonValueKind.String)
+                    {
+                        var v = entry.Value.GetString();
+                        if (v == "forceOn" || v == "forceOff")
+                            compatibility[entry.Name] = v;
+                    }
+                }
+                continue;
+            }
+            cache[prop.Name] = prop.Value.Clone();
+        }
+        return (cache, compatibility);
+    }
+
+    /// <summary>
+    /// CE-T2 : relit, en un seul essai, un config.json resté illisible au chargement. Sous
+    /// <c>_lock</c>. Encore tenu : rien ne change, sans nouvelle ligne de journal. Lu : le
+    /// fichier devient la base, les réglages changés pendant la panne passent par-dessus, et
+    /// l'écriture reprend. Corrompu entre-temps : même règle qu'au chargement (mise de côté, puis
+    /// réglages de la session).
+    /// </summary>
+    private static void TryRereadLocked()
+    {
+        Dictionary<string, JsonElement> cache;
+        Dictionary<string, string>? compatibility;
+        try
+        {
+            (cache, compatibility) = ParseConfig(File.ReadAllText(_configPath));
+        }
+        catch (Exception ex) when (FileQuarantine.IsReadFailure(ex))
+        {
+            return; // toujours tenu : le premier échec est déjà journalisé
+        }
+        catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
+        {
+            Log("ConfigManager.Reread", ex);
+            if (FileQuarantine.TryMoveAside(_configPath, "ConfigManager.Quarantine") != null)
+                _quarantineNoticePending = true;
+            else if (File.Exists(_configPath))
+            {
+                _readPending = false; // quarantaine ratée : collante, comme au chargement
+                return;
+            }
+            cache = new Dictionary<string, JsonElement>();
+            compatibility = null;
+        }
+        catch (IOException)
+        {
+            // Fichier disparu entre-temps : plus rien à protéger, les réglages de la session restent.
+            cache = new Dictionary<string, JsonElement>();
+            compatibility = null;
+        }
+
+        int kept = _changedWhileUnread.Count + _compatChangedWhileUnread.Count;
+        foreach (var (key, value) in _changedWhileUnread)
+        {
+            if (value is { } element) cache[key] = element;
+            else cache.Remove(key);
+        }
+        foreach (var (process, mode) in _compatChangedWhileUnread)
+        {
+            compatibility ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (mode == null) compatibility.Remove(process);
+            else compatibility[process] = mode;
+        }
+        _cache = cache;
+        _compatibilityCache = compatibility;
+        _loadFailed = false;
+        _readPending = false;
+        _changedWhileUnread.Clear();
+        _compatChangedWhileUnread.Clear();
+        LogCompatEventDeferred("ConfigReadRecovered", $"changesKept={kept}");
+        if (kept > 0) MarkDirty();
     }
 
     /// <summary>
@@ -1422,6 +1516,7 @@ static class ConfigManager
             && current.GetRawText() == value.GetRawText())
             return;
         _cache[key] = value;
+        if (_readPending) _changedWhileUnread[key] = value;
         MarkDirty();
     }
 
@@ -1483,6 +1578,9 @@ static class ConfigManager
             string? failureContext;
             lock (_lock)
             {
+                // CE-T2 : un fichier resté illisible est relu avant d'écrire, fermeture comprise
+                // (FlushFinal) ; sinon les réglages de la panne n'étaient jamais écrits.
+                if (_readPending) TryRereadLocked();
                 if (!_dirty || _cache == null) return;
                 content = SerializeLocked();
                 path = _configPath;

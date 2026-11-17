@@ -167,16 +167,24 @@ public class QuarantaineTests : IDisposable
         File.WriteAllText(ConfigPath, ConfigValide);
         Recharger(ConfigPath);
         using (new FileStream(ConfigPath, FileMode.Open, FileAccess.Read, FileShare.None))
-            Assert.False(ConfigManager.ActivationConsent); // lecture refusée : pas d'accord pour la session
+        {
+            Assert.False(ConfigManager.ActivationConsent); // lecture refusée : pas d'accord tant qu'elle dure
+            ConfigManager.SetNotifications(false);
+            ConfigManager.Flush();
+        }
 
-        ConfigManager.SetNotifications(false);
-        ConfigManager.Flush();
-
-        Assert.Equal(ConfigValide, File.ReadAllText(ConfigPath));
+        Assert.Equal(ConfigValide, File.ReadAllText(ConfigPath)); // rien d'écrit pendant le verrou
         Assert.Empty(Copies("config.json"));
         Assert.False(ConfigManager.TakeQuarantineNotice());
+
+        // CE-T2 : verrou levé, le fichier est relu au prochain accès et le choix fait pendant la
+        // panne s'écrit par-dessus (décision d'Antoine du 17/11 : le réglage récent gagne).
+        Assert.True(ConfigManager.ActivationConsent);
+        ConfigManager.Flush();
+        Assert.Empty(Copies("config.json"));
         Recharger(ConfigPath);
         Assert.True(ConfigManager.ActivationConsent);
+        Assert.False(ConfigManager.NotificationsEnabled);
     }
 
     /// <summary>Renommage impossible (une copie de la même seconde existe déjà) : même règle
@@ -233,15 +241,22 @@ public class QuarantaineTests : IDisposable
         File.WriteAllText(ProgressPath, ProgressionValide);
         LessonProgressStore store;
         using (new FileStream(ProgressPath, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
             store = new LessonProgressStore(ProgressPath);
+            store.RecordSuccess(Exercice(), Réussite(Exercice()));
+            Assert.False(store.IsCompleted(Exercice())); // retour arrière en mémoire, comme avant
+        }
 
-        store.RecordSuccess(Exercice(), Réussite(Exercice()));
-
-        Assert.False(store.IsCompleted(Exercice())); // retour arrière en mémoire, comme avant
-        Assert.Equal(ProgressionValide, File.ReadAllText(ProgressPath));
+        Assert.Equal(ProgressionValide, File.ReadAllText(ProgressPath)); // rien d'écrit pendant le verrou
         Assert.Null(store.QuarantinedPath);
         Assert.Empty(Copies("lessons-progress.json"));
         Assert.False(LessonProgressStore.TakeQuarantineNotice());
+
+        // CE-T2 : verrou levé, le fichier est relu au prochain accès et la réussite suivante s'écrit.
+        store.RecordSuccess(Exercice(), Réussite(Exercice()));
+        Assert.True(store.IsCompleted(Exercice()));
+        Assert.True(new LessonProgressStore(ProgressPath).IsCompleted(Exercice()));
+        Assert.Empty(Copies("lessons-progress.json"));
     }
 
     [Fact]

@@ -36,6 +36,33 @@ internal static class FileQuarantine
     /// <summary>Contenu corrompu : JSON invalide, racine non-objet, valeur mal formée.</summary>
     internal static bool IsCorruption(Exception ex) => ex is JsonException or FormatException;
 
+    /// <summary>Pauses entre les essais de lecture du premier chargement : 350 ms au plus, une
+    /// fois par fichier, et seulement quand le fichier est tenu (CE-T2).</summary>
+    internal static int[] ReadRetryDelaysMilliseconds = { 50, 100, 200 };
+
+    /// <summary>Attente entre deux essais, remplaçable par les témoins.</summary>
+    internal static Action<int> ReadRetrySleep = static ms => Thread.Sleep(ms);
+
+    /// <summary>
+    /// Lecture du premier chargement (audit des chemins d'erreur, CE-T2 : constats CE-03 à
+    /// CE-06). Un antivirus, une sauvegarde ou une synchronisation tient le fichier quelques
+    /// dizaines de millisecondes : un seul essai concluait à l'échec pour toute la session. Ici,
+    /// quelques essais courts, comme l'écriture de fermeture de <see cref="ConfigManager"/> ; seul
+    /// un échec de lecture (<see cref="IsReadFailure"/>) est réessayé, la dernière exception
+    /// sort telle quelle. Les relectures suivantes, au prochain accès, n'essaient qu'une fois.
+    /// </summary>
+    internal static string ReadAllTextWithRetries(string path)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try { return File.ReadAllText(path); }
+            catch (Exception ex) when (IsReadFailure(ex) && attempt < ReadRetryDelaysMilliseconds.Length)
+            {
+                ReadRetrySleep(ReadRetryDelaysMilliseconds[attempt]);
+            }
+        }
+    }
+
     /// <summary>
     /// Renomme le fichier en copie mise de côté. Jamais de suppression, jamais d'écrasement
     /// d'une copie existante. Rend le chemin de la copie, ou null si le renommage a échoué :
