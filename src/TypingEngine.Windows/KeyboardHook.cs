@@ -39,6 +39,12 @@ public sealed class KeyboardHook : IDisposable
 
     private IntPtr _hookId = IntPtr.Zero;
 
+    // M2.1 I2 / M3.8 I2 (1.3.0) : pendant Reinstall, l'ancien hook reste posé le temps de traiter
+    // les frappes qui lui étaient déjà adressées ; une frappe vue par les deux hooks n'est traitée
+    // qu'une fois. Hors Reinstall, _retiringHookId vaut zéro et rien ne change.
+    private IntPtr _retiringHookId = IntPtr.Zero;
+    private (uint Vk, uint Scan, uint Flags, uint Time, IntPtr Extra, IntPtr Msg)? _derniereFrappeVue;
+
     // AG130-10 : instant du dernier rappel recu de Windows. Sans lui, un hook
     // decroche en silence (LowLevelHooksTimeout depasse, reprise de veille) ne se
     // voit nulle part - l'application reinstalle a l'aveugle toutes les 60 s et
@@ -139,7 +145,7 @@ public sealed class KeyboardHook : IDisposable
     {
         _mapper = mapper;
         _host = host ?? NullWindowsTypingHost.Instance;
-        _proc = HookCallback;
+        _proc = HookCallbackSansDoublon;
         ReloadShortcuts();
     }
 
@@ -202,8 +208,9 @@ public sealed class KeyboardHook : IDisposable
     /// Réinstalle le hook Win32 SANS changer l'identité de cet objet : les abonnés
     /// (RawKeyDown de l'onboarding, des leçons, du clavier virtuel) restent valides.
     /// Le nouveau hook est posé AVANT de décrocher l'ancien : aucun callback ne peut
-    /// s'intercaler (Install/Unhook et les callbacks s'exécutent sur le même thread),
-    /// donc aucune frappe n'est perdue et aucun double traitement n'est possible.
+    /// s'intercaler (Install/Unhook et les callbacks s'exécutent sur le même thread).
+    /// Les frappes déjà adressées à l'ancien hook sont traitées avant qu'il soit décroché,
+    /// et une frappe vue par les deux n'est traitée qu'une fois (M2.1 I2, M3.8 I2).
     /// Retourne false si SetWindowsHookEx échoue (l'ancien hook, s'il existe, est conservé).
     /// </summary>
     public bool Reinstall()
@@ -226,10 +233,42 @@ public sealed class KeyboardHook : IDisposable
             return _hookId != IntPtr.Zero; // ancien hook encore posé → état inchangé
         }
 
-        if (_hookId != IntPtr.Zero)
-            Win32.UnhookWindowsHookEx(_hookId);
+        // M2.1 I2 / M3.8 I2 (1.3.0) : une frappe arrivée avant le nouveau hook attend encore
+        // l'ancien. Le décrocher tout de suite la laissait passer à l'application, non remappée.
+        // On traite d'abord ce qui est en attente (PeekMessage livre les rappels du hook), puis on
+        // décroche. Le nouveau hook reçoit les frappes suivantes ; un doublon est écarté.
+        var ancien = _hookId;
         _hookId = newId;
+        if (ancien != IntPtr.Zero)
+        {
+            _retiringHookId = ancien;
+            try { Win32.PeekMessageW(out _, IntPtr.Zero, 0, 0, Win32.PM_NOREMOVE); }
+            finally
+            {
+                Win32.UnhookWindowsHookEx(ancien);
+                _retiringHookId = IntPtr.Zero;
+                _derniereFrappeVue = null;
+            }
+        }
         return true;
+    }
+
+    /// <summary>
+    /// Pendant le relais de Reinstall (deux hooks posés, même rappel), une frappe déjà vue par
+    /// l'un des deux est rendue à la chaîne sans second traitement : ni double émission ni
+    /// double RawKeyDown. Hors relais, appel direct de HookCallback.
+    /// </summary>
+    private IntPtr HookCallbackSansDoublon(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && _retiringHookId != IntPtr.Zero)
+        {
+            var s = ReadHookStruct(lParam);
+            var cle = (s.vkCode, s.scanCode, s.flags, s.time, s.dwExtraInfo, wParam);
+            if (_derniereFrappeVue == cle)
+                return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
+            _derniereFrappeVue = cle;
+        }
+        return HookCallback(nCode, wParam, lParam);
     }
 
     /// <summary>

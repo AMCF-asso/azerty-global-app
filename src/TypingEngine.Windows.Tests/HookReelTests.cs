@@ -21,6 +21,7 @@ namespace TypingEngine.Windows.Tests;
 /// aussi et le test le dirait.
 /// </summary>
 [Trait("Categorie", "EntreeReelle")]
+[Collection(EntreeReelleCollection.Nom)]
 public sealed class HookReelTests
 {
     private const int WH_KEYBOARD_LL = 13;

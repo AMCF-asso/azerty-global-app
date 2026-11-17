@@ -2,7 +2,7 @@
 
 Base c16866b, branche claude/ag-tests-regles-130. Règle, test, verdict. Généré le 2026-11-17 à partir des rapports de lot.
 
-Lignes : 92 (ids distincts 92). Vertes 89, rouges 0, autres 3.
+Lignes : 92 (ids distincts 92). Vertes 91, rouges 0, autres 1 (M2.1-I1 : une variante rouge attendue). Tests de vraie frappe joués le 17/11/2026 sur bureau réel, app installée fermée : 4/5, seule exception M2_1_I1_InstallDeuxFois (rouge attendu).
 
 Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa dernière assertion, témoins avant. Les 3 tests `EntreeReelle` (fichier Regles130EntreeReelleTests.cs) sont écrits et compilés mais jamais joués : ils envoient de vraies frappes (SendInput) sur le bureau ; ils tournent par l'étape tests-entree-reelle de scripts/verify.ps1.
 
@@ -16,8 +16,8 @@ Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa de
 | M1.7-I2 | M1_7_I2_CaractereDeControle_JamaisRemplaceParDuTexte | vert | Regles130PurTests.cs |
 | M1.7-I3 | M1_7_I3_Raccourci_AucunTexteAttendu | vert | Regles130PurTests.cs |
 | M1.8-I3 | M1_8_I3_Indicateur_NeDetruitJamaisLePinceauDeLaClasse | vert | Regles130PurTests.cs |
-| M2.1-I1 | M2_1_I1_Reinstall_UnSeulHookALEtatStable_UneFrappeUnSeulRawKeyDown + M2_1_I1_InstallDeuxFois_DeuxHooksPoses_RougeAttendu | non exécuté (compilé) | Regles130EntreeReelleTests.cs |
-| M2.1-I2 | M2_1_I2_M3_8_I2_RafaleDeTouchesRemappees_PendantDesReinstallRepetes_NParesExactement | non exécuté (compilé) | Regles130EntreeReelleTests.cs |
+| M2.1-I1 | M2_1_I1_Reinstall_UnSeulHookALEtatStable_UneFrappeUnSeulRawKeyDown + M2_1_I1_InstallDeuxFois_DeuxHooksPoses_RougeAttendu | partiel (17/11/2026, bureau réel) : variante Reinstall verte ; InstallDeuxFois rouge attendu (2 RawKeyDown, garde externe ShouldInstallHookAtLoopStart) | Regles130EntreeReelleTests.cs |
+| M2.1-I2 | M2_1_I2_M3_8_I2_RafaleDeTouchesRemappees_PendantDesReinstallRepetes_NParesExactement | vert (17/11/2026, bureau réel : rouge avant correctif, une touche d'origine fuyait pendant Reinstall ; corrigé dans KeyboardHook.Reinstall) | Regles130EntreeReelleTests.cs |
 | M2.1-I4 | M2_1_I4_ApresDispose_LeRappelTourneSansEffet | vert | Regles130MoteurTests.cs |
 | M2.3-I3 | M2_3_I3_PassThroughTotal_AucuneNotificationRaccourciNiEmission | vert | Regles130MoteurTests.cs |
 | M2.3-I4 | M2_3_I4_PassThroughAvecRaccourcis_PasDeRawKeyDown_RaccourcisDetectes | vert | Regles130MoteurTests.cs |
@@ -41,7 +41,7 @@ Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa de
 | M3.4-I4 | M3_4_I4_AbonnementAppLanguageChanged_RetireALaFermeture | vert | Regles130TrayTests.cs |
 | M3.6-I2 | M3_6_I2_FenetreDeBascule_SeFerme2sApresLaDerniereBascule | vert | Regles130TrayTests.cs |
 | M3.8-I1 | M3_8_I1_Cleanup_EstIdempotent | vert | Regles130TrayTests.cs |
-| M3.8-I2 | M2_1_I2_M3_8_I2_RafaleDeTouchesRemappees_PendantDesReinstallRepetes_NParesExactement | non exécuté (compilé) | Regles130EntreeReelleTests.cs |
+| M3.8-I2 | M2_1_I2_M3_8_I2_RafaleDeTouchesRemappees_PendantDesReinstallRepetes_NParesExactement | vert (17/11/2026, bureau réel, après correctif de KeyboardHook.Reinstall ; voir M2.1-I2) | Regles130EntreeReelleTests.cs |
 | M4.1-I3 | M4_1_I3_SeulLeGagnantEcrit_RotationEtRelanceApresLesSorties | vert | Regles130PurTests.cs |
 | M4.1-I5 | M4_1_I5_SecondeInstance_MuetteEnActivationSysteme | vert | Regles130PurTests.cs |
 | M4.2-I3 | M4_2_I3_DeuxFlushConcurrents_EcrituresDansLOrdreDesInstantanes | vert | Regles130PurTests.cs |
