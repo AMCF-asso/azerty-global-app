@@ -2,7 +2,7 @@
 
 Base c16866b, branche claude/ag-tests-regles-130. Règle, test, verdict. Généré le 2026-11-17 à partir des rapports de lot.
 
-Lignes : 92 (ids distincts 92). Vertes 81, rouges 8, autres 3.
+Lignes : 92 (ids distincts 92). Vertes 82, rouges 7, autres 3.
 
 Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa dernière assertion, témoins avant. Les 3 tests `EntreeReelle` (fichier Regles130EntreeReelleTests.cs) sont écrits et compilés mais jamais joués : ils envoient de vraies frappes (SendInput) sur le bureau ; ils tournent par l'étape tests-entree-reelle de scripts/verify.ps1.
 
@@ -88,7 +88,7 @@ Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa de
 | M7.6-I3 | M7_6_I3_BalloonExpiree_NEstPlusCliquable | vert | Regles130TrayTests.cs |
 | M7.6-I5 | M7_6_I5_ToastAncienClique_OuvreSansNouvelEffetDEtat | vert | Regles130PurTests.cs |
 | M7.7-I2 | M7_7_I2_RappelDeFin_NeFaitQueOuvrirLeLienEtJournaliser | vert | Regles130PurTests.cs |
-| M7.8-I3 | M7_8_I3_EntreeMaintenue_NOuvreQuUneUrlParAppui | rouge | Regles130PurTests.cs |
+| M7.8-I3 | M7_8_I3_EntreeMaintenue_NOuvreQuUneUrlParAppui | vert (corrigé 1.3.0) | Regles130PurTests.cs |
 | M8.1-I1 | M8_1_I1_PasDeCaptureDeRaccourciHorsDeLaFenetreVisible | vert | Regles130AccueilReglagesTests.cs |
 | M8.1-I3 | M8_1_I3_PauseDesParametres_JamaisArmeeEnProduction | vert | Regles130PurTests.cs |
 | M8.1-I4 | M8_1_I4_Cleanup_DeuxFoisAvecDesFenetresReelles_DisposeUnique | vert (en plus) | Regles130TrayTests.cs |

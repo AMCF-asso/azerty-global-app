@@ -26,6 +26,11 @@ internal sealed class LinkBehavior
     private const int IDC_HAND = 32649;
     private const uint WM_UPDATEUISTATE = 0x0128;
 
+    /// <summary>
+    /// Bit 30 de lParam d'un WM_KEYDOWN : la touche était déjà enfoncée (répétition automatique).
+    /// </summary>
+    internal static bool IsAutoRepeat(IntPtr lParam) => (lParam.ToInt64() & (1L << 30)) != 0;
+
     // Gardé vivant tant que la sous-classe est posée : Windows n'en tient qu'un pointeur.
     private readonly Win32.SUBCLASSPROC _proc;
     private readonly List<(IntPtr Link, UIntPtr Id)> _links = new();
@@ -129,6 +134,11 @@ internal sealed class LinkBehavior
             case Win32.WM_KEYDOWN:
                 if (wParam == (IntPtr)VK_RETURN)
                 {
+                    // M7.8 I3 (1.3.0) : un appui n'ouvre qu'une URL. Entrée maintenue répète
+                    // WM_KEYDOWN avec le bit 30 de lParam posé (touche déjà enfoncée) : la
+                    // répétition est absorbée sans rouvrir le lien.
+                    if (IsAutoRepeat(lParam))
+                        return IntPtr.Zero;
                     int ctrlId = Win32.GetDlgCtrlID(hWnd);
                     Win32.SendMessageW(_owner(), Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
                     return IntPtr.Zero;

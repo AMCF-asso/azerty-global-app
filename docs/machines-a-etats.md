@@ -3197,7 +3197,7 @@ C7.5.
 
 - I1 : une seule instance d'À propos. Garanti par `_about ??=` (`src/TrayApplication.cs:918`) et le menu sur le fil de la pompe.
 - I2 : une instance masquée et d'une autre langue est recréée ; visible, elle est rafraîchie. Garanti par `:913-917` et `AboutWindow.OnLanguageChanged`.
-- I3 : le lien d'un lien Enter ouvre exactement une URL par appui. **Non garanti** pour la répétition automatique de touche : `WM_KEYDOWN` sans test du bit de répétition (`src/LinkBehavior.cs:129-135`). Maintenir Entrée sur un lien ouvre plusieurs fois l'URL (non retenu en constat : geste volontairement soutenu, impact nul au-delà de doublons d'onglets).
+- I3 : le lien d'un lien Enter ouvre exactement une URL par appui. Garanti depuis 1.3.0 (17 novembre 2026) : `WM_KEYDOWN` ignore la répétition automatique (`LinkBehavior.IsAutoRepeat`, bit 30 de `lParam`) ; Entrée maintenue n'ouvre l'URL qu'une fois. Test : `Regles130PurTests.M7_8_I3_EntreeMaintenue_NOuvreQuUneUrlParAppui`.
 - I4 : un double-clic sur un lien n'ouvre qu'une URL. Garanti par `if (code == 0)` (`src/AboutWindow.cs:308-317`, `src/OnboardingWindow.cs:1146-1155`) : `STN_DBLCLK` ignoré.
 
 #### Table de transition

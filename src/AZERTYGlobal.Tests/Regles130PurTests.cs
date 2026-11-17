@@ -955,9 +955,9 @@ public sealed class Regles130PurLiensTests : IDisposable
         GC.KeepAlive(_ownerProc);
     }
 
-    // M7.8 I3 : un lien activé à Entrée n'ouvre qu'une URL par appui. NON GARANTI par le produit
-    // (constat) : WM_KEYDOWN est traité sans tester le bit de répétition (bit 30 de lParam), donc
-    // Entrée maintenue ouvre l'URL à chaque répétition. Le test échoue sur sa dernière assertion.
+    // M7.8 I3 : un lien activé à Entrée n'ouvre qu'une URL par appui. Tenu depuis 1.3.0 : WM_KEYDOWN
+    // ignore la répétition automatique (bit 30 de lParam, LinkBehavior.IsAutoRepeat). Rouge avant le
+    // correctif : Entrée maintenue ouvrait l'URL à chaque répétition.
     [Fact]
     public void M7_8_I3_EntreeMaintenue_NOuvreQuUneUrlParAppui()
     {
