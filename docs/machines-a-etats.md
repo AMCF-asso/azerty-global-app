@@ -2153,7 +2153,7 @@ Aucun constat.
 #### Invariants
 
 - I1 : la mise en page et la peinture utilisent le même prédicat — garanti depuis ME-07 : la mise en page est refaite (`FitWindow`) dès que l'opt-in du Défi change pendant l'ouverture (`ConfigManager.TrainingEnabledChanged`, `OnTrainingEnabledChanged`), au lieu de ne l'être qu'à `Show` et au changement de langue (C5.5 corrigé).
-- I2 : la minuterie de copie est détruite à la fermeture — non garanti : `Close()` (`src/UsageStatsWindow.cs:354-358`) ne fait que `ShowWindow(0)` et `_visible = false`, sans `KillTimer` ; la minuterie ne se détruit que dans son propre `WM_TIMER` (`:453-460`, 1500 ms) ou à `DestroyWindow`. `:493-502` est `OnCopyStats`, qui l'arme.
+- I2 : la minuterie de copie est détruite à la fermeture — garanti depuis 1.3.0 (17 novembre 2026) : `Close()` fait `KillTimer(TIMER_COPY_FEEDBACK)` et remet `_showCopiedFeedback` et `_copyFailed` à faux ; une réouverture ne montre plus un retour de copie périmé. `OnCopyStats` l'arme. Test : `Regles130PurTests.M5_6_I2_MinuterieDeCopie_DetruiteALaFermeture`.
 
 #### Table de transition
 

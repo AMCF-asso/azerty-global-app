@@ -2,7 +2,7 @@
 
 Base c16866b, branche claude/ag-tests-regles-130. Règle, test, verdict. Généré le 2026-11-17 à partir des rapports de lot.
 
-Lignes : 92 (ids distincts 92). Vertes 82, rouges 7, autres 3.
+Lignes : 92 (ids distincts 92). Vertes 83, rouges 6, autres 3.
 
 Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa dernière assertion, témoins avant. Les 3 tests `EntreeReelle` (fichier Regles130EntreeReelleTests.cs) sont écrits et compilés mais jamais joués : ils envoient de vraies frappes (SendInput) sur le bureau ; ils tournent par l'étape tests-entree-reelle de scripts/verify.ps1.
 
@@ -55,7 +55,7 @@ Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa de
 | M5.1-I4 | M5_1_I4_Preload_ChargeAvantLeHook_LaFrappeNeRelitPasLeFichier | vert | Regles130PurTests.cs |
 | M5.4-I1 | M5_4_I1_FermeturesEnTrop_LaProfondeurNeDevientJamaisNegative | vert | Regles130PurTests.cs |
 | M5.4-I3 | M5_4_I3_Exclusion_SeulBeginTutorialOuvreLaPlage | vert | Regles130PurTests.cs |
-| M5.6-I2 | M5_6_I2_MinuterieDeCopie_DetruiteALaFermeture | rouge | Regles130PurTests.cs |
+| M5.6-I2 | M5_6_I2_MinuterieDeCopie_DetruiteALaFermeture | vert (corrigé 1.3.0) | Regles130PurTests.cs |
 | M5.7-I2 | M5_7_I2_RechargementConditionnel_NeRemplacePasUnEtatEchoue | vert | Regles130PurTests.cs |
 | M5.7-I3 | M5_7_I3_JsonValideDeFormeInattendue_ChargementSansException | vert | Regles130PurTests.cs |
 | M5.7-I4 | M5_7_I4_ResetAll_RemetToutLEtatDeProgression | vert | Regles130PurTests.cs |

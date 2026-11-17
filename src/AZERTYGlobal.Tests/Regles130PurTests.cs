@@ -567,9 +567,9 @@ public sealed class Regles130PurStatsTests
             "l'appel doit être dans BeginTutorial");
     }
 
-    // M5.6 I2 : la minuterie de copie est détruite à la fermeture. NON GARANTI par le produit
-    // (constat) : Close() masque la fenêtre sans KillTimer ; la minuterie ne meurt que dans son
-    // propre WM_TIMER (1500 ms) ou à DestroyWindow. Le test échoue sur sa dernière assertion.
+    // M5.6 I2 : la minuterie de copie est détruite à la fermeture. Tenu depuis 1.3.0 : Close() fait
+    // KillTimer(TIMER_COPY_FEEDBACK). Rouge avant le correctif : Close() masquait la fenêtre sans
+    // KillTimer ; la minuterie ne mourait que dans son propre WM_TIMER (1500 ms) ou à DestroyWindow.
     [Fact]
     public void M5_6_I2_MinuterieDeCopie_DetruiteALaFermeture()
     {

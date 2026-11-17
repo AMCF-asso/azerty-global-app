@@ -353,6 +353,12 @@ sealed class UsageStatsWindow : IDisposable
 
     public void Close()
     {
+        // M5.6 I2 (1.3.0) : la minuterie du retour « Copié » meurt avec la fermeture, au lieu
+        // de survivre jusqu'à son propre WM_TIMER ; le retour s'efface avec elle, pour qu'une
+        // réouverture ne montre pas un « Copié » d'une copie passée.
+        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_COPY_FEEDBACK);
+        _showCopiedFeedback = false;
+        _copyFailed = false;
         Win32.ShowWindow(_hWnd, 0);
         _visible = false;
     }
