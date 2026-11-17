@@ -321,6 +321,14 @@ internal static class PaperText
     private static bool Covers(IntPtr hdc, FontSpec font, string cluster)
     {
         if (font.Family == AppFonts.System) return true;
+        // Les polices de pictogrammes ne dessinent que des pictogrammes : le reste (flèches,
+        // formes, mathématiques) garde Segoe UI, à la taille du texte.
+        if (font.Family is AppFonts.Pictographs or AppFonts.PictographsFallback && !cluster.All(AppFonts.IsPictograph))
+            return false;
+        // AG Symboles a ✈ et ★, mais dessinés bien plus grands que les lettres (1,6 et 1,1 touche
+        // à la taille du signe) : un pictogramme passe par la chaîne des pictogrammes, à échelle réduite.
+        if (font.Family == AppFonts.Symbols && cluster.All(AppFonts.IsPictograph))
+            return false;
         lock (Gate)
         {
             if (Coverage.TryGetValue((font.Family, font.Weight, cluster), out bool known))

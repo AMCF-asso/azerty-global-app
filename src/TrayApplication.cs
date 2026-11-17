@@ -622,6 +622,27 @@ sealed class TrayApplication : IDisposable
         bool suspendedForCompatibility, CompatibilitySuspendReason reason) =>
         suspendedForCompatibility && reason == CompatibilitySuspendReason.UserOverride;
 
+    /// <summary>
+    /// Un champ de mot de passe bloque-t-il la recherche ? Pas quand le premier plan n'est pas
+    /// une application (barre des tâches d'où s'ouvre le menu, bureau, aucune fenêtre, nos
+    /// fenêtres) : la sonde y répond « sécurisé » faute de contrôle qui a le focus, et
+    /// l'entrée « Rechercher un caractère » restait grisée après une première recherche
+    /// fermée (signalé par Antoine le 2026-11-12). L'insertion revérifie la cible réelle.
+    /// </summary>
+    private bool SecureInputBlocksSearch =>
+        _mapper?.AdvancedFeaturesSuppressed == true && _foregroundMonitor?.ForegroundIsApplication != false;
+
+    /// <summary>
+    /// La recherche de caractères peut-elle s'ouvrir maintenant ? Une seule décision pour le
+    /// raccourci, l'entrée du menu et son clic : le menu l'ignorait (R3 n'avait corrigé que le
+    /// raccourci), si bien que « Rechercher un caractère » restait grisé dans une application
+    /// que l'utilisateur a marquée « désactivée », alors que Ctrl+Maj+W y ouvrait la fenêtre.
+    /// Fonction pure, pour la même raison que <see cref="ShouldServeSearchWhileBlocked"/>.
+    /// </summary>
+    private static bool CanOpenCharacterSearch(
+        bool shouldProcessHook, bool userOverrideSuspension, bool secureInput) =>
+        (shouldProcessHook || userOverrideSuspension) && !secureInput;
+
     private void ApplyHookState(bool syncWhenActive = false, bool preservePendingDeadKey = false)
     {
         if (_mapper != null) _mapper.EmissionPaused = IsPaused;
@@ -850,10 +871,10 @@ sealed class TrayApplication : IDisposable
                     // R3, écart 8 : le raccourci arrive jusqu'ici sous suspension choisie
                     // (ShortcutsWhilePassThrough) ; annoncer « Désactivé » contredisait le
                     // Changelog. Le remappage, lui, reste éteint.
-                    if ((ShouldProcessHook || IsUserOverrideSuspension) &&
-                        _mapper?.AdvancedFeaturesSuppressed != true)
+                    if (CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
+                            SecureInputBlocksSearch))
                         _characterSearch?.Toggle();
-                    else if (_mapper?.AdvancedFeaturesSuppressed == true)
+                    else if (SecureInputBlocksSearch)
                         ShowBalloon(L.Layers_SearchSecureTitle, L.TrayClarity_SearchSecureBody);
                     else if (IsPaused)
                         ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
@@ -916,9 +937,10 @@ sealed class TrayApplication : IDisposable
                         case IDM_SEARCH:
                             if (_characterSearch?.IsVisible == true)
                                 _characterSearch.Hide();
-                            else if (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true)
+                            else if (CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
+                                         SecureInputBlocksSearch))
                                 _characterSearch?.Show(_lastForegroundBeforeTrayMenu);
-                            else if (_mapper?.AdvancedFeaturesSuppressed == true)
+                            else if (SecureInputBlocksSearch)
                                 ShowBalloon(L.Layers_SearchSecureTitle, L.TrayClarity_SearchSecureBody);
                             break;
                         case IDM_SETTINGS:
@@ -1940,7 +1962,8 @@ sealed class TrayApplication : IDisposable
         uint kbdFlags = ShouldProcessHook || _virtualKeyboard?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, kbdFlags, IDM_KEYBOARD,
             _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdKey) : L.Tray_MenuVirtualKeyboard(kbdKey));
-        uint searchFlags = (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true) ||
+        uint searchFlags = CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
+                SecureInputBlocksSearch) ||
             _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchKey));
 

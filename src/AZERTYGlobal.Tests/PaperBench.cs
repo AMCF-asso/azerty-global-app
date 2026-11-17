@@ -199,6 +199,21 @@ public sealed class PaperBench
         });
     }
 
+    /// <summary>Touche morte Symboles divers : pictogrammes (✈ ★ ☎ ⚠…) à la taille des lettres
+    /// et des flèches voisines. Mesuré par <c>PictographFitTests</c>, regardé ici.</summary>
+    [Fact]
+    public void ClavierSymbolesDivers()
+    {
+        if (OutDir is not { Length: > 0 } dir) return;
+        var layout = LayoutLoader.LoadFromResource();
+        Render(Path.Combine(dir, "papier-clavier-symboles-divers.png"), 854, 330, hdc =>
+        {
+            PaperDraw.Fill(hdc, 0, 0, 854, 330, PaperTheme.Paper);
+            var dead = new PaperKeyboardState { ActiveDeadKey = "dk_misc_symbols" };
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 20, 52f), layout, PaperKeyboardMode.ActiveLayer, dead);
+        });
+    }
+
     private static void Render(string file, int width, int height, Action<IntPtr> paint)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);

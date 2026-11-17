@@ -76,6 +76,34 @@ public class SearchWhileSuspendedTests
         Assert.False(ServirLaRecherche(false, raison));
     }
 
+    private static bool PeutOuvrir(bool traite, bool choisie, bool securisee)
+    {
+        var method = typeof(TrayApplication).GetMethod(
+            "CanOpenCharacterSearch",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        return (bool)method!.Invoke(null, new object[] { traite, choisie, securisee })!;
+    }
+
+    /// <summary>
+    /// Signalé par Antoine le 2026-11-12 : « Rechercher un caractère » grisé « de temps en
+    /// temps ». R3 avait corrigé le raccourci, pas l'entrée du menu : dans une application
+    /// marquée « désactivée » par l'utilisateur, Ctrl+Maj+W ouvrait la recherche et le menu
+    /// la grisait. Le menu, son clic et le raccourci passent par la même décision.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false, false, true)]   // app active
+    [InlineData(false, true, false, true)]   // suspension choisie : le cas signalé
+    [InlineData(false, false, false, false)] // pause, désactivée, jeu, accès distant
+    [InlineData(true, false, true, false)]   // champ de mot de passe
+    [InlineData(false, true, true, false)]   // choisie, mais champ de mot de passe
+    public void LeMenuLeClicEtLeRaccourciOntLaMemeDecision(
+        bool traite, bool choisie, bool securisee, bool attendu)
+    {
+        Assert.Equal(attendu, PeutOuvrir(traite, choisie, securisee));
+    }
+
     /// <summary>
     /// Le lien entre les deux décisions est le cœur de R3 : un raccourci détecté qui
     /// n'ouvre rien est précisément le défaut corrigé. Ce témoin rougit si l'une des deux

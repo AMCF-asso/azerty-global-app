@@ -102,6 +102,16 @@ public sealed class ForegroundMonitor : IDisposable
     /// </summary>
     public bool IsTransientShellForeground { get; private set; }
 
+    /// <summary>
+    /// Vrai quand le premier plan est une vraie application : ni aucune fenêtre, ni une surface
+    /// du shell (barre des tâches, bureau), ni une de nos propres fenêtres. Ailleurs, aucun
+    /// champ de texte ne peut recevoir une frappe : <see cref="IsSecureInput"/> y vaut vrai
+    /// par prudence (aucune fenêtre, ou aucun contrôle qui a le focus, ce qui est l'état de la
+    /// barre des tâches), pas parce qu'un champ de mot de passe est là. Le menu de la zone de
+    /// notification, ouvert depuis la barre des tâches, ne doit pas s'y fier.
+    /// </summary>
+    public bool ForegroundIsApplication { get; private set; } = true;
+
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
     public string? CurrentProcessName => _snapshot?.ProcessName;
 
@@ -295,8 +305,10 @@ public sealed class ForegroundMonitor : IDisposable
             var oldSnapshot = _snapshot;
             CompatibilityMode oldMode = oldSnapshot?.Mode ?? CompatibilityMode.Default;
             _snapshot = new Snapshot(window, processName, fullPath, hkl, mode, resolved.Reason, identity, secureInput);
-            if (hasFg && !isTransientShell && pid != (uint)Environment.ProcessId)
+            bool isApplication = hasFg && !isTransientShell && pid != (uint)Environment.ProcessId;
+            if (isApplication)
                 _lastApplication = _snapshot;
+            ForegroundIsApplication = isApplication;
             IsTransientShellForeground = isTransientShell;
 
             // Le motif et hasFg sont journalisés avec le mode : sans eux, deux Recompute
