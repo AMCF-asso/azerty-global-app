@@ -13,6 +13,7 @@ namespace TypingEngine.Windows.Tests;
 /// poste utilisé : ils injectent des touches.
 /// </summary>
 [Trait("Categorie", "EntreeReelle")]
+[Collection(EntreeReelleCollection.Nom)]
 public sealed class Regles130EntreeReelleTests
 {
     private const int WH_KEYBOARD_LL = 13;
