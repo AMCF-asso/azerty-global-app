@@ -33,9 +33,10 @@ sealed class UsageStatsWindow : IDisposable
     // Section « Défi du jour » ajoutée en v1.2.0 : la fenêtre ne réserve sa hauteur
     // que lorsque la section se dessine (même prédicat que WM_PAINT, cf. plus bas).
     private const int CHALLENGE_SECTION_H = 130;
-    // 1.3.0 : Défi masqué (DailyChallenge.Enabled) ; les compteurs restent sur disque.
+    // 1.3.0 : Défi masqué par son interrupteur ou par la stratégie LessonsEnabled ; les
+    // compteurs restent sur disque.
     private static bool ChallengeSectionVisible
-        => DailyChallenge.Enabled
+        => PolicyManager.ChallengeEnabledNow
            && (ConfigManager.TrainingEnabled || UsageStats.ChallengesCompletedCount > 0);
     // S1-3 : deux lignes discrètes sous la phrase de confidentialité, réservées comme le Défi.
     private const int POLICY_HINT_H = 40;
@@ -209,8 +210,12 @@ sealed class UsageStatsWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : « Donner mon avis » aussi est masqué, par
+        // le même procédé que Discord ci-dessous — créé, jamais affiché.
+        uint feedbackStyle = Win32.WS_CHILD | Win32.SS_NOTIFY | Win32.WS_TABSTOP;
+        if (PolicyManager.OutboundLinksEnabledNow) feedbackStyle |= Win32.WS_VISIBLE;
         _hWndLinkFeedback = Win32.CreateWindowExW(0, "STATIC", L.Stats_LinkFeedback,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+            feedbackStyle,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_LINK_FEEDBACK, hInstance, IntPtr.Zero);
         _links.Attach(_hWndLinkFeedback, 1);
@@ -449,12 +454,12 @@ sealed class UsageStatsWindow : IDisposable
                             Close();
                             break;
                         case IDC_LINK_FEEDBACK:
-                            Win32.ShellExecuteW(IntPtr.Zero, "open",
+                            OutboundLinks.Open(
                                 ProductIdentity.DiagnosticUrl(ProductIdentity.FeedbackPath, Program.Version,
-                                    ProductIdentity.OsDescription(), "stats"), null, null, 1);
+                                    ProductIdentity.OsDescription(), "stats"));
                             break;
                         case IDC_LINK_DISCORD:
-                            Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1);
+                            OutboundLinks.Open(ProductIdentity.DiscordInviteUrl);
                             break;
                     }
                     return IntPtr.Zero;

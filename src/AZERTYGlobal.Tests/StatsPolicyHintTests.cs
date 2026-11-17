@@ -13,7 +13,7 @@ public class StatsPolicyHintTests
     [Theory]
     [InlineData(null, "Amcf", true)]
     [InlineData(null, "Store", false)]
-    [InlineData(null, "Unpackaged", false)]
+    [InlineData(null, "Unpackaged", true)]
     [InlineData(false, "Amcf", false)]
     [InlineData(false, "Store", false)]
     [InlineData(true, "Amcf", false)]

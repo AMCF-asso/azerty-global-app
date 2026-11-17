@@ -11,24 +11,26 @@
 // chaîne. C'est donc une comparaison de chaînes, sans marshalling de structure, donc sans
 // risque sous Native AOT.
 //
-// Le canal hors package garde le comportement d'aujourd'hui, à l'identique : la décision D8 du
-// 2026-08-19 remet son cas à plus tard. Il figure dans l'énumération pour que la bascule soit
-// une ligne le jour où elle est tranchée, pas pour être traité maintenant.
+// Le canal hors package est sobre depuis la 1.3.0 : tout ce qui n'est pas le Store l'est
+// (décision 5 d'Antoine du 2026-11-17, fin du report D8 du 2026-08-19). Ce qui le distingue
+// encore d'Amcf tient au packaging, jamais au comportement : raccourci .lnk au lieu de la tâche
+// de démarrage MSIX, pas de toast COM.
 
 namespace AZERTYGlobal;
 
 /// <summary>Canal par lequel cette instance a été installée.</summary>
 internal enum DistributionChannel
 {
-    /// <summary>Microsoft Store. Seul canal qui sollicite un avis et propose ses liens
-    /// externes.</summary>
+    /// <summary>Microsoft Store. Seul canal qui sollicite un avis et propose ses liens de
+    /// soutien par défaut.</summary>
     Store,
 
     /// <summary>Bundle MSIX signé par l'association, distribué hors Store. Comportement
     /// sobre.</summary>
     Amcf,
 
-    /// <summary>Exécutable hors package. Comportement inchangé, décision D8.</summary>
+    /// <summary>Exécutable hors package. Comportement sobre depuis la 1.3.0 (décision 5 du
+    /// 2026-11-17).</summary>
     Unpackaged,
 }
 
@@ -84,17 +86,17 @@ static class AppChannel
     }
 
     /// <summary>
-    /// Le canal AMCF est le seul canal sobre : ni sollicitation d'avis, ni « Soutenir le
-    /// projet », ni Discord (décision D3 du 2026-08-19). Trois fenêtres en dépendent, d'où
-    /// un prédicat ici plutôt qu'une comparaison recopiée.
+    /// Tout canal autre que le Store est sobre : ni sollicitation d'avis, ni « Soutenir le
+    /// projet », ni Discord, statistiques locales éteintes par défaut (décision D3 du
+    /// 2026-08-19 pour Amcf, étendue au canal hors package par la décision 5 du 2026-11-17).
+    /// Trois fenêtres en dépendent, d'où un prédicat ici plutôt qu'une comparaison recopiée.
     ///
-    /// Le canal hors package garde le comportement d'aujourd'hui à l'identique (D8). Écrire
-    /// « ≠ Store » à la place éteindrait ses liens externes et trancherait D8 au passage, ce
-    /// que le plan v1.2.0 remet explicitement à plus tard — le lot B du plan emploie
-    /// pourtant cette formulation.
+    /// Écrit « ≠ Store » et non comme une liste : un canal ajouté un jour naît sobre, la
+    /// direction d'échec voulue par <see cref="Classify"/>. Ce ne sont que des défauts : une
+    /// stratégie de groupe les inverse sur tous les canaux.
     /// </summary>
     internal static bool IsSober(DistributionChannel channel) =>
-        channel == DistributionChannel.Amcf;
+        channel != DistributionChannel.Store;
 
     /// <summary>
     /// Hook de test : force le canal jusqu'au <c>Dispose</c>, qui restaure la valeur

@@ -87,7 +87,7 @@ static class StoreReview
         {
             if (status != Windows.Foundation.AsyncStatus.Completed)
             {
-                Win32.ShellExecuteW(IntPtr.Zero, "open", fallbackUrl, null, null, 1);
+                OutboundLinks.Open(fallbackUrl);
                 return;
             }
 
@@ -96,7 +96,7 @@ static class StoreReview
             {
                 ConfigManager.Log("StoreReview.OnCompleted",
                     new InvalidOperationException($"status={result.Status}"));
-                Win32.ShellExecuteW(IntPtr.Zero, "open", fallbackUrl, null, null, 1);
+                OutboundLinks.Open(fallbackUrl);
             }
         }
         catch (Exception ex)

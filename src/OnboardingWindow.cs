@@ -456,12 +456,17 @@ sealed class OnboardingWindow : IDisposable
         // possibles a l'etape 1 (jamais essaye / essaye non complete / complete).
         MoveCtl(_hWndBtnPrev, margin, bottomY, S(BASE_BTN_W_PREV), S(BASE_BTN_H));
 
-        // Étape 3 — liens dans une grille fixe
-        MoveCtl(_hWndLinkLessons, linksX, linkStartY, linksWidth, linkControlHeight);
-        MoveCtl(_hWndLinkGuide, linksX, linkStartY + linkRowH, linksWidth, linkControlHeight);
-        MoveCtl(_hWndLinkAfrica, linksX, linkStartY + linkRowH * 2, linksWidth, linkControlHeight);
-        MoveCtl(_hWndLinkFeedback, linksX, linkStartY + linkRowH * 3, linksWidth, linkControlHeight);
-        MoveCtl(_hWndLinkDiscord, linksX, linkStartY + linkRowH * 4, linksWidth, linkControlHeight);
+        // Étape 3 — liens, une ligne par entrée visible (ResourceLinkEntries) : une stratégie
+        // qui en retire ne laisse aucun trou dans la grille.
+        int[] linkEntries = ResourceLinkEntriesNow;
+        foreach (var (id, hWndLink) in new[] {
+            (IDC_LINK_LESSONS, _hWndLinkLessons), (IDC_LINK_GUIDE, _hWndLinkGuide),
+            (IDC_LINK_AFRICA, _hWndLinkAfrica), (IDC_LINK_FEEDBACK, _hWndLinkFeedback),
+            (IDC_LINK_DISCORD, _hWndLinkDiscord) })
+        {
+            int row = Math.Max(0, Array.IndexOf(linkEntries, id));
+            MoveCtl(hWndLink, linksX, linkStartY + linkRowH * row, linksWidth, linkControlHeight);
+        }
 
         // Préférences
         // Les cases se posent Px(4) à gauche du texte des liens : le carré peint s'y décale d'autant,
@@ -648,6 +653,9 @@ sealed class OnboardingWindow : IDisposable
     /// avant cela, elles restent en attente, rien n'étant écrit sans l'accord d'activation.</summary>
     private void ToggleCheckBox(IntPtr checkBox)
     {
+        // Stratégie AutoStartEnabled : l'application applique la valeur imposée au démarrage
+        // (TrayApplication.ApplyAutoStartPolicy) ; la case montre l'état réel et ne bascule pas.
+        if (checkBox == _hWndChkAutoStart && AutoStartManaged) return;
         bool on = !IsChecked(checkBox);
         SetChecked(checkBox, on, announce: true);
         if (checkBox == _hWndChkTraining)
@@ -724,19 +732,19 @@ sealed class OnboardingWindow : IDisposable
         // Même règle pour les liens et les cases de la dernière étape, qu'un retour en arrière masque.
         if (step3Vis == 0 && IsLastStepControl(Win32.GetFocus()))
             Win32.SetFocus(_hWndBtnNext);
-        Win32.ShowWindow(_hWndLinkLessons, step3Vis);
-        Win32.ShowWindow(_hWndLinkGuide, step3Vis);
-        Win32.ShowWindow(_hWndLinkAfrica, step3Vis);
-        Win32.ShowWindow(_hWndLinkFeedback, step3Vis);
-        // Canal sobre : aucune invitation Discord, décision D3 du 2026-08-19. C'est la
-        // dernière ligne de la grille de liens de la dernière étape : rien ne remonte, aucune place
-        // ne reste vide. Depuis le lot C, une politique d'entreprise peut l'éteindre aussi
-        // sur les autres canaux.
-        Win32.ShowWindow(_hWndLinkDiscord, PolicyManager.ExternalLinksEnabledNow ? step3Vis : 0);
+        // Une ligne par entrée de ResourceLinkEntries : le canal sobre retire Discord (D3), les
+        // stratégies OutboundLinksEnabled et LessonsEnabled à 0 retirent leurs liens (1.3.0).
+        int[] shownLinks = ResourceLinkEntriesNow;
+        Win32.ShowWindow(_hWndLinkLessons, shownLinks.Contains(IDC_LINK_LESSONS) ? step3Vis : 0);
+        Win32.ShowWindow(_hWndLinkGuide, shownLinks.Contains(IDC_LINK_GUIDE) ? step3Vis : 0);
+        Win32.ShowWindow(_hWndLinkAfrica, shownLinks.Contains(IDC_LINK_AFRICA) ? step3Vis : 0);
+        Win32.ShowWindow(_hWndLinkFeedback, shownLinks.Contains(IDC_LINK_FEEDBACK) ? step3Vis : 0);
+        Win32.ShowWindow(_hWndLinkDiscord, shownLinks.Contains(IDC_LINK_DISCORD) ? step3Vis : 0);
         Win32.ShowWindow(_hWndChkAutoStart, step3Vis);
         Win32.ShowWindow(_hWndChkDontShow, step3Vis);
-        // Opt-in des rappels du Défi : masqué avec le Défi en 1.3.0 (DailyChallenge.Enabled).
-        Win32.ShowWindow(_hWndChkTraining, DailyChallenge.Enabled ? step3Vis : 0);
+        // Opt-in des rappels du Défi : masqué avec le Défi, par son interrupteur ou par la
+        // stratégie LessonsEnabled (PolicyManager.ChallengeEnabled).
+        Win32.ShowWindow(_hWndChkTraining, PolicyManager.ChallengeEnabledNow ? step3Vis : 0);
         if (step3Vis == 1)
         {
             // Resynchronisation à chaque affichage de l'étape 3 : l'utilisateur a pu
@@ -862,7 +870,7 @@ sealed class OnboardingWindow : IDisposable
                     L.Onboarding_Card4Title + ". " + SearchShortcut() + L.Onboarding_Card4Suffix);
             default:
                 return string.Join(" ", new[] { label, L.Onboarding_SectionResources + ".", L.Settings_SectionPreferences + ".",
-                    DailyChallenge.Enabled ? L.Onboarding_ChkTrainingDesc : "" }.Where(part => part.Length > 0));
+                    PolicyManager.ChallengeEnabledNow ? L.Onboarding_ChkTrainingDesc : "" }.Where(part => part.Length > 0));
         }
     }
 
@@ -954,7 +962,8 @@ sealed class OnboardingWindow : IDisposable
         // faisaient de toute fermeture un opt-out permanent). Un refus déjà enregistré s'affiche
         // coché (C7.2) : sinon « C'est parti ! » le réécrivait à « afficher » sans que la case le dise.
         // Le réglage de l'utilisateur seul, pas la politique : c'est lui que la case écrit.
-        _autoStartShownChecked = AutoStart.DefaultOnboardingCheck();
+        // Sous stratégie, la case montre l'état réel, déjà appliqué au démarrage.
+        _autoStartShownChecked = AutoStartManaged ? AutoStartIsRegistered() : AutoStart.DefaultOnboardingCheck();
         SetChecked(_hWndChkAutoStart, _autoStartShownChecked);
         _dontShowShownChecked = !ConfigManager.ShowOnboardingUserSetting;
         SetChecked(_hWndChkDontShow, _dontShowShownChecked);
@@ -1064,7 +1073,8 @@ sealed class OnboardingWindow : IDisposable
                 ConfigManager.SetShowOnboardingAtStartup(!dontShow);
 
             bool autoStart = _autoStartChecked;
-            if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, autoStart, _autoStartShownChecked))
+            if (!AutoStartManaged &&
+                ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, autoStart, _autoStartShownChecked))
             {
                 // Ce bloc n'est atteint que si _step3Reached : la case a donc été vue, et la
                 // modifier est un choix, qui éteint la relance dans un sens comme dans
@@ -1186,7 +1196,7 @@ sealed class OnboardingWindow : IDisposable
                     case IDC_LINK_DISCORD:
                         if (code == 0) OpenLink(ProductIdentity.DiscordInviteUrl); break;
                     case IDC_LINK_LESSONS:
-                        if (code == 0) OpenLessonsRequested?.Invoke(); break;
+                        if (code == 0 && PolicyManager.LessonsEnabledNow) OpenLessonsRequested?.Invoke(); break;
                     case IDC_BTN_FLAG:
                         if (code == 0) ApplyLanguageChange(L.IsEnglish ? "fr" : "en"); break;
                     case IDC_CHK_AUTOSTART:
@@ -1295,6 +1305,9 @@ sealed class OnboardingWindow : IDisposable
     }
 
     private void RefreshAutoStartCheckbox() => SetChecked(_hWndChkAutoStart, AutoStartIsRegistered());
+
+    /// <summary>Le lancement au démarrage est-il tenu par la stratégie AutoStartEnabled ?</summary>
+    private static bool AutoStartManaged => PolicyManager.IsManaged(PolicyManager.Current.AutoStart);
 
     /// <summary>
     /// A14 : relit le contraste élevé et les couleurs système. Quand la palette change, les pinceaux
@@ -1494,7 +1507,7 @@ sealed class OnboardingWindow : IDisposable
 
     private void OpenLink(string url)
     {
-        Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
+        if (!OutboundLinks.Open(url)) return;
         Win32.SetWindowPos(_hWnd, Win32.HWND_NOTOPMOST, 0, 0, 0, 0,
             Win32.SWP_NOSIZE | Win32.SWP_NOMOVE | Win32.SWP_SHOWWINDOW);
     }
@@ -1766,9 +1779,32 @@ sealed class OnboardingWindow : IDisposable
     /// <summary>Retrait du libellé d'une case, depuis le bord gauche des liens : le carré et son espace.</summary>
     private int CheckLabelIndent => Px(CHECK_BOX + CHECK_GAP);
 
-    /// <summary>Lignes de la grille de liens de la dernière étape : l'invitation Discord est la cinquième, et le
-    /// canal sobre ou une politique l'éteint (audit 09/11, W24 : le cadre gardait sa place, vide).</summary>
-    internal static int ResourceLinkRows => PolicyManager.ExternalLinksEnabledNow ? 5 : 4;
+    /// <summary>
+    /// Liens de la dernière étape, dans l'ordre d'affichage : Leçons, guide, Afrique, avis,
+    /// Discord. Le canal sobre ou <c>ExternalLinksEnabled</c> retire Discord (audit 09/11, W24 :
+    /// le cadre gardait sa place, vide) ; <c>OutboundLinksEnabled</c> à 0 retire tout ce qui
+    /// ouvre le navigateur ; <c>LessonsEnabled</c> à 0 retire Leçons (stratégies 1.3.0). Liste
+    /// pure, pour la même raison que <see cref="TrayApplication.FeedbackMenuEntries"/>.
+    /// </summary>
+    internal static int[] ResourceLinkEntries(bool lessons, bool outboundLinks, bool externalLinks)
+    {
+        var entries = new List<int>(5);
+        if (lessons) entries.Add(IDC_LINK_LESSONS);
+        if (outboundLinks)
+        {
+            entries.Add(IDC_LINK_GUIDE);
+            entries.Add(IDC_LINK_AFRICA);
+            entries.Add(IDC_LINK_FEEDBACK);
+            if (externalLinks) entries.Add(IDC_LINK_DISCORD);
+        }
+        return entries.ToArray();
+    }
+
+    internal static int[] ResourceLinkEntriesNow => ResourceLinkEntries(PolicyManager.LessonsEnabledNow,
+        PolicyManager.OutboundLinksEnabledNow, PolicyManager.ExternalLinksEnabledNow);
+
+    /// <summary>Lignes de la grille de liens de la dernière étape.</summary>
+    internal static int ResourceLinkRows => ResourceLinkEntriesNow.Length;
 
     private void GetStep3Layout(int topY, int winW,
         out Win32.RECT resourcesPanel, out Win32.RECT prefsPanel, out Win32.RECT prefsTitle,
@@ -1790,7 +1826,9 @@ sealed class OnboardingWindow : IDisposable
         {
             linkControlHeight = Math.Max(S(28), MeasureSingleLineHeight(hdc, _hFontLinkStrong) + S(6));
             linkRowH = linkControlHeight + S(2);
-            int resourcesHeight = resourcePaddingTop + linkRowH * ResourceLinkRows + resourcePaddingBottom;
+            // Aucune ligne (les deux stratégies à 0) : pas de cadre vide, les préférences remontent.
+            int resourcesHeight = ResourceLinkRows == 0 ? 0
+                : resourcePaddingTop + linkRowH * ResourceLinkRows + resourcePaddingBottom;
             int panelTop = StepTitleRect(winW, topY).bottom + Px(12);
 
             resourcesPanel = new Win32.RECT
@@ -1824,7 +1862,7 @@ sealed class OnboardingWindow : IDisposable
             checkboxTrainingY = checkboxY + checkboxSpacing * 2;
             trainingDescY = checkboxTrainingY + checkboxHeight + S(2);
             int prefsHeight;
-            if (DailyChallenge.Enabled)
+            if (PolicyManager.ChallengeEnabledNow)
             {
                 trainingDescHeight = Paragraph(hdc, new[] { new TextRun(L.Onboarding_ChkTrainingDesc) }, FontCaption, FontCaption,
                     0, 0, checkboxWidth - CheckLabelIndent, CLR_REASSURE, CLR_REASSURE, draw: false);
@@ -2201,13 +2239,13 @@ sealed class OnboardingWindow : IDisposable
         DrawStepTitle(hdc, cw, y, L.Onboarding_SectionResources);
         PaperText.DrawLine(hdc, L.Settings_SectionPreferences, FontSection, prefsTitle, CLR_TITLE);
 
-        DrawPaperPanel(hdc, resourcesPanel);
+        if (ResourceLinkRows > 0) DrawPaperPanel(hdc, resourcesPanel);
         DrawPaperPanel(hdc, prefsPanel);
 
         // Texte descriptif sous la case « Défi du jour » (3e case du panneau Préférences) —
         // simple texte dessiné (comme la mention vie privée de l'étape 1), pas de contrôle
         // STATIC dédié : pas besoin d'interaction, juste une précision sous le libellé de la case.
-        if (!DailyChallenge.Enabled) return; // 1.3.0 : Défi masqué, ni case ni texte
+        if (!PolicyManager.ChallengeEnabledNow) return; // Défi masqué : ni case ni texte
         Paragraph(hdc, new[] { new TextRun(L.Onboarding_ChkTrainingDesc) }, FontCaption, FontCaption,
             checkboxX + CheckLabelIndent, trainingDescY, checkboxWidth - CheckLabelIndent, CLR_REASSURE, CLR_REASSURE, draw: true);
     }

@@ -365,7 +365,7 @@ internal sealed partial class LessonsWindow : IDisposable, ILessonsAutomationHos
     /// premier plan du poste).</summary>
     internal bool OpenChallenge()
     {
-        if (!DailyChallenge.Enabled) return false; // 1.3.0 : Défi masqué
+        if (!PolicyManager.ChallengeEnabledNow) return false; // Défi masqué : interrupteur ou stratégie
         _challenge.Request(); // offert même sans opt-in, reconstruit à la date et à l'étape du moment (A23)
         RefreshChallengeModuleIfStale();
         for (int m = 0; m < _catalog.Modules.Count; m++)

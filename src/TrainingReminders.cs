@@ -112,7 +112,7 @@ static class TrainingReminders
             CurrentStreak: UsageStats.CurrentStreak,
             HelperOpens: UsageStats.SearchOpenCount + UsageStats.VirtualKeyboardOpenCount,
             ReviewPromptLastShown: ReviewState.Load().LastShown,
-            ChallengeAvailable: DailyChallenge.Enabled);
+            ChallengeAvailable: PolicyManager.ChallengeEnabledNow);
     }
 
     /// <summary>
