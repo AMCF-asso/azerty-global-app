@@ -853,11 +853,11 @@ public sealed class KeyMapper
 
             // Obtenir le caractère de base (sans modificateurs) pour trouver le VK
             var baseChar = ctrlKeyDef.Base;
-            if (baseChar == null || baseChar.Length == 0 || baseChar.StartsWith("dk_"))
+            if (baseChar == null || baseChar.Length == 0 || baseChar.StartsWith("dk_", StringComparison.Ordinal))
                 return false;
 
             // Lettre A-Z → VK 0x41-0x5A
-            char c = char.ToUpper(baseChar[0]);
+            char c = char.ToUpperInvariant(baseChar[0]);
             if (c >= 'A' && c <= 'Z')
             {
                 // Si la touche physique produit déjà ce VK sur le layout natif,
@@ -879,7 +879,7 @@ public sealed class KeyMapper
 
             // En AZERTY, les chiffres sont souvent en couche Shift — vérifier aussi
             var shiftChar = ctrlKeyDef.Shift;
-            if (shiftChar != null && shiftChar.Length > 0 && !shiftChar.StartsWith("dk_"))
+            if (shiftChar != null && shiftChar.Length > 0 && !shiftChar.StartsWith("dk_", StringComparison.Ordinal))
             {
                 char sc = shiftChar[0];
                 if (sc >= '0' && sc <= '9')

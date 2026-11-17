@@ -11,6 +11,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Conversions sans culture en erreur (audit des formats régionaux, T3). -->
+    <GlobalAnalyzerConfigFiles Include="..\Globalisation.globalconfig" />
     <ProjectReference Include="..\TypingEngine.Core\TypingEngine.Core.csproj" />
   </ItemGroup>
 </Project>

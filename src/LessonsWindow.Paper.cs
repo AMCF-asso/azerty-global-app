@@ -891,7 +891,7 @@ internal sealed partial class LessonsWindow
         DrawPaperMetric(hdc, x + (metricW + gap), metricTop, metricW, L.LessonsWin_MetricAccuracy,
             FormatNullable(stats.AccuracyPercent, " %"), GetAccuracyColor(stats.AccuracyPercent));
         DrawPaperMetric(hdc, x + (metricW + gap) * 2, metricTop, metricW, L.LessonsWin_MetricErrors,
-            stats.ErrorCount.ToString(), GetErrorColor(stats.ErrorCount));
+            stats.ErrorCount.ToString(System.Globalization.CultureInfo.InvariantCulture), GetErrorColor(stats.ErrorCount));
         if (_summaryBestWpm.HasValue)
             DrawPaperMetric(hdc, x + (metricW + gap) * 3, metricTop, metricW, L.LessonsWin_MetricBest,
                 FormatWpm(_summaryBestWpm), _summaryIsNewBest ? CLR_ACCENT : CLR_TEXT);
@@ -933,7 +933,7 @@ internal sealed partial class LessonsWindow
         static string Sentence(string label, string value) => L.LessonsAutomation_Metric(label, value) + ".";
         parts.Add(Sentence(L.LessonsWin_MetricSpeed, FormatWpm(stats.Wpm)));
         parts.Add(Sentence(L.LessonsWin_MetricAccuracy, FormatNullable(stats.AccuracyPercent, " %")));
-        parts.Add(Sentence(L.LessonsWin_MetricErrors, stats.ErrorCount.ToString()));
+        parts.Add(Sentence(L.LessonsWin_MetricErrors, stats.ErrorCount.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         if (_summaryBestWpm.HasValue)
             parts.Add(Sentence(L.LessonsWin_MetricBest, FormatWpm(_summaryBestWpm)));
         var hard = stats.GetHardestCharacters(3);

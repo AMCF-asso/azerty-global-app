@@ -60,6 +60,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Conversions et comparaisons sans culture en erreur (audit des formats régionaux, T3). -->
+    <GlobalAnalyzerConfigFiles Include="Globalisation.globalconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Exclure les doublons Proton Drive (fichiers "Name clash") -->
     <Compile Remove="**/*(# Name clash *).cs" />
     <Compile Remove="**/*(# Edit conflict *).cs" />

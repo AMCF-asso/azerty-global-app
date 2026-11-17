@@ -57,7 +57,7 @@ internal sealed class LessonModule
 internal static class LessonNames
 {
     public static bool SameTitle(string module, string lesson) =>
-        string.Equals(module?.Trim(), lesson?.Trim(), StringComparison.CurrentCultureIgnoreCase);
+        string.Equals(module?.Trim(), lesson?.Trim(), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>« Module séparateur Leçon », ou le seul titre quand les deux sont identiques.</summary>
     public static string Join(string module, string lesson, string separator) =>
