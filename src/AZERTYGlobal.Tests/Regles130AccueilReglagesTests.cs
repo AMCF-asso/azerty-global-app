@@ -319,9 +319,9 @@ public sealed class Regles130AccueilReglagesParametresTests
         finally { BancCapture.Teardown(w); }
     }
 
-    // M8.1 I5 : un handle GDI n'est supprimé qu'une fois. Dispose supprime _hSurfaceBrush sans remettre
-    // le champ à zéro : un second Dispose le supprimerait de nouveau (doc : non garanti, jugé non
-    // atteignable via I4). GetObjectType ne voit pas la destruction d'un pinceau plein (cache gdi32,
+    // M8.1 I5 : un handle GDI n'est supprimé qu'une fois. Tenu depuis 1.3.0 : Dispose remet
+    // _hSurfaceBrush à zéro après DeleteObject. Rouge avant le correctif : un second Dispose le
+    // supprimait de nouveau (cas jugé non atteignable via I4). GetObjectType ne voit pas la destruction d'un pinceau plein (cache gdi32,
     // NativeWindowTests.cs:137) : la preuve est l'état du champ après le premier Dispose.
     [Fact]
     public void M8_1_I5_DoubleDispose_LePinceauNEstSupprimeQuUneFois()

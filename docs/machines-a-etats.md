@@ -3290,7 +3290,7 @@ Lecture seule. Chemins relatifs au dépôt, sous `src/`. Les numéros de ligne s
 - I2 : deux raccourcis distincts. Garanti par `ApplyCapturedShortcut` (collision `vk == otherVk`, refus, l. 2341-2394).
 - I3 : aucune écriture de configuration pendant la pause pour une case affichée comme cochée. Garanti par construction : la pause du `SettingsWindow` n'est jamais armée en production (aucun appelant).
 - I4 : `Dispose` unique. Garanti par `TrayApplication.Cleanup` (l. 2333) et le champ remis à null (l. 2348).
-- I5 : un handle GDI n'est supprimé qu'une fois. `Dispose` fait `DeleteObject(_hSurfaceBrush)` sans remise à zéro (l. 2531) : non garanti en cas de double `Dispose`, mais non atteignable (I4).
+- I5 : un handle GDI n'est supprimé qu'une fois. Garanti depuis 1.3.0 (17 novembre 2026) : `Dispose` supprime `_hSurfaceBrush` s'il est non nul puis remet le champ à zéro ; un second `Dispose` ne le supprime pas de nouveau (cas déjà non atteignable par I4). Test : `Regles130AccueilReglagesTests.M8_1_I5_DoubleDispose_LePinceauNEstSupprimeQuUneFois`.
 
 #### Table de transition
 

@@ -2538,7 +2538,13 @@ sealed partial class SettingsWindow : IDisposable
             _hWnd = IntPtr.Zero;
         }
 
-        Win32.DeleteObject(_hSurfaceBrush);
+        // M8.1 I5 (1.3.0) : un handle GDI n'est supprimé qu'une fois. Le champ revient à zéro,
+        // donc un second Dispose ne supprime pas un handle que Windows a pu redonner ailleurs.
+        if (_hSurfaceBrush != IntPtr.Zero)
+        {
+            Win32.DeleteObject(_hSurfaceBrush);
+            _hSurfaceBrush = IntPtr.Zero;
+        }
 
         if (_gdipToken != IntPtr.Zero)
         {
