@@ -207,11 +207,12 @@ public sealed class Regles130MoteurTests
     }
 
     /// <summary>
-    /// M1.5-I4 : l'état de la suspension est lu de manière cohérente pendant un seul appel. NON
-    /// GARANTI selon le document (IsEmissionSuspended relit GetForegroundWindow à chaque appel) : ce
-    /// test énonce la propriété, il est rouge tant que le produit ne la tient pas. Un seul appel de
-    /// ProcessKey, le premier plan change après la k-ième lecture : la touche doit alors soit être
-    /// absorbée ET émise, soit laissée passer ET non émise, jamais perdue ni doublée.
+    /// M1.5-I4 : l'état de la suspension est lu de manière cohérente pendant un seul appel. Tenu
+    /// depuis 1.3.0 : ProcessKey prend un instantané du premier plan à l'entrée et toutes les gardes
+    /// de l'appel le lisent. Un seul appel de ProcessKey, le premier plan change après la k-ième
+    /// lecture : la touche doit alors soit être absorbée ET émise, soit laissée passer ET non émise,
+    /// jamais perdue ni doublée. Ajusté : témoin couplé à l'ancienne implémentation (il exigeait
+    /// au moins 3 lectures par appel ; le correctif en fait une seule, c'est la garantie elle-même).
     /// </summary>
     [Fact]
     public void M1_5_I4_UnSeulAppel_LitLaSuspensionDeManiereCoherente()
@@ -220,19 +221,20 @@ public sealed class Regles130MoteurTests
         var stable = FrappeAvecBasculeApres(-1);
         Assert.True(stable.Absorbee);
         Assert.True(stable.Lots >= 1, "montage : aucune émission en régime stable");
-        Assert.True(stable.Lectures >= 3, $"montage : lectures du premier plan par appel = {stable.Lectures}");
+        Assert.True(stable.Lectures >= 1, "montage : le premier plan n'est jamais lu");
 
         // Témoin 2 : premier plan déjà périmé, la touche passe sans rien émettre.
         var perime = FrappeAvecBasculeApres(0);
         Assert.False(perime.Absorbee);
         Assert.Equal(0, perime.Lots);
 
-        // Balayage : le changement tombe après chaque lecture possible de l'appel stable.
+        // Balayage : le changement tombe après la k-ième lecture, pour k jusqu'à 4 (les lectures
+        // que faisait l'ancienne implémentation ; le correctif n'en fait qu'une). L'appel doit
+        // rester cohérent quel que soit le moment du changement.
         var incoherents = new List<string>();
-        for (int k = 1; k < stable.Lectures; k++)
+        for (int k = 1; k <= Math.Max(4, stable.Lectures); k++)
         {
             var r = FrappeAvecBasculeApres(k);
-            Assert.Equal(0, r.Restantes);   // la file scriptée a été entièrement lue : le changement a eu lieu
             bool emise = r.Lots >= 1;
             if (r.Absorbee != emise)
                 incoherents.Add($"bascule après {k} lecture(s) : {(r.Absorbee ? "touche absorbée, rien émis (frappe perdue)" : "touche transmise ET caractère émis (doublon)")}");

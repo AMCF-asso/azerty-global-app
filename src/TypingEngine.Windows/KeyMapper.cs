@@ -606,7 +606,32 @@ public sealed class KeyMapper
             StateChanged?.Invoke();
     }
 
+    /// <summary>
+    /// M1.5 I4 (1.3.0) : l'état de suspension est lu une seule fois par frappe. Le contexte
+    /// d'émission (mode du premier plan et HKL) est pris à l'entrée et sert à toutes les
+    /// gardes et émissions de l'appel : un premier plan qui change au milieu ne peut plus
+    /// rendre la touche absorbée sans émission (frappe perdue) ni transmise après émission
+    /// (doublon). Le changement est vu à la frappe suivante. Un appel imbriqué (rappel de
+    /// l'hôte pendant la frappe) garde l'instantané de l'appel extérieur.
+    /// </summary>
     public bool ProcessKey(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
+    {
+        if (_keyEmitContext != null)
+            return ProcessKeyWithContext(vkCode, scanCode, flags, isKeyDown);
+        _keyEmitContext = LiveEmitContext();
+        try { return ProcessKeyWithContext(vkCode, scanCode, flags, isKeyDown); }
+        finally { _keyEmitContext = null; }
+    }
+
+    private (CompatibilityMode Mode, IntPtr Hkl)? _keyEmitContext;
+
+    private (CompatibilityMode Mode, IntPtr Hkl) LiveEmitContext() =>
+        _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
+
+    /// <summary>L'instantané de la frappe en cours, sinon une lecture fraîche (appel hors hook).</summary>
+    private (CompatibilityMode Mode, IntPtr Hkl) EmitContext() => _keyEmitContext ?? LiveEmitContext();
+
+    private bool ProcessKeyWithContext(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
     {
         var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
         if (_staleKeyDowns.Remove(key) && isKeyDown)
@@ -1006,10 +1031,11 @@ public sealed class KeyMapper
         {
             if (IsEmissionSuspended)
             {
-                // L'instantane de premier plan a change depuis l'entree de ProcessKey.
-                // Consommer ici detruirait la touche morte pour une emission qui n'aura
-                // pas lieu : le caractere disparaitrait entierement. Meme traitement que
-                // la garde d'entree, pour que les deux chemins suspendus se ressemblent.
+                // Filet : depuis M1.5 I4, l'instantane de la frappe ne change pas pendant
+                // l'appel ; seule une pause volontaire posee entre-temps (EmissionPaused)
+                // arrive ici. Consommer detruirait la touche morte pour une emission qui
+                // n'aura pas lieu : le caractere disparaitrait entierement. Meme traitement
+                // que la garde d'entree, pour que les deux chemins suspendus se ressemblent.
                 ArbitratePendingDeadKeyWhileSuspended();
                 TrackPassThroughKey(scanCode, flags, isKeyDown);
                 return false;
@@ -1098,7 +1124,7 @@ public sealed class KeyMapper
 
     private IntPtr GetTargetKeyboardLayout()
     {
-        var (_, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
+        var (_, hkl) = EmitContext();
         return hkl;
     }
 
@@ -1184,7 +1210,7 @@ public sealed class KeyMapper
         if (IsEmissionSuspended || !FlushInputRecovery()) return new(0, 0, Blocked: true);
         // Audit sécu 2026-05 SEV-A2-05 : lecture atomique single-shot du snapshot
         // ForegroundMonitor. Évite race mode/hkl discordants pendant alt-tab.
-        var (mode, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
+        var (mode, hkl) = EmitContext();
 
         var inputs = Interlocked.Exchange(ref _emitInputs, null) ?? new List<Win32.INPUT>(text.Length * 16);
         try
@@ -1278,7 +1304,7 @@ public sealed class KeyMapper
     /// morte en attente.
     /// </summary>
     private bool IsSuspendedByForeground =>
-        _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
+        EmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
 
     /// <summary>
     /// Arbitre le sort d'une touche morte en attente quand l'emission devient
@@ -1338,7 +1364,7 @@ public sealed class KeyMapper
     }
 
     private bool IsEmissionSuspended => EmissionPaused ||
-        _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
+        EmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
 
     private uint SendInputsWithRecovery(Win32.INPUT[] inputs)
     {

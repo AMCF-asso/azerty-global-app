@@ -502,7 +502,7 @@ C1.6 corrigé (ticket ME-05) : invariant I1 rétabli, test `MachinesEtatsLot1Te
 - I1 : rien n'est émis pendant une suspension. Garanti par `KeyMapper.cs:1018, 1070, 1216`.
 - I2 : une suspension est fail-closed pendant le laps entre changement de fenêtre et recalcul du snapshot. Garanti par `ForegroundMonitor.cs:115` (comparaison de fenêtre).
 - I3 : la suspension imposée détruit la touche morte, la pause volontaire la garde. Garanti par `KeyMapper.cs:1106-1110, 514, 858`.
-- I4 : l'état de la suspension est lu de manière cohérente pendant un seul appel. **Non garanti** : `IsEmissionSuspended` relit `GetForegroundWindow()` à chaque appel (`:1151-1152`).
+- I4 : l'état de la suspension est lu de manière cohérente pendant un seul appel. Garanti depuis 1.3.0 (17 novembre 2026) : `ProcessKey` prend un instantané du contexte d'émission (`LiveEmitContext`) à l'entrée ; `IsEmissionSuspended`, `IsSuspendedByForeground`, `GetTargetKeyboardLayout` et `TryEmitText` lisent cet instantané (`EmitContext()`), une seule lecture de `GetForegroundWindow()` par frappe. Test : `Regles130MoteurTests.M1_5_I4_UnSeulAppel_LitLaSuspensionDeManiereCoherente`.
 
 #### Table de transition
 
