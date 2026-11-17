@@ -237,9 +237,21 @@ public class GameRegistryTests
     [InlineData("wfica32.exe")]
     [InlineData("CDViewer.exe")]
     [InlineData("vmware-remotemks.exe")]
+    [InlineData("vmware-view.exe")]
+    [InlineData("WFICA32.EXE")]      // casse du nom indifférente
     public void IsRemoteAccessProcess_KnownClient_ReturnsTrue(string processName)
     {
         Assert.True(GameRegistry.IsRemoteAccessProcess(processName));
+    }
+
+    [Fact]
+    public void RemoteAccessHostProcesses_ExclutLesClientsDeBureauVirtuel()
+    {
+        // Citrix et Horizon sont des clients : côté hôte, leur entrée n'est pas traitée
+        // comme une injection de prise en main à distance.
+        foreach (var client in new[] { "wfica32.exe", "CDViewer.exe", "vmware-view.exe", "vmware-remotemks.exe" })
+            Assert.DoesNotContain(GameRegistry.RemoteAccessHostProcesses,
+                h => string.Equals(h, client, StringComparison.OrdinalIgnoreCase));
     }
 
     // Gestionnaires et services de VM : on y tape du texte ordinaire (noms, chemins), le

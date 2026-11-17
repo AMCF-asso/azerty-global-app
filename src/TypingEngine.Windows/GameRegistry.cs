@@ -52,6 +52,9 @@ public static class GameRegistry
         "wfica32.exe",             // Citrix Workspace, session ICA
         "CDViewer.exe",            // Citrix Desktop Viewer
         "vmware-remotemks.exe",    // VMware Horizon, affichage de la session
+        // Décision d'Antoine du 2026-11-12 (6988428) : client Horizon, nom tiré de la
+        // documentation de l'éditeur, non mesuré sur un poste réel.
+        "vmware-view.exe",         // VMware / Omnissa Horizon Client
     };
 
     /// <summary>
