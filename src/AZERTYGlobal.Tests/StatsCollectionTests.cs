@@ -74,7 +74,7 @@ public class StatsCollectionTests : IDisposable
         Assert.False(File.Exists(_statsPath));
         // Le fichier temporaire de l'écriture atomique non plus : une écriture avortée en
         // laisserait un, et le dossier ne doit rien porter du tout.
-        Assert.False(File.Exists(_statsPath + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(_statsPath)!, Path.GetFileName(_statsPath) + "*.tmp")); // T-01 : temporaire par PID depuis AG130-11 (b)
         Assert.Empty(Directory.GetFiles(_tempDir, "usage-stats*"));
     }
 

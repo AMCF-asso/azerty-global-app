@@ -87,6 +87,22 @@ static class UsageStats
     // fabriquer un silence de 3 600 000 ms. Non persiste.
     private static long _lastRemapTickCount;
 
+    /// <summary>Noms des champs que cette version lit et écrit.</summary>
+    private static readonly HashSet<string> KnownFields = new(StringComparer.Ordinal)
+    {
+        "firstRemapDate", "lastActiveDate", "activeDaysCount", "currentStreak", "bestStreak",
+        "totalActiveMinutes", "accentedUppercaseCount", "frenchTypographyCount",
+        "internationalCount", "symbolsCount", "searchOpenCount", "virtualKeyboardOpenCount",
+        "challengesCompletedCount", "lastSpecialCharDate",
+    };
+
+    /// <summary>
+    /// Champs inconnus du fichier relu (version plus récente, copie d'un autre poste), gardés
+    /// tels quels et réécrits après les champs connus (AF-03, audit des fichiers 1.3.0) :
+    /// avant, la liste fixe de <see cref="SnapshotLocked"/> les effaçait à la première écriture.
+    /// </summary>
+    private static List<KeyValuePair<string, JsonElement>>? _unknownFields;
+
     /// <summary>
     /// Hook de test : redirige usage-stats.json vers un fichier temporaire et réinitialise
     /// l'état en mémoire. À n'utiliser que dans le projet de tests via InternalsVisibleTo.
@@ -120,6 +136,7 @@ static class UsageStats
         _virtualKeyboardOpenCount = 0;
         _challengesCompletedCount = 0;
         _lastSpecialCharDate = null;
+        _unknownFields = null;
         _enrichedThresholdCrossed = false;
         _lastRemapTickCount = 0;
     }
@@ -573,7 +590,7 @@ static class UsageStats
             if (File.Exists(_statsPath))
             {
                 var json = File.ReadAllText(_statsPath);
-                using var doc = JsonDocument.Parse(json);
+                using var doc = FileQuarantine.ParseUserFile(json);
                 var root = doc.RootElement;
                 // Un JSON valide mais non-objet ("[]", "null"…) ferait jeter TryGetProperty
                 // (InvalidOperationException, hors filtre) : le convertir en corruption ordinaire.
@@ -593,7 +610,14 @@ static class UsageStats
                 _virtualKeyboardOpenCount = GetLongProp(root, "virtualKeyboardOpenCount");
                 _challengesCompletedCount = GetLongProp(root, "challengesCompletedCount");
                 _lastSpecialCharDate = GetStringProp(root, "lastSpecialCharDate");
+                foreach (var prop in root.EnumerateObject())
+                {
+                    if (KnownFields.Contains(prop.Name)) continue;
+                    _unknownFields ??= new List<KeyValuePair<string, JsonElement>>();
+                    _unknownFields.Add(new(prop.Name, prop.Value.Clone()));
+                }
             }
+            FileQuarantine.RemoveOrphanTemps(_statsPath); // AF-06
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException
                                    or (IOException and not FileNotFoundException and not DirectoryNotFoundException))
@@ -605,10 +629,22 @@ static class UsageStats
             _readFailed = true;
             ConfigManager.Log("UsageStats.EnsureLoaded", ex);
         }
-        catch (Exception ex) when (ex is IOException or JsonException or FormatException)
+        catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
         {
-            // Fichier absent ou corrompu : redémarrer avec des statistiques vides plutôt
-            // que de planter l'app (cf. Plan implémentation v1.1.md § 1d).
+            // Fichier corrompu : redémarrer avec des statistiques vides plutôt que de planter
+            // l'app (cf. Plan implémentation v1.1.md § 1d). AF-04 (audit des fichiers 1.3.0,
+            // décision d'Antoine du 16/11) : l'ancien contenu est d'abord mis de côté, comme
+            // config.json et la progression, au lieu d'être écrasé ; sans message, les
+            // statistiques n'étant pas des réglages. Renommage raté avec le fichier encore là :
+            // même règle qu'une lecture impossible, rien ne l'écrase.
+            ResetInMemoryState();
+            ConfigManager.Log("UsageStats.EnsureLoaded", ex);
+            if (FileQuarantine.TryMoveAside(_statsPath, "UsageStats.Quarantine") == null && File.Exists(_statsPath))
+                _readFailed = true;
+        }
+        catch (IOException ex)
+        {
+            // Fichier disparu entre File.Exists et la lecture : comme une installation neuve.
             ResetInMemoryState();
             ConfigManager.Log("UsageStats.EnsureLoaded", ex);
         }
@@ -723,6 +759,12 @@ static class UsageStats
             writer.WriteNumber("virtualKeyboardOpenCount", _virtualKeyboardOpenCount);
             writer.WriteNumber("challengesCompletedCount", _challengesCompletedCount);
             if (_lastSpecialCharDate != null) writer.WriteString("lastSpecialCharDate", _lastSpecialCharDate);
+            if (_unknownFields != null)
+                foreach (var (name, value) in _unknownFields)
+                {
+                    writer.WritePropertyName(name);
+                    value.WriteTo(writer);
+                }
             writer.WriteEndObject();
         }
         return stream.ToArray();
