@@ -2,7 +2,7 @@
 
 Base c16866b, branche claude/ag-tests-regles-130. Règle, test, verdict. Généré le 2026-11-17 à partir des rapports de lot.
 
-Lignes : 92 (ids distincts 92). Vertes 87, rouges 2, autres 3.
+Lignes : 92 (ids distincts 92). Vertes 88, rouges 1, autres 3.
 
 Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa dernière assertion, témoins avant. Les 3 tests `EntreeReelle` (fichier Regles130EntreeReelleTests.cs) sont écrits et compilés mais jamais joués : ils envoient de vraies frappes (SendInput) sur le bureau ; ils tournent par l'étape tests-entree-reelle de scripts/verify.ps1.
 
@@ -33,7 +33,7 @@ Rouges = règle que le produit ne tient pas (constat) ; chacun échoue sur sa de
 | M3.1-I1 | M3_1_I1_PauseImpliqueActif_SurToutesLesSequencesDeCommandes | vert | Regles130TrayTests.cs |
 | M3.1-I3 | M3_1_I3_ApplyHookState_SeulEcrivainDeLEtatDuHook | vert | Regles130TrayTests.cs |
 | M3.1-I4 | M3_1_I4_CommandeDuMenu_AppliqueeALEtatAffiche | vert (corrigé 1.3.0) | Regles130TrayTests.cs |
-| M3.1-I5 | M3_1_I5_RaccourciGlobal_NeFaitPasDeTravailLourdDansLeRappelDuHook | rouge | Regles130TrayTests.cs |
+| M3.1-I5 | M3_1_I5_RaccourciGlobal_NeFaitPasDeTravailLourdDansLeRappelDuHook | vert (corrigé 1.3.0) | Regles130TrayTests.cs |
 | M3.2-I1 | M3_2_I1_RepriseAnnonceeSeulementSiUneSuspensionLaRenduDue | vert | Regles130TrayTests.cs |
 | M3.3-I1 | M3_3_I1_BullesEtNudges_RespectentNotificationsEnabled | vert | Regles130TrayTests.cs |
 | M3.3-I2 | M3_3_I2_SollicitationAUsageUnique_MarqueeSeulementSiMontree | rouge | Regles130TrayTests.cs |

@@ -21,6 +21,7 @@ namespace AZERTYGlobal.Tests;
 internal static class OutilsTray130
 {
     internal const uint WmTrayIcon = 0x8001;          // TrayApplication.WM_TRAYICON (WM_APP + 1)
+    internal const uint WmAppToggle = 0x8005;         // TrayApplication.WM_APP_TOGGLE (WM_APP + 5)
     internal const uint NinBalloonTimeout = 0x0404;
     internal const uint NinBalloonUserClick = 0x0405;
     internal const int IdmToggle = 1001;
@@ -208,9 +209,10 @@ public sealed class Regles130TrayEtatTests
         Assert.Equal(0, ecriture.Matches(code[..debut] + code[fin..]).Count);
     }
 
-    // M3.1 I4 : le menu et la commande exécutée correspondent au même état. Non garanti (C3.2) : le
-    // menu affiche « Désactiver », le raccourci global désactive pendant qu'il est ouvert, puis le clic
-    // sur « Désactiver » exécute OnToggle sur l'état courant et réactive. ROUGE attendu aujourd'hui.
+    // M3.1 I4 : le menu et la commande exécutée correspondent au même état. Tenu depuis 1.3.0 (C3.2) :
+    // le menu retient l'état qu'il affiche ; « Désactiver » choisi alors que le raccourci global a
+    // désactivé pendant le menu ne réactive pas. Ajusté : témoin couplé à l'ancienne implémentation
+    // (depuis M3.1 I5, le raccourci poste WM_APP_TOGGLE ; la boucle de messages, simulée ici, l'exécute).
     [Fact]
     public void M3_1_I4_CommandeDuMenu_AppliqueeALEtatAffiche()
     {
@@ -220,7 +222,11 @@ public sealed class Regles130TrayEtatTests
         TrayShellPendantMenu? menu = null;
         var (tray, faux, wndProc) = OutilsTray130.Tray(f => menu = new TrayShellPendantMenu(f));
         OutilsTray130.ActiverAvecHook(tray, banc.Hook);
-        menu!.PendantMenu = () => BancCapture.Call(tray, "OnToggleShortcut");   // l'état change pendant le menu
+        menu!.PendantMenu = () =>                                  // l'état change pendant le menu
+        {
+            BancCapture.Call(tray, "OnToggleShortcut");            // le raccourci, dans le rappel du hook
+            wndProc(OutilsTray130.Fenetre, OutilsTray130.WmAppToggle, IntPtr.Zero, IntPtr.Zero);   // la boucle le traite
+        };
 
         BancCapture.Call(tray, "ShowContextMenu");                // le menu s'ouvre sur « Désactiver » (état actif)
         Assert.Equal(1, faux.Menus);                               // témoin : le menu a bien été montré
@@ -230,16 +236,17 @@ public sealed class Regles130TrayEtatTests
         Assert.False(OutilsTray130.Actif(tray), "C3.2 : « Désactiver » choisi dans un menu affiché actif a réactivé le programme");
     }
 
-    // M3.1 I5 : le raccourci global ne fait pas de travail lourd dans le rappel du hook. Non garanti
-    // (C3.4) : OnToggleShortcut, câblé sur KeyMapper.ToggleRequested, exécute OnToggle dans le rappel
-    // (Shell_NotifyIcon, GDI+). ROUGE attendu aujourd'hui : la dernière assertion exige zéro appel shell.
+    // M3.1 I5 : le raccourci global ne fait pas de travail lourd dans le rappel du hook. Tenu depuis
+    // 1.3.0 (C3.4) : OnToggleShortcut, câblé sur KeyMapper.ToggleRequested, ne fait que poster
+    // WM_APP_TOGGLE ; la bascule (Shell_NotifyIcon, GDI+) tourne dans la boucle de messages. Le test
+    // exige zéro appel shell dans le rappel, puis une bascule, une seule, quand le message est traité.
     [Fact]
     public void M3_1_I5_RaccourciGlobal_NeFaitPasDeTravailLourdDansLeRappelDuHook()
     {
         using var iso = new BancCapture.Isolation();
         using var banc = new BancFrappe(asyncLogique: false);
         ConfigManager.SetNotifications(false);   // pas de fenêtre de bascule : on observe le shell seul
-        var (tray, faux, _) = OutilsTray130.Tray();
+        var (tray, faux, wndProc) = OutilsTray130.Tray();
         OutilsTray130.ActiverAvecHook(tray, banc.Hook);
         // Le câblage du constructeur (TrayApplication.cs : _mapper.ToggleRequested += OnToggleShortcut).
         banc.Mapper.ToggleRequested += (Action)Delegate.CreateDelegate(typeof(Action), tray,
@@ -256,6 +263,13 @@ public sealed class Regles130TrayEtatTests
         Assert.Equal(1, rappels);                                  // témoin : le raccourci est arrivé jusqu'au tray
         Assert.True(faux.Icone.Count == 0,
             $"C3.4 : le rappel du hook a appelé Shell_NotifyIcon {faux.Icone.Count} fois (travail lourd dans le hook)");
+
+        // Preuve que le travail n'est pas perdu : un seul message posté, et son traitement bascule une fois.
+        Assert.Equal(1, faux.Postes.Count(m => m == OutilsTray130.WmAppToggle));
+        Assert.True(OutilsTray130.Actif(tray));                    // rien n'a basculé avant la boucle
+        wndProc(OutilsTray130.Fenetre, OutilsTray130.WmAppToggle, IntPtr.Zero, IntPtr.Zero);
+        Assert.False(OutilsTray130.Actif(tray));                   // désactivé, une fois
+        Assert.True(faux.Icone.Count > 0);                         // l'icône est mise à jour, hors du rappel
     }
 
     private static object EtatAnnonce(TrayApplication tray) => BancCapture.Field<object>(tray, "_announcementState");

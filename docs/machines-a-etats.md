@@ -150,7 +150,7 @@ Trente-neuf constats ont été relevés sur `250c4ef` : 15 confirmés, 4 atteint
 | C3.1 | M3.7 | Un double clic sur l'icône réarme la minuterie de simple clic après son `KillTimer` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.2 | M3.1 | Commandes de menu appliquées à l'état courant et non à l'état affiché | confirmé (couture `ITrayShell`), puis corrigé, 17 novembre 2026 : état affiché retenu (`MenuShownState`) | faible | ME-13 | `Regles130TrayEtatTests.M3_1_I4_*` (rouge avant le correctif) |
 | C3.3 | M3.5 | `_layoutPopupOpen` posé avant la construction de la fenêtre, sans `try/finally` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
-| C3.4 | M3.1 | Le raccourci global exécute tout `OnToggle`/`StopPause` dans le rappel du hook clavier | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
+| C3.4 | M3.1 | Le raccourci global exécute tout `OnToggle`/`StopPause` dans le rappel du hook clavier | confirmé (couture `ITrayShell`), puis corrigé, 17 novembre 2026 : bascule postée (`WM_APP_TOGGLE`) | faible | ME-13 | `Regles130TrayEtatTests.M3_1_I5_*` (rouge avant le correctif) |
 | C3.5 | M3.3 | Bulles à usage unique marquées faites avant l'affichage, dans la foulée du `NIM_ADD` | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
 | C3.6 | M3.6 | `NIM_ADD` sans contrôle de retour ni réessai, y compris sur `TaskbarCreated` | confirmé (couture `ITrayShell`), puis corrigé, 16 novembre 2026 : réessai borné | faible | ME-13 | `CoutureTrayTests.C3_6_*` (4 tests : réessai, borne, doublon, nettoyage) |
 | C3.7 | M3.5 | Fenêtre de conflit de disposition sans garde sur l'état de l'application | plausible (couture à ajouter) | faible | ME-13 | lecture du code |
@@ -1181,7 +1181,7 @@ Ces prédicats ne forment pas une partition : « Désactivé » exclut la pau
 - I2 `IsPaused => minuterie 9030 active` : garanti, posée dans `StartPauseUntil`, tuée dans `StopPause`, `OnToggle` et `Cleanup` (2068-2144, 2331-2373).
 - I3 Une seule écriture de l'état du hook : garanti par `ApplyHookState` (585-610), seul écrivain de `PassThroughAll`, `ShortcutsWhilePassThrough`, `Enabled` et `EmissionPaused` (grep confirmé).
 - I4 Le menu et la commande exécutée correspondent au même état : garanti depuis 1.3.0 (17 novembre 2026, C3.2 corrigé). `ShowContextMenu` retient l'état affiché (`MenuShownState`) ; `IDM_TOGGLE` et `IDM_PAUSE` ne s'appliquent que si l'état visé n'a pas changé pendant le menu (`MenuCommandStillApplies`), sinon l'intention affichée est déjà atteinte et la commande ne fait rien. Test : `Regles130TrayEtatTests.M3_1_I4_CommandeDuMenu_AppliqueeALEtatAffiche`.
-- I5 Le raccourci global ne fait pas de travail lourd dans le hook : non garanti (C3.4).
+- I5 Le raccourci global ne fait pas de travail lourd dans le hook : garanti depuis 1.3.0 (17 novembre 2026, C3.4 corrigé). `OnToggleShortcut`, câblé sur `KeyMapper.ToggleRequested`, ne fait que poster `WM_APP_TOGGLE` ; `ApplyToggleShortcut` (reprise de pause ou `OnToggle`) tourne dans la boucle de messages. Test : `Regles130TrayEtatTests.M3_1_I5_RaccourciGlobal_NeFaitPasDeTravailLourdDansLeRappelDuHook`.
 
 #### Table de transition
 

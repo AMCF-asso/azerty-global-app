@@ -17,6 +17,9 @@ sealed class TrayApplication : IDisposable
     private const uint WM_APP_VKBD = WM_APP + 3;
     private const uint WM_APP_STATE = WM_APP + 6;
     private const uint WM_APP_SECURE_RECHECK = WM_APP + 7;
+    // M3.1 I5 (1.3.0) : Ctrl+Maj+Verr. Maj arrive dans le rappel du hook ; la bascule (icône,
+    // bulle, fenêtre de bascule) s'exécute au retour dans la boucle de messages.
+    private const uint WM_APP_TOGGLE = WM_APP + 5;
     // Activation de toast COM re-routée par la file de messages du fil UI (v1.2.0).
     // wParam = 1 : action=review, cible Store ; wParam = 2 : action=review, cible
     // page feedback (répartition tirée à l'affichage — un toast antérieur sans
@@ -871,6 +874,10 @@ sealed class TrayApplication : IDisposable
                 case WM_APP_STATE:
                     Interlocked.Exchange(ref _stateRefreshQueued, 0);
                     ApplyStateChange();
+                    return IntPtr.Zero;
+
+                case WM_APP_TOGGLE:
+                    ApplyToggleShortcut();
                     return IntPtr.Zero;
 
                 case WM_APP_SECURE_RECHECK:
@@ -2074,13 +2081,28 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// Handler du raccourci clavier Ctrl+Maj+Verr.Maj (via KeyMapper.ToggleRequested).
+    /// Handler du raccourci clavier Ctrl+Maj+Verr.Maj (via KeyMapper.ToggleRequested), appelé
+    /// dans le rappel du hook. M3.1 I5 (1.3.0) : il ne fait que poster WM_APP_TOGGLE ; la
+    /// bascule (Shell_NotifyIcon, GDI+, fenêtre de bascule) tourne dans la boucle de messages,
+    /// hors du délai que Windows accorde au hook. Comme les autres raccourcis (recherche,
+    /// clavier virtuel). Un message refusé (file pleine) est journalisé : la frappe est perdue,
+    /// jamais le hook.
+    /// </summary>
+    private void OnToggleShortcut()
+    {
+        if (!Shell.PostMessageW(_hWnd, WM_APP_TOGGLE, IntPtr.Zero, IntPtr.Zero))
+            ConfigManager.LogCompatEventDeferred("BasculeRaccourciPerdue",
+                "WM_APP_TOGGLE refuse par la file de messages ; raccourci ignore");
+    }
+
+    /// <summary>
+    /// Bascule du raccourci, sur le fil de la boucle de messages (WM_APP_TOGGLE).
     /// Pendant une pause volontaire, le raccourci REPREND (équivalent « Reprendre
     /// maintenant ») au lieu de basculer _enabled — sinon il terminerait la pause ET
     /// désactiverait, ce qui contredirait l'intention « réactiver » de l'utilisateur.
     /// Le menu tray (IDM_TOGGLE) appelle OnToggle directement et garde sa sémantique.
     /// </summary>
-    private void OnToggleShortcut()
+    private void ApplyToggleShortcut()
     {
         if (IsPaused)
         {

@@ -22,6 +22,11 @@ namespace AZERTYGlobal.Tests;
 //     une touche bloquée par le hook n'y entre pas, une injection y entre).
 //   - Hôte : le geste Ctrl+Maj+Verr.maj, la pause et le premier plan suivent TrayApplication
 //     (ApplyHookState, OnToggleShortcut, OnForegroundChanged → RefreshForegroundContext).
+//     Depuis M3.1 I5 (1.3.0), OnToggleShortcut poste WM_APP_TOGGLE : la bascule s'applique
+//     dans la boucle de messages du tray, après 0 à 3 rappels du hook tirés au hasard (le hook
+//     peut être rappelé avant que le message posté soit traité), et au plus tard avant toute
+//     action hors clavier (temps, premier plan, pause, réglages), qui passe par la même boucle.
+//     Ce délai a son propre SplitMix64, dérivé de la graine de la suite : rejouable aussi.
 // Graines : SplitMix64 maison, une graine par suite, rejouable (Rejouer).
 // ════════════════════════════════════════════════════════════════════════════════════════
 
@@ -252,8 +257,11 @@ internal sealed class BancFrappe : IDisposable
     public readonly List<Violation> Violations = new();
     public readonly HashSet<string> Desactivees = new();
 
-    public BancFrappe(bool asyncLogique)
+    /// <param name="graineDelais">Graine des délais de la bascule postée ; null : traitée au retour
+    /// du rappel (tests nommés).</param>
+    public BancFrappe(bool asyncLogique, ulong? graineDelais = null)
     {
+        _delais = graineDelais is ulong g ? new SplitMix64(g ^ GraineDelaisMasque) : null;
         var a = Clavier.Applis[0];
         Mock = new MockWin32Api
         {
@@ -316,11 +324,34 @@ internal sealed class BancFrappe : IDisposable
         _epoque++;
     }
 
+    // OnToggleShortcut ne fait que poster WM_APP_TOGGLE (M3.1 I5) ; ApplyToggleShortcut tourne
+    // dans la boucle de messages, après le retour du rappel du hook.
+    private const ulong GraineDelaisMasque = 0xB45C0130D1A15EEDUL;   // délais indépendants des actions
+    private readonly SplitMix64? _delais;
+    private int _basculesPostees;
+    private int _rappelsAvantBoucle;   // rappels du hook encore servis avant que la boucle traite le message
+
     private void SurBascule()
     {
-        if (_pause) { _pause = false; AppliquerEtatHook(sync: true, preserve: true); return; }
-        _utilisateurActif = !_utilisateurActif;
-        AppliquerEtatHook(sync: true, preserve: false);
+        if (_basculesPostees++ == 0) _rappelsAvantBoucle = _delais?.Below(4) ?? 0;
+    }
+
+    /// <summary>Après chaque rappel : la boucle traite les messages postés une fois le délai écoulé.</summary>
+    private void FinDeRappel()
+    {
+        if (_basculesPostees == 0) return;
+        if (_rappelsAvantBoucle-- > 0) return;
+        TraiterBasculesPostees();
+    }
+
+    private void TraiterBasculesPostees()
+    {
+        for (; _basculesPostees > 0; _basculesPostees--)
+        {
+            if (_pause) { _pause = false; AppliquerEtatHook(sync: true, preserve: true); continue; }
+            _utilisateurActif = !_utilisateurActif;
+            AppliquerEtatHook(sync: true, preserve: false);
+        }
     }
 
     // ── Un événement physique dans le rappel ─────────────────────────────────────────────
@@ -333,6 +364,7 @@ internal sealed class BancFrappe : IDisposable
         long r = _proc(0, (IntPtr)msg, _lParam).ToInt64();
         if (bas) Sys.Physique.Add(vk); else Sys.Physique.Remove(vk);
         if (r == 0) Sys.AppliquerLogique(vk, bas);
+        FinDeRappel();                                              // la boucle de messages du tray
         _maintenant += 15;
         return r;
     }
@@ -377,6 +409,8 @@ internal sealed class BancFrappe : IDisposable
     // ── Jouer une action et vérifier l'oracle ────────────────────────────────────────────
     public void Jouer(ActionFrappe act)
     {
+        // Hors clavier, l'action passe par la boucle de messages, qui traite d'abord les bascules postées.
+        if (act.Type is not (TypeAction.Bas or TypeAction.Haut or TypeAction.HautPerdu)) TraiterBasculesPostees();
         var modeAvant = Mapper.MaintainableLayerState.Mode;
         string? compAvant = Composition;
         bool declencheurTenu = TenueNom("SC02B");
@@ -642,9 +676,10 @@ internal static class Generateur
 /// <summary>Exécution, réduction et rapport.</summary>
 internal static class Execution
 {
-    public static List<Violation> Jouer(IReadOnlyList<ActionFrappe> suite, bool asyncLogique, IEnumerable<string>? desactivees = null)
+    public static List<Violation> Jouer(IReadOnlyList<ActionFrappe> suite, bool asyncLogique, IEnumerable<string>? desactivees = null,
+        ulong? graineDelais = null)
     {
-        using var banc = new BancFrappe(asyncLogique);
+        using var banc = new BancFrappe(asyncLogique, graineDelais);
         if (desactivees != null) foreach (var d in desactivees) banc.Desactivees.Add(d);
         foreach (var a in suite) banc.Jouer(a);
         banc.Terminer();
@@ -652,11 +687,11 @@ internal static class Execution
     }
 
     /// <summary>Réduction gloutonne (suppression de blocs) tant que la même règle échoue.</summary>
-    public static List<ActionFrappe> Reduire(List<ActionFrappe> suite, string regle, bool asyncLogique)
+    public static List<ActionFrappe> Reduire(List<ActionFrappe> suite, string regle, bool asyncLogique, ulong? graineDelais = null)
     {
-        bool Echoue(List<ActionFrappe> s) => Jouer(s, asyncLogique).Any(v => v.Regle == regle);
+        bool Echoue(List<ActionFrappe> s) => Jouer(s, asyncLogique, null, graineDelais).Any(v => v.Regle == regle);
         var courante = new List<ActionFrappe>(suite);
-        var premier = Jouer(courante, asyncLogique).FirstOrDefault(v => v.Regle == regle);
+        var premier = Jouer(courante, asyncLogique, null, graineDelais).FirstOrDefault(v => v.Regle == regle);
         if (premier.Regle != null && premier.Etape < courante.Count)
         {
             var tronquee = courante.Take(premier.Etape + 1).ToList();
@@ -928,7 +963,7 @@ public sealed class FrappeHasardTests
             ulong graine = GraineBase + (ulong)i;
             var suite = Generateur.Suite(graine, LongueurSuite);
             pas += suite.Count;
-            foreach (var v in Execution.Jouer(suite, asyncLogique, ConstatsDemontres))
+            foreach (var v in Execution.Jouer(suite, asyncLogique, ConstatsDemontres, graineDelais: graine))
                 parRegle[v.Regle] = parRegle.TryGetValue(v.Regle, out var x) ? (x.Nombre + 1, x.Graine, x.Premiere) : (1, graine, v);
         }
 
@@ -936,8 +971,8 @@ public sealed class FrappeHasardTests
         rapport.AppendLine($"modèle async {(asyncLogique ? "logique" : "physique")} : {NombreSuites} suites × {LongueurSuite} pas = {pas} pas, graines {GraineBase:X}..{GraineBase + (ulong)NombreSuites - 1:X}");
         foreach (var (regle, (nombre, graine, premiere)) in parRegle)
         {
-            var reduite = Execution.Reduire(Generateur.Suite(graine, LongueurSuite), regle, asyncLogique);
-            var v = Execution.Jouer(reduite, asyncLogique).First(x => x.Regle == regle);
+            var reduite = Execution.Reduire(Generateur.Suite(graine, LongueurSuite), regle, asyncLogique, graine);
+            var v = Execution.Jouer(reduite, asyncLogique, null, graine).First(x => x.Regle == regle);
             rapport.AppendLine($"[{regle}] {nombre} violation(s), première graine {graine:X} pas {premiere.Etape} : {premiere.Detail}");
             rapport.AppendLine($"    réduite ({reduite.Count} actions) : {string.Join(" ", reduite)}");
             rapport.AppendLine($"    → {v.Detail}");
