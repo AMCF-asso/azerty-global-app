@@ -82,6 +82,18 @@ static class Program
             log("SingleInstanceMutexDenied", ex.GetType().Name);
             return SingleInstanceOutcome.SecondInstance;
         }
+        catch (WaitHandleCannotBeOpenedException ex)
+        {
+            // CE-13 (K65) : le nom est pris par un objet d'un autre type (evenement, semaphore).
+            // Aucune instance d'AZERTY Global ne cree autre chose qu'un mutex sous ce nom : ce
+            // n'est donc pas la preuve d'une instance vivante. L'exception sortait de Main avant
+            // le gestionnaire d'erreur fatale : pas de demarrage, sans message. On demarre sans
+            // ce mutex, comme sans le mutex global ; celui-ci, s'il est pris, protege encore
+            // d'une seconde instance (elle se dit alors « autre session »).
+            log("SingleInstanceMutexNameTaken", ex.GetType().Name);
+            localMutex = null;
+            isNew = true;
+        }
 
         // AG130-11 (b) : le mutex ci-dessus ne porte que la session courante. Une
         // console et une session RDP du meme compte lancaient donc deux instances sur
@@ -100,7 +112,10 @@ static class Program
         {
             (crossSessionMutex, isNewCrossSession) = createMutex(globalName);
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or NotSupportedException)
+        // CE-13 (K66) : WaitHandleCannotBeOpenedException, nom pris par un objet d'un autre type,
+        // faisait planter le lancement ; meme repli que les autres refus.
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or NotSupportedException
+                                       or WaitHandleCannotBeOpenedException)
         {
             log("CrossSessionMutexUnavailable", ex.GetType().Name);
         }
