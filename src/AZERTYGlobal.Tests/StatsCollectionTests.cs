@@ -56,9 +56,9 @@ public class StatsCollectionTests : IDisposable
         using (AppChannel.OverrideForTests(DistributionChannel.Store))
             Assert.True(UsageStats.CollectionEnabled);
 
-        // D8 : l'EXE hors package collecte comme aujourd'hui.
+        // Décision 5 du 2026-11-17 (fin du report D8) : l'EXE hors package est sobre comme Amcf.
         using (AppChannel.OverrideForTests(DistributionChannel.Unpackaged))
-            Assert.True(UsageStats.CollectionEnabled);
+            Assert.False(UsageStats.CollectionEnabled);
     }
 
     /// <summary>Critère d'acceptation du lot D, mot pour mot.</summary>

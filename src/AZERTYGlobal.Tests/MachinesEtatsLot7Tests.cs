@@ -388,7 +388,7 @@ public sealed class MachinesEtatsLot7Tests : IDisposable
             _dossier = Path.Combine(Path.GetTempPath(), "AZGLot7_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_dossier);
             _politique = PolicyManager.OverrideForTests((_, _) => null);
-            _canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+            _canal = AppChannel.OverrideForTests(DistributionChannel.Store);
             LearningSessionTracker.ResetForTests();
             typeof(ConfigManager).GetField("_lastErrorUtc", Statique)!.SetValue(null, null);
 

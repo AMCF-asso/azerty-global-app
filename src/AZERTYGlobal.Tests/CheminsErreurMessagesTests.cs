@@ -109,7 +109,7 @@ public sealed class CheminsErreurMessagesTests : IDisposable
         Directory.CreateDirectory(dossier);
         _dossiers.Add(dossier);
         var politique = PolicyManager.OverrideForTests((_, _) => null);
-        var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         LearningSessionTracker.ResetForTests();
         typeof(ConfigManager).GetField("_lastErrorUtc", Statique)!.SetValue(null, null);
 

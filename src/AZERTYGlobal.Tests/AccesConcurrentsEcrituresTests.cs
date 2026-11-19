@@ -16,6 +16,11 @@ public class AccesConcurrentsEcrituresTests : IDisposable
     private string ConfigPath => Path.Combine(_dir, "config.json");
     private string StatsPath => Path.Combine(_dir, "usage-stats.json");
 
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
+
     public AccesConcurrentsEcrituresTests()
     {
         Directory.CreateDirectory(_dir);
@@ -26,6 +31,7 @@ public class AccesConcurrentsEcrituresTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         ConfigManager.SaveSchedulerForTests = null;
         ConfigManager.DiskWritePhaseForTests = null;
         ConfigManager.SaveDelayMilliseconds = -1;

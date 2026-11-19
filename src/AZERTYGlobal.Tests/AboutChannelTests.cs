@@ -25,10 +25,11 @@ public class AboutChannelTests
     public void Liens_SurAmcf_PerdentHelloAssoSeulement() =>
         Assert.Equal(Identité, AboutWindow.LinkEntries(DistributionChannel.Amcf));
 
-    /// <summary>D8 : l'exécutable hors paquet garde la fenêtre d'aujourd'hui.</summary>
+    /// <summary>Décision 5 du 2026-11-17 : l'exécutable hors paquet perd HelloAsso, comme
+    /// Amcf.</summary>
     [Fact]
-    public void Liens_HorsPaquet_InchangésD8() =>
-        Assert.Equal(IdentitéEtSoutien, AboutWindow.LinkEntries(DistributionChannel.Unpackaged));
+    public void Liens_HorsPaquet_SobresCommeAmcf() =>
+        Assert.Equal(Identité, AboutWindow.LinkEntries(DistributionChannel.Unpackaged));
 
     [Fact]
     public void Liens_PolitiqueÀZéro_ÉteintHelloAssoSurStore() =>

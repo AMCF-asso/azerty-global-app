@@ -326,6 +326,9 @@ sealed class TrayApplication : IDisposable
             // calendrier) : elle reste écrite pour les configs existantes et le diagnostic.
             ConfigManager.EnsureFirstRunTimestamp();
 
+            // Stratégie AutoStartEnabled (1.3.0) : appliquée à chaque démarrage, sans boîte.
+            AutoStart.ApplyPolicy(PolicyManager.Current.AutoStart);
+
             // Premier lancement : onboarding. Lancements suivants : notification balloon.
 #if DEBUG
             // En debug, toujours afficher l'onboarding pour faciliter les tests
@@ -974,17 +977,17 @@ sealed class TrayApplication : IDisposable
                             // W2 : déjà ouverte, elle revient au premier plan sans se relire.
                             _maintainableLayersWindow.ShowOrBringToFront();
                             break;
-                        case IDM_GUIDE_CHANGES: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
-                        case IDM_RELEASE_NOTES: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
-                        case IDM_GUIDE_PDF: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath), null, null, 1); break;
-                        case IDM_CARDS: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.KeyboardCardsPath), null, null, 1); break;
-                        case IDM_PRIVACY: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/confidentialite#application"), null, null, 1); break;
-                        case IDM_DISCORD: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
-                        case IDM_SITE: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
+                        case IDM_GUIDE_CHANGES: OpenUrl(ProductIdentity.Url("/guide")); break;
+                        case IDM_RELEASE_NOTES: OpenUrl(ProductIdentity.Url("/nouveautes")); break;
+                        case IDM_GUIDE_PDF: OpenUrl(ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath)); break;
+                        case IDM_CARDS: OpenUrl(ProductIdentity.Url(ProductIdentity.KeyboardCardsPath)); break;
+                        case IDM_PRIVACY: OpenUrl(ProductIdentity.Url("/confidentialite#application")); break;
+                        case IDM_DISCORD: OpenUrl(ProductIdentity.DiscordInviteUrl); break;
+                        case IDM_SITE: OpenUrl(ProductIdentity.SiteBaseUrl); break;
                         case IDM_FEEDBACK: OpenFeedback("tray-menu"); break;
                         case IDM_RATE_STORE: OnRateStoreFromMenu(); break;
                         case IDM_BUG: OnReportBug(); break;
-                        case IDM_SUPPORT: Shell.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/soutien"), null, null, 1); break;
+                        case IDM_SUPPORT: OpenUrl(ProductIdentity.Url("/soutien")); break;
                         case IDM_ONBOARDING:
                             // W2 : l'accueil déjà ouvert revient au premier plan, à l'étape où il est.
                             if (_onboarding?.IsVisible == true)
@@ -1642,6 +1645,9 @@ sealed class TrayApplication : IDisposable
 
     private void ShowLessonsWindow()
     {
+        // Stratégie LessonsEnabled à 0 : plus aucune porte n'y mène ; ce garde ferme celles
+        // qu'un toast resté affiché ou un appel oublié laisseraient ouvertes.
+        if (!PolicyManager.LessonsEnabledNow) return;
         if (!_activationConsent) { ShowOnboardingNow(); return; }
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
@@ -1725,7 +1731,7 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (!ShouldShowChallengeAnnouncement(DailyChallenge.Enabled,
+            if (!ShouldShowChallengeAnnouncement(PolicyManager.ChallengeEnabledNow,
                     ConfigManager.ChallengeAnnounceDone, ConfigManager.TrainingEnabled,
                     ConfigManager.NotificationsEnabled))
                 return false;
@@ -1813,7 +1819,7 @@ sealed class TrayApplication : IDisposable
     {
         // 1.3.0 : Défi masqué. Plus aucune porte n'y mène (menu, annonce, rappel) ; ce
         // garde ferme le dernier appel resté possible, vers les Leçons ordinaires.
-        if (!DailyChallenge.Enabled) { ShowLessonsWindow(); return; }
+        if (!PolicyManager.ChallengeEnabledNow) { ShowLessonsWindow(); return; }
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
         if (!_lessons!.ShowChallenge())
@@ -1858,8 +1864,11 @@ sealed class TrayApplication : IDisposable
     /// AppendMenuW gardés par un if auraient donné un test qui vérifie que Store est Store.
     /// </summary>
     internal static int[] FeedbackMenuEntries(DistributionChannel channel,
-        bool? externalLinksPolicy = null) =>
-        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+        bool? externalLinksPolicy = null, bool? outboundLinksPolicy = null) =>
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : avis et bug ouvrent le navigateur, le
+        // sous-menu disparaît entier (décision 2 du 2026-11-17, qui amende D4).
+        !PolicyManager.OutboundLinksEnabled(outboundLinksPolicy) ? Array.Empty<int>()
+        : PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
             ? new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_DISCORD, IDM_BUG }
             : new[] { IDM_FEEDBACK, IDM_BUG };
 
@@ -1867,8 +1876,8 @@ sealed class TrayApplication : IDisposable
     /// Store », absente du canal sobre (D3). Rendue comme liste pour la même raison que
     /// <see cref="FeedbackMenuEntries"/>.</summary>
     internal static int[] FeedbackTopLevelEntries(DistributionChannel channel,
-        bool? externalLinksPolicy = null) =>
-        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+        bool? externalLinksPolicy = null, bool? outboundLinksPolicy = null) =>
+        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel, outboundLinksPolicy)
             ? new[] { IDM_RATE_STORE }
             : Array.Empty<int>();
 
@@ -1890,10 +1899,29 @@ sealed class TrayApplication : IDisposable
     /// <see cref="DailyChallenge.Enabled"/> est levé ; en 1.3.0 le sous-menu garde Leçons
     /// et l'accueil. Liste pure pour la même raison que <see cref="FeedbackMenuEntries"/>.
     /// </summary>
-    internal static int[] LearnMenuEntries(bool challengeEnabled) =>
-        challengeEnabled
+    internal static int[] LearnMenuEntries(bool challengeEnabled, bool? lessonsPolicy = null) =>
+        // Stratégie LessonsEnabled à 0 (1.3.0) : Leçons et Défi partent, l'accueil reste.
+        !PolicyManager.LessonsEnabled(lessonsPolicy) ? new[] { IDM_ONBOARDING }
+        : challengeEnabled
             ? new[] { IDM_EXERCISES, IDM_CHALLENGE, IDM_ONBOARDING }
             : new[] { IDM_EXERCISES, IDM_ONBOARDING };
+
+    /// <summary>Entrées « Ressources » d'« À propos et aide », toutes des liens vers le site :
+    /// aucune quand la stratégie OutboundLinksEnabled est à 0, et le sous-menu disparaît.</summary>
+    internal static int[] ResourcesMenuEntries(bool? outboundLinksPolicy = null) =>
+        PolicyManager.OutboundLinksEnabled(outboundLinksPolicy)
+            ? new[] { IDM_GUIDE_PDF, IDM_SITE, IDM_GUIDE_CHANGES, IDM_CARDS, IDM_RELEASE_NOTES }
+            : Array.Empty<int>();
+
+    private static string ResourcesMenuLabel(int id) => id switch
+    {
+        IDM_GUIDE_PDF => L.Tray_MenuPrintableGuide,
+        IDM_SITE => L.About_LinkSite,
+        IDM_GUIDE_CHANGES => L.Tray_MenuFiveChanges,
+        IDM_CARDS => L.Tray_MenuKeyboardCards,
+        IDM_RELEASE_NOTES => L.Tray_MenuWhatsNew,
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
+    };
 
     private static string LearnMenuLabel(int id) => id switch
     {
@@ -2020,7 +2048,7 @@ sealed class TrayApplication : IDisposable
         // Défi du jour : toujours visible depuis la décision du 2026-08-16, sans condition
         // d'opt-in — sauf interrupteur coupé (masqué le 2026-09-24, réactivé en 1.3.0 le
         // 2026-10-07). Voir LearnMenuEntries.
-        foreach (int id in LearnMenuEntries(DailyChallenge.Enabled))
+        foreach (int id in LearnMenuEntries(DailyChallenge.Enabled, PolicyManager.Current.Lessons))
             Win32.AppendMenuW(hLearnMenu, MF_STRING, (nuint)id, LearnMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLearnMenu, L.Tray_MenuLearn);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
@@ -2077,28 +2105,37 @@ sealed class TrayApplication : IDisposable
         // À propos et aide ▸ (2026-09-19) : confidentialité, ressources, retours, notation
         // et « À propos », soit cinq lignes de premier niveau, tiennent désormais sous une
         // seule. Rien n'est retiré : tout reste atteignable en un clic de plus.
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : confidentialité, ressources et retours
+        // sont des liens ; il ne reste qu'« À propos ».
         var hAboutHelpMenu = Win32.CreatePopupMenu();
-        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
+        var outboundLinksPolicy = PolicyManager.Current.OutboundLinks;
+        if (PolicyManager.OutboundLinksEnabled(outboundLinksPolicy))
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
 
         // Ressources et liens externes
-        var hResourcesMenu = Win32.CreatePopupMenu();
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_GUIDE_PDF, L.Tray_MenuPrintableGuide);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_SITE, L.About_LinkSite);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_GUIDE_CHANGES, L.Tray_MenuFiveChanges);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_CARDS, L.Tray_MenuKeyboardCards);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_RELEASE_NOTES, L.Tray_MenuWhatsNew);
-        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
+        int[] resources = ResourcesMenuEntries(outboundLinksPolicy);
+        if (resources.Length > 0)
+        {
+            var hResourcesMenu = Win32.CreatePopupMenu();
+            foreach (int id in resources)
+                Win32.AppendMenuW(hResourcesMenu, MF_STRING, (nuint)id, ResourcesMenuLabel(id));
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
+        }
 
-        var hFeedbackMenu = Win32.CreatePopupMenu();
         var channel = AppChannel.Current;
         var externalLinksPolicy = PolicyManager.Current.ExternalLinks;
-        foreach (int id in FeedbackMenuEntries(channel, externalLinksPolicy))
-            Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
-        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
+        int[] feedback = FeedbackMenuEntries(channel, externalLinksPolicy, outboundLinksPolicy);
+        if (feedback.Length > 0)
+        {
+            var hFeedbackMenu = Win32.CreatePopupMenu();
+            foreach (int id in feedback)
+                Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
+        }
         // « Noter sur le Microsoft Store » au premier niveau, sous « Retours et soutien »
         // (S2-6, confirmé le 2026-09-02) : l'action la plus utile au projet, en un clic.
         // Absente du canal sobre : rien n'y renvoie vers le Store (D3).
-        foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy))
+        foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy, outboundLinksPolicy))
             Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
 
         Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_ABOUT, L.Tray_MenuAbout);
@@ -2564,9 +2601,11 @@ sealed class TrayApplication : IDisposable
         OpenDiagnosticPage(path, source);
 
     private void OpenDiagnosticPage(string path, string source) =>
-        Shell.ShellExecuteW(IntPtr.Zero, "open",
-            ProductIdentity.DiagnosticUrl(path, Program.Version, ProductIdentity.OsDescription(), source),
-            null, null, 1);
+        OpenUrl(ProductIdentity.DiagnosticUrl(path, Program.Version, ProductIdentity.OsDescription(), source));
+
+    /// <summary>Tout lien de la barre des tâches passe par la porte unique des liens sortants,
+    /// avec le shell injectable que ses tests observent.</summary>
+    private void OpenUrl(string url) => OutboundLinks.Open(url, Shell.ShellExecuteW);
 
     private void OnExit()
     {
@@ -3144,8 +3183,10 @@ sealed class TrayApplication : IDisposable
 
     private void OpenStoreReview(IntPtr owner)
     {
+        // La boîte du Store ouvre le Store : coupée avec les liens sortants (1.3.0).
+        if (!PolicyManager.OutboundLinksEnabledNow) return;
         if (StoreReview.TryShow(owner, StoreReviewUrl)) return;
-        Shell.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1);
+        OpenUrl(StoreReviewUrl);
     }
 
     /// <summary>

@@ -11,16 +11,17 @@
   shows, not translations of the French labels.
 -->
 <policyDefinitionResources xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
-                           revision="1.0" schemaVersion="1.0">
+                           revision="1.1" schemaVersion="1.0">
   <displayName>AZERTY Global</displayName>
   <description>AZERTY Global settings an organization can enforce.</description>
   <resources>
     <stringTable>
       <string id="AZERTYGlobal">AZERTY Global</string>
       <string id="SUPPORTED_AZERTY_GLOBAL_1_2_0">AZERTY Global 1.2.0 or later</string>
+      <string id="SUPPORTED_AZERTY_GLOBAL_1_3_0">AZERTY Global 1.3.0 or later</string>
 
       <string id="NotificationsEnabled">Allow application notifications</string>
-      <string id="NotificationsEnabled_Explain">Enabled: the application may show its notifications, and the user keeps their own setting. Disabled: no comfort notification is shown, including the review prompt, and the user setting is locked. Security warnings are shown in every case. Not configured: the user decides.</string>
+      <string id="NotificationsEnabled_Explain">Enabled: the application shows its notifications, and the user setting is locked on. Disabled: no comfort notification is shown, including the review prompt, and the user setting is locked. Security warnings are shown in every case. Not configured: the user decides.</string>
 
       <string id="UsageStatsEnabled">Allow local usage statistics</string>
       <string id="UsageStatsEnabled_Explain">Enabled: the application keeps its counters in %LocalAppData%\Packages\&lt;package family name&gt;\LocalCache\Local\AZERTY Global\usage-stats.json. Disabled: no statistics file is created or updated. Not configured: on for the Microsoft Store version, off for the version distributed by the association. These counters never leave the machine.</string>
@@ -29,12 +30,21 @@
       <string id="ExternalLinksEnabled_Explain">Enabled: the “Support the project”, “Rate on the Microsoft Store” entries and the Discord link are visible. Disabled: they are hidden. “Give feedback” and “Report a bug” remain available in every case. Not configured: visible on the Microsoft Store version, hidden on the version distributed by the association.</string>
 
       <string id="RemoveOnboarding">Remove the welcome window at startup</string>
-      <string id="RemoveOnboarding_Explain">Enabled: the welcome window no longer opens at startup, and the matching checkbox is locked. The “Welcome window” entry in the notification-area menu still opens it on demand. Disabled, or not configured: the window follows the user's setting.</string>
+      <string id="RemoveOnboarding_Explain">Enabled: the welcome window no longer opens at startup, and the matching checkbox is locked. The “Reopen the welcome screen” entry in the Learn menu of the notification area still opens it on demand. Disabled, or not configured: the window follows the user's setting.</string>
 
       <string id="Language">Force the interface language</string>
       <string id="Language_Explain">Forces the application language and locks the three places that can change it. Accepted values: fr, en. Any other value is ignored and traced in error.log, and the language stays the user's own. Not configured: the user chooses.</string>
       <string id="Language_fr">French (fr)</string>
       <string id="Language_en">English (en)</string>
+
+      <string id="RemoveOutboundLinks">Hide all links to the Internet</string>
+      <string id="RemoveOutboundLinks_Explain">Enabled: every link that opens the browser or the Microsoft Store is hidden: “Give feedback”, “Report a bug”, the website, the source code, the license, the guide, the privacy policy, the resources, Discord, project support, rating on the Microsoft Store and the review prompt. The application then opens no third-party site. The OutboundLinksEnabled value is written as 0. Disabled (the value is written as 1), or not configured: no effect; this policy does not turn back on the support links that the version distributed by the association or the “Allow external links” policy have switched off. Takes effect the next time the application starts.</string>
+
+      <string id="AutoStartEnabled">Start at sign-in</string>
+      <string id="AutoStartEnabled_Explain">Enabled: at every startup, the application turns on its start at sign-in; the AutoStartEnabled value is written as 1. Disabled: it turns it off; the value is written as 0. In both cases, the Settings checkbox is greyed out and reads “Managed by your organization”. Limits set by Windows: the effect only begins after each user has launched the application once (the Windows rule for MSIX startup tasks); and a refusal the user has expressed in Windows (Task Manager, Settings, Apps, Startup) is still respected, the application does not get around it. Not configured: the user decides. Takes effect the next time the application starts.</string>
+
+      <string id="RemoveLessons">Hide Lessons and the Daily Challenge</string>
+      <string id="RemoveLessons_Explain">Enabled: Lessons and the Daily Challenge disappear from the application: entries of the Learn menu, reminders, the link on the welcome screen and the Challenge section of Statistics. The “Reopen the welcome screen” entry remains available, and with it the activation exercise (“Turn on and try”): it teaches the keyboard's basics, it is not a lesson. The LessonsEnabled value is written as 0. Disabled (the value is written as 1), or not configured: no effect. Takes effect the next time the application starts.</string>
     </stringTable>
     <presentationTable>
       <presentation id="Language">

@@ -57,7 +57,8 @@ static class AutoStartNudge
         // Une seule lecture de l'état Windows : « déjà actif » et « refusé » en sont tirés ensemble.
         var windowsState = AutoStart.WindowsState;
         return new(
-            NudgeDone: ConfigManager.AutoStartNudgeDone,
+            // Stratégie AutoStartEnabled posée : la structure a tranché, rien à proposer.
+            NudgeDone: ConfigManager.AutoStartNudgeDone || PolicyManager.IsManaged(PolicyManager.Current.AutoStart),
             AlreadyRegistered: windowsState == AutoStartWindowsState.Enabled,
             NotificationsEnabled: ConfigManager.NotificationsEnabled,
             FirstRemapDate: UsageStats.FirstRemapDate,

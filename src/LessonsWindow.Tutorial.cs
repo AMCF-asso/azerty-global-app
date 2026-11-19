@@ -345,8 +345,17 @@ internal sealed partial class LessonsWindow
             var finish = new Win32.RECT { left = right - finishW, top = buttonsTop, right = right, bottom = buttonsTop + S(36) };
             var more = new Win32.RECT { left = finish.left - S(12) - continueW, top = buttonsTop, right = finish.left - S(12), bottom = buttonsTop + S(36) };
             focusAt = _clickActions.Count;
-            DrawOutlineButton(hdc, more, L.Learning_BtnContinueLessons, () => ContinueAfterTutorial(HomeShowToday), primary: true);
-            DrawOutlineButton(hdc, finish, L.Learning_BtnFinish, FinishTutorial);
+            // Stratégie LessonsEnabled à 0 : l'exercice d'activation reste (décision « Garder
+            // l'exercice »), mais plus rien ne mène aux Leçons. « Fermer » devient le bouton principal.
+            if (FinalScreenOffersLessons)
+            {
+                DrawOutlineButton(hdc, more, L.Learning_BtnContinueLessons, () => ContinueAfterTutorial(HomeShowToday), primary: true);
+                DrawOutlineButton(hdc, finish, L.Learning_BtnFinish, FinishTutorial);
+            }
+            else
+            {
+                DrawOutlineButton(hdc, finish, L.Learning_BtnFinish, FinishTutorial, primary: true);
+            }
             // Retour vers la dernière étape, à gauche des boutons (audit UX du 09/11, L15).
             if (_tutorialRoute is { Length: > 0 })
                 DrawLink(hdc, x, buttonsTop + S(18), "‹ " + L.LessonsWin_IconPrevious, false, TutorialBackFromFinal);
@@ -363,10 +372,24 @@ internal sealed partial class LessonsWindow
     /// est prévenu), la fenêtre reste ouverte et ouvre <paramref name="open"/>.</summary>
     private void ContinueAfterTutorial(Action open)
     {
+        // Seconde garde (les contrôles ne sont pas dessinés quand la stratégie coupe les Leçons) :
+        // un appel qui passerait quand même ferme l'exercice au lieu d'ouvrir Aujourd'hui, la
+        // carte ou la leçon d'Afrique.
+        if (!FinalScreenOffersLessons)
+        {
+            FinishTutorial();
+            return;
+        }
         EndTutorial(completed: true);
         open();
         Win32.SetForegroundWindow(_hWnd);
     }
+
+    /// <summary>L'écran final propose-t-il « Continuer les leçons » et les cartes « Prochaines
+    /// étapes » (Aujourd'hui, Votre carte, Afrique) ? Non quand la stratégie LessonsEnabled les
+    /// retire de l'application. Lue à chaque dessin : la valeur ne change pas en cours de
+    /// processus, et un test peut la forcer.</summary>
+    internal static bool FinalScreenOffersLessons => PolicyManager.LessonsEnabledNow;
 
     /// <summary>La leçon « Un tour d'Afrique » du catalogue, null si le catalogue ne la porte pas.</summary>
     private LessonLesson? TutorialAfricaLesson()
@@ -395,17 +418,20 @@ internal sealed partial class LessonsWindow
         var small = F(AppFonts.Text, 13);
         uint fill = PaperDraw.Blend(CLR_ACCENT, CLR_PANEL, 0.04f);
 
-        var steps = new List<(string Label, string Help, Action Open)>
+        // Les trois cartes mènent aux Leçons : sans elles (stratégie LessonsEnabled à 0), la carte
+        // « Prochaines étapes » entière est omise ; « Raccourcis à retenir » reste.
+        var steps = new List<(string Label, string Help, Action Open)>();
+        if (FinalScreenOffersLessons)
         {
-            (L.LessonsHome_Today, L.Learning_FinalNextTodayHelp, () => ContinueAfterTutorial(HomeShowToday)),
-            (L.LessonsHome_YourMap, L.Learning_FinalNextMapHelp, () => ContinueAfterTutorial(() => HomeShowMap())),
-        };
-        if (TutorialAfricaLesson() is { } africa)
-            steps.Add((africa.Title, L.Learning_FinalNextAfricaHelp, () => ContinueAfterTutorial(OpenTutorialAfrica)));
+            steps.Add((L.LessonsHome_Today, L.Learning_FinalNextTodayHelp, () => ContinueAfterTutorial(HomeShowToday)));
+            steps.Add((L.LessonsHome_YourMap, L.Learning_FinalNextMapHelp, () => ContinueAfterTutorial(() => HomeShowMap())));
+            if (TutorialAfricaLesson() is { } africa)
+                steps.Add((africa.Title, L.Learning_FinalNextAfricaHelp, () => ContinueAfterTutorial(OpenTutorialAfrica)));
+        }
 
         int rowH = S(50);
         int nextH = pad + S(26) + steps.Count * rowH + S(4);
-        if (top + nextH <= limit)
+        if (steps.Count > 0 && top + nextH <= limit)
         {
             var card = new Win32.RECT { left = left, top = top, right = right, bottom = top + nextH };
             PaperDraw.RoundBox(hdc, card, fill, CLR_BORDER, S(3));

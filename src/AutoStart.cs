@@ -144,6 +144,38 @@ static class AutoStart
     }
 
     /// <summary>
+    /// Stratégie AutoStartEnabled (1.3.0), appliquée par l'application à chaque démarrage :
+    /// active (1) ou coupe (0) son propre lancement automatique quand l'état réel diffère. Sans
+    /// boîte : personne n'a rien demandé à l'écran. Un échec — refus exprimé dans Windows,
+    /// que ni l'application ni la stratégie ne contournent — est journalisé comme événement
+    /// de compatibilité, pas comme erreur (choix d'Antoine du 2026-11-17 : une tâche de
+    /// démarrage MSIX ne peut pas être imposée sans moyen non documenté).
+    /// Rend true quand l'état réel est celui que la stratégie demande, ou sans stratégie.
+    /// </summary>
+    internal static bool ApplyPolicy(bool? policy) => ApplyPolicy(policy, Set, () => IsRegistered);
+
+    /// <summary>Décision pure, avec ses points d'appui : les tests n'écrivent jamais le vrai
+    /// démarrage.</summary>
+    internal static bool ApplyPolicy(bool? policy, Func<bool, bool> setter, Func<bool> isRegistered)
+    {
+        if (policy is not bool wanted) return true;
+        try
+        {
+            if (isRegistered() == wanted) return true;
+            if (setter(wanted)) return true;
+        }
+        catch (Exception ex)
+        {
+            ConfigManager.Log("AutoStart.ApplyPolicy", ex);
+            return false;
+        }
+
+        ConfigManager.LogCompatEvent("AutoStartPolicyNotApplied",
+            $"{PolicyManager.ValueAutoStart}={(wanted ? 1 : 0)}: refused by Windows ({WindowsState})");
+        return false;
+    }
+
+    /// <summary>
     /// Le lancement automatique est EFFECTIF : Windows exécutera l'entrée au démarrage
     /// (<see cref="AutoStartWindowsState.Enabled"/>). Un raccourci présent mais refusé par
     /// l'utilisateur ou par une stratégie ne compte pas (C4.2). En version packagée, c'est

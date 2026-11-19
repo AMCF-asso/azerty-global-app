@@ -104,6 +104,7 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT ResetRect;
         public Win32.RECT PreferencesTitleRect;
         public Win32.RECT AutoStartRect;
+        public Win32.RECT ManagedAutoStartRect;
         public Win32.RECT NotificationsRect;
         public Win32.RECT ManagedNotificationsRect;
         public Win32.RECT OnboardingRect;
@@ -187,6 +188,7 @@ sealed partial class SettingsWindow : IDisposable
     private IntPtr _hWndValidation;
     // Lignes « Géré par votre organisation » (lot C) : une par réglage sous politique.
     private IntPtr _hWndManagedNotifications;
+    private IntPtr _hWndManagedAutoStart;
     private IntPtr _hWndManagedOnboarding;
     private IntPtr _hWndManagedLanguage;
 
@@ -194,6 +196,10 @@ sealed partial class SettingsWindow : IDisposable
     // ne change pas tant que l'application tourne, la mise en page peut donc s'y fier.
     private readonly bool _managedNotifications =
         PolicyManager.IsManaged(PolicyManager.Current.Notifications);
+    // Stratégie AutoStartEnabled (1.3.0) : l'application applique la valeur imposée à chaque
+    // démarrage (TrayApplication.ApplyAutoStartPolicy) ; la case montre l'état réel, grisée.
+    private readonly bool _managedAutoStart =
+        PolicyManager.IsManaged(PolicyManager.Current.AutoStart);
     private readonly bool _managedOnboarding =
         PolicyManager.IsOnboardingManaged(PolicyManager.Current.ShowOnboarding);
     private readonly bool _managedLanguage =
@@ -516,6 +522,9 @@ sealed partial class SettingsWindow : IDisposable
         // fonctionnalité disparue plutôt que comme une décision de la structure.
         _hWndManagedNotifications = CreateManagedNotice(hInstance, _managedNotifications);
         _hWndManagedOnboarding = CreateManagedNotice(hInstance, _managedOnboarding);
+        _hWndManagedAutoStart = CreateManagedNotice(hInstance, _managedAutoStart);
+        if (_managedAutoStart)
+            Win32.EnableWindow(_hWndChkAutoStart, false);
         if (_managedNotifications)
             Win32.EnableWindow(_hWndChkNotifications, false);
         if (_managedOnboarding)
@@ -768,6 +777,8 @@ sealed partial class SettingsWindow : IDisposable
             new(_hWndLinkReset, General, () => FontButton.Handle, l => l.ResetRect,
                 () => L.Settings_LinkResetDefaults, PushButton: true),
             new(_hWndChkAutoStart, General, () => FontBody.Handle, l => l.AutoStartRect, () => L.Settings_AutoStart),
+            new(_hWndManagedAutoStart, General, () => FontSmall.Handle, l => l.ManagedAutoStartRect,
+                () => L.Settings_ManagedByOrganization, () => _managedAutoStart),
             new(_hWndChkNotifications, General, () => FontBody.Handle, l => l.NotificationsRect, () => L.Settings_Notifications),
             new(_hWndManagedNotifications, General, () => FontSmall.Handle, l => l.ManagedNotificationsRect,
                 () => L.Settings_ManagedByOrganization, () => _managedNotifications),
@@ -775,7 +786,7 @@ sealed partial class SettingsWindow : IDisposable
             new(_hWndManagedOnboarding, General, () => FontSmall.Handle, l => l.ManagedOnboardingRect,
                 () => L.Settings_ManagedByOrganization, () => _managedOnboarding),
             new(_hWndChkTraining, General, () => FontBody.Handle, l => l.TrainingRect,
-                () => L.Challenge_OptIn, () => DailyChallenge.Enabled),
+                () => L.Challenge_OptIn, () => PolicyManager.ChallengeEnabledNow),
 
             new(_hWndCompatList, Apps, () => FontListName.Handle, l => l.CompatListRect),
             new(_hWndCompatAdd, Apps, () => FontButton.Handle, l => l.CompatAddRect, () => L.Settings_CompatAdd, PushButton: true),
@@ -1268,6 +1279,7 @@ sealed partial class SettingsWindow : IDisposable
             layout.PreferencesTitleRect = Title(ref y);
             layout.AutoStartRect = Choice(ref y);
             layout.AutoStartHintRect = Hint(ref y, L.SettingsClarity_HintAutoStart);
+            layout.ManagedAutoStartRect = Managed(ref y, _managedAutoStart);
             layout.NotificationsRect = Choice(ref y);
             layout.NotificationsHintRect = Hint(ref y, L.SettingsClarity_HintNotifications);
             // Lignes « Géré par votre organisation » : sous le sous-titre de la case. Hauteur
@@ -1276,8 +1288,10 @@ sealed partial class SettingsWindow : IDisposable
             layout.OnboardingRect = Choice(ref y);
             layout.OnboardingHintRect = Hint(ref y, L.SettingsClarity_HintOnboarding);
             layout.ManagedOnboardingRect = Managed(ref y, _managedOnboarding);
-            // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0).
-            layout.TrainingRect = Choice(ref y, DailyChallenge.Enabled);
+            // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0),
+            // par son interrupteur ou par la stratégie LessonsEnabled à 0 : sans Défi, il n'y a
+            // rien à rappeler, et une case grisée promettrait un réglage qui n'existe pas.
+            layout.TrainingRect = Choice(ref y, PolicyManager.ChallengeEnabledNow);
             return y;
         }
 
@@ -1783,7 +1797,7 @@ sealed partial class SettingsWindow : IDisposable
                 IntPtr hdcStatic = wParam;
                 IntPtr hCtrl = lParam;
                 if (hCtrl == _hWndManagedNotifications || hCtrl == _hWndManagedOnboarding ||
-                    hCtrl == _hWndManagedLanguage)
+                    hCtrl == _hWndManagedLanguage || hCtrl == _hWndManagedAutoStart)
                 {
                     Win32.SetBkMode(hdcStatic, 1);
                     Win32.SetTextColor(hdcStatic, CLR_MUTED);

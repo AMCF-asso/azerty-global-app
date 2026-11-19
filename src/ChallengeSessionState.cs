@@ -27,8 +27,8 @@ internal sealed class ChallengeSessionState
     /// Défi demandé pour cette ouverture : sans cela, le menu « Défi du jour » et l'annonce,
     /// faite justement à qui n'a pas l'opt-in, ouvraient les Leçons ordinaires (A23).</summary>
     private bool Offered =>
-        DailyChallenge.ShouldOfferModule(DailyChallenge.Enabled, ConfigManager.TrainingEnabled) ||
-        (_requested && DailyChallenge.Enabled);
+        DailyChallenge.ShouldOfferModule(PolicyManager.ChallengeEnabledNow, ConfigManager.TrainingEnabled) ||
+        (_requested && PolicyManager.ChallengeEnabledNow);
 
     /// <summary>Catalogue des leçons, plus le module « Défi du jour » quand il est offert
     /// (Défi activé, rappels activés ou Défi demandé, banque d'extraits chargée).</summary>

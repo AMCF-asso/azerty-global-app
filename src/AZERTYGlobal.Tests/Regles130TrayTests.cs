@@ -453,7 +453,7 @@ public sealed class Regles130TrayBullesTests
     public void M3_3_I2_SollicitationAUsageUnique_JamaisDeuxFois()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         var lecteurAvant = AutoStart.WindowsStateReader;
         OutilsTray130.SemerStatistiquesDAvis();                    // jours actifs et première frappe : relance et avis dus
         OutilsTray130.DerniereFrappeIlYa(20_000);
@@ -616,7 +616,7 @@ public sealed class Regles130TrayAvisEtAccueilTests
     public void M7_4_I7_DeuxDemandesSuccessives_LaSecondeEstRefusee_CompteurA1()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         OutilsTray130.SemerStatistiquesDAvis();
         OutilsTray130.DerniereFrappeIlYa(20_000);
         try
@@ -649,7 +649,7 @@ public sealed class Regles130TrayAvisEtAccueilTests
     public void M7_5_I6_TickDeQuietude_NeFaitAucuneEcritureSurDisque()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         OutilsTray130.SemerStatistiquesDAvis();
         string chemin = Path.Combine(ConfigManager.LogDirectory, "config.json");
         var (tray, _, wndProc) = OutilsTray130.Tray();

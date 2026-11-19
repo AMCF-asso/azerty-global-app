@@ -17,6 +17,11 @@ public class CheminsErreurDonneesTests : IDisposable
     private const string ConfigValide = "{\"activationConsent\":true,\"appLanguage\":\"fr\"}";
     private const string StatsOriginal = "{ \"activeDaysCount\": 42, \"bestStreak\": 30 }";
 
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
+
     public CheminsErreurDonneesTests()
     {
         Directory.CreateDirectory(_dir);
@@ -26,6 +31,7 @@ public class CheminsErreurDonneesTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         UsageStats.OverrideStatsPathForTests(Path.Combine(_dir, "inutilise.json"));
         ConfigManager.OverrideConfigPathForTests(Path.Combine(_dir, "inutilise-config.json"));
         for (int essai = 0; essai < 20; essai++)

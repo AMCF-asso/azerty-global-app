@@ -10,7 +10,7 @@
 // le code. L'identité du produit ne s'écrit jamais en dur ailleurs que dans ProductIdentity —
 // la CI refuse tout littéral qui la nomme.
 //
-// Précédence, la même pour les cinq valeurs : politique HKLM > réglage utilisateur de
+// Précédence, la même pour les huit valeurs : politique HKLM > réglage utilisateur de
 // config.json > défaut du canal. Deux écarts assumés, tous deux décidés par Antoine le
 // 2026-08-19 :
 //   - ShowOnboarding à 1 autorise sans imposer, seul 0 contraint : verrouiller la case à
@@ -53,7 +53,10 @@ internal sealed record PolicySet(
     bool? UsageStats,
     bool? ExternalLinks,
     bool? ShowOnboarding,
-    string? Language)
+    string? Language,
+    bool? OutboundLinks = null,
+    bool? AutoStart = null,
+    bool? Lessons = null)
 {
     /// <summary>Aucune politique posée : l'état de très loin le plus fréquent.</summary>
     internal static readonly PolicySet None = new(null, null, null, null, null);
@@ -84,6 +87,25 @@ static class PolicyManager
     /// (décision du 2026-08-19) : la politique impose la langue et verrouille le sélecteur,
     /// or « default » promettrait un défaut que l'utilisateur pourrait changer.</summary>
     internal const string ValueLanguage = "Language";
+
+    // Trois valeurs de la 1.3.0 (segmentation Store / MSIX entreprise, décisions d'Antoine du
+    // 2026-11-17). Noms consignés dans la note de décision : une DSI les écrit, ils ne
+    // changent plus.
+
+    /// <summary>REG_DWORD. À 0, masque tout lien qui ouvre le navigateur ou le Store, y compris
+    /// « Donner mon avis », « Signaler un bug », site, code source et licence (amende D4). À 1,
+    /// aucun effet : ne rallume rien de ce qu'éteignent le canal sobre ou
+    /// <see cref="ValueExternalLinks"/>.</summary>
+    internal const string ValueOutboundLinks = "OutboundLinksEnabled";
+
+    /// <summary>REG_DWORD. À 1, l'application active son lancement à l'ouverture de session à
+    /// chaque démarrage ; à 0, elle le coupe. Dans les deux cas la case de Paramètres est
+    /// grisée. Windows garde la main sur ce qu'il refuse : voir <see cref="AutoStartPolicy"/>.</summary>
+    internal const string ValueAutoStart = "AutoStartEnabled";
+
+    /// <summary>REG_DWORD. À 0, masque Leçons et Défi du jour (menu, rappels, accueil) et grise
+    /// la case du rappel d'entraînement. À 1, aucun effet : rien n'est retiré par défaut.</summary>
+    internal const string ValueLessons = "LessonsEnabled";
 
     // ═══════════════════════════════════════════════════════════════
     // Lecture et cache
@@ -122,14 +144,17 @@ static class PolicyManager
         }
     }
 
-    /// <summary>Lit les cinq valeurs par le lecteur donné. Sans état : c'est la fonction que
+    /// <summary>Lit les huit valeurs par le lecteur donné. Sans état : c'est la fonction que
     /// les tests éprouvent, ce qui leur évite de toucher au cache du processus.</summary>
     internal static PolicySet Read(PolicyValueReader reader) => new(
         Notifications: ReadFlag(reader, ValueNotifications),
         UsageStats: ReadFlag(reader, ValueUsageStats),
         ExternalLinks: ReadFlag(reader, ValueExternalLinks),
         ShowOnboarding: ReadFlag(reader, ValueShowOnboarding),
-        Language: ReadLanguage(reader));
+        Language: ReadLanguage(reader),
+        OutboundLinks: ReadFlag(reader, ValueOutboundLinks),
+        AutoStart: ReadFlag(reader, ValueAutoStart),
+        Lessons: ReadFlag(reader, ValueLessons));
 
     private static bool? ReadFlag(PolicyValueReader reader, string valueName) =>
         reader(KeyPath, valueName) switch
@@ -224,6 +249,38 @@ static class PolicyManager
     internal static bool ExternalLinksEnabled(bool? policy, DistributionChannel channel) =>
         policy ?? !AppChannel.IsSober(channel);
 
+    /// <summary>Liens externes effectifs, la stratégie de coupure générale comprise : à 0, elle
+    /// éteint aussi les liens de soutien et la notation. Jamais l'inverse : à 1, elle laisse
+    /// le canal sobre et <see cref="ValueExternalLinks"/> décider.</summary>
+    internal static bool ExternalLinksEnabled(bool? policy, DistributionChannel channel,
+        bool? outboundPolicy) =>
+        OutboundLinksEnabled(outboundPolicy) && ExternalLinksEnabled(policy, channel);
+
+    /// <summary>Tous les liens sortants — navigateur et Store. Seul 0 contraint, comme
+    /// <see cref="ShowOnboarding"/> : par défaut, sur tous les canaux, « Donner mon avis »,
+    /// « Signaler un bug », site, code source et licence restent visibles (D4 amendée le
+    /// 2026-11-17).</summary>
+    internal static bool OutboundLinksEnabled(bool? policy) => policy != false;
+
+    /// <summary>Leçons et Défi du jour. Seul 0 contraint : rien n'est retiré par défaut, sur
+    /// aucun canal (décision 4 du 2026-11-17).</summary>
+    internal static bool LessonsEnabled(bool? policy) => policy != false;
+
+    /// <summary>Le Défi du jour est-il proposé ? Son interrupteur de produit
+    /// (<see cref="DailyChallenge.Enabled"/>) et la stratégie des Leçons, dont il fait partie.
+    /// Un seul prédicat pour toutes les portes : menu, rappel, fenêtre Leçons.</summary>
+    internal static bool ChallengeEnabled(bool challengeSwitch, bool? lessonsPolicy) =>
+        challengeSwitch && LessonsEnabled(lessonsPolicy);
+
+    /// <summary>
+    /// Ce que l'application doit faire de son lancement automatique au démarrage : null quand
+    /// aucune stratégie n'est posée (le choix de l'utilisateur vaut), sinon l'état à
+    /// appliquer. Choix d'Antoine du 2026-11-17 : une stratégie gérée par l'application, faute
+    /// de moyen documenté d'imposer une tâche de démarrage MSIX — l'effet de 1 suppose un
+    /// premier lancement par l'utilisateur, et un refus exprimé dans Windows reste respecté.
+    /// </summary>
+    internal static bool? AutoStartPolicy(bool? policy) => policy;
+
     /// <summary>Fenêtre de bienvenue. La politique à 1 autorise sans imposer : seul 0
     /// contraint (décision du 2026-08-19). L'utilisateur garde donc sa case tant que la DSI
     /// n'a pas explicitement supprimé la fenêtre.</summary>
@@ -258,7 +315,19 @@ static class PolicyManager
     /// trois fenêtres et deux chemins de sollicitation, d'où un raccourci ici plutôt qu'une
     /// expression recopiée.</summary>
     internal static bool ExternalLinksEnabledNow =>
-        ExternalLinksEnabled(Current.ExternalLinks, AppChannel.Current);
+        ExternalLinksEnabled(Current.ExternalLinks, AppChannel.Current, Current.OutboundLinks);
+
+    /// <summary>Tous les liens sortants de cette instance. Lu par chaque fenêtre qui en montre
+    /// et par <see cref="OutboundLinks.Open(string)"/>, qui refuse d'ouvrir quand la stratégie
+    /// les coupe.</summary>
+    internal static bool OutboundLinksEnabledNow => OutboundLinksEnabled(Current.OutboundLinks);
+
+    /// <summary>Leçons et Défi du jour pour cette instance.</summary>
+    internal static bool LessonsEnabledNow => LessonsEnabled(Current.Lessons);
+
+    /// <summary>Défi du jour pour cette instance : interrupteur de produit et stratégie.</summary>
+    internal static bool ChallengeEnabledNow =>
+        ChallengeEnabled(DailyChallenge.Enabled, Current.Lessons);
 
     /// <summary>
     /// S1-3 (décision du 2026-09-02) : les Statistiques disent qu'une stratégie de groupe peut
@@ -315,7 +384,7 @@ static class PolicyManager
     /// </summary>
     internal static object? ReadRegistryValue(string keyPath, string valueName)
     {
-        // REG_DWORD d'abord : quatre des cinq valeurs en sont.
+        // REG_DWORD d'abord : sept des huit valeurs en sont.
         uint size = sizeof(int);
         if (RegGetValueDword(HKEY_LOCAL_MACHINE, keyPath, valueName,
                 RRF_RT_REG_DWORD | RRF_SUBKEY_WOW6464KEY, IntPtr.Zero, out int dword, ref size)

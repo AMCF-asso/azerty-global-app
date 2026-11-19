@@ -451,7 +451,7 @@ public sealed class Regles130PurStatsTests
     public void M5_1_I1_DeuxFlushConcurrents_UnSeulEcrivainADeLaFois()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         var hookAvant = UsageStats.WritePhaseForTests;
         try
         {
@@ -494,7 +494,7 @@ public sealed class Regles130PurStatsTests
     public void M5_1_I4_Preload_ChargeAvantLeHook_LaFrappeNeRelitPasLeFichier()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         string chemin = Path.Combine(ConfigManager.LogDirectory, "usage-stats.json");
 
         // Un fichier portant cinq caractères enrichis, mis de côté.
@@ -524,7 +524,7 @@ public sealed class Regles130PurStatsTests
     public void M5_4_I1_FermeturesEnTrop_LaProfondeurNeDevientJamaisNegative()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         while (UsageStats.IsTypingExcluded) UsageStats.EndExcludedTyping();   // part de zéro
 
         UsageStats.EndExcludedTyping();
@@ -545,7 +545,7 @@ public sealed class Regles130PurStatsTests
     public void M5_4_I3_Exclusion_SeulBeginTutorialOuvreLaPlage()
     {
         using var iso = new BancCapture.Isolation();
-        using var canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        using var canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         while (UsageStats.IsTypingExcluded) UsageStats.EndExcludedTyping();
         long avant = UsageStats.TotalSpecialCharsCount;
         UsageStats.RecordEmittedText("É");
@@ -869,8 +869,9 @@ public sealed class Regles130PurAvisEtParametresTests
     }
 
     // M7.7 I2 : le rappel de fin de la boîte d'avis du Store ne touche ni l'état ni les fenêtres :
-    // il n'appelle que ShellExecuteW (repli), le journal et la lecture du résultat. Balayage du
-    // texte source (rappel exécuté sur le pool, WinRT, hors portée d'un montage de test).
+    // il n'appelle que la porte des liens sortants (OutboundLinks.Open, qui porte le ShellExecuteW
+    // de repli depuis la 1.3.0), le journal et la lecture du résultat. Balayage du texte source
+    // (rappel exécuté sur le pool, WinRT, hors portée d'un montage de test).
     [Fact]
     public void M7_7_I2_RappelDeFin_NeFaitQueOuvrirLeLienEtJournaliser()
     {
@@ -880,11 +881,11 @@ public sealed class Regles130PurAvisEtParametresTests
         Assert.True(corps > methode && methode >= 0, "OnCompleted introuvable");
 
         var appels = SourcePur.Appels(code[corps..]);
-        Assert.Contains("Win32.ShellExecuteW", appels);   // témoins : le repli et le journal sont bien là
+        Assert.Contains("OutboundLinks.Open", appels);   // témoins : le repli (par la porte) et le journal sont bien là
         Assert.Contains("ConfigManager.Log", appels);
         Assert.Subset(new HashSet<string>
         {
-            "Win32.ShellExecuteW", "ConfigManager.Log", "operation.GetResults", "InvalidOperationException",
+            "OutboundLinks.Open", "ConfigManager.Log", "operation.GetResults", "InvalidOperationException",
         }, appels);
     }
 

@@ -38,8 +38,11 @@ sealed class AboutWindow : IDisposable
 
     // S1-1 : le lien HelloAsso n'existe que là où les liens externes sont permis. Ailleurs, le
     // nom de l'association s'écrit en texte simple, à la même place.
-    private readonly bool _supportLink =
-        LinkEntries(AppChannel.Current, PolicyManager.Current.ExternalLinks).Contains(IDC_LINK_AMCF);
+    // Liens de cette fenêtre, lus une fois : canal, ExternalLinksEnabled et OutboundLinksEnabled.
+    private readonly int[] _linkEntries =
+        LinkEntries(AppChannel.Current, PolicyManager.Current.ExternalLinks, PolicyManager.Current.OutboundLinks);
+
+    private bool _supportLink => _linkEntries.Contains(IDC_LINK_AMCF);
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     // F-10 : survol, Entrée, Échap et Tab des quatre liens.
@@ -77,8 +80,12 @@ sealed class AboutWindow : IDisposable
     /// 2026-09-02 : canal sobre, ou politique <c>ExternalLinksEnabled</c> à 0). Liste pure pour
     /// la même raison que <see cref="TrayApplication.FeedbackMenuEntries"/>.
     /// </summary>
-    internal static int[] LinkEntries(DistributionChannel channel, bool? externalLinksPolicy = null) =>
-        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+    internal static int[] LinkEntries(DistributionChannel channel, bool? externalLinksPolicy = null,
+        bool? outboundLinksPolicy = null) =>
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : site, code source et licence aussi
+        // (décision 2 du 2026-11-17, qui amende D4).
+        !PolicyManager.OutboundLinksEnabled(outboundLinksPolicy) ? Array.Empty<int>()
+        : PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
             ? new[] { IDC_LINK_SITE, IDC_LINK_GITHUB, IDC_LINK_LICENSE, IDC_LINK_AMCF }
             : new[] { IDC_LINK_SITE, IDC_LINK_GITHUB, IDC_LINK_LICENSE };
 
@@ -171,23 +178,34 @@ sealed class AboutWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
-        _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", L.About_LinkSite,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkSite, 1);
+        // Liens absents de _linkEntries (stratégie OutboundLinksEnabled à 0) : aucun contrôle,
+        // comme le lien AMCF ci-dessous — rien à atteindre par Tab, rien à cliquer.
+        if (_linkEntries.Contains(IDC_LINK_SITE))
+        {
+            _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", L.About_LinkSite,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkSite, 1);
+        }
 
-        _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkGithub, 2);
+        if (_linkEntries.Contains(IDC_LINK_GITHUB))
+        {
+            _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkGithub, 2);
+        }
 
-        _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkLicense, 3);
+        if (_linkEntries.Contains(IDC_LINK_LICENSE))
+        {
+            _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkLicense, 3);
+        }
 
         // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure). Sans lien
         // (S1-1), aucun contrôle : rien à atteindre par Tab, rien à cliquer.
@@ -385,10 +403,7 @@ sealed class AboutWindow : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
-    private void OpenLink(string url)
-    {
-        Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
-    }
+    private void OpenLink(string url) => OutboundLinks.Open(url);
 
     private void OnPaint(IntPtr hWnd)
     {

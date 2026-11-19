@@ -27,6 +27,11 @@ public class EcrituresGroupeesTests : IDisposable
         "{\"activationConsent\":true,\"appLanguage\":\"fr\",\"notificationsEnabled\":true," +
         "\"showOnboardingAtStartup\":false,\"autoStartEnabled\":false}";
 
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
+
     public EcrituresGroupeesTests()
     {
         Directory.CreateDirectory(_dir);
@@ -37,6 +42,7 @@ public class EcrituresGroupeesTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         ConfigManager.DiskWritePhaseForTests = null;
         UsageStats.WritePhaseForTests = null;
         ConfigManager.SaveDelayMilliseconds = -1;

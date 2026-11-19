@@ -73,21 +73,23 @@ public class SoberChannelTests
         Assert.Empty(TrayApplication.FeedbackTopLevelEntries(DistributionChannel.Amcf));
     }
 
-    /// <summary>Décision D8 : l'EXE hors package garde le menu d'aujourd'hui, ses trois liens
-    /// externes compris. Ce test rougit si le garde-fou passe de « == Amcf » à « ≠ Store »,
-    /// formulation que le lot B du plan emploie et qui trancherait D8 au passage.</summary>
+    /// <summary>Décision 5 du 2026-11-17 (fin du report D8) : l'EXE hors package est sobre
+    /// comme le MSIX entreprise — « Donner mon avis » et « Signaler un bug » seulement, pas de
+    /// notation Store.</summary>
     [Fact]
-    public void HorsPackage_GardeLeMenuDAujourdhui()
+    public void HorsPackage_EstSobreCommeAmcf()
     {
-        Assert.Equal(4, TrayApplication.FeedbackMenuEntries(DistributionChannel.Unpackaged).Length);
-        Assert.Single(TrayApplication.FeedbackTopLevelEntries(DistributionChannel.Unpackaged));
+        Assert.Equal(TrayApplication.FeedbackMenuEntries(DistributionChannel.Amcf),
+            TrayApplication.FeedbackMenuEntries(DistributionChannel.Unpackaged));
+        Assert.Empty(TrayApplication.FeedbackTopLevelEntries(DistributionChannel.Unpackaged));
     }
 
+    /// <summary>Tout ce qui n'est pas le Store est sobre (décision 5 du 2026-11-17).</summary>
     [Fact]
-    public void CanalSobre_EstLeCanalAmcfEtLuiSeul()
+    public void CanalSobre_EstToutCanalSaufLeStore()
     {
         Assert.True(AppChannel.IsSober(DistributionChannel.Amcf));
         Assert.False(AppChannel.IsSober(DistributionChannel.Store));
-        Assert.False(AppChannel.IsSober(DistributionChannel.Unpackaged));
+        Assert.True(AppChannel.IsSober(DistributionChannel.Unpackaged));
     }
 }

@@ -245,6 +245,64 @@ public class ParcoursAccueilTests
         }
     }
 
+    /// <summary>
+    /// Décision d'Antoine du 2026-11-18 : avec LessonsEnabled à 0, l'écran final de l'exercice
+    /// d'activation n'ouvre plus les Leçons. Ni « Continuer les leçons », ni les cartes
+    /// « Aujourd'hui », « Votre carte » et « Un tour d'Afrique » ne sont dessinés (le nombre de
+    /// cibles cliquables baisse d'au moins 3), et un appel direct à ContinueAfterTutorial ferme
+    /// l'exercice sans rien ouvrir. Le témoin sans stratégie compte les cibles avec les Leçons.
+    /// </summary>
+    [Fact]
+    public void Ecran_final_sans_lecons_ne_propose_ni_Continuer_ni_cartes_et_ne_les_ouvre_pas()
+    {
+        using var isolation = new BancCapture.Isolation();
+        var window = Open();
+        bool? closed = null;
+        window.TutorialClosed = completed => closed = completed;
+        try
+        {
+            window.BeginTutorial();
+            BancCapture.Call(window, "StartTutorialRoute");
+            for (int i = 0; i < 4; i++)
+            {
+                ConfigManager.RecordLearningExerciseCompleted(i);
+                BancCapture.Call(window, "AdvanceTutorialRoute");
+            }
+            Assert.Equal("Final", Page(window));
+
+            static int Cibles(LessonsWindow w)
+            {
+                IntPtr hwnd = BancCapture.Handle(w);
+                Win32.InvalidateRect(hwnd, IntPtr.Zero, false);
+                Win32.SendMessageW(hwnd, Win32.WM_PAINT, IntPtr.Zero, IntPtr.Zero);
+                return BancCapture.Field<List<(Win32.RECT Rect, Action Action)>>(w, "_clickActions").Count;
+            }
+
+            int avecLecons;
+            using (PolicyManager.OverrideForTests((_, _) => null))
+                avecLecons = Cibles(window);
+
+            int sansLecons;
+            int ouvertures = 0;
+            using (PolicyManager.OverrideForTests((chemin, nom) =>
+                       chemin == PolicyManager.KeyPath && nom == PolicyManager.ValueLessons ? 0 : null))
+            {
+                sansLecons = Cibles(window);
+                BancCapture.Call(window, "ContinueAfterTutorial", (Action)(() => ouvertures++));
+            }
+
+            // Continuer, Aujourd'hui, Votre carte, plus Afrique quand le catalogue la porte.
+            Assert.True(avecLecons - sansLecons >= 3, $"cibles avec Leçons {avecLecons}, sans {sansLecons}");
+            Assert.Equal(0, ouvertures);                                        // rien ne s'ouvre
+            Assert.True(closed);                                                // l'exercice est clos comme réussi
+            Assert.False(window.IsTutorialActive);
+        }
+        finally
+        {
+            BancCapture.Teardown(window);
+        }
+    }
+
     [Fact]
     public void Un_exercice_bonus_se_passe()
     {
