@@ -113,6 +113,35 @@ public sealed class AuditTempsHorlogeTests : IDisposable
         Assert.True(stats.ElapsedSeconds > 0, "durée nulle : l'horloge des durées n'a pas été lue");
     }
 
+    /// <summary>Verify du 18/11 : <c>QueryUnbiasedInterruptTime</c> n'avance qu'au tic d'horloge
+    /// (0,3 à 1,9 ms mesurés ce jour-là, 15,6 ms par défaut). Une frappe rapide tenait dans un tic :
+    /// durée nulle, vitesse absente (<c>DefiRecordTests</c>, « vitesse mesurée : 0 »). L'horloge des
+    /// durées doit séparer deux lectures bien plus proches qu'un tic : le plus petit pas observé
+    /// reste sous 100 µs (100 ns attendus). L'ancienne lecture, remise pour la mutation du 18/11,
+    /// n'est pas descendue sous 335 µs (3 passages rouges : 335,6, 398,6 et 502,6 µs).</summary>
+    [Fact]
+    [Trait("Audit", "temps-horloge")]
+    public void TH01c_L_horloge_des_durees_separe_deux_lectures_plus_proches_qu_un_tic()
+    {
+        var plusPetitPas = TimeSpan.MaxValue;
+        int pas = 0;
+        var garde = System.Diagnostics.Stopwatch.StartNew();
+        var précédente = MonotonicClock.Now();
+        while (pas < 1000 && garde.ElapsedMilliseconds < 200)
+        {
+            var lecture = MonotonicClock.Now();
+            Assert.True(lecture >= précédente, $"MonotonicClock a reculé : {précédente} puis {lecture}");
+            if (lecture == précédente) continue;
+            pas++;
+            if (lecture - précédente < plusPetitPas) plusPetitPas = lecture - précédente;
+            précédente = lecture;
+        }
+
+        Assert.True(pas > 0, "MonotonicClock n'a pas avancé en 200 ms");
+        Assert.True(plusPetitPas < TimeSpan.FromMicroseconds(100),
+            $"plus petit pas : {plusPetitPas.TotalMicroseconds} µs sur {pas} pas (tic d'horloge, pas le compteur précis)");
+    }
+
     [Fact]
     [Trait("Audit", "temps-horloge")]
     public void TH01_Mode_Libre_mesure_sa_vitesse_sur_l_horloge_des_durees()
