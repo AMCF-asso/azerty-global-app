@@ -1084,8 +1084,15 @@ static class ConfigManager
     /// lecture : la ligne est réessayée au lieu d'être jetée. Le budget est par vidage
     /// (<see cref="LogShareRetryBudget"/> attentes de <see cref="LogShareRetryDelayMs"/> ms) :
     /// un fichier tenu longtemps coûte au plus 200 ms au vidage, puis ses lignes sont perdues
-    /// comme avant.</summary>
-    private static void WriteQueuedLogEntriesLocked()
+    /// comme avant.
+    ///
+    /// CE-T7 (CE-17, audit des chemins d'erreur) : le plafond de 5 Mo vaut aussi en cours de
+    /// session. Avant, la rotation n'avait lieu qu'au démarrage : une exception répétée (un
+    /// WndProc qui lève à chaque message) faisait grossir error.log sans borne jusqu'à la
+    /// fermeture (8 Mo mesurés en 30 000 lignes). La taille est suivie ici, sous le verrou.</summary>
+    /// <param name="mayRotate">Faux dans <see cref="LogFatal"/> quand le verrou n'a pas été
+    /// obtenu : ni suivi de taille ni renommage hors du verrou.</param>
+    private static void WriteQueuedLogEntriesLocked(bool mayRotate = true)
     {
         int retriesLeft = LogShareRetryBudget;
         while (_logQueue.TryDequeue(out var item))
@@ -1097,6 +1104,7 @@ static class ConfigManager
                 {
                     Directory.CreateDirectory(item.Dir);
                     File.AppendAllText(Path.Combine(item.Dir, "error.log"), item.Entry);
+                    if (mayRotate) TrackLogSizeLocked(item.Dir, item.Entry);
                     break;
                 }
                 catch (IOException) when (retriesLeft > 0)
@@ -1107,6 +1115,58 @@ static class ConfigManager
                 catch { break; }
             }
         }
+    }
+
+    /// <summary>Dossier dont la taille d'error.log est suivie (null : à relire), sous
+    /// <c>_logFlushLock</c>. Le dossier change avec les tests (OverrideConfigPathForTests).</summary>
+    private static string? _logSizeDir;
+    /// <summary>Taille connue d'error.log dans <see cref="_logSizeDir"/>, en octets UTF-8.</summary>
+    private static long _logSizeBytes;
+    /// <summary>Taille à laquelle tenter le renommage ; repoussée après un échec.</summary>
+    private static long _logRotateAtBytes = LogRotationSizeBytes;
+    /// <summary>Après un renommage refusé (error.log.old tenu ouvert), réessai 64 Ko plus loin :
+    /// pas une exception par ligne, et le fichier ne dépasse le plafond que de peu.</summary>
+    private const long LogRotateRetryStepBytes = 64 * 1024;
+
+    /// <summary>Ajoute la ligne écrite à la taille suivie, puis renomme error.log en
+    /// error.log.old au-delà du plafond. Sous <c>_logFlushLock</c>.</summary>
+    private static void TrackLogSizeLocked(string dir, string entry)
+    {
+        if (!string.Equals(_logSizeDir, dir, StringComparison.Ordinal))
+        {
+            // Relue une fois par dossier : la ligne qui vient d'être écrite y est déjà.
+            var info = new FileInfo(Path.Combine(dir, "error.log"));
+            _logSizeBytes = info.Exists ? info.Length : 0;
+            _logSizeDir = dir;
+            _logRotateAtBytes = LogRotationSizeBytes;
+        }
+        else
+            _logSizeBytes += Encoding.UTF8.GetByteCount(entry);
+
+        if (_logSizeBytes < _logRotateAtBytes) return;
+        if (TryRotateLogLocked(dir))
+        {
+            _logSizeBytes = 0;
+            _logRotateAtBytes = LogRotationSizeBytes;
+        }
+        else
+            _logRotateAtBytes = _logSizeBytes + LogRotateRetryStepBytes;
+    }
+
+    /// <summary>Renomme error.log en error.log.old (écrase le précédent). Sous
+    /// <c>_logFlushLock</c>. Faux si le renommage a échoué.</summary>
+    private static bool TryRotateLogLocked(string dir)
+    {
+        try
+        {
+            var logFile = Path.Combine(dir, "error.log");
+            var oldFile = Path.Combine(dir, "error.log.old");
+            if (File.Exists(oldFile))
+                File.Delete(oldFile);
+            File.Move(logFile, oldFile);
+            return true;
+        }
+        catch { return false; }
     }
 
     private const int LogShareRetryBudget = 20;
@@ -1125,7 +1185,7 @@ static class ConfigManager
         try
         {
             Monitor.TryEnter(_logFlushLock, 1000, ref locked);
-            WriteQueuedLogEntriesLocked();
+            WriteQueuedLogEntriesLocked(mayRotate: locked);
         }
         finally
         {
@@ -1237,27 +1297,28 @@ static class ConfigManager
 
     /// <summary>
     /// Vérifie la taille de error.log au démarrage. Si > 5 Mo, renomme en error.log.old
-    /// (écrase l'éventuel précédent .old). Une seule rotation, pas d'archivage cumulatif.
-    /// À appeler une fois au démarrage de l'app, avant toute écriture de log.
+    /// (écrase l'éventuel précédent .old). Une seule rotation, pas d'archivage cumulatif :
+    /// error.log et error.log.old font au plus ~10 Mo ensemble. Appelée au démarrage de l'app,
+    /// avant toute écriture de log ; en cours de session, l'écriture du journal applique le
+    /// même plafond (<see cref="TrackLogSizeLocked"/>, CE-T7).
     /// </summary>
     public static void RotateLogIfNeeded()
     {
         // Sous le verrou du journal (T5) : une ligne en cours d'écriture ne part pas dans le
         // fichier qu'on renomme, et aucune n'est écrite entre le test de taille et le renommage.
         lock (_logFlushLock)
-        try
         {
-            var logFile = Path.Combine(LogDirectory, "error.log");
-            if (!File.Exists(logFile)) return;
-            var info = new FileInfo(logFile);
-            if (info.Length < LogRotationSizeBytes) return;
-
-            var oldFile = Path.Combine(LogDirectory, "error.log.old");
-            if (File.Exists(oldFile))
-                File.Delete(oldFile);
-            File.Move(logFile, oldFile);
+            _logSizeDir = null; // la taille suivie est relue à la ligne suivante
+            try
+            {
+                var logFile = Path.Combine(LogDirectory, "error.log");
+                if (!File.Exists(logFile)) return;
+                var info = new FileInfo(logFile);
+                if (info.Length < LogRotationSizeBytes) return;
+                TryRotateLogLocked(LogDirectory); // best-effort, ne pas bloquer le démarrage
+            }
+            catch { /* best-effort, ne pas bloquer le démarrage */ }
         }
-        catch { /* best-effort, ne pas bloquer le démarrage */ }
     }
 
     private static bool GetBool(string key)
