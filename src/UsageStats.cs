@@ -887,6 +887,36 @@ static class UsageStats
         }
     }
 
+    /// <summary>
+    /// Écriture de fermeture (CE-12, K125 et K98) : <see cref="Flush"/>, puis, tant que les
+    /// compteurs restent à écrire, les mêmes nouveaux essais bornés que
+    /// <see cref="ConfigManager.FlushFinal"/> (3 × 250 ms au plus), sur le fil appelant. La
+    /// fermeture n'appelait <see cref="Flush"/> qu'une fois : un verrou d'antivirus tenu à cet
+    /// instant faisait perdre les compteurs de la session. Seulement à la sortie et à
+    /// WM_ENDSESSION confirmé (<c>TrayApplication.Cleanup</c>), jamais à WM_QUERYENDSESSION, qui
+    /// ne doit pas dormir. Rend vrai si plus rien n'attend ; sinon la perte est journalisée.
+    /// </summary>
+    /// <param name="sleep">Attente entre deux essais, en millisecondes (remplaçable en test).</param>
+    internal static bool FlushFinal(Action<int>? sleep = null, int retries = ConfigManager.FinalFlushRetries,
+        int delayMilliseconds = ConfigManager.FinalFlushDelayMilliseconds)
+    {
+        sleep ??= static ms => Thread.Sleep(ms);
+        Flush();
+        for (int essai = 0; essai < retries && StillToWrite(); essai++)
+        {
+            sleep(delayMilliseconds);
+            Flush();
+        }
+        if (!StillToWrite()) return true;
+        ConfigManager.LogCompatCriticalEvent("UsageStatsFinalWriteLost", $"retries={retries}");
+        return false;
+    }
+
+    private static bool StillToWrite()
+    {
+        lock (_lock) return _dirty;
+    }
+
     /// <summary>Flush sur le pool de threads (minuteur de 5 min, changement de session) :
     /// le fil du hook n'attend plus le disque. Une seule écriture en vol à la fois ; une demande
     /// arrivée pendant celle-ci est servie à sa fin, par un tour de plus, au lieu d'être jetée :

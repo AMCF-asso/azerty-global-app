@@ -167,10 +167,33 @@ public class CheminsErreurDonneesTests : IDisposable
 
         var verrou = new FileStream(StatsPath, FileMode.Open, FileAccess.Read, FileShare.None);
         var liberation = Task.Run(async () => { await Task.Delay(80); verrou.Dispose(); });
-        UsageStats.Flush(); // la fermeture : un seul essai aujourd'hui
+        // La fermeture (TrayApplication.Cleanup). CE-T4 : elle passait par UsageStats.Flush, un
+        // seul essai ; elle passe par FlushFinal, les essais de ConfigManager.FlushFinal. Le test
+        // qui suit vérifie que Cleanup l'appelle bien.
+        UsageStats.FlushFinal();
         liberation.Wait();
 
         UsageStats.OverrideStatsPathForTests(StatsPath); // le processus est mort, lancement suivant
         Assert.Equal(1, UsageStats.AccentedUppercaseCount); // 0
+    }
+
+    // CE-T4 (CE-12) : le test précédent appelle l'écriture de fermeture directement ; celui-ci
+    // lit Cleanup, qui seul décide de ce que la fermeture appelle.
+    [Fact]
+    public void LaFermetureEcritLesStatistiquesAvecLesNouveauxEssais()
+    {
+        string source = File.ReadAllText(SourceDeLApp("TrayApplication.cs"));
+        Assert.Contains("try { UsageStats.FlushFinal(); }", source);
+        Assert.DoesNotContain("try { UsageStats.Flush(); }", source);
+    }
+
+    private static string SourceDeLApp(string fichier)
+    {
+        for (var dossier = new DirectoryInfo(AppContext.BaseDirectory); dossier != null; dossier = dossier.Parent)
+        {
+            string chemin = Path.Combine(dossier.FullName, "src", fichier);
+            if (File.Exists(chemin)) return chemin;
+        }
+        throw new FileNotFoundException(fichier);
     }
 }
