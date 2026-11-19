@@ -400,7 +400,7 @@ public sealed class Regles130LeconsFenetreTests
             Assert.False(Armee(), "témoin : sans début posé, la minuterie ne tourne pas");
 
             BancCapture.Call(fenetre, "OnChar", 'a');                                   // première frappe
-            Assert.True(BancCapture.Field<DateTimeOffset?>(fenetre, "_freeStartedAt").HasValue);
+            Assert.True(BancCapture.Field<TimeSpan?>(fenetre, "_freeStartedElapsed").HasValue);
             Assert.True(OutilsLecons130.Sonder(fenetre, "TIMER_FREE_STATS"), "témoin : la première frappe arme la minuterie");
             Assert.True(Armee(), "témoin : toutes conditions vraies, la minuterie tourne");
 
@@ -420,10 +420,10 @@ public sealed class Regles130LeconsFenetreTests
             Assert.False(Armee(), "fenêtre masquée");
             BancCapture.SetField(fenetre, "_visible", true);
 
-            var debut = BancCapture.Field<DateTimeOffset?>(fenetre, "_freeStartedAt");
-            BancCapture.SetField(fenetre, "_freeStartedAt", null);
+            var debut = BancCapture.Field<TimeSpan?>(fenetre, "_freeStartedElapsed");
+            BancCapture.SetField(fenetre, "_freeStartedElapsed", null);
             Assert.False(Armee(), "début effacé");
-            BancCapture.SetField(fenetre, "_freeStartedAt", debut);
+            BancCapture.SetField(fenetre, "_freeStartedElapsed", debut);
             Assert.True(Armee(), "témoin : conditions rétablies, la minuterie tourne de nouveau");
 
             // Le tick se réarme sous les conditions, et seulement alors.
