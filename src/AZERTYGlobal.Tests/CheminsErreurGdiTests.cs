@@ -8,36 +8,46 @@ namespace AZERTYGlobal.Tests;
 /// <summary>Audit des chemins d'erreur, rapport-E S1 et S2 : PaperText face à un DC invalide.</summary>
 public class CheminsErreurPaperTextTests
 {
-    private static Dictionary<(FontSpec, string), bool> Coverage()
+    /// <summary>Le cache de couverture, clé (famille, graisse, grappe) depuis l'audit des ressources
+    /// (C1, C2) : la hauteur n'en fait plus partie.</summary>
+    private static Dictionary<(string Family, int Weight, string Cluster), bool> Coverage()
     {
         var champ = typeof(PaperText).GetField("Coverage", BindingFlags.NonPublic | BindingFlags.Static);
         Assert.NotNull(champ);
-        return (Dictionary<(FontSpec, string), bool>)champ!.GetValue(null)!;
+        return (Dictionary<(string Family, int Weight, string Cluster), bool>)champ!.GetValue(null)!;
     }
 
     // rapport-E S1 (W769, W770)
+    // Adaptation à l'intégration 1.3.0 : la version de la branche d'audit lisait une clé
+    // (FontSpec, grappe) et prenait une hauteur rare pour la victime. Depuis que la hauteur est
+    // sortie de la clé, le témoin remplissait la case de la victime et le test passait sans
+    // éprouver la panne. La grappe est donc propre au test (aucune autre ne demande « ӂ »), la
+    // panne vient en premier, et le témoin vient après, sur la même clé vidée.
     [Fact]
     [Trait("Audit", "chemins-erreur")]
     public void Covers_DcInvalide_NeMemorisePasUneCouvertureInventee()
     {
         Assert.True(AppFonts.LoadedCount > 0, "polices embarquées non chargées : le témoin n'a pas de sens");
         var cache = Coverage();
-        var temoin = new FontSpec(AppFonts.Text, 61);   // hauteurs rares : aucune autre fenêtre ne partage ces clés
-        var victime = new FontSpec(AppFonts.Text, 59);
-
-        // Témoin : avec un vrai DC, AG Texte (latin) n'a pas le « я » : la grappe est non couverte.
-        IntPtr ecran = Win32.GetDC(IntPtr.Zero);
-        try { PaperText.Width(ecran, "я", temoin); }
-        finally { Win32.ReleaseDC(IntPtr.Zero, ecran); }
-        Assert.True(cache.TryGetValue((temoin, "я"), out bool temoinCouvre));
-        Assert.False(temoinCouvre, "AG Texte ne devrait pas couvrir le cyrillique");
+        const string Grappe = "ӂ"; // U+04C2, cyrillique : AG Texte (latin) ne l'a pas
+        var police = new FontSpec(AppFonts.Text, 59);
+        var cle = (police.Family, police.Weight, Grappe);
+        Assert.False(cache.ContainsKey(cle), "la grappe du test est déjà en cache : le test n'éprouverait rien");
 
         // Panne : DC nul (GetDC d'une fenêtre détruite). GetGlyphIndicesW rend GDI_ERROR.
-        PaperText.Width(IntPtr.Zero, "я", victime);
+        PaperText.Width(IntPtr.Zero, Grappe, police);
+        bool memorise = cache.TryGetValue(cle, out bool apresPanne);
+        cache.Remove(cle);
 
-        bool memorise = cache.TryGetValue((victime, "я"), out bool couvre);
-        Assert.False(memorise && couvre,
-            "un échec GDI a été mémorisé comme « AG Texte couvre я » : carré vide jusqu'à la fin de la session");
+        // Témoin : avec un vrai DC, la vraie couverture.
+        IntPtr ecran = Win32.GetDC(IntPtr.Zero);
+        try { PaperText.Width(ecran, Grappe, police); }
+        finally { Win32.ReleaseDC(IntPtr.Zero, ecran); }
+        Assert.True(cache.TryGetValue(cle, out bool verite));
+        Assert.False(verite, "AG Texte ne devrait pas couvrir le cyrillique");
+
+        Assert.False(memorise && apresPanne != verite,
+            "un échec GDI a été mémorisé comme « AG Texte couvre ӂ » : carré vide jusqu'à la fin de la session");
     }
 
     // rapport-E S2 (W759)

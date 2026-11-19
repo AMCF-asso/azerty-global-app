@@ -378,7 +378,9 @@ static class Win32
 
     public const int GCLP_HBRBACKGROUND = -10;
 
-    [DllImport("user32.dll")]
+    /// <summary>Rend l'ancienne valeur, ou 0 en cas d'échec : 0 est aussi une ancienne valeur
+    /// légitime, seul le code d'erreur les distingue (CE-16).</summary>
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr SetClassLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]

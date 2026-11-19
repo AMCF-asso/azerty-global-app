@@ -106,7 +106,15 @@ static class NativeWindow
             return IntPtr.Zero;
 
         IntPtr brush = Win32.CreateSolidBrush(color);
+        Marshal.SetLastPInvokeError(0);
         IntPtr previous = Win32.SetClassLongPtrW(hwnd, Win32.GCLP_HBRBACKGROUND, brush);
+        if (previous == IntPtr.Zero && Marshal.GetLastPInvokeError() != 0)
+        {
+            // CE-16 (W530) : refusé (fenêtre détruite pendant RefreshPalette). Le pinceau n'est
+            // pas à la classe : personne d'autre ne le détruirait (38 fuites sur 40 appels).
+            Win32.DeleteObject(brush);
+            return IntPtr.Zero;
+        }
         if (previous != IntPtr.Zero && previous != brush)
             Win32.DeleteObject(previous);
         return brush;

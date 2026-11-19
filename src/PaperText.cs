@@ -25,13 +25,43 @@ internal static class PaperText
     private static readonly Dictionary<(string Family, int Weight, string Cluster), bool> Coverage = new();
     private static readonly object Gate = new();
 
-    /// <summary>Hauteurs au-dessus et au-dessous de la ligne de base de la police principale.</summary>
+    /// <summary>Hauteurs au-dessus et au-dessous de la ligne de base de la police principale.
+    /// CE-15 (W759) : sur un DC refusé (fenêtre détruite, quota GDI épuisé), la mesure se refait
+    /// sur le DC de l'écran ; avant, (0, 0) partait sans signal et SettingsWindow._metrics ou
+    /// CharacterSearch.ResizeEditControl le gardaient pour la session.</summary>
     internal static (int Ascent, int Descent) Metrics(IntPtr hdc, FontSpec font)
     {
+        if (TryMetrics(hdc, font, out var metrics)) return metrics;
+        return OnScreenDc(screen => TryMetrics(screen, font, out var m) ? m : EstimatedMetrics(font),
+            EstimatedMetrics(font));
+    }
+
+    private static bool TryMetrics(IntPtr hdc, FontSpec font, out (int Ascent, int Descent) metrics)
+    {
         var old = Win32.SelectObject(hdc, font.Handle);
-        Win32.GetTextMetricsW(hdc, out var tm);
+        bool ok = Win32.GetTextMetricsW(hdc, out var tm);
         Win32.SelectObject(hdc, old);
-        return (tm.tmAscent, tm.tmDescent);
+        metrics = (tm.tmAscent, tm.tmDescent);
+        return ok && tm.tmAscent + tm.tmDescent > 0;
+    }
+
+    /// <summary>Dernier recours, sans aucun DC : la hauteur de caractère de la police, partagée
+    /// comme le font les polices latines (environ 4/5 au-dessus de la ligne de base).</summary>
+    private static (int Ascent, int Descent) EstimatedMetrics(FontSpec font)
+    {
+        int height = Math.Max(1, Math.Abs(font.Height));
+        int ascent = Math.Max(1, (height * 4 + 2) / 5);
+        return (ascent, Math.Max(1, height - ascent));
+    }
+
+    /// <summary>Mesure sur le DC de l'écran, rendu aussitôt ; <paramref name="fallback"/> si
+    /// Windows n'en donne pas.</summary>
+    private static T OnScreenDc<T>(Func<IntPtr, T> measure, T fallback)
+    {
+        IntPtr screen = Win32.GetDC(IntPtr.Zero);
+        if (screen == IntPtr.Zero) return fallback;
+        try { return measure(screen); }
+        finally { Win32.ReleaseDC(IntPtr.Zero, screen); }
     }
 
     /// <summary>Largeur de <paramref name="text"/> sur une ligne.</summary>
@@ -308,12 +338,22 @@ internal static class PaperText
         return pieces;
     }
 
+    /// <summary>CE-15 (W767) : sur un DC refusé, la largeur se mesure sur le DC de l'écran ;
+    /// avant, 0 partait sans signal et LessonsWindow._freeWidths le gardait pour la session.</summary>
     private static Piece Measure(IntPtr hdc, string text, FontSpec font)
     {
+        if (!TryExtent(hdc, text, font, out int width) && text.Length > 0)
+            width = OnScreenDc(screen => TryExtent(screen, text, font, out int w) ? w : 0, 0);
+        return new Piece(text, font, width);
+    }
+
+    private static bool TryExtent(IntPtr hdc, string text, FontSpec font, out int width)
+    {
         var old = Win32.SelectObject(hdc, font.Handle);
-        Win32.GetTextExtentPoint32W(hdc, text, text.Length, out var size);
+        bool ok = Win32.GetTextExtentPoint32W(hdc, text, text.Length, out var size);
         Win32.SelectObject(hdc, old);
-        return new Piece(text, font, size.cx);
+        width = size.cx;
+        return ok;
     }
 
     /// <summary>La police a-t-elle tous les glyphes de la grappe ? Les espaces ne comptent pas :
@@ -334,13 +374,28 @@ internal static class PaperText
             if (Coverage.TryGetValue((font.Family, font.Weight, cluster), out bool known))
                 return known;
         }
-        var old = Win32.SelectObject(hdc, font.Handle);
-        var indices = new ushort[cluster.Length];
-        Win32.GetGlyphIndicesW(hdc, cluster, cluster.Length, indices, Win32.GGI_MARK_NONEXISTING_GLYPHS);
-        Win32.SelectObject(hdc, old);
-        bool covers = Array.TrueForAll(indices, index => index != 0xFFFF);
+        // CE-14 (W769) : GetGlyphIndicesW rend GDI_ERROR sur un DC refusé et laisse les indices à
+        // 0, ce qui se lisait « couvert » et restait en cache pour la session (carré vide au lieu
+        // de la police de secours). On reprend sur le DC de l'écran ; sans réponse, on ne met
+        // rien en cache.
+        bool? measured = TryCovers(hdc, font, cluster)
+            ?? OnScreenDc(screen => TryCovers(screen, font, cluster), null);
+        if (measured is not bool covers) return true;
         lock (Gate)
             Coverage[(font.Family, font.Weight, cluster)] = covers;
         return covers;
+    }
+
+    private const uint GDI_ERROR = 0xFFFFFFFF;
+
+    /// <summary>Couverture lue sur <paramref name="hdc"/>, ou null si GDI refuse la lecture.</summary>
+    private static bool? TryCovers(IntPtr hdc, FontSpec font, string cluster)
+    {
+        var old = Win32.SelectObject(hdc, font.Handle);
+        var indices = new ushort[cluster.Length];
+        uint result = Win32.GetGlyphIndicesW(hdc, cluster, cluster.Length, indices, Win32.GGI_MARK_NONEXISTING_GLYPHS);
+        Win32.SelectObject(hdc, old);
+        if (result == GDI_ERROR) return null;
+        return Array.TrueForAll(indices, index => index != 0xFFFF);
     }
 }
