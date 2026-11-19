@@ -421,17 +421,24 @@ public sealed class RessourcesLongueDureeTests
 
     // ── Sans fenêtre : suivi du premier plan, icônes de la zone de notification ─
 
-    /// <summary>ForegroundMonitor pose trois crochets WinEvent à la construction et les retire
-    /// au Dispose. Le tray n'en crée qu'un, mais un oubli coûterait un crochet système à
-    /// chaque recréation : on compte posés et retirés sur le mock.</summary>
+    /// <summary>ForegroundMonitor pose ses crochets WinEvent à la construction (premier plan,
+    /// focus, Alt+Tab et, depuis l'audit par frappe au hasard AFH-4, changement de bureau
+    /// d'entrée) et les retire au Dispose. Le tray n'en crée qu'un, mais un oubli coûterait un
+    /// crochet système à chaque recréation : on compte posés et retirés sur le mock. Le nombre
+    /// par suivi est mesuré sur le premier, pas écrit en dur : la branche d'audit en attendait
+    /// trois, la base 1.3.0 en pose quatre.</summary>
     [Fact]
     public void Creer_et_disposer_le_suivi_du_premier_plan_retire_chaque_crochet_pose()
     {
         var api = new MockWin32Api();
-        for (int i = 0; i < Cycles; i++)
+        new global::TypingEngine.Windows.ForegroundMonitor(api, IntPtr.Zero).Dispose();
+        int parSuivi = api.WinEventHooksSet;
+        Assert.True(parSuivi > 0, "le suivi du premier plan ne pose aucun crochet : le banc ne prouve rien");
+        Assert.Equal(parSuivi, api.WinEventHooksRemoved);
+        for (int i = 1; i < Cycles; i++)
             new global::TypingEngine.Windows.ForegroundMonitor(api, IntPtr.Zero).Dispose();
-        _out.WriteLine($"{Cycles} suivis : {api.WinEventHooksSet} crochets posés, {api.WinEventHooksRemoved} retirés");
-        Assert.Equal(3 * Cycles, api.WinEventHooksSet);
+        _out.WriteLine($"{Cycles} suivis : {api.WinEventHooksSet} crochets posés ({parSuivi} par suivi), {api.WinEventHooksRemoved} retirés");
+        Assert.Equal(parSuivi * Cycles, api.WinEventHooksSet);
         Assert.Equal(api.WinEventHooksSet, api.WinEventHooksRemoved);
     }
 
