@@ -115,7 +115,7 @@ internal sealed class SecureInputProbe : IDisposable
                 bool secure;
                 try { secure = _query(request.Window); }
                 catch { secure = true; }
-                Result previous;
+                bool changedLate;
                 lock (_gate)
                 {
                     if (generation != _generation)
@@ -125,11 +125,15 @@ internal sealed class SecureInputProbe : IDisposable
                         return;
                     }
                     _busySince = 0;
-                    previous = Volatile.Read(ref _result);
+                    var previous = Volatile.Read(ref _result);
+                    // Le retard se mesure à la publication, avant de réveiller l'appelant : mesuré
+                    // après _done.Set(), un fil préempté à cet endroit signalait comme tardif un
+                    // résultat que l'appelant avait reçu dans le délai.
+                    changedLate = _clock() > request.Deadline && previous.Secure != secure;
                     Volatile.Write(ref _result, new Result(request.Id, secure));
                 }
                 _done.Set();
-                if (_clock() > request.Deadline && previous.Secure != secure)
+                if (changedLate)
                 {
                     try { ResultChangedLate?.Invoke(); } catch { }
                 }

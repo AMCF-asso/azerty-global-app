@@ -161,6 +161,26 @@ public class SecureInputProbeTests
         finally { release.Set(); }
     }
 
+    // Le retard se juge à la publication du résultat. L'horloge saute de 5 s dès qu'un résultat
+    // est publié : mesuré après la publication (ancien code, fil préempté entre _done.Set() et
+    // la mesure), le résultat reçu dans le délai était signalé tardif.
+    [Fact]
+    public void Resultat_publie_dans_le_delai_n_est_pas_signale_tardif_meme_si_l_horloge_avance_juste_apres()
+    {
+        const long debut = 1_000_000;
+        SecureInputProbe? probe = null;
+        using var sonde = probe = new SecureInputProbe(() => true, _ => false, timeout: 100, retryDelay: 0,
+            abandonAfter: 2000,
+            clock: () => probe is not null && probe.LastResultRequestId > 0 ? debut + 5000 : debut);
+        int levees = 0;
+        sonde.ResultChangedLate += () => Interlocked.Increment(ref levees);
+
+        Assert.False(VerdictRapide(sonde, (IntPtr)2));   // sécurisé initial → non sécurisé : changement
+        // L'ouvrier ne prend la requête suivante qu'après avoir fini la précédente, levée comprise.
+        Assert.False(VerdictRapide(sonde, (IntPtr)3));
+        Assert.Equal(0, Volatile.Read(ref levees));
+    }
+
     [Fact]
     public void Workers_abandonnes_sont_bornes_puis_la_sonde_reste_securisee()
     {
