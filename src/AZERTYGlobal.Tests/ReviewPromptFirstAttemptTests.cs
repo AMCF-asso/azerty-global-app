@@ -27,6 +27,11 @@ public class ReviewPromptFirstAttemptTests : IDisposable
     private readonly string _configPath;
     private readonly string _statsPath;
 
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
+
     public ReviewPromptFirstAttemptTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "AZGEssai1_" + Guid.NewGuid().ToString("N"));
@@ -39,6 +44,7 @@ public class ReviewPromptFirstAttemptTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         try { Directory.Delete(_tempDir, true); } catch { }
     }
 

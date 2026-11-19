@@ -21,7 +21,7 @@
       <string id="SUPPORTED_AZERTY_GLOBAL_1_3_0">AZERTY Global 1.3.0 or later</string>
 
       <string id="NotificationsEnabled">Allow application notifications</string>
-      <string id="NotificationsEnabled_Explain">Enabled: the application may show its notifications, and the user keeps their own setting. Disabled: no comfort notification is shown, including the review prompt, and the user setting is locked. Security warnings are shown in every case. Not configured: the user decides.</string>
+      <string id="NotificationsEnabled_Explain">Enabled: the application shows its notifications, and the user setting is locked on. Disabled: no comfort notification is shown, including the review prompt, and the user setting is locked. Security warnings are shown in every case. Not configured: the user decides.</string>
 
       <string id="UsageStatsEnabled">Allow local usage statistics</string>
       <string id="UsageStatsEnabled_Explain">Enabled: the application keeps its counters in %LocalAppData%\Packages\&lt;package family name&gt;\LocalCache\Local\AZERTY Global\usage-stats.json. Disabled: no statistics file is created or updated. Not configured: on for the Microsoft Store version, off for the version distributed by the association. These counters never leave the machine.</string>
@@ -30,7 +30,7 @@
       <string id="ExternalLinksEnabled_Explain">Enabled: the “Support the project”, “Rate on the Microsoft Store” entries and the Discord link are visible. Disabled: they are hidden. “Give feedback” and “Report a bug” remain available in every case. Not configured: visible on the Microsoft Store version, hidden on the version distributed by the association.</string>
 
       <string id="RemoveOnboarding">Remove the welcome window at startup</string>
-      <string id="RemoveOnboarding_Explain">Enabled: the welcome window no longer opens at startup, and the matching checkbox is locked. The “Welcome window” entry in the notification-area menu still opens it on demand. Disabled, or not configured: the window follows the user's setting.</string>
+      <string id="RemoveOnboarding_Explain">Enabled: the welcome window no longer opens at startup, and the matching checkbox is locked. The “Reopen the welcome screen” entry in the Learn menu of the notification area still opens it on demand. Disabled, or not configured: the window follows the user's setting.</string>
 
       <string id="Language">Force the interface language</string>
       <string id="Language_Explain">Forces the application language and locks the three places that can change it. Accepted values: fr, en. Any other value is ignored and traced in error.log, and the language stays the user's own. Not configured: the user chooses.</string>

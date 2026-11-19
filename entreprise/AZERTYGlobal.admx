@@ -26,7 +26,6 @@
                    revision="1.1" schemaVersion="1.0">
   <policyNamespaces>
     <target prefix="azertyglobal" namespace="AMCF.Policies.AZERTYGlobal" />
-    <using prefix="windows" namespace="Microsoft.Policies.Windows" />
   </policyNamespaces>
   <resources minRequiredRevision="1.1" />
   <supportedOn>

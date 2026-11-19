@@ -17,6 +17,11 @@ public class UsageStatsReadFailureTests : IDisposable
     private readonly string _statsPath;
     private const string Original = "{ \"activeDaysCount\": 42, \"bestStreak\": 30 }";
 
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
+
     public UsageStatsReadFailureTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "AZGTests_" + Guid.NewGuid().ToString("N"));
@@ -28,6 +33,7 @@ public class UsageStatsReadFailureTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         UsageStats.OverrideStatsPathForTests(Path.Combine(_tempDir, "inutilise.json"));
         try { Directory.Delete(_tempDir, true); } catch { }
     }

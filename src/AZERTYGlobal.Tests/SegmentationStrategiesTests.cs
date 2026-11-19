@@ -1,8 +1,67 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit;
 
 namespace AZERTYGlobal.Tests;
+
+/// <summary>
+/// Décision d'Antoine du 2026-11-17 (« Garder l'exercice ») : avec <c>LessonsEnabled</c> à 0,
+/// « Activer et essayer » de l'accueil ouvre toujours l'exercice d'activation — c'est la prise
+/// en main du clavier, pas l'apprentissage ludique. Le parcours passe par
+/// <c>ShowTutorialFromOnboarding</c>, que la stratégie ne garde pas ; ce test le prouve de bout
+/// en bout (bouton de l'accueil, tray, fenêtre Leçons) au lieu de le laisser à une lecture du code.
+/// </summary>
+public class ExerciceActivationSansLeconsTests
+{
+    private const BindingFlags Instance = BindingFlags.Instance | BindingFlags.NonPublic;
+
+    private static PolicyValueReader LeconsAZero() =>
+        (chemin, nom) => chemin == PolicyManager.KeyPath && nom == PolicyManager.ValueLessons ? 0 : null;
+
+    [Fact]
+    public void ActiverEtEssayer_OuvreLExercice_AvecLessonsEnabledAZero()
+    {
+        using var iso = new BancCapture.Isolation();
+        using var politique = PolicyManager.OverrideForTests(LeconsAZero());
+        var accueil = OutilsAccueilReglages130.OuvrirAccueil();
+        var layout = LayoutLoader.LoadFromResource();
+        var mapper = new KeyMapper(layout, new MockWin32Api());
+        var hook = new KeyboardHook(mapper); // jamais installé
+        var tray = (TrayApplication)RuntimeHelpers.GetUninitializedObject(typeof(TrayApplication));
+        LessonsWindow? lecons = null;
+        try
+        {
+            // Témoin : la stratégie est bien en vigueur, les Leçons elles-mêmes sont fermées.
+            Assert.False(PolicyManager.LessonsEnabledNow);
+            Assert.Equal(new[] { 1010 }, TrayApplication.LearnMenuEntries(challengeEnabled: true,
+                lessonsPolicy: false));                                  // « Revoir l'accueil » seul
+            BancCapture.SetField(tray, "_activationConsent", true);
+            BancCapture.SetField(tray, "_hook", hook);
+            BancCapture.SetField(tray, "_mapper", mapper);
+            BancCapture.SetField(tray, "_layout", layout);
+            BancCapture.Call(tray, "ShowLessonsWindow");
+            Assert.Null(BancCapture.Field<LessonsWindow?>(tray, "_lessons"));   // témoin : la porte Leçons reste fermée
+
+            // Le bouton de l'accueil, câblé comme le tray (TrayApplication.cs : TutorialRequested).
+            BancCapture.SetField(tray, "_onboarding", accueil);
+            accueil.TutorialRequested = (Action)Delegate.CreateDelegate(typeof(Action), tray,
+                typeof(TrayApplication).GetMethod("ShowTutorialFromOnboarding", Instance)!);
+            BancCapture.Call(accueil, "LaunchTutorial");
+
+            lecons = BancCapture.Field<LessonsWindow?>(tray, "_lessons");
+            Assert.NotNull(lecons);
+            Assert.True(lecons!.IsTutorialActive, "l'exercice d'activation ne s'est pas ouvert");
+            Assert.True(OutilsAccueilReglages130.Bool(accueil, "_tutorialOpen"));
+        }
+        finally
+        {
+            if (lecons != null) BancCapture.Teardown(lecons);
+            BancCapture.Teardown(accueil);
+        }
+    }
+}
 
 /// <summary>
 /// Segmentation Store / MSIX entreprise, 1.3.0 (décisions d'Antoine du 2026-11-17) : trois

@@ -41,7 +41,7 @@ public class SollicitationAvisCaracterisationTests : IDisposable
         _config = Path.Combine(_dossier, "config.json");
         _stats = Path.Combine(_dossier, "usage-stats.json");
         _politique = PolicyManager.OverrideForTests((_, _) => null);
-        _canal = AppChannel.OverrideForTests(DistributionChannel.Unpackaged);
+        _canal = AppChannel.OverrideForTests(DistributionChannel.Store);
         LearningSessionTracker.ResetForTests();
         DernierEchec(null);
     }
@@ -154,9 +154,10 @@ public class SollicitationAvisCaracterisationTests : IDisposable
         Assert.True(AuFilDeLaFrappe(tray));
         Assert.Equal(1, ConfigManager.ReviewPromptCount);
         Assert.Equal(Aujourdhui, ConfigManager.ReviewPromptLastShown);
-        // Hors package : bulle, cible page feedback.
+        // Canal Store (seul canal qui sollicite depuis la 1.3.0) : bulle, cible fiche Store.
+        // « Hors package : cible page feedback » n'existe plus : ce canal est sobre, sans demande.
         Assert.Equal("Review", BullePendante(tray));
-        Assert.False(CibleStore(tray));
+        Assert.True(CibleStore(tray));
 
         // Écrit sur le disque sous les clés historiques, retour arrière v1.1 compris.
         using var disque = JsonDocument.Parse(File.ReadAllText(_config));

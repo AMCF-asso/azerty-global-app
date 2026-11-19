@@ -19,6 +19,11 @@ public class AuditFichiersTests : IDisposable
     private string StatsPath => Path.Combine(_dir, "usage-stats.json");
     private string ProgressPath => Path.Combine(_dir, "lessons-progress.json");
 
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
+
     public AuditFichiersTests()
     {
         Directory.CreateDirectory(_dir);
@@ -28,6 +33,7 @@ public class AuditFichiersTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         CultureInfo.CurrentCulture = _cultureOrigin;
         UsageStats.OverrideStatsPathForTests(Path.Combine(_dir, "inutilise.json"));
         ConfigManager.SaveDelayMilliseconds = -1;
