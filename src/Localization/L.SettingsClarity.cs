@@ -139,8 +139,8 @@ internal static partial class L
         "Les trois premiers exercices sont faits : l’accueil ne s’ouvre plus de lui-même au lancement. Il reste dans le menu de la zone de notification.",
         "The first three exercises are done: the welcome screen no longer opens by itself at launch. It stays in the notification-area menu.");
     public static string SettingsClarity_HintSystemLayoutWarning => T(
-        "Affiche un avertissement quand la disposition système Windows est active en même temps que l’application.",
-        "Shows a warning when the Windows system layout is active alongside the app.");
+        "Prévient si la disposition Windows est active.",
+        "Warns if the Windows layout is also active.");
     public static string SettingsClarity_HintResetWindow => T(
         "La replace au centre de l’écran, utile si elle est sortie de la vue.",
         "Moves it back to the center of the screen, handy if it went off-screen.");
