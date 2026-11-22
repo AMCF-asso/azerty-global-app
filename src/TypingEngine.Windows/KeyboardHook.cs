@@ -203,6 +203,10 @@ public sealed class KeyboardHook : IDisposable
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AG_DEV_PREVIEW")))
             return;
 #endif
+        // M2.1-I1 : Install() idempotent — évite d'écraser _hookId et de laisser un hook orphelin.
+        if (_hookId != IntPtr.Zero)
+            return;
+
         // GetModuleHandle(null) retourne le handle du module principal — suffisant pour WH_KEYBOARD_LL
         // et compatible avec PublishTrimmed (pas de dépendance à System.Diagnostics.Process)
         _hookId = Win32.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, Win32.GetModuleHandleW(null), 0);
