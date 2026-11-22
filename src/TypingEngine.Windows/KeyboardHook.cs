@@ -59,9 +59,11 @@ public sealed class KeyboardHook : IDisposable
     // sonde hors du rappel (toutes les 5 s), lu seul par le rappel : volatile suffit.
     private volatile bool _remoteSessionActive;
 
-    // VK codes des raccourcis configurables (lus depuis config.json)
+    // VK codes et modificateurs des raccourcis configurables (lus depuis config.json)
     private uint _vkSearch;
     private uint _vkVirtualKeyboard;
+    private ShortcutModifiers _modsSearch = ShortcutModifierRules.Default;
+    private ShortcutModifiers _modsVirtualKeyboard = ShortcutModifierRules.Default;
 
     // Détection changement de layout via Ctrl+Shift
     private bool _nonModifierPressed;
@@ -154,8 +156,12 @@ public sealed class KeyboardHook : IDisposable
     {
         _vkSearch = _host.ShortcutCharacterSearchVk;
         _vkVirtualKeyboard = _host.ShortcutVirtualKeyboardVk;
-        // Sécurité : si les deux raccourcis sont identiques, désactiver le second
-        if (_vkSearch != 0 && _vkSearch == _vkVirtualKeyboard)
+        _modsSearch = ShortcutModifierRules.IsValid(_host.ShortcutCharacterSearchModifiers)
+            ? _host.ShortcutCharacterSearchModifiers : ShortcutModifierRules.Default;
+        _modsVirtualKeyboard = ShortcutModifierRules.IsValid(_host.ShortcutVirtualKeyboardModifiers)
+            ? _host.ShortcutVirtualKeyboardModifiers : ShortcutModifierRules.Default;
+        // Sécurité : si les deux raccourcis sont identiques (mêmes modificateurs et même touche), désactiver le second
+        if (_vkSearch != 0 && _vkSearch == _vkVirtualKeyboard && _modsSearch == _modsVirtualKeyboard)
             _vkVirtualKeyboard = 0;
         // Sécurité : ne pas entrer en conflit avec Verr.Maj (toggle on/off = 0x14)
         if (_vkSearch == 0x14) _vkSearch = 0;
@@ -483,7 +489,7 @@ public sealed class KeyboardHook : IDisposable
                 // Audit du 25/09 (M-04) : l'appui et Ctrl+Maj d'abord. MatchesShortcutKey parcourt
                 // la disposition, et le faisait à chaque rappel ; les quatre prédicats sont purs,
                 // sans effet de bord : l'ordre ne change pas le résultat (HookCallbackTests).
-                if (isKeyDown && firstPress && _mapper.IsToggleShortcut() &&
+                if (isKeyDown && firstPress && _mapper.MatchesShortcutModifiers(_modsSearch) &&
                     ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkSearch) &&
                     _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode))
                 {
@@ -496,7 +502,7 @@ public sealed class KeyboardHook : IDisposable
                 // Détecter Ctrl+Shift+<touche> → ouvrir/fermer le clavier virtuel
                 // R11 : même garde « saisie sécurisée » que la recherche — sans elle, le
                 // clavier virtuel s'affiche au-dessus d'un champ mot de passe.
-                if (isKeyDown && firstPress && _mapper.IsToggleShortcut() &&
+                if (isKeyDown && firstPress && _mapper.MatchesShortcutModifiers(_modsVirtualKeyboard) &&
                     ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkVirtualKeyboard) &&
                     _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode))
                 {

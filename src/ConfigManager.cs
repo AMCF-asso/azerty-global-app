@@ -746,6 +746,11 @@ static class ConfigManager
 
     public static void SetLessonInvisibleMarkersVisible(bool visible) => SetBool("lessonInvisibleMarkersVisible", visible);
 
+    /// <summary>Avertit quand la disposition système est active en même temps que l'application. Défaut : true.</summary>
+    public static bool WarnSystemLayout => GetBoolDefaultTrue("warnSystemLayout");
+
+    public static void SetWarnSystemLayout(bool warn) => SetBool("warnSystemLayout", warn);
+
     /// <summary>
     /// Raccourcis Ctrl+Shift+Lettre interdits car trop courants dans les applications.
     /// Voir aussi : Ctrl+Shift+Verr.Maj (toggle on/off), bloqué séparément via VK_CAPITAL.
@@ -772,15 +777,49 @@ static class ConfigManager
     /// Vérifie si une touche est autorisée comme raccourci Ctrl+Shift+touche.
     /// Formats acceptés : lettre (A-Z sauf bloquées), chiffre (0-9), "F1" à "F12".
     /// </summary>
-    public static bool IsShortcutAllowedVk(uint vk)
+    public static bool IsShortcutAllowedVk(uint vk) =>
+        IsShortcutAllowed(TypingEngine.Windows.ShortcutModifierRules.Default, vk);
+
+    /// <summary>
+    /// Vérifie si une combinaison (modificateurs + touche) est autorisée comme raccourci.
+    /// Les lettres courantes de BlockedLetters ne sont bloquées que sous Ctrl+Maj (où elles
+    /// entrent en conflit avec les navigateurs et éditeurs).
+    /// </summary>
+    public static bool IsShortcutAllowed(TypingEngine.Windows.ShortcutModifiers modifiers, uint vk)
     {
+        if (!TypingEngine.Windows.ShortcutModifierRules.IsValid(modifiers))
+            return false;
         if (vk >= 0x70 && vk <= 0x7B) return true;
-        // Touches de fonction F1-F12
         if (vk >= '0' && vk <= '9') return true;
-        // Chiffres 0-9
-        if (vk >= 'A' && vk <= 'Z') return !BlockedLetters.Contains((char)vk);
-        // Lettres A-Z (sauf bloquées)
+        if (vk >= 'A' && vk <= 'Z')
+        {
+            if (modifiers == TypingEngine.Windows.ShortcutModifierRules.Default)
+                return !BlockedLetters.Contains((char)vk);
+            return true;
+        }
         return false;
+    }
+
+    /// <summary>Modificateurs du raccourci clavier virtuel. Défaut : Ctrl+Maj.</summary>
+    public static TypingEngine.Windows.ShortcutModifiers ShortcutVirtualKeyboardModifiers
+    {
+        get => TypingEngine.Windows.ShortcutModifierRules.ParseOrDefault(GetString("shortcutVirtualKeyboardModifiers"));
+        set
+        {
+            if (TypingEngine.Windows.ShortcutModifierRules.IsValid(value))
+                SetString("shortcutVirtualKeyboardModifiers", TypingEngine.Windows.ShortcutModifierRules.Serialize(value));
+        }
+    }
+
+    /// <summary>Modificateurs du raccourci recherche de caractère. Défaut : Ctrl+Maj.</summary>
+    public static TypingEngine.Windows.ShortcutModifiers ShortcutCharacterSearchModifiers
+    {
+        get => TypingEngine.Windows.ShortcutModifierRules.ParseOrDefault(GetString("shortcutCharacterSearchModifiers"));
+        set
+        {
+            if (TypingEngine.Windows.ShortcutModifierRules.IsValid(value))
+                SetString("shortcutCharacterSearchModifiers", TypingEngine.Windows.ShortcutModifierRules.Serialize(value));
+        }
     }
 
     /// <summary>Lettre du raccourci clavier virtuel. Défaut : "Q" → Ctrl+Maj+Q.</summary>
@@ -789,11 +828,11 @@ static class ConfigManager
         get
         {
             uint vk = GetUInt("shortcutVirtualKeyboardVk");
-            return IsShortcutAllowedVk(vk) ? vk : DefaultShortcutVirtualKeyboardVk;
+            return IsShortcutAllowed(ShortcutVirtualKeyboardModifiers, vk) ? vk : DefaultShortcutVirtualKeyboardVk;
         }
         set
         {
-            if (IsShortcutAllowedVk(value))
+            if (IsShortcutAllowed(ShortcutVirtualKeyboardModifiers, value))
                 SetUInt("shortcutVirtualKeyboardVk", value);
         }
     }
@@ -804,11 +843,11 @@ static class ConfigManager
         get
         {
             uint vk = GetUInt("shortcutCharacterSearchVk");
-            return IsShortcutAllowedVk(vk) ? vk : DefaultShortcutCharacterSearchVk;
+            return IsShortcutAllowed(ShortcutCharacterSearchModifiers, vk) ? vk : DefaultShortcutCharacterSearchVk;
         }
         set
         {
-            if (IsShortcutAllowedVk(value))
+            if (IsShortcutAllowed(ShortcutCharacterSearchModifiers, value))
                 SetUInt("shortcutCharacterSearchVk", value);
         }
     }

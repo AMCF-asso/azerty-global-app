@@ -1421,10 +1421,13 @@ sealed class TrayApplication : IDisposable
     /// Avertit l'utilisateur si le layout système actif est déjà AZERTY Global.
     /// Appelé au démarrage (vérifie le layout de notre thread).
     /// </summary>
+    private readonly SystemLayoutConflictGuard _layoutConflictGuard = new();
+
     private void CheckSystemLayout()
     {
         IntPtr hkl = TypingEngine.Windows.Win32.GetKeyboardLayout(0);
-        if (!IsLayoutAZERTYGlobal(hkl)) return;
+        if (!_layoutConflictGuard.EvaluateStartup(IsLayoutAZERTYGlobal(hkl), ConfigManager.WarnSystemLayout))
+            return;
         ShowLayoutConflictPopup(isAtStartup: true);
     }
 
@@ -1439,6 +1442,7 @@ sealed class TrayApplication : IDisposable
 
     /// <summary>
     /// Vérifie le layout du thread au premier plan après un potentiel Ctrl+Shift switch.
+    /// N'avertit que lors d'une vraie bascule vers la disposition système (pas si elle était déjà active).
     /// </summary>
     private void CheckForegroundLayout()
     {
@@ -1446,7 +1450,8 @@ sealed class TrayApplication : IDisposable
         uint threadId = Win32.GetWindowThreadProcessId(hwndFg, IntPtr.Zero);
         IntPtr hkl = TypingEngine.Windows.Win32.GetKeyboardLayout(threadId);
 
-        if (!IsLayoutAZERTYGlobal(hkl)) return;
+        if (!_layoutConflictGuard.EvaluateAfterSwitch(IsLayoutAZERTYGlobal(hkl), ConfigManager.WarnSystemLayout))
+            return;
         ShowLayoutConflictPopup(isAtStartup: false);
     }
 
@@ -1484,6 +1489,11 @@ sealed class TrayApplication : IDisposable
                     _pendingOnboardingShow = false;
                     ShowOnboardingNow();
                 }
+            },
+            onDontShowChanged: dontShow =>
+            {
+                if (dontShow)
+                    ConfigManager.SetWarnSystemLayout(false);
             });
         _layoutConflictWindow.Show();
     }
@@ -1966,7 +1976,9 @@ sealed class TrayApplication : IDisposable
     {
         var hMenu = Win32.CreatePopupMenu();
         var kbdKey = ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutVirtualKeyboardVk);
+        var kbdMods = ConfigManager.ShortcutVirtualKeyboardModifiers;
         var searchKey = ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk);
+        var searchMods = ConfigManager.ShortcutCharacterSearchModifiers;
         // Menu en quatre blocs d'intention (décision S2 du 2026-09-02, portée en v1.2.0 le
         // 2026-09-19) : État · Outils · Apprendre · Réglages et infos, puis Langue et Quitter.
         // Les IDM_* ne changent pas ; seuls l'ordre, les regroupements et trois libellés bougent.
@@ -2015,11 +2027,11 @@ sealed class TrayApplication : IDisposable
         // ── Outils ──────────────────────────────────────────────────
         uint kbdFlags = ShouldProcessHook || _virtualKeyboard?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, kbdFlags, IDM_KEYBOARD,
-            _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdKey) : L.Tray_MenuVirtualKeyboard(kbdKey));
+            _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdMods, kbdKey) : L.Tray_MenuVirtualKeyboard(kbdMods, kbdKey));
         uint searchFlags = CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
                 SecureInputBlocksSearch) ||
             _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
-        Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchKey));
+        Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchMods, searchKey));
 
         // Couches ▸ (S2-3) : l'entrée unique à suffixe ✓/… devient un sous-menu de trois
         // couches cochables. Les libellés sont repris tels quels de la fenêtre des couches,

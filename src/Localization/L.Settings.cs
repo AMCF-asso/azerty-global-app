@@ -18,6 +18,9 @@ internal static partial class L
     public static string Settings_AutoStart => T("Lancer au démarrage de Windows", "Launch at Windows startup");
     public static string Settings_Notifications => T("Notifications", "Notifications");
     public static string Settings_OnboardingWindow => T("Afficher l’accueil au démarrage", "Show the welcome screen at startup");
+    public static string Settings_SystemLayoutWarning => T(
+        "Avertir si la disposition système est active",
+        "Warn when the system layout is active");
 
     /// <summary>Mention portée par un réglage imposé par une politique d'entreprise (lot C
     /// du 2026-08-19). Formulation validée mot à mot par Antoine, fr et en : c'est celle que

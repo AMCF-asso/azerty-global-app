@@ -6,24 +6,59 @@ internal static partial class L
     // Objectif d'Antoine : même l'utilisateur le moins à l'aise ne doit jamais être perdu.
     // Chaque réglage dit ce qu'il change, chaque refus dit pourquoi et quoi faire.
 
+    /// <summary>Étiquettes des modificateurs d'un raccourci, dans l'ordre d'affichage (Ctrl, Alt, Maj/Shift).</summary>
+    public static string[] SettingsClarity_ModifierTags(TypingEngine.Windows.ShortcutModifiers modifiers)
+    {
+        if (!TypingEngine.Windows.ShortcutModifierRules.IsValid(modifiers))
+            modifiers = TypingEngine.Windows.ShortcutModifierRules.Default;
+        var tags = new List<string>(3);
+        if ((modifiers & TypingEngine.Windows.ShortcutModifiers.Ctrl) != 0) tags.Add("Ctrl");
+        if ((modifiers & TypingEngine.Windows.ShortcutModifiers.Alt) != 0) tags.Add("Alt");
+        if ((modifiers & TypingEngine.Windows.ShortcutModifiers.Shift) != 0) tags.Add(Settings_ShortcutModifier2);
+        return tags.ToArray();
+    }
+
     /// <summary>Le geste complet d'un raccourci, espaces insécables : il ne se coupe jamais.</summary>
+    public static string SettingsClarity_Combo(TypingEngine.Windows.ShortcutModifiers modifiers, string key) =>
+        string.Join(" + ", SettingsClarity_ModifierTags(modifiers)) + " + " + key;
+
+    /// <summary>Même geste, forme compacte sans espaces (menu de la zone de notification).</summary>
+    public static string SettingsClarity_ComboCompact(TypingEngine.Windows.ShortcutModifiers modifiers, string key) =>
+        string.Join("+", SettingsClarity_ModifierTags(modifiers)) + "+" + key;
+
+    /// <summary>Le geste complet d'un raccourci Ctrl+Maj, espaces insécables : il ne se coupe jamais.</summary>
     public static string SettingsClarity_Combo(string key) =>
-        $"Ctrl + {Settings_ShortcutModifier2} + {key}";
+        SettingsClarity_Combo(TypingEngine.Windows.ShortcutModifierRules.Default, key);
 
-    /// <summary>Invite de capture : les touches acceptées sont celles de
-    /// ConfigManager.IsShortcutAllowedVk (F1-F12, 0-9, A-Z sauf les lettres réservées).</summary>
+    /// <summary>Invite de capture : combinaison complète (au moins 2 modificateurs + touche).</summary>
     public static string SettingsClarity_CaptureHint => T(
-        "Appuyez sur une lettre, un chiffre ou F1 à F12 (quelques lettres sont déjà prises). Échap annule.",
-        "Press a letter, a digit or F1 to F12 (a few letters are taken). Esc cancels.");
+        "Appuyez sur la combinaison voulue (au moins 2 touches parmi Ctrl, Maj, Alt + lettre, chiffre ou F1 à F12). Échap annule.",
+        "Press the desired shortcut (at least 2 of Ctrl, Shift, Alt + a letter, digit or F1 to F12). Esc cancels.");
 
-    /// <summary>La touche choisie ouvre déjà l'autre fenêtre.</summary>
-    public static string SettingsClarity_ShortcutTakenByKeyboard(string key) => T(
-        $"{SettingsClarity_Combo(key)} affiche déjà le clavier virtuel. Choisissez une autre touche.",
-        $"{SettingsClarity_Combo(key)} already shows the virtual keyboard. Choose another key.");
+    /// <summary>Moins de deux modificateurs tenus lors de la capture.</summary>
+    public static string SettingsClarity_ShortcutNeedModifiers => T(
+        "Ajoutez au moins deux modificateurs parmi Ctrl, Maj et Alt (par exemple Ctrl + Maj ou Alt + Maj).",
+        "Include at least two modifiers from Ctrl, Shift and Alt (for example Ctrl + Shift or Alt + Shift).");
 
-    public static string SettingsClarity_ShortcutTakenBySearch(string key) => T(
-        $"{SettingsClarity_Combo(key)} ouvre déjà la recherche de caractères. Choisissez une autre touche.",
-        $"{SettingsClarity_Combo(key)} already opens the character search. Choose another key.");
+    /// <summary>Win ou Alt Gr tenu lors de la capture.</summary>
+    public static string SettingsClarity_ShortcutNoWinOrAltGr => T(
+        "Les touches Win et Alt Gr ne peuvent pas servir dans un raccourci. Utilisez Ctrl, Maj et Alt gauche.",
+        "Win and Alt Gr cannot be used in a shortcut. Use Ctrl, Shift and left Alt.");
+
+    /// <summary>La combinaison choisie ouvre déjà l'autre fenêtre.</summary>
+    public static string SettingsClarity_ShortcutTakenByKeyboard(TypingEngine.Windows.ShortcutModifiers modifiers, string key) => T(
+        $"{SettingsClarity_Combo(modifiers, key)} affiche déjà le clavier virtuel. Choisissez une autre combinaison.",
+        $"{SettingsClarity_Combo(modifiers, key)} already shows the virtual keyboard. Choose another shortcut.");
+
+    public static string SettingsClarity_ShortcutTakenBySearch(TypingEngine.Windows.ShortcutModifiers modifiers, string key) => T(
+        $"{SettingsClarity_Combo(modifiers, key)} ouvre déjà la recherche de caractères. Choisissez une autre combinaison.",
+        $"{SettingsClarity_Combo(modifiers, key)} already opens the character search. Choose another shortcut.");
+
+    public static string SettingsClarity_ShortcutTakenByKeyboard(string key) =>
+        SettingsClarity_ShortcutTakenByKeyboard(TypingEngine.Windows.ShortcutModifierRules.Default, key);
+
+    public static string SettingsClarity_ShortcutTakenBySearch(string key) =>
+        SettingsClarity_ShortcutTakenBySearch(TypingEngine.Windows.ShortcutModifierRules.Default, key);
 
     /// <summary>Lettre réservée : ce que fait déjà Ctrl+Maj+lettre ailleurs. Les usages
     /// reprennent les commentaires de ConfigManager.BlockedLetters.</summary>
@@ -103,6 +138,9 @@ internal static partial class L
     public static string SettingsClarity_HintOnboardingDone => T(
         "Les trois premiers exercices sont faits : l’accueil ne s’ouvre plus de lui-même au lancement. Il reste dans le menu de la zone de notification.",
         "The first three exercises are done: the welcome screen no longer opens by itself at launch. It stays in the notification-area menu.");
+    public static string SettingsClarity_HintSystemLayoutWarning => T(
+        "Affiche un avertissement quand la disposition système Windows est active en même temps que l’application.",
+        "Shows a warning when the Windows system layout is active alongside the app.");
     public static string SettingsClarity_HintResetWindow => T(
         "La replace au centre de l’écran, utile si elle est sortie de la vue.",
         "Moves it back to the center of the screen, handy if it went off-screen.");

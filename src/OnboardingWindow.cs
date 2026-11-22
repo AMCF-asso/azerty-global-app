@@ -839,15 +839,19 @@ sealed class OnboardingWindow : IDisposable
         "´ ` ~ : " + L.Onboarding_NoteAccents + ".", L.Onboarding_PrivacyReassurance, L.Onboarding_TurnOffAnyTime);
 
     /// <summary>« Ctrl + Maj + Q » : la même écriture que les cartes de l'étape 3.</summary>
-    private static string Shortcut(string key) => $"Ctrl + {L.Settings_ShortcutModifier2} + {key}";
+    private static string Shortcut(string key) =>
+        Shortcut(TypingEngine.Windows.ShortcutModifierRules.Default, key);
+
+    private static string Shortcut(TypingEngine.Windows.ShortcutModifiers mods, string key) =>
+        string.Join(" + ", L.SettingsClarity_ModifierTags(mods)) + " + " + key;
 
     /// <summary>Audit 09/11, W17 : les raccourcis du clavier virtuel et de la recherche, tels que
     /// l'utilisateur les a réglés (Q et W par défaut), pas écrits en dur.</summary>
     internal static string KeyboardShortcut() =>
-        Shortcut(ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutVirtualKeyboardVk));
+        Shortcut(ConfigManager.ShortcutVirtualKeyboardModifiers, ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutVirtualKeyboardVk));
 
     internal static string SearchShortcut() =>
-        Shortcut(ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk));
+        Shortcut(ConfigManager.ShortcutCharacterSearchModifiers, ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk));
 
     /// <summary>
     /// Audit 1.3.0, A8 : ce que le lecteur d'écran ne lit pas, parce que c'est peint en GDI. Le texte

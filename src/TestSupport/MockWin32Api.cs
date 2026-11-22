@@ -245,6 +245,8 @@ internal sealed class TestWindowsTypingHost : IWindowsTypingHost
 
     public uint ShortcutCharacterSearchVk { get; set; }
     public uint ShortcutVirtualKeyboardVk { get; set; }
+    public ShortcutModifiers ShortcutCharacterSearchModifiers { get; set; } = ShortcutModifierRules.Default;
+    public ShortcutModifiers ShortcutVirtualKeyboardModifiers { get; set; } = ShortcutModifierRules.Default;
     public bool CompatibilityDebugLog { get; set; }
     public List<string> EmittedTexts { get; } = new();
 

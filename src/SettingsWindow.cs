@@ -46,6 +46,7 @@ sealed partial class SettingsWindow : IDisposable
     private const int IDC_RADIO_NOTATION_WITHOUT = 3132;
     private const int IDC_CHK_LESSON_KEYBOARD = 3142;
     private const int IDC_CHK_HIDE_MASTERED = 3143;
+    private const int IDC_CHK_SYSTEM_LAYOUT_WARNING = 3144;
 
     // Listbox Win32 (section Apps suspendues), dessinée par la fenêtre : LBS_HASSTRINGS garde
     // le texte de chaque ligne pour les lecteurs d'écran.
@@ -109,6 +110,7 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT ManagedNotificationsRect;
         public Win32.RECT OnboardingRect;
         public Win32.RECT ManagedOnboardingRect;
+        public Win32.RECT SystemLayoutWarningRect;
         public Win32.RECT TrainingRect;
         public Win32.RECT LanguageTitleRect;
         public Win32.RECT LanguageFrRect;
@@ -135,6 +137,7 @@ sealed partial class SettingsWindow : IDisposable
         public Win32.RECT AutoStartHintRect;
         public Win32.RECT NotificationsHintRect;
         public Win32.RECT OnboardingHintRect;
+        public Win32.RECT SystemLayoutWarningHintRect;
         public Win32.RECT ResetVirtualKeyboardHintRect;
         public Win32.RECT ResetLessonsHintRect;
         // La version, au pied de l'onglet « Langue et maintenance » (QCM du 11/10, 20 h 15).
@@ -179,6 +182,7 @@ sealed partial class SettingsWindow : IDisposable
     private IntPtr _hWndChkAutoStart;
     private IntPtr _hWndChkNotifications;
     private IntPtr _hWndChkOnboarding;
+    private IntPtr _hWndChkSystemLayoutWarning;
     private IntPtr _hWndChkTraining;
     private IntPtr _hWndResetVirtualKeyboardWindow;
     private IntPtr _hWndResetLessonsWindow;
@@ -240,10 +244,13 @@ sealed partial class SettingsWindow : IDisposable
     private bool _searchValid = true;
     private uint _keyboardVk;
     private uint _searchVk;
-    // Touche montrée par chaque case : celle en place, ou celle qu'un refus vient de
-    // nommer (0 : rien de montré encore, la touche en place).
+    private TypingEngine.Windows.ShortcutModifiers _keyboardMods = TypingEngine.Windows.ShortcutModifierRules.Default;
+    private TypingEngine.Windows.ShortcutModifiers _searchMods = TypingEngine.Windows.ShortcutModifierRules.Default;
+    // Touche et modificateurs montrés par chaque ligne : ceux en place, ou ceux qu'un refus vient de nommer.
     private uint _keyboardShownVk;
     private uint _searchShownVk;
+    private TypingEngine.Windows.ShortcutModifiers _keyboardShownMods;
+    private TypingEngine.Windows.ShortcutModifiers _searchShownMods;
     private bool _showCaptureHint;
     private string _validationMessage = string.Empty;
     private bool _validationRefused;
@@ -506,6 +513,13 @@ sealed partial class SettingsWindow : IDisposable
             _hWnd, (IntPtr)IDC_CHK_ONBOARDING, hInstance, IntPtr.Zero);
         if (ConfigManager.ShowOnboardingAtStartup)
             Win32.SendMessageW(_hWndChkOnboarding, Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
+
+        _hWndChkSystemLayoutWarning = Win32.CreateWindowExW(0, "BUTTON", L.Settings_SystemLayoutWarning,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.BS_AUTOCHECKBOX | Win32.WS_TABSTOP,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_SYSTEM_LAYOUT_WARNING, hInstance, IntPtr.Zero);
+        if (ConfigManager.WarnSystemLayout)
+            Win32.SendMessageW(_hWndChkSystemLayoutWarning, Win32.BM_SETCHECK, (IntPtr)Win32.BST_CHECKED, IntPtr.Zero);
 
         // Opt-in Défi du jour (v1.2.0) — décoché par défaut, appliqué immédiatement au
         // clic (pas à la fermeture) : l'entrée du menu tray et le module des leçons
@@ -785,6 +799,8 @@ sealed partial class SettingsWindow : IDisposable
             new(_hWndChkOnboarding, General, () => FontBody.Handle, l => l.OnboardingRect, () => L.Settings_OnboardingWindow),
             new(_hWndManagedOnboarding, General, () => FontSmall.Handle, l => l.ManagedOnboardingRect,
                 () => L.Settings_ManagedByOrganization, () => _managedOnboarding),
+            new(_hWndChkSystemLayoutWarning, General, () => FontBody.Handle, l => l.SystemLayoutWarningRect,
+                () => L.Settings_SystemLayoutWarning),
             new(_hWndChkTraining, General, () => FontBody.Handle, l => l.TrainingRect,
                 () => L.Challenge_OptIn, () => PolicyManager.ChallengeEnabledNow),
 
@@ -918,6 +934,8 @@ sealed partial class SettingsWindow : IDisposable
         yield return L.SettingsClarity_ShortcutKeypadDigit;
         yield return L.SettingsClarity_ShortcutOtherKey;
         yield return L.SettingsClarity_ShortcutCtrlOnly;
+        yield return L.SettingsClarity_ShortcutNeedModifiers;
+        yield return L.SettingsClarity_ShortcutNoWinOrAltGr;
         yield return L.SettingsClarity_ShortcutRestored("F12");
         yield return L.SettingsClarity_ShortcutTakenByKeyboard("F12");
         yield return L.SettingsClarity_ShortcutTakenBySearch("F12");
@@ -928,9 +946,14 @@ sealed partial class SettingsWindow : IDisposable
 
     /// <summary>Le refus d'une touche, avec sa raison : lettre réservée (ce qu'elle fait déjà
     /// ailleurs), chiffre du pavé numérique, ou autre touche. Null si la touche est acceptée.</summary>
-    internal static string? ShortcutRefusal(uint vk)
+    internal static string? ShortcutRefusal(uint vk) =>
+        ShortcutRefusal(TypingEngine.Windows.ShortcutModifierRules.Default, vk);
+
+    internal static string? ShortcutRefusal(TypingEngine.Windows.ShortcutModifiers modifiers, uint vk)
     {
-        if (ConfigManager.IsShortcutAllowedVk(vk)) return null;
+        if (!TypingEngine.Windows.ShortcutModifierRules.IsValid(modifiers))
+            return L.SettingsClarity_ShortcutNeedModifiers;
+        if (ConfigManager.IsShortcutAllowed(modifiers, vk)) return null;
         if (vk >= 'A' && vk <= 'Z') return L.SettingsClarity_ShortcutReservedLetter((char)vk);
         if (vk >= 0x60 && vk <= 0x69) return L.SettingsClarity_ShortcutKeypadDigit; // VK_NUMPAD0-9
         return L.SettingsClarity_ShortcutOtherKey;
@@ -1288,6 +1311,8 @@ sealed partial class SettingsWindow : IDisposable
             layout.OnboardingRect = Choice(ref y);
             layout.OnboardingHintRect = Hint(ref y, L.SettingsClarity_HintOnboarding);
             layout.ManagedOnboardingRect = Managed(ref y, _managedOnboarding);
+            layout.SystemLayoutWarningRect = Choice(ref y);
+            layout.SystemLayoutWarningHintRect = Hint(ref y, L.SettingsClarity_HintSystemLayoutWarning);
             // Opt-in des rappels du Défi : ligne repliée tant que le Défi est masqué (1.3.0),
             // par son interrupteur ou par la stratégie LessonsEnabled à 0 : sans Défi, il n'y a
             // rien à rappeler, et une case grisée promettrait un réglage qui n'existe pas.
@@ -1425,6 +1450,8 @@ sealed partial class SettingsWindow : IDisposable
             ConfigManager.TrainingEnabled ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         Win32.SendMessageW(_hWndChkNotifications, Win32.BM_SETCHECK,
             ConfigManager.NotificationsEnabled ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
+        Win32.SendMessageW(_hWndChkSystemLayoutWarning, Win32.BM_SETCHECK,
+            ConfigManager.WarnSystemLayout ? (IntPtr)Win32.BST_CHECKED : IntPtr.Zero, IntPtr.Zero);
         // Re-synchroniser la checkbox onboarding a chaque ouverture : l'utilisateur a pu
         // modifier l'etat via la case « Ne plus afficher » du wizard depuis la derniere
         // fermeture des Settings.
@@ -1714,8 +1741,12 @@ sealed partial class SettingsWindow : IDisposable
                             // n'était plus annoncé. Le rendre au bouton, Oui comme Non.
                             Win32.SetFocus(_hWndLinkReset);
                             if (confirmResult != 6) break; // IDYES = 6
+                            _keyboardMods = TypingEngine.Windows.ShortcutModifierRules.Default;
+                            _searchMods = TypingEngine.Windows.ShortcutModifierRules.Default;
                             _keyboardVk = DefaultKeyboardVk;
                             _searchVk = DefaultSearchVk;
+                            ConfigManager.ShortcutVirtualKeyboardModifiers = _keyboardMods;
+                            ConfigManager.ShortcutCharacterSearchModifiers = _searchMods;
                             ConfigManager.ShortcutVirtualKeyboardVk = _keyboardVk;
                             ConfigManager.ShortcutCharacterSearchVk = _searchVk;
                             RefreshShortcutTexts();
@@ -1757,6 +1788,9 @@ sealed partial class SettingsWindow : IDisposable
                         break;
                     case IDC_CHK_ONBOARDING:
                         if (code == 0) ApplyOnboarding();
+                        break;
+                    case IDC_CHK_SYSTEM_LAYOUT_WARNING:
+                        if (code == 0) ConfigManager.SetWarnSystemLayout(IsChecked(_hWndChkSystemLayoutWarning));
                         break;
                     case IDC_CHK_TRAINING:
                         if (code == 0)
@@ -1838,23 +1872,34 @@ sealed partial class SettingsWindow : IDisposable
 
     private void LoadShortcutStateFromConfig()
     {
+        _keyboardMods = ConfigManager.ShortcutVirtualKeyboardModifiers;
+        _searchMods = ConfigManager.ShortcutCharacterSearchModifiers;
         _keyboardVk = ConfigManager.ShortcutVirtualKeyboardVk;
         _searchVk = ConfigManager.ShortcutCharacterSearchVk;
     }
 
     private void RefreshShortcutTexts()
     {
-        RefreshShortcutText(_hWndEditKeyboard, _keyboardVk);
-        RefreshShortcutText(_hWndEditSearch, _searchVk);
+        RefreshShortcutText(_hWndEditKeyboard, _keyboardMods, _keyboardVk);
+        RefreshShortcutText(_hWndEditSearch, _searchMods, _searchVk);
     }
 
     /// <summary>Écrit la touche dans sa case. « F12 » élargit la case : la mise en page suit.</summary>
-    private void RefreshShortcutText(IntPtr hWndShortcut, uint vk)
+    private void RefreshShortcutText(IntPtr hWndShortcut, uint vk) =>
+        RefreshShortcutText(hWndShortcut, hWndShortcut == _hWndEditKeyboard ? _keyboardMods : _searchMods, vk);
+
+    private void RefreshShortcutText(IntPtr hWndShortcut, TypingEngine.Windows.ShortcutModifiers mods, uint vk)
     {
         if (hWndShortcut == _hWndEditKeyboard)
+        {
             _keyboardShownVk = vk;
+            _keyboardShownMods = mods;
+        }
         else if (hWndShortcut == _hWndEditSearch)
+        {
             _searchShownVk = vk;
+            _searchShownMods = mods;
+        }
         Win32.SetWindowTextW(hWndShortcut, ConfigManager.GetShortcutDisplayName(vk));
         if (_controls.Length > 0)
             RepositionControls();
@@ -1961,6 +2006,10 @@ sealed partial class SettingsWindow : IDisposable
         ? (_keyboardShownVk != 0 ? _keyboardShownVk : _keyboardVk)
         : (_searchShownVk != 0 ? _searchShownVk : _searchVk);
 
+    private TypingEngine.Windows.ShortcutModifiers ShownMods(bool keyboard) => keyboard
+        ? (_keyboardShownMods != TypingEngine.Windows.ShortcutModifiers.None ? _keyboardShownMods : _keyboardMods)
+        : (_searchShownMods != TypingEngine.Windows.ShortcutModifiers.None ? _searchShownMods : _searchMods);
+
     private void SetShortcutValidity(IntPtr hWndShortcut, bool valid)
     {
         if (hWndShortcut == _hWndEditKeyboard)
@@ -2046,6 +2095,7 @@ sealed partial class SettingsWindow : IDisposable
         AccessibleName.TrySetDescription(_hWndChkAutoStart, L.SettingsClarity_HintAutoStart);
         AccessibleName.TrySetDescription(_hWndChkNotifications, L.SettingsClarity_HintNotifications);
         AccessibleName.TrySetDescription(_hWndChkOnboarding, L.SettingsClarity_HintOnboarding);
+        AccessibleName.TrySetDescription(_hWndChkSystemLayoutWarning, L.SettingsClarity_HintSystemLayoutWarning);
         AccessibleName.TrySetDescription(_hWndResetVirtualKeyboardWindow, L.SettingsClarity_HintResetWindow);
         AccessibleName.TrySetDescription(_hWndResetLessonsWindow, L.SettingsClarity_HintResetWindow);
         // Deux « Mots » et deux « Recette écrite » se suivent dans l'onglet « Leçons » : l'état du
@@ -2286,8 +2336,10 @@ sealed partial class SettingsWindow : IDisposable
     /// <see cref="EffectiveModifiers"/> : Alt Gr n'y compte ni comme Ctrl ni comme Alt.</summary>
     internal static ShortcutKeyAction ClassifyShortcutKey(uint vk, bool ctrl, bool alt, bool shift)
     {
-        if (alt) return ShortcutKeyAction.PassToSystem;
-        if (ctrl && !shift) return ShortcutKeyAction.RefuseCtrl;
+        // Alt seul (sans Ctrl ni Maj) : Alt+F4 ferme la fenêtre, Alt+Espace ouvre son menu.
+        if (alt && !ctrl && !shift) return ShortcutKeyAction.PassToSystem;
+        // Ctrl seul (sans Maj ni Alt) : Ctrl+A ne doit pas enregistrer « A ».
+        if (ctrl && !shift && !alt) return ShortcutKeyAction.RefuseCtrl;
         if (vk is 0x08 or 0x2E) return ShortcutKeyAction.RestoreDefault;
         return ShortcutKeyAction.Apply;
     }
@@ -2358,33 +2410,35 @@ sealed partial class SettingsWindow : IDisposable
     private bool ShortcutCaptureMessageShown =>
         _showCaptureHint || (_validationRefused && CurrentMessagePlace() == MessagePlace.Shortcuts);
 
-    private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk) => ApplyCapturedShortcut(hWndShortcut, vk, false);
+    private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk) =>
+        ApplyCapturedShortcut(hWndShortcut, hWndShortcut == _hWndEditKeyboard ? _keyboardMods : _searchMods, vk, false);
 
-    private void ApplyCapturedShortcut(IntPtr hWndShortcut, uint vk, bool restored)
+    private void ApplyCapturedShortcut(IntPtr hWndShortcut, TypingEngine.Windows.ShortcutModifiers mods, uint vk, bool restored)
     {
         bool isKeyboard = hWndShortcut == _hWndEditKeyboard;
         uint otherVk = isKeyboard ? _searchVk : _keyboardVk;
+        var otherMods = isKeyboard ? _searchMods : _keyboardMods;
 
         // Lot « clarté » : chaque refus dit pourquoi, à la place de l'invite. La case montre
         // la touche refusée, en rouge, celle que nomme le message (QCM du 07/10) ; la touche
         // en place revient à Échap ou à la perte du focus.
-        if (ShortcutRefusal(vk) is string refusal)
+        if (ShortcutRefusal(mods, vk) is string refusal)
         {
             SetShortcutValidity(hWndShortcut, false);
-            RefreshShortcutText(hWndShortcut, vk);
+            RefreshShortcutText(hWndShortcut, mods, vk);
             SetRefusalMessage(refusal);
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
 
-        if (vk == otherVk)
+        if (vk == otherVk && mods == otherMods)
         {
             SetShortcutValidity(hWndShortcut, false);
-            RefreshShortcutText(hWndShortcut, vk);
+            RefreshShortcutText(hWndShortcut, mods, vk);
             string key = ConfigManager.GetShortcutDisplayName(vk);
             SetRefusalMessage(isKeyboard
-                ? L.SettingsClarity_ShortcutTakenBySearch(key)
-                : L.SettingsClarity_ShortcutTakenByKeyboard(key));
+                ? L.SettingsClarity_ShortcutTakenBySearch(mods, key)
+                : L.SettingsClarity_ShortcutTakenByKeyboard(mods, key));
             Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
             return;
         }
@@ -2393,18 +2447,22 @@ sealed partial class SettingsWindow : IDisposable
 
         if (isKeyboard)
         {
+            _keyboardMods = mods;
             _keyboardVk = vk;
+            ConfigManager.ShortcutVirtualKeyboardModifiers = mods;
             ConfigManager.ShortcutVirtualKeyboardVk = vk;
-            RefreshShortcutText(hWndShortcut, _keyboardVk);
+            RefreshShortcutText(hWndShortcut, _keyboardMods, _keyboardVk);
             SetValidationMessage(restored
                 ? L.SettingsClarity_ShortcutRestored(ConfigManager.GetShortcutDisplayName(vk))
                 : L.Settings_ShortcutKeyboardUpdated);
         }
         else
         {
+            _searchMods = mods;
             _searchVk = vk;
+            ConfigManager.ShortcutCharacterSearchModifiers = mods;
             ConfigManager.ShortcutCharacterSearchVk = vk;
-            RefreshShortcutText(hWndShortcut, _searchVk);
+            RefreshShortcutText(hWndShortcut, _searchMods, _searchVk);
             SetValidationMessage(restored
                 ? L.SettingsClarity_ShortcutRestored(ConfigManager.GetShortcutDisplayName(vk))
                 : L.Settings_ShortcutSearchUpdated);
@@ -2504,11 +2562,20 @@ sealed partial class SettingsWindow : IDisposable
                 if (IsModifierVirtualKey((uint)vk))
                     return IntPtr.Zero;
 
+                if (KeyHeld(0x5B) || KeyHeld(0x5C))
+                {
+                    SetShortcutValidity(hWnd, false);
+                    SetRefusalMessage(L.SettingsClarity_ShortcutNoWinOrAltGr);
+                    Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+                    return IntPtr.Zero;
+                }
+
+                bool shift = KeyHeld(VK_SHIFT);
                 var (ctrl, alt) = EffectiveModifiers(KeyHeld(VK_LCONTROL), KeyHeld(VK_RCONTROL),
                     KeyHeld(VK_LMENU), KeyHeld(VK_RMENU));
-                switch (ClassifyShortcutKey((uint)vk, ctrl, alt, KeyHeld(VK_SHIFT)))
+                switch (ClassifyShortcutKey((uint)vk, ctrl, alt, shift))
                 {
-                    // Alt+F4, Alt+Espace, Alt+lettre : au système, qui ferme ou ouvre le menu.
+                    // Alt seul (Alt+F4, Alt+Espace, Alt+lettre) : au système, qui ferme ou ouvre le menu.
                     case ShortcutKeyAction.PassToSystem:
                         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
                     case ShortcutKeyAction.RefuseCtrl:
@@ -2519,12 +2586,17 @@ sealed partial class SettingsWindow : IDisposable
                         Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
                         return IntPtr.Zero;
                     case ShortcutKeyAction.RestoreDefault:
-                        ApplyCapturedShortcut(hWnd, hWnd == _hWndEditKeyboard ? DefaultKeyboardVk : DefaultSearchVk,
+                        ApplyCapturedShortcut(hWnd, TypingEngine.Windows.ShortcutModifierRules.Default,
+                            hWnd == _hWndEditKeyboard ? DefaultKeyboardVk : DefaultSearchVk,
                             restored: true);
                         return IntPtr.Zero;
                 }
 
-                ApplyCapturedShortcut(hWnd, (uint)vk);
+                var capturedMods = TypingEngine.Windows.ShortcutModifierRules.FromBools(ctrl, shift, alt);
+                var targetMods = TypingEngine.Windows.ShortcutModifierRules.IsValid(capturedMods)
+                    ? capturedMods
+                    : (hWnd == _hWndEditKeyboard ? _keyboardMods : _searchMods);
+                ApplyCapturedShortcut(hWnd, targetMods, (uint)vk, restored: false);
                 return IntPtr.Zero;
             }
         }

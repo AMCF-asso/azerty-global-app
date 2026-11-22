@@ -63,7 +63,7 @@ public sealed class Audit0911FenetresTests : IDisposable
 
     [Theory]
     [InlineData(0x73u, false, true, false, "PassToSystem")]   // Alt+F4
-    [InlineData(0x41u, false, true, true, "PassToSystem")]    // Alt+Maj+A
+    [InlineData(0x41u, false, true, true, "Apply")]           // Alt+Maj+A (modificateurs configurables)
     [InlineData(0x41u, true, false, false, "RefuseCtrl")]     // Ctrl+A
     [InlineData(0x41u, true, false, true, "Apply")]           // Ctrl+Maj+A
     [InlineData(0x08u, false, false, false, "RestoreDefault")] // Retour arrière

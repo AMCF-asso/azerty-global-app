@@ -8,6 +8,8 @@ public interface IWindowsTypingHost
 {
     uint ShortcutCharacterSearchVk { get; }
     uint ShortcutVirtualKeyboardVk { get; }
+    ShortcutModifiers ShortcutCharacterSearchModifiers => ShortcutModifierRules.Default;
+    ShortcutModifiers ShortcutVirtualKeyboardModifiers => ShortcutModifierRules.Default;
     bool CompatibilityDebugLog { get; }
 
     string? GetCompatibilityOverride(string processName);

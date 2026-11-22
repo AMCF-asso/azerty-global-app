@@ -126,7 +126,7 @@ sealed partial class SettingsWindow
         _paperButtons = new[]
         {
             _hWndLinkReset,
-            _hWndChkAutoStart, _hWndChkNotifications, _hWndChkOnboarding, _hWndChkTraining,
+            _hWndChkAutoStart, _hWndChkNotifications, _hWndChkOnboarding, _hWndChkSystemLayoutWarning, _hWndChkTraining,
             _hWndRadioLangFr, _hWndRadioLangEn,
             _hWndRadioCompatAuto, _hWndRadioCompatForceOn, _hWndRadioCompatForceOff,
             // Onglet « Leçons » (11/10) : sept boutons radio, deux cases.
@@ -211,14 +211,15 @@ sealed partial class SettingsWindow
         if (_activeTab == SettingsTab.General)
         {
             DrawTitle(hdc, layout.ShortcutsTitleRect, L.Settings_SectionShortcuts);
-            DrawShortcutRow(hdc, layout.KeyboardRowRect, layout.KeyboardBoxRect, L.Settings_ShortcutLabelKeyboard);
-            DrawShortcutRow(hdc, layout.SearchRowRect, layout.SearchBoxRect, L.Settings_ShortcutLabelSearch);
+            DrawShortcutRow(hdc, layout.KeyboardRowRect, layout.KeyboardBoxRect, L.Settings_ShortcutLabelKeyboard, ShownMods(keyboard: true));
+            DrawShortcutRow(hdc, layout.SearchRowRect, layout.SearchBoxRect, L.Settings_ShortcutLabelSearch, ShownMods(keyboard: false));
             DrawHint(hdc, layout.KeyboardHintRect, L.SettingsClarity_HintKeyboardShortcut);
             DrawHint(hdc, layout.SearchHintRect, L.SettingsClarity_HintSearchShortcut);
             DrawTitle(hdc, layout.PreferencesTitleRect, L.Settings_SectionPreferences);
             DrawHint(hdc, layout.AutoStartHintRect, L.SettingsClarity_HintAutoStart);
             DrawHint(hdc, layout.NotificationsHintRect, L.SettingsClarity_HintNotifications);
             DrawHint(hdc, layout.OnboardingHintRect, L.SettingsClarity_HintOnboarding);
+            DrawHint(hdc, layout.SystemLayoutWarningHintRect, L.SettingsClarity_HintSystemLayoutWarning);
         }
         else if (_activeTab == SettingsTab.Applications)
         {
@@ -262,10 +263,10 @@ sealed partial class SettingsWindow
     /// <summary>Une ligne de raccourci : le libellé, puis le geste écrit comme dans la
     /// Tablature — les modificateurs tenus en étiquettes d'encre, la touche dans sa case
     /// (peinte par la case elle-même, <see cref="PaintShortcutBox"/>).</summary>
-    private void DrawShortcutRow(IntPtr hdc, Win32.RECT row, Win32.RECT box, string label)
+    private void DrawShortcutRow(IntPtr hdc, Win32.RECT row, Win32.RECT box, string label, TypingEngine.Windows.ShortcutModifiers mods)
     {
         int right = box.left - S(9);
-        string[] held = { L.Settings_ShortcutModifier2, "Ctrl" };
+        string[] held = L.SettingsClarity_ModifierTags(mods).Reverse().ToArray();
         int tagH = S(22);
         int tagTop = row.top + (row.bottom - row.top - tagH) / 2;
         foreach (string tag in held)

@@ -452,8 +452,8 @@ internal sealed partial class LessonsWindow
 
         var shortcuts = new (string Combo, string Label)[]
         {
-            (L.SettingsClarity_Combo(ShortcutKeyName(ConfigManager.ShortcutVirtualKeyboardVk)), L.Settings_ShortcutLabelKeyboard),
-            (L.SettingsClarity_Combo(ShortcutKeyName(ConfigManager.ShortcutCharacterSearchVk)), L.Search_WindowTitle),
+            (L.SettingsClarity_Combo(ConfigManager.ShortcutVirtualKeyboardModifiers, ShortcutKeyName(ConfigManager.ShortcutVirtualKeyboardVk)), L.Settings_ShortcutLabelKeyboard),
+            (L.SettingsClarity_Combo(ConfigManager.ShortcutCharacterSearchModifiers, ShortcutKeyName(ConfigManager.ShortcutCharacterSearchVk)), L.Search_WindowTitle),
         };
         int shortcutRowH = S(32);
         int shortcutsH = pad + S(26) + shortcuts.Length * shortcutRowH + S(4);

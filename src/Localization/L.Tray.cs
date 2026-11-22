@@ -133,9 +133,18 @@ internal static partial class L
         ? T($"Jusqu’à demain {clock}", $"Until tomorrow {clock}")
         : T($"Jusqu’à {clock}", $"Until {clock}");
     public static string Tray_MenuPauseCustom => T("Personnaliser…", "Custom…");
-    public static string Tray_MenuHideVirtualKeyboard(string key) => T($"Masquer le clavier virtuel\tCtrl+Maj+{key}", $"Hide virtual keyboard\tCtrl+Shift+{key}");
-    public static string Tray_MenuVirtualKeyboard(string key) => T($"Afficher le clavier virtuel\tCtrl+Maj+{key}", $"Show virtual keyboard\tCtrl+Shift+{key}");
-    public static string Tray_MenuSearchCharacter(string key) => T($"Rechercher un caractère\tCtrl+Maj+{key}", $"Find a character\tCtrl+Shift+{key}");
+    public static string Tray_MenuHideVirtualKeyboard(TypingEngine.Windows.ShortcutModifiers mods, string key) =>
+        T($"Masquer le clavier virtuel\t{SettingsClarity_ComboCompact(mods, key)}", $"Hide virtual keyboard\t{SettingsClarity_ComboCompact(mods, key)}");
+    public static string Tray_MenuVirtualKeyboard(TypingEngine.Windows.ShortcutModifiers mods, string key) =>
+        T($"Afficher le clavier virtuel\t{SettingsClarity_ComboCompact(mods, key)}", $"Show virtual keyboard\t{SettingsClarity_ComboCompact(mods, key)}");
+    public static string Tray_MenuSearchCharacter(TypingEngine.Windows.ShortcutModifiers mods, string key) =>
+        T($"Rechercher un caractère\t{SettingsClarity_ComboCompact(mods, key)}", $"Find a character\t{SettingsClarity_ComboCompact(mods, key)}");
+    public static string Tray_MenuHideVirtualKeyboard(string key) =>
+        Tray_MenuHideVirtualKeyboard(TypingEngine.Windows.ShortcutModifierRules.Default, key);
+    public static string Tray_MenuVirtualKeyboard(string key) =>
+        Tray_MenuVirtualKeyboard(TypingEngine.Windows.ShortcutModifierRules.Default, key);
+    public static string Tray_MenuSearchCharacter(string key) =>
+        Tray_MenuSearchCharacter(TypingEngine.Windows.ShortcutModifierRules.Default, key);
     public static string Tray_MenuLessons => T("Leçons", "Lessons");
     public static string Tray_MenuWelcomeWindow => T("Revoir l’accueil", "Reopen the welcome screen");
 

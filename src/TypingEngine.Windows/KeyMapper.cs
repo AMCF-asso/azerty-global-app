@@ -473,6 +473,19 @@ public sealed class KeyMapper
     public bool IsToggleShortcut() => IsShiftDown && IsCtrlDown && !IsAltGrDown && !_leftAltDown
         && !_leftWinDown && !_rightWinDown;
 
+    /// <summary>Vérifie si les modificateurs tenus correspondent exactement au raccourci configuré.
+    /// AltGr et Win sont toujours exclus (touches mortes et raccourcis système).</summary>
+    public bool MatchesShortcutModifiers(ShortcutModifiers expected)
+    {
+        if (!ShortcutModifierRules.IsValid(expected))
+            return false;
+        if (IsAltGrDown || _leftWinDown || _rightWinDown)
+            return false;
+        return IsCtrlDown == ((expected & ShortcutModifiers.Ctrl) != 0)
+            && IsShiftDown == ((expected & ShortcutModifiers.Shift) != 0)
+            && _leftAltDown == ((expected & ShortcutModifiers.Alt) != 0);
+    }
+
     /// <summary>
     /// Verifie si l'evenement correspond a un raccourci configure.
     /// Les lettres/chiffres sont interpretes par position AZERTY Global afin que
