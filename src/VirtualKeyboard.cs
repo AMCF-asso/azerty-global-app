@@ -225,6 +225,9 @@ sealed class VirtualKeyboard : IDisposable
     private IntPtr _hWnd;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Layout _layout;
+    /// <summary>Polices à l'échelle de la fenêtre, qui suit sa taille sans palier : détruites
+    /// quand l'échelle change et à la fermeture (audit des ressources, C2).</summary>
+    private readonly WindowFonts _fonts = new();
 
     private bool _visible;
     private IntPtr _preferredMonitorWindow;
@@ -288,6 +291,7 @@ sealed class VirtualKeyboard : IDisposable
     private static float PaintScale(int cw, int ch) => Math.Max(0.1f, Math.Min(cw / (float)DEFAULT_WIDTH, ch / (float)DEFAULT_HEIGHT));
 
     private static int Px(float value, float scale) => (int)Math.Round(value * scale);
+    private static int Px(float value, FontScale scale) => Px(value, scale.Value);
 
     /// <summary>Le cadre du clavier, sous le bandeau ; c'est aussi celui des zones de survol
     /// (<see cref="KeyboardRenderer.BuildHitTestRects(KeyboardPlacement)"/>).</summary>
@@ -981,12 +985,12 @@ sealed class VirtualKeyboard : IDisposable
     /// <summary>Dessine le bandeau d'état et le clavier en couche active dans le DC mémoire.</summary>
     private void PaintContent(IntPtr hdc, ref Win32.RECT clientRect, int cw, int ch)
     {
-        float s = PaintScale(cw, ch);
+        var s = _fonts.At(PaintScale(cw, ch));
         PaperDraw.Fill(hdc, clientRect, PaperTheme.Paper);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
 
         var layout = ShortcutHeld ? BlankLayout : _layout;
-        PaperKeyboard.Draw(hdc, KeyboardPlacementFor(cw, ch), layout, PaperKeyboardMode.ActiveLayer, BuildKeyboardState());
+        PaperKeyboard.Draw(hdc, KeyboardPlacementFor(cw, ch), layout, PaperKeyboardMode.ActiveLayer, BuildKeyboardState(), s.Owner);
 
         DrawBanner(hdc, cw, s);
     }
@@ -1059,7 +1063,7 @@ sealed class VirtualKeyboard : IDisposable
     /// recherche), à droite la phrase qui dit ce que montre le clavier. La maquette le fait
     /// haut de 64 px, 78 avec la portée d'un geste ; la fenêtre garde 78 pour que le clavier ne
     /// saute pas, et l'état seul se pose en bas, contre le clavier, comme sur la maquette.</summary>
-    private void DrawBanner(IntPtr hdc, int cw, float s)
+    private void DrawBanner(IntPtr hdc, int cw, FontScale s)
     {
         int bottom = Px(MockBannerHeight - MockBannerPadBottom, s);
         int fullTop = Px(MockBannerPadTop, s);
@@ -1110,7 +1114,7 @@ sealed class VirtualKeyboard : IDisposable
 
     /// <summary>La portée d'état : lignes Maj et AltGr, le trait épais quand on tient. Rend
     /// son bord droit.</summary>
-    private int DrawHeldStaff(IntPtr hdc, int left, int top, float s)
+    private int DrawHeldStaff(IntPtr hdc, int left, int top, FontScale s)
     {
         var labelFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s);
         int labelWidth = Px(MockStaffLabel, s);
@@ -1348,5 +1352,6 @@ sealed class VirtualKeyboard : IDisposable
         }
 
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("VK"));
+        _fonts.Dispose(); // après la fenêtre : plus aucun DC ne les tient
     }
 }

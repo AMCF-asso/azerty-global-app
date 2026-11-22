@@ -30,7 +30,7 @@ internal sealed record KeyNotationStyle
     internal FontSpec NoteFont { get; init; }
 
     /// <summary>Leçons : sous le caractère courant, pavés de 26 px, cases de 34 px.</summary>
-    internal static KeyNotationStyle Lessons(float s) => new()
+    internal static KeyNotationStyle Lessons(FontScale s) => new()
     {
         TagHeight = Px(26, s), TagMinWidth = Px(52, s), TagPaddingX = Px(10, s), TagRadius = Px(3, s),
         TagFont = FontSpec.Of(AppFonts.Text, 14, TypeRamp.Semibold, s),
@@ -42,7 +42,7 @@ internal sealed record KeyNotationStyle
     };
 
     /// <summary>Recherche : le geste du caractère choisi, grandes cases de 38 px.</summary>
-    internal static KeyNotationStyle Search(float s) => new()
+    internal static KeyNotationStyle Search(FontScale s) => new()
     {
         TagHeight = Px(24, s), TagMinWidth = Px(48, s), TagPaddingX = Px(9, s), TagRadius = Px(3, s),
         TagFont = FontSpec.Of(AppFonts.Text, 13, TypeRamp.Semibold, s),
@@ -54,7 +54,7 @@ internal sealed record KeyNotationStyle
 
     /// <summary>Bandeau du clavier virtuel : le geste venu de la recherche. Maj et AltGr
     /// empilés tiennent dans les 62 px du bandeau : 16 + 2 + 16 + 2 + 24 = 60.</summary>
-    internal static KeyNotationStyle Banner(float s) => new()
+    internal static KeyNotationStyle Banner(FontScale s) => new()
     {
         TagHeight = Px(16, s), TagMinWidth = Px(38, s), TagPaddingX = Px(7, s), TagRadius = Px(2, s),
         TagFont = FontSpec.Of(AppFonts.Text, 10, TypeRamp.Semibold, s),
@@ -65,6 +65,7 @@ internal sealed record KeyNotationStyle
     };
 
     internal static int Px(float value, float scale) => Math.Max(1, (int)Math.Round(value * scale));
+    internal static int Px(float value, FontScale scale) => Px(value, scale.Value);
 }
 
 /// <summary>Une note sous la case d'un temps : Verr. Maj. qui allume ou qui éteint les majuscules.</summary>

@@ -16,8 +16,11 @@ internal sealed partial class LessonsWindow
 
     private float PaperScale => _dpiScale * _windowScale;
 
+    /// <summary>L'échelle du papier pour ses polices : celles de la fenêtre, à cette échelle.</summary>
+    private FontScale PaperFonts => _scaledFonts.At(PaperScale);
+
     private FontSpec F(string family, int size, int weight = TypeRamp.Regular) =>
-        FontSpec.Of(family, size, weight, PaperScale);
+        FontSpec.Of(family, size, weight, PaperFonts);
 
     private void ClosePicker()
     {
@@ -409,7 +412,7 @@ internal sealed partial class LessonsWindow
     private void DrawPaperLesson(IntPtr hdc, Win32.RECT rc, Win32.RECT body)
     {
         // Parcours (option A du 07/11 nuit) : ligne en 44 px, geste à sa hauteur mesurée.
-        var style = IsTutorialActive ? TablatureStyle.TutorialText(PaperScale) : TablatureStyle.LessonsText(PaperScale);
+        var style = IsTutorialActive ? TablatureStyle.TutorialText(PaperFonts) : TablatureStyle.LessonsText(PaperFonts);
         _notationReserve = IsTutorialActive ? TutorialNotationHeight(hdc) : NotationAreaHeight();
         int partH = 1 + S(22) + style.Height + S(10) + _notationReserve + S(14) + 1;
         var part = new Win32.RECT { left = body.left, top = body.top, right = body.right, bottom = body.top + partH };
@@ -583,7 +586,7 @@ internal sealed partial class LessonsWindow
             if (expectedChar != '\0')
             {
                 // L'attendu reste lisible : petit, pâle, en haut de la colonne.
-                var hint = FontSpec.Of(AppFonts.Text, 22, TypeRamp.Semibold, style.GlyphFont.Height / 50f);
+                var hint = FontSpec.Of(AppFonts.Text, 22, TypeRamp.Semibold, new FontScale(style.GlyphFont.Height / 50f, style.GlyphFont.Owner));
                 var hintRect = new Win32.RECT { left = cellRect.left, top = cellRect.top + S(2), right = cellRect.right, bottom = cellRect.top + S(2) + S(26) };
                 if (ExpectedHint(expectedChar) is string hintText)
                     PaperText.DrawLine(hdc, hintText, hint, hintRect, CLR_MUTED, TextAlign.Center);
@@ -817,7 +820,7 @@ internal sealed partial class LessonsWindow
         foreach (var ch in state.LessonVisibleCharacters) paper.LessonVisibleCharacters.Add(ch);
         foreach (var (sc, step) in stepBadges) paper.StepBadges[sc] = step;
 
-        PaperKeyboard.Draw(hdc, placement, _layout, LessonKeyboardMode(paper), paper);
+        PaperKeyboard.Draw(hdc, placement, _layout, LessonKeyboardMode(paper), paper, PaperFonts.Owner);
         _keyboardHover = (placement, profile, state);
     }
 

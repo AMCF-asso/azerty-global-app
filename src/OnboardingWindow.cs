@@ -266,8 +266,7 @@ sealed class OnboardingWindow : IDisposable
     // Recréés quand la palette change (contraste élevé activé ou coupé pendant que l'accueil vit).
     private IntPtr _hPanelBrush;
 
-    // GDI+ resources
-    private IntPtr _gdipToken;
+    // GDI+ resources (GDI+ itself: GdiPlus.EnsureStarted)
     private IntPtr _gdipLogo;
     private IntPtr _gdipFlagEn;
     private IntPtr _gdipFlagFr;
@@ -325,8 +324,7 @@ sealed class OnboardingWindow : IDisposable
         _dpiScale = FittedScale(screenScale);
 
         // GDI+
-        var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
+        GdiPlus.EnsureStarted();
 
         _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), ProductIdentity.LogoResourceName);
         _gdipFlagEn = GdiImageLoader.LoadFromEmbeddedResource(typeof(OnboardingWindow), "flag-en.png");
@@ -1926,7 +1924,7 @@ sealed class OnboardingWindow : IDisposable
             var state = new PaperKeyboardState { CenteredBase = true };
             state.FramedScancodes.UnionWith(Step1ChangedKeys);
             state.NamedFunctionLabels.UnionWith(Step1NamedKeys);
-            PaperKeyboard.Draw(hdc, placement, layout, PaperKeyboardMode.Map, state);
+            PaperKeyboard.Draw(hdc, placement, layout, PaperKeyboardMode.Map, state, fonts: null); // échelle du DPI seul : cache partagé
             DrawStep1Notes(hdc, gfx, placement, kbH, cw - margin);
         }
 
@@ -2231,7 +2229,6 @@ sealed class OnboardingWindow : IDisposable
         if (_gdipLogo != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipLogo); _gdipLogo = IntPtr.Zero; }
         if (_gdipFlagEn != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagEn); _gdipFlagEn = IntPtr.Zero; }
         if (_gdipFlagFr != IntPtr.Zero) { Win32.GdipDisposeImage(_gdipFlagFr); _gdipFlagFr = IntPtr.Zero; }
-        if (_gdipToken != IntPtr.Zero) { Win32.GdiplusShutdown(_gdipToken); _gdipToken = IntPtr.Zero; }
         DestroyFonts();
         Win32.DeleteObject(_hPanelBrush);
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("Onboarding"));

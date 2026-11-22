@@ -2958,8 +2958,7 @@ sealed class TrayApplication : IDisposable
     /// maillon échoue : l'appelant retombe sur l'icône texte.</summary>
     private static IntPtr CreateLogoIcon(int size)
     {
-        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) != 0)
+        if (!GdiPlus.EnsureStarted())
             return IntPtr.Zero;
         IntPtr logo = IntPtr.Zero;
         try
@@ -2970,7 +2969,6 @@ sealed class TrayApplication : IDisposable
         finally
         {
             if (logo != IntPtr.Zero) Win32.GdipDisposeImage(logo);
-            Win32.GdiplusShutdown(token);
         }
     }
 
