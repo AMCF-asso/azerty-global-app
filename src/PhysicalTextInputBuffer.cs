@@ -33,13 +33,22 @@ internal sealed class PhysicalTextInputBuffer
         _clock = clock ?? (() => Environment.TickCount64);
     }
 
-    public void Enqueue(string text)
+    // Entrée posée par CaptureKey pour la frappe en cours, tant que le moteur n'a pas dit ce qu'il
+    // en fait (ApplyEngineDecision). Audit des machines à états, C1.2 et C1.3 (ticket ME-06).
+    private Entry? _provisional;
+    private bool _awaitingDecision;
+
+    public void Enqueue(string text) => EnqueueEntry(text);
+
+    private Entry? EnqueueEntry(string text)
     {
-        if (string.IsNullOrEmpty(text)) return;
+        if (string.IsNullOrEmpty(text)) return null;
 
         long now = _clock();
         DiscardExpiredEntries(now);
-        _entries.Enqueue(new Entry(text, now));
+        var entry = new Entry(text, now);
+        _entries.Enqueue(entry);
+        return entry;
     }
 
     public bool HasPending
@@ -78,7 +87,40 @@ internal sealed class PhysicalTextInputBuffer
         return received;
     }
 
-    public void Clear() => _entries.Clear();
+    public void Clear()
+    {
+        _entries.Clear();
+        _provisional = null;
+        _awaitingDecision = false;
+    }
+
+    /// <summary>
+    /// Le moteur a décidé de la frappe que CaptureKey vient de noter (KeyMapper.KeyDecided). Quand
+    /// il a absorbé la touche ou écrit un texte, c'est ce texte réel qui est attendu, et rien
+    /// quand il n'a rien émis : le calcul de CaptureKey, fait avant le moteur, ignorait l'accord
+    /// tenu, le Maj d'activation encore enfoncé et les touches qui n'écrivent rien sous une
+    /// couche (C1.2, C1.3). Touche laissée passer sans texte émis : Windows écrira le caractère
+    /// natif et l'attendu de la disposition reste en place.
+    /// </summary>
+    public void ApplyEngineDecision(bool handled, string? emittedText)
+    {
+        if (!_awaitingDecision) return;
+        _awaitingDecision = false;
+        var provisional = _provisional;
+        _provisional = null;
+        if (!handled && string.IsNullOrEmpty(emittedText)) return;
+
+        if (provisional != null) Remove(provisional);
+        if (!string.IsNullOrEmpty(emittedText)) EnqueueEntry(emittedText);
+    }
+
+    private void Remove(Entry entry)
+    {
+        if (!_entries.Contains(entry)) return;
+        var kept = _entries.Where(e => !ReferenceEquals(e, entry)).ToArray();
+        _entries.Clear();
+        foreach (var e in kept) _entries.Enqueue(e);
+    }
 
     /// <summary>
     /// Retient le texte qu'AZERTY Global va produire pour la touche physique qui vient
@@ -91,6 +133,8 @@ internal sealed class PhysicalTextInputBuffer
         // Raccourci (Ctrl, Alt ou Win tenu) : aucun texte n'est attendu. Sans cette garde,
         // Ctrl+A tapait « a » et Ctrl+chiffre laissait une entrée fantôme d'une seconde qui
         // décalait les lettres suivantes (audit 09/11, E1, E11).
+        _provisional = null;
+        _awaitingDecision = false;
         if (IsShortcutChord(mapper.CtrlDown, mapper.AltDown, mapper.WinDown, mapper.AltGrDown))
             return;
         // Audit 09/11, E14 : une couche verrouillée (grecque, cyrillique…) n'est pas une touche morte
@@ -100,8 +144,9 @@ internal sealed class PhysicalTextInputBuffer
         string? lockedLayer = layer.Mode == MaintainableLayerMode.Locked ? layer.LayerId : null;
         string? text = ExpectedText(layout, scancode, mapper.ShiftDown, mapper.AltGrDown,
             mapper.CapsLockActive, mapper.ActiveDeadKey, lockedLayer);
-        if (!string.IsNullOrEmpty(text))
-            Enqueue(text);
+        // Un calcul avant le moteur : le moteur le corrige ensuite (ApplyEngineDecision).
+        _provisional = EnqueueEntry(text ?? string.Empty);
+        _awaitingDecision = true;
     }
 
     /// <summary>

@@ -157,6 +157,14 @@ sealed class OnboardingWindow : IDisposable
     // État de la case « Lancer au démarrage » au dernier Show() : décocher la case cochée
     // par défaut est un choix, alors même que l'état réel ne change pas.
     private bool _autoStartShownChecked;
+    // État de la case « Ne plus afficher » au dernier Show() : elle reprend le réglage enregistré
+    // (C7.2). Close() la compare à l'état courant : seule une case changée est un choix.
+    private bool _dontShowShownChecked;
+    // Instant du dernier changement d'étape (C7.1), nul tant qu'aucun depuis l'ouverture.
+    private long? _stepChangedAt;
+    // Vrai entre le WM_LBUTTONDBLCLK reçu par « Suivant » et la fin du relâchement qui en fait un clic :
+    // le WM_COMMAND produit dans cet intervalle est le second clic d'un double clic de souris (C7.1).
+    private bool _nextMouseDoubleClick;
     // Vrai des qu'on lance le parcours une premiere fois (gardé dans la config, audit 1.3.0, A1).
     // Distincte de _learningModuleDone (qui n'est mis a true qu'a la complete reussite des
     // exercices du parcours). Etat B (essaye non complete) sert a afficher « Suivant » a cote de
@@ -662,6 +670,27 @@ sealed class OnboardingWindow : IDisposable
     internal static Func<bool, bool> AutoStartSetter = AutoStart.Set;
     internal static Func<bool> AutoStartIsRegistered = () => AutoStart.IsRegistered;
     internal static Func<IntPtr, string, string, uint, int> ShowMessageBox = Win32.MessageBoxW;
+    /// <summary>Horloge (ms) et délai de double clic de Windows (ms), remplaçables dans les tests (C7.1).</summary>
+    internal static Func<long> Clock = () => Environment.TickCount64;
+    internal static Func<int> DoubleClickDelay = () => (int)Win32.GetDoubleClickTime();
+
+    /// <summary>
+    /// C7.1 : « Suivant » change de sens à la dernière étape (« C'est parti ! », même identifiant) :
+    /// le second clic d'un double clic sur « Suivant » validait l'accueil sans que l'étape 3 ait été
+    /// vue. Un clic reçu pendant le délai de double clic de Windows après un changement d'étape est
+    /// donc ignoré ; un clic posé après ce délai agit comme avant.
+    /// Suite : seul le second clic d'un double clic de SOURIS est visé. Le bouton le reconnaît au
+    /// WM_LBUTTONDBLCLK qu'il reçoit (<see cref="ButtonArrowSubclassProc"/>) ; une activation au clavier
+    /// (Entrée, Espace, flèche), par l'accessibilité ou « Précédent » puis « Suivant » n'en émet pas :
+    /// elle agit toujours, même dans le délai.
+    /// </summary>
+    private bool IsSecondClickOfDoubleClick()
+    {
+        if (!_nextMouseDoubleClick) return false;
+        if (_stepChangedAt is not long at) return false;
+        long elapsed = Clock() - at;
+        return elapsed >= 0 && elapsed < DoubleClickDelay();
+    }
 
     /// <summary>Écrit « Lancer au démarrage ». Un échec rend la case à l'état réel et le dit. Le choix de
     /// l'utilisateur éteint la relance, dans un sens comme dans l'autre (R2 de l'audit v1.2.0).</summary>
@@ -883,6 +912,7 @@ sealed class OnboardingWindow : IDisposable
     {
         if (_currentStep >= OnboardingStep.Last) return;
         _currentStep++;
+        _stepChangedAt = Clock();
         if (_currentStep == OnboardingStep.Last) _step3Reached = true;
         UpdateStepVisibility();
         FocusAfterStepChange();
@@ -892,6 +922,7 @@ sealed class OnboardingWindow : IDisposable
     {
         if (_currentStep <= 0) return;
         _currentStep--;
+        _stepChangedAt = Clock();
         UpdateStepVisibility();
         FocusAfterStepChange();
     }
@@ -915,6 +946,7 @@ sealed class OnboardingWindow : IDisposable
     public void Show()
     {
         _currentStep = 0;
+        _stepChangedAt = null;
         _activationRefused = false;
         _step3Reached = false; // sera mis a true a la 1ere transition vers l'etape 3
         // Étape 3 : « Lancer au démarrage » cochée par défaut au premier accueil, sinon l'état
@@ -922,13 +954,15 @@ sealed class OnboardingWindow : IDisposable
         // décision du 2026-09-23). Rien n'est appliqué ici : Close() ne persiste la case que si
         // l'étape 3 a été vue, l'activation acceptée, et la case validée par le bouton
         // final ou changée par l'utilisateur (audit 24/09, B2).
-        // « Ne plus afficher »
-        // UNCHECKED par defaut (v0.9.7.1) -> l'opt-out doit etre explicite. Avant, la default-checked
-        // combinee a la persistance dans Close() faisait que tout fermeture (X, Esc, Quit, C'est parti!)
-        // declenchait un opt-out permanent, meme si l'utilisateur n'avait jamais atteint l'etape 3.
+        // « Ne plus afficher » : décochée tant qu'aucun refus n'est enregistré (v0.9.7.1 : l'opt-out
+        // doit être explicite ; avant, la case cochée par défaut et la persistance dans Close()
+        // faisaient de toute fermeture un opt-out permanent). Un refus déjà enregistré s'affiche
+        // coché (C7.2) : sinon « C'est parti ! » le réécrivait à « afficher » sans que la case le dise.
+        // Le réglage de l'utilisateur seul, pas la politique : c'est lui que la case écrit.
         _autoStartShownChecked = AutoStart.DefaultOnboardingCheck();
         SetChecked(_hWndChkAutoStart, _autoStartShownChecked);
-        SetChecked(_hWndChkDontShow, false);
+        _dontShowShownChecked = !ConfigManager.ShowOnboardingUserSetting;
+        SetChecked(_hWndChkDontShow, _dontShowShownChecked);
         RefreshPalette(); // A14 : le contraste élevé a pu changer depuis la création
         // Sync bidirectionnel des flags avec la progression persistee. Seuils alignes avec
         // la condition d'auto-show ([TrayApplication.cs] : LearningMaxStepCompleted < 3) :
@@ -1026,12 +1060,12 @@ sealed class OnboardingWindow : IDisposable
         _step3Reached = false;
         if (step3Reached && _activationAccepted)
         {
-            // « Ne plus afficher » est toujours affichée décochée (Show) : sur croix ou
-            // Échap, seule une case cochée par l'utilisateur est un choix. Avant, un
-            // simple Échap à l'étape 3 réécrivait « afficher au démarrage » et défaisait
-            // en silence un refus posé dans les Paramètres ou hérité de la v1.1.
+            // « Ne plus afficher » reprend le réglage enregistré à l'ouverture (Show) : sur croix ou
+            // Échap, seule une case changée par l'utilisateur est un choix (un simple Échap à
+            // l'étape 3 défaisait en silence un refus posé dans les Paramètres ou hérité de la
+            // v1.1) ; la validation, case inchangée, réécrit la valeur déjà enregistrée (C7.2).
             bool dontShow = _dontShowChecked;
-            if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, dontShow, shownChecked: false))
+            if (ShouldApplyPreferenceOnClose(validated, step3Reached, _activationAccepted, dontShow, _dontShowShownChecked))
                 ConfigManager.SetShowOnboardingAtStartup(!dontShow);
 
             bool autoStart = _autoStartChecked;
@@ -1128,6 +1162,7 @@ sealed class OnboardingWindow : IDisposable
                         OnEscape();
                         break;
                     case IDC_BTN_NEXT:
+                        if (IsSecondClickOfDoubleClick()) break; // C7.1
                         // Avant la dernière étape : passer a la suivante. Dernière : fermer l'onboarding.
                         // (Le bouton « Essayer maintenant » est un controle distinct IDC_BTN_TRY.)
                         if (_currentStep < OnboardingStep.Last) GoToNextStep();
@@ -1512,6 +1547,28 @@ sealed class OnboardingWindow : IDisposable
             {
                 Win32.SendMessageW(_hWnd, Win32.WM_KEYDOWN, wParam, lParam);
                 return IntPtr.Zero;
+            }
+        }
+
+        // C7.1 (suite) : repérer le second clic d'un double clic de souris sur « Suivant ». Le bouton
+        // système traite WM_LBUTTONDBLCLK comme un appui, puis le relâchement envoie le WM_COMMAND
+        // pendant ce même WM_LBUTTONUP : le repère vit donc de l'un à l'autre, et tout ce qui peut
+        // interrompre ce geste (nouvel appui, perte du focus, annulation du mode) l'efface.
+        if (uIdSubclass == (UIntPtr)20)
+        {
+            switch (msg)
+            {
+                case Win32.WM_LBUTTONDBLCLK:
+                    _nextMouseDoubleClick = true;
+                    break;
+                case Win32.WM_LBUTTONDOWN:
+                case Win32.WM_KILLFOCUS:
+                case 0x001F: // WM_CANCELMODE
+                    _nextMouseDoubleClick = false;
+                    break;
+                case Win32.WM_LBUTTONUP:
+                    try { return Win32.DefSubclassProc(hWnd, msg, wParam, lParam); }
+                    finally { _nextMouseDoubleClick = false; }
             }
         }
         return Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
