@@ -123,6 +123,18 @@ public class AltGrLabelTests : IDisposable
         }
     }
 
+    /// <summary>Le mot « AltGr » écrit en dur (original du site) s'affiche « Alt Gr », sans toucher
+    /// « Alt Gr » ni un mot qui le contient.</summary>
+    [Theory]
+    [MemberData(nameof(Langues))]
+    public void Le_mot_AltGr_ecrit_en_dur_s_affiche_Alt_Gr(string langue)
+    {
+        L.Language = langue;
+        Assert.Equal($"Tenez {L.AltGrKey} + U ; {L.AltGrKey} + N", LessonCatalogLoader.ExpandPlaceholders("Tenez AltGr + U ; {ALTGR} + N"));
+        Assert.Equal($"{L.AltGrKey} ({L.AltGrKey})", LessonCatalogLoader.ExpandPlaceholders($"{L.AltGrKey} (AltGr)"));
+        Assert.Equal("AltGrafe", LessonCatalogLoader.ExpandPlaceholders("AltGrafe"));
+    }
+
     /// <summary>La consigne réécrite ne coûte aucune progression : l'empreinte d'avant le
     /// 09/11, calculée avec l'ancienne consigne « AltGr + : », est toujours reconnue.</summary>
     [Theory]
@@ -134,7 +146,9 @@ public class AltGrLabelTests : IDisposable
         var exercice = LessonCatalogLoader.LoadFromResource().Modules
             .SelectMany(m => m.Lessons).SelectMany(l => l.Exercises)
             .Single(e => e.KeyPrefix == "email-web/croisillon/2/");
-        Assert.DoesNotContain("AltGr", exercice.Instruction, StringComparison.Ordinal);
+        // lessons.json est une copie de l'original du site, qui écrit « AltGr » : c'est l'affichage
+        // qui dit « Alt Gr » (ExpandPlaceholders), la consigne brute reste celle du fichier.
+        Assert.DoesNotContain("AltGr", LessonCatalogLoader.ExpandPlaceholders(exercice.Instruction), StringComparison.Ordinal);
         string ancienne = LessonCatalogLoader.ComputeLegacyExerciseHash(exercice.Type, ancienneConsigne, exercice.Content);
         Assert.Contains(ancienne, exercice.LegacyHashes);
     }

@@ -330,11 +330,16 @@ internal static class LessonCatalogLoader
         return L.IsEnglish && !string.IsNullOrEmpty(en) ? en : fr;
     }
 
+    private static readonly System.Text.RegularExpressions.Regex LiteralAltGr =
+        new(@"\bAltGr\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     /// <summary>Texte affiché d'une consigne ou d'une description : {ALTGR}, {SHIFT} et {CAPS}
     /// deviennent le nom des touches dans la langue de l'app (« Alt Gr » : <see cref="L.AltGrKey"/>).
     /// La consigne brute reste dans <see cref="LessonExercise.Instruction"/> : les empreintes
-    /// d'avant le 09/11/2026 l'incluaient.</summary>
-    internal static string ExpandPlaceholders(string text) => text
+    /// d'avant le 09/11/2026 l'incluaient. Le mot « AltGr » écrit en dur dans lessons.json prend
+    /// le même nom : le fichier est une copie de l'original du site (contrôle de provenance), qui
+    /// l'écrit ainsi en 12 endroits ; l'affichage ne dépend pas de la façon dont le site l'écrit.</summary>
+    internal static string ExpandPlaceholders(string text) => LiteralAltGr.Replace(text, _ => L.AltGrKey)
         .Replace("{ALTGR}", L.AltGrKey, StringComparison.OrdinalIgnoreCase)
         .Replace("{SHIFT}", L.LessonsWin_PlaceholderShift, StringComparison.OrdinalIgnoreCase)
         .Replace("{CAPS}", L.LessonsWin_PlaceholderCaps, StringComparison.OrdinalIgnoreCase);
