@@ -61,6 +61,10 @@ internal static class BancCapture
     internal const string OnlyVariable = "AZERTY_CAPTURE_ONLY";
     internal const string AllVariable = "AZERTY_CAPTURE_ALL";
     internal const string ScreenVariable = "AZERTY_CAPTURE_ECRAN";
+    /// <summary><c>AZERTY_TEST_ECRAN_REEL=LARGEURxHAUTEUR</c> (« 1024x768 ») : taille de l'écran réel
+    /// simulé pour le plafond de taille de Windows, afin de rejouer sur un poste ce que le runner de
+    /// la CI impose (voir <see cref="AllowSimulatedScreenSize"/>).</summary>
+    internal const string PhysicalScreenVariable = "AZERTY_TEST_ECRAN_REEL";
 
     /// <summary>
     /// Zone de travail simulée, <c>AZERTY_CAPTURE_ECRAN=LARGEURxHAUTEUR</c> (« 1024x728 »), ou null
@@ -430,6 +434,9 @@ internal static class BancCapture
         if (hwnd == IntPtr.Zero)
             throw new InvalidOperationException("handle nul avant la mise à l'échelle");
 
+        SimulatePhysicalScreen(hwnd);
+        AllowSimulatedScreenSize(hwnd);
+
         int current = Win32.GetDpiForWindow(hwnd);
         if (current <= 0 || current == targetDpi)
             return current;
@@ -460,6 +467,128 @@ internal static class BancCapture
             Marshal.FreeHGlobal(pointer);
         }
         return current;
+    }
+
+    // ── Taille des fenêtres sur un écran simulé ──────────────────────
+    //
+    // Windows plafonne la taille d'une fenêtre de premier niveau à l'écran réel (WM_GETMINMAXINFO :
+    // ptMaxTrackSize = écran + cadre). Sur le runner, 1024 × 768, une fenêtre portée à 192 DPI sous
+    // une zone de travail simulée de 3840 px (OverrideWorkAreaForTests) ne dépassait pas 1044 px de
+    // large : l'Accueil mesurait 1028 px de zone cliente au lieu de 1440, et son titre d'étape 1
+    // (1007 px en anglais, 1118 en français) sortait coupé (« dispose de 916 px »). Le poste d'Antoine
+    // (écran assez large) ne voyait rien. Tant qu'une zone simulée est posée, le plafond monte
+    // donc à cette zone plus le cadre, jamais en dessous de celui de Windows.
+
+    private delegate IntPtr SubclassProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data);
+
+    [DllImport("comctl32.dll")]
+    private static extern bool SetWindowSubclass(IntPtr hwnd, SubclassProc proc, UIntPtr id, UIntPtr data);
+
+    [DllImport("comctl32.dll")]
+    private static extern bool RemoveWindowSubclass(IntPtr hwnd, SubclassProc proc, UIntPtr id);
+
+    [DllImport("comctl32.dll")]
+    private static extern IntPtr DefSubclassProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    private static readonly UIntPtr SubclassId = (UIntPtr)0x41475A53; // « AGZS »
+    private const int MinMaxInfoMaxTrackX = 32, MinMaxInfoMaxTrackY = 36; // ptMaxTrackSize, MINMAXINFO
+
+    // Le délégué doit rester vivant tant que la sous-classe est posée : une entrée par fenêtre.
+    private static readonly Dictionary<IntPtr, SubclassProc> SubclassesDeTaille = new();
+
+    /// <summary>Plafond de taille relevé pour <paramref name="hwnd"/> quand une zone de travail
+    /// simulée est posée sur ce fil ; sans zone simulée, la fenêtre garde celui de Windows.</summary>
+    internal static void AllowSimulatedScreenSize(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || NativeWindow.SimulatedWorkAreaForTests is not { } work)
+            return;
+
+        lock (SubclassesDeTaille)
+        {
+            if (SubclassesDeTaille.ContainsKey(hwnd))
+                return;
+
+            int workW = work.right - work.left;
+            int workH = work.bottom - work.top;
+            IntPtr Proc(IntPtr h, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data)
+            {
+                IntPtr result = DefSubclassProc(h, msg, wParam, lParam);
+                if (msg == Win32.WM_GETMINMAXINFO && lParam != IntPtr.Zero
+                    && Win32.GetWindowRect(h, out var outer) && Win32.GetClientRect(h, out var client))
+                {
+                    int frameW = (outer.right - outer.left) - (client.right - client.left);
+                    int frameH = (outer.bottom - outer.top) - (client.bottom - client.top);
+                    Marshal.WriteInt32(lParam, MinMaxInfoMaxTrackX,
+                        Math.Max(Marshal.ReadInt32(lParam, MinMaxInfoMaxTrackX), workW + frameW));
+                    Marshal.WriteInt32(lParam, MinMaxInfoMaxTrackY,
+                        Math.Max(Marshal.ReadInt32(lParam, MinMaxInfoMaxTrackY), workH + frameH));
+                }
+                return result;
+            }
+
+            SubclassProc proc = Proc;
+            if (SetWindowSubclass(hwnd, proc, SubclassId, UIntPtr.Zero))
+                SubclassesDeTaille[hwnd] = proc;
+        }
+    }
+
+    private static readonly Dictionary<IntPtr, SubclassProc> EcransReels = new();
+
+    /// <summary>Pose sur <paramref name="hwnd"/> le plafond d'un écran réel de
+    /// <paramref name="width"/> × <paramref name="height"/>, comme Windows le calcule : à poser avant
+    /// <see cref="AllowSimulatedScreenSize"/>, qui le relève ensuite.</summary>
+    internal static void SimulatePhysicalScreen(IntPtr hwnd, int width = 0, int height = 0)
+    {
+        if (width <= 0)
+        {
+            string? raw = Environment.GetEnvironmentVariable(PhysicalScreenVariable);
+            if (string.IsNullOrWhiteSpace(raw))
+                return;
+            string[] parts = raw.Split('x', 'X', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length != 2
+                || !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out width)
+                || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out height))
+                throw new InvalidOperationException($"{PhysicalScreenVariable} doit valoir LARGEURxHAUTEUR (« 1024x768 »), pas « {raw} ».");
+        }
+
+        lock (EcransReels)
+        {
+            if (hwnd == IntPtr.Zero || EcransReels.ContainsKey(hwnd))
+                return;
+            int w = width, hgt = height;
+            IntPtr Proc(IntPtr h, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data)
+            {
+                IntPtr result = DefSubclassProc(h, msg, wParam, lParam);
+                // Cadre : celui de la fenêtre, comme le calcule Windows (écran + cadre des deux côtés).
+                if (msg == Win32.WM_GETMINMAXINFO && Win32.GetWindowRect(h, out var outer) && Win32.GetClientRect(h, out var client))
+                {
+                    // Plafond de Windows : l'écran plus le cadre (mesuré sur un poste : 1920 → 1940).
+                    int border = (outer.right - outer.left) - (client.right - client.left) + 4;
+                    Marshal.WriteInt32(lParam, MinMaxInfoMaxTrackX, w + border);
+                    Marshal.WriteInt32(lParam, MinMaxInfoMaxTrackY, hgt + border);
+                }
+                return result;
+            }
+            SubclassProc proc = Proc;
+            if (SetWindowSubclass(hwnd, proc, (UIntPtr)0x41475A52, UIntPtr.Zero))
+                EcransReels[hwnd] = proc;
+        }
+    }
+
+    /// <summary>Retire la sous-classe de <see cref="AllowSimulatedScreenSize"/>, avant la
+    /// destruction de la fenêtre.</summary>
+    internal static void ReleaseSimulatedScreenSize(IntPtr hwnd)
+    {
+        lock (SubclassesDeTaille)
+        {
+            if (SubclassesDeTaille.Remove(hwnd, out var proc) && hwnd != IntPtr.Zero)
+                RemoveWindowSubclass(hwnd, proc, SubclassId);
+        }
+        lock (EcransReels)
+        {
+            if (EcransReels.Remove(hwnd, out var ecran) && hwnd != IntPtr.Zero)
+                RemoveWindowSubclass(hwnd, ecran, (UIntPtr)0x41475A52);
+        }
     }
 
     /// <summary>
@@ -525,6 +654,8 @@ internal static class BancCapture
     /// </summary>
     internal static void Teardown(IDisposable window)
     {
+        try { ReleaseSimulatedScreenSize(Handle(window)); }
+        catch (MissingFieldException) { /* fenêtre sans _hWnd : rien à relâcher */ }
         window.Dispose();
         Pump(5);
     }

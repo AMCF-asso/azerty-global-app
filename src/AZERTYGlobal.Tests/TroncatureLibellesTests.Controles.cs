@@ -61,6 +61,27 @@ public sealed partial class TroncatureLibellesTests
             _échelles[type.Name] = dpi / 96f;
     }
 
+    /// <summary>
+    /// Précondition du banc : sous un DPI simulé (zone de travail de 1920 ou 3840 px), l'Accueil a la
+    /// zone cliente qu'il demande. Une fenêtre plafonnée par l'écran réel du poste ou du runner
+    /// (CI du 16/11 : 1028 px au lieu de 1440 à 192 DPI) ferait sortir « coupés » des titres qui
+    /// tiennent : l'échec dit alors que c'est le banc, pas un libellé.
+    /// </summary>
+    private static void VérifierTailleDemandée(OnboardingWindow accueil, IntPtr hwnd)
+    {
+        if (_dpiSimulé <= 0)
+            return;
+
+        const BindingFlags constantes = BindingFlags.Static | BindingFlags.NonPublic;
+        int largeurDeBase = (int)typeof(OnboardingWindow).GetField("BASE_WIN_W", constantes)!.GetRawConstantValue()!;
+        float échelleInterface = (float)typeof(OnboardingWindow).GetField("ONBOARDING_UI_SCALE", constantes)!.GetRawConstantValue()!;
+        int voulue = (int)(largeurDeBase * BancCapture.Field<float>(accueil, "_dpiScale") * échelleInterface);
+        Win32.GetClientRect(hwnd, out var zoneCliente);
+        Assert.True(zoneCliente.right - zoneCliente.left >= voulue,
+            $"Banc : l'Accueil à {_dpiSimulé} DPI a {zoneCliente.right - zoneCliente.left} px de zone cliente pour {voulue} voulus "
+            + "(plafond de Windows lié à l'écran réel : voir BancCapture.AllowSimulatedScreenSize).");
+    }
+
     // ── Contrôles natifs ─────────────────────────────────────────────
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]

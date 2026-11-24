@@ -323,6 +323,10 @@ static class NativeWindow
         return new WorkAreaScope(previous);
     }
 
+    /// <summary>La zone de travail simulée du fil courant, ou null : le banc de test s'en sert
+    /// pour que l'écran réel ne plafonne pas la taille d'une fenêtre (WM_GETMINMAXINFO).</summary>
+    internal static Win32.RECT? SimulatedWorkAreaForTests => t_workAreaOverride;
+
     private sealed class WorkAreaScope : IDisposable
     {
         private readonly Win32.RECT? _previous;

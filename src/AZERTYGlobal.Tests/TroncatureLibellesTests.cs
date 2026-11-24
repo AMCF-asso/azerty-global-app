@@ -349,6 +349,7 @@ public sealed partial class TroncatureLibellesTests
         {
             IntPtr hwnd = BancCapture.Handle(accueil);
             MettreÀLÉchelle(accueil, hwnd);
+            VérifierTailleDemandée(accueil, hwnd);
             for (int étape = 0; étape < OnboardingStep.Count; étape++)
             {
                 BancCapture.SetField(accueil, "_currentStep", étape);
