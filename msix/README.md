@@ -157,39 +157,52 @@ Corriger les problèmes signalés avant soumission. Les nouvelles APIs v0.9.7 (`
 4. Ajouter une note de certification expliquant l'usage de `WH_KEYBOARD_LL` + APIs v0.9.7 (`PSAPI`, `SetWinEventHook`) — voir section "Notes pour l'équipe de certification Microsoft" de `Fiche Store.md`
 5. Soumettre
 
-### 8. Signer le canal hors Store AMCF
+### 8. Construire et signer le bundle hors Store AMCF
 
-Le bundle Microsoft Store et le bundle hors Store signé AMCF sont deux artefacts de release distincts.
+Le bundle Microsoft Store et le bundle hors Store signé AMCF sont deux artefacts de release distincts, au contenu identique hors manifeste.
 
-- Store : uploader uniquement le bundle versionné attendu par Partner Center.
-- Hors Store : signer une copie du bundle avec Microsoft Artifact Signing au nom de l'AMCF, puis publier cette copie pour les environnements où le Store est bloqué.
-- Ne jamais uploader dans Partner Center un bundle signé localement pour test ou un artefact hors Store sans vérification explicite.
+- Store : uploader uniquement le bundle versionné non signé `msix\AZERTYGlobal-<version>.msixbundle`.
+- Hors Store : **ne pas signer une copie du bundle Store**. Son manifeste porte l'éditeur Store (`CN=7FD049E3-…`), et signtool refuse un paquet dont l'éditeur diffère du sujet du certificat AMCF. `scripts/Pack-AmcfBundle.ps1` déballe le bundle Store, remplace l'éditeur et son nom affiché dans chaque manifeste, remballe, puis échoue si un autre fichier diffère du paquet Store.
+- Ne jamais uploader dans Partner Center un bundle signé localement pour test, ni un bundle AMCF.
 
-Commande type à adapter avec le vrai `metadata.json` local :
+Commande (la signature demande une connexion Azure au compte Artifact Signing de l'AMCF ; sans `-Sign`, seul le bundle non signé est produit) :
 
 ```powershell
-signtool.exe sign /v /debug /fd SHA256 /tr "http://timestamp.acs.microsoft.com" /td SHA256 /dlib "<ArtifactSigningClient>\bin\x64\Azure.CodeSigning.Dlib.dll" /dmdf "metadata.json" "msix\AZERTYGlobal-<version>.msixbundle"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\Pack-AmcfBundle.ps1 -Bundle "msix\AZERTYGlobal-<version>.msixbundle" -ExpectedSha256 <SHA-256 du bundle de la recette> -OutDir <dossier vide> -Sign
 ```
+
+`<version>` a quatre segments (`1.3.0.0`), `<x.y.z>` trois (`1.3.0`). Les noms de bundle, du build à la publication :
+
+| Fichier | Produit par | Usage |
+|---|---|---|
+| `msix\AZERTYGlobal-<version>.msixbundle` | `Pack-MSIX.ps1` | Store uniquement, non signé |
+| `<OutDir>\AZERTYGlobal-<version>-amcf-unsigned.msixbundle` | `Pack-AmcfBundle.ps1` | Contrôle, non distribuable |
+| `<OutDir>\AZERTY_Global_<x.y.z>.msixbundle` | `Pack-AmcfBundle.ps1 -Sign` | Bundle AMCF signé, publié sous le même nom sur `download.azerty.global` |
+| `AZERTY_Global.msixbundle` | copie du précédent | Nom stable visé par le `.appinstaller` (§ 9) |
+
+Publier un bundle sur `download.azerty.global` ne se limite pas à le déposer dans R2 : le Worker `components/website/workers/download-msix/` ne sert que les noms de son manifeste `FILES` (404 sinon) et refuse un objet dont la taille ou l'ETag diffèrent (503). Chaque nom publié demande une entrée `FILES` (`sha256`, `expectedSize`, `expectedEtag`, qui fournit aussi l'URL `.sha256`) et un redéploiement du Worker, selon le README de ce Worker.
+
+Le bundle AMCF a son propre nom de famille, `AZERTYGlobal.AZERTYGlobal_yh4wjq6y8vthy` (Store : `_w9kghr08zmhbg`) : il ne met pas à jour une installation Store, les deux coexistent. Le guide destiné aux DSI est `entreprise/Guide de déploiement.md`.
 
 ### 9. Générer le `.appinstaller` du canal AMCF
 
 Lot E du plan v1.2.0, décision D7. Le fichier est **généré depuis le bundle signé**, jamais écrit à la main : son `Publisher` et sa version doivent égaler ceux du manifeste au caractère près, sinon la mise à jour boucle ou ne se déclenche jamais.
 
-À faire après l'étape 8, sur la copie signée au nom de l'AMCF — pas sur le bundle destiné au Store, que le script refuse :
+À faire après l'étape 8, sur le bundle signé au nom de l'AMCF — pas sur le bundle destiné au Store, que le script refuse :
 
 ```powershell
-python scripts/gen-appinstaller.py --bundle "msix\AZERTYGlobal-<version>-amcf-signed.msixbundle" --out "msix\AZERTY_Global.appinstaller"
+python scripts/gen-appinstaller.py --bundle "<OutDir>\AZERTY_Global_<x.y.z>.msixbundle" --out "msix\AZERTY_Global.appinstaller"
 ```
 
 Puis comparer explicitement le fichier produit au bundle avec la commande ci-dessous. Ce contrôle est distinct de `Verify-Release.ps1` :
 
 ```powershell
-python scripts/gen-appinstaller.py --bundle "msix\AZERTYGlobal-<version>-amcf-signed.msixbundle" --check "msix\AZERTY_Global.appinstaller"
+python scripts/gen-appinstaller.py --bundle "<OutDir>\AZERTY_Global_<x.y.z>.msixbundle" --check "msix\AZERTY_Global.appinstaller"
 ```
 
-Le script affiche l'identité lue, la liste des caractères non-ASCII du fichier, et rend un code de sortie non nul au premier écart. Il n'écrit rien sans `--out`.
+Le script affiche l'identité lue, la liste des caractères non-ASCII du fichier, puis tous les écarts trouvés, et rend un code de sortie non nul s'il en trouve un. Il n'écrit rien sans `--out`.
 
-Publication : deux objets dans le bucket R2 servi par `download.azerty.global`, sous des noms stables et sans version — `AZERTY_Global.appinstaller` et `AZERTY_Global.msixbundle`. ⚠️ Le Worker `components/website/workers/download-msix/` applique aujourd'hui `Cache-Control: max-age=31536000, immutable` et `Content-Disposition: attachment` à **tous** ses fichiers : en l'état, le `.appinstaller` serait téléchargé au lieu d'être ouvert par App Installer, et la mise à jour ne serait jamais vue. Les quatre pièges et le détail des décisions : `docs/audit-v1.2.0/lot-e-appinstaller.md`.
+Publication : deux objets dans le bucket R2 servi par `download.azerty.global`, sous des noms stables et sans version — `AZERTY_Global.appinstaller` et `AZERTY_Global.msixbundle` (copie de `AZERTY_Global_<x.y.z>.msixbundle`). Les deux URL sont écrites en dur dans `gen-appinstaller.py` (`SELF_URI`, `BUNDLE_URI`). ⚠️ État du Worker `components/website/workers/download-msix/src/index.js`, lu le 2026-11-17 dans le worktree `components/website` : `FILES` ne liste aucun de ces deux noms (réponse 404), le seul bundle servi est `AZERTY_Global_1.1.0.msixbundle` ; les requêtes partielles (`Range`) reçoivent le fichier entier ; `Cache-Control: public, max-age=300, s-maxage=86400` et `Content-Disposition: attachment` sont appliqués à **tous** les fichiers. En l'état, le `.appinstaller` serait téléchargé au lieu d'être ouvert par App Installer. Les pièges et le détail des décisions : `docs/audit-v1.2.0/lot-e-appinstaller.md`.
 
 ## Notes importantes
 
@@ -201,4 +214,4 @@ Publication : deux objets dans le bucket R2 servi par `download.azerty.global`, 
 
 ---
 
-*Dernière mise à jour : 2026-09-15 (v1.2.0 — contrôle explicite du `.appinstaller` du canal AMCF)*
+*Dernière mise à jour : 2026-11-17 (v1.3.0 — § 8 aligné sur `Pack-AmcfBundle.ps1`, noms de bundle unifiés, état du Worker relu)*
