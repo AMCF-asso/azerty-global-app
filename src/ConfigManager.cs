@@ -1897,7 +1897,7 @@ static class ConfigManager
             Flush();
         }
         if (!StillToWrite()) return true;
-        LogCompatEvent("ConfigFinalWriteLost", $"failedWrites={FailedWritesSnapshot()}");
+        LogCompatCriticalEvent("ConfigFinalWriteLost", $"failedWrites={FailedWritesSnapshot()}");
         return false;
     }
 
