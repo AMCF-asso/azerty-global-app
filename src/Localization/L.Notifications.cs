@@ -48,16 +48,19 @@ internal static partial class L
         $"Disposition système {Product} détectée",
         $"{Product} system layout detected");
     public static string LayoutConflict_IntroAtStartup => T(
-        $"Une disposition système {Product} est déjà installée sur cet ordinateur.",
-        $"An {Product} system layout is already installed on this computer.");
+        $"{Product} est déjà installée dans Windows comme disposition de clavier, c’est-à-dire comme agencement des caractères sur les touches.",
+        $"{Product} is already installed in Windows as a keyboard layout, meaning the arrangement of characters on the keys.");
     public static string LayoutConflict_IntroAfterSwitch => T(
-        $"Une disposition système {Product} vient d’être activée sur cet ordinateur.",
-        $"An {Product} system layout has just been enabled on this computer.");
-    public static string LayoutConflict_Question => T("Quel est votre besoin ?", "What do you need?");
+        $"{Product} vient d’être activée dans Windows comme disposition de clavier, c’est-à-dire comme agencement des caractères sur les touches.",
+        $"{Product} has just been enabled in Windows as a keyboard layout, meaning the arrangement of characters on the keys.");
+    public static string LayoutConflict_Question => T("Quel est votre besoin ?", "What do you need?");
     // Notes des deux liens de commande, sous leur titre (BtnKeep, BtnQuit).
     public static string LayoutConflict_KeepNote => T(
-        $"Pour le clavier virtuel et la recherche de caractère. Retirez ensuite {Product} des dispositions chargées : Paramètres Windows → Heure et langue → Langue et région → Options de la langue concernée. Cochez aussi « Lancer au démarrage de Windows » dans l’application.",
-        $"For the virtual keyboard and character search. Then remove {Product} from the loaded layouts: Windows Settings → Time & language → Language & region → Options for the relevant language. Also check “Launch at Windows startup” in the app.");
+        $"Pour le clavier virtuel et la recherche de caractère. Vous pouvez garder les deux actifs ensemble (la disposition système prend le relais hors portée de l’application), ou retirer {Product} des dispositions Windows si vous n’en avez pas besoin avant la connexion.",
+        $"For the virtual keyboard and character search. You can keep both active together (the system layout takes over where the app cannot run), or remove {Product} from Windows layouts if you don’t need it before sign-in.");
+    public static string LayoutConflict_DontShowAgain => T(
+        "Ne plus afficher cet avertissement",
+        "Don’t show this warning again");
     public static string LayoutConflict_QuitNote => T(
         $"Pour taper avec {Product} avant l’ouverture de session (mot de passe Windows, écran de verrouillage, UAC, BitLocker). La disposition système suffit : l’application ferait double emploi.",
         $"To type with {Product} before sign-in (Windows password, lock screen, UAC, BitLocker). The system layout is enough: the app would be redundant.");

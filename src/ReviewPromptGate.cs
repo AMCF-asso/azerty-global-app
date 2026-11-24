@@ -12,9 +12,6 @@ internal enum ReviewPromptTrigger
     Startup,
     /// <summary>Seuil de caractères enrichis armé, frappe dans cette session, puis silence.</summary>
     QuietTyping,
-    /// <summary>Partage d'un résultat (chemin <c>ReviewSharePrompt</c>). N'emprunte que la
-    /// garde des séances d'apprentissage (<see cref="ReviewPromptGate.LearningAllowsPrompt"/>).</summary>
-    Share,
 }
 
 /// <summary>
@@ -62,8 +59,8 @@ internal readonly record struct ReviewPromptSignals(
 /// <summary>
 /// Décisions pures de la sollicitation d'avis : sans état, sans I/O, pour être éprouvées
 /// sans fenêtre. La notification a sa décision complète ici
-/// (<see cref="ShouldShowNotification"/>) ; le partage garde la sienne dans
-/// <c>ReviewSharePrompt</c>, qui emprunte le plafond, le clic et le silence après erreur.
+/// (<see cref="ShouldShowNotification"/>). Depuis la 1.3.0 (C1), c'est le seul chemin automatique :
+/// le partage ne sollicite plus d'avis, le bouton « Noter l'application » est un geste explicite.
 /// </summary>
 internal static class ReviewPromptGate
 {
@@ -92,8 +89,7 @@ internal static class ReviewPromptGate
     /// on ne relance pas un absent.</summary>
     internal const int StaleDays = 3;
     /// <summary>Pas de sollicitation dans ces heures après une erreur journalisée : on ne
-    /// demande pas un avis à quelqu'un qui vient d'avoir un problème. Même valeur pour la
-    /// notification et le partage.</summary>
+    /// demande pas un avis à quelqu'un qui vient d'avoir un problème.</summary>
     internal const int ErrorCooldownHours = 48;
 
     /// <summary>Reste-t-il un essai ? Ni réponse de l'utilisateur, ni plafond atteint.</summary>
@@ -264,7 +260,7 @@ internal static class ReviewPromptGate
     /// déclencher la demande : au fil de la frappe, il faut en plus une frappe remappée
     /// après la fin de la séance (<paramref name="millisecondsSinceLastRemap"/> plus court
     /// que <paramref name="millisecondsSinceLearningClosed"/>), que le tick suivra de son
-    /// silence habituel. Démarrage, relais de l'accueil et partage n'ont pas cette
+    /// silence habituel. Démarrage et relais de l'accueil n'ont pas cette
     /// condition : ils ne naissent pas d'une frappe.
     /// </summary>
     /// <param name="millisecondsSinceLearningClosed"><see cref="long.MaxValue"/> si aucune

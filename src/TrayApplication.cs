@@ -17,7 +17,10 @@ sealed class TrayApplication : IDisposable
     private const uint WM_APP_VKBD = WM_APP + 3;
     private const uint WM_APP_STATE = WM_APP + 6;
     private const uint WM_APP_SECURE_RECHECK = WM_APP + 7;
-    // Activation de toast COM re-routée du thread RPC vers le thread UI (v1.2.0).
+    // M3.1 I5 (1.3.0) : Ctrl+Maj+Verr. Maj arrive dans le rappel du hook ; la bascule (icône,
+    // bulle, fenêtre de bascule) s'exécute au retour dans la boucle de messages.
+    private const uint WM_APP_TOGGLE = WM_APP + 5;
+    // Activation de toast COM re-routée par la file de messages du fil UI (v1.2.0).
     // wParam = 1 : action=review, cible Store ; wParam = 2 : action=review, cible
     // page feedback (répartition tirée à l'affichage — un toast antérieur sans
     // segment target= vaut cible Store, comportement historique).
@@ -120,9 +123,36 @@ sealed class TrayApplication : IDisposable
     // changement d'etat, ce qui invaliderait un hBalloonIcon pointant dessus.
     private IntPtr _hBalloonIcon;
     private Win32.NOTIFYICONDATAW _nid;
+    private ITrayShell? _shell;
+
+    /// <summary>
+    /// Appels Win32 à effet (minuteries, icône, messages postés, boîtes, liens, menu, horloge
+    /// des messages) : <see cref="Win32TrayShell"/> en production, un faux dans les tests.
+    /// Repli sur le réel si rien n'est posé, y compris pour un objet créé sans constructeur
+    /// (<c>RuntimeHelpers.GetUninitializedObject</c>, tests existants).
+    /// </summary>
+    internal ITrayShell Shell
+    {
+        get => _shell ?? Win32TrayShell.Instance;
+        set => _shell = value;
+    }
+
+    /// <summary>
+    /// Heure murale de la pause (audit temps et horloge du 17/11, TH-04, couture décidée par le
+    /// QCM du 17/11) : l'horloge système en production, une horloge réglable dans les tests.
+    /// Même repli que <see cref="Shell"/> pour un objet créé sans constructeur.
+    /// </summary>
+    internal Func<DateTimeOffset> UtcClock
+    {
+        get => _utcClock ?? DefaultUtcClock;
+        set => _utcClock = value;
+    }
+    private Func<DateTimeOffset>? _utcClock;
+    private static readonly Func<DateTimeOffset> DefaultUtcClock = () => DateTimeOffset.UtcNow;
     private readonly Win32.WNDPROC _wndProcDelegate; // prevent GC
     private KeyboardHook? _hook;
     private KeyMapper? _mapper;
+    private bool _sessionLocked;
     private Layout? _layout;
     private VirtualKeyboard? _virtualKeyboard;
     private CharacterSearch? _characterSearch;
@@ -135,6 +165,8 @@ sealed class TrayApplication : IDisposable
     private ToggleNotification? _toggleNotification;
     private LessonsWindow? _lessons;
     private IntPtr _lastForegroundBeforeTrayMenu;
+    /// <summary>État affiché par le dernier menu contextuel (M3.1 I4), lu par sa commande.</summary>
+    private MenuShownState? _menuShownState;
 
     // Si conflit layout systeme detecte au demarrage, l'onboarding est differe et n'est
     // affiche qu'apres que l'utilisateur a clique « Garder l'app » dans LayoutConflictWindow.
@@ -153,6 +185,7 @@ sealed class TrayApplication : IDisposable
     private bool _startupFailed;
     private bool _enabled = ConfigManager.ActivationConsent;
     private DateTimeOffset? _pauseUntilUtc;
+    private DateTimeOffset _pauseLastTickUtc; // heure murale du dernier tic de pause (TH-04)
 
     // Nature de la dernière balloon cliquable affichée : le clic sur une balloon est
     // routé selon cette valeur (avis → page d'avis, défi → séance). Invalidé dès qu'une
@@ -201,7 +234,7 @@ sealed class TrayApplication : IDisposable
         if (_hWnd == IntPtr.Zero)
         {
             // Sans fenêtre de messages, rien ne peut fonctionner (tray, timers, hook events).
-            Win32.MessageBoxW(IntPtr.Zero,
+            Shell.MessageBoxW(IntPtr.Zero,
                 L.Tray_WindowCreationError,
                 L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
             Win32.PostQuitMessage(1);
@@ -233,8 +266,7 @@ sealed class TrayApplication : IDisposable
             szInfo = "",
             szInfoTitle = ""
         };
-        PrepareTrayIconForAdd(ref _nid);
-        Win32.Shell_NotifyIconW(NIM_ADD, ref _nid);
+        AddTrayIcon(firstAttempt: true);
 
         // Le tooltip du tray garde son texte tant que l'état ne change pas : le rafraîchir
         // explicitement quand la langue change (Paramètres ou onboarding).
@@ -243,8 +275,8 @@ sealed class TrayApplication : IDisposable
         // Activateur de toast COM (v1.2.0) : Windows livre le clic sur un toast à CE
         // processus au lieu de relancer l'exécutable. Packagé uniquement — hors package,
         // les balloons Shell_NotifyIcon restent le canal (aucun AUMID enregistré).
-        // Le callback arrive sur un thread RPC COM → re-routage PostMessage vers le
-        // thread UI avant toute action.
+        // Le callback arrive sur ce fil (STA), éventuellement imbriqué dans une attente
+        // qui pompe → re-routage PostMessage avant toute action.
         if (ConfigManager.IsPackaged)
         {
             _toastActivatorRegistered = ToastActivation.Register();
@@ -253,11 +285,11 @@ sealed class TrayApplication : IDisposable
                 ToastActivation.Activated += args =>
                 {
                     if (args.Contains("action=review", StringComparison.Ordinal))
-                        Win32.PostMessageW(_hWnd, WM_APP_TOAST,
+                        Shell.PostMessageW(_hWnd, WM_APP_TOAST,
                             args.Contains("target=feedback", StringComparison.Ordinal) ? (IntPtr)2 : (IntPtr)1,
                             IntPtr.Zero);
                     else if (args.Contains("action=autostart", StringComparison.Ordinal))
-                        Win32.PostMessageW(_hWnd, WM_APP_TOAST, (IntPtr)3, IntPtr.Zero);
+                        Shell.PostMessageW(_hWnd, WM_APP_TOAST, (IntPtr)3, IntPtr.Zero);
                 };
             }
         }
@@ -294,6 +326,9 @@ sealed class TrayApplication : IDisposable
             // calendrier) : elle reste écrite pour les configs existantes et le diagnostic.
             ConfigManager.EnsureFirstRunTimestamp();
 
+            // Stratégie AutoStartEnabled (1.3.0) : appliquée à chaque démarrage, sans boîte.
+            AutoStart.ApplyPolicy(PolicyManager.Current.AutoStart);
+
             // Premier lancement : onboarding. Lancements suivants : notification balloon.
 #if DEBUG
             // En debug, toujours afficher l'onboarding pour faciliter les tests
@@ -328,14 +363,14 @@ sealed class TrayApplication : IDisposable
             else if (!MaybeShowReviewPrompt(ReviewPromptTrigger.Startup) && !MaybeShowChallengeAnnouncement()
                      && !MaybeShowAutoStartNudge())
             {
-                Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
+                Shell.SetTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
             }
 
             // config.json corrompu, mis de côté au chargement : le dire une fois. L'accord
             // manque désormais, donc l'accueil s'ouvre et la bulle « Actif » ne part pas.
             _settingsResetNoticePending = ConfigManager.TakeQuarantineNotice();
             if (_settingsResetNoticePending)
-                Win32.SetTimer(_hWnd, (UIntPtr)TIMER_SETTINGS_RESET_NOTICE, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
+                Shell.SetTimer(_hWnd, (UIntPtr)TIMER_SETTINGS_RESET_NOTICE, STARTUP_BALLOON_DELAY_MS, IntPtr.Zero);
         }
         catch (Exception ex)
         {
@@ -344,7 +379,7 @@ sealed class TrayApplication : IDisposable
             // clair avec un chemin d'action (support).
             ConfigManager.Log("TrayApplication ctor", ex);
             _startupFailed = true; // A22 : Run() ne pose pas le hook, WM_QUIT est en file
-            Win32.MessageBoxW(IntPtr.Zero,
+            Shell.MessageBoxW(IntPtr.Zero,
                 L.Tray_StartupError,
                 L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
             Win32.PostQuitMessage(1);
@@ -360,8 +395,8 @@ sealed class TrayApplication : IDisposable
         _mapper.ToggleRequested += OnToggleShortcut;
         _hook = new KeyboardHook(_mapper, _typingHost);
         _hook.RawKeyDown += OnKeyPressed;
-        _hook.SearchRequested += () => Win32.PostMessageW(_hWnd, WM_APP_SEARCH, IntPtr.Zero, IntPtr.Zero);
-        _hook.VirtualKeyboardRequested += () => Win32.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);
+        _hook.SearchRequested += () => Shell.PostMessageW(_hWnd, WM_APP_SEARCH, IntPtr.Zero, IntPtr.Zero);
+        _hook.VirtualKeyboardRequested += () => Shell.PostMessageW(_hWnd, WM_APP_VKBD, IntPtr.Zero, IntPtr.Zero);
         _hook.LayoutMayHaveChanged += OnLayoutMayHaveChanged;
         ApplyHookState();
         // A22 (audit 1.3.0, PERF-1) : le hook n'est plus posé ici mais dans Run(), juste
@@ -382,12 +417,18 @@ sealed class TrayApplication : IDisposable
         {
             _characterSearch = new CharacterSearch(new TextInsertionService(_mapper.TryEmitText,
                 canInsert: () => !ShouldBlockHookCompletely && _foregroundMonitor?.IsSecureInput != true,
-                refreshTarget: () => _foregroundMonitor?.Recompute()));
+                refreshTarget: () => _foregroundMonitor?.Recompute(),
+                imposedSuspension: () => _foregroundMonitor?.CurrentSuspendReason
+                    is CompatibilitySuspendReason.AntiCheat or CompatibilitySuspendReason.RemoteAccess));
             _characterSearch.InsertionIncomplete += () =>
                 ShowBalloon(L.Layers_InsertIncompleteTitle, L.Layers_InsertIncompleteBody);
             _characterSearch.SelectionChanged += OnSearchSelectionChanged;
             _characterSearch.FallbackCopied += character =>
                 ShowBalloon(L.Layers_InsertFallbackTitle, L.Layers_InsertFallbackBody(character));
+            _characterSearch.ElevatedTargetCopied += character =>
+                ShowBalloon(L.Layers_InsertElevatedTitle, L.Layers_InsertElevatedBody(character));
+            _characterSearch.FallbackCopyFailed += character =>
+                ShowBalloon(L.Layers_InsertFallbackFailedTitle, L.Layers_InsertFallbackFailedBody(character));
         }
         catch (Exception ex)
         {
@@ -423,6 +464,7 @@ sealed class TrayApplication : IDisposable
         {
             _foregroundMonitor = new ForegroundMonitor(_win32Api, _hWnd, _typingHost);
             _foregroundMonitor.ForegroundChanged += OnForegroundChanged;
+            _foregroundMonitor.InputDesktopSwitched += heure => ForgetHeldKeys(heure);   // Ctrl+Alt+Suppr, UAC (AFH-4)
             // Résultat UIA arrivé après le budget d'attente : le snapshot sécurisé
             // est périmé, replanifier un Recompute sur la boucle de messages.
             SecureInputDetector.ResultChangedLate += OnSecureInputLateResult;
@@ -521,6 +563,11 @@ sealed class TrayApplication : IDisposable
     private const uint REMOTE_HOST_PROBE_INTERVAL_MS = 5_000;
     private int _remoteHostProbeRunning;
     private const uint TIMER_SINGLECLICK = 9010;
+
+    // Un double clic sur l'icône envoie UP, DBLCLK, UP : le second relâchement appartient au
+    // double clic et ne doit pas réarmer le simple clic (M3.7 I1, constat C3.1, sinon le menu
+    // s'ouvrait en plus de l'action du double clic). Seul le fil de la fenêtre y touche.
+    private bool _lButtonUpEndsDoubleClick;
     private const uint TIMER_LAYOUT_CHECK = 9020;
     private const uint TIMER_PAUSE = 9030;
     // Balloon « Actif » du démarrage : émis par timer one-shot, jamais dans la foulée
@@ -549,6 +596,16 @@ sealed class TrayApplication : IDisposable
     private const uint TIMER_REVIEW_QUIET = 9050;
     private const uint REVIEW_QUIET_POLL_MS = 5_000;
     private const long REVIEW_QUIET_SILENCE_MS = 15_000;
+
+    // C3.6 (audit par frappe au hasard, décision d'Antoine du 16 novembre 2026) : un
+    // Explorer qui redémarre peut refuser le NIM_ADD envoyé sur TaskbarCreated, sa zone de
+    // notification n'étant pas encore prête. Sans réessai, l'icône restait absente jusqu'au
+    // redémarrage suivant d'Explorer. Réessai à intervalle fixe, borné : 15 × 2 s couvrent
+    // un démarrage lent sans tourner indéfiniment si le shell n'a pas de zone de notification.
+    private const uint TIMER_TRAY_ADD_RETRY = 9070;
+    private const uint TRAY_ADD_RETRY_INTERVAL_MS = 2_000;
+    private const int TRAY_ADD_MAX_RETRIES = 15;
+    private int _trayAddRetries;
 
     // Message TaskbarCreated (Explorer restart / chargement tardif au boot)
     private readonly uint _wmTaskbarCreated = Win32.RegisterWindowMessageW("TaskbarCreated");
@@ -581,6 +638,27 @@ sealed class TrayApplication : IDisposable
     private static bool ShouldServeSearchWhileBlocked(
         bool suspendedForCompatibility, CompatibilitySuspendReason reason) =>
         suspendedForCompatibility && reason == CompatibilitySuspendReason.UserOverride;
+
+    /// <summary>
+    /// Un champ de mot de passe bloque-t-il la recherche ? Pas quand le premier plan n'est pas
+    /// une application (barre des tâches d'où s'ouvre le menu, bureau, aucune fenêtre, nos
+    /// fenêtres) : la sonde y répond « sécurisé » faute de contrôle qui a le focus, et
+    /// l'entrée « Rechercher un caractère » restait grisée après une première recherche
+    /// fermée (signalé par Antoine le 2026-11-12). L'insertion revérifie la cible réelle.
+    /// </summary>
+    private bool SecureInputBlocksSearch =>
+        _mapper?.AdvancedFeaturesSuppressed == true && _foregroundMonitor?.ForegroundIsApplication != false;
+
+    /// <summary>
+    /// La recherche de caractères peut-elle s'ouvrir maintenant ? Une seule décision pour le
+    /// raccourci, l'entrée du menu et son clic : le menu l'ignorait (R3 n'avait corrigé que le
+    /// raccourci), si bien que « Rechercher un caractère » restait grisé dans une application
+    /// que l'utilisateur a marquée « désactivée », alors que Ctrl+Maj+W y ouvrait la fenêtre.
+    /// Fonction pure, pour la même raison que <see cref="ShouldServeSearchWhileBlocked"/>.
+    /// </summary>
+    private static bool CanOpenCharacterSearch(
+        bool shouldProcessHook, bool userOverrideSuspension, bool secureInput) =>
+        (shouldProcessHook || userOverrideSuspension) && !secureInput;
 
     private void ApplyHookState(bool syncWhenActive = false, bool preservePendingDeadKey = false)
     {
@@ -616,9 +694,9 @@ sealed class TrayApplication : IDisposable
         // détecté ; geler la saisie de la fenêtre ouvrirait une fenêtre inerte.
         _characterSearch?.SetInputPaused(paused && !IsUserOverrideSuspension);
         _lessons?.SetInputPaused(paused);
-        _settings?.SetInputPaused(_activationConsent && paused);
-        // Le consentement doit rester accessible avant que le moteur soit actif.
-        _onboarding?.SetInputPaused(_activationConsent && paused);
+        // Audit 09/11, W3 : les Paramètres ne sont pas une surface de frappe, ils restent utilisables
+        // en pause (ils étaient figés, sans un mot : seule la croix répondait). L'accueil aussi :
+        // il n'a plus de champ de frappe depuis le retrait de l'étape des langues (11/11).
     }
 
     /// <summary>
@@ -633,12 +711,14 @@ sealed class TrayApplication : IDisposable
     /// <summary>
     /// Aperçu de dev : AG_DEV_PREVIEW=vkbd,lessons,settings,about ouvre ces fenêtres au
     /// lancement. Compilé en Debug seulement : le binaire du Store n'en porte aucune trace.
+    /// L'export des rectangles (deplacer.py) écoute dans tout build Debug, aussi sans
+    /// AG_DEV_PREVIEW : la boucle live (décision du 07/11) garde le hook clavier actif.
     /// </summary>
     private void OpenDevPreviewWindows()
     {
+        DevRects.StartWatching();
         var spec = Environment.GetEnvironmentVariable("AG_DEV_PREVIEW");
         if (string.IsNullOrWhiteSpace(spec)) return;
-        DevRects.StartWatching();
         foreach (var name in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             switch (name)
@@ -658,23 +738,22 @@ sealed class TrayApplication : IDisposable
         // Le hook LL peut ne pas recevoir de callbacks tant que la boucle de messages
         // n'est pas active, ou au démarrage de Windows quand le système n'est pas encore
         // prêt. On planifie plusieurs réinstallations progressives pour couvrir les deux cas.
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK, 500, IntPtr.Zero);
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK_2, 3000, IntPtr.Zero);
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK_3, 8000, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK, 500, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK_2, 3000, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_REHOOK_3, 8000, IntPtr.Zero);
         // Watchdog périodique (non tué : se répète tant que l'app vit)
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG, HOOK_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG, HOOK_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
         // Sonde de silence du hook (non tué : périodique) — AG130-10
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE, HOOK_PROBE_INTERVAL_MS, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE, HOOK_PROBE_INTERVAL_MS, IntPtr.Zero);
         // Sauvegarde différée des statistiques locales d'usage (non tué : périodique)
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH, STATS_FLUSH_INTERVAL_MS, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH, STATS_FLUSH_INTERVAL_MS, IntPtr.Zero);
         // Sollicitation d'avis au fil de la frappe : seulement s'il en reste une à faire.
-        if (ReviewPromptStillPossible())
-            Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero);
+        EnsureReviewTimer();
         // Chien de garde du snapshot foreground (non tué : périodique)
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_FOREGROUND_WATCHDOG, FOREGROUND_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_FOREGROUND_WATCHDOG, FOREGROUND_WATCHDOG_INTERVAL_MS, IntPtr.Zero);
         // Sonde des hôtes de prise en main à distance (non tuée : périodique), plus une
         // mesure immédiate pour qu'une session déjà ouverte soit servie dès le lancement (C5).
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_REMOTE_HOST_PROBE, REMOTE_HOST_PROBE_INTERVAL_MS, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_REMOTE_HOST_PROBE, REMOTE_HOST_PROBE_INTERVAL_MS, IntPtr.Zero);
         ProbeRemoteHost();
         // Chargement anticipé de usage-stats.json sur le thread UI : la première frappe
         // remappée ne doit déclencher aucune I/O dans le callback du hook.
@@ -701,8 +780,8 @@ sealed class TrayApplication : IDisposable
                 // poserait le hook pendant qu'elle annonce l'échec.
                 foreach (var timer in new[] { TIMER_REHOOK, TIMER_REHOOK_2, TIMER_REHOOK_3,
                              TIMER_HOOK_WATCHDOG, TIMER_HOOK_PROBE })
-                    Win32.KillTimer(_hWnd, (UIntPtr)timer);
-                Win32.MessageBoxW(IntPtr.Zero, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
+                    Shell.KillTimer(_hWnd, (UIntPtr)timer);
+                Shell.MessageBoxW(IntPtr.Zero, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
                 return;
             }
         }
@@ -726,6 +805,21 @@ sealed class TrayApplication : IDisposable
     // ═══════════════════════════════════════════════════════════════
     // Gestion des messages Windows
     // ═══════════════════════════════════════════════════════════════
+    /// <summary>
+    /// Réponse à WM_QUERYENDSESSION : une écriture immédiate de ce qui attend (audit du 25/09, A-05),
+    /// rapide et sans attente. Le message est une demande : une autre application peut l'annuler,
+    /// et il peut arriver plusieurs fois ; l'app ne quitte pas, son fil d'interface ne doit pas
+    /// dormir (ME-09 suite : <c>FlushFinal</c> y dormait jusqu'à 750 ms par appel). Un échec
+    /// d'écriture est repris par la minuterie de reprise tant que l'app vit ; les nouveaux essais
+    /// avec attente de <c>FlushFinal</c> n'ont leur place qu'à WM_ENDSESSION confirmé (wParam non
+    /// nul, via <c>Cleanup</c>) et à la sortie normale.
+    /// </summary>
+    internal static void OnQueryEndSession()
+    {
+        ConfigManager.Flush();
+        UsageStats.Flush();
+    }
+
     private IntPtr WndProcCallback(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
@@ -736,12 +830,24 @@ sealed class TrayApplication : IDisposable
                     var mouseMsg = (uint)(lParam.ToInt64() & 0xFFFF);
                     if (mouseMsg == Win32.WM_RBUTTONUP)
                         ShowContextMenu();
+                    else if (mouseMsg == Win32.WM_LBUTTONDOWN)
+                        _lButtonUpEndsDoubleClick = false;   // nouveau clic : un relâchement manquant ne le mange pas
                     else if (mouseMsg == Win32.WM_LBUTTONUP)
-                        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK, Win32.GetDoubleClickTime(), IntPtr.Zero);
+                    {
+                        if (_lButtonUpEndsDoubleClick)
+                            _lButtonUpEndsDoubleClick = false;   // fin du double clic : rien à armer
+                        else
+                            Shell.SetTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK, Win32.GetDoubleClickTime(), IntPtr.Zero);
+                    }
                     else if (mouseMsg == Win32.WM_LBUTTONDBLCLK)
                     {
-                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK);
-                        if (ShouldProcessHook) _virtualKeyboard?.Toggle();
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK);
+                        _lButtonUpEndsDoubleClick = true;
+                        // Audit 09/11, W14 : en pause, désactivé ou avant l'accord, le double-clic ne
+                        // restait pas sans effet : il dit pourquoi, ou ouvre l'accueil.
+                        if (!_activationConsent) ShowOnboardingNow();
+                        else if (ShouldProcessHook) _virtualKeyboard?.Toggle();
+                        else ShowToolUnavailableBalloon();
                     }
                     else if (mouseMsg == NIN_BALLOONUSERCLICK)
                     {
@@ -769,7 +875,7 @@ sealed class TrayApplication : IDisposable
                     return IntPtr.Zero;
 
                 case WM_APP_TOAST:
-                    // Clic sur un toast (activation COM re-routée du thread RPC).
+                    // Clic sur un toast (activation COM re-routée par PostMessage).
                     if (wParam == (IntPtr)1)
                         OpenReviewTarget(toStore: true);
                     else if (wParam == (IntPtr)2)
@@ -782,10 +888,10 @@ sealed class TrayApplication : IDisposable
                     // R3, écart 8 : le raccourci arrive jusqu'ici sous suspension choisie
                     // (ShortcutsWhilePassThrough) ; annoncer « Désactivé » contredisait le
                     // Changelog. Le remappage, lui, reste éteint.
-                    if ((ShouldProcessHook || IsUserOverrideSuspension) &&
-                        _mapper?.AdvancedFeaturesSuppressed != true)
+                    if (CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
+                            SecureInputBlocksSearch))
                         _characterSearch?.Toggle();
-                    else if (_mapper?.AdvancedFeaturesSuppressed == true)
+                    else if (SecureInputBlocksSearch)
                         ShowBalloon(L.Layers_SearchSecureTitle, L.TrayClarity_SearchSecureBody);
                     else if (IsPaused)
                         ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
@@ -799,19 +905,17 @@ sealed class TrayApplication : IDisposable
                     // Le raccourci n'arrive ici, sous suspension, que si elle est choisie
                     // (ShouldDetectShortcutsWhileBlocked). « Désactivé — Ctrl+Maj+Verr. Maj.
                     // pour réactiver » y était faux : ce raccourci aurait désactivé l'app.
-                    else if (IsUserOverrideSuspension)
-                        ShowBalloon(L.Tray_SuspendedInTitle(FormatProcessName(
-                                _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback)),
-                            L.TrayClarity_UserOverrideSuspendedBody);
-                    else if (IsPaused)
-                        ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
                     else
-                        ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
+                        ShowToolUnavailableBalloon();
                     return IntPtr.Zero;
 
                 case WM_APP_STATE:
                     Interlocked.Exchange(ref _stateRefreshQueued, 0);
                     ApplyStateChange();
+                    return IntPtr.Zero;
+
+                case WM_APP_TOGGLE:
+                    ApplyToggleShortcut();
                     return IntPtr.Zero;
 
                 case WM_APP_SECURE_RECHECK:
@@ -823,8 +927,13 @@ sealed class TrayApplication : IDisposable
                 case Win32.WM_COMMAND:
                     switch (wParam.ToInt32() & 0xFFFF)
                     {
-                        case IDM_TOGGLE: OnToggle(); break;
+                        case IDM_TOGGLE:
+                            if (MenuCommandStillApplies(IDM_TOGGLE, TakeMenuShownState(), _enabled, IsPaused))
+                                OnToggle();
+                            break;
                         case IDM_PAUSE:
+                            if (!MenuCommandStillApplies(IDM_PAUSE, TakeMenuShownState(), _enabled, IsPaused))
+                                break;
                             if (IsPaused)
                                 StopPause(expired: false);
                             else
@@ -845,9 +954,10 @@ sealed class TrayApplication : IDisposable
                         case IDM_SEARCH:
                             if (_characterSearch?.IsVisible == true)
                                 _characterSearch.Hide();
-                            else if (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true)
+                            else if (CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
+                                         SecureInputBlocksSearch))
                                 _characterSearch?.Show(_lastForegroundBeforeTrayMenu);
-                            else if (_mapper?.AdvancedFeaturesSuppressed == true)
+                            else if (SecureInputBlocksSearch)
                                 ShowBalloon(L.Layers_SearchSecureTitle, L.TrayClarity_SearchSecureBody);
                             break;
                         case IDM_SETTINGS:
@@ -864,20 +974,27 @@ sealed class TrayApplication : IDisposable
                                 _maintainableLayersWindow = new MaintainableLayersWindow();
                                 _maintainableLayersWindow.SettingsChanged += OnMaintainableLayerSettingsChanged;
                             }
-                            _maintainableLayersWindow.Show();
+                            // W2 : déjà ouverte, elle revient au premier plan sans se relire.
+                            _maintainableLayersWindow.ShowOrBringToFront();
                             break;
-                        case IDM_GUIDE_CHANGES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/guide"), null, null, 1); break;
-                        case IDM_RELEASE_NOTES: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/nouveautes"), null, null, 1); break;
-                        case IDM_GUIDE_PDF: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath), null, null, 1); break;
-                        case IDM_CARDS: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url(ProductIdentity.KeyboardCardsPath), null, null, 1); break;
-                        case IDM_PRIVACY: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/confidentialite#application"), null, null, 1); break;
-                        case IDM_DISCORD: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.DiscordInviteUrl, null, null, 1); break;
-                        case IDM_SITE: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.SiteBaseUrl, null, null, 1); break;
+                        case IDM_GUIDE_CHANGES: OpenUrl(ProductIdentity.Url("/guide")); break;
+                        case IDM_RELEASE_NOTES: OpenUrl(ProductIdentity.Url("/nouveautes")); break;
+                        case IDM_GUIDE_PDF: OpenUrl(ProductIdentity.Url(ProductIdentity.CheatSheetPdfPath)); break;
+                        case IDM_CARDS: OpenUrl(ProductIdentity.Url(ProductIdentity.KeyboardCardsPath)); break;
+                        case IDM_PRIVACY: OpenUrl(ProductIdentity.Url("/confidentialite#application")); break;
+                        case IDM_DISCORD: OpenUrl(ProductIdentity.DiscordInviteUrl); break;
+                        case IDM_SITE: OpenUrl(ProductIdentity.SiteBaseUrl); break;
                         case IDM_FEEDBACK: OpenFeedback("tray-menu"); break;
                         case IDM_RATE_STORE: OnRateStoreFromMenu(); break;
                         case IDM_BUG: OnReportBug(); break;
-                        case IDM_SUPPORT: Win32.ShellExecuteW(IntPtr.Zero, "open", ProductIdentity.Url("/soutien"), null, null, 1); break;
+                        case IDM_SUPPORT: OpenUrl(ProductIdentity.Url("/soutien")); break;
                         case IDM_ONBOARDING:
+                            // W2 : l'accueil déjà ouvert revient au premier plan, à l'étape où il est.
+                            if (_onboarding?.IsVisible == true)
+                            {
+                                _onboarding.BringToFront();
+                                break;
+                            }
                             if (_onboarding == null)
                             {
                                 _onboarding = CreateOnboardingWindow();
@@ -918,7 +1035,7 @@ sealed class TrayApplication : IDisposable
                                 _usageStats = null;
                             }
                             _usageStats ??= new UsageStatsWindow();
-                            _usageStats.StatsShared = OnStatsShared;
+                            _usageStats.RateRequested = OnRateStoreFromStats;
                             _usageStats.Show();
                             break;
                         case IDM_EXERCISES:
@@ -937,7 +1054,7 @@ sealed class TrayApplication : IDisposable
                             ApplyCompatibilityOverride("forceOff");
                             break;
                         case IDM_COMPAT_INFO:
-                            Win32.MessageBoxW(_hWnd, L.Tray_CompatInfoBody,
+                            Shell.MessageBoxW(_hWnd, L.Tray_CompatInfoBody,
                                 L.Tray_CompatInfoTitle, MB_OK | MB_ICONINFORMATION);
                             break;
 #if DEBUG
@@ -967,29 +1084,39 @@ sealed class TrayApplication : IDisposable
                     var timerId = (uint)wParam.ToInt64();
                     if (timerId == TIMER_REHOOK || timerId == TIMER_REHOOK_2 || timerId == TIMER_REHOOK_3)
                     {
-                        Win32.KillTimer(_hWnd, (UIntPtr)timerId);
+                        Shell.KillTimer(_hWnd, (UIntPtr)timerId);
                         ReinstallHook();
                     }
                     else if (timerId == TIMER_SINGLECLICK)
                     {
-                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK);
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_SINGLECLICK);
                         ShowContextMenu();
                     }
                     else if (timerId == TIMER_LAYOUT_CHECK)
                     {
-                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_LAYOUT_CHECK);
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_LAYOUT_CHECK);
                         CheckForegroundLayout();
                     }
                     else if (timerId == TIMER_PAUSE)
                     {
-                        if (_pauseUntilUtc.HasValue && DateTimeOffset.UtcNow >= _pauseUntilUtc.Value)
+                        // Audit temps et horloge du 17/11, TH-04 : l'échéance est une heure murale.
+                        // Une heure qui recule depuis le tic précédent (horloge avancée au moment
+                        // de la pause puis remise, resynchronisation) prolongeait la pause d'autant,
+                        // jusqu'à des semaines. Le recul est retiré de l'échéance : la durée réelle
+                        // restante ne change pas. Une heure qui avance (veille, réglage) compte
+                        // comme du temps écoulé : la pause finit au plus tôt, jamais plus tard.
+                        var now = UtcClock();
+                        if (_pauseUntilUtc is { } until && now < _pauseLastTickUtc)
+                            _pauseUntilUtc = until - (_pauseLastTickUtc - now);
+                        _pauseLastTickUtc = now;
+                        if (_pauseUntilUtc.HasValue && now >= _pauseUntilUtc.Value)
                             StopPause(expired: true);
                         else
                             UpdateTooltip();
                     }
                     else if (timerId == TIMER_STARTUP_BALLOON)
                     {
-                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON);
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_STARTUP_BALLOON);
                         // Si l'état a bougé entre-temps (suspension, pause), la bulle
                         // d'état correspondante est déjà passée : ne pas la recouvrir.
                         if (ShouldProcessHook)
@@ -997,7 +1124,7 @@ sealed class TrayApplication : IDisposable
                     }
                     else if (timerId == TIMER_SETTINGS_RESET_NOTICE)
                     {
-                        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_SETTINGS_RESET_NOTICE);
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_SETTINGS_RESET_NOTICE);
                         if (_settingsResetNoticePending)
                         {
                             _settingsResetNoticePending = false;
@@ -1023,6 +1150,8 @@ sealed class TrayApplication : IDisposable
                         // Rappel Défi du jour (v1.2.0) : décision pure à chaque tick, tous
                         // les gardes (opt-in, un par jour, fenêtre horaire) sont dedans.
                         MaybeShowTrainingReminder();
+                        // CE-T3 (CE-10) : nouvel essai d'une minuterie d'avis refusée par Windows.
+                        EnsureReviewTimer();
                     }
                     else if (timerId == TIMER_REVIEW_QUIET)
                     {
@@ -1042,6 +1171,11 @@ sealed class TrayApplication : IDisposable
                         // Timer récurrent : présence d'un hôte de prise en main à distance (C5).
                         ProbeRemoteHost();
                     }
+                    else if (timerId == TIMER_TRAY_ADD_RETRY)
+                    {
+                        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY);
+                        AddTrayIcon(firstAttempt: false);
+                    }
                     return IntPtr.Zero;
 
                 case Win32.WM_INPUTLANGCHANGE:
@@ -1055,7 +1189,14 @@ sealed class TrayApplication : IDisposable
                     {
                         int powerEvent = wParam.ToInt32();
                         if (powerEvent == Win32.PBT_APMRESUMEAUTOMATIC || powerEvent == Win32.PBT_APMRESUMESUSPEND)
+                        {
+                            // Relâches faites pendant la veille (AFH-4). WM_POWERBROADCAST est
+                            // envoyé : GetMessageTime n'y donne pas l'heure de la reprise. Tout
+                            // oublier ; seule une touche tapée entre le réveil et cet avis
+                            // (quelques ms, hook souvent décroché) redevient un appui neuf.
+                            ForgetHeldKeys(null);
                             ReinstallHook(nudgeForeground: false);
+                        }
                     }
                     break; // laisser DefWindowProc répondre TRUE
 
@@ -1068,18 +1209,32 @@ sealed class TrayApplication : IDisposable
                         // écrire ce qui attend, sur le pool de threads (audit du 25/09, A-05).
                         ConfigManager.FlushInBackground();
                         UsageStats.FlushInBackground();
-                        if (sessionEvent == Win32.WTS_SESSION_UNLOCK ||
+                        // Les relâchements faits sur l'écran de verrouillage ou dans l'autre session
+                        // n'atteignent pas le hook. Deux effets complémentaires :
+                        // - AFH-4 : le hook oublie les appuis qu'il croyait tenus (sinon l'appui
+                        //   suivant passerait pour une répétition), à l'heure de l'avis ;
+                        // - EW-1, EW-3, EW-24 : au départ comme au retour, le moteur relit l'état
+                        //   physique des touches et abandonne touche morte et couche à un coup.
+                        ForgetHeldKeys(SessionTransitionTime(
+                            Shell.InSendMessage(), Shell.GetMessageTime(), Shell.GetTickCount()));
+                        bool depart = sessionEvent == Win32.WTS_SESSION_LOCK ||
+                            sessionEvent == Win32.WTS_CONSOLE_DISCONNECT ||
+                            sessionEvent == Win32.WTS_REMOTE_DISCONNECT;
+                        bool retour = sessionEvent == Win32.WTS_SESSION_UNLOCK ||
                             sessionEvent == Win32.WTS_CONSOLE_CONNECT ||
-                            sessionEvent == Win32.WTS_REMOTE_CONNECT)
+                            sessionEvent == Win32.WTS_REMOTE_CONNECT;
+                        if (depart || retour)
+                        {
+                            _sessionLocked = depart; // EW-4 : rappel et demande d'avis attendent le retour
+                            _mapper?.SyncState();
+                        }
+                        if (retour)
                             ReinstallHook(nudgeForeground: false);
                     }
                     return IntPtr.Zero;
 
                 case Win32.WM_QUERYENDSESSION:
-                    // Arrêt ou déconnexion annoncé : écrire tout de suite ce qui attend, sans
-                    // compter sur WM_ENDSESSION (audit du 25/09, A-05). Deux écritures au plus.
-                    ConfigManager.Flush();
-                    UsageStats.Flush();
+                    OnQueryEndSession();
                     return (IntPtr)1; // ne jamais bloquer l'arrêt/déconnexion
 
                 case Win32.WM_ENDSESSION:
@@ -1098,8 +1253,7 @@ sealed class TrayApplication : IDisposable
                     // TaskbarCreated : Explorer a (re)démarré — réenregistrer l'icône et le hook
                     if (_wmTaskbarCreated != 0 && msg == _wmTaskbarCreated)
                     {
-                        PrepareTrayIconForAdd(ref _nid);
-                        Win32.Shell_NotifyIconW(NIM_ADD, ref _nid);
+                        AddTrayIcon(firstAttempt: true);
                         ReinstallHook();
                         return IntPtr.Zero;
                     }
@@ -1153,8 +1307,35 @@ sealed class TrayApplication : IDisposable
 
         // Sans nudge foreground : la sonde tire en pleine frappe de l'utilisateur,
         // lui voler le focus serait pire que le mal (même motif que l'audit 2026-07 M2).
+        // Le hook était décroché : les relâches de cette période sont perdues (AFH-4).
+        ForgetHeldKeys(null);
         ReinstallHook(nudgeForeground: false);
     }
+
+    /// <summary>
+    /// Oublie les appuis en cours (hook et moteur) après une période où des relâches ont pu
+    /// échapper au hook : écran sécurisé, verrouillage, changement de session, veille, hook
+    /// décroché. L'appui suivant de chaque touche est neuf (AFH-4, décision d'Antoine du
+    /// 16 novembre 2026). Pas aux réinstallations de routine (TIMER_REHOOK, chien de garde
+    /// périodique) : une répétition de raccourci tenu redeviendrait un appui neuf (AFH-3).
+    /// </summary>
+    /// <param name="transitionTime">
+    /// Heure du passage (base <c>KBDLLHOOKSTRUCT.time</c>) : une touche tapée juste après, dont le
+    /// rappel du hook passe avant cet avis, reste un appui en cours. Null : tout oublier.
+    /// </param>
+    private void ForgetHeldKeys(uint? transitionTime) => _hook?.ForgetHeldKeys(transitionTime);
+
+    /// <summary>
+    /// Heure de passage d'un avis WM_WTSSESSION_CHANGE (AFH-4). La documentation ne dit pas
+    /// s'il est posté ou envoyé, d'où le test à l'exécution (InSendMessageEx). Posté :
+    /// <c>GetMessageTime</c> donne l'heure où il a été posté. Envoyé : <c>GetMessageTime</c>
+    /// date du message posté précédent, parfois bien plus ancien, et les touches tenues
+    /// pendant le verrouillage ne seraient pas oubliées ; on prend alors l'heure de traitement.
+    /// Les messages envoyés et les rappels du hook (envoyés eux aussi) sont traités dans leur
+    /// ordre d'envoi : un appui déjà vu a été envoyé avant cet avis.
+    /// </summary>
+    internal static uint SessionTransitionTime(bool messageEnvoye, int heureMessage, uint maintenant)
+        => messageEnvoye ? maintenant : unchecked((uint)heureMessage);
 
     /// <summary>
     /// Réinstalle le keyboard hook (nouveau SetWindowsHookEx) SANS changer l'identité de
@@ -1240,10 +1421,13 @@ sealed class TrayApplication : IDisposable
     /// Avertit l'utilisateur si le layout système actif est déjà AZERTY Global.
     /// Appelé au démarrage (vérifie le layout de notre thread).
     /// </summary>
+    private readonly SystemLayoutConflictGuard _layoutConflictGuard = new();
+
     private void CheckSystemLayout()
     {
         IntPtr hkl = TypingEngine.Windows.Win32.GetKeyboardLayout(0);
-        if (!IsLayoutAZERTYGlobal(hkl)) return;
+        if (!_layoutConflictGuard.EvaluateStartup(IsLayoutAZERTYGlobal(hkl), ConfigManager.WarnSystemLayout))
+            return;
         ShowLayoutConflictPopup(isAtStartup: true);
     }
 
@@ -1253,11 +1437,12 @@ sealed class TrayApplication : IDisposable
     /// </summary>
     private void OnLayoutMayHaveChanged()
     {
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_LAYOUT_CHECK, 100, IntPtr.Zero);
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_LAYOUT_CHECK, 100, IntPtr.Zero);
     }
 
     /// <summary>
     /// Vérifie le layout du thread au premier plan après un potentiel Ctrl+Shift switch.
+    /// N'avertit que lors d'une vraie bascule vers la disposition système (pas si elle était déjà active).
     /// </summary>
     private void CheckForegroundLayout()
     {
@@ -1265,7 +1450,8 @@ sealed class TrayApplication : IDisposable
         uint threadId = Win32.GetWindowThreadProcessId(hwndFg, IntPtr.Zero);
         IntPtr hkl = TypingEngine.Windows.Win32.GetKeyboardLayout(threadId);
 
-        if (!IsLayoutAZERTYGlobal(hkl)) return;
+        if (!_layoutConflictGuard.EvaluateAfterSwitch(IsLayoutAZERTYGlobal(hkl), ConfigManager.WarnSystemLayout))
+            return;
         ShowLayoutConflictPopup(isAtStartup: false);
     }
 
@@ -1303,6 +1489,11 @@ sealed class TrayApplication : IDisposable
                     _pendingOnboardingShow = false;
                     ShowOnboardingNow();
                 }
+            },
+            onDontShowChanged: dontShow =>
+            {
+                if (dontShow)
+                    ConfigManager.SetWarnSystemLayout(false);
             });
         _layoutConflictWindow.Show();
     }
@@ -1314,6 +1505,11 @@ sealed class TrayApplication : IDisposable
     private void ShowOnboardingNow()
     {
         _onboarding ??= CreateOnboardingWindow();
+        if (_onboarding.IsVisible)
+        {
+            _onboarding.BringToFront(); // W2 : Show() le remettrait à l'étape 1
+            return;
+        }
         ApplyWindowInputState();
         _onboarding.Show();
     }
@@ -1329,9 +1525,16 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
+    /// Texte journalisé pour une transition de session distante : l'état, jamais le nom de
+    /// l'outil. La note RGPD des établissements promet qu'aucun nom de logiciel n'est lisible
+    /// dans error.log (audit de régression du 10/11, RA4).
+    /// </summary>
+    internal static string RemoteSessionLogDetails(string? tool) => tool != null ? "active" : "inactive";
+
+    /// <summary>
     /// C5 revu le 30/10 (audit M1) : met à jour KeyboardHook.RemoteSessionActive depuis le
     /// pool de threads, selon qu'une session distante est ouverte dans notre session Windows.
-    /// Une seule sonde à la fois ; une transition est journalisée (nom de l'outil, aucune frappe).
+    /// Une seule sonde à la fois ; une transition est journalisée (état seul, aucune frappe).
     /// </summary>
     private void ProbeRemoteHost()
     {
@@ -1346,7 +1549,7 @@ sealed class TrayApplication : IDisposable
                 if (hook != null && hook.RemoteSessionActive != active)
                 {
                     hook.RemoteSessionActive = active;
-                    ConfigManager.LogCompatEvent("RemoteSession", active ? "active (" + tool + ")" : "inactive");
+                    ConfigManager.LogCompatEvent("RemoteSession", RemoteSessionLogDetails(tool));
                 }
             }
             catch (Exception ex)
@@ -1384,7 +1587,7 @@ sealed class TrayApplication : IDisposable
         {
             if (!_activationConsent) _hook.Dispose();
             ConfigManager.Log("Activation", ex);
-            Win32.MessageBoxW(_hWnd, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
+            Shell.MessageBoxW(_hWnd, L.Tray_StartupError, L.Common_ErrorTitle, MB_OK | MB_ICONERROR);
             return false;
         }
     }
@@ -1452,6 +1655,9 @@ sealed class TrayApplication : IDisposable
 
     private void ShowLessonsWindow()
     {
+        // Stratégie LessonsEnabled à 0 : plus aucune porte n'y mène ; ce garde ferme celles
+        // qu'un toast resté affiché ou un appel oublié laisseraient ouvertes.
+        if (!PolicyManager.LessonsEnabledNow) return;
         if (!_activationConsent) { ShowOnboardingNow(); return; }
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
@@ -1493,7 +1699,6 @@ sealed class TrayApplication : IDisposable
         if (_lessons == null)
         {
             _lessons = new LessonsWindow(_layout, _mapper, _hook);
-            _lessons.ChallengeShared = OnChallengeShared;
             // La fenêtre vient de charger la progression. Fichier corrompu mis de côté
             // (audit du 25/09, L-14) : le dire une fois.
             if (LessonProgressStore.TakeQuarantineNotice())
@@ -1507,15 +1712,22 @@ sealed class TrayApplication : IDisposable
         if (_settings == null)
         {
             _settings = new SettingsWindow();
-            _settings.ShortcutChanged = () => _hook?.ReloadShortcuts();
-            // Un override modifié depuis la section Apps suspendues doit
-            // s'appliquer immédiatement au process foreground courant.
-            _settings.CompatibilityOverridesChanged = () => _foregroundMonitor?.Recompute();
-            // Notation des touches changée dans l'onglet Leçons : la fenêtre ouverte suit.
-            _settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
+            ConfigureSettingsWindow(_settings);
         }
         ApplyWindowInputState();
-        _settings.Show();
+        _settings.ShowOrBringToFront(); // W2 : déjà ouverte, elle n'est pas remise à zéro
+    }
+
+    private void ConfigureSettingsWindow(SettingsWindow settings)
+    {
+        settings.ShortcutChanged = () => _hook?.ReloadShortcuts();
+        // Un override modifié depuis la section Apps suspendues doit
+        // s'appliquer immédiatement au process foreground courant.
+        settings.CompatibilityOverridesChanged = () => _foregroundMonitor?.Recompute();
+        // Notation des touches changée dans l'onglet Leçons : la fenêtre ouverte suit.
+        settings.LessonDisplayChanged = () => _lessons?.RefreshDisplay();
+        // Notifications rallumées : la demande d'avis peut de nouveau partir dans cette session (C7.4).
+        settings.NotificationsChanged = EnsureReviewTimer;
     }
 
     /// <summary>
@@ -1529,7 +1741,7 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (!ShouldShowChallengeAnnouncement(DailyChallenge.Enabled,
+            if (!ShouldShowChallengeAnnouncement(PolicyManager.ChallengeEnabledNow,
                     ConfigManager.ChallengeAnnounceDone, ConfigManager.TrainingEnabled,
                     ConfigManager.NotificationsEnabled))
                 return false;
@@ -1617,7 +1829,7 @@ sealed class TrayApplication : IDisposable
     {
         // 1.3.0 : Défi masqué. Plus aucune porte n'y mène (menu, annonce, rappel) ; ce
         // garde ferme le dernier appel resté possible, vers les Leçons ordinaires.
-        if (!DailyChallenge.Enabled) { ShowLessonsWindow(); return; }
+        if (!PolicyManager.ChallengeEnabledNow) { ShowLessonsWindow(); return; }
         if (!EnsureLessonsWindow()) return;
         ApplyWindowInputState();
         if (!_lessons!.ShowChallenge())
@@ -1633,9 +1845,10 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
-            if (!ConfigManager.NotificationsEnabled) return;
             var now = DateTime.Now;
-            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot()))
+            TrainingReminders.RepairFutureDates(DateOnly.FromDateTime(now));
+            if (!ConfigManager.NotificationsEnabled) return;
+            if (!TrainingReminders.ShouldRemind(now, TrainingReminders.Snapshot() with { SessionLocked = _sessionLocked }))
                 return;
 
             TrainingReminders.MarkReminderShown(DateOnly.FromDateTime(now));
@@ -1661,8 +1874,11 @@ sealed class TrayApplication : IDisposable
     /// AppendMenuW gardés par un if auraient donné un test qui vérifie que Store est Store.
     /// </summary>
     internal static int[] FeedbackMenuEntries(DistributionChannel channel,
-        bool? externalLinksPolicy = null) =>
-        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+        bool? externalLinksPolicy = null, bool? outboundLinksPolicy = null) =>
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : avis et bug ouvrent le navigateur, le
+        // sous-menu disparaît entier (décision 2 du 2026-11-17, qui amende D4).
+        !PolicyManager.OutboundLinksEnabled(outboundLinksPolicy) ? Array.Empty<int>()
+        : PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
             ? new[] { IDM_SUPPORT, IDM_FEEDBACK, IDM_DISCORD, IDM_BUG }
             : new[] { IDM_FEEDBACK, IDM_BUG };
 
@@ -1670,8 +1886,8 @@ sealed class TrayApplication : IDisposable
     /// Store », absente du canal sobre (D3). Rendue comme liste pour la même raison que
     /// <see cref="FeedbackMenuEntries"/>.</summary>
     internal static int[] FeedbackTopLevelEntries(DistributionChannel channel,
-        bool? externalLinksPolicy = null) =>
-        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+        bool? externalLinksPolicy = null, bool? outboundLinksPolicy = null) =>
+        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel, outboundLinksPolicy)
             ? new[] { IDM_RATE_STORE }
             : Array.Empty<int>();
 
@@ -1693,10 +1909,29 @@ sealed class TrayApplication : IDisposable
     /// <see cref="DailyChallenge.Enabled"/> est levé ; en 1.3.0 le sous-menu garde Leçons
     /// et l'accueil. Liste pure pour la même raison que <see cref="FeedbackMenuEntries"/>.
     /// </summary>
-    internal static int[] LearnMenuEntries(bool challengeEnabled) =>
-        challengeEnabled
+    internal static int[] LearnMenuEntries(bool challengeEnabled, bool? lessonsPolicy = null) =>
+        // Stratégie LessonsEnabled à 0 (1.3.0) : Leçons et Défi partent, l'accueil reste.
+        !PolicyManager.LessonsEnabled(lessonsPolicy) ? new[] { IDM_ONBOARDING }
+        : challengeEnabled
             ? new[] { IDM_EXERCISES, IDM_CHALLENGE, IDM_ONBOARDING }
             : new[] { IDM_EXERCISES, IDM_ONBOARDING };
+
+    /// <summary>Entrées « Ressources » d'« À propos et aide », toutes des liens vers le site :
+    /// aucune quand la stratégie OutboundLinksEnabled est à 0, et le sous-menu disparaît.</summary>
+    internal static int[] ResourcesMenuEntries(bool? outboundLinksPolicy = null) =>
+        PolicyManager.OutboundLinksEnabled(outboundLinksPolicy)
+            ? new[] { IDM_GUIDE_PDF, IDM_SITE, IDM_GUIDE_CHANGES, IDM_CARDS, IDM_RELEASE_NOTES }
+            : Array.Empty<int>();
+
+    private static string ResourcesMenuLabel(int id) => id switch
+    {
+        IDM_GUIDE_PDF => L.Tray_MenuPrintableGuide,
+        IDM_SITE => L.About_LinkSite,
+        IDM_GUIDE_CHANGES => L.Tray_MenuFiveChanges,
+        IDM_CARDS => L.Tray_MenuKeyboardCards,
+        IDM_RELEASE_NOTES => L.Tray_MenuWhatsNew,
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
+    };
 
     private static string LearnMenuLabel(int id) => id switch
     {
@@ -1706,11 +1941,44 @@ sealed class TrayApplication : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null),
     };
 
+    /// <summary>État que le menu contextuel montrait à son ouverture (M3.1 I4).</summary>
+    internal readonly record struct MenuShownState(bool Enabled, bool Paused);
+
+    /// <summary>
+    /// M3.1 I4 (1.3.0) : une commande du menu s'applique à l'état que le menu affichait. Le menu
+    /// est modal et l'état peut changer pendant qu'il est ouvert (raccourci global, fin de pause) ;
+    /// la commande suit alors l'intention affichée. « Désactiver » ou « Activer » ne fait rien si
+    /// l'activation a déjà changé (l'intention est atteinte) ; « Reprendre maintenant » ou
+    /// « Pause personnalisée… » ne fait rien si l'état de pause a changé. Sans état affiché
+    /// (commande hors menu), la commande s'applique à l'état courant, comme avant.
+    /// </summary>
+    internal static bool MenuCommandStillApplies(int command, MenuShownState? shown, bool enabled, bool paused) =>
+        shown is not { } s || command switch
+        {
+            IDM_TOGGLE => s.Enabled == enabled,
+            IDM_PAUSE => s.Paused == paused,
+            _ => true,
+        };
+
+    /// <summary>Rend l'état affiché par le dernier menu et l'oublie : une commande, une lecture.</summary>
+    private MenuShownState? TakeMenuShownState()
+    {
+        var shown = _menuShownState;
+        _menuShownState = null;
+        return shown;
+    }
+
+    /// <summary>Libellé de l'entrée d'activation : en pause, « Désactiver » met fin à la pause.</summary>
+    internal static string ToggleMenuLabel(bool enabled, bool paused) =>
+        !enabled ? L.Tray_MenuEnable : paused ? L.TrayClarity_MenuDisableEndsPause : L.Tray_MenuDisable;
+
     private void ShowContextMenu()
     {
         var hMenu = Win32.CreatePopupMenu();
         var kbdKey = ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutVirtualKeyboardVk);
+        var kbdMods = ConfigManager.ShortcutVirtualKeyboardModifiers;
         var searchKey = ConfigManager.GetShortcutDisplayName(ConfigManager.ShortcutCharacterSearchVk);
+        var searchMods = ConfigManager.ShortcutCharacterSearchModifiers;
         // Menu en quatre blocs d'intention (décision S2 du 2026-09-02, portée en v1.2.0 le
         // 2026-09-19) : État · Outils · Apprendre · Réglages et infos, puis Langue et Quitter.
         // Les IDM_* ne changent pas ; seuls l'ordre, les regroupements et trois libellés bougent.
@@ -1724,16 +1992,23 @@ sealed class TrayApplication : IDisposable
             Win32.AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, SuspensionReasonText(_appliedSuspendReason));
             Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
         }
-        Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE,
-            _enabled ? L.Tray_MenuDisable : L.Tray_MenuEnable);
+        // Audit 09/11, W14 et W15 : en pause ou désactivé, une ligne grisée dit ce que le menu grise ;
+        // « Désactiver » dit qu'il met fin à la pause (le raccourci, lui, la reprend).
+        if (_activationConsent && !_suspendedForCompatibility && (IsPaused || !_enabled))
+        {
+            Win32.AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0,
+                IsPaused ? L.TrayClarity_MenuStatePaused : L.TrayClarity_MenuStateDisabled);
+            Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
+        }
+        Win32.AppendMenuW(hMenu, MF_STRING, IDM_TOGGLE, ToggleMenuLabel(_enabled, IsPaused));
         if (IsPaused)
         {
             Win32.AppendMenuW(hMenu, MF_STRING, IDM_PAUSE,
-                L.Tray_MenuResumeNow(PauseSchedule.DescribeResume(DateTime.Now, _pauseUntilUtc!.Value.LocalDateTime)));
+                L.Tray_MenuResumeNow(PauseSchedule.DescribeResume(UtcClock().LocalDateTime, _pauseUntilUtc!.Value.LocalDateTime)));
         }
         else
         {
-            DateTime now = DateTime.Now;
+            DateTime now = UtcClock().LocalDateTime;
             DateTime morning = PauseSchedule.NextMorning(now);
             var hPauseMenu = Win32.CreatePopupMenu();
             Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE_15, L.Tray_MenuPause15);
@@ -1744,7 +2019,7 @@ sealed class TrayApplication : IDisposable
                 L.Tray_MenuPauseUntilMorning(morning.Date > now.Date, PauseSchedule.FormatClock(morning)));
             Win32.AppendMenuW(hPauseMenu, MF_SEPARATOR, 0, null);
             Win32.AppendMenuW(hPauseMenu, MF_STRING, IDM_PAUSE, L.Tray_MenuPauseCustom);
-            Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP | (_enabled ? 0u : MF_GRAYED),
+            Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP | (CanStartPause(_enabled, _pauseDialogOpen) ? 0u : MF_GRAYED),
                 (nuint)hPauseMenu, L.Tray_MenuPause);
         }
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
@@ -1752,10 +2027,11 @@ sealed class TrayApplication : IDisposable
         // ── Outils ──────────────────────────────────────────────────
         uint kbdFlags = ShouldProcessHook || _virtualKeyboard?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
         Win32.AppendMenuW(hMenu, kbdFlags, IDM_KEYBOARD,
-            _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdKey) : L.Tray_MenuVirtualKeyboard(kbdKey));
-        uint searchFlags = (ShouldProcessHook && _mapper?.AdvancedFeaturesSuppressed != true) ||
+            _virtualKeyboard?.IsVisible == true ? L.Tray_MenuHideVirtualKeyboard(kbdMods, kbdKey) : L.Tray_MenuVirtualKeyboard(kbdMods, kbdKey));
+        uint searchFlags = CanOpenCharacterSearch(ShouldProcessHook, IsUserOverrideSuspension,
+                SecureInputBlocksSearch) ||
             _characterSearch?.IsVisible == true ? MF_STRING : MF_STRING | MF_GRAYED;
-        Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchKey));
+        Win32.AppendMenuW(hMenu, searchFlags, IDM_SEARCH, L.Tray_MenuSearchCharacter(searchMods, searchKey));
 
         // Couches ▸ (S2-3) : l'entrée unique à suffixe ✓/… devient un sous-menu de trois
         // couches cochables. Les libellés sont repris tels quels de la fenêtre des couches,
@@ -1784,7 +2060,7 @@ sealed class TrayApplication : IDisposable
         // Défi du jour : toujours visible depuis la décision du 2026-08-16, sans condition
         // d'opt-in — sauf interrupteur coupé (masqué le 2026-09-24, réactivé en 1.3.0 le
         // 2026-10-07). Voir LearnMenuEntries.
-        foreach (int id in LearnMenuEntries(DailyChallenge.Enabled))
+        foreach (int id in LearnMenuEntries(DailyChallenge.Enabled, PolicyManager.Current.Lessons))
             Win32.AppendMenuW(hLearnMenu, MF_STRING, (nuint)id, LearnMenuLabel(id));
         Win32.AppendMenuW(hMenu, MF_STRING | MF_POPUP, (nuint)hLearnMenu, L.Tray_MenuLearn);
         Win32.AppendMenuW(hMenu, MF_SEPARATOR, 0, null);
@@ -1841,28 +2117,37 @@ sealed class TrayApplication : IDisposable
         // À propos et aide ▸ (2026-09-19) : confidentialité, ressources, retours, notation
         // et « À propos », soit cinq lignes de premier niveau, tiennent désormais sous une
         // seule. Rien n'est retiré : tout reste atteignable en un clic de plus.
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : confidentialité, ressources et retours
+        // sont des liens ; il ne reste qu'« À propos ».
         var hAboutHelpMenu = Win32.CreatePopupMenu();
-        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
+        var outboundLinksPolicy = PolicyManager.Current.OutboundLinks;
+        if (PolicyManager.OutboundLinksEnabled(outboundLinksPolicy))
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_PRIVACY, L.Tray_MenuPrivacySecurity);
 
         // Ressources et liens externes
-        var hResourcesMenu = Win32.CreatePopupMenu();
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_GUIDE_PDF, L.Tray_MenuPrintableGuide);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_SITE, L.About_LinkSite);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_GUIDE_CHANGES, L.Tray_MenuFiveChanges);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_CARDS, L.Tray_MenuKeyboardCards);
-        Win32.AppendMenuW(hResourcesMenu, MF_STRING, IDM_RELEASE_NOTES, L.Tray_MenuWhatsNew);
-        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
+        int[] resources = ResourcesMenuEntries(outboundLinksPolicy);
+        if (resources.Length > 0)
+        {
+            var hResourcesMenu = Win32.CreatePopupMenu();
+            foreach (int id in resources)
+                Win32.AppendMenuW(hResourcesMenu, MF_STRING, (nuint)id, ResourcesMenuLabel(id));
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hResourcesMenu, L.Tray_MenuResources);
+        }
 
-        var hFeedbackMenu = Win32.CreatePopupMenu();
         var channel = AppChannel.Current;
         var externalLinksPolicy = PolicyManager.Current.ExternalLinks;
-        foreach (int id in FeedbackMenuEntries(channel, externalLinksPolicy))
-            Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
-        Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
+        int[] feedback = FeedbackMenuEntries(channel, externalLinksPolicy, outboundLinksPolicy);
+        if (feedback.Length > 0)
+        {
+            var hFeedbackMenu = Win32.CreatePopupMenu();
+            foreach (int id in feedback)
+                Win32.AppendMenuW(hFeedbackMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
+            Win32.AppendMenuW(hAboutHelpMenu, MF_STRING | MF_POPUP, (nuint)hFeedbackMenu, L.Tray_MenuFeedbackSupport);
+        }
         // « Noter sur le Microsoft Store » au premier niveau, sous « Retours et soutien »
         // (S2-6, confirmé le 2026-09-02) : l'action la plus utile au projet, en un clic.
         // Absente du canal sobre : rien n'y renvoie vers le Store (D3).
-        foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy))
+        foreach (int id in FeedbackTopLevelEntries(channel, externalLinksPolicy, outboundLinksPolicy))
             Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, (nuint)id, FeedbackMenuLabel(id));
 
         Win32.AppendMenuW(hAboutHelpMenu, MF_STRING, IDM_ABOUT, L.Tray_MenuAbout);
@@ -1886,19 +2171,36 @@ sealed class TrayApplication : IDisposable
         if (_lastForegroundBeforeTrayMenu == _hWnd)
             _lastForegroundBeforeTrayMenu = IntPtr.Zero;
         Win32.SetForegroundWindow(_hWnd);
-        Win32.TrackPopupMenuEx(hMenu, TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, _hWnd, IntPtr.Zero);
-        Win32.PostMessageW(_hWnd, 0, IntPtr.Zero, IntPtr.Zero); // WM_NULL — fermeture propre du menu
+        // M3.1 I4 : l'état affiché, que la commande choisie comparera à l'état courant.
+        _menuShownState = new MenuShownState(_enabled, IsPaused);
+        Shell.TrackPopupMenuEx(hMenu, TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, _hWnd, IntPtr.Zero);
+        Shell.PostMessageW(_hWnd, 0, IntPtr.Zero, IntPtr.Zero); // WM_NULL — fermeture propre du menu
         Win32.DestroyMenu(hMenu);
     }
 
     /// <summary>
-    /// Handler du raccourci clavier Ctrl+Maj+Verr.Maj (via KeyMapper.ToggleRequested).
+    /// Handler du raccourci clavier Ctrl+Maj+Verr.Maj (via KeyMapper.ToggleRequested), appelé
+    /// dans le rappel du hook. M3.1 I5 (1.3.0) : il ne fait que poster WM_APP_TOGGLE ; la
+    /// bascule (Shell_NotifyIcon, GDI+, fenêtre de bascule) tourne dans la boucle de messages,
+    /// hors du délai que Windows accorde au hook. Comme les autres raccourcis (recherche,
+    /// clavier virtuel). Un message refusé (file pleine) est journalisé : la frappe est perdue,
+    /// jamais le hook.
+    /// </summary>
+    private void OnToggleShortcut()
+    {
+        if (!Shell.PostMessageW(_hWnd, WM_APP_TOGGLE, IntPtr.Zero, IntPtr.Zero))
+            ConfigManager.LogCompatEventDeferred("BasculeRaccourciPerdue",
+                "WM_APP_TOGGLE refuse par la file de messages ; raccourci ignore");
+    }
+
+    /// <summary>
+    /// Bascule du raccourci, sur le fil de la boucle de messages (WM_APP_TOGGLE).
     /// Pendant une pause volontaire, le raccourci REPREND (équivalent « Reprendre
     /// maintenant ») au lieu de basculer _enabled — sinon il terminerait la pause ET
     /// désactiverait, ce qui contredirait l'intention « réactiver » de l'utilisateur.
     /// Le menu tray (IDM_TOGGLE) appelle OnToggle directement et garde sa sémantique.
     /// </summary>
-    private void OnToggleShortcut()
+    private void ApplyToggleShortcut()
     {
         if (IsPaused)
         {
@@ -1906,6 +2208,38 @@ sealed class TrayApplication : IDisposable
             return;
         }
         OnToggle();
+    }
+
+    /// <summary>La mini-fenêtre de bascule (haut droite) suit la case « Notifications » ; l'anti-cheat la
+    /// supprime toujours (pas d'overlay tiers devant un jeu protégé).</summary>
+    internal static bool ShouldShowToggleOverlay(bool notificationsEnabled, bool securitySuspension) =>
+        notificationsEnabled && !securitySuspension;
+
+    /// <summary>Pourquoi un outil (clavier virtuel, recherche) ne répond pas : choix de l'utilisateur pour une
+    /// application, pause, ou désactivation. Décision pure, la bulle la lit.</summary>
+    internal enum ToolUnavailableReason { UserOverrideSuspension, Paused, Disabled }
+
+    internal static ToolUnavailableReason WhyToolUnavailable(bool userOverrideSuspension, bool paused) =>
+        userOverrideSuspension ? ToolUnavailableReason.UserOverrideSuspension
+        : paused ? ToolUnavailableReason.Paused
+        : ToolUnavailableReason.Disabled;
+
+    private void ShowToolUnavailableBalloon()
+    {
+        switch (WhyToolUnavailable(IsUserOverrideSuspension, IsPaused))
+        {
+            case ToolUnavailableReason.UserOverrideSuspension:
+                ShowBalloon(L.Tray_SuspendedInTitle(FormatProcessName(
+                        _foregroundMonitor?.CurrentProcessName ?? L.Tray_ThisGameFallback)),
+                    L.TrayClarity_UserOverrideSuspendedBody);
+                break;
+            case ToolUnavailableReason.Paused:
+                ShowBalloon(L.Tray_PausedTitle, L.TrayClarity_PausedByYouBody);
+                break;
+            default:
+                ShowBalloon(L.Tray_DisabledTitle, L.Tray_DisabledBalloonBody);
+                break;
+        }
     }
 
     private void OnToggle()
@@ -1958,7 +2292,7 @@ sealed class TrayApplication : IDisposable
         if (IsPaused)
         {
             _pauseUntilUtc = null;
-            Win32.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
+            Shell.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
         }
 
         _enabled = !_enabled;
@@ -1992,34 +2326,52 @@ sealed class TrayApplication : IDisposable
         // l'icone tray est cachee par le jeu — angle mort accepte en exclusive fullscreen).
         // Garde anti-cheat : pas d'overlay tiers quand un jeu anti-cheat kernel-level est
         // au foreground — risque de detection comme cheat / trainer (fausse alerte).
+        // Audit 09/11, W13 : « Notifications » décochée coupe aussi cette mini-fenêtre (elle restait).
         var suspendReason = _foregroundMonitor?.CurrentSuspendReason ?? CompatibilitySuspendReason.None;
-        if (!IsSecuritySuspension(suspendReason))
+        if (ShouldShowToggleOverlay(ConfigManager.NotificationsEnabled, IsSecuritySuspension(suspendReason)))
         {
             if (_toggleNotification == null) _toggleNotification = new ToggleNotification();
             _toggleNotification.Show(_enabled);
         }
     }
 
+    // Audit 09/11, W12 : le dialogue de durée a sa propre boucle de messages ; le menu de la zone de
+    // notification reste servi pendant qu'il est ouvert. Une pause lancée entre-temps (durée
+    // prédéfinie, jusqu'à demain) était écrasée à sa fermeture, et le dialogue pouvait s'ouvrir deux fois.
+    private bool _pauseDialogOpen;
+    private int _pauseSerial;
+
+    /// <summary>Une pause peut démarrer : le programme est actif et aucun dialogue de durée n'attend de réponse.</summary>
+    internal static bool CanStartPause(bool enabled, bool pauseDialogOpen) => enabled && !pauseDialogOpen;
+
+    /// <summary>Le résultat du dialogue s'applique seulement si aucune autre pause n'a démarré depuis son ouverture.</summary>
+    internal static bool ShouldApplyDialogPause(int serialAtOpen, int serialNow, bool enabled) =>
+        enabled && serialAtOpen == serialNow;
+
     private void ShowPauseDialogAndStart()
     {
-        if (!_enabled)
+        if (!CanStartPause(_enabled, _pauseDialogOpen))
             return;
 
-        var duration = PauseDurationDialog.Show(_hWnd);
-        if (duration.HasValue)
+        int serialAtOpen = _pauseSerial;
+        _pauseDialogOpen = true;
+        TimeSpan? duration;
+        try { duration = PauseDurationDialog.Show(_hWnd); }
+        finally { _pauseDialogOpen = false; }
+        if (duration.HasValue && ShouldApplyDialogPause(serialAtOpen, _pauseSerial, _enabled))
             StartPause(duration.Value);
     }
 
     private void StartPresetPause(int minutes)
     {
-        if (_enabled)
+        if (CanStartPause(_enabled, _pauseDialogOpen))
             StartPause(TimeSpan.FromMinutes(minutes));
     }
 
     private void StartPause(TimeSpan duration)
     {
         int totalMinutes = Math.Clamp((int)Math.Round(duration.TotalMinutes), 1, 1439);
-        StartPauseUntil(DateTimeOffset.UtcNow.AddMinutes(totalMinutes),
+        StartPauseUntil(UtcClock().AddMinutes(totalMinutes),
             L.Tray_PausedForDurationTitle(FormatDuration(totalMinutes)));
     }
 
@@ -2028,9 +2380,9 @@ sealed class TrayApplication : IDisposable
     /// de <see cref="StartPause"/>.</summary>
     private void StartPauseUntilMorning()
     {
-        if (!_enabled)
+        if (!CanStartPause(_enabled, _pauseDialogOpen))
             return;
-        DateTime now = DateTime.Now;
+        DateTime now = UtcClock().LocalDateTime;
         DateTime morning = PauseSchedule.NextMorning(now);
         StartPauseUntil(new DateTimeOffset(morning).ToUniversalTime(),
             L.Tray_PausedUntilMorningTitle(morning.Date > now.Date, PauseSchedule.FormatClock(morning)));
@@ -2038,9 +2390,21 @@ sealed class TrayApplication : IDisposable
 
     private void StartPauseUntil(DateTimeOffset untilUtc, string balloonTitle)
     {
+        // CE-T3 (CE-09) : seul le tick de TIMER_PAUSE lève la pause. Minuterie refusée (quota
+        // d'objets USER épuisé, fenêtre en cours de destruction) : pas de pause sans échéance, le
+        // clavier reste actif et une bulle le dit (décision d'Antoine du 17 novembre 2026). La
+        // minuterie est posée avant tout état : rien à défaire, pas même les relâchements
+        // synthétiques de ClearPassedThroughKeys.
+        if (Shell.SetTimer(_hWnd, (UIntPtr)TIMER_PAUSE, 1000, IntPtr.Zero) == UIntPtr.Zero)
+        {
+            ConfigManager.LogCompatEvent("PauseTimerRefused", $"error={Marshal.GetLastWin32Error()}");
+            ShowBalloon(L.Tray_PauseFailedTitle, L.Tray_PauseFailedBody);
+            return;
+        }
+        _pauseSerial++;
         _pauseUntilUtc = untilUtc;
+        _pauseLastTickUtc = UtcClock();
         _mapper?.ClearPassedThroughKeys();
-        Win32.SetTimer(_hWnd, (UIntPtr)TIMER_PAUSE, 1000, IntPtr.Zero);
         ApplyHookState();
         UpdateIcon();
         UpdateTooltip();
@@ -2051,7 +2415,7 @@ sealed class TrayApplication : IDisposable
     {
         bool wasPaused = IsPaused;
         _pauseUntilUtc = null;
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
         // R4 : doctrine d'ArbitratePendingDeadKeyWhileSuspended — une pause volontaire
         // conserve la touche morte, seule une suspension imposée l'abandonne. SyncState
         // l'annulait à la reprise, ce que le produit ne tenait donc pas.
@@ -2086,7 +2450,7 @@ sealed class TrayApplication : IDisposable
         if (!_pauseUntilUtc.HasValue)
             return "00:00";
 
-        var remaining = _pauseUntilUtc.Value - DateTimeOffset.UtcNow;
+        var remaining = _pauseUntilUtc.Value - UtcClock();
         if (remaining < TimeSpan.Zero)
             remaining = TimeSpan.Zero;
 
@@ -2097,6 +2461,15 @@ sealed class TrayApplication : IDisposable
     }
 
     private bool _lastCapsState;
+
+    /// <summary>
+    /// 1 tant qu'un WM_APP_STATE attend dans la file : coalesce les transitions d'une rafale.
+    /// Écrit et lu sur le seul fil d'interface (hook, boucle de messages), y compris quand le
+    /// hook s'exécute imbriqué dans une attente qui pompe : aucune course aujourd'hui
+    /// (docs/audit-acces-concurrents.md, T6). <c>Interlocked</c> est gardé à dessein, pour
+    /// un coût nul : si un autre fil levait un jour <c>StateChanged</c>, un simple booléen
+    /// pourrait faire perdre un rafraîchissement.
+    /// </summary>
     private int _stateRefreshQueued;
 
     /// <summary>
@@ -2111,8 +2484,13 @@ sealed class TrayApplication : IDisposable
     private void OnStateChanged()
     {
         if (_hWnd == IntPtr.Zero) return;
-        if (Interlocked.Exchange(ref _stateRefreshQueued, 1) == 0)
-            Win32.PostMessageW(_hWnd, WM_APP_STATE, IntPtr.Zero, IntPtr.Zero);
+        // CE-T3 (CE-07) : le drapeau dit « un message est en file ». S'il n'a pas pu partir (file
+        // pleine, fenêtre en cours de destruction), il retombe : le changement d'état suivant
+        // reposte. Sans cela, l'icône ne suivait plus l'état de toute la session. Aucun journal
+        // ici : on est dans le rappel du hook.
+        if (Interlocked.Exchange(ref _stateRefreshQueued, 1) == 0 &&
+            !Shell.PostMessageW(_hWnd, WM_APP_STATE, IntPtr.Zero, IntPtr.Zero))
+            Interlocked.Exchange(ref _stateRefreshQueued, 0);
     }
 
     /// <summary>Travail UI réel de OnStateChanged, exécuté hors du hook.</summary>
@@ -2189,6 +2567,9 @@ sealed class TrayApplication : IDisposable
         ConfigManager.SetMaintainableCyrillicEnabled(cyrillic);
         ConfigManager.SetMaintainableScientificEnabled(scientific);
         ConfigManager.SetMaintainableLayersEnabled(greek || cyrillic || scientific);
+        // Audit 09/11, W4 : la fenêtre Couches ouverte relit la configuration. Elle gardait ses
+        // anciennes cases et les réécrivait à sa fermeture, défaisant le geste du menu.
+        _maintainableLayersWindow?.RefreshFromConfig();
         OnMaintainableLayerSettingsChanged();
     }
 
@@ -2202,7 +2583,7 @@ sealed class TrayApplication : IDisposable
     private void OnSecureInputLateResult()
     {
         if (_hWnd != IntPtr.Zero)
-            Win32.PostMessageW(_hWnd, WM_APP_SECURE_RECHECK, IntPtr.Zero, IntPtr.Zero);
+            Shell.PostMessageW(_hWnd, WM_APP_SECURE_RECHECK, IntPtr.Zero, IntPtr.Zero);
     }
 
     private void RefreshVirtualKeyboard()
@@ -2231,10 +2612,12 @@ sealed class TrayApplication : IDisposable
     private void OpenFeedback(string source, string path = ProductIdentity.FeedbackPath) =>
         OpenDiagnosticPage(path, source);
 
-    private static void OpenDiagnosticPage(string path, string source) =>
-        Win32.ShellExecuteW(IntPtr.Zero, "open",
-            ProductIdentity.DiagnosticUrl(path, Program.Version, ProductIdentity.OsDescription(), source),
-            null, null, 1);
+    private void OpenDiagnosticPage(string path, string source) =>
+        OpenUrl(ProductIdentity.DiagnosticUrl(path, Program.Version, ProductIdentity.OsDescription(), source));
+
+    /// <summary>Tout lien de la barre des tâches passe par la porte unique des liens sortants,
+    /// avec le shell injectable que ses tests observent.</summary>
+    private void OpenUrl(string url) => OutboundLinks.Open(url, Shell.ShellExecuteW);
 
     private void OnExit()
     {
@@ -2250,10 +2633,13 @@ sealed class TrayApplication : IDisposable
         if (_cleaned) return;
         _cleaned = true;
 
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG);
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE);
-        Win32.KillTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH);
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_PAUSE);
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_WATCHDOG);
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_HOOK_PROBE);
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_STATS_FLUSH);
+        // Un réessai en attente remettrait l'icône après le NIM_DELETE ci-dessous (WM_ENDSESSION
+        // nettoie sans détruire la fenêtre, donc sans tuer ses minuteries).
+        Shell.KillTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY);
         Win32.WTSUnRegisterSessionNotification(_hWnd);
         _mapper?.ClearPassedThroughKeys();
         SecureInputDetector.ResultChangedLate -= OnSecureInputLateResult;
@@ -2273,10 +2659,14 @@ sealed class TrayApplication : IDisposable
         // Dernières écritures, après les fenêtres : leur Dispose peut encore poser des
         // réglages (bornes des fenêtres). Le hook est déjà décroché (audit du 25/09, A-05).
         // Chacune dans son try : un échec ne doit couper ni l'autre ni le reste du nettoyage.
-        try { UsageStats.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.Flush", ex); }
-        try { ConfigManager.Flush(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.Flush", ex); }
+        // Les deux réessaient sur un verrou passager (CE-T4, CE-12 : un seul essai perdait les
+        // compteurs de la session) ; pire cas 2 × 750 ms. OnQueryEndSession, lui, ne dort pas.
+        try { UsageStats.FlushFinal(); } catch (Exception ex) { ConfigManager.Log("Cleanup UsageStats.FlushFinal", ex); }
+        try { ConfigManager.FlushFinal(); } catch (Exception ex) { ConfigManager.Log("Cleanup ConfigManager.FlushFinal", ex); }
+        // Les lignes d'error.log encore en file mourraient avec le processus (T5).
+        ConfigManager.FlushLog();
         ToastActivation.Unregister();
-        Win32.Shell_NotifyIconW(NIM_DELETE, ref _nid);
+        Shell.Shell_NotifyIconW(NIM_DELETE, ref _nid);
         if (_hIcon != IntPtr.Zero)
         {
             Win32.DestroyIcon(_hIcon);
@@ -2298,6 +2688,36 @@ sealed class TrayApplication : IDisposable
         // Après un redémarrage d'Explorer, NIM_ADD doit donc réannoncer explicitement
         // le callback, l'icône et le tooltip pour reconstruire une entrée tray complète.
         data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+    }
+
+    /// <summary>
+    /// Ajoute l'icône de la zone de notification, et la réessaie si Explorer la refuse (C3.6).
+    /// <paramref name="firstAttempt"/> (démarrage, TaskbarCreated) remet le compte d'essais à
+    /// zéro : un nouvel Explorer mérite une nouvelle série. Un NIM_ADD refusé alors que l'entrée
+    /// existe déjà (TaskbarCreated répété) est reconnu par un NIM_MODIFY accepté : rien à refaire.
+    /// </summary>
+    private void AddTrayIcon(bool firstAttempt)
+    {
+        if (_cleaned) return;
+        if (firstAttempt)
+        {
+            _trayAddRetries = 0;
+            Shell.KillTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY);
+        }
+
+        PrepareTrayIconForAdd(ref _nid);
+        if (Shell.Shell_NotifyIconW(NIM_ADD, ref _nid)) return;
+        PrepareTrayIconForAdd(ref _nid);
+        if (Shell.Shell_NotifyIconW(NIM_MODIFY, ref _nid)) return;
+
+        if (_trayAddRetries >= TRAY_ADD_MAX_RETRIES)
+        {
+            ConfigManager.LogCompatEvent("TrayIconAddFailed",
+                $"NIM_ADD refused {TRAY_ADD_MAX_RETRIES + 1} times, icon absent until the next TaskbarCreated");
+            return;
+        }
+        _trayAddRetries++;
+        Shell.SetTimer(_hWnd, (UIntPtr)TIMER_TRAY_ADD_RETRY, TRAY_ADD_RETRY_INTERVAL_MS, IntPtr.Zero);
     }
 
     /// <summary>
@@ -2444,7 +2864,7 @@ sealed class TrayApplication : IDisposable
 
         _nid.hIcon = _hIcon;
         _nid.uFlags = NIF_ICON;
-        Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+        Shell.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
 
         if (oldIcon != IntPtr.Zero) Win32.DestroyIcon(oldIcon);
     }
@@ -2476,7 +2896,7 @@ sealed class TrayApplication : IDisposable
     {
         _nid.szTip = tip;
         _nid.uFlags = NIF_TIP;
-        return Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+        return Shell.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
     }
 
     /// <summary>
@@ -2577,6 +2997,37 @@ sealed class TrayApplication : IDisposable
         }
     }
 
+    /// <summary>Pose ou retire la minuterie de quiétude. Couture des tests : SetTimer/KillTimer
+    /// sur une fenêtre réelle ne s'observent pas. Rend vrai si la minuterie tourne après l'appel
+    /// (CE-T3, CE-10 : un SetTimer refusé n'est plus déclaré posé).</summary>
+    internal static Func<IntPtr, bool, bool> ReviewTimerSwitch = static (hWnd, on) =>
+    {
+        if (on) return Win32.SetTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET, REVIEW_QUIET_POLL_MS, IntPtr.Zero) != UIntPtr.Zero;
+        Win32.KillTimer(hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+        return false;
+    };
+
+    private bool _reviewTimerArmed;
+
+    /// <summary>La minuterie de quiétude est-elle posée ?</summary>
+    internal bool ReviewTimerArmed => _reviewTimerArmed;
+
+    /// <summary>
+    /// Met la minuterie de quiétude d'accord avec <see cref="ReviewPromptStillPossible"/> :
+    /// posée quand une sollicitation redevient possible (notifications rallumées dans les
+    /// Paramètres), retirée quand plus aucune ne l'est. Idempotente ; appelée au démarrage,
+    /// par le tick et par le changement du réglage des notifications.
+    /// </summary>
+    internal void EnsureReviewTimer()
+    {
+        bool possible = ReviewPromptStillPossible();
+        if (possible == _reviewTimerArmed) return;
+        // CE-T3 (CE-10) : posée seulement si SetTimer l'a acceptée. Un refus laisse le drapeau
+        // faux, et le tick de TIMER_STATS_FLUSH (5 min) retente : la demande d'avis n'est plus
+        // perdue pour la session.
+        _reviewTimerArmed = ReviewTimerSwitch(_hWnd, possible);
+    }
+
     /// <summary>
     /// Le franchissement du seuil enrichi doit-il être consommé après une tentative de
     /// sollicitation ? Décision pure, sans état ni I/O, pour rester éprouvable.
@@ -2618,7 +3069,7 @@ sealed class TrayApplication : IDisposable
             // Plus rien à solliciter : le timer n'a plus de raison de tourner.
             if (!ReviewPromptStillPossible())
             {
-                Win32.KillTimer(_hWnd, (UIntPtr)TIMER_REVIEW_QUIET);
+                EnsureReviewTimer();
                 return;
             }
 
@@ -2626,7 +3077,8 @@ sealed class TrayApplication : IDisposable
             // refermé. Encore en train de taper : on repasse dans cinq secondes. Accueil
             // ouvert : l'avis est différé, pas annulé — même règle qu'au démarrage.
             if (!ReviewPromptGate.ShouldTryAfterQuietTyping(UsageStats.EnrichedThresholdCrossed,
-                    UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS, _reviewPromptDeferred))
+                    UsageStats.MillisecondsSinceLastRemap, REVIEW_QUIET_SILENCE_MS,
+                    _reviewPromptDeferred || _sessionLocked || _onboarding is { IsVisible: true }))
                 return;
 
             bool shown = MaybeShowReviewPrompt(ReviewPromptTrigger.QuietTyping);
@@ -2677,6 +3129,12 @@ sealed class TrayApplication : IDisposable
     {
         try
         {
+            // Audit temps et horloge du 17/11, TH-02 : heure remise depuis le démarrage, les dates
+            // d'avis écrites horloge en avance valent aujourd'hui et se réécrivent.
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            ConfigManager.RepairFutureReviewDates(today);
+            if (_versionFirstRun is { } firstRun && firstRun.Date > today)
+                _versionFirstRun = firstRun with { Date = today };
             var signals = ReviewPromptGate.Snapshot(_versionFirstRun);
             if (!ReviewPromptGate.ShouldShowNotification(trigger, signals, out int attempt))
                 return false;
@@ -2708,12 +3166,6 @@ sealed class TrayApplication : IDisposable
         }
     }
 
-    /// <summary>Photographie de l'état des séances pour <see cref="ReviewPromptGate.LearningAllowsPrompt"/>.</summary>
-    private static bool LearningAllowsReviewNow(ReviewPromptTrigger trigger) =>
-        ReviewPromptGate.LearningAllowsPrompt(trigger, LearningSessionTracker.IsOpen,
-            LearningSessionTracker.MillisecondsSinceLastClose, UsageStats.MillisecondsSinceLastRemap,
-            ReviewPromptGate.LearningCooldownMs);
-
     /// <summary>
     /// Cible du clic sur la sollicitation d'avis. Le volet d'avis Store n'est ouvert
     /// que pour une install packagée (les autres ne peuvent en général pas noter) ;
@@ -2739,10 +3191,14 @@ sealed class TrayApplication : IDisposable
     /// profond dès que l'API n'est pas disponible — installation hors Store, Store absent
     /// du système, ou refus de l'API.
     /// </summary>
-    private void OpenStoreReview()
+    private void OpenStoreReview() => OpenStoreReview(ReviewOwnerWindow());
+
+    private void OpenStoreReview(IntPtr owner)
     {
-        if (StoreReview.TryShow(ReviewOwnerWindow(), StoreReviewUrl)) return;
-        Win32.ShellExecuteW(IntPtr.Zero, "open", StoreReviewUrl, null, null, 1);
+        // La boîte du Store ouvre le Store : coupée avec les liens sortants (1.3.0).
+        if (!PolicyManager.OutboundLinksEnabledNow) return;
+        if (StoreReview.TryShow(owner, StoreReviewUrl)) return;
+        OpenUrl(StoreReviewUrl);
     }
 
     /// <summary>
@@ -2773,61 +3229,17 @@ sealed class TrayApplication : IDisposable
     }
 
     /// <summary>
-    /// L'utilisateur vient de copier son résultat de défi puis de refermer la fenêtre.
-    /// Le geste de partage est le signal de promotion le plus net dont dispose
-    /// l'application : il vaut mieux que n'importe quel seuil de jours, et c'est le seul
-    /// chemin de sollicitation qui atteint aussi ceux qui ont coupé les notifications
-    /// Windows — la sollicitation par toast, elle, ne leur parvient jamais.
-    ///
-    /// Les garde-fous de <see cref="MaybeShowReviewPrompt"/> restent en vigueur : deux
-    /// essais au maximum sur la vie de l'installation, aucun après une réponse, aucun dans
-    /// les 48 heures qui suivent une erreur journalisée, un seul par jour.
+    /// C1 (1.3.0) : « Noter l'application » dans Mes statistiques. Remplace la demande d'avis
+    /// qui partait toute seule après « Copier » ou le partage d'un Défi : la boîte de notation
+    /// du Store s'ouvre seulement sur ce clic, comme pour l'entrée du menu (même geste explicite :
+    /// plus aucune sollicitation ensuite). Le bouton n'existe que sur le canal Store, liens
+    /// externes permis (<c>UsageStatsWindow.RateButtonVisible</c>).
     /// </summary>
-    private void OnChallengeShared() => MaybeShowReviewAfterShare("challenge");
-
-    /// <summary>Résumé de statistiques copié puis fenêtre refermée. Le bouton de copie
-    /// existe depuis la v1.1 sans avoir jamais rien armé, alors que c'est le même geste de
-    /// promotion que le partage d'un résultat de défi (décision du 2026-08-17).</summary>
-    private void OnStatsShared() => MaybeShowReviewAfterShare("stats");
-
-    /// <summary>
-    /// Un partage vient d'aboutir : ouvrir la boîte de notation Store si les gardes le
-    /// permettent. La règle de décision vit dans <see cref="ReviewSharePrompt"/>, pure et
-    /// testable sans fenêtre — R1 et R3 de l'audit v1.2.0 sont restés invisibles tant
-    /// qu'elle était mêlée à l'affichage.
-    /// </summary>
-    private void MaybeShowReviewAfterShare(string source)
+    private void OnRateStoreFromStats(IntPtr owner)
     {
-        try
-        {
-            // Même garde que MaybeShowReviewPrompt : le partage d'un défi se présente à la
-            // fermeture des Leçons, donc « juste après une séance » (2026-09-24).
-            if (!LearningAllowsReviewNow(ReviewPromptTrigger.Share)) return;
-
-            var signals = ReviewSharePrompt.Snapshot();
-            if (!ReviewSharePrompt.ShouldPrompt(signals)) return;
-
-            if (!StoreReview.TryShow(_hWnd, StoreReviewUrl)) return;
-
-            // Consommé une fois la boîte lancée. `TryShow` ne dit que « opération
-            // lancée » : la boîte a besoin de la boucle de messages de ce thread, donc
-            // rien ne l'attend (voir StoreReview) — mais ses deux chemins d'échec
-            // ouvrent le lien profond du Store, si bien qu'un essai n'est jamais
-            // consommé sans issue pour l'utilisateur.
-            //
-            // Un essai, pas la vie de l'installation (arbitrage du 2026-08-17). La boîte
-            // s'est affichée, mais Windows ne dit jamais si l'utilisateur a déposé sa note :
-            // poser aussi `reviewPromptClicked` faisait qu'un seul partage — même refermé
-            // aussitôt sans rien noter — éteignait toute sollicitation ultérieure. Le
-            // plafond de deux essais, la règle « une seule par jour » sur la date
-            // persistée, les seuils d'usage et le silence de 48 h après une erreur
-            // restent les garde-fous, tous réunis dans ReviewSharePrompt.
-            ConfigManager.RecordReviewPromptShown(signals.Today);
-        }
-        catch (Exception ex)
-        {
-            ConfigManager.Log($"TrayApplication.MaybeShowReviewAfterShare({source})", ex);
-        }
+        try { ConfigManager.SetReviewPromptClicked(); }
+        catch (Exception ex) { ConfigManager.Log("OnRateStoreFromStats", ex); }
+        OpenStoreReview(owner != IntPtr.Zero ? owner : ReviewOwnerWindow());
     }
 
     /// <summary>Libellé localisé d'une couche maintenable (indicateur, infobulle).</summary>
@@ -2849,7 +3261,7 @@ sealed class TrayApplication : IDisposable
         _nid.szInfo = text;
         _nid.hBalloonIcon = _hBalloonIcon;
         _nid.dwInfoFlags = NIIF_USER | NIIF_LARGE_ICON;
-        Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+        Shell.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
     }
 
     /// <summary>
@@ -2874,8 +3286,7 @@ sealed class TrayApplication : IDisposable
     /// maillon échoue : l'appelant retombe sur l'icône texte.</summary>
     private static IntPtr CreateLogoIcon(int size)
     {
-        var input = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        if (Win32.GdiplusStartup(out IntPtr token, ref input, IntPtr.Zero) != 0)
+        if (!GdiPlus.EnsureStarted())
             return IntPtr.Zero;
         IntPtr logo = IntPtr.Zero;
         try
@@ -2886,7 +3297,6 @@ sealed class TrayApplication : IDisposable
         finally
         {
             if (logo != IntPtr.Zero) Win32.GdipDisposeImage(logo);
-            Win32.GdiplusShutdown(token);
         }
     }
 
@@ -2902,7 +3312,7 @@ sealed class TrayApplication : IDisposable
         _nid.szInfoTitle = title;
         _nid.szInfo = text;
         _nid.dwInfoFlags = NIIF_WARNING;
-        Win32.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
+        Shell.Shell_NotifyIconW(NIM_MODIFY, ref _nid);
     }
 
     /// <summary>

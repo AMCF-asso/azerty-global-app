@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 
 POLICY_MANAGER = ROOT / "src" / "PolicyManager.cs"
 PRODUCT_IDENTITY = ROOT / "src" / "ProductIdentity.cs"
+LOCALIZATION_TRAY = ROOT / "src" / "Localization" / "L.Tray.cs"
 ADMX = ROOT / "entreprise" / "AZERTYGlobal.admx"
 ADML = {
     "fr-FR": ROOT / "entreprise" / "fr-FR" / "AZERTYGlobal.adml",
@@ -30,7 +31,7 @@ REG = ROOT / "entreprise" / "politiques-exemple.reg"
 
 GP_NAMESPACE = "{http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions}"
 
-# Les cinq valeurs sont déclarées dans PolicyManager.cs sous la forme
+# Les huit valeurs sont déclarées dans PolicyManager.cs sous la forme
 # `internal const string ValueXxx = "NomDansLeRegistre";`. C'est le nom du registre qui compte
 # ici, pas celui de la constante.
 VALUE_CONSTANT = re.compile(r'internal const string Value\w+\s*=\s*"([^"]+)"')
@@ -43,6 +44,11 @@ EXPECTED_VALUES = {
     "UsageStatsEnabled": ("1", "0"),
     "ExternalLinksEnabled": ("1", "0"),
     "ShowOnboarding": ("0", "1"),
+    # 1.3.0 (décisions d'Antoine du 2026-11-17) : « Masquer… » écrit 0, comme la bienvenue ;
+    # le démarrage contraint dans les deux sens.
+    "OutboundLinksEnabled": ("0", "1"),
+    "AutoStartEnabled": ("1", "0"),
+    "LessonsEnabled": ("0", "1"),
 }
 
 
@@ -53,7 +59,7 @@ def read(path):
 class ScannerTests(unittest.TestCase):
     def test_le_scanner_voit_quelque_chose(self):
         """Sans ce test, un motif aveugle rendrait tous les autres vacuement verts."""
-        self.assertEqual(len(VALUE_CONSTANT.findall(read(POLICY_MANAGER))), 5)
+        self.assertEqual(len(VALUE_CONSTANT.findall(read(POLICY_MANAGER))), 8)
         self.assertEqual(len(POLICIES_ROOT.findall(read(POLICY_MANAGER))), 1)
         self.assertEqual(len(NAMESPACE_CONSTANT.findall(read(PRODUCT_IDENTITY))), 1)
         self.assertTrue(ADMX.exists())
@@ -72,8 +78,14 @@ class AdmxTests(unittest.TestCase):
         namespace = NAMESPACE_CONSTANT.search(read(PRODUCT_IDENTITY)).group(1)
         cls.expected_key = root_path + namespace
 
-    def test_cinq_strategies(self):
-        self.assertEqual(len(self.policies), 5)
+    def test_huit_strategies(self):
+        self.assertEqual(len(self.policies), 8)
+
+    def test_chaque_valeur_a_sa_polarite_attendue(self):
+        """Sans ce test, une stratégie nouvelle absente d'EXPECTED_VALUES passerait sans que
+        personne ne vérifie ce que « Activé » écrit."""
+        declared = {p.get("valueName") for p in self.policies if p.get("valueName")}
+        self.assertEqual(declared - {"Language"}, set(EXPECTED_VALUES))
 
     def test_les_valeurs_du_modele_sont_celles_du_code(self):
         """Le cas qui justifie ce fichier : une clé renommée dans le code, un ADMX qui pose
@@ -107,8 +119,9 @@ class AdmxTests(unittest.TestCase):
             self.assertEqual(disabled.get("value"), expected_disabled, value_name)
 
     def test_la_fenetre_de_bienvenue_reste_inversee(self):
-        """Elle est le seul réglage dont « Activé » écrit 0. Un jour quelqu'un « corrigera »
-        cette anomalie, et la stratégie se mettra à imposer la fenêtre au lieu de la retirer."""
+        """Premier réglage dont « Activé » écrit 0 (les deux « Masquer… » de la 1.3.0 l'ont
+        rejoint). Un jour quelqu'un « corrigera » cette anomalie, et la stratégie se mettra à
+        imposer la fenêtre au lieu de la retirer."""
         onboarding = [p for p in self.policies if p.get("valueName") == "ShowOnboarding"]
         self.assertEqual(len(onboarding), 1)
         enabled = onboarding[0].find(f"{GP_NAMESPACE}enabledValue/{GP_NAMESPACE}decimal")
@@ -187,6 +200,36 @@ class AdmlTests(unittest.TestCase):
         self.assertGreaterEqual(len(differents), 8, differents)
 
 
+    def test_l_entree_de_menu_citee_est_celle_que_l_application_affiche(self):
+        """Un DSI cherche dans le menu le libellé que la console lui cite. « Fenêtre de
+        bienvenue » n'existe plus depuis l'entrée « Revoir l'accueil » du menu Apprendre ;
+        le libellé est relu dans L.Tray.cs, pas recopié ici."""
+        source = read(LOCALIZATION_TRAY)
+        match = re.search(
+            r'Tray_MenuWelcomeWindow\s*=>\s*T\("([^"]+)",\s*"([^"]+)"\)', source
+        )
+        self.assertIsNotNone(match)
+        reels = {"fr-FR": match.group(1), "en-US": match.group(2)}
+        for culture, libelle in reels.items():
+            libelle = libelle.replace("’", "'")
+            for identifiant in ("RemoveOnboarding_Explain", "RemoveLessons_Explain"):
+                texte = self.strings[culture][identifiant].replace("’", "'")
+                self.assertIn(libelle, texte, f"{culture} {identifiant}")
+        self.assertNotIn("Fenêtre de bienvenue »", self.strings["fr-FR"]["RemoveOnboarding_Explain"])
+        self.assertNotIn("“Welcome window”", self.strings["en-US"]["RemoveOnboarding_Explain"])
+
+    def test_notifications_a_un_impose_et_verrouille(self):
+        """Décision d'Antoine du 2026-11-18 : le code fait foi (PolicyManager.IsManaged verrouille
+        le réglage pour 0 comme pour 1). Un texte « l'utilisateur garde son réglage » mentirait
+        à la DSI sur le cas Activé."""
+        fr = self.strings["fr-FR"]["NotificationsEnabled_Explain"]
+        en = self.strings["en-US"]["NotificationsEnabled_Explain"]
+        self.assertNotIn("garde son réglage", fr)
+        self.assertNotIn("keeps their own setting", en)
+        self.assertIn("verrouillé sur « activé »", fr)
+        self.assertIn("locked on", en)
+
+
 class RegTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -209,15 +252,19 @@ class RegTests(unittest.TestCase):
         namespace = NAMESPACE_CONSTANT.search(read(PRODUCT_IDENTITY)).group(1)
         self.assertIn(f"[HKEY_LOCAL_MACHINE\\{root_path}{namespace}]", self.text)
 
-    def test_les_cinq_valeurs_sont_posees(self):
+    def test_les_huit_valeurs_sont_posees(self):
         for value in VALUE_CONSTANT.findall(read(POLICY_MANAGER)):
             self.assertIn(f'"{value}"=', self.text, value)
 
     def test_la_fenetre_de_bienvenue_est_posee_a_zero(self):
         self.assertIn('"ShowOnboarding"=dword:00000000', self.text)
 
+    def test_le_reg_cite_le_menu_et_les_deux_sens_des_notifications(self):
+        self.assertIn("« Revoir l'accueil » du menu Apprendre", self.text.replace("\r\n; ", " "))
+        self.assertIn("1 : l'application affiche ses notifications", self.text)
+
     def test_la_langue_est_une_chaine_pas_un_dword(self):
-        """Language est le seul REG_SZ des cinq ; un dword ici serait ignoré à la lecture."""
+        """Language est le seul REG_SZ des huit ; un dword ici serait ignoré à la lecture."""
         self.assertRegex(self.text, r'"Language"="(fr|en)"')
 
 

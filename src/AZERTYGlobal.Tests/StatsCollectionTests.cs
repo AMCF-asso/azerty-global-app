@@ -56,9 +56,9 @@ public class StatsCollectionTests : IDisposable
         using (AppChannel.OverrideForTests(DistributionChannel.Store))
             Assert.True(UsageStats.CollectionEnabled);
 
-        // D8 : l'EXE hors package collecte comme aujourd'hui.
+        // Décision 5 du 2026-11-17 (fin du report D8) : l'EXE hors package est sobre comme Amcf.
         using (AppChannel.OverrideForTests(DistributionChannel.Unpackaged))
-            Assert.True(UsageStats.CollectionEnabled);
+            Assert.False(UsageStats.CollectionEnabled);
     }
 
     /// <summary>Critère d'acceptation du lot D, mot pour mot.</summary>
@@ -74,7 +74,7 @@ public class StatsCollectionTests : IDisposable
         Assert.False(File.Exists(_statsPath));
         // Le fichier temporaire de l'écriture atomique non plus : une écriture avortée en
         // laisserait un, et le dossier ne doit rien porter du tout.
-        Assert.False(File.Exists(_statsPath + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(_statsPath)!, Path.GetFileName(_statsPath) + "*.tmp")); // T-01 : temporaire par PID depuis AG130-11 (b)
         Assert.Empty(Directory.GetFiles(_tempDir, "usage-stats*"));
     }
 

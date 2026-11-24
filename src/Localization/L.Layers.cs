@@ -4,20 +4,23 @@ internal static partial class L
 {
     // ── Fenêtre des couches maintenables ─────────────────────────────
     public static string Layers_WindowTitleSuffix => T("Couches verrouillables", "Lockable layers");
-    public static string Layers_Title => T("Taper plusieurs caractères d’une autre couche", "Type several characters from another layer");
+    public static string Layers_Title => T("Taper plusieurs caractères d’une autre couche (un autre jeu de caractères : grec, cyrillique, scientifique)", "Type several characters from another layer (another set of characters: Greek, Cyrillic, scientific)");
     public static string Layers_Explainer => T(
-        "Appui simple : la prochaine frappe.\r\n" +
-        "Double appui : verrouillage dans l’application active.   Échap : déverrouiller.",
-        "Single press: the next keystroke.\r\n" +
-        "Double press: lock inside the active app.   Esc: unlock.");
+        "Appui simple : la prochaine frappe seulement (l’indicateur affiche « · 1 »).\r\n" +
+        "Double appui : verrouillage dans l’application active (« · verrou »).   Échap : déverrouiller.",
+        "Single press: the next keystroke only (the indicator shows “· 1”).\r\n" +
+        "Double press: lock inside the active app (“· lock”).   Esc: unlock.");
     public static string Layers_MasterCheckbox => T("Activer les couches verrouillables", "Enable lockable layers");
     public static string Layers_AvailableLabel => T("Couches disponibles", "Available layers");
     public static string Layers_GreekCheckbox => T("Grec — Maj + *", "Greek — Shift + *");
-    public static string Layers_CyrillicCheckbox => T("Cyrillique — AltGr + *", "Cyrillic — AltGr + *");
-    public static string Layers_ScientificCheckbox => T("Scientifique — AltGr + =", "Scientific — AltGr + =");
+    public static string Layers_CyrillicCheckbox => T($"Cyrillique — {AltGrKey} + *", $"Cyrillic — {AltGrKey} + *");
+    public static string Layers_ScientificCheckbox => T($"Scientifique — {AltGrKey} + =", $"Scientific — {AltGrKey} + =");
     public static string Layers_VisualCheckbox => T("Afficher un indicateur près du curseur", "Show an indicator near the text cursor");
     public static string Layers_DelayLabel => T("Délai du double appui :", "Double-press delay:");
     public static string Layers_DelayUnit => T("ms (150 à 1000)", "ms (150 to 1000)");
+    /// <summary>Délai hors bornes, ramené (audit 09/11, W20) : dit ce qui a été retenu.</summary>
+    public static string Layers_DelayRaised(int ms) => T($"Trop court : ramené à {ms} ms.", $"Too short: raised to {ms} ms.");
+    public static string Layers_DelayLowered(int ms) => T($"Trop long : ramené à {ms} ms.", $"Too long: lowered to {ms} ms.");
     public static string Layers_ActivatedBody => T(
         "Couches activées.\n\nAppui simple : une frappe.\n" +
         "Double appui : verrouillage dans l’application.\nÉchap : déverrouiller.",
@@ -42,8 +45,18 @@ internal static partial class L
     public static string Layers_InsertIncompleteBody => T(
         $"Vérifiez le texte saisi avant de réessayer avec {ProductIdentity.DisplayName}.",
         $"Check the inserted text before trying again with {ProductIdentity.DisplayName}.");
+    public static string Layers_InsertFallbackFailedTitle => T("Caractère non inséré", "Character not inserted");
+    public static string Layers_InsertFallbackFailedBody(string ch) => T(
+        $"Ni l’insertion ni la copie de « {ch} » n’ont abouti : le presse-papiers est occupé. Réessayez dans un instant.",
+        $"Neither inserting nor copying “{ch}” worked: the clipboard is busy. Try again in a moment.");
     public static string Layers_InsertFallbackTitle => T("Caractère copié", "Character copied");
     public static string Layers_InsertFallbackBody(string ch) => T(
         $"L’insertion directe de {ProductIdentity.DisplayName} n’était pas disponible — collez « {ch} » avec Ctrl + V.",
         $"{ProductIdentity.DisplayName}’s direct insertion was unavailable — paste “{ch}” with Ctrl + V.");
+    // EW-7 (audit environnement Windows) : fenêtre lancée en administrateur, Windows refuse
+    // les frappes simulées d'une application ordinaire ; le caractère a été copié.
+    public static string Layers_InsertElevatedTitle => T("Caractère copié", "Character copied");
+    public static string Layers_InsertElevatedBody(string ch) => T(
+        $"Windows empêche {ProductIdentity.DisplayName} d’écrire dans une fenêtre lancée en administrateur. Collez « {ch} » avec Ctrl + V.",
+        $"Windows prevents {ProductIdentity.DisplayName} from typing into a window run as administrator. Paste “{ch}” with Ctrl + V.");
 }

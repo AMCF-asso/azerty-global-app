@@ -157,14 +157,14 @@ public class MiniKeyboardRendererTests : IDisposable
         L.Language = "fr";
         var fr = Allumees(tenues);
         Assert.Equal("Maj", Maj(fr).Label);
-        Assert.Equal("AltGr", AltGr(fr).Label);
+        Assert.Equal(L.AltGrKey, AltGr(fr).Label);
         Assert.Equal("T", Touche(fr, ScanT).Label);
         Assert.Equal("VM", Allumees(caps)[0].Label);
 
         L.Language = "en";
         var en = Allumees(tenues);
         Assert.Equal("Shift", Maj(en).Label);
-        Assert.Equal("AltGr", AltGr(en).Label);
+        Assert.Equal(L.AltGrKey, AltGr(en).Label);
         Assert.Equal("Caps", Allumees(caps)[0].Label);
     }
 
@@ -266,8 +266,8 @@ public class MiniKeyboardRendererTests : IDisposable
 
         SurBitmap(600, 260, hdc =>
         {
-            (width, expected) = MiniKeyboardRenderer.MeasureNumbered(hdc, 24f, steps, 1f);
-            height = MiniKeyboardRenderer.DrawNumbered(hdc, 10, 10, 24f, steps, 1f);
+            (width, expected) = MiniKeyboardRenderer.MeasureNumbered(hdc, 24f, steps, FontScale.Shared(1f));
+            height = MiniKeyboardRenderer.DrawNumbered(hdc, 10, 10, 24f, steps, FontScale.Shared(1f));
             // Un point du fond de la touche T (loin de sa gravure et de sa pastille), puis de Maj, puis d'une touche éteinte.
             struck = GetPixel(hdc, t.Rect.left + 3, t.Rect.bottom - 3);
             held = GetPixel(hdc, maj.Rect.left + 4, maj.Rect.bottom - 4);
@@ -294,11 +294,11 @@ public class MiniKeyboardRendererTests : IDisposable
 
         SurBitmap(900, 260, hdc =>
         {
-            m1 = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, un, 1f);
-            m2 = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, deux, 1f);
-            m2x = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, deux, 2f);
-            h1 = MiniKeyboardRenderer.DrawFrames(hdc, 4, 4, 15f, un, 1f);
-            h2 = MiniKeyboardRenderer.DrawFrames(hdc, 4, 4, 15f, deux, 1f);
+            m1 = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, un, FontScale.Shared(1f));
+            m2 = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, deux, FontScale.Shared(1f));
+            m2x = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, deux, FontScale.Shared(2f));
+            h1 = MiniKeyboardRenderer.DrawFrames(hdc, 4, 4, 15f, un, FontScale.Shared(1f));
+            h2 = MiniKeyboardRenderer.DrawFrames(hdc, 4, 4, 15f, deux, FontScale.Shared(1f));
         });
 
         var mini = MiniKeyboardRenderer.Size(15f);
@@ -319,9 +319,9 @@ public class MiniKeyboardRendererTests : IDisposable
         (int Width, int Height) m = default;
         SurBitmap(100, 100, hdc =>
         {
-            a = MiniKeyboardRenderer.DrawNumbered(hdc, 0, 0, 15f, Array.Empty<GestureStep>(), 1f);
-            b = MiniKeyboardRenderer.DrawFrames(hdc, 0, 0, 15f, Array.Empty<GestureStep>(), 1f);
-            m = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, Array.Empty<GestureStep>(), 1f);
+            a = MiniKeyboardRenderer.DrawNumbered(hdc, 0, 0, 15f, Array.Empty<GestureStep>(), FontScale.Shared(1f));
+            b = MiniKeyboardRenderer.DrawFrames(hdc, 0, 0, 15f, Array.Empty<GestureStep>(), FontScale.Shared(1f));
+            m = MiniKeyboardRenderer.MeasureFrames(hdc, 15f, Array.Empty<GestureStep>(), FontScale.Shared(1f));
         });
         Assert.Equal((0, 0, 0, 0), (a, b, m.Width, m.Height));
     }

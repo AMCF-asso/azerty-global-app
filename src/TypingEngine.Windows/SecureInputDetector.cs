@@ -42,10 +42,14 @@ public static unsafe class SecureInputDetector
 
     private static readonly SecureInputProbe Probe = new(
         () => CoInitializeEx(IntPtr.Zero, COINIT_MULTITHREADED) >= 0,
-        QueryFocusedElementIsPassword, QueryTimeoutMilliseconds);
+        QueryFocusedElementIsPassword, QueryTimeoutMilliseconds, workerExit: ReleaseAutomation);
 
     // Instance IUIAutomation mise en cache sur le worker (CoCreateInstance à chaque
-    // focus serait du gaspillage) ; recréée après tout échec.
+    // focus serait du gaspillage) ; recréée après tout échec. Propre à chaque fil :
+    // un worker abandonné par la sonde (bloqué dans COM) peut coexister avec son
+    // remplaçant sans partager ni relâcher l'instance de l'autre. Chaque fil la relâche
+    // à sa sortie (workerExit de la sonde : arrêt, abandon, exception).
+    [ThreadStatic]
     private static IntPtr _automation;
 
     /// <summary>

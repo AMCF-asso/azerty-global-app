@@ -14,7 +14,7 @@ internal static partial class L
     /// <summary>Geste masqué parce que maîtrisé ; « Indice » le montre.</summary>
     public static string KeyNotation_Mastered => T("Maîtrisé : geste masqué", "Mastered: gesture hidden");
     public static string KeyNotation_MasteredPanel => T(
-        "Vous maîtrisez ce geste : il reste masqué. Une erreur le fait réapparaître ; Indice le montre à tout moment.",
+        "Vous maîtrisez ce geste : il reste masqué. Une erreur le fait réapparaître ; Indice le montre à tout moment.",
         "You have mastered this gesture, so it stays hidden. A mistake brings it back; Hint shows it at any time.");
     /// <summary>Grand clavier numéroté : rien à lire sous le caractère.</summary>
     public static string KeyNotation_FollowKeyboard => T("Suivez le clavier : ", "Follow the keyboard: ");

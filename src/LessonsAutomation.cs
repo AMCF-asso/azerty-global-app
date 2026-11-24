@@ -18,8 +18,22 @@ namespace AZERTYGlobal;
 /// <param name="Cells">Case de chaque caractère de <paramref name="Text"/>, défilement compris ;
 /// vide quand la géométrie n'est pas relevée (mode Libre) : la surface entière en tient lieu.</param>
 /// <param name="HelpText">Titre et consigne de l'exercice, que Narrateur lit après le nom.</param>
+/// <param name="SelectionAnchor">Autre bout de la sélection d'un champ éditable (mode Libre) ;
+/// null ou égal au curseur : rien de sélectionné.</param>
 internal sealed record LessonSurfaceView(string Name, string HelpText, string Text, int Caret, Win32.RECT Box,
-    Win32.RECT[] Cells, Win32.RECT? CaretRect);
+    Win32.RECT[] Cells, Win32.RECT? CaretRect, int? SelectionAnchor = null)
+{
+    /// <summary>La sélection, bornée au texte : (début, fin), égaux sans sélection.</summary>
+    public (int Start, int End) Selection
+    {
+        get
+        {
+            int caret = Math.Clamp(Caret, 0, Text.Length);
+            int anchor = Math.Clamp(SelectionAnchor ?? caret, 0, Text.Length);
+            return (Math.Min(caret, anchor), Math.Max(caret, anchor));
+        }
+    }
+}
 
 internal enum LessonControlKind { Button, ListItem, CheckBox }
 
@@ -33,7 +47,8 @@ internal sealed record LessonControlView(string Name, LessonControlKind Kind, Wi
 internal interface ILessonsAutomationHost
 {
     IntPtr Handle { get; }
-    /// <summary>Null quand rien ne se tape (récapitulatif, Paramètres).</summary>
+    /// <summary>Null quand il n'y a ni texte à taper ni texte à lire (Paramètres, liste des
+    /// leçons). Le bilan de fin d'exercice en a une, en lecture : son titre et ses chiffres.</summary>
     LessonSurfaceView? SurfaceView { get; }
     IReadOnlyList<LessonControlView> Controls { get; }
     bool WindowHasFocus { get; }
@@ -253,7 +268,9 @@ internal sealed partial class LessonsAutomation : IDisposable
     private LessonControlView[] _lastControls = Array.Empty<LessonControlView>();
     private bool _structureChanged;
     private string? _lastText;
+    private string? _lastSurfaceName;
     private int _lastCaret = -1;
+    private (int Start, int End) _lastSelection = (-1, -1);
     private int _lastFocus = NoFocus;
     private int _lastFocusGeneration;
     private bool _disposed;
@@ -346,16 +363,25 @@ internal sealed partial class LessonsAutomation : IDisposable
         if (_disposed) return;
         var view = Host.SurfaceView;
         int focus = FocusTarget();
-        bool focusChanged = focus != _lastFocus || (focus >= 0 && Generation != _lastFocusGeneration);
+        // Même surface, autre écran (la ligne à taper devient le bilan, audit de régression du
+        // 10/11, RA6) : le focus n'a pas bougé pour l'application, mais le lecteur d'écran doit
+        // relire l'élément ; l'événement de focus lui fait dire le nom, le texte et l'aide.
+        bool surfaceRenamed = focus == -1 && view?.Name != _lastSurfaceName;
+        bool focusChanged = focus != _lastFocus || (focus >= 0 && Generation != _lastFocusGeneration) || surfaceRenamed;
+        _lastSurfaceName = view?.Name;
         bool textChanged = view?.Text != _lastText;
-        bool caretChanged = (view?.Caret ?? -1) != _lastCaret;
+        var selection = view?.Selection ?? (-1, -1);
+        bool caretChanged = (view?.Caret ?? -1) != _lastCaret || selection != _lastSelection;
         bool structureChanged = _structureChanged;
         _lastFocus = focus;
         _lastFocusGeneration = Generation;
         _lastText = view?.Text;
         _lastCaret = view?.Caret ?? -1;
+        _lastSelection = selection;
         _structureChanged = false;
 
+        if (focusChanged && focus != NoFocus)
+            Observer?.Invoke("focus", focus == -1 ? view?.Name : Host.Controls[focus].Name);
         if (!UiaClientsAreListening()) return;
         if (structureChanged)
             RaiseStructureChanged();
@@ -366,6 +392,33 @@ internal sealed partial class LessonsAutomation : IDisposable
             Raise(_surface, TextChangedEventId);
         if (textChanged || caretChanged)
             Raise(_surface, TextSelectionChangedEventId);
+    }
+
+    /// <summary>Témoin des événements décidés (« focus », « notification ») et de leur texte, pour
+    /// les tests : sans client UIA à l'écoute, rien n'est réellement levé.</summary>
+    internal Action<string, string?>? Observer { get; set; }
+
+    /// <summary>
+    /// Fait dire une phrase au lecteur d'écran sans déplacer le focus (audit de régression du
+    /// 10/11, RA7 : la faute de frappe). La dernière annonce remplace celles en attente : seule
+    /// la faute la plus récente compte. Sans effet avant Windows 10 1709, où l'entrée n'existe pas.
+    /// </summary>
+    public void Notify(string text)
+    {
+        if (_disposed || string.IsNullOrEmpty(text)) return;
+        Observer?.Invoke("notification", text);
+        if (!UiaClientsAreListening() || Host.SurfaceView == null) return;
+        nint simple = Pointer(_surface, IidSimple);
+        nint display = Marshal.StringToBSTR(text);
+        nint activity = Marshal.StringToBSTR(TypingErrorActivityId);
+        try { UiaRaiseNotificationEvent(simple, NotificationKindActionAborted, NotificationProcessingImportantMostRecent, display, activity); }
+        catch (EntryPointNotFoundException) { }
+        finally
+        {
+            Marshal.FreeBSTR(display);
+            Marshal.FreeBSTR(activity);
+            Marshal.Release(simple);
+        }
     }
 
     private static void Raise(object provider, int eventId)
@@ -459,6 +512,15 @@ internal sealed partial class LessonsAutomation : IDisposable
 
     [DllImport("UIAutomationCore.dll")]
     private static extern int UiaRaiseAutomationEvent(nint provider, int eventId);
+
+    // NotificationKind_ActionAborted, NotificationProcessing_ImportantMostRecent (UIAutomationCore.h).
+    private const int NotificationKindActionAborted = 3;
+    private const int NotificationProcessingImportantMostRecent = 1;
+    internal const string TypingErrorActivityId = "LessonTypingError";
+
+    [DllImport("UIAutomationCore.dll")]
+    private static extern int UiaRaiseNotificationEvent(nint provider, int notificationKind, int notificationProcessing,
+        nint displayString, nint activityId);
 
     [DllImport("UIAutomationCore.dll")]
     private static extern int UiaRaiseStructureChangedEvent(nint provider, int structureChangeType, int[]? runtimeId, int runtimeIdLength);
@@ -675,7 +737,12 @@ internal sealed partial class LessonsAutomation : IDisposable
 
         public nint GetFragmentRoot() => Pointer(owner.Root, IidFragmentRoot);
 
-        public nint GetSelection() => SafeArray.Unknowns(CaretRange());
+        /// <summary>La sélection du champ (mode Libre), sinon le curseur seul.</summary>
+        public nint GetSelection()
+        {
+            var (start, end) = View.Selection;
+            return SafeArray.Unknowns(new TextRange(this, start, end));
+        }
 
         public nint GetVisibleRanges()
         {

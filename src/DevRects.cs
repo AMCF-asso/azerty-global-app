@@ -176,9 +176,13 @@ internal static class DevRects
         string? dir = null;
         try
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(request));
-            dir = doc.RootElement.GetProperty("dossier").GetString();
+            // CE-19 (K37) : la demande est retirée dès qu'elle est lue, avant d'être analysée.
+            // Supprimée après l'analyse, une demande illisible restait en place et était relue et
+            // journalisée toutes les 400 ms, sans réponse pour l'outil.
+            string text = File.ReadAllText(request);
             File.Delete(request);
+            using var doc = JsonDocument.Parse(text);
+            dir = doc.RootElement.GetProperty("dossier").GetString();
             // Écriture limitée au dossier d'échange de l'aperçu.
             string full = Path.GetFullPath(dir ?? "");
             if (!full.StartsWith(Root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))

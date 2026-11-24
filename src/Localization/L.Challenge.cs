@@ -11,9 +11,9 @@ internal static partial class L
         "Échauffement sur les caractères cibles, puis l’extrait du jour.",
         "Warm up on the target characters, then type today’s passage.");
     public static string Challenge_SequenceLessonTitle(int step, int total) =>
-        T($"Prise en main {step}/{total}", $"Getting started {step}/{total}");
+        T($"Découverte {step}/{total}", $"Introduction {step}/{total}"); // « Prise en main » est le parcours de l'accueil (QCM du 10/11, L14)
     public static string Challenge_DailyLessonTitle(DateOnly date) =>
-        T($"Défi du {FormatDate(date)}", $"Challenge for {FormatDate(date)}");
+        T($"Défi du {FormatDate(date)}", $"Challenge for {FormatDateCompact(date)}"); // mois abrégé en anglais : l'en-tête coupait le jour (QCM du 10/11, W24)
     public static string Challenge_WarmupInstruction => T(
         "Échauffement : tapez chaque caractère cinq fois.",
         "Warm-up: type each character five times.");
@@ -23,6 +23,12 @@ internal static partial class L
     public static string Challenge_ExtractInstructionCredited(string credit) => T(
         $"Tapez l’extrait du jour — d’après {credit}.",
         $"Type today’s passage — after {credit}.");
+
+    // Séance du jour déjà comptée (audit UX du 09/11, L10) : dit avant le mode de frappe, et dans
+    // le texte d'aide de la surface. Court : la ligne d'état tient sur une ligne (RA9 du 10/11).
+    public static string Challenge_AlreadyDone => T(
+        "Séance du jour déjà comptée.",
+        "Today’s session already counted.");
 
     // Rappel (balloon tray)
     public static string Challenge_ReminderTitle => T("Défi du jour", "Daily challenge");
@@ -63,6 +69,8 @@ internal static partial class L
     // Bouton du récapitulatif de fin de défi
     public static string Challenge_ShareButton => T("Copier mon résultat", "Copy my result");
     public static string Challenge_ShareButtonCopied => T("Copié ✓", "Copied ✓");
+    /// <summary>Le presse-papiers était tenu par une autre application : un nouveau clic réessaie.</summary>
+    public static string Challenge_ShareButtonFailed => T("Copie impossible, réessayer", "Copy failed, try again");
     public static string Challenge_ShareTooltip => T(
         "Copiez votre résultat du jour, prêt à coller dans une conversation.",
         "Copies today’s result, ready to paste into a conversation.");
@@ -70,7 +78,7 @@ internal static partial class L
     // ── Section « Défi du jour » dans Mes statistiques (v1.2.0) ──────
     public static string Challenge_StatsSectionTitle => T("Défi du jour", "Daily challenge");
     public static string Challenge_StatsSessionsLabel => T("Séances terminées", "Sessions completed");
-    public static string Challenge_StatsOnboardingLabel => T("Prise en main", "Getting started");
+    public static string Challenge_StatsOnboardingLabel => T("Découverte", "Introduction");
     public static string Challenge_StatsOnboardingDone => T("Terminée ✓", "Completed ✓");
     public static string Challenge_StatsLastSessionLabel => T("Dernière séance", "Last session");
     public static string Challenge_StatsNoSessionYet => "—";

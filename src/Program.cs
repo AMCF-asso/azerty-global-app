@@ -33,23 +33,67 @@ static class Program
                 $"Global\\{ProductIdentity.SingleInstanceMutexName}.{qualifier}");
     }
 
-    [STAThread]
-    static void Main()
+    internal enum SingleInstanceOutcome
     {
-        // Déclarer l'app DPI-aware AVANT toute création de fenêtre. app.manifest le déclare déjà :
-        // l'appel échoue alors sans lever (retour BOOL). Plus de repli Windows 8.1 (X-04, A-20).
-        Win32.SetProcessDpiAwarenessContext((IntPtr)(-4)); // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+        /// <summary>Premier lancement : les deux noms sont pris (ou le nom global est indisponible).</summary>
+        Winner,
+        /// <summary>Une instance de la MEME session tourne deja (y compris une instance elevee).</summary>
+        SecondInstance,
+        /// <summary>Une instance d'une AUTRE session du meme compte tourne deja.</summary>
+        OtherSession,
+    }
 
-        // Langue de l'UI : lue en tout premier, avant tout message affichable (mutex, erreurs fatales).
-        L.Language = ConfigManager.AppLanguage;
+    /// <summary>Cree ou ouvre le mutex nomme : rend le mutex et vrai s'il vient d'etre cree.</summary>
+    private static (Mutex Mutex, bool IsNew) CreateNamedMutex(string name)
+    {
+        var mutex = new Mutex(true, name, out bool isNew);
+        return (mutex, isNew);
+    }
 
-        // Empêcher les instances multiples — Audit sécu 2026-05 SEV-A2-03 :
-        // préfixe Local\ explicite + qualif SID pour éviter qu'un autre process
-        // user-land squatte le nom et bloque le démarrage (DoS trivial sans
-        // préfixe). Local\ scope = current session uniquement, donc safe.
-        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value;
-        var (localMutexName, globalMutexName) = BuildSingleInstanceMutexNames(sid);
-        using var mutex = new Mutex(true, localMutexName, out bool isNew);
+    /// <summary>
+    /// Prend les deux mutex d'instance unique et dit qui l'on est (ME-09, C4.1). Separee de
+    /// <c>Main</c> pour etre eprouvee sans creer de vrai mutex : la fabrique est remplacable.
+    ///
+    /// Le mutex <c>Local\</c> existe deja quand une instance ELEVEE tourne : son DACL est celui
+    /// du jeton eleve, et le lancement non eleve du meme compte ne peut pas l'ouvrir
+    /// (<see cref="UnauthorizedAccessException"/>). Ce refus est la preuve qu'une instance du
+    /// meme compte et de la meme session tourne : seconde instance, jamais un plantage.
+    /// L'appelant garde les deux mutex rendus (le possede jusqu'a la fin du processus) et
+    /// libere celui de <c>Global\</c> quand il refuse de demarrer.
+    /// </summary>
+    internal static SingleInstanceOutcome AcquireSingleInstance(
+        string localName, string globalName,
+        Func<string, (Mutex Mutex, bool IsNew)> createMutex,
+        Action<string, string> log,
+        out Mutex? localMutex, out Mutex? crossSessionMutex)
+    {
+        localMutex = null;
+        crossSessionMutex = null;
+        bool isNew;
+        try
+        {
+            (localMutex, isNew) = createMutex(localName);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // ME-09 (C4.1) : le mutex existe deja, cree par une instance ELEVEE (DACL du jeton
+            // eleve), et ce jeton non eleve n'a pas le droit de l'ouvrir. C'est la preuve qu'une
+            // instance du meme compte et de la meme session tourne deja : seconde instance.
+            log("SingleInstanceMutexDenied", ex.GetType().Name);
+            return SingleInstanceOutcome.SecondInstance;
+        }
+        catch (WaitHandleCannotBeOpenedException ex)
+        {
+            // CE-13 (K65) : le nom est pris par un objet d'un autre type (evenement, semaphore).
+            // Aucune instance d'AZERTY Global ne cree autre chose qu'un mutex sous ce nom : ce
+            // n'est donc pas la preuve d'une instance vivante. L'exception sortait de Main avant
+            // le gestionnaire d'erreur fatale : pas de demarrage, sans message. On demarre sans
+            // ce mutex, comme sans le mutex global ; celui-ci, s'il est pris, protege encore
+            // d'une seconde instance (elle se dit alors « autre session »).
+            log("SingleInstanceMutexNameTaken", ex.GetType().Name);
+            localMutex = null;
+            isNew = true;
+        }
 
         // AG130-11 (b) : le mutex ci-dessus ne porte que la session courante. Une
         // console et une session RDP du meme compte lancaient donc deux instances sur
@@ -63,22 +107,51 @@ static class Program
         // tous les comptes n'ont pas. Quand il manque, on retombe sur le comportement
         // d'avant plutot que d'empecher le demarrage : la protection est au mieux
         // possible, jamais un prerequis.
-        Mutex? crossSession = null;
         bool isNewCrossSession = true;
         try
         {
-            crossSession = new Mutex(true,
-                globalMutexName, out isNewCrossSession);
+            (crossSessionMutex, isNewCrossSession) = createMutex(globalName);
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or NotSupportedException)
+        // CE-13 (K66) : WaitHandleCannotBeOpenedException, nom pris par un objet d'un autre type,
+        // faisait planter le lancement ; meme repli que les autres refus.
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or NotSupportedException
+                                       or WaitHandleCannotBeOpenedException)
         {
-            ConfigManager.LogCompatEvent("CrossSessionMutexUnavailable", ex.GetType().Name);
+            log("CrossSessionMutexUnavailable", ex.GetType().Name);
         }
 
         // L'ordre compte : une seconde instance de la MEME session est une relance
         // d'activation Windows et meurt en silence sous MSIX ; une instance d'une AUTRE
         // session est un vrai conflit de fichiers et se dit, packagee ou non.
-        if (isNew && !isNewCrossSession)
+        if (isNew && !isNewCrossSession) return SingleInstanceOutcome.OtherSession;
+        return isNew ? SingleInstanceOutcome.Winner : SingleInstanceOutcome.SecondInstance;
+    }
+
+    [STAThread]
+    static void Main()
+    {
+        // Déclarer l'app DPI-aware AVANT toute création de fenêtre. app.manifest le déclare déjà :
+        // l'appel échoue alors sans lever (retour BOOL). Plus de repli Windows 8.1 (X-04, A-20).
+        Win32.SetProcessDpiAwarenessContext((IntPtr)(-4)); // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+
+        // Langue de l'UI : lue en tout premier, avant tout message affichable (mutex, erreurs fatales).
+        // ME-09 (C4.5) : lecture seule. Charger ConfigManager ici mettait config.json de cote avant
+        // de savoir si ce lancement gagne ; deux lancements simultanes sur un fichier corrompu se
+        // disputaient le renommage. Le gagnant charge et met de cote plus bas (premier acces de
+        // TrayApplication), la seconde instance ne touche pas aux fichiers.
+        L.Language = ConfigManager.AppLanguageWithoutLoading();
+
+        // Empêcher les instances multiples — Audit sécu 2026-05 SEV-A2-03 :
+        // préfixe Local\ explicite + qualif SID pour éviter qu'un autre process
+        // user-land squatte le nom et bloque le démarrage (DoS trivial sans
+        // préfixe). Local\ scope = current session uniquement, donc safe.
+        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value;
+        var (localMutexName, globalMutexName) = BuildSingleInstanceMutexNames(sid);
+        var outcome = AcquireSingleInstance(localMutexName, globalMutexName, CreateNamedMutex,
+            ConfigManager.LogCompatEvent, out var localMutex, out var crossSession);
+        using var mutex = localMutex;
+
+        if (outcome == SingleInstanceOutcome.OtherSession)
         {
             ConfigManager.LogCompatEvent("SecondSessionRefused", $"packaged={ConfigManager.IsPackaged}");
             Win32.MessageBoxW(IntPtr.Zero,
@@ -89,7 +162,7 @@ static class Program
         }
 
         using var crossSessionMutex = crossSession;
-        if (!isNew)
+        if (outcome == SingleInstanceOutcome.SecondInstance)
         {
             // Diagnostic (sert aussi à préparer l'activateur COM prévu en v1.2.0, cf. TO-DO
             // « Option 2 ») : trace uniquement la forme de l'activation. Les arguments
@@ -135,13 +208,12 @@ static class Program
         // Gestion des erreurs fatales (le handler ne peut pas empêcher la terminaison)
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
-            var logPath = Path.Combine(ConfigManager.LogDirectory, "error.log");
-            var safeMessage = ConfigManager.SanitizeException(e.ExceptionObject as Exception);
-            try { Directory.CreateDirectory(ConfigManager.LogDirectory); } catch { }
             try
             {
                 // Audit sécu 2026-05 SEV-A1-01 : sanitize au lieu de ex.ToString() complet.
-                File.AppendAllText(logPath, $"[{DateTime.Now:s}] FATAL: {safeMessage}\n");
+                // Audit des accès concurrents (T5) : sous le verrou du journal, après les lignes
+                // encore en file, qui mourraient sinon avec le processus.
+                ConfigManager.LogFatal(ConfigManager.SanitizeException(e.ExceptionObject as Exception));
             }
             catch { }
             Win32.MessageBoxW(IntPtr.Zero,
@@ -152,7 +224,9 @@ static class Program
         // Polices du site (refonte 1.3.0), privées au processus.
         AppFonts.EnsureLoaded();
 
-        using var app = new TrayApplication();
-        app.Run();
+        using (var app = new TrayApplication())
+            app.Run();
+        // Après la fermeture des fenêtres, qui libèrent leurs images GDI+ dans leur Dispose.
+        GdiPlus.Shutdown();
     }
 }

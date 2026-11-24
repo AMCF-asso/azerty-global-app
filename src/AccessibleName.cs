@@ -189,6 +189,42 @@ static class AccessibleName
         }
     }
 
+    /// <summary>Rôle MSAA « graphique » (ROLE_SYSTEM_GRAPHIC) : une image ou un affichage qui ne s'active pas.</summary>
+    internal const int RoleGraphic = 0x28;
+
+    /// <summary>
+    /// Pose le rôle MSAA du client de <paramref name="hwnd"/> (UI Automation le lit aussi). Sert à
+    /// un affichage peint à la main, que le proxy MSAA présente sinon comme un « client » anonyme
+    /// (audit 09/11, W22). Rend faux, sans lever, si COM ou oleacc refusent.
+    /// </summary>
+    public static bool TrySetRole(IntPtr hwnd, int role)
+    {
+        if (hwnd == IntPtr.Zero) return false;
+        IntPtr services = IntPtr.Zero;
+        try
+        {
+            Guid clsid = ClsidAccPropServices;
+            Guid iid = IidIAccPropServices;
+            if (CoCreateInstance(ref clsid, IntPtr.Zero, CLSCTX_INPROC_SERVER, ref iid, out services) != 0
+                || services == IntPtr.Zero)
+                return false;
+            var setHwndProp = Marshal.GetDelegateForFunctionPointer<SetHwndPropDelegate>(
+                VTableSlot(services, VT_SetHwndProp));
+            return setHwndProp(services, hwnd, OBJID_CLIENT, CHILDID_SELF, PropIdAccRole,
+                new Variant { Vt = VT_I4, IntVal = role }) == 0;
+        }
+        catch (Exception ex) when (ex is ExternalException or MarshalDirectiveException
+            or EntryPointNotFoundException or DllNotFoundException)
+        {
+            return false;
+        }
+        finally
+        {
+            if (services != IntPtr.Zero)
+                Marshal.GetDelegateForFunctionPointer<ReleaseDelegate>(VTableSlot(services, VT_Release))(services);
+        }
+    }
+
     private static IntPtr VTableSlot(IntPtr instance, int slot) =>
         Marshal.ReadIntPtr(Marshal.ReadIntPtr(instance), slot * IntPtr.Size);
 }

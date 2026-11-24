@@ -38,7 +38,7 @@ public class PaperKeyboardTargetTests
         try
         {
             PaperDraw.Fill(hdc, 0, 0, width + 20, height + 20, PaperTheme.Paper);
-            PaperKeyboard.Draw(hdc, placement, Disposition, mode, state);
+            PaperKeyboard.Draw(hdc, placement, Disposition, mode, state, fonts: null);
             // En bas à gauche : aucune légende de lettre ni nom de touche de fonction, centré.
             pixel = GetPixel(hdc, rect.left + 5, rect.bottom - 5);
         }

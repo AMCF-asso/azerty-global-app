@@ -223,8 +223,13 @@ sealed class VirtualKeyboard : IDisposable
     // Champs d'instance
     // ═══════════════════════════════════════════════════════════════
     private IntPtr _hWnd;
+    /// <summary>T5 (EW-15) : contraste élevé de la barre de titre posée.</summary>
+    private bool _frameHighContrast;
     private readonly Win32.WNDPROC _wndProcDelegate;
     private readonly Layout _layout;
+    /// <summary>Polices à l'échelle de la fenêtre, qui suit sa taille sans palier : détruites
+    /// quand l'échelle change et à la fermeture (audit des ressources, C2).</summary>
+    private readonly WindowFonts _fonts = new();
 
     private bool _visible;
     private IntPtr _preferredMonitorWindow;
@@ -288,6 +293,7 @@ sealed class VirtualKeyboard : IDisposable
     private static float PaintScale(int cw, int ch) => Math.Max(0.1f, Math.Min(cw / (float)DEFAULT_WIDTH, ch / (float)DEFAULT_HEIGHT));
 
     private static int Px(float value, float scale) => (int)Math.Round(value * scale);
+    private static int Px(float value, FontScale scale) => Px(value, scale.Value);
 
     /// <summary>Le cadre du clavier, sous le bandeau ; c'est aussi celui des zones de survol
     /// (<see cref="KeyboardRenderer.BuildHitTestRects(KeyboardPlacement)"/>).</summary>
@@ -342,8 +348,10 @@ sealed class VirtualKeyboard : IDisposable
             posX, posY, windowW, windowH,
             IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
         ApplyPaperFrame(_hWnd);
+        _frameHighContrast = HighContrast.IsOn();
 
         CreateTooltip();
+        PresentAsDisplay();
         ConfigManager.WindowBoundsCleared += OnWindowBoundsCleared;
         ConfigManager.AppLanguageChanged += OnAppLanguageChanged;
     }
@@ -488,62 +496,81 @@ sealed class VirtualKeyboard : IDisposable
         int windowH = Math.Max(1, winRect.bottom - winRect.top);
         var workArea = GetActiveMonitorWorkArea(_preferredMonitorWindow, _hWnd);
         _preferredMonitorWindow = IntPtr.Zero;
-        int posX = workArea.left + Math.Max(0, (workArea.right - workArea.left - windowW) / 2);
-        int posY = workArea.top + Math.Max(0, (workArea.bottom - workArea.top - windowH) / 2);
-        Win32.MoveWindow(_hWnd, posX, posY, windowW, windowH, false);
+
+        // A2 : la fenêtre naît à 854 × 368 px, sans échelle. Elle passe d'abord sur l'écran
+        // cible (sa taille actuelle, le temps que Windows lui donne le DPI de cet écran, et
+        // WM_DPICHANGED l'ajuste), puis reçoit la taille par défaut à CE DPI, calée dans la
+        // zone de travail à rapport de forme constant.
+        Win32.MoveWindow(_hWnd, workArea.left, workArea.top, windowW, windowH, false);
+        int dpi = NativeWindow.DpiOf(_hWnd);
+        var (outerW, outerH) = NativeWindow.OuterSize(
+            WindowSizing.ScaleForDpi(DEFAULT_WIDTH, dpi), WindowSizing.ScaleForDpi(DEFAULT_HEIGHT, dpi),
+            FrameStyle, FrameExStyle, dpi);
+        var (posX, posY) = NativeWindow.CenterIn(workArea, outerW, outerH);
+        var fitted = FitToWorkArea(new Win32.RECT
+        {
+            left = posX, top = posY, right = posX + outerW, bottom = posY + outerH
+        });
+        Win32.MoveWindow(_hWnd, fitted.left, fitted.top,
+            fitted.right - fitted.left, fitted.bottom - fitted.top, false);
     }
+
+    private const uint FrameStyle = Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU;
+    private const uint FrameExStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
 
     private bool TryRestoreSavedBounds()
     {
         if (_hWnd == IntPtr.Zero) return false;
         if (!ConfigManager.TryGetWindowBounds(ConfigManager.VirtualKeyboardBoundsKey, out var rect))
             return false;
-        if (!IsRectVisibleOnScreen(rect))
+        if (!NativeWindow.IsRectVisibleOnScreen(rect))
             return false;
 
+        // T6 (EW-17) : la place mémorisée peut venir d'un écran plus grand : ramenée dans la
+        // zone de travail, réduite au besoin en gardant les proportions.
+        rect = FitToWorkArea(rect);
         Win32.MoveWindow(_hWnd, rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top, false);
         return true;
     }
 
-    private static bool IsRectVisibleOnScreen(Win32.RECT rect)
-    {
-        int width = rect.right - rect.left;
-        int height = rect.bottom - rect.top;
-        if (width < 100 || height < 80) return false;
-
-        var center = new Win32.POINT
-        {
-            x = rect.left + width / 2,
-            y = rect.top + height / 2
-        };
-        var monitor = Win32.MonitorFromPoint(center, 0);
-        if (monitor == IntPtr.Zero) return false;
-
-        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
-        if (!Win32.GetMonitorInfo(monitor, ref info)) return false;
-
-        var work = info.rcWork;
-        return rect.right > work.left + 40 &&
-               rect.left < work.right - 40 &&
-               rect.bottom > work.top + 40 &&
-               rect.top < work.bottom - 40;
-    }
-
     private void SaveWindowBounds()
     {
         if (_hWnd == IntPtr.Zero) return;
-        if (Win32.GetWindowRect(_hWnd, out var rect) && IsRectVisibleOnScreen(rect))
+        if (Win32.GetWindowRect(_hWnd, out var rect) && NativeWindow.IsRectVisibleOnScreen(rect))
             ConfigManager.SetWindowBounds(ConfigManager.VirtualKeyboardBoundsKey, rect);
     }
 
     // Les libellés dessinés (Entrée, Verr. Maj., Maj, Espace) suivent la langue de
     // l'interface : redessiner dès qu'elle change, et réécrire l'infobulle au prochain survol.
+    private const int IDC_ARROW = 32512;
+    private const int HTCLIENT = 1;
+
+    /// <summary>W22 : la zone client du clavier montre la flèche (c'est un affichage).</summary>
+    internal static bool ShowsArrowCursor(int hitTest) => hitTest == HTCLIENT;
+
+    /// <summary>
+    /// W22 : le clavier virtuel se présente comme un affichage, pas comme un clavier à cliquer. Un
+    /// lecteur d'écran lit un graphique nommé, décrit « Affichage seul », jamais un bouton ; la fenêtre
+    /// ne prend pas le focus (WS_EX_NOACTIVATE), n'a pas de survol qui s'active, et seul le survol
+    /// d'une touche montre le nom de son caractère.
+    /// </summary>
+    private void PresentAsDisplay()
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        AccessibleName.TrySetRole(_hWnd, AccessibleName.RoleGraphic);
+        AccessibleName.TrySet(_hWnd, L.VirtualKeyboardPaper_Title);
+        AccessibleName.TrySetDescription(_hWnd, L.VirtualKeyboardPaper_Description);
+    }
+
     private void OnAppLanguageChanged(string _)
     {
         _hoveredKeyIndex = -1;
         if (_hWnd != IntPtr.Zero)
+        {
             Win32.SetWindowTextW(_hWnd, WindowTitle);
+            PresentAsDisplay();
+        }
         if (_visible && _hWnd != IntPtr.Zero)
             Invalidate();
     }
@@ -727,6 +754,13 @@ sealed class VirtualKeyboard : IDisposable
     {
         try
         {
+        // T5 (EW-15) : contraste élevé activé ou coupé, clavier affiché : la barre de titre suit.
+        if (NativeWindow.IsThemeChange(msg))
+            NativeWindow.RefreshFrame(hWnd, ref _frameHighContrast);
+        // T6 (EW-18) : écran débranché, définition ou zone de travail changée : le clavier,
+        // affiché ou caché, revient dans la zone de travail, proportions gardées.
+        if (NativeWindow.IsDisplayChange(msg, wParam))
+            KeepInWorkArea();
         switch (msg)
         {
             case Win32.WM_PAINT:
@@ -772,6 +806,16 @@ sealed class VirtualKeyboard : IDisposable
                 OnMouseMove(lParam);
                 return IntPtr.Zero;
 
+            case Win32.WM_SETCURSOR:
+                // W22 : un affichage, jamais un bouton. La flèche, jamais la main, sur toute la zone
+                // client (les bords de redimensionnement gardent les curseurs de Windows).
+                if (ShowsArrowCursor((int)(lParam.ToInt64() & 0xFFFF)))
+                {
+                    Win32.SetCursor(Win32.LoadCursorW(IntPtr.Zero, (IntPtr)IDC_ARROW));
+                    return (IntPtr)1;
+                }
+                break;
+
             case Win32.WM_MOUSELEAVE:
                 _trackingMouse = false;
                 if (_hoveredKeyIndex != -1)
@@ -802,12 +846,13 @@ sealed class VirtualKeyboard : IDisposable
             case Win32.WM_GETMINMAXINFO:
                 if (lParam != IntPtr.Zero)
                 {
-                    // Convertir les tailles client min en tailles fenêtre
-                    var minRect = new Win32.RECT { left = 0, top = 0, right = MIN_WIDTH, bottom = MIN_HEIGHT };
-                    Win32.AdjustWindowRectEx(ref minRect, Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU,
-                        false, Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE);
+                    // Convertir les tailles client min (96 DPI) en tailles fenêtre, au DPI de l'écran
+                    int minDpi = NativeWindow.DpiOf(hWnd);
+                    var (minW, minH) = NativeWindow.OuterSize(
+                        WindowSizing.ScaleForDpi(MIN_WIDTH, minDpi), WindowSizing.ScaleForDpi(MIN_HEIGHT, minDpi),
+                        FrameStyle, FrameExStyle, minDpi);
                     var mmi = Marshal.PtrToStructure<Win32.MINMAXINFO>(lParam);
-                    mmi.ptMinTrackSize = new Win32.POINT { x = minRect.right - minRect.left, y = minRect.bottom - minRect.top };
+                    mmi.ptMinTrackSize = new Win32.POINT { x = minW, y = minH };
                     Marshal.StructureToPtr(mmi, lParam, false);
                 }
                 return IntPtr.Zero;
@@ -823,12 +868,23 @@ sealed class VirtualKeyboard : IDisposable
 
     /// <summary>Le rectangle suggéré par un changement de DPI, ramené à la zone de travail à
     /// rapport de forme constant (<see cref="WindowSizing.FitOuterKeepingRatio"/>) et calé dedans.</summary>
+    /// <summary>T6 (EW-18) : replace le clavier dans la zone de travail de son écran.</summary>
+    private void KeepInWorkArea()
+    {
+        if (!NativeWindow.IsPlacedFreely(_hWnd) || !Win32.GetWindowRect(_hWnd, out var current)) return;
+        var fitted = FitToWorkArea(current);
+        if (fitted.left != current.left || fitted.top != current.top ||
+            fitted.right != current.right || fitted.bottom != current.bottom)
+            Win32.MoveWindow(_hWnd, fitted.left, fitted.top,
+                fitted.right - fitted.left, fitted.bottom - fitted.top, true);
+    }
+
+    /// <summary>Le rectangle tenu dans la zone de travail de l'écran où il tombe (T6 : celui
+    /// d'arrivée, pas celui que la fenêtre quitte), proportions gardées.</summary>
     private Win32.RECT FitToWorkArea(Win32.RECT suggested)
     {
-        const uint style = Win32.WS_POPUP | Win32.WS_THICKFRAME | Win32.WS_CAPTION | Win32.WS_SYSMENU;
-        const uint exStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
-        var work = NativeWindow.WorkArea(_hWnd);
-        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, style, exStyle);
+        var work = NativeWindow.WorkAreaOf(suggested);
+        var (frameW, frameH) = NativeWindow.NonClientSize(_hWnd, FrameStyle, FrameExStyle);
         var (w, h) = WindowSizing.FitOuterKeepingRatio(suggested.right - suggested.left,
             suggested.bottom - suggested.top, frameW, frameH, work.right - work.left, work.bottom - work.top);
         int x = Math.Max(work.left, Math.Min(suggested.left, work.right - w));
@@ -931,12 +987,12 @@ sealed class VirtualKeyboard : IDisposable
     /// <summary>Dessine le bandeau d'état et le clavier en couche active dans le DC mémoire.</summary>
     private void PaintContent(IntPtr hdc, ref Win32.RECT clientRect, int cw, int ch)
     {
-        float s = PaintScale(cw, ch);
+        var s = _fonts.At(PaintScale(cw, ch));
         PaperDraw.Fill(hdc, clientRect, PaperTheme.Paper);
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
 
         var layout = ShortcutHeld ? BlankLayout : _layout;
-        PaperKeyboard.Draw(hdc, KeyboardPlacementFor(cw, ch), layout, PaperKeyboardMode.ActiveLayer, BuildKeyboardState());
+        PaperKeyboard.Draw(hdc, KeyboardPlacementFor(cw, ch), layout, PaperKeyboardMode.ActiveLayer, BuildKeyboardState(), s.Owner);
 
         DrawBanner(hdc, cw, s);
     }
@@ -1009,7 +1065,7 @@ sealed class VirtualKeyboard : IDisposable
     /// recherche), à droite la phrase qui dit ce que montre le clavier. La maquette le fait
     /// haut de 64 px, 78 avec la portée d'un geste ; la fenêtre garde 78 pour que le clavier ne
     /// saute pas, et l'état seul se pose en bas, contre le clavier, comme sur la maquette.</summary>
-    private void DrawBanner(IntPtr hdc, int cw, float s)
+    private void DrawBanner(IntPtr hdc, int cw, FontScale s)
     {
         int bottom = Px(MockBannerHeight - MockBannerPadBottom, s);
         int fullTop = Px(MockBannerPadTop, s);
@@ -1060,7 +1116,7 @@ sealed class VirtualKeyboard : IDisposable
 
     /// <summary>La portée d'état : lignes Maj et AltGr, le trait épais quand on tient. Rend
     /// son bord droit.</summary>
-    private int DrawHeldStaff(IntPtr hdc, int left, int top, float s)
+    private int DrawHeldStaff(IntPtr hdc, int left, int top, FontScale s)
     {
         var labelFont = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, s);
         int labelWidth = Px(MockStaffLabel, s);
@@ -1122,7 +1178,7 @@ sealed class VirtualKeyboard : IDisposable
         }
         var held = new List<string>(2);
         if (_shiftDown) held.Add(shiftName);
-        if (_altGrDown) held.Add("AltGr");
+        if (_altGrDown) held.Add(L.AltGrKey);
         if (held.Count > 0)
         {
             for (int i = 0; i < held.Count; i++)
@@ -1143,7 +1199,7 @@ sealed class VirtualKeyboard : IDisposable
         runs.Add(new TextRun(L.VirtualKeyboardPaper_IdleLead));
         runs.Add(new TextRun(shiftName, true));
         runs.Add(new TextRun(L.VirtualKeyboardPaper_Or));
-        runs.Add(new TextRun("AltGr", true));
+        runs.Add(new TextRun(L.AltGrKey, true));
         runs.Add(new TextRun(L.VirtualKeyboardPaper_IdleTail));
         return runs;
     }
@@ -1189,7 +1245,7 @@ sealed class VirtualKeyboard : IDisposable
         {
             // Autre touche morte → masquer, sauf la touche morte active :
             // double-pression = GetIsolated() → caractère A, puis Apply(A) → caractère B
-            if (output.StartsWith("dk_"))
+            if (output.StartsWith("dk_", StringComparison.Ordinal))
             {
                 if (output == _activeDeadKey && _layout.DeadKeys.TryGetValue(_activeDeadKey, out var selfDk))
                 {
@@ -1261,11 +1317,11 @@ sealed class VirtualKeyboard : IDisposable
             if (hitIndex >= 0 && !_visualKeys[hitIndex].IsContextual)
             {
                 string? ch2 = GetDisplayChar(_visualKeys[hitIndex].Scancode);
-                if (ch2 != null && !ch2.StartsWith("dk_") && CharacterIndex.Shared.Names.TryGetValue(ch2, out var name))
+                if (ch2 != null && !ch2.StartsWith("dk_", StringComparison.Ordinal) && CharacterIndex.Shared.Names.TryGetValue(ch2, out var name))
                     UpdateTooltipText(L.IsEnglish
                         ? (name.En.Length > 0 ? name.En : name.Fr)
                         : (name.Fr.Length > 0 ? name.Fr : name.En));
-                else if (ch2 != null && ch2.StartsWith("dk_"))
+                else if (ch2 != null && ch2.StartsWith("dk_", StringComparison.Ordinal))
                 {
                     UpdateTooltipText(GetDeadKeyDisplayName(ch2));
                 }
@@ -1298,5 +1354,6 @@ sealed class VirtualKeyboard : IDisposable
         }
 
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("VK"));
+        _fonts.Dispose(); // après la fenêtre : plus aucun DC ne les tient
     }
 }

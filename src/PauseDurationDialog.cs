@@ -35,7 +35,11 @@ sealed class PauseDurationDialog : IDisposable
     // Zone client de référence, à 96 DPI.
     private const int BASE_CLIENT_W = 330;
     private const int BASE_CLIENT_H = 174;
-    private const int SPIN_W = 18;
+    // A9 : cible de pointage d'au moins 24 px (WCAG 2.5.8). Le contrôle Up-down s'imposait sa
+    // largeur système (18 px) quand il s'accrochait au bord de son champ (UDS_ALIGNRIGHT) :
+    // il est donc posé à côté du champ, à sa propre largeur, et suit la mise à l'échelle.
+    internal const int SPIN_W = 24;
+    private const int EDIT_W = 36;
     private const uint Style = Win32.WS_OVERLAPPED | Win32.WS_CAPTION | Win32.WS_SYSMENU;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
@@ -57,7 +61,7 @@ sealed class PauseDurationDialog : IDisposable
     private IntPtr _hBgBrush;
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
     // création, comme l'accueil). Les champs prennent la surface blanche du papier.
-    private readonly PaperPalette _pal = PaperPalette.Now();
+    private PaperPalette _pal = PaperPalette.Now(); // T5 : relue sur WM_SETTINGCHANGE
     private IntPtr _hFieldBrush;
     // D1 (accessibilité 1.3.0) : DPI de l'écran de la fenêtre, et géométrie de référence à
     // 96 DPI de chaque contrôle, remise à l'échelle sur WM_DPICHANGED.
@@ -65,6 +69,7 @@ sealed class PauseDurationDialog : IDisposable
     private readonly ControlLayout _layout = new(redrawOnFont: false);
     private Action<string>? _onAppLanguageChanged;
     private bool _durationValid = true;
+    private bool _fieldBusy; // garde contre la réentrée d'EN_CHANGE quand Sanitize réécrit le champ
     private bool _done;
     private TimeSpan? _result;
 
@@ -199,10 +204,6 @@ sealed class PauseDurationDialog : IDisposable
         _hFontStrong = CreateScaledFont(TypeRamp.Semibold);
         _layout.Apply(_dpi, _hFont);
         Win32.SendMessageW(_hResume, Win32.WM_SETFONT, _hFontStrong, (IntPtr)1);
-        // Les champs reprennent leur largeur pleine : chaque Up-down, remis à sa largeur au
-        // nouveau DPI, se recolle à droite et raccourcit son champ d'autant.
-        AttachSpin(_hSpinHours, _hEditHours);
-        AttachSpin(_hSpinMinutes, _hEditMinutes);
         if (oldFont != IntPtr.Zero) Win32.DeleteObject(oldFont);
         if (oldStrong != IntPtr.Zero) Win32.DeleteObject(oldStrong);
     }
@@ -225,12 +226,12 @@ sealed class PauseDurationDialog : IDisposable
             _hChips[i] = CreateChip(hInstance, IDC_CHIP_FIRST + i, L.Pause_QuickChip(QuickMinutes[i]),
                 15 + i * 74, 11, 74, 34, first: i == 0);
         _hLabel = CreateStatic(hInstance, L.Pause_Label, 18, 59, 104, 22, WS_GROUP);
-        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 126, 54, 50, 28);
-        _hSpinHours = CreateSpin(hInstance, _hEditHours, MaxHours, 1);
-        _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 180, 59, 20, 22);
-        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(), 204, 54, 50, 28);
-        _hSpinMinutes = CreateSpin(hInstance, _hEditMinutes, MaxMinutes, MinutesStep);
-        _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 258, 59, 44, 22);
+        _hEditHours = CreateEdit(hInstance, IDC_EDIT_HOURS, "0", 126, 54, EDIT_W, 28);
+        _hSpinHours = CreateSpin(hInstance, _hEditHours, MaxHours, 1, 126 + EDIT_W, 54, 28);
+        _hHours = CreateStatic(hInstance, L.Pause_UnitHours, 190, 59, 20, 22);
+        _hEditMinutes = CreateEdit(hInstance, IDC_EDIT_MINUTES, DefaultMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture), 214, 54, EDIT_W, 28);
+        _hSpinMinutes = CreateSpin(hInstance, _hEditMinutes, MaxMinutes, MinutesStep, 214 + EDIT_W, 54, 28);
+        _hMinutes = CreateStatic(hInstance, L.Pause_UnitMinutes, 278, 59, 38, 22);
         _hResume = CreateStatic(hInstance, string.Empty, 18, 96, 294, 22);
         Win32.SendMessageW(_hResume, Win32.WM_SETFONT, _hFontStrong, (IntPtr)1);
 
@@ -277,8 +278,7 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
-        if (!_pal.HighContrast)
-            ChipButton.Attach(hwnd, _pal);
+        ChipButton.Attach(hwnd); // T5 : en contraste élevé, le dessin du système, décidé au dessin
         return hwnd;
     }
 
@@ -290,24 +290,30 @@ sealed class PauseDurationDialog : IDisposable
             S(x), S(y), S(w), S(h), _hWnd, (IntPtr)id, hInstance, IntPtr.Zero);
         _layout.Track(hwnd, x, y, w, h);
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
+        NumericField.Limit(hwnd, 2); // 0 à 23 h, 0 à 59 min : le collage est tronqué lui aussi (E28)
         return hwnd;
     }
 
     /// <summary>Flèches Windows d'un champ : bornes 0..<paramref name="max"/>, pas de
     /// <paramref name="step"/>, flèches du clavier, texte du champ tenu à jour par le
     /// contrôle lui-même (UDS_SETBUDDYINT).</summary>
-    private IntPtr CreateSpin(IntPtr hInstance, IntPtr buddy, int max, uint step)
+    private IntPtr CreateSpin(IntPtr hInstance, IntPtr buddy, int max, uint step, int x, int y, int h)
     {
+        // Sans UDS_ALIGNRIGHT : le contrôle garde la position et la largeur qu'on lui donne.
         var hwnd = Win32.CreateWindowExW(0, Win32.UPDOWN_CLASS, string.Empty,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.UDS_SETBUDDYINT | Win32.UDS_ALIGNRIGHT |
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.UDS_SETBUDDYINT |
             Win32.UDS_ARROWKEYS | Win32.UDS_NOTHOUSANDS | Win32.UDS_HOTTRACK,
-            0, 0, S(SPIN_W), 0, _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
+            S(x), S(y), S(SPIN_W), S(h), _hWnd, IntPtr.Zero, hInstance, IntPtr.Zero);
         if (hwnd == IntPtr.Zero)
             return hwnd;
+        _layout.Track(hwnd, x, y, SPIN_W, h);
 
         Win32.SendMessageW(hwnd, Win32.UDM_SETRANGE32, IntPtr.Zero, (IntPtr)max);
         Win32.SendMessageW(hwnd, Win32.UDM_SETBUDDY, buddy, IntPtr.Zero);
         Win32.SendMessageW(hwnd, Win32.UDM_SETPOS32, IntPtr.Zero, (IntPtr)ReadInt(buddy));
+        // Le contrôle reprend sa largeur système (17-18 px) à la création et à l'accrochage
+        // au champ : on la rétablit en dernier, c'est elle que la main vise (A9, ≥ 24 px).
+        Win32.MoveWindow(hwnd, S(x), S(y), S(SPIN_W), S(h), true);
 
         var accel = new Win32.UDACCEL { nSec = 0, nInc = step };
         IntPtr pAccel = System.Runtime.InteropServices.Marshal.AllocHGlobal(
@@ -321,13 +327,6 @@ sealed class PauseDurationDialog : IDisposable
         return hwnd;
     }
 
-    private void AttachSpin(IntPtr spin, IntPtr buddy)
-    {
-        if (spin == IntPtr.Zero) return;
-        Win32.MoveWindow(spin, 0, 0, S(SPIN_W), 0, false);
-        Win32.SendMessageW(spin, Win32.UDM_SETBUDDY, buddy, IntPtr.Zero);
-    }
-
     private IntPtr CreateButton(IntPtr hInstance, int id, string text, int x, int y, int w, int h, uint style)
     {
         var hwnd = Win32.CreateWindowExW(0, "BUTTON", text,
@@ -337,15 +336,41 @@ sealed class PauseDurationDialog : IDisposable
         Win32.SendMessageW(hwnd, Win32.WM_SETFONT, _hFont, (IntPtr)1);
         // Audit UX 1.3.0, #3 : « Confirmer » porte l'accent. A9 : boutons papier ; en
         // contraste élevé, le dessin du système.
-        if (!_pal.HighContrast)
-            LightButton.Attach(hwnd, paper: true);
+        LightButton.Attach(hwnd, paper: true); // T5 : idem
         return hwnd;
+    }
+
+    /// <summary>N3 : Entrée annule quand le focus est sur « Annuler », confirme sinon.</summary>
+    internal static bool EnterCancels(IntPtr focused, IntPtr cancelButton) =>
+        cancelButton != IntPtr.Zero &&
+        DialogNavigation.ButtonToPressOnEnter(DialogNavigation.IDOK, focused, new[] { cancelButton }) == cancelButton;
+
+    /// <summary>
+    /// T5 (EW-15) : relit la palette (contraste élevé activé ou coupé fenêtre ouverte) ;
+    /// fond, pinceaux, barre de titre et contrôles suivent. Rien quand elle n'a pas changé.
+    /// </summary>
+    private void RefreshPalette()
+    {
+        if (_hWnd == IntPtr.Zero || !NativeWindow.RefreshPalette(_hWnd, ref _pal))
+            return;
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        IntPtr oldField = _hFieldBrush;
+        _hFieldBrush = Win32.CreateSolidBrush(_pal.Surface);
+        if (oldField != IntPtr.Zero) Win32.DeleteObject(oldField);
+        NativeWindow.RepaintAll(_hWnd);
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
         {
+            // T5 (EW-15) : contraste élevé ou couleurs du système changés, fenêtre ouverte.
+            if (NativeWindow.IsThemeChange(msg))
+                RefreshPalette();
+            // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+            // affichée ou cachée, revient dans la zone de travail de son écran.
+            if (NativeWindow.IsDisplayChange(msg, wParam))
+                NativeWindow.KeepInWorkArea(hWnd);
             switch (msg)
             {
                 case Win32.WM_COMMAND:
@@ -354,7 +379,12 @@ sealed class PauseDurationDialog : IDisposable
                     int code = (wParam.ToInt32() >> 16) & 0xFFFF;
                     if (id == IDOK)
                     {
-                        ValidateAndClose();
+                        // N3 : IsDialogMessageW envoie IDOK quoi qu'il arrive. Entrée sur
+                        // « Annuler » annule ; partout ailleurs elle confirme, comme avant.
+                        if (EnterCancels(Win32.GetFocus(), _hBtnCancel))
+                            Close(null);
+                        else
+                            ValidateAndClose();
                         return IntPtr.Zero;
                     }
                     if (id == IDCANCEL)
@@ -369,7 +399,7 @@ sealed class PauseDurationDialog : IDisposable
                     }
                     if ((id == IDC_EDIT_HOURS || id == IDC_EDIT_MINUTES) && code == Win32.EN_CHANGE)
                     {
-                        UpdateResumeLine();
+                        OnFieldChanged(lParam);
                         return IntPtr.Zero;
                     }
                     break;
@@ -460,6 +490,17 @@ sealed class PauseDurationDialog : IDisposable
 
     private TimeSpan? CurrentDuration() => ParseDuration(ReadInt(_hEditHours), ReadInt(_hEditMinutes));
 
+    /// <summary>Frappe ou collage dans un champ d'heures ou de minutes : le texte garde ses chiffres
+    /// (audit 09/11, E28 ; <c>ES_NUMBER</c> ne filtre que la frappe), puis la reprise suit.</summary>
+    private void OnFieldChanged(IntPtr edit)
+    {
+        if (_fieldBusy) return;
+        _fieldBusy = true;
+        try { NumericField.Sanitize(edit); }
+        finally { _fieldBusy = false; }
+        UpdateResumeLine();
+    }
+
     private void UpdateResumeLine()
     {
         if (_hResume == IntPtr.Zero || _hBtnOk == IntPtr.Zero)
@@ -467,8 +508,11 @@ sealed class PauseDurationDialog : IDisposable
         TimeSpan? duration = CurrentDuration();
         _durationValid = duration.HasValue;
         DateTime now = Clock();
+        // Audit temps et horloge du 17/11, TH-05 : la pause finit à UtcNow + durée ; « now + d »
+        // en heure locale naïve affichait une heure d'écart quand la pause chevauche un
+        // changement d'heure. Même calcul que le menu de la zone de notification.
         Win32.SetWindowTextW(_hResume, duration is { } d
-            ? L.Pause_Resumes(PauseSchedule.DescribeResume(now, now + d))
+            ? L.Pause_Resumes(PauseSchedule.DescribeResume(now, (new DateTimeOffset(now).ToUniversalTime() + d).LocalDateTime))
             : L.Pause_InvalidDuration);
         Win32.InvalidateRect(_hResume, IntPtr.Zero, true);
         Win32.EnableWindow(_hBtnOk, _durationValid);
@@ -491,8 +535,8 @@ sealed class PauseDurationDialog : IDisposable
     /// <summary>Une pastille remplit les deux champs : la ligne de reprise suit (EN_CHANGE).</summary>
     private void SetDuration(int totalMinutes)
     {
-        Win32.SetWindowTextW(_hEditHours, (totalMinutes / 60).ToString());
-        Win32.SetWindowTextW(_hEditMinutes, (totalMinutes % 60).ToString());
+        Win32.SetWindowTextW(_hEditHours, (totalMinutes / 60).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Win32.SetWindowTextW(_hEditMinutes, (totalMinutes % 60).ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private void ValidateAndClose()
@@ -505,14 +549,14 @@ sealed class PauseDurationDialog : IDisposable
     private static void Step(IntPtr edit, int delta, int max)
     {
         int value = Math.Clamp(ReadInt(edit) + delta, 0, max);
-        Win32.SetWindowTextW(edit, value.ToString());
+        Win32.SetWindowTextW(edit, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private static int ReadInt(IntPtr hwnd)
     {
         var sb = new StringBuilder(16);
         Win32.GetWindowTextW(hwnd, sb, sb.Capacity);
-        return int.TryParse(sb.ToString(), out int value) ? value : 0;
+        return int.TryParse(sb.ToString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value) ? value : 0;
     }
 
     private void Close(TimeSpan? result)

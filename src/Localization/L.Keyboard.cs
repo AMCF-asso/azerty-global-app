@@ -13,7 +13,7 @@ internal static partial class L
     public static string Keyboard_TooltipCtrl => T("Contrôle (Ctrl)", "Control (Ctrl)");
     public static string Keyboard_TooltipWin => T("Touche Windows", "Windows key");
     public static string Keyboard_TooltipAlt => "Alt";
-    public static string Keyboard_TooltipAltGr => T("Alt droite (AltGr)", "Right Alt (AltGr)");
+    public static string Keyboard_TooltipAltGr => T($"Alt droite ({AltGrKey})", $"Right Alt ({AltGrKey})");
     public static string Keyboard_TooltipMenu => T("Menu contextuel", "Context menu");
 
     // ── Texte dessiné sur les touches ──
@@ -26,15 +26,22 @@ internal static partial class L
         "Verr. Maj." => T("Verr. Maj.", "Caps Lock"),
         "Maj ⇧" => T("Maj ⇧", "Shift ⇧"),
         "Espace" => T("Espace", "Space"),
+        "AltGr" => AltGrKey,
         _ => internalLabel,
     };
 
+    /// <summary>Nom affiché de la touche Alt Gr, le même en français et en anglais (décision
+    /// d'Antoine du 09/11/2026) : espace insécable, jamais coupé en fin de ligne. Tout texte
+    /// affiché passe par ici ; l'identifiant interne (couche, libellé de VisualKey,
+    /// character-index.json) reste « AltGr ».</summary>
+    public const string AltGrKey = "Alt\u00A0Gr";
+
     // ── Libellés de couche dans le tooltip d'une touche (Base : x — NOM) ──
     public static string Keyboard_LayerShift => T("Maj", "Shift");
-    public static string Keyboard_LayerShiftAltGr => T("Maj+AltGr", "Shift+AltGr");
+    public static string Keyboard_LayerShiftAltGr => T($"Maj + {AltGrKey}", $"Shift + {AltGrKey}");
 
     public static string Keyboard_DeadKeyConnector => T(" — touche morte ", " — dead key ");
-    public static string Keyboard_ActiveDeadKeyStatus(string name) => T($"Touche morte active : {name}", $"Active dead key: {name}");
+    public static string Keyboard_ActiveDeadKeyStatus(string name) => T($"Touche morte active : {name} (attend la lettre suivante)", $"Active dead key: {name} (waiting for the next letter)");
 
     // ── Marqueurs de caractères invisibles ────────────────────────────
     public static string Keyboard_NarrowNbsp => T("esp. ins. fine", "narrow NBSP");

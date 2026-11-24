@@ -13,7 +13,7 @@ public class StatsPolicyHintTests
     [Theory]
     [InlineData(null, "Amcf", true)]
     [InlineData(null, "Store", false)]
-    [InlineData(null, "Unpackaged", false)]
+    [InlineData(null, "Unpackaged", true)]
     [InlineData(false, "Amcf", false)]
     [InlineData(false, "Store", false)]
     [InlineData(true, "Amcf", false)]
@@ -23,29 +23,39 @@ public class StatsPolicyHintTests
             PolicyManager.ShowsCollectionPolicyHint(politique, Enum.Parse<DistributionChannel>(canal)));
 
     /// <summary>La fenêtre réserve la place de la ligne, comme pour le Défi : sans elle, la
-    /// ligne passerait sous les liens du bas.</summary>
+    /// ligne passerait sous les liens du bas. Depuis A1 (candidat 1.3.0), la hauteur suit le
+    /// texte mesuré au lieu d'un +40 px fixe : sur Amcf le texte descend plus bas que sur le
+    /// Store, et dans les deux cas les liens restent sous lui. La fenêtre ne rétrécit jamais.</summary>
     [Fact]
     public void Fenêtre_RéserveLaLigneSurAmcf()
     {
         using var isolation = new BancCapture.Isolation();
-        int store = HauteurCliente(out float échelle);
-        int amcf;
+        var store = Mesure();
+        (int TextBottom, int LinkTop, int ClientBottom) amcf;
         using (AppChannel.OverrideForTests(DistributionChannel.Amcf))
-            amcf = HauteurCliente(out _);
+            amcf = Mesure();
 
-        int attendu = (int)(40 * échelle);
-        Assert.InRange(amcf - store, attendu - 1, attendu + 1);
+        Assert.True(amcf.TextBottom > store.TextBottom,
+            $"la ligne de stratégie de groupe ajoute du texte : Amcf {amcf.TextBottom}, Store {store.TextBottom}");
+        Assert.True(store.LinkTop >= store.TextBottom, $"Store : liens à {store.LinkTop}, texte jusqu'à {store.TextBottom}");
+        Assert.True(amcf.LinkTop >= amcf.TextBottom, $"Amcf : liens à {amcf.LinkTop}, texte jusqu'à {amcf.TextBottom}");
+        Assert.True(amcf.ClientBottom >= store.ClientBottom);
     }
 
-    private static int HauteurCliente(out float échelle)
+    /// <summary>Bas du texte mesuré, haut des liens et bas de la zone cliente, en pixels cliente.</summary>
+    private static (int TextBottom, int LinkTop, int ClientBottom) Mesure()
     {
         var window = new UsageStatsWindow();
         try
         {
             window.Show();
-            échelle = BancCapture.Field<float>(window, "_dpiScale");
-            Win32.GetClientRect(BancCapture.Handle(window), out var client);
-            return client.bottom;
+            IntPtr hWnd = BancCapture.Handle(window);
+            Win32.GetClientRect(hWnd, out var client);
+            int textBottom = (int)BancCapture.Call(window, "MeasureTextBottom", client.right)!;
+            Win32.GetWindowRect(BancCapture.Field<IntPtr>(window, "_hWndLinkFeedback"), out var link);
+            var origin = new Win32.POINT { x = 0, y = 0 };
+            Win32.ClientToScreen(hWnd, ref origin);
+            return (textBottom, link.top - origin.y, client.bottom);
         }
         finally
         {

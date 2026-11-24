@@ -26,7 +26,7 @@ sealed class AboutWindow : IDisposable
     // ── Couleurs ────────────────────────────────────────────────────
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
     // création, comme l'accueil).
-    private readonly PaperPalette _pal = PaperPalette.Now();
+    private PaperPalette _pal = PaperPalette.Now(); // T5 : relue sur WM_SETTINGCHANGE
     private uint LinkHover => _pal.HighContrast ? _pal.Action : PaperDraw.Blend(_pal.Ink, _pal.Action, 0.25f);
 
     private IntPtr _hWnd;
@@ -38,8 +38,11 @@ sealed class AboutWindow : IDisposable
 
     // S1-1 : le lien HelloAsso n'existe que là où les liens externes sont permis. Ailleurs, le
     // nom de l'association s'écrit en texte simple, à la même place.
-    private readonly bool _supportLink =
-        LinkEntries(AppChannel.Current, PolicyManager.Current.ExternalLinks).Contains(IDC_LINK_AMCF);
+    // Liens de cette fenêtre, lus une fois : canal, ExternalLinksEnabled et OutboundLinksEnabled.
+    private readonly int[] _linkEntries =
+        LinkEntries(AppChannel.Current, PolicyManager.Current.ExternalLinks, PolicyManager.Current.OutboundLinks);
+
+    private bool _supportLink => _linkEntries.Contains(IDC_LINK_AMCF);
 
     private readonly Win32.WNDPROC _wndProcDelegate;
     // F-10 : survol, Entrée, Échap et Tab des quatre liens.
@@ -48,7 +51,6 @@ sealed class AboutWindow : IDisposable
     // Fond de la classe : Windows le détruit au désenregistrement (NativeWindow).
     private IntPtr _hBgBrush;
 
-    private IntPtr _gdipToken;
     private IntPtr _gdipLogo;
     private IntPtr _hIcon;
 
@@ -69,7 +71,7 @@ sealed class AboutWindow : IDisposable
 
     /// <summary>Langue de l'UI à la création : titre, liens et bouton sont figés au
     /// constructeur. Permet à TrayApplication de recréer la fenêtre si la langue a changé.</summary>
-    public string UiLanguage { get; } = L.Language;
+    public string UiLanguage { get; private set; } = L.Language;
 
     /// <summary>
     /// Liens de la fenêtre, dans l'ordre de tabulation. Site, code source et licence sont des
@@ -78,8 +80,12 @@ sealed class AboutWindow : IDisposable
     /// 2026-09-02 : canal sobre, ou politique <c>ExternalLinksEnabled</c> à 0). Liste pure pour
     /// la même raison que <see cref="TrayApplication.FeedbackMenuEntries"/>.
     /// </summary>
-    internal static int[] LinkEntries(DistributionChannel channel, bool? externalLinksPolicy = null) =>
-        PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
+    internal static int[] LinkEntries(DistributionChannel channel, bool? externalLinksPolicy = null,
+        bool? outboundLinksPolicy = null) =>
+        // Stratégie OutboundLinksEnabled à 0 (1.3.0) : site, code source et licence aussi
+        // (décision 2 du 2026-11-17, qui amende D4).
+        !PolicyManager.OutboundLinksEnabled(outboundLinksPolicy) ? Array.Empty<int>()
+        : PolicyManager.ExternalLinksEnabled(externalLinksPolicy, channel)
             ? new[] { IDC_LINK_SITE, IDC_LINK_GITHUB, IDC_LINK_LICENSE, IDC_LINK_AMCF }
             : new[] { IDC_LINK_SITE, IDC_LINK_GITHUB, IDC_LINK_LICENSE };
 
@@ -93,14 +99,14 @@ sealed class AboutWindow : IDisposable
         Win32.ReleaseDC(IntPtr.Zero, hdcScreen);
         _dpiScale = dpi / 96f;
 
-        var gdipInput = new Win32.GdiplusStartupInput { GdiplusVersion = 1 };
-        Win32.GdiplusStartup(out _gdipToken, ref gdipInput, IntPtr.Zero);
+        GdiPlus.EnsureStarted();
         _gdipLogo = GdiImageLoader.LoadFromEmbeddedResource(typeof(AboutWindow), ProductIdentity.LogoResourceName);
 
         CreateFonts();
         CreateMainWindow();
         CreateControls();
         ApplyFontsToControls();
+        ConfigManager.AppLanguageChanged += OnLanguageChanged;
         // Plafonnée dès la création : sans cela, seule une fenêtre qui change d'échelle l'était.
         ResizeWindow();
         RepositionControls();
@@ -172,23 +178,34 @@ sealed class AboutWindow : IDisposable
     {
         var hInstance = Win32.GetModuleHandleW(null);
 
-        _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", L.About_LinkSite,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkSite, 1);
+        // Liens absents de _linkEntries (stratégie OutboundLinksEnabled à 0) : aucun contrôle,
+        // comme le lien AMCF ci-dessous — rien à atteindre par Tab, rien à cliquer.
+        if (_linkEntries.Contains(IDC_LINK_SITE))
+        {
+            _hWndLinkSite = Win32.CreateWindowExW(0, "STATIC", L.About_LinkSite,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_SITE, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkSite, 1);
+        }
 
-        _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkGithub, 2);
+        if (_linkEntries.Contains(IDC_LINK_GITHUB))
+        {
+            _hWndLinkGithub = Win32.CreateWindowExW(0, "STATIC", L.About_LinkGithub,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_GITHUB, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkGithub, 2);
+        }
 
-        _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
-            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
-            0, 0, 0, 0,
-            _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
-        _links.Attach(_hWndLinkLicense, 3);
+        if (_linkEntries.Contains(IDC_LINK_LICENSE))
+        {
+            _hWndLinkLicense = Win32.CreateWindowExW(0, "STATIC", L.About_LinkLicense,
+                Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.SS_NOTIFY | Win32.WS_TABSTOP,
+                0, 0, 0, 0,
+                _hWnd, (IntPtr)IDC_LINK_LICENSE, hInstance, IntPtr.Zero);
+            _links.Attach(_hWndLinkLicense, 3);
+        }
 
         // Lien inline dans la ligne AMCF (positionné dans WM_PAINT après mesure). Sans lien
         // (S1-1), aucun contrôle : rien à atteindre par Tab, rien à cliquer.
@@ -205,9 +222,9 @@ sealed class AboutWindow : IDisposable
             Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | 0x0001 /* BS_DEFPUSHBUTTON */,
             0, 0, 0, 0,
             _hWnd, (IntPtr)IDC_BTN_CLOSE, hInstance, IntPtr.Zero);
-        // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système.
-        if (!_pal.HighContrast)
-            LightButton.Attach(_hWndBtnClose, paper: true);
+        // Audit UX 1.3.0, #3 ; A9 : bouton papier. En contraste élevé, le dessin du système
+        // (T5 : LightButton le décide à chaque dessin).
+        LightButton.Attach(_hWndBtnClose, paper: true);
 
         RepositionControls();
     }
@@ -261,6 +278,8 @@ sealed class AboutWindow : IDisposable
 
     public void Show()
     {
+        RefreshPalette(); // T5 : le réglage a pu changer fenêtre cachée
+        NativeWindow.KeepInWorkArea(_hWnd); // T6 (EW-18) : l'écran de la dernière ouverture a pu partir
         Win32.ShowWindow(_hWnd, 1);
         Win32.SetForegroundWindow(_hWnd);
         _visible = true;
@@ -272,10 +291,29 @@ sealed class AboutWindow : IDisposable
         _visible = false;
     }
 
+    /// <summary>
+    /// T5 (EW-15) : relit la palette (contraste élevé activé ou coupé fenêtre ouverte) ;
+    /// fond, pinceaux, barre de titre et contrôles suivent. Rien quand elle n'a pas changé.
+    /// </summary>
+    private void RefreshPalette()
+    {
+        if (_hWnd == IntPtr.Zero || !NativeWindow.RefreshPalette(_hWnd, ref _pal))
+            return;
+        _hBgBrush = NativeWindow.ApplyClassBackground(_hWnd, _pal.Paper);
+        NativeWindow.RepaintAll(_hWnd);
+    }
+
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
         {
+            // T5 (EW-15) : contraste élevé ou couleurs du système changés, fenêtre ouverte.
+            if (NativeWindow.IsThemeChange(msg))
+                RefreshPalette();
+            // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+            // affichée ou cachée, revient dans la zone de travail de son écran.
+            if (NativeWindow.IsDisplayChange(msg, wParam))
+                NativeWindow.KeepInWorkArea(hWnd);
             switch (msg)
             {
                 case Win32.WM_PAINT:
@@ -365,10 +403,7 @@ sealed class AboutWindow : IDisposable
         return Win32.DefWindowProcW(hWnd, msg, wParam, lParam);
     }
 
-    private void OpenLink(string url)
-    {
-        Win32.ShellExecuteW(IntPtr.Zero, "open", url, null, null, 1);
-    }
+    private void OpenLink(string url) => OutboundLinks.Open(url);
 
     private void OnPaint(IntPtr hWnd)
     {
@@ -466,8 +501,9 @@ sealed class AboutWindow : IDisposable
         Win32.SetTextColor(hdc, _pal.Muted);
         int fontsY = amcfY + S(26);
         var fontsRect = new Win32.RECT { left = margin, top = fontsY, right = cw - margin, bottom = fontsY + S(20) };
-        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect,
-            Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS);
+        const uint fontsFormat = Win32.DT_LEFT | Win32.DT_SINGLELINE | Win32.DT_NOPREFIX | Win32.DT_END_ELLIPSIS;
+        TruncationProbe.DrawText(hdc, L.About_FontCredit, fontsRect, fontsFormat); // audit UX du 09/11, W24
+        Win32.DrawTextW(hdc, L.About_FontCredit, -1, ref fontsRect, fontsFormat);
 
         // Separateur juste au-dessus des liens
         int sepY = S(BASE_WIN_H - 100);
@@ -477,8 +513,26 @@ sealed class AboutWindow : IDisposable
             Win32.GdipDeleteGraphics(gfx);
     }
 
+    /// <summary>Audit 09/11, W8 : la langue change pendant que la fenêtre est ouverte. Les textes
+    /// peints suivent d'eux-mêmes (L.* relu à chaque peinture) ; les contrôles, eux, portaient le texte
+    /// de la création. Le titre, les liens et « Fermer » sont réécrits.</summary>
+    internal void OnLanguageChanged(string language)
+    {
+        if (_hWnd == IntPtr.Zero) return;
+        UiLanguage = L.Language;
+        Win32.SetWindowTextW(_hWnd, L.About_WindowTitle);
+        Win32.SetWindowTextW(_hWndLinkSite, L.About_LinkSite);
+        Win32.SetWindowTextW(_hWndLinkGithub, L.About_LinkGithub);
+        Win32.SetWindowTextW(_hWndLinkLicense, L.About_LinkLicense);
+        if (_hWndLinkAmcf != IntPtr.Zero)
+            Win32.SetWindowTextW(_hWndLinkAmcf, L.About_LinkAmcf);
+        Win32.SetWindowTextW(_hWndBtnClose, L.About_Close);
+        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+    }
+
     public void Dispose()
     {
+        ConfigManager.AppLanguageChanged -= OnLanguageChanged;
         _links.Detach();
         if (_hWnd != IntPtr.Zero)
         {
@@ -499,11 +553,6 @@ sealed class AboutWindow : IDisposable
         {
             Win32.GdipDisposeImage(_gdipLogo);
             _gdipLogo = IntPtr.Zero;
-        }
-        if (_gdipToken != IntPtr.Zero)
-        {
-            Win32.GdiplusShutdown(_gdipToken);
-            _gdipToken = IntPtr.Zero;
         }
 
         NativeWindow.UnregisterClass(ProductIdentity.WindowClass("About"));

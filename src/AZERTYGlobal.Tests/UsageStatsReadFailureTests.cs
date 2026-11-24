@@ -8,12 +8,19 @@ namespace AZERTYGlobal.Tests;
 /// d'un antivirus ou d'une sauvegarde) n'est jamais écrasé par des compteurs repartis de
 /// zéro, et le lancement suivant le relit. Un fichier corrompu, lui, repart de zéro et se
 /// réécrit comme avant : la garde ne doit pas le bloquer pour toujours.
+/// CE-T2 (17/11) : le fichier est aussi relu avant la prochaine écriture de la session, et les
+/// compteurs de la session s'ajoutent aux siens (RelectureApresPanneTests).
 /// </summary>
 public class UsageStatsReadFailureTests : IDisposable
 {
     private readonly string _tempDir;
     private readonly string _statsPath;
     private const string Original = "{ \"activeDaysCount\": 42, \"bestStreak\": 30 }";
+
+    // Canal Store : statistiques et sollicitation d'avis n'existent que hors canal sobre ;
+    // l'hote de tests est Unpackaged, sobre depuis la decision 5 du 2026-11-17.
+    private readonly IDisposable _canalStore =
+        AppChannel.OverrideForTests(DistributionChannel.Store);
 
     public UsageStatsReadFailureTests()
     {
@@ -26,6 +33,7 @@ public class UsageStatsReadFailureTests : IDisposable
 
     public void Dispose()
     {
+        _canalStore.Dispose();
         UsageStats.OverrideStatsPathForTests(Path.Combine(_tempDir, "inutilise.json"));
         try { Directory.Delete(_tempDir, true); } catch { }
     }
@@ -34,13 +42,15 @@ public class UsageStatsReadFailureTests : IDisposable
     public void FichierVerrouilleAuChargement_NEstJamaisEcrase()
     {
         using (new FileStream(_statsPath, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
             UsageStats.Preload(); // lecture refusée : violation de partage
 
-        // Scénario joué : le chargement a bien échoué (42 attendus s'il avait réussi).
-        Assert.Equal(0, UsageStats.ActiveDaysCount);
+            // Scénario joué : le chargement a bien échoué (42 attendus s'il avait réussi).
+            Assert.Equal(0, UsageStats.ActiveDaysCount);
 
-        UsageStats.RecordEmittedText("É");
-        UsageStats.Flush();
+            UsageStats.RecordEmittedText("É");
+            UsageStats.Flush(); // relecture encore refusée : aucune écriture
+        }
 
         Assert.Equal(Original, File.ReadAllText(_statsPath));
     }
@@ -51,12 +61,14 @@ public class UsageStatsReadFailureTests : IDisposable
         using (new FileStream(_statsPath, FileMode.Open, FileAccess.Read, FileShare.None))
             UsageStats.Preload();
         UsageStats.RecordEmittedText("É");
-        UsageStats.Flush();
+        UsageStats.Flush(); // CE-T2 : verrou levé, relit le fichier et y ajoute la session
 
         UsageStats.OverrideStatsPathForTests(_statsPath); // redémarrage simulé
 
-        Assert.Equal(42, UsageStats.ActiveDaysCount);
+        // Le fichier ne porte pas de dernière date : le jour de la session s'ajoute aux 42.
+        Assert.Equal(43, UsageStats.ActiveDaysCount);
         Assert.Equal(30, UsageStats.BestStreak);
+        Assert.Equal(1, UsageStats.AccentedUppercaseCount);
     }
 
     [Fact]

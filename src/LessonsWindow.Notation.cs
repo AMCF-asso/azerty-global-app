@@ -52,7 +52,7 @@ internal sealed partial class LessonsWindow
         string glyph = current.ToString();
         // É, È, Ç, À avant une minuscule : touche morte circonflexe, pas Verr. Maj. (12/10),
         // sauf Verr. Maj. déjà allumée.
-        var gesture = Gesture.Of(glyph, following, _mapper.CapsLockActive);
+        var gesture = Gesture.Of(glyph, following, _mapper.CapsLockActive, CapsLockExercise);
         if (gesture.Count == 0) return null;
         if (gesture.Count == 1 && !gesture[0].Shift && !gesture[0].AltGr && Gesture.StrikesItsOwnKey(glyph, gesture))
             return null;
@@ -65,9 +65,17 @@ internal sealed partial class LessonsWindow
     /// </summary>
     private void DrawCurrentNotation(IntPtr hdc, Win32.RECT part, int top, int center, char? following)
     {
-        if (_session.NeedsBackspaceCorrection || _session.GetNextExpectedCharacter() is not char current) return;
+        if (_session.NeedsBackspaceCorrection)
+        {
+            // Parcours, sans panneau du geste : la consigne de correction se lit sous la ligne.
+            if (IsTutorialActive)
+                DrawCenteredRuns(hdc, new List<TextRun> { new(L.Gesture_StrikeCapital), new(L.LessonsPaper_BackspaceKey, true), new(".") },
+                    top + S(6), center, part.left + S(16), part.right - S(16));
+            return;
+        }
+        if (_session.GetNextExpectedCharacter() is not char current) return;
         int minLeft = part.left + S(16), maxRight = part.right - S(16);
-        int areaBottom = top + NotationAreaHeight();
+        int areaBottom = top + _notationReserve;
         int saved = Win32.SaveDC(hdc);
         Win32.IntersectClipRect(hdc, part.left + 1, top, part.right - 1, areaBottom);
         try
@@ -102,26 +110,26 @@ internal sealed partial class LessonsWindow
                 case LessonNotation.MiniKeyboard:
                 {
                     float unit = MiniUnit * PaperScale;
-                    var (mw, _) = MiniKeyboardRenderer.MeasureNumbered(hdc, unit, g.Steps, PaperScale);
+                    var (mw, _) = MiniKeyboardRenderer.MeasureNumbered(hdc, unit, g.Steps, PaperFonts);
                     int ml = Math.Clamp(center - mw / 2, minLeft, Math.Max(minLeft, maxRight - mw));
-                    MiniKeyboardRenderer.DrawNumbered(hdc, ml, top, unit, g.Steps, PaperScale);
+                    MiniKeyboardRenderer.DrawNumbered(hdc, ml, top, unit, g.Steps, PaperFonts);
                     break;
                 }
                 case LessonNotation.Frames:
                 {
                     float unit = FrameUnit * PaperScale;
-                    var (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperScale);
+                    var (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperFonts);
                     if (fw > maxRight - minLeft)
                     {
                         unit = FrameUnitSmall * PaperScale;
-                        (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperScale);
+                        (fw, _) = MiniKeyboardRenderer.MeasureFrames(hdc, unit, g.Steps, PaperFonts);
                     }
                     int fl = Math.Clamp(center - fw / 2, minLeft, Math.Max(minLeft, maxRight - fw));
-                    MiniKeyboardRenderer.DrawFrames(hdc, fl, top, unit, g.Steps, PaperScale);
+                    MiniKeyboardRenderer.DrawFrames(hdc, fl, top, unit, g.Steps, PaperFonts);
                     break;
                 }
                 default:
-                    var style = KeyNotationStyle.Lessons(PaperScale);
+                    var style = KeyNotationStyle.Lessons(PaperFonts);
                     var (w, _) = KeyNotation.Measure(hdc, g.Steps, style, g.Notes);
                     int left = Math.Clamp(center - w / 2, minLeft, Math.Max(minLeft, maxRight - w));
                     // Collée sous le caractère : une réserve pour deux pavés la détachait de

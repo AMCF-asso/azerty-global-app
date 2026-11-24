@@ -22,14 +22,23 @@ internal readonly record struct LessonInputResult(
 internal sealed class LessonAttemptStats
 {
     private readonly Func<DateTimeOffset> _clock;
+    private readonly Func<TimeSpan> _elapsedClock;
     private DateTimeOffset? _startedAt;
-    private DateTimeOffset? _completedAt;
+    private TimeSpan? _startedElapsed;
+    private TimeSpan? _completedElapsed;
     private readonly Dictionary<char, int> _errorCountsByExpected = new();
     private readonly Dictionary<char, int> _attemptCountsByExpected = new();
 
-    public LessonAttemptStats(Func<DateTimeOffset>? clock = null)
+    /// <param name="clock">Heure murale : date de début de l'essai (<see cref="StartedAt"/>).</param>
+    /// <param name="elapsedClock">Horloge des durées (audit temps et horloge, TH-01) : par défaut
+    /// <see cref="MonotonicClock"/>, hors veille et insensible à l'heure de Windows. Une heure qui
+    /// recule pendant l'exercice ne raccourcit plus sa durée, donc ne gonfle plus la vitesse ni le
+    /// record. Un test qui n'injecte que l'heure murale y lit aussi ses durées.</param>
+    public LessonAttemptStats(Func<DateTimeOffset>? clock = null, Func<TimeSpan>? elapsedClock = null)
     {
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
+        _elapsedClock = elapsedClock
+            ?? (clock is null ? MonotonicClock.Now : () => clock() - DateTimeOffset.UnixEpoch);
     }
 
     public int ProductiveKeystrokes { get; private set; }
@@ -44,7 +53,11 @@ internal sealed class LessonAttemptStats
     /// attendu, que la progression par geste ramène alors dans la Révision du jour.</param>
     public void RecordChar(char actual, char? expected, bool tolerated = false)
     {
-        _startedAt ??= _clock();
+        if (!_startedElapsed.HasValue)
+        {
+            _startedAt = _clock();
+            _startedElapsed = _elapsedClock();
+        }
         ProductiveKeystrokes++;
         if (expected.HasValue)
         {
@@ -80,16 +93,16 @@ internal sealed class LessonAttemptStats
 
     public void Complete()
     {
-        _completedAt ??= _clock();
+        _completedElapsed ??= _elapsedClock();
     }
 
     public double ElapsedSeconds
     {
         get
         {
-            if (!_startedAt.HasValue) return 0;
-            var end = _completedAt ?? _clock();
-            return Math.Max(0, (end - _startedAt.Value).TotalSeconds);
+            if (!_startedElapsed.HasValue) return 0;
+            var end = _completedElapsed ?? _elapsedClock();
+            return Math.Max(0, (end - _startedElapsed.Value).TotalSeconds);
         }
     }
 
@@ -172,6 +185,11 @@ internal sealed class LessonTypingSession
     {
         if (IsExerciseComplete || IsLineComplete) return IgnoredResult();
         if (c == '\r' || c == '\n') return IgnoredResult();
+        // Un caractère hors du plan de base (émoji, panneau Win+.) arrive en deux moitiés. Aucun
+        // exercice n'en attend : il compte pour une seule frappe fausse, dans une seule case, que
+        // Retour arrière efface d'un coup (audit 09/11, E16). La seconde moitié est ignorée.
+        if (char.IsLowSurrogate(c)) return IgnoredResult();
+        if (char.IsHighSurrogate(c)) c = '�';
 
         return Mode == LessonTypingMode.Strict ? TypeStrict(c) : TypeFlexible(c);
     }

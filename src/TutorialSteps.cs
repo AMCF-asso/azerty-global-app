@@ -7,7 +7,9 @@ namespace AZERTYGlobal;
 /// LessonCatalog). L'Initiation les reprend tous dans cet ordre ; le tutoriel n'en joue que le
 /// parcours choisi (<see cref="BuildRoute"/>). La progression enregistrée dépend du texte (clé
 /// et empreinte des exercices, rang pour l'import de l'accueil) : changer un texte, ou l'ordre,
-/// efface la réussite déjà enregistrée de cet exercice.
+/// efface la réussite déjà enregistrée de cet exercice, sauf si l'ancien texte entre dans la
+/// table des anciennes formes (<see cref="LessonContentHistory"/>, à régénérer par
+/// `scripts/build-lesson-instruction-history.py`).
 /// </summary>
 internal static class TutorialSteps
 {
@@ -58,6 +60,14 @@ internal static class TutorialSteps
         (UsageDocuments, Documents),
         (UsageMessages, Messages),
     };
+
+    /// <summary>L'usage dont <paramref name="step"/> est l'exercice, null pour le tronc commun.</summary>
+    public static string? UsageOf(int step)
+    {
+        foreach (var (usage, index) in UsagesByPriority)
+            if (index == step) return usage;
+        return null;
+    }
 
     /// <summary>Un exercice du parcours : son rang fixe et s'il est facultatif (bonus).</summary>
     internal readonly record struct RouteStep(int Index, bool Skippable);

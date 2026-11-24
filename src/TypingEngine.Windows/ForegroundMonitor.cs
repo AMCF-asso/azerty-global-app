@@ -46,6 +46,15 @@ public sealed class ForegroundMonitor : IDisposable
     private IntPtr _winEventHook = IntPtr.Zero;
     private IntPtr _focusEventHook = IntPtr.Zero;
     private IntPtr _switchEventHook = IntPtr.Zero;
+    private IntPtr _desktopSwitchEventHook = IntPtr.Zero;
+
+    /// <summary>
+    /// Le bureau d'entrée a changé : aller ou retour d'un écran sécurisé (Ctrl+Alt+Suppr, UAC,
+    /// verrouillage). Les relâches faites là-bas n'atteignent pas le hook (AFH-4). Levé sur le
+    /// fil qui a créé le moniteur, avant le recalcul du premier plan. Argument : heure de
+    /// l'événement (<c>dwmsEventTime</c>, même base que <c>KBDLLHOOKSTRUCT.time</c>).
+    /// </summary>
+    public event Action<uint>? InputDesktopSwitched;
 
     // Snapshot immuable atomique pour cohérence cross-thread. Tous les champs sont
     // mis à jour en une seule écriture de référence (atomique CLR pour les types ref).
@@ -62,6 +71,16 @@ public sealed class ForegroundMonitor : IDisposable
         bool SecureInput);
     private volatile Snapshot? _snapshot;
     private Snapshot? _lastApplication;
+
+    /// <summary>
+    /// Numéro du dernier <see cref="Recompute"/> commencé (audit des accès concurrents, R1).
+    /// La sonde du champ mot de passe et le verrou de la sonde attendent sur le fil STA : ces
+    /// attentes distribuent les WinEvent, donc un Recompute imbriqué peut s'exécuter et écrire
+    /// l'état de la nouvelle fenêtre avant que l'appel externe reprenne. L'appel externe, dont
+    /// les lectures sont plus anciennes, n'écrit alors rien : l'appel imbriqué a déjà publié un
+    /// état plus récent et levé <see cref="ForegroundChanged"/>. Fil d'interface seul.
+    /// </summary>
+    private int _recomputeGeneration;
 
     /// <summary>Dernière application hors shell, destinée uniquement au menu de compatibilité.</summary>
     public string? LastApplicationProcessName => _lastApplication?.ProcessName;
@@ -82,6 +101,16 @@ public sealed class ForegroundMonitor : IDisposable
     /// de bulles a chaque Alt+Tab entre deux applications suspendues).
     /// </summary>
     public bool IsTransientShellForeground { get; private set; }
+
+    /// <summary>
+    /// Vrai quand le premier plan est une vraie application : ni aucune fenêtre, ni une surface
+    /// du shell (barre des tâches, bureau), ni une de nos propres fenêtres. Ailleurs, aucun
+    /// champ de texte ne peut recevoir une frappe : <see cref="IsSecureInput"/> y vaut vrai
+    /// par prudence (aucune fenêtre, ou aucun contrôle qui a le focus, ce qui est l'état de la
+    /// barre des tâches), pas parce qu'un champ de mot de passe est là. Le menu de la zone de
+    /// notification, ouvert depuis la barre des tâches, ne doit pas s'y fier.
+    /// </summary>
+    public bool ForegroundIsApplication { get; private set; } = true;
 
     /// <summary>Nom court du process foreground (ex: "Minecraft.Windows.exe"). Null si pas de fenêtre foreground.</summary>
     public string? CurrentProcessName => _snapshot?.ProcessName;
@@ -114,7 +143,17 @@ public sealed class ForegroundMonitor : IDisposable
         var snap = _snapshot;  // capture atomique
         if (!IsTrackingAvailable || snap == null || snap.Window != _api.GetForegroundWindow())
             return (CompatibilityMode.DisabledAntiCheat, IntPtr.Zero);
-        return (snap?.Mode ?? CompatibilityMode.Default, snap?.Hkl ?? IntPtr.Zero);
+        // EW-2 : une bascule de disposition dans la même fenêtre (Alt+Maj, Ctrl+Maj, barre de
+        // langue) ne déclenche aucun évènement suivi ; le HKL du snapshot serait périmé. Relire
+        // celui du fil de la fenêtre à chaque émission : deux appels user32, sans OpenProcess.
+        var hkl = snap.Hkl;
+        uint tid = _api.GetWindowThreadId(snap.Window);
+        if (tid != 0)
+        {
+            var live = _api.GetKeyboardLayout(tid);
+            if (live != IntPtr.Zero) hkl = live;
+        }
+        return (snap.Mode, hkl);
     }
 
     /// <summary>
@@ -182,6 +221,11 @@ public sealed class ForegroundMonitor : IDisposable
             // chien de garde de l'hôte couvre le même cas.
             _switchEventHook = _api.SetWinEventHook(
                 Win32.EVENT_SYSTEM_SWITCHSTART, Win32.EVENT_SYSTEM_SWITCHEND, _winEventDelegate);
+            // Passage par un écran sécurisé : hors IsTrackingAvailable aussi. Sans lui, une
+            // relâche perdue là-bas fait passer l'appui suivant pour une répétition (AFH-4) ;
+            // le verrouillage reste couvert par WM_WTSSESSION_CHANGE côté hôte.
+            _desktopSwitchEventHook = _api.SetWinEventHook(
+                Win32.EVENT_SYSTEM_DESKTOPSWITCH, Win32.EVENT_SYSTEM_DESKTOPSWITCH, _winEventDelegate);
             // Un échec de l'un des deux suivis impose une suspension de précaution.
         }
         catch (Exception ex)
@@ -199,6 +243,11 @@ public sealed class ForegroundMonitor : IDisposable
     {
         // Le snapshot de frappe suit aussi le focus dans une même fenêtre
         // (champ de mot de passe), sans garder l'identité précédente pendant 100 ms.
+        if (eventType == Win32.EVENT_SYSTEM_DESKTOPSWITCH)
+        {
+            try { InputDesktopSwitched?.Invoke(dwmsEventTime); }
+            catch (Exception ex) { _host.Log("ForegroundMonitor.InputDesktopSwitched", ex); }
+        }
         Recompute();
     }
 
@@ -209,6 +258,12 @@ public sealed class ForegroundMonitor : IDisposable
     /// </summary>
     public void Recompute()
     {
+        int generation = ++_recomputeGeneration;
+        // CE-T1 (CE-02) : l'abonné est prévenu hors du try du calcul. Avant, son exception tombait
+        // dans le catch ci-dessous : le bon état était remplacé par le repli « premier plan inconnu,
+        // champ sécurisé », puis l'abonné rappelé hors de tout try faisait remonter l'exception dans
+        // le rappel WinEvent. Le catch ne couvre plus que le calcul de l'état.
+        bool notify;
         try
         {
             string? processName = null;
@@ -245,14 +300,20 @@ public sealed class ForegroundMonitor : IDisposable
             // Sans suivi des fenêtres, tout est suspendu (UnknownForeground) : pas de sonde non plus.
             bool secureInput = !hasFg || (IsTrackingAvailable && !SkipsPasswordProbe(resolved.Reason)
                 && _api.IsWindowPasswordField(window));
+            // Un Recompute imbriqué pendant une attente qui pompe a déjà écrit un état plus
+            // récent : écrire le nôtre le remplacerait par une fenêtre qui n'est plus au
+            // premier plan (R1). Aucune attente qui pompe entre ce test et l'écriture.
+            if (generation != _recomputeGeneration) return;
             _secureRetryAfter = _clock() + 1000;
 
             // Snapshot atomique : une seule écriture de référence (atomique CLR sur ref types).
             var oldSnapshot = _snapshot;
             CompatibilityMode oldMode = oldSnapshot?.Mode ?? CompatibilityMode.Default;
             _snapshot = new Snapshot(window, processName, fullPath, hkl, mode, resolved.Reason, identity, secureInput);
-            if (hasFg && !isTransientShell && pid != (uint)Environment.ProcessId)
+            bool isApplication = hasFg && !isTransientShell && pid != (uint)Environment.ProcessId;
+            if (isApplication)
                 _lastApplication = _snapshot;
+            ForegroundIsApplication = isApplication;
             IsTransientShellForeground = isTransientShell;
 
             // Le motif et hasFg sont journalisés avec le mode : sans eux, deux Recompute
@@ -267,23 +328,24 @@ public sealed class ForegroundMonitor : IDisposable
                     + $"pid={pid}, tracking={IsTrackingAvailable})");
             }
 
-            if (oldMode != mode || oldSnapshot?.Identity != identity ||
+            // Toujours notifier sur changement effectif de process pour permettre à
+            // au produit hôte de mettre à jour son état UI (override changes, etc.)
+            notify = oldMode != mode || oldSnapshot?.Identity != identity ||
                 oldSnapshot?.SecureInput != secureInput ||
-                (oldMode == mode && processName != null))
-            {
-                // Toujours notifier sur changement effectif de process pour permettre à
-                // au produit hôte de mettre à jour son état UI (override changes, etc.)
-                ForegroundChanged?.Invoke();
-            }
+                (oldMode == mode && processName != null);
         }
         catch (Exception ex)
         {
+            _host.Log("ForegroundMonitor.Recompute", ex);
+            // Même règle qu'au succès : un appel imbriqué plus récent a déjà publié son état.
+            if (generation != _recomputeGeneration) return;
             _snapshot = new Snapshot(IntPtr.Zero, null, null, IntPtr.Zero,
                 CompatibilityMode.DisabledAntiCheat, CompatibilitySuspendReason.UnknownForeground, default, true);
             IsTransientShellForeground = false;
-            _host.Log("ForegroundMonitor.Recompute", ex);
-            ForegroundChanged?.Invoke();
+            notify = true;
         }
+        if (notify)
+            SubscriberGuard.Raise(ForegroundChanged, _host, "ForegroundMonitor.ForegroundChanged");
     }
 
     /// <summary>
@@ -352,6 +414,11 @@ public sealed class ForegroundMonitor : IDisposable
         {
             try { _api.UnhookWinEvent(_switchEventHook); } catch { }
             _switchEventHook = IntPtr.Zero;
+        }
+        if (_desktopSwitchEventHook != IntPtr.Zero)
+        {
+            try { _api.UnhookWinEvent(_desktopSwitchEventHook); } catch { }
+            _desktopSwitchEventHook = IntPtr.Zero;
         }
         _winEventDelegate = null;
     }

@@ -12,6 +12,10 @@ internal readonly record struct GestureStep(bool Shift, bool AltGr, string KeyCo
     /// <summary>La case de la portée : gravure courte (« Esp » pour Espace).</summary>
     public string ShortLabel => Gesture.ShortKeyLabel(KeyCode, KeyLabel);
 
+    /// <summary>Comme <see cref="ShortLabel"/>, mais Verr. Maj. en sigle (« VM ») : pour les endroits
+    /// où le nom en clair ne tient pas.</summary>
+    public string CompactLabel => Gesture.CompactKeyLabel(KeyCode, KeyLabel);
+
     /// <summary>La touche dans la phrase : sa gravure, ou sa place quand la gravure AZERTY
     /// n'est pas ce qu'elle tape (« la touche à droite du M »).</summary>
     public string SpokenLabel => Gesture.SpokenKeyLabel(KeyCode, KeyLabel);
@@ -103,7 +107,14 @@ internal static class Gesture
         _ => label,
     };
 
-    /// <summary>Gravure courte d'une case de portée (« Esp », « VM »).</summary>
+    /// <summary>Gravure compacte : celle d'une case de portée, Verr. Maj. en sigle (« VM »).</summary>
+    internal static string CompactKeyLabel(string keyCode, string label) => keyCode switch
+    {
+        CapsLockCode => L.Gesture_CapsLockCompact,
+        _ => ShortKeyLabel(keyCode, label),
+    };
+
+    /// <summary>Gravure courte d'une case de portée (« Esp », « Verr. Maj. »).</summary>
     internal static string ShortKeyLabel(string keyCode, string label) => keyCode switch
     {
         "Space" => L.Gesture_SpaceShort,
@@ -126,6 +137,22 @@ internal static class Gesture
         => CharacterIndex.Shared.ByCharacter.TryGetValue(character, out var entry) && entry.PreferredBefore(next, capsLockActive) is { } method
             ? Of(method)
             : Array.Empty<GestureStep>();
+
+    /// <summary>Comme <see cref="Of(string, char?, bool)"/> ; dans un exercice en Verr. Maj.
+    /// (<paramref name="capsLockExercise"/>), une capitale tapée Maj + lettre devient
+    /// Verr. Maj. puis la lettre seule (remontée d'Antoine, 07/11).</summary>
+    internal static IReadOnlyList<GestureStep> Of(string character, char? next, bool capsLockActive, bool capsLockExercise)
+    {
+        var steps = Of(character, next, capsLockActive);
+        if (!capsLockExercise || steps.Count != 1 || !steps[0].Shift || steps[0].AltGr
+            || character.Length != 1 || !char.IsLetter(character[0]) || !char.IsUpper(character[0]))
+            return steps;
+        return new[]
+        {
+            new GestureStep(false, false, CapsLockCode, KeyLabel(CapsLockCode)),
+            steps[0] with { Shift = false },
+        };
+    }
 
     /// <summary>Les temps d'une méthode de saisie.</summary>
     internal static IReadOnlyList<GestureStep> Of(MethodData method)
@@ -176,7 +203,7 @@ internal static class Gesture
                 runs.Add(new TextRun(L.Gesture_Then));
             var held = new List<string>(2);
             if (step.Shift) held.Add(L.Settings_ShortcutModifier2);
-            if (step.AltGr) held.Add("AltGr");
+            if (step.AltGr) held.Add(L.AltGrKey);
             if (held.Count > 0)
             {
                 runs.Add(new TextRun(first ? L.Gesture_HoldCapital : L.Gesture_Hold));

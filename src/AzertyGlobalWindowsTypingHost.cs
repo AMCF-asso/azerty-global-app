@@ -7,6 +7,8 @@ internal sealed class AzertyGlobalWindowsTypingHost : IWindowsTypingHost
 {
     public uint ShortcutCharacterSearchVk => ConfigManager.ShortcutCharacterSearchVk;
     public uint ShortcutVirtualKeyboardVk => ConfigManager.ShortcutVirtualKeyboardVk;
+    public ShortcutModifiers ShortcutCharacterSearchModifiers => ConfigManager.ShortcutCharacterSearchModifiers;
+    public ShortcutModifiers ShortcutVirtualKeyboardModifiers => ConfigManager.ShortcutVirtualKeyboardModifiers;
     public bool CompatibilityDebugLog => ConfigManager.CompatibilityDebugLog;
 
     public string? GetCompatibilityOverride(string processName) =>

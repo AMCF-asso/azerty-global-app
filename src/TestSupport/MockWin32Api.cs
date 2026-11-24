@@ -55,6 +55,8 @@ internal sealed class MockWin32Api : IWin32Api
     public IntPtr WinEventHookHandle { get; set; } = (IntPtr)0xCAFE;
     public bool ShouldFailSetWinEventHook { get; set; }
     public bool UnhookWinEventCalled { get; private set; }
+    /// <summary>Plages d'événements demandées à SetWinEventHook, dans l'ordre.</summary>
+    public List<(uint Min, uint Max)> WinEventRanges { get; } = new();
 
     /// <summary>
     /// Simule un changement de foreground en invoquant le delegate capturé
@@ -85,7 +87,16 @@ internal sealed class MockWin32Api : IWin32Api
     public short GetAsyncKeyState(int vk) =>
         AsyncKeyStateScript.TryGetValue(vk, out var v) ? v : (short)0;
 
-    public IntPtr GetKeyboardLayout(uint threadId) => CurrentHkl;
+    public IntPtr GetKeyboardLayout(uint threadId) =>
+        threadId != 0 && ThreadHkl.TryGetValue(threadId, out var hkl) ? hkl : CurrentHkl;
+
+    /// <summary>Fil rendu pour toute fenêtre (0 = inconnu : pas de relecture de la disposition).</summary>
+    public uint ScriptedWindowThreadId { get; set; }
+
+    /// <summary>Disposition par fil, pour distinguer le fil du premier plan de celui de l'app.</summary>
+    public Dictionary<uint, IntPtr> ThreadHkl { get; } = new();
+
+    public uint GetWindowThreadId(IntPtr window) => window == IntPtr.Zero ? 0u : ScriptedWindowThreadId;
 
     /// <summary>Position rendue par <see cref="GetCursorPos"/> : le banc de capture la veut hors
     /// de toute fenêtre, la vraie souris n'est jamais lue ni déplacée.</summary>
@@ -206,16 +217,23 @@ internal sealed class MockWin32Api : IWin32Api
         return ScriptedSecureInput;
     }
 
+    /// <summary>Crochets posés et retirés depuis la création du mock (audit des ressources).</summary>
+    public int WinEventHooksSet { get; private set; }
+    public int WinEventHooksRemoved { get; private set; }
+
     public IntPtr SetWinEventHook(uint eventMin, uint eventMax, Win32.WinEventDelegate cb)
     {
         if (ShouldFailSetWinEventHook) return IntPtr.Zero;
+        WinEventRanges.Add((eventMin, eventMax));
         CapturedWinEventDelegate = cb;
+        WinEventHooksSet++;
         return WinEventHookHandle;
     }
 
     public bool UnhookWinEvent(IntPtr hook)
     {
         UnhookWinEventCalled = true;
+        WinEventHooksRemoved++;
         return true;
     }
 }
@@ -227,6 +245,8 @@ internal sealed class TestWindowsTypingHost : IWindowsTypingHost
 
     public uint ShortcutCharacterSearchVk { get; set; }
     public uint ShortcutVirtualKeyboardVk { get; set; }
+    public ShortcutModifiers ShortcutCharacterSearchModifiers { get; set; } = ShortcutModifierRules.Default;
+    public ShortcutModifiers ShortcutVirtualKeyboardModifiers { get; set; } = ShortcutModifierRules.Default;
     public bool CompatibilityDebugLog { get; set; }
     public List<string> EmittedTexts { get; } = new();
 

@@ -14,12 +14,21 @@ internal sealed class LayerIndicatorWindow : IDisposable
     // D1 (accessibilité 1.3.0) : DPI de l'écran qui porte l'indicateur.
     private int _dpi = 96;
 
-    public LayerIndicatorWindow()
+    /// <summary>Invalidation de la fenêtre ; remplaçable par les tests (P/Invoke non observable).</summary>
+    internal Action<IntPtr> InvalidateWindow = hWnd => Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
+
+    public LayerIndicatorWindow() : this((name, proc) => NativeWindow.RegisterClass(name, proc))
+    {
+    }
+
+    /// <summary>ME-07, C1.7 : l'enregistrement de classe est injectable pour éprouver l'indicateur
+    /// sans fenêtre (classe refusée).</summary>
+    internal LayerIndicatorWindow(Func<string, Win32.WNDPROC, bool> registerClass)
     {
         _wndProcDelegate = WndProc;
         IntPtr instance = Win32.GetModuleHandleW(null);
         // Audit du 25/09, X-01 : une classe refusée ne crée pas de fenêtre.
-        if (!NativeWindow.RegisterClass(ProductIdentity.WindowClass("LayerIndicator"), _wndProcDelegate))
+        if (!registerClass(ProductIdentity.WindowClass("LayerIndicator"), _wndProcDelegate))
             return;
 
         uint exStyle = Win32.WS_EX_TOPMOST | Win32.WS_EX_TOOLWINDOW | Win32.WS_EX_NOACTIVATE;
@@ -53,6 +62,9 @@ internal sealed class LayerIndicatorWindow : IDisposable
 
     public void Update(MaintainableLayerState state, bool secureInput)
     {
+        // ME-07, C1.7 : sans fenêtre (création refusée), rien à placer ni à repeindre ;
+        // InvalidateRect(NULL) repeindrait toutes les fenêtres.
+        if (_hWnd == IntPtr.Zero) return;
         if (!ConfigManager.MaintainableLayersEnabled ||
             !ConfigManager.MaintainableVisualFeedbackEnabled ||
             secureInput || !state.IsActive)
@@ -70,12 +82,12 @@ internal sealed class LayerIndicatorWindow : IDisposable
         };
         _label = TrayApplication.GetMaintainableLayerLabel(state.LayerId) + suffix;
         RefreshPosition();
-        Win32.InvalidateRect(_hWnd, IntPtr.Zero, true);
+        InvalidateWindow(_hWnd);
     }
 
     public void RefreshPosition()
     {
-        if (string.IsNullOrEmpty(_label)) return;
+        if (_hWnd == IntPtr.Zero || string.IsNullOrEmpty(_label)) return;
         if (!TryGetCaretPoint(out var point))
         {
             Hide();
@@ -93,7 +105,7 @@ internal sealed class LayerIndicatorWindow : IDisposable
     public void Hide()
     {
         _label = string.Empty;
-        if (_visible)
+        if (_visible && _hWnd != IntPtr.Zero)
             Win32.ShowWindow(_hWnd, 0);
         _visible = false;
     }

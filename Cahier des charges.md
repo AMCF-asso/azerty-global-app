@@ -75,14 +75,14 @@ L'utilisateur grand public qui double-clique sur l'exe doit comprendre immédiat
 
 L'onboarding actuel s'organise en deux niveaux :
 
-#### Wizard d'accueil — 4 étapes
+#### Wizard d'accueil — 3 étapes
 
 - [x] **Étape 1** : « 5 changements, 99 % des frappes préservées » sur le clavier papier, nouveautés en bleu et cinq notes au trait, mention de confidentialité « Tout se passe sur votre ordinateur : ce que vous tapez n’est ni enregistré ni envoyé. », puis « Vous pouvez le désactiver à tout moment. » et le bouton « Activer et essayer » (« Essayer maintenant » après l’accord). Refonte du 15/10 (`b9dd1d7`).
-- [x] **Étape 2** : « Écrire le peul, le wolof, le bambara » : les lettres de trois langues et un geste pour chacune, un champ d’essai (ù puis b donne ɓ, « C’est bien ɓ. ») et l’astuce Ctrl + Maj + W (`cadab2c`, 08/10).
-- [x] **Étape 3** : « Comment utiliser AZERTY Global » — 4 cards : icône tray, activation/désactivation (`Ctrl+Maj+Verr.Maj`), clavier virtuel (`Ctrl+Maj+Q`), recherche de caractère (`Ctrl+Maj+W`).
-- [x] **Étape 4** : ressources & communauté — 4 liens (Continuer avec les leçons, Guide de prise en main, Donner mon avis, Échanger avec les autres utilisateurs) + préférences (lancer au démarrage, ne plus afficher, rappels d’entraînement « Défi du jour »).
+- [x] **Étape 2** : « Comment utiliser AZERTY Global » — 4 cards : icône tray, activation/désactivation (`Ctrl+Maj+Verr.Maj`), clavier virtuel (`Ctrl+Maj+Q`), recherche de caractère (`Ctrl+Maj+W`).
+- [x] **Étape 3** : ressources & communauté — 5 liens (Continuer avec les leçons, Guide de prise en main, Écrire le peul, le wolof, le bambara, Donner mon avis, Échanger avec les autres utilisateurs) + préférences (lancer au démarrage, ne plus afficher, rappels d’entraînement « Défi du jour »).
 - [x] **Bouton « Essayer maintenant »** (« Activer et essayer » avant l’accord) dans l’étape 1 : ouvre le parcours d’exercices dans les Leçons, sans avancer silencieusement à l’étape 2. Dès que le parcours a été ouvert une fois, « Suivant » apparaît à côté ; « Essayer maintenant » disparaît quand le tronc commun est réussi.
 - [x] **Esc + croix X** pour fermer.
+- [x] **Pas d’étape « langues africaines »** (décision d’Antoine du 11/11) : l’étape « Écrire le peul, le wolof, le bambara » du 08/10 (`cadab2c`) est retirée pour tous ; l’écran des usages de la Prise en main propose « Une langue d’Afrique » et son exercice, l’étape 3 garde un lien vers la page `/afrique` du site.
 
 #### Parcours d’exercices — 8 exercices, dans les Leçons
 

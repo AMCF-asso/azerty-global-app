@@ -39,6 +39,12 @@ public sealed class KeyboardHook : IDisposable
 
     private IntPtr _hookId = IntPtr.Zero;
 
+    // M2.1 I2 / M3.8 I2 (1.3.0) : pendant Reinstall, l'ancien hook reste posé le temps de traiter
+    // les frappes qui lui étaient déjà adressées ; une frappe vue par les deux hooks n'est traitée
+    // qu'une fois. Hors Reinstall, _retiringHookId vaut zéro et rien ne change.
+    private IntPtr _retiringHookId = IntPtr.Zero;
+    private (uint Vk, uint Scan, uint Flags, uint Time, IntPtr Extra, IntPtr Msg)? _derniereFrappeVue;
+
     // AG130-10 : instant du dernier rappel recu de Windows. Sans lui, un hook
     // decroche en silence (LowLevelHooksTimeout depasse, reprise de veille) ne se
     // voit nulle part - l'application reinstalle a l'aveugle toutes les 60 s et
@@ -53,15 +59,43 @@ public sealed class KeyboardHook : IDisposable
     // sonde hors du rappel (toutes les 5 s), lu seul par le rappel : volatile suffit.
     private volatile bool _remoteSessionActive;
 
-    // VK codes des raccourcis configurables (lus depuis config.json)
+    // VK codes et modificateurs des raccourcis configurables (lus depuis config.json)
     private uint _vkSearch;
     private uint _vkVirtualKeyboard;
+    private ShortcutModifiers _modsSearch = ShortcutModifierRules.Default;
+    private ShortcutModifiers _modsVirtualKeyboard = ShortcutModifierRules.Default;
 
     // Détection changement de layout via Ctrl+Shift
     private bool _nonModifierPressed;
 
+    // Touches servies comme raccourci par le hook (Ctrl+Maj+Verr. maj, recherche, clavier
+    // virtuel), jusqu'à leur relâche. Une répétition automatique garde la décision de l'appui
+    // (M1.4 I1) : sans cela, Ctrl+Maj+Q tenu basculait le clavier virtuel à chaque répétition
+    // (audit par frappe au hasard, AFH-3). La relâche est absorbée comme l'appui (M1.4 I4).
+    // Seul le fil du hook y touche.
+    private readonly HashSet<uint> _shortcutKeysHeld = new();
+
+    // Touches non modificatrices vues enfoncées par le hook. Le hook bas niveau ne dit pas si un
+    // appui est une répétition : une touche déjà enfoncée qui se répète garde la décision de son
+    // appui. Sans cela, Q tapé puis Ctrl+Maj enfoncés faisaient de la répétition de Q un
+    // raccourci, dont la relâche absorbée laissait Q enfoncé pour Windows (banc aléatoire,
+    // graines 0x4147015D et 0x41470133). Les relâches perdues (écran sécurisé, verrouillage,
+    // hook décroché) sont oubliées par ForgetHeldKeys, appelé à ces transitions (AFH-4).
+    // Valeur : heure (KBDLLHOOKSTRUCT.time) du dernier appui vu.
+    private readonly Dictionary<uint, uint> _keysDownSeen = new();
+
+    // Heure du dernier appui vu par touche physique (scancode, étendue), pour ForgetHeldKeys :
+    // seuls les appuis antérieurs au passage sont oubliés. Seul le fil du hook y touche.
+    private readonly Dictionary<(uint Scan, bool Extended), uint> _lastDownTime = new();
+
     /// <summary>Événement déclenché pour chaque keydown (scancode) — pour animation clavier virtuel.</summary>
     public event Action<uint>? RawKeyDown;
+
+    /// <summary>
+    /// Même keydown, avec le bit « touche étendue ». Le « / » du pavé numérique partage le
+    /// scancode 0x35 de la touche « ! » : sans ce bit, les Leçons attendaient « ! » (audit 09/11, E3).
+    /// </summary>
+    public event Action<uint, bool>? RawKeyDownDetailed;
 
     /// <summary>Événement déclenché quand Ctrl+Maj+W est pressé (ouvrir recherche de caractère).</summary>
     public event Action? SearchRequested;
@@ -113,7 +147,7 @@ public sealed class KeyboardHook : IDisposable
     {
         _mapper = mapper;
         _host = host ?? NullWindowsTypingHost.Instance;
-        _proc = HookCallback;
+        _proc = HookCallbackSansDoublon;
         ReloadShortcuts();
     }
 
@@ -122,12 +156,41 @@ public sealed class KeyboardHook : IDisposable
     {
         _vkSearch = _host.ShortcutCharacterSearchVk;
         _vkVirtualKeyboard = _host.ShortcutVirtualKeyboardVk;
-        // Sécurité : si les deux raccourcis sont identiques, désactiver le second
-        if (_vkSearch != 0 && _vkSearch == _vkVirtualKeyboard)
+        _modsSearch = ShortcutModifierRules.IsValid(_host.ShortcutCharacterSearchModifiers)
+            ? _host.ShortcutCharacterSearchModifiers : ShortcutModifierRules.Default;
+        _modsVirtualKeyboard = ShortcutModifierRules.IsValid(_host.ShortcutVirtualKeyboardModifiers)
+            ? _host.ShortcutVirtualKeyboardModifiers : ShortcutModifierRules.Default;
+        // Sécurité : si les deux raccourcis sont identiques (mêmes modificateurs et même touche), désactiver le second
+        if (_vkSearch != 0 && _vkSearch == _vkVirtualKeyboard && _modsSearch == _modsVirtualKeyboard)
             _vkVirtualKeyboard = 0;
         // Sécurité : ne pas entrer en conflit avec Verr.Maj (toggle on/off = 0x14)
         if (_vkSearch == 0x14) _vkSearch = 0;
         if (_vkVirtualKeyboard == 0x14) _vkVirtualKeyboard = 0;
+    }
+
+    /// <summary>
+    /// Oublie les appuis en cours, ici et dans le moteur (<see cref="KeyMapper.ForgetHeldKeys"/>) :
+    /// à appeler à chaque passage par un écran sécurisé ou un verrouillage, à l'ouverture d'une
+    /// session et après un décrochage du hook, quand des relâches n'ont pas atteint le hook
+    /// (AFH-4). L'appui suivant de chaque touche est neuf ; une relâche tardive d'un raccourci
+    /// servi reste absorbée (_shortcutKeysHeld est conservé). Ne pas appeler à une simple
+    /// réinstallation de routine : une répétition de raccourci tenu redeviendrait un appui neuf.
+    /// </summary>
+    /// <param name="transitionTime">
+    /// Heure du passage, dans la base de <c>KBDLLHOOKSTRUCT.time</c> (<c>dwmsEventTime</c>,
+    /// <c>GetMessageTime</c> d'un message posté, <c>GetTickCount</c>). Seuls les appuis vus à cette heure ou avant sont oubliés : l'avis
+    /// du retour peut être traité après l'appel du hook pour une touche tapée juste après, qui
+    /// doit rester un appui en cours. Sans heure, tous les appuis sont oubliés.
+    /// </param>
+    public void ForgetHeldKeys(uint? transitionTime = null)
+    {
+        bool Avant(uint t) => transitionTime is not uint since || unchecked((int)(t - since)) <= 0;
+        var oubliees = new List<uint>();
+        foreach (var (vk, t) in _keysDownSeen)
+            if (Avant(t)) oubliees.Add(vk);
+        foreach (var vk in oubliees)
+            _keysDownSeen.Remove(vk);
+        _mapper.ForgetHeldKeys(key => !_lastDownTime.TryGetValue(key, out uint t) || Avant(t));
     }
 
     /// <summary>Vrai une fois le hook Win32 posé (Install ou Reinstall réussi).</summary>
@@ -140,6 +203,10 @@ public sealed class KeyboardHook : IDisposable
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AG_DEV_PREVIEW")))
             return;
 #endif
+        // M2.1-I1 : Install() idempotent — évite d'écraser _hookId et de laisser un hook orphelin.
+        if (_hookId != IntPtr.Zero)
+            return;
+
         // GetModuleHandle(null) retourne le handle du module principal — suffisant pour WH_KEYBOARD_LL
         // et compatible avec PublishTrimmed (pas de dépendance à System.Diagnostics.Process)
         _hookId = Win32.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, Win32.GetModuleHandleW(null), 0);
@@ -151,8 +218,9 @@ public sealed class KeyboardHook : IDisposable
     /// Réinstalle le hook Win32 SANS changer l'identité de cet objet : les abonnés
     /// (RawKeyDown de l'onboarding, des leçons, du clavier virtuel) restent valides.
     /// Le nouveau hook est posé AVANT de décrocher l'ancien : aucun callback ne peut
-    /// s'intercaler (Install/Unhook et les callbacks s'exécutent sur le même thread),
-    /// donc aucune frappe n'est perdue et aucun double traitement n'est possible.
+    /// s'intercaler (Install/Unhook et les callbacks s'exécutent sur le même thread).
+    /// Les frappes déjà adressées à l'ancien hook sont traitées avant qu'il soit décroché,
+    /// et une frappe vue par les deux n'est traitée qu'une fois (M2.1 I2, M3.8 I2).
     /// Retourne false si SetWindowsHookEx échoue (l'ancien hook, s'il existe, est conservé).
     /// </summary>
     public bool Reinstall()
@@ -175,10 +243,42 @@ public sealed class KeyboardHook : IDisposable
             return _hookId != IntPtr.Zero; // ancien hook encore posé → état inchangé
         }
 
-        if (_hookId != IntPtr.Zero)
-            Win32.UnhookWindowsHookEx(_hookId);
+        // M2.1 I2 / M3.8 I2 (1.3.0) : une frappe arrivée avant le nouveau hook attend encore
+        // l'ancien. Le décrocher tout de suite la laissait passer à l'application, non remappée.
+        // On traite d'abord ce qui est en attente (PeekMessage livre les rappels du hook), puis on
+        // décroche. Le nouveau hook reçoit les frappes suivantes ; un doublon est écarté.
+        var ancien = _hookId;
         _hookId = newId;
+        if (ancien != IntPtr.Zero)
+        {
+            _retiringHookId = ancien;
+            try { Win32.PeekMessageW(out _, IntPtr.Zero, 0, 0, Win32.PM_NOREMOVE); }
+            finally
+            {
+                Win32.UnhookWindowsHookEx(ancien);
+                _retiringHookId = IntPtr.Zero;
+                _derniereFrappeVue = null;
+            }
+        }
         return true;
+    }
+
+    /// <summary>
+    /// Pendant le relais de Reinstall (deux hooks posés, même rappel), une frappe déjà vue par
+    /// l'un des deux est rendue à la chaîne sans second traitement : ni double émission ni
+    /// double RawKeyDown. Hors relais, appel direct de HookCallback.
+    /// </summary>
+    private IntPtr HookCallbackSansDoublon(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && _retiringHookId != IntPtr.Zero)
+        {
+            var s = ReadHookStruct(lParam);
+            var cle = (s.vkCode, s.scanCode, s.flags, s.time, s.dwExtraInfo, wParam);
+            if (_derniereFrappeVue == cle)
+                return Win32.CallNextHookEx(_hookId, nCode, wParam, lParam);
+            _derniereFrappeVue = cle;
+        }
+        return HookCallback(nCode, wParam, lParam);
     }
 
     /// <summary>
@@ -311,6 +411,12 @@ public sealed class KeyboardHook : IDisposable
             int msg = wParam.ToInt32();
             bool isKeyDown = msg == (int)Win32.WM_KEYDOWN || msg == (int)Win32.WM_SYSKEYDOWN;
             bool isKeyUp = msg == (int)Win32.WM_KEYUP || msg == (int)Win32.WM_SYSKEYUP;
+            if (isKeyDown || isKeyUp)
+            {
+                var physicalKey = (hookStruct.scanCode, (hookStruct.flags & 0x01) != 0);   // LLKHF_EXTENDED, même clé que KeyMapper
+                if (isKeyDown) _lastDownTime[physicalKey] = hookStruct.time;
+                else _lastDownTime.Remove(physicalKey);
+            }
 
             // Suspension : aucun remappage, raccourci, notification ni émission.
             // Garder les modificateurs physiques et l'association down/up pour la reprise ;
@@ -327,6 +433,7 @@ public sealed class KeyboardHook : IDisposable
                 // ── Détection changement de layout via Ctrl+Shift ──
                 // Windows change le layout du foreground thread quand Ctrl+Shift
                 // est pressé et relâché SANS qu'une 3e touche ait été pressée.
+                if (isKeyDown) _mapper.ResyncModifiersWithPhysicalState(); // EW-1 : relâchement perdu
                 bool wasCtrlShift = _mapper.IsToggleShortcut();
 
                 // Toujours tracker les modificateurs (même quand désactivé)
@@ -345,11 +452,39 @@ public sealed class KeyboardHook : IDisposable
 
                 // Ctrl+Shift relâché sans touche intermédiaire → possible changement de layout
                 if (wasCtrlShift && !isCtrlShift && !_nonModifierPressed)
-                    LayoutMayHaveChanged?.Invoke();
+                    SubscriberGuard.Raise(LayoutMayHaveChanged, _host, "KeyboardHook.LayoutMayHaveChanged");
+
+                // Appui neuf ou répétition (M1.4 I1) : seul un appui neuf peut devenir raccourci.
+                bool firstPress = false;
+                if (!IsModifierKey(hookStruct.vkCode))
+                {
+                    if (isKeyDown)
+                    {
+                        firstPress = !_keysDownSeen.ContainsKey(hookStruct.vkCode);
+                        _keysDownSeen[hookStruct.vkCode] = hookStruct.time;
+                    }
+                    else _keysDownSeen.Remove(hookStruct.vkCode);
+                }
+
+                // Touche servie comme raccourci : sa répétition et sa relâche restent au
+                // raccourci, sans le redéclencher (AFH-3), même si Ctrl ou Maj est lâché avant.
+                // Un appui neuf (relâche perdue) reprend le chemin normal.
+                if (_shortcutKeysHeld.Contains(hookStruct.vkCode))
+                {
+                    if (!isKeyDown)
+                    {
+                        _shortcutKeysHeld.Remove(hookStruct.vkCode);
+                        return (IntPtr)1;
+                    }
+                    if (!firstPress)
+                        return (IntPtr)1;
+                    _shortcutKeysHeld.Remove(hookStruct.vkCode);
+                }
 
                 // Détecter Ctrl+Shift+CapsLock même quand désactivé
-                if (hookStruct.vkCode == 0x14 && isKeyDown && _mapper.IsToggleShortcut())
+                if (hookStruct.vkCode == 0x14 && isKeyDown && firstPress && _mapper.IsToggleShortcut())
                 {
+                    _shortcutKeysHeld.Add(hookStruct.vkCode);
                     _mapper.HandleToggleShortcut();
                     return (IntPtr)1; // Bloquer le CapsLock — seul le toggle on/off est voulu
                 }
@@ -358,22 +493,26 @@ public sealed class KeyboardHook : IDisposable
                 // Audit du 25/09 (M-04) : l'appui et Ctrl+Maj d'abord. MatchesShortcutKey parcourt
                 // la disposition, et le faisait à chaque rappel ; les quatre prédicats sont purs,
                 // sans effet de bord : l'ordre ne change pas le résultat (HookCallbackTests).
-                if (isKeyDown && _mapper.IsToggleShortcut() &&
+                if (isKeyDown && firstPress && _mapper.MatchesShortcutModifiers(_modsSearch) &&
                     ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkSearch) &&
                     _mapper.MatchesShortcutKey(_vkSearch, hookStruct.vkCode, hookStruct.scanCode))
                 {
-                    SearchRequested?.Invoke();
+                    _shortcutKeysHeld.Add(hookStruct.vkCode);
+                    _mapper.AbandonPendingForShortcut(); // M1.1 I3 : un raccourci abandonne l'accent (AFH-2)
+                    SubscriberGuard.Raise(SearchRequested, _host, "KeyboardHook.SearchRequested");
                     return (IntPtr)1;
                 }
 
                 // Détecter Ctrl+Shift+<touche> → ouvrir/fermer le clavier virtuel
                 // R11 : même garde « saisie sécurisée » que la recherche — sans elle, le
                 // clavier virtuel s'affiche au-dessus d'un champ mot de passe.
-                if (isKeyDown && _mapper.IsToggleShortcut() &&
+                if (isKeyDown && firstPress && _mapper.MatchesShortcutModifiers(_modsVirtualKeyboard) &&
                     ShortcutOpensWindow(_mapper.AdvancedFeaturesSuppressed, _vkVirtualKeyboard) &&
                     _mapper.MatchesShortcutKey(_vkVirtualKeyboard, hookStruct.vkCode, hookStruct.scanCode))
                 {
-                    VirtualKeyboardRequested?.Invoke();
+                    _shortcutKeysHeld.Add(hookStruct.vkCode);
+                    _mapper.AbandonPendingForShortcut(); // M1.1 I3 : un raccourci abandonne l'accent (AFH-2)
+                    SubscriberGuard.Raise(VirtualKeyboardRequested, _host, "KeyboardHook.VirtualKeyboardRequested");
                     return (IntPtr)1;
                 }
 
@@ -381,7 +520,10 @@ public sealed class KeyboardHook : IDisposable
                 // A20 (audit 1.3.0, SEC-1) : rien en saisie sécurisée. Clavier virtuel, Leçons
                 // et tutoriel surlignaient sinon les touches d'un mot de passe, à l'écran.
                 if (ShouldNotifyRawKeyDown(isKeyDown, _passThroughAll, _mapper.KeyDisplaySuppressed))
-                    RawKeyDown?.Invoke(hookStruct.scanCode);
+                {
+                    SubscriberGuard.Raise(RawKeyDown, hookStruct.scanCode, _host, "KeyboardHook.RawKeyDown");
+                    SubscriberGuard.Raise(RawKeyDownDetailed, hookStruct.scanCode, (hookStruct.flags & 0x01) != 0, _host, "KeyboardHook.RawKeyDownDetailed");
+                }
 
                 if (_enabled)
                 {

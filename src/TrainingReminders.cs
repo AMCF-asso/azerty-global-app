@@ -27,7 +27,11 @@ readonly record struct TrainingSignals(
     int CurrentStreak,
     long HelperOpens,               // recherche + clavier virtuel (compteurs globaux)
     DateOnly? ReviewPromptLastShown, // date persistée de la dernière sollicitation d'avis
-    bool ChallengeAvailable);        // DailyChallenge.Enabled : le rappel n'ouvre que le Défi
+    bool ChallengeAvailable)        // DailyChallenge.Enabled : le rappel n'ouvre que le Défi
+{
+    /// <summary>Session verrouillée ou déconnectée (EW-4) : une bulle n'y serait pas vue.</summary>
+    public bool SessionLocked { get; init; }
+}
 
 static class TrainingReminders
 {
@@ -55,6 +59,7 @@ static class TrainingReminders
     /// </summary>
     public static bool ShouldRemind(DateTime now, TrainingSignals s)
     {
+        if (s.SessionLocked) return false;                     // EW-4 : attendre le retour
         if (!s.ChallengeAvailable) return false;                // 1.3.0 : Défi masqué
         if (!s.Enabled) return false;
         if (s.IgnoredCount >= MaxIgnored) return false;         // arrêt définitif
@@ -63,8 +68,10 @@ static class TrainingReminders
         if (s.ReviewPromptLastShown == today) return false;     // l'avis du jour prime
         if (now.Hour < EarliestHour) return false;
 
-        if (s.LastReminderDate == today) return false;          // un rappel par jour max
-        if (s.LastSessionDate == today) return false;           // séance déjà faite
+        // Une date enregistrée postérieure à aujourd'hui (horloge ou fuseau reculé) vaut aujourd'hui ;
+        // RepairFutureDates la réécrit, de sorte que le blocage ne dépasse pas la journée.
+        if (s.LastReminderDate >= today) return false;          // un rappel par jour max
+        if (s.LastSessionDate >= today) return false;           // séance déjà faite
 
         // Signal 1 — nouveaux utilisateurs (cible prioritaire v1.2.0) : la séquence de
         // désapprentissage n'est pas finie → rappeler tant qu'il reste des étapes,
@@ -98,14 +105,31 @@ static class TrainingReminders
             Enabled: ConfigManager.TrainingEnabled,
             IgnoredCount: ConfigManager.TrainingIgnoredCount,
             SequenceIndex: ConfigManager.TrainingSequenceIndex,
-            LastSessionDate: ParseDate(ConfigManager.TrainingLastSessionDate),
-            LastReminderDate: ParseDate(ConfigManager.TrainingLastReminderDate),
+            LastSessionDate: StoredDate.Parse(ConfigManager.TrainingLastSessionDate),
+            LastReminderDate: StoredDate.Parse(ConfigManager.TrainingLastReminderDate),
             LastActiveDate: UsageStats.LastActiveDate,
             LastSpecialCharDate: UsageStats.LastSpecialCharDate,
             CurrentStreak: UsageStats.CurrentStreak,
             HelperOpens: UsageStats.SearchOpenCount + UsageStats.VirtualKeyboardOpenCount,
             ReviewPromptLastShown: ReviewState.Load().LastShown,
-            ChallengeAvailable: DailyChallenge.Enabled);
+            ChallengeAvailable: PolicyManager.ChallengeEnabledNow);
+    }
+
+    /// <summary>
+    /// Ramène à aujourd'hui, et réécrit, une date de rappel ou de séance postérieure à aujourd'hui
+    /// (horloge avancée puis remise, fuseau reculé : ME-10, suite). Sans cette réécriture, la date
+    /// lointaine vaudrait « aujourd'hui » (>= today) jusqu'à ce que la vraie date la rattrape :
+    /// plus de rappel, et plus de séance du Défi commun comptée, pendant des mois. Le blocage dure
+    /// ainsi au plus la journée en cours, comme pour la série d'usage (UsageStats). <paramref name="today"/>
+    /// est le jour réel de la machine, jamais celui d'un module resté ouvert après minuit.
+    /// </summary>
+    public static void RepairFutureDates(DateOnly today)
+    {
+        string text = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (StoredDate.Parse(ConfigManager.TrainingLastReminderDate) > today)
+            ConfigManager.SetTrainingLastReminderDate(text);
+        if (StoredDate.Parse(ConfigManager.TrainingLastSessionDate) > today)
+            ConfigManager.SetTrainingLastSessionDate(text);
     }
 
     /// <summary>Marque le rappel du jour comme émis (avant l'affichage de la balloon).</summary>
@@ -129,11 +153,8 @@ static class TrainingReminders
     /// </summary>
     public static bool MarkSessionCompleted(DateOnly today, uint playedIndex)
     {
+        if (!WouldCount(today, playedIndex)) return false;
         uint seq = ConfigManager.TrainingSequenceIndex;
-        bool counted = seq < DailyChallenge.SequenceLength
-            ? playedIndex == seq
-            : playedIndex >= DailyChallenge.SequenceLength && ParseDate(ConfigManager.TrainingLastSessionDate) != today;
-        if (!counted) return false;
         ConfigManager.SetTrainingLastSessionDate(today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         if (seq < DailyChallenge.SequenceLength)
             ConfigManager.SetTrainingSequenceIndex(seq + 1);
@@ -141,6 +162,16 @@ static class TrainingReminders
         return true;
     }
 
-    private static DateOnly? ParseDate(string? s) =>
-        s != null && DateOnly.TryParseExact(s, "yyyy-MM-dd", out var d) ? d : null;
+    /// <summary>
+    /// La séance de l'étape <paramref name="playedIndex"/>, finie ce jour, compterait-elle ?
+    /// Faux pour un rejeu : étape déjà dépassée, ou défi commun déjà fait aujourd'hui. La
+    /// fenêtre Leçons le dit avant la frappe (audit UX du 09/11, L10).
+    /// </summary>
+    public static bool WouldCount(DateOnly today, uint playedIndex)
+    {
+        uint seq = ConfigManager.TrainingSequenceIndex;
+        return seq < DailyChallenge.SequenceLength
+            ? playedIndex == seq
+            : playedIndex >= DailyChallenge.SequenceLength && !(StoredDate.Parse(ConfigManager.TrainingLastSessionDate) >= today);
+    }
 }

@@ -54,6 +54,8 @@ public static class Win32
     // snapshot restait donc figé sur le sélecteur et toute émission était refusée.
     public const uint EVENT_SYSTEM_SWITCHSTART = 0x0014;
     public const uint EVENT_SYSTEM_SWITCHEND = 0x0015;
+    // Changement du bureau d'entrée : écran sécurisé (Ctrl+Alt+Suppr, UAC, verrouillage) et retour.
+    public const uint EVENT_SYSTEM_DESKTOPSWITCH = 0x0020;
     public const uint EVENT_OBJECT_FOCUS = 0x8005;
     public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
     public const uint LIST_MODULES_ALL = 0x03;
@@ -106,6 +108,25 @@ public static class Win32
 
     [DllImport("user32.dll")]
     public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    public const uint PM_NOREMOVE = 0x0000;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MSG
+    {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam;
+        public IntPtr lParam;
+        public uint time;
+        public int ptX;
+        public int ptY;
+    }
+
+    /// <summary>Sans retirer de message : livre les messages envoyés et les rappels de hook en attente.</summary>
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PeekMessageW(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandleW(string? lpModuleName);

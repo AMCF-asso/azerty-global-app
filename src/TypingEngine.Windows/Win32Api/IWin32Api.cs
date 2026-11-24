@@ -15,6 +15,8 @@ public interface IWin32Api
     short GetKeyState(int vk);
     short GetAsyncKeyState(int vk);
     IntPtr GetKeyboardLayout(uint threadId);
+    /// <summary>Fil d'une fenêtre (0 si inconnu). Sert à relire sa disposition à chaque émission (EW-2).</summary>
+    uint GetWindowThreadId(IntPtr window) => 0;
     int ToUnicode(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags);
     int ToUnicodeEx(uint vk, uint scan, byte[] state, System.Text.StringBuilder buffer, int capacity, uint flags, IntPtr hkl);
 

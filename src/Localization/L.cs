@@ -41,7 +41,23 @@ internal static partial class L
         }
         catch (System.Globalization.CultureNotFoundException)
         {
-            return date.ToString("yyyy-MM-dd");
+            return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>Date pour un titre étroit : mois abrégé en anglais ("Sep 10, 2026"), date longue
+    /// en français, qui tient déjà ("10 septembre 2026"). L'en-tête des Leçons coupait
+    /// "Challenge for September 10, 2026" et perdait le jour (QCM du 10/11, W24).</summary>
+    public static string FormatDateCompact(DateOnly date)
+    {
+        if (!IsEnglish) return FormatDate(date);
+        try
+        {
+            return date.ToDateTime(TimeOnly.MinValue).ToString("MMM d, yyyy", DisplayCulture);
+        }
+        catch (System.Globalization.CultureNotFoundException)
+        {
+            return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 }

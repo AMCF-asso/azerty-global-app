@@ -44,20 +44,192 @@ public class SecureInputProbeTests
         Assert.True(probe.Query());
     }
 
-    [Fact]
-    public void Worker_bloque_ne_reutilise_pas_le_resultat_non_securise_precedent()
+    // Horloge injectée : le délai d'abandon d'un worker bloqué se pilote sans attente
+    // réelle. Seule l'attente de la requête elle-même (timeout) reste en temps réel, et
+    // seulement quand on attend justement l'expiration d'un worker bloqué.
+    private sealed class Horloge
     {
+        private long _now = 1_000_000;
+        public long Now => Volatile.Read(ref _now);
+        public void Avance(long ms) => Interlocked.Add(ref _now, ms);
+    }
+
+    // Délégué de requête : la fenêtre 1 reste bloquée dans « COM » jusqu'à release et
+    // rend alors `retourFenetre1` ; toute autre fenêtre répond vite, non sécurisée.
+    // `entree` est libéré à chaque entrée dans la fenêtre 1 : le test attend que le
+    // worker soit réellement occupé avant de faire avancer l'horloge.
+    private static Func<IntPtr, bool> FenetreUnBloquee(
+        ManualResetEventSlim release, SemaphoreSlim entree, bool retourFenetre1)
+        => window =>
+        {
+            if (window != (IntPtr)1) return false;
+            entree.Release();
+            release.Wait();
+            return retourFenetre1;
+        };
+
+    // Relance une requête rapide jusqu'au verdict frais : le thread du nouveau worker
+    // peut démarrer après l'expiration de la requête ; le nombre d'essais est borné,
+    // pas la durée.
+    private static bool VerdictRapide(SecureInputProbe probe, IntPtr window)
+    {
+        bool securise = true;
+        for (int essai = 0; essai < 100 && securise; essai++)
+            securise = probe.Query(window);
+        return securise;
+    }
+
+    [Fact]
+    public void Worker_bloque_n_est_ni_multiplie_ni_abandonne_avant_le_delai()
+    {
+        var horloge = new Horloge();
         using var release = new ManualResetEventSlim();
-        int queries = 0;
+        using var entree = new SemaphoreSlim(0);
         int workers = 0;
         using var probe = new SecureInputProbe(() => { Interlocked.Increment(ref workers); return true; },
-            _ => { if (Interlocked.Increment(ref queries) > 1) release.Wait(); return false; }, timeout: 100);
+            FenetreUnBloquee(release, entree, false), timeout: 100, retryDelay: 0,
+            abandonAfter: 2000, clock: () => horloge.Now);
         try
         {
-            Assert.False(probe.Query());
-            Assert.True(probe.Query());
-            Assert.True(probe.Query());
+            Assert.True(probe.Query((IntPtr)1));
+            Assert.True(entree.Wait(10_000));
+            horloge.Avance(1999);
+            // Fail-closed pendant le blocage, tant que le délai n'est pas écoulé.
+            Assert.True(probe.Query((IntPtr)2));
+            Assert.True(probe.Query((IntPtr)2));
             Assert.Equal(1, Volatile.Read(ref workers));
+            Assert.Equal(0, probe.AbandonedWorkers);
+        }
+        finally { release.Set(); }
+    }
+
+    [Fact]
+    public void Worker_bloque_est_abandonne_apres_le_delai_et_une_nouvelle_detection_repart()
+    {
+        var horloge = new Horloge();
+        using var release = new ManualResetEventSlim();
+        using var entree = new SemaphoreSlim(0);
+        int workers = 0;
+        using var probe = new SecureInputProbe(() => { Interlocked.Increment(ref workers); return true; },
+            FenetreUnBloquee(release, entree, false), timeout: 100, retryDelay: 0,
+            abandonAfter: 2000, clock: () => horloge.Now);
+        try
+        {
+            Assert.True(probe.Query((IntPtr)1));
+            Assert.True(entree.Wait(10_000));
+            horloge.Avance(2000);
+
+            Assert.False(VerdictRapide(probe, (IntPtr)2));
+            Assert.Equal(2, Volatile.Read(ref workers));
+            Assert.Equal(1, probe.AbandonedWorkers);
+            // La nouvelle génération sert les requêtes suivantes sans nouvel abandon.
+            Assert.False(VerdictRapide(probe, (IntPtr)3));
+            Assert.Equal(2, Volatile.Read(ref workers));
+        }
+        finally { release.Set(); }
+    }
+
+    [Fact]
+    public void Retour_tardif_d_un_worker_abandonne_n_ecrase_pas_la_detection_recente()
+    {
+        var horloge = new Horloge();
+        using var release = new ManualResetEventSlim();
+        using var entree = new SemaphoreSlim(0);
+        // Le worker abandonné rend « sécurisé » en retard, à l'inverse du verdict récent.
+        using var probe = new SecureInputProbe(() => true,
+            FenetreUnBloquee(release, entree, true), timeout: 100, retryDelay: 0,
+            abandonAfter: 2000, clock: () => horloge.Now);
+        int levees = 0;
+        probe.ResultChangedLate += () => Interlocked.Increment(ref levees);
+        try
+        {
+            Assert.True(probe.Query((IntPtr)1));
+            Assert.True(entree.Wait(10_000));
+            horloge.Avance(2000);
+            Assert.False(VerdictRapide(probe, (IntPtr)2));
+            int idRecent = probe.LastResultRequestId;
+            int leveesAvant = Volatile.Read(ref levees);
+            horloge.Avance(5000);   // la requête 1 est largement hors délai : retour « tardif »
+
+            release.Set();
+            Assert.True(SpinWait.SpinUntil(() => probe.AbandonedWorkers == 0, 10_000));
+
+            Assert.Equal(idRecent, probe.LastResultRequestId);
+            Assert.Equal(leveesAvant, Volatile.Read(ref levees));
+            Assert.False(VerdictRapide(probe, (IntPtr)2));
+        }
+        finally { release.Set(); }
+    }
+
+    // Le retard se juge à la publication du résultat. L'horloge saute de 5 s dès qu'un résultat
+    // est publié : mesuré après la publication (ancien code, fil préempté entre _done.Set() et
+    // la mesure), le résultat reçu dans le délai était signalé tardif.
+    [Fact]
+    public void Resultat_publie_dans_le_delai_n_est_pas_signale_tardif_meme_si_l_horloge_avance_juste_apres()
+    {
+        const long debut = 1_000_000;
+        SecureInputProbe? probe = null;
+        using var sonde = probe = new SecureInputProbe(() => true, _ => false, timeout: 100, retryDelay: 0,
+            abandonAfter: 2000,
+            clock: () => probe is not null && probe.LastResultRequestId > 0 ? debut + 5000 : debut);
+        int levees = 0;
+        sonde.ResultChangedLate += () => Interlocked.Increment(ref levees);
+
+        Assert.False(VerdictRapide(sonde, (IntPtr)2));   // sécurisé initial → non sécurisé : changement
+        // L'ouvrier ne prend la requête suivante qu'après avoir fini la précédente, levée comprise.
+        Assert.False(VerdictRapide(sonde, (IntPtr)3));
+        Assert.Equal(0, Volatile.Read(ref levees));
+    }
+
+    [Fact]
+    public void Workers_abandonnes_sont_bornes_puis_la_sonde_reste_securisee()
+    {
+        var horloge = new Horloge();
+        using var release = new ManualResetEventSlim();
+        using var entree = new SemaphoreSlim(0);
+        int workers = 0;
+        // Toute fenêtre reste bloquée : on ne doit jamais accumuler de fils sans borne.
+        using var probe = new SecureInputProbe(() => { Interlocked.Increment(ref workers); return true; },
+            _ => { entree.Release(); release.Wait(); return false; }, timeout: 50, retryDelay: 0,
+            abandonAfter: 2000, clock: () => horloge.Now);
+        try
+        {
+            for (int i = 1; i <= SecureInputProbe.MaxAbandonedWorkers + 1; i++)
+            {
+                Assert.True(probe.Query((IntPtr)i));
+                Assert.True(entree.Wait(10_000));   // le worker courant est dans sa requête
+                horloge.Avance(2000);
+            }
+            // Plafond atteint : les requêtes suivantes ne lancent plus aucun fil.
+            Assert.True(probe.Query((IntPtr)50));
+            horloge.Avance(2000);
+            Assert.True(probe.Query((IntPtr)51));
+            // 3 workers abandonnés, 1 courant : jamais plus de 4 fils.
+            Assert.Equal(SecureInputProbe.MaxAbandonedWorkers, probe.AbandonedWorkers);
+            Assert.Equal(SecureInputProbe.MaxAbandonedWorkers + 1, Volatile.Read(ref workers));
+            Assert.True(probe.Query((IntPtr)99));
+        }
+        finally { release.Set(); }
+    }
+
+    [Fact]
+    public void Apres_le_retour_des_workers_abandonnes_la_sonde_repart_normalement()
+    {
+        var horloge = new Horloge();
+        using var release = new ManualResetEventSlim();
+        using var entree = new SemaphoreSlim(0);
+        using var probe = new SecureInputProbe(() => true,
+            FenetreUnBloquee(release, entree, false), timeout: 100, retryDelay: 0,
+            abandonAfter: 2000, clock: () => horloge.Now);
+        try
+        {
+            Assert.True(probe.Query((IntPtr)1));
+            Assert.True(entree.Wait(10_000));
+            horloge.Avance(2000);
+            Assert.False(VerdictRapide(probe, (IntPtr)2));
+            release.Set();
+            Assert.True(SpinWait.SpinUntil(() => probe.AbandonedWorkers == 0, 10_000));
+            Assert.False(VerdictRapide(probe, (IntPtr)3));
         }
         finally { release.Set(); }
     }

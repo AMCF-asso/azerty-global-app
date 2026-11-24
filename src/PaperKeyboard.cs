@@ -48,6 +48,10 @@ internal sealed class PaperKeyboardState
     /// <summary>Accueil : touches de fonction qui gardent leur nom (<see cref="VirtualKeyboard.VisualKey.Label"/>) ;
     /// les autres restent muettes.</summary>
     public HashSet<string> NamedFunctionLabels { get; } = new(StringComparer.Ordinal);
+    /// <summary>Carte (<see cref="PaperKeyboardMode.Map"/>) du parcours : toutes les légendes
+    /// restent à leur place, celles de la couche active en encre, les autres en
+    /// <see cref="PaperKeyboard.InactiveLegendInk"/> (remontée n° 10 d'Antoine, 07/11).</summary>
+    public bool EmphasizeActiveLayer { get; init; }
 }
 
 internal static class PaperKeyboard
@@ -81,10 +85,10 @@ internal static class PaperKeyboard
     }
 
     internal static void Draw(IntPtr hdc, KeyboardPlacement placement, Layout layout, PaperKeyboardMode mode,
-        PaperKeyboardState state)
+        PaperKeyboardState state, WindowFonts? fonts)
     {
         Win32.SetBkMode(hdc, Win32.TRANSPARENT);
-        float k = placement.Scale / MockKey;
+        var k = new FontScale(placement.Scale / MockKey, fonts);
         foreach (var key in KeyboardRenderer.VisualKeys)
             DrawKey(hdc, ToRect(key, placement), key, layout, mode, state, k);
     }
@@ -101,7 +105,7 @@ internal static class PaperKeyboard
     // ── Une touche ─────────────────────────────────────────────────────
 
     private static void DrawKey(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, Layout layout,
-        PaperKeyboardMode mode, PaperKeyboardState state, float k)
+        PaperKeyboardMode mode, PaperKeyboardState state, FontScale k)
     {
         bool isoEnter = key.Scancode == ScanEnter && key.H > VirtualKeyboard.KEY_H;
         bool function = key.IsContextual;
@@ -147,7 +151,7 @@ internal static class PaperKeyboard
         int borderWidth = 1;
         int penStyle = Win32.PS_SOLID;
         bool onAction = false;
-        int stateWidth = Math.Max(2, (int)Math.Round(2 * k));
+        int stateWidth = Math.Max(2, (int)Math.Round(2 * k.Value));
         if (!held && (target || step > 0))
         {
             // Le plein bleu dit « tenu ou allumé en ce moment » ; un geste à faire est cerné et
@@ -194,7 +198,7 @@ internal static class PaperKeyboard
             borderWidth = stateWidth;
         }
 
-        int radius = Math.Max(2, (int)Math.Round(3 * k));
+        int radius = Math.Max(2, (int)Math.Round(3 * k.Value));
         if (isoEnter)
             DrawIsoEnter(hdc, rect, key, fill, border, borderWidth);
         else
@@ -220,7 +224,9 @@ internal static class PaperKeyboard
         else if (mode == PaperKeyboardMode.ActiveLayer)
             DrawActiveSign(hdc, rect, key, active, activeIsDeadKey, onAction, k);
         else if (def != null)
-            DrawLegends(hdc, rect, key, def, onAction, k);
+            DrawLegends(hdc, rect, key, def, onAction, k,
+                state.EmphasizeActiveLayer ? ActiveLegend(def, key.Scancode, state.Shift, state.AltGr, state.CapsLock) ?? "" : null,
+                state.EmphasizeActiveLayer ? def.GetOutput(state.Shift, state.AltGr, state.CapsLock) : null);
 
         if (step > 0)
             DrawBadge(hdc, rect, step, k);
@@ -269,7 +275,7 @@ internal static class PaperKeyboard
     /// <summary>Nom d'une touche de fonction : centré au clavier virtuel (choix d'Antoine, 07/10),
     /// en bas à gauche aux Leçons comme sur la maquette F.</summary>
     private static void DrawFunctionName(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, PaperKeyboardMode mode,
-        bool onAction, float k)
+        bool onAction, FontScale k)
     {
         string name = FunctionName(key.Label);
         bool backspace = key.Scancode == ScanBackspace;
@@ -277,12 +283,12 @@ internal static class PaperKeyboard
         if (mode == PaperKeyboardMode.ActiveLayer || backspace)
         {
             int size = backspace ? 20 : 12;
-            var font = FontSpec.Of(backspace ? AppFonts.Symbols : AppFonts.Text, Scaled(size, k * MockKey / 50f), onAction ? TypeRamp.Semibold : TypeRamp.Regular, 1f);
+            var font = k.Font(backspace ? AppFonts.Symbols : AppFonts.Text, Scaled(size, k.Value * MockKey / 50f), onAction ? TypeRamp.Semibold : TypeRamp.Regular);
             PaperText.DrawLine(hdc, name, font, rect, color, TextAlign.Center);
             return;
         }
         // Centré comme sur le clavier virtuel : un seul style de touche de fonction (QCM du 07/10).
-        var small = FontSpec.Of(AppFonts.Text, Scaled(11, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular, 1f);
+        var small = k.Font(AppFonts.Text, Scaled(11, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular);
         PaperText.DrawLine(hdc, name, small, rect, color, TextAlign.Center);
     }
 
@@ -328,17 +334,17 @@ internal static class PaperKeyboard
     // ── Couche active (clavier virtuel A) ──────────────────────────────
 
     private static void DrawActiveSign(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, string? value,
-        bool deadKey, bool onAction, float k)
+        bool deadKey, bool onAction, FontScale k)
     {
         if (string.IsNullOrEmpty(value)) return;
-        float u = k * MockKey / 50f; // tailles de la maquette A, touche de 50 px
+        var u = k.Times(MockKey / 50f); // tailles de la maquette A, touche de 50 px
         uint ink = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
 
         // Espace : ce qu'elle tape se dit en mots (« insécable fine »).
         if (key.Scancode == ScanSpace && value.Length == 1 && char.IsWhiteSpace(value[0]))
         {
             if (value == " ") return;
-            var nameFont = FontSpec.Of(AppFonts.Text, Scaled(12, u), TypeRamp.Regular, 1f);
+            var nameFont = u.Font(AppFonts.Text, Scaled(12, u), TypeRamp.Regular);
             PaperText.DrawLine(hdc, SpaceName(value), nameFont, rect, onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary, TextAlign.Center);
             return;
         }
@@ -347,27 +353,27 @@ internal static class PaperKeyboard
         if (display.Length > 2 && !display.StartsWith('◌'))
         {
             // Nom d'un invisible (« esp. ins. ») : petit, comme un nom de touche.
-            var nameFont = FontSpec.Of(AppFonts.Text, Scaled(12, u), TypeRamp.Regular, 1f);
+            var nameFont = u.Font(AppFonts.Text, Scaled(12, u), TypeRamp.Regular);
             PaperText.DrawLine(hdc, display, nameFont, rect, onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary, TextAlign.Center);
             return;
         }
-        var font = FontSpec.Of(AppFonts.Title, Scaled(deadKey ? 28 : 23, u), TypeRamp.Semibold, 1f);
+        var font = u.Font(AppFonts.Title, Scaled(deadKey ? 28 : 23, u), TypeRamp.Semibold);
         PaperText.DrawLine(hdc, display, font, rect, ink, TextAlign.Center);
     }
 
     /// <summary>Touche à pastille : le nom que dit la consigne (« ù ») en grand, ce qu'elle tape
     /// maintenant (« ´ ») en petit en haut à gauche ; la pastille garde le coin haut droit.</summary>
     private static void DrawStepKeyName(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, string name,
-        string? active, bool onAction, float k)
+        string? active, bool onAction, FontScale k)
     {
-        float u = k * MockKey / 50f;
+        var u = k.Times(MockKey / 50f);
         uint ink = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
         uint secondary = onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary;
         bool space = key.Scancode == ScanSpace;
         // Un mot (« Espace ») se pose comme un nom de touche ; une gravure comme un signe.
         var nameFont = name.Length > 2
-            ? FontSpec.Of(AppFonts.Text, Scaled(12, u), TypeRamp.Semibold, 1f)
-            : FontSpec.Of(AppFonts.Title, Scaled(23, u), TypeRamp.Semibold, 1f);
+            ? u.Font(AppFonts.Text, Scaled(12, u), TypeRamp.Semibold)
+            : u.Font(AppFonts.Title, Scaled(23, u), TypeRamp.Semibold);
         PaperText.DrawLine(hdc, name, nameFont, rect, ink, TextAlign.Center);
 
         string? typed = TypedBesideName(name, active, space);
@@ -376,8 +382,8 @@ internal static class PaperKeyboard
         // Un accent seul a un trait fin : il garde la taille et l'encre d'un signe.
         bool accent = IsDeadKeyRef(active);
         var font = space
-            ? FontSpec.Of(AppFonts.Text, Scaled(11, u), TypeRamp.Regular, 1f)
-            : FontSpec.Of(AppFonts.Title, Scaled(accent ? 22 : 13, u), TypeRamp.Semibold, 1f);
+            ? u.Font(AppFonts.Text, Scaled(11, u), TypeRamp.Regular)
+            : u.Font(AppFonts.Title, Scaled(accent ? 22 : 13, u), TypeRamp.Semibold);
         var (ascent, descent) = PaperText.Metrics(hdc, font);
         // En haut à gauche : un accent seul y reste un accent (en bas, « ´ » passait pour une
         // virgule) ; la pastille tient le coin d'en face.
@@ -398,37 +404,78 @@ internal static class PaperKeyboard
 
     // ── Carte à quatre légendes (Leçons F) ─────────────────────────────
 
-    private static void DrawLegends(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, KeyDefinition def,
-        bool onAction, float k)
+    /// <summary>Encre des légendes hors couche active, sur la carte de l'onboarding : lisible,
+    /// en retrait. Réglée en direct avec Antoine (remontée n° 10, 07/11).</summary>
+    internal static uint InactiveLegendInk = PaperTheme.Pale;
+
+    /// <summary>Encre des légendes de la couche active, sur la carte du parcours : bleu foncé
+    /// (#1A2FA0), demandé par Antoine le 07/11 (remontée n° 10).</summary>
+    // Constante : un champ statique ajouté à chaud n'est pas initialisé (il valait 0, du noir).
+    internal const uint ActiveLegendInk = PaperTheme.Action; // #1A3EF2, QCM d'Antoine du 07/11 : « Bleu plus clair »
+
+    /// <summary>Ce que montre une légende : la lettre gravée devient sa capitale quand c'est elle
+    /// que la touche tape (a → A sous Maj ou Verr. Maj., é → É en Verr. Maj.).</summary>
+    internal static string? ShownLegend(string? value, string? activeLegend, string? output)
+        => value != null && value == activeLegend && !string.IsNullOrEmpty(output) ? output : value;
+
+    /// <summary>Légendes gravées sur la carte : Base, Maj (sauf sur une lettre, dont la capitale
+    /// se lit dans la lettre), Maj+AltGr (s'il diffère d'AltGr), AltGr ; l'espace n'a que ses deux
+    /// légendes de droite.</summary>
+    internal static string?[] DrawnLegends(KeyDefinition def, uint scancode)
     {
-        uint ink = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
-        uint secondary = onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary;
+        if (scancode == ScanSpace) return new[] { def.ShiftAltGr, def.AltGr };
+        bool letter = KeyboardRenderer.IsLetterKey(scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
+        return new[] { def.Base, letter ? null : def.Shift, def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null, def.AltGr };
+    }
+
+    /// <summary>La légende gravée qui dit ce que la touche tape avec ces modificateurs : à
+    /// l'identique, sinon la base en lettre pour sa capitale (a pour A sous Maj, é pour É en
+    /// Verr. Maj.) ; null si aucune ne le dit.</summary>
+    internal static string? ActiveLegend(KeyDefinition def, uint scancode, bool shift, bool altGr, bool capsLock)
+    {
+        string? output = def.GetOutput(shift, altGr, capsLock);
+        if (string.IsNullOrEmpty(output)) return null;
+        var drawn = DrawnLegends(def, scancode);
+        if (drawn.Contains(output)) return output;
+        return drawn[0] is { } baseLegend && scancode != ScanSpace
+               && string.Equals(baseLegend, output, StringComparison.OrdinalIgnoreCase) ? baseLegend : null;
+    }
+
+    private static void DrawLegends(IntPtr hdc, Win32.RECT rect, VirtualKeyboard.VisualKey key, KeyDefinition def,
+        bool onAction, FontScale k, string? active = null, string? output = null)
+    {
+        uint inkBase = onAction ? PaperTheme.OnAction : PaperTheme.Ink;
+        uint secondaryBase = onAction ? PaperTheme.OnAction : PaperTheme.TextSecondary;
+        // Couche active (onboarding) : la légende qu'elle tape en encre, les autres en retrait.
+        bool letter = KeyboardRenderer.IsLetterKey(key.Scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
+        string? shiftAltGr = def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null;
+        uint Ink(string? value, uint normal) => active == null || onAction ? normal
+            : !string.IsNullOrEmpty(value) && value == active ? ActiveLegendInk : InactiveLegendInk;
         int left = rect.left + Scaled(6, k), right = rect.right - Scaled(5, k);
         int top = rect.top + Scaled(5, k), bottom = rect.bottom - Scaled(6, k);
 
         if (key.Scancode == ScanSpace)
         {
-            var nameFont = FontSpec.Of(AppFonts.Text, Scaled(10, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular, 1f);
-            Corner(hdc, SpaceLegend(def.ShiftAltGr), nameFont, left, right, top, bottom, Corner_.TopRight, secondary);
-            Corner(hdc, SpaceLegend(def.AltGr), nameFont, left, right, top, bottom, Corner_.BottomRight, secondary);
+            var nameFont = k.Font(AppFonts.Text, Scaled(10, k), onAction ? TypeRamp.Semibold : TypeRamp.Regular);
+            Corner(hdc, SpaceLegend(def.ShiftAltGr), nameFont, left, right, top, bottom, Corner_.TopRight, Ink(def.ShiftAltGr, secondaryBase));
+            Corner(hdc, SpaceLegend(def.AltGr), nameFont, left, right, top, bottom, Corner_.BottomRight, Ink(def.AltGr, secondaryBase));
             return;
         }
 
         // Medium (ag-mono-500) : les signes fins se lisent mieux qu’en Regular (QCM du 07/10).
-        var mono = (int size) => FontSpec.Of(AppFonts.Mono, Scaled(size, k), TypeRamp.Medium, 1f);
-        bool letter = KeyboardRenderer.IsLetterKey(key.Scancode) && def.Base is { Length: 1 } b && char.IsLetter(b[0]);
-        string? shiftAltGr = def.ShiftAltGr != def.AltGr ? def.ShiftAltGr : null;
+        var mono = (int size) => k.Font(AppFonts.Mono, Scaled(size, k), TypeRamp.Medium);
         if (letter)
         {
-            Corner(hdc, def.Base, mono(17), left, right, top, bottom, Corner_.TopLeft, ink);
+            Corner(hdc, ShownLegend(def.Base, active, output), mono(17), left, right, top, bottom, Corner_.TopLeft, Ink(def.Base, inkBase));
         }
         else
         {
-            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, secondary);
-            Corner(hdc, def.Base, mono(15), left, right, top, bottom, Corner_.BottomLeft, ink);
+            Corner(hdc, def.Shift, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopLeft, Ink(def.Shift, secondaryBase));
+            Corner(hdc, ShownLegend(def.Base, active, output), mono(15), left, right, top, bottom, Corner_.BottomLeft, Ink(def.Base, inkBase));
         }
-        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, secondary);
-        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, secondary);
+        // Maj+AltGr égal à AltGr n'est gravé qu'une fois : la légende AltGr vaut pour les deux.
+        Corner(hdc, shiftAltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.TopRight, Ink(shiftAltGr, secondaryBase));
+        Corner(hdc, def.AltGr, mono(SecondaryLegend), left, right, top, bottom, Corner_.BottomRight, Ink(def.AltGr, secondaryBase));
     }
 
     /// <summary>Taille commune des trois légendes secondaires (Maj, AltGr, Maj+AltGr) : 10 et
@@ -440,13 +487,13 @@ internal static class PaperKeyboard
     /// <summary>Le signe que la touche tape sans modificateur, au centre ; cadre bleu si la touche
     /// change. Les tailles viennent de la maquette, en fraction de la touche (0,42 u).</summary>
     private static void DrawCenteredContent(IntPtr hdc, Win32.RECT rect, Win32.RECT nameArea, VirtualKeyboard.VisualKey key,
-        KeyDefinition? def, PaperKeyboardState state, float k)
+        KeyDefinition? def, PaperKeyboardState state, FontScale k)
     {
         if (key.IsContextual || (def == null && key.Scancode != ScanSpace))
         {
             if (state.NamedFunctionLabels.Contains(key.Label))
             {
-                var nameFont = FontSpec.Of(AppFonts.Text, Scaled(0.27f * MockKey, k), TypeRamp.Regular, 1f);
+                var nameFont = k.Font(AppFonts.Text, Scaled(0.27f * MockKey, k), TypeRamp.Regular);
                 PaperText.DrawLine(hdc, FunctionName(key.Label), nameFont, nameArea, PaperTheme.TextSecondary, TextAlign.Center);
             }
             return;
@@ -459,20 +506,41 @@ internal static class PaperKeyboard
         if (state.FramedScancodes.Contains(key.Scancode))
         {
             // Centré sur l'œil du caractère, accents et jambages compris.
-            float u = k * MockKey;
-            int bw = (int)Math.Round(u * 0.64f), bh = (int)Math.Round(u * 0.8f);
+            var u = k.Times(MockKey);
+            int bw = (int)Math.Round(u.Value * 0.64f), bh = (int)Math.Round(u.Value * 0.8f);
             int top = cy + (int)Math.Round(letterSize * 0.08f) - bh / 2;
             var frame = new Win32.RECT { left = cx - bw / 2, top = top, right = cx - bw / 2 + bw - 1, bottom = top + bh - 1 };
-            PaperDraw.RoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, (int)Math.Round(bw * 0.24f),
-                Math.Max(1, (int)Math.Round(u * 1.25f / 38f)));
+            if (FrameSmooth)
+                PaperDraw.SmoothRoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, bw * FrameRadiusRatio,
+                    Math.Max(1f, u.Value * 1.25f / 38f));
+            else
+                PaperDraw.RoundBox(hdc, frame, PaperTheme.Surface, PaperTheme.Action, (int)Math.Round(bw * FrameRadiusRatio),
+                    Math.Max(1, (int)Math.Round(u.Value * 1.25f / 38f)));
         }
         // Un accent seul (´ ` ¨ ˜) est minuscule à la taille des lettres : plus grand, abaissé vers le centre.
         bool thinAccent = IsDeadKeyRef(def.Base) && text is "´" or "`" or "¨" or "˜";
-        int size = thinAccent ? Scaled(0.8f * MockKey, k) : letterSize;
-        var font = FontSpec.Of(AppFonts.Mono, size, TypeRamp.Medium, 1f);
-        int baseline = cy + (int)Math.Round(size * (thinAccent ? 0.62f : 0.34f));
+        int size = thinAccent ? Scaled(ThinAccentRatio * MockKey, k) : letterSize;
+        var font = thinAccent
+            ? k.Font(ThinAccentFont, size, ThinAccentWeight)
+            : k.Font(AppFonts.Mono, size, TypeRamp.Medium);
+        int baseline = cy + (int)Math.Round(size * (thinAccent ? ThinAccentBaseline : 0.34f));
         PaperText.Draw(hdc, text, font, cx - PaperText.Width(hdc, text, font) / 2, baseline, PaperTheme.Ink);
     }
+
+    /// <summary>Rayon des cadres bleus, en fraction de leur largeur (0,5 = pastille). Réglable
+    /// par le banc des contours (remontée n° 2 d'Antoine, 07/11).</summary>
+    internal static float FrameRadiusRatio = 0.36f; // choix d'Antoine sur la planche, 07/11 (variante C, lissée)
+
+    /// <summary>Cadres bleus lissés (GDI+) ; false = l'ancien tracé GDI en escalier, gardé pour le banc.</summary>
+    internal static bool FrameSmooth = true;
+
+    // Accent seul (´ ` ¨ ˜) sur une touche morte : taille (en touche), police, graisse, ligne de base
+    // (en taille). Remontée d'Antoine du 07/11 : le ´ de la touche ù s'affichait en gros trait
+    // (Mono medium) ; choix d'Antoine sur la planche, 07/11 : variante C, police Texte regular.
+    internal static float ThinAccentRatio = 0.8f;
+    internal static string ThinAccentFont = AppFonts.Text;
+    internal static int ThinAccentWeight = TypeRamp.Regular;
+    internal static float ThinAccentBaseline = 0.62f;
 
     private enum Corner_ { TopLeft, TopRight, BottomLeft, BottomRight }
 
@@ -513,9 +581,9 @@ internal static class PaperKeyboard
     // ── Pastille d'ordre ───────────────────────────────────────────────
 
     /// <summary>Pastille « 1 » ou « 2 » : dans quel ordre frapper les gestes venus de la recherche.</summary>
-    private static void DrawBadge(IntPtr hdc, Win32.RECT rect, int step, float k)
+    private static void DrawBadge(IntPtr hdc, Win32.RECT rect, int step, FontScale k)
     {
-        float u = k * MockKey / 50f;
+        var u = k.Times(MockKey / 50f);
         int size = Scaled(17, u), inset = Scaled(4, u);
         var r = new Win32.RECT { left = rect.right - inset - size, top = rect.top + inset, right = rect.right - inset, bottom = rect.top + inset + size };
         var brush = Win32.CreateSolidBrush(PaperTheme.Surface);
@@ -528,7 +596,7 @@ internal static class PaperKeyboard
         Win32.DeleteObject(pen);
         Win32.DeleteObject(brush);
         PaperText.DrawLine(hdc, step.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            FontSpec.Of(AppFonts.Text, Scaled(11, u), TypeRamp.Semibold, 1f), r, StepColor(step), TextAlign.Center);
+            u.Font(AppFonts.Text, Scaled(11, u), TypeRamp.Semibold), r, StepColor(step), TextAlign.Center);
     }
 
     /// <summary>Couleur d'une étape de geste : l'étape 2 se distingue de l'étape 1 ; sans étape,
@@ -562,4 +630,5 @@ internal static class PaperKeyboard
     private static bool IsDeadKeyRef(string? s) => s != null && s.StartsWith("dk_", StringComparison.Ordinal);
 
     private static int Scaled(float size, float k) => Math.Max(1, (int)Math.Round(size * k));
+    private static int Scaled(float size, FontScale k) => Scaled(size, k.Value);
 }

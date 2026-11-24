@@ -1,0 +1,60 @@
+{
+ "initiation/premiers-pas/1": [
+  {
+   "key": "initiation/premiers-pas/1",
+   "content": "GRÂCE À AZERTY GLOBAL, ÉCRIRE EN FRANÇAIS EST TRÈS FACILE !"
+  }
+ ],
+ "initiation/premiers-pas/2": [
+  {
+   "key": "initiation/premiers-pas/2",
+   "content": "jean.dupont@education.gouv.fr"
+  }
+ ],
+ "initiation/premiers-pas/3": [
+  {
+   "key": "initiation/premiers-pas/3",
+   "content": "Lætitia demande « d'où vient ce chef-d'œuvre… » — elle l'approuve à 100 %."
+  }
+ ],
+ "initiation/premiers-pas/4": [
+  {
+   "key": "initiation/premiers-pas/4",
+   "content": "type Config = { items: string[]; sep: \"~\" | \"\\\\\" };"
+  }
+ ],
+ "initiation/premiers-pas/5": [
+  {
+   "key": "initiation/premiers-pas/5",
+   "content": "São Paulo, Córdoba, Tromsø, Łódź, lunedì, Größe"
+  }
+ ],
+ "majuscules-accentuees/caps-a-grave/1": [
+  {
+   "key": "majuscules-accentuees/caps-a-grave/1",
+   "content": "À À À À À"
+  },
+  {
+   "key": "majuscules-accentuees/caps-a-grave/2",
+   "content": "À bientôt !\nÀ DEMAIN !\nDÉJÀ LÀ ?\nÀ plus.\nLÀ-BAS"
+  }
+ ],
+ "majuscules-accentuees/caps-c-cedilla/1": [
+  {
+   "key": "majuscules-accentuees/caps-c-cedilla/1",
+   "content": "Ç Ç Ç Ç Ç"
+  }
+ ],
+ "majuscules-accentuees/caps-e-acute/1": [
+  {
+   "key": "majuscules-accentuees/caps-e-acute/1",
+   "content": "É É É É É"
+  }
+ ],
+ "majuscules-accentuees/caps-e-grave/1": [
+  {
+   "key": "majuscules-accentuees/caps-e-grave/1",
+   "content": "È È È È È"
+  }
+ ]
+}

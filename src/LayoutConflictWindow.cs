@@ -15,6 +15,7 @@ sealed class LayoutConflictWindow : IDisposable
 {
     private const int IDC_BTN_QUIT = 5101;
     private const int IDC_BTN_KEEP = 5102;
+    private const int IDC_CHK_DONT_SHOW = 5103;
 
     // Nom de classe Win32. Defini en const pour partage entre CreateMainWindow et Dispose
     // (UnregisterClassW au Dispose pour eviter que la classe survive l'instance et garde
@@ -37,7 +38,7 @@ sealed class LayoutConflictWindow : IDisposable
     // A9 : palette papier des Leçons, ou celle du système en contraste élevé (lue à la
     // création, comme l'accueil). Audit UX 1.3.0, #8 : l'intro passe en texte secondaire,
     // la question garde le texte plein.
-    private readonly PaperPalette _pal = PaperPalette.Now();
+    private PaperPalette _pal = PaperPalette.Now(); // T5 : relue sur WM_SETTINGCHANGE
     private const uint SS_NOPREFIX = 0x0080;
     private const int BS_TYPEMASK = 0x000F;
     private const int GWL_STYLE = -16;
@@ -48,6 +49,7 @@ sealed class LayoutConflictWindow : IDisposable
     private IntPtr _hWnd;
     private IntPtr _hWndBtnQuit;
     private IntPtr _hWndBtnKeep;
+    private IntPtr _hWndChkDontShow;
     // #8 : titre, intro et question étaient peints en GDI, invisibles du Narrateur. Ce sont
     // des STATIC, que la fenêtre place (LayoutText) et colore (WM_CTLCOLORSTATIC).
     private IntPtr _hTitle;
@@ -55,11 +57,12 @@ sealed class LayoutConflictWindow : IDisposable
     private IntPtr _hQuestion;
 
     private readonly Win32.WNDPROC _wndProcDelegate;
-    private readonly IntPtr _hBgBrush;
+    private IntPtr _hBgBrush; // T5 : refait quand la palette change
 
     private readonly bool _isAtStartup;
     private readonly Action _onQuit;
     private readonly Action _onKeep;
+    private readonly Action<bool>? _onDontShowChanged;
 
     private float _dpiScale;
     private int S(int val) => (int)(val * _dpiScale);
@@ -83,13 +86,14 @@ sealed class LayoutConflictWindow : IDisposable
     /// </param>
     /// <param name="onQuit">Callback appele si l'utilisateur choisit « Quitter l'application ».</param>
     /// <param name="onKeep">Callback appele si l'utilisateur choisit « Garder l'app » (ou ferme la fenetre).</param>
-    public LayoutConflictWindow(bool isAtStartup, Action onQuit, Action onKeep)
+    public LayoutConflictWindow(bool isAtStartup, Action onQuit, Action onKeep, Action<bool>? onDontShowChanged = null)
     {
         _wndProcDelegate = WndProc;
         _hBgBrush = Win32.CreateSolidBrush(_pal.Paper);
         _isAtStartup = isAtStartup;
         _onQuit = onQuit;
         _onKeep = onKeep;
+        _onDontShowChanged = onDontShowChanged;
 
         var hdcScreen = Win32.GetDC(IntPtr.Zero);
         int dpi = Win32.GetDeviceCaps(hdcScreen, 88);
@@ -144,6 +148,7 @@ sealed class LayoutConflictWindow : IDisposable
     {
         Win32.SendMessageW(_hWndBtnQuit, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
         Win32.SendMessageW(_hWndBtnKeep, Win32.WM_SETFONT, _hFontButton, (IntPtr)1);
+        Win32.SendMessageW(_hWndChkDontShow, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
         Win32.SendMessageW(_hTitle, Win32.WM_SETFONT, _hFontTitle, (IntPtr)1);
         Win32.SendMessageW(_hIntro, Win32.WM_SETFONT, _hFontText, (IntPtr)1);
         Win32.SendMessageW(_hQuestion, Win32.WM_SETFONT, _hFontBold, (IntPtr)1);
@@ -204,6 +209,11 @@ sealed class LayoutConflictWindow : IDisposable
         _quitNote = L.LayoutConflict_QuitNote;
         SetNote(_hWndBtnKeep, _keepNote);
         SetNote(_hWndBtnQuit, _quitNote);
+
+        _hWndChkDontShow = Win32.CreateWindowExW(0, "BUTTON", L.LayoutConflict_DontShowAgain,
+            Win32.WS_CHILD | Win32.WS_VISIBLE | Win32.WS_TABSTOP | Win32.BS_AUTOCHECKBOX,
+            0, 0, 0, 0,
+            _hWnd, (IntPtr)IDC_CHK_DONT_SHOW, hInstance, IntPtr.Zero);
     }
 
     // ── A9 : liens de commande en cartes papier ─────────────────────
@@ -343,19 +353,22 @@ sealed class LayoutConflictWindow : IDisposable
         int gap = S(8);
 
         IntPtr hdc = Win32.GetDC(_hWnd);
-        int y, keepH, quitH;
+        int y, keepH, quitH, chkH;
         try
         {
             y = LayoutText(hdc, contentW) + S(4);
             keepH = LinkHeight(_hWndBtnKeep, _keepNote, contentW, hdc);
             quitH = LinkHeight(_hWndBtnQuit, _quitNote, contentW, hdc);
+            chkH = Math.Max(S(24), MeasureWrapped(hdc, _hFontText, L.LayoutConflict_DontShowAgain, Math.Max(S(60), contentW - S(24))) + S(4));
         }
         finally { Win32.ReleaseDC(_hWnd, hdc); }
 
         Win32.MoveWindow(_hWndBtnKeep, margin, y, contentW, keepH, true);
         y += keepH + gap;
         Win32.MoveWindow(_hWndBtnQuit, margin, y, contentW, quitH, true);
-        return y + quitH + S(20);
+        y += quitH + S(12);
+        Win32.MoveWindow(_hWndChkDontShow, margin, y, contentW, chkH, true);
+        return y + chkH + S(18);
     }
 
     public void Show()
@@ -372,14 +385,45 @@ sealed class LayoutConflictWindow : IDisposable
 
     private void Close(bool quit)
     {
+        bool dontShow = _hWndChkDontShow != IntPtr.Zero
+            && Win32.SendMessageW(_hWndChkDontShow, Win32.BM_GETCHECK, IntPtr.Zero, IntPtr.Zero) == (IntPtr)Win32.BST_CHECKED;
         Win32.ShowWindow(_hWnd, 0);
-        if (quit) _onQuit(); else _onKeep();
+        if (quit)
+        {
+            _onQuit();
+        }
+        else
+        {
+            if (dontShow) _onDontShowChanged?.Invoke(true);
+            _onKeep();
+        }
+    }
+
+    /// <summary>
+    /// T5 (EW-15) : relit la palette (contraste élevé activé ou coupé fenêtre ouverte) ;
+    /// fond, pinceaux, barre de titre et contrôles suivent. Rien quand elle n'a pas changé.
+    /// </summary>
+    private void RefreshPalette()
+    {
+        if (_hWnd == IntPtr.Zero || !NativeWindow.RefreshPalette(_hWnd, ref _pal))
+            return;
+        IntPtr oldBg = _hBgBrush;
+        _hBgBrush = Win32.CreateSolidBrush(_pal.Paper);
+        if (oldBg != IntPtr.Zero) Win32.DeleteObject(oldBg);
+        NativeWindow.RepaintAll(_hWnd);
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         try
         {
+            // T5 (EW-15) : contraste élevé ou couleurs du système changés, fenêtre ouverte.
+            if (NativeWindow.IsThemeChange(msg))
+                RefreshPalette();
+            // T6 (EW-18) : écran débranché, définition ou zone de travail changée : la fenêtre,
+            // affichée ou cachée, revient dans la zone de travail de son écran.
+            if (NativeWindow.IsDisplayChange(msg, wParam))
+                NativeWindow.KeepInWorkArea(hWnd);
             switch (msg)
             {
                 case Win32.WM_PAINT:

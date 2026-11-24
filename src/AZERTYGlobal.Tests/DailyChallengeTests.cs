@@ -124,6 +124,16 @@ public class TrainingRemindersTests
         Assert.False(TrainingReminders.ShouldRemind(Evening, s with { IgnoredCount = TrainingReminders.MaxIgnored }));
     }
 
+    // Audit environnement Windows, EW-4 : un rappel tiré session verrouillée est marqué vu
+    // sans avoir été lu. Il attend le déverrouillage (le minuteur repasse à chaque tick).
+    [Fact]
+    public void EW4_PasDeRappel_SessionVerrouillee_PuisRappelAuRetour()
+    {
+        var s = Base(Today) with { SequenceIndex = 0 };
+        Assert.False(TrainingReminders.ShouldRemind(Evening, s with { SessionLocked = true }));
+        Assert.True(TrainingReminders.ShouldRemind(Evening, s with { SessionLocked = false }));
+    }
+
     [Fact]
     public void NoReminder_BeforeEveningWindow()
     {

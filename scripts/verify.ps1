@@ -124,6 +124,9 @@ function Invoke-Tests([string]$Projet, [string]$Filtre = '', [switch]$BureauCour
 
 $etapes = [ordered]@{
     'identite'        = { Invoke-Commande python @('scripts/list-identity-literals.py') }
+    # Chaque création de ressource de src/ (minuterie, abonnement, objet Windows, mémoire
+    # native) a une libération trouvée par règle ou un verdict lu (scripts/ressources-verdicts.tsv).
+    'ressources'      = { Invoke-Commande python @('scripts/audit-ressources-inventaire.py', '--check') }
     'schema'          = { Invoke-Commande python @('scripts/validate-layout.py') }
     'temoins'         = { Invoke-Commande python @('-m', 'unittest', 'discover', '-s', 'scripts/tests', '-v') }
     'store-analytics' = {

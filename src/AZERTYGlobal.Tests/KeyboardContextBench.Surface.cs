@@ -82,7 +82,7 @@ public partial class KeyboardContextBench
                 if (state.ErrorScancode != 0 && i == state.Typed.Length - 1)
                 {
                     BancCapture.SetField(window, "_visible", true);
-                    BancCapture.Call(window, "OnRawKeyDown", state.ErrorScancode);
+                    BancCapture.Call(window, "OnRawKeyDown", state.ErrorScancode, false);
                     BancCapture.SetField(window, "_visible", false);
                 }
                 BancCapture.Call(window, "OnChar", state.Typed[i]);
@@ -104,7 +104,7 @@ public partial class KeyboardContextBench
             if (state.Settings)
                 BancCapture.Call(window, "ToggleSettings");
             if (state.Free)
-                BancCapture.SetField(window, "_freeStartedAt", null); // statistiques sans horloge
+                BancCapture.SetField(window, "_freeStartedElapsed", null); // statistiques sans horloge
             BancCapture.Call(window, "UpdateRenderScaleFromCurrentClient", true);
             IntPtr hwnd = window.Handle;
             Win32.ShowWindow(hwnd, 1);

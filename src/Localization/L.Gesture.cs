@@ -19,10 +19,15 @@ internal static partial class L
     public static string Gesture_KeyRightOfM => T("la touche à droite du M", "the key right of M");
     /// <summary>Gravure courte d'Espace dans une case de portée.</summary>
     public static string Gesture_SpaceShort => T("Esp", "Spc");
-    /// <summary>Gravure courte de Verr. Maj. dans une case de portée.</summary>
-    public static string Gesture_CapsLockShort => T("VM", "Caps");
+    /// <summary>Gravure de Verr. Maj. dans une case de portée : le nom en clair (avis global 1.3.0,
+    /// « VM » est un sigle que personne ne connaît) ; la case prend la largeur du texte.</summary>
+    public static string Gesture_CapsLockShort => T("Verr. Maj.", "Caps");
+    /// <summary>Gravure compacte de Verr. Maj., là où le nom en clair ne tient pas : la touche du
+    /// mini-clavier (1,75 unité de large) et la bande de révision de l'accueil, quand le nom en clair
+    /// ferait disparaître des caractères à revoir.</summary>
+    public static string Gesture_CapsLockCompact => T("VM", "Caps");
     public static string Gesture_LineShift => Settings_ShortcutModifier2;
-    public static string Gesture_LineAltGr => "AltGr";
+    public static string Gesture_LineAltGr => AltGrKey;
     public static string Gesture_LineKey => T("Touche", "Key");
     public static string Gesture_ThenShort => Search_ThenWord;
 }

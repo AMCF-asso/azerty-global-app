@@ -23,6 +23,24 @@ public class ForegroundMonitorMockedTests
         return mock;
     }
 
+    // AFH-4 (audit par frappe au hasard) : le passage par un écran sécurisé (Ctrl+Alt+Suppr, UAC,
+    // verrouillage) est signalé à l'hôte, qui oublie les appuis en cours. Prémisse non prouvée
+    // ici : Windows livre EVENT_SYSTEM_DESKTOPSWITCH à un hook hors contexte.
+    [Fact]
+    public void DesktopSwitch_RaisesInputDesktopSwitched_OnlyForThatEvent()
+    {
+        var mock = SetupMock("notepad.exe", @"C:\Windows\notepad.exe");
+        using var fm = new ForegroundMonitor(mock, IntPtr.Zero, _host);
+        Assert.Contains((Win32.EVENT_SYSTEM_DESKTOPSWITCH, Win32.EVENT_SYSTEM_DESKTOPSWITCH), mock.WinEventRanges);
+        var heures = new List<uint>();
+        fm.InputDesktopSwitched += heures.Add;
+
+        mock.SimulateForegroundChange("notepad.exe", @"C:\Windows\notepad.exe", IntPtr.Zero);
+        Assert.Empty(heures);
+        mock.CapturedWinEventDelegate!(IntPtr.Zero, Win32.EVENT_SYSTEM_DESKTOPSWITCH, IntPtr.Zero, 0, 0, 0, 4242);
+        Assert.Equal(new uint[] { 4242 }, heures);
+    }
+
     [Fact]
     public void Recompute_NoForeground_ReturnsDefault()
     {

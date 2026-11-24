@@ -24,6 +24,12 @@ internal sealed class LinkBehavior
     private const int VK_RETURN = 0x0D;
     private const int VK_ESCAPE = 0x1B;
     private const int IDC_HAND = 32649;
+    private const uint WM_UPDATEUISTATE = 0x0128;
+
+    /// <summary>
+    /// Bit 30 de lParam d'un WM_KEYDOWN : la touche était déjà enfoncée (répétition automatique).
+    /// </summary>
+    internal static bool IsAutoRepeat(IntPtr lParam) => (lParam.ToInt64() & (1L << 30)) != 0;
 
     // Gardé vivant tant que la sous-classe est posée : Windows n'en tient qu'un pointeur.
     private readonly Win32.SUBCLASSPROC _proc;
@@ -52,7 +58,14 @@ internal sealed class LinkBehavior
     public IntPtr Hovered { get; private set; }
 
     /// <summary>Survolé ou focalisé : la couleur de survol, dans WM_CTLCOLORSTATIC.</summary>
-    public bool IsActive(IntPtr link) => link != IntPtr.Zero && (Hovered == link || Win32.GetFocus() == link);
+    public bool IsActive(IntPtr link) =>
+        link != IntPtr.Zero &&
+        IsActiveState(Hovered == link, Win32.GetFocus() == link, PaperChoice.FocusCuesShown(link));
+
+    /// <summary>Audit 09/11, E30 : le survol colore toujours le lien ; le focus ne le colore que si le
+    /// clavier a servi (<c>UISF_HIDEFOCUS</c> levé), comme le cadre de focus.</summary>
+    internal static bool IsActiveState(bool hovered, bool hasFocus, bool focusCuesShown) =>
+        hovered || (hasFocus && focusCuesShown);
 
     public bool Contains(IntPtr hwnd) => hwnd != IntPtr.Zero && _links.Exists(l => l.Link == hwnd);
 
@@ -121,6 +134,11 @@ internal sealed class LinkBehavior
             case Win32.WM_KEYDOWN:
                 if (wParam == (IntPtr)VK_RETURN)
                 {
+                    // M7.8 I3 (1.3.0) : un appui n'ouvre qu'une URL. Entrée maintenue répète
+                    // WM_KEYDOWN avec le bit 30 de lParam posé (touche déjà enfoncée) : la
+                    // répétition est absorbée sans rouvrir le lien.
+                    if (IsAutoRepeat(lParam))
+                        return IntPtr.Zero;
                     int ctrlId = Win32.GetDlgCtrlID(hWnd);
                     Win32.SendMessageW(_owner(), Win32.WM_COMMAND, (IntPtr)ctrlId, hWnd);
                     return IntPtr.Zero;
@@ -139,6 +157,15 @@ internal sealed class LinkBehavior
                 if (_focusFrame)
                     Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
                 break;
+            case WM_UPDATEUISTATE:
+            {
+                // E30 : le cadre et la couleur de focus suivent l'état d'interface (Windows le lève
+                // à la première touche de navigation, le baisse à un clic) : repeint au changement.
+                IntPtr result = Win32.DefSubclassProc(hWnd, msg, wParam, lParam);
+                if (Win32.GetFocus() == hWnd)
+                    Win32.InvalidateRect(hWnd, IntPtr.Zero, true);
+                return result;
+            }
             case Win32.WM_PAINT:
                 if (_focusFrame)
                     return GdiHelpers.PaintLinkWithFocusRect(hWnd, msg, wParam, lParam);

@@ -6,8 +6,13 @@ internal static partial class L
     // Recherche par langue (1.3.0) : le champ dit qu'un nom de langue suffit (« wolof », « pulaar »).
     public static string Search_Placeholder => T("Caractère, nom ou langue…", "Character, name or language…");
     public static string Search_NoResults => T("Aucun résultat", "No results");
+    /// <summary>Entrée sans rien à insérer (audit 09/11, W10) : champ vide, puis requête sans résultat.</summary>
+    public static string Search_EnterNothingEmpty => T("Rien à insérer : tapez un caractère, un nom ou une langue.", "Nothing to insert: type a character, a name or a language.");
+    public static string Search_EnterNothingNoResults => T("Aucun résultat à insérer : essayez un autre mot.", "No result to insert: try another word.");
     public static string Search_Tip => T("Entrée pour insérer · Échap pour fermer", "Enter to insert · Esc to close");
-    public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"“{ch}” copied!");
+    /// <summary>Ni l'insertion ni la copie n'ont abouti (presse-papiers tenu par une autre application).</summary>
+    public static string Search_CopyFailedFeedback => T("Copie impossible : réessayez", "Copy failed: try again");
+    public static string Search_CopiedFeedback(string ch) => T($"« {ch} » copié !", $"“{ch}” copied!");
     /// <summary>A18 : le résultat choisi, tel que le lecteur d'écran le lit sur le champ.</summary>
     public static string Search_AccessibleResult(int position, int count, string glyph, string name, string gesture)
         => T($"Résultat {position} sur {count} : {glyph}, {name}. {gesture}",
@@ -21,17 +26,17 @@ internal static partial class L
     public static string Search_ThenWord => T("puis", "then");
     public static string Search_CapsLockWord => T("Verr. Maj.", "Caps Lock");
 
-    /// <summary>Libellé d'une couche + touche (ex. "Maj + é", "Verr.Maj + AltGr + Maj + à").</summary>
+    /// <summary>Libellé d'une couche + touche (ex. "Maj + é", "Verr. Maj. + Alt Gr + Maj + à").</summary>
     public static string Search_LayerKeyLabel(string layer, string keyLabel) => layer switch
     {
         "Base" => keyLabel,
         "Shift" => $"{Settings_ShortcutModifier2} + {keyLabel}",
-        "AltGr" => $"AltGr + {keyLabel}",
-        "AltGr+Shift" or "Shift+AltGr" => $"AltGr + {Settings_ShortcutModifier2} + {keyLabel}",
+        "AltGr" => $"{AltGrKey} + {keyLabel}",
+        "AltGr+Shift" or "Shift+AltGr" => $"{AltGrKey} + {Settings_ShortcutModifier2} + {keyLabel}",
         "Caps" => $"{Search_CapsLockWord} + {keyLabel}",
         "Caps+Shift" => $"{Search_CapsLockWord} + {Settings_ShortcutModifier2} + {keyLabel}",
-        "Caps+AltGr" => $"{Search_CapsLockWord} + AltGr + {keyLabel}",
-        "Caps+Shift+AltGr" or "Caps+AltGr+Shift" => $"{Search_CapsLockWord} + AltGr + {Settings_ShortcutModifier2} + {keyLabel}",
+        "Caps+AltGr" => $"{Search_CapsLockWord} + {AltGrKey} + {keyLabel}",
+        "Caps+Shift+AltGr" or "Caps+AltGr+Shift" => $"{Search_CapsLockWord} + {AltGrKey} + {Settings_ShortcutModifier2} + {keyLabel}",
         _ => keyLabel,
     };
 

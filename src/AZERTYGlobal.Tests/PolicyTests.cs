@@ -75,7 +75,7 @@ public class PolicyTests : IDisposable
     /// <summary>Le chemin n'est pas seulement construit : c'est bien celui qui est demandé au
     /// registre, pour les cinq valeurs et sous leurs noms exacts.</summary>
     [Fact]
-    public void Read_DemandeLesCinqValeursSousLeCheminDeStrategie()
+    public void Read_DemandeLesHuitValeursSousLeCheminDeStrategie()
     {
         var lecteur = new LecteurEnregistreur();
 
@@ -87,6 +87,8 @@ public class PolicyTests : IDisposable
             {
                 "NotificationsEnabled", "UsageStatsEnabled", "ExternalLinksEnabled",
                 "ShowOnboarding", "Language",
+                // 1.3.0 : segmentation Store / MSIX entreprise (décisions du 2026-11-17).
+                "OutboundLinksEnabled", "AutoStartEnabled", "LessonsEnabled",
             },
             lecteur.Demandes.Select(d => d.Valeur).ToArray());
     }
@@ -205,14 +207,14 @@ public class PolicyTests : IDisposable
         Assert.True(PolicyManager.NotificationsEnabled(true, userSetting: false));
     }
 
-    /// <summary>Défaut de canal : la collecte est éteinte sur le canal sobre et allumée
-    /// ailleurs, y compris hors package — la décision D8 laisse ce canal inchangé.</summary>
+    /// <summary>Défaut de canal : la collecte n'est allumée que sur le Store ; le canal hors
+    /// package est sobre depuis la décision 5 du 2026-11-17.</summary>
     [Fact]
     public void Statistiques_SansPolitique_SuiventLeDefautDuCanal()
     {
         Assert.False(PolicyManager.UsageStatsEnabled(null, DistributionChannel.Amcf));
         Assert.True(PolicyManager.UsageStatsEnabled(null, DistributionChannel.Store));
-        Assert.True(PolicyManager.UsageStatsEnabled(null, DistributionChannel.Unpackaged));
+        Assert.False(PolicyManager.UsageStatsEnabled(null, DistributionChannel.Unpackaged));
     }
 
     [Fact]
@@ -227,7 +229,7 @@ public class PolicyTests : IDisposable
     {
         Assert.False(PolicyManager.ExternalLinksEnabled(null, DistributionChannel.Amcf));
         Assert.True(PolicyManager.ExternalLinksEnabled(null, DistributionChannel.Store));
-        Assert.True(PolicyManager.ExternalLinksEnabled(null, DistributionChannel.Unpackaged));
+        Assert.False(PolicyManager.ExternalLinksEnabled(null, DistributionChannel.Unpackaged));
     }
 
     /// <summary>Ce que la politique apporte de neuf : une structure peut éteindre les liens
@@ -361,25 +363,15 @@ public class PolicyTests : IDisposable
             TrayApplication.FeedbackTopLevelEntries(DistributionChannel.Amcf, externalLinksPolicy: true));
     }
 
-    /// <summary>Second chemin de sollicitation, celui qu'on oublie : le partage tombe lui
-    /// aussi avec les liens externes, et il a sa propre garde.</summary>
+    /// <summary>C1 (1.3.0) : le bouton « Noter l'application » de Mes statistiques tombe avec les
+    /// liens externes, comme l'entrée du menu, et n'existe que sur le canal Store (la fiche).</summary>
     [Fact]
-    public void Partage_LiensExternesEteints_NeSollicitePas()
+    public void BoutonNoter_LiensExternesEteints_Masque()
     {
-        var signaux = new ReviewSharePromptSignals(
-            Channel: DistributionChannel.Store,
-            ExternalLinks: false,
-            PromptClicked: false,
-            PromptCount: 0,
-            PromptLastShown: null,
-            LastErrorUtc: null,
-            UtcNow: new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
-            Today: new DateOnly(2026, 8, 19),
-            FirstRemapDate: new DateOnly(2026, 8, 10),
-            ActiveDaysCount: ReviewSharePrompt.MinActiveDays);
-
-        Assert.False(ReviewSharePrompt.ShouldPrompt(signaux));
-        Assert.True(ReviewSharePrompt.ShouldPrompt(signaux with { ExternalLinks = true }));
+        Assert.True(UsageStatsWindow.RateButtonVisible(DistributionChannel.Store, externalLinks: true));
+        Assert.False(UsageStatsWindow.RateButtonVisible(DistributionChannel.Store, externalLinks: false));
+        Assert.False(UsageStatsWindow.RateButtonVisible(DistributionChannel.Amcf, externalLinks: true));
+        Assert.False(UsageStatsWindow.RateButtonVisible(DistributionChannel.Unpackaged, externalLinks: true));
     }
 
     /// <summary>
@@ -459,7 +451,7 @@ public class PolicyTests : IDisposable
             _ = PolicyManager.Current;
         }
 
-        Assert.Equal(5, lecteur.Demandes.Count);
+        Assert.Equal(8, lecteur.Demandes.Count);   // une lecture par valeur, pas une de plus
     }
 
     // ═══════════════════════════════════════════════════════════════

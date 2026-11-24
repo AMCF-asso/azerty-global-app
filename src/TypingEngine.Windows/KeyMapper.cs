@@ -94,12 +94,27 @@ public sealed class KeyMapper
     public bool AltGrDown => IsAltGrDown;
     public bool CtrlDown => IsCtrlDown;
     public bool AltDown => _leftAltDown;
+    public bool WinDown => _leftWinDown || _rightWinDown;
 
     /// <summary>Événement déclenché quand l'état change (pour rafraîchir l'UI).</summary>
     public event Action? StateChanged;
 
     /// <summary>Événement déclenché quand Ctrl+Shift+CapsLock est pressé (toggle on/off).</summary>
     public event Action? ToggleRequested;
+
+    /// <summary>
+    /// Déclenché à la fin de chaque appui de touche traité par le moteur (répétitions comprises),
+    /// avec la décision réelle : absorbée ou non, et le texte effectivement émis. Rien n'est
+    /// déclenché quand l'émission est suspendue : la touche passe alors au système.
+    /// </summary>
+    public event Action<KeyDecision>? KeyDecided;
+
+    // CE-T1 (CE-01) : ces trois événements partent du rappel du hook. Chaque abonné est prévenu
+    // à part ; son exception est journalisée et ne décide plus du sort de la touche.
+    private void RaiseStateChanged() => SubscriberGuard.Raise(StateChanged, _host, "KeyMapper.StateChanged");
+
+    private readonly System.Text.StringBuilder _keyEmitted = new();
+    private bool _recordingKey;
 
     /// <summary>
     /// Constructeur principal pour les tests (IWin32Api injecté).
@@ -110,7 +125,7 @@ public sealed class KeyMapper
         _composition = new CompositionEngine(layout);
         _api = api;
         _host = host ?? NullWindowsTypingHost.Instance;
-        _maintainableLayers.StateChanged += () => StateChanged?.Invoke();
+        _maintainableLayers.StateChanged += () => RaiseStateChanged();
         // Lire l'état initial du Caps Lock
         _capsLockState = (_api.GetKeyState(0x14) & 0x0001) != 0;
         // Vider le buffer de touche morte du layout Windows sous-jacent
@@ -200,7 +215,7 @@ public sealed class KeyMapper
         _capsLockState = false;
         // Notifier seulement si l'etat logique interne a effectivement change. Evite un repaint
         // UI inutile dans le cas de desync (Windows ON / interne deja OFF).
-        if (wasOn) StateChanged?.Invoke();
+        if (wasOn) RaiseStateChanged();
     }
 
     /// <summary>
@@ -244,7 +259,7 @@ public sealed class KeyMapper
         ClearPassedThroughKeys();
 
         if (changed)
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     /// <summary>
@@ -339,6 +354,61 @@ public sealed class KeyMapper
         // ToUnicode l'a consommée en combinant — c'est le comportement voulu.
     }
 
+    private static bool IsModifierVk(uint vk) => vk is
+        0x10 or 0x11 or 0x12 or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5 or VK_LWIN or VK_RWIN;
+
+    /// <summary>
+    /// Vrai si la touche annule un coup de couche armé : toute touche qui n'est pas une touche de la
+    /// disposition (touche étendue, ou scancode absent de la disposition), sauf les six exceptions.
+    /// Elle recouvre les touches sans caractère (flèches, Début, Fin, Page préc./suiv., Inser, Suppr,
+    /// Applications, Impr. écran, F1 à F24, Arrêt défil, Pause, Win, volume et multimédia) et les
+    /// touches du pavé numérique qui écrivent un caractère (Verr. num allumé : chiffres, + - * / et
+    /// séparateur décimal, VK 0x60 à 0x6F), qui sortent leur caractère normalement. Maj, Ctrl, Alt,
+    /// AltGr, Verr. maj et Verr. num sont les exceptions : elles préparent la frappe suivante
+    /// (majuscule de l'autre alphabet) et n'annulent jamais l'attente.
+    /// </summary>
+    private bool CancelsOneShot(uint vkCode, uint scanCode, bool isExtended)
+    {
+        if (vkCode is 0x10 or 0x11 or 0x12 or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5
+            or VK_CAPITAL or Win32.VK_NUMLOCK)
+            return false;
+        if (vkCode is VK_LWIN or VK_RWIN)
+            return true;
+        return isExtended || !_layout.Keys.ContainsKey(scanCode);
+    }
+
+    /// <summary>
+    /// Un raccourci abandonne sans rien écrire la touche morte armée et le coup de couche
+    /// (M1.1 I3). La couche verrouillée n'est pas touchée. Appelé par le chemin des raccourcis
+    /// Ctrl, Alt et Win ci-dessous, et par le hook pour les raccourcis qu'il sert lui-même
+    /// (recherche, clavier virtuel), qui ne passent jamais par <see cref="ProcessKey"/> :
+    /// sans cela l'accent restait armé après Ctrl+Maj+W (audit par frappe au hasard, AFH-2).
+    /// </summary>
+    internal void AbandonPendingForShortcut()
+    {
+        bool abandoned = _composition.ActiveDeadKey != null && _composition.Cancel();
+        abandoned |= _maintainableLayers.CancelOneShot();
+        if (abandoned)
+            RaiseStateChanged();
+    }
+
+    /// <summary>
+    /// Toute touche hors disposition annule le coup de couche armé : la lettre suivante sort en
+    /// français, seule la toute prochaine touche peut sortir dans l'autre alphabet (ME-12, constat
+    /// C1.5, décisions d'Antoine du 16 novembre 2026 : « Toutes annulent », « Le chiffre annule »).
+    /// Seul le coup est annulé : la couche verrouillée et l'attente d'une touche morte seule gardent
+    /// leur comportement, et la touche n'est jamais absorbée ni transformée (un chiffre du pavé
+    /// numérique sort normalement). Seul le premier appui compte : l'auto-répétition d'une touche
+    /// tenue ne défait pas un coup armé depuis (un accord promu par cette même touche).
+    /// </summary>
+    private void CancelOneShotOnKeyOutsideLayout(uint vkCode, uint scanCode, bool isExtended)
+    {
+        if (!CancelsOneShot(vkCode, scanCode, isExtended)) return;
+        if (_keyDownOwnership.ContainsKey((scanCode, isExtended))) return;
+        if (_maintainableLayers.CancelOneShot())
+            RaiseStateChanged();
+    }
+
     private bool IsShiftDown => _leftShiftDown || _rightShiftDown;
     // AltGr = Right Alt (envoie aussi un phantom LCtrl)
     // ou Right Ctrl + Left Alt (convention Windows : Ctrl+Alt = AltGr)
@@ -395,13 +465,26 @@ public sealed class KeyMapper
         // Notifier si l'état d'un modificateur a changé (pour le clavier virtuel)
         if (notify && (IsShiftDown != oldShift || IsAltGrDown != oldAltGr ||
             IsCtrlDown != oldCtrl || _leftAltDown != oldAlt))
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     /// <summary>Vérifie si Ctrl+Shift sont enfoncés (pour le raccourci toggle). Win exclu
     /// pour ne pas capturer les raccourcis système Win+Ctrl+Maj+<touche>.</summary>
     public bool IsToggleShortcut() => IsShiftDown && IsCtrlDown && !IsAltGrDown && !_leftAltDown
         && !_leftWinDown && !_rightWinDown;
+
+    /// <summary>Vérifie si les modificateurs tenus correspondent exactement au raccourci configuré.
+    /// AltGr et Win sont toujours exclus (touches mortes et raccourcis système).</summary>
+    public bool MatchesShortcutModifiers(ShortcutModifiers expected)
+    {
+        if (!ShortcutModifierRules.IsValid(expected))
+            return false;
+        if (IsAltGrDown || _leftWinDown || _rightWinDown)
+            return false;
+        return IsCtrlDown == ((expected & ShortcutModifiers.Ctrl) != 0)
+            && IsShiftDown == ((expected & ShortcutModifiers.Shift) != 0)
+            && _leftAltDown == ((expected & ShortcutModifiers.Alt) != 0);
+    }
 
     /// <summary>
     /// Verifie si l'evenement correspond a un raccourci configure.
@@ -460,7 +543,17 @@ public sealed class KeyMapper
     {
         // Ne PAS toucher à _capsLockState — ce raccourci active/désactive le remapping,
         // pas le Caps Lock. Le CapsLock est bloqué dans le hook.
-        ToggleRequested?.Invoke();
+        SubscriberGuard.Raise(ToggleRequested, _host, "KeyMapper.ToggleRequested");
+    }
+
+    /// <summary>
+    /// Constat EW-1 : un relâchement fait sur le bureau sécurisé (Win+L, Ctrl+Alt+Suppr, UAC)
+    /// n'atteint jamais le hook. Le hook appelle cette méthode à chaque appui, avant de tester
+    /// ses raccourcis, y compris remappage coupé ou en pause où ProcessKey ne tourne pas.
+    /// </summary>
+    public void ResyncModifiersWithPhysicalState()
+    {
+        if (_pendingInputRecovery == null) CleanupStaleModifiers();
     }
 
     /// <summary>
@@ -493,7 +586,7 @@ public sealed class KeyMapper
             _rightWinDown = false;
 
         if (changed)
-            StateChanged?.Invoke();
+            RaiseStateChanged();
     }
 
     /// <summary>
@@ -502,9 +595,64 @@ public sealed class KeyMapper
     /// </summary>
     private readonly Dictionary<(uint Scan, bool Extended), bool> _keyDownOwnership = new();
 
+    // Appuis de _keyDownOwnership antérieurs au dernier passage par un écran sécurisé, un
+    // verrouillage ou un décrochage du hook : leur relâche a pu se perdre. Un nouvel appui de
+    // la touche est neuf ; une relâche tardive garde la décision de l'ancien appui (M1.4 I4).
+    private readonly HashSet<(uint Scan, bool Extended)> _staleKeyDowns = new();
+
+    /// <summary>
+    /// Oublie les appuis en cours : à appeler à chaque passage par un écran sécurisé
+    /// (Ctrl+Alt+Suppr, UAC, écran de verrouillage), une ouverture de session ou un hook
+    /// décroché, où les relâches n'atteignent pas le hook. Sans cela, l'appui suivant d'une
+    /// touche dont la relâche s'est perdue passait pour une répétition et rejouait l'ancienne
+    /// décision (audit par frappe au hasard, AFH-4 ; décision d'Antoine du 16 novembre 2026,
+    /// « Corriger »). Le déclencheur de couche en attente est abandonné sans armer de coup.
+    /// </summary>
+    /// <param name="pressedBeforeTransition">
+    /// Vrai pour une touche (scancode, étendue) dont le dernier appui précède le passage ;
+    /// null : toutes. Une touche tapée après le passage, traitée avant son avis, reste en cours.
+    /// </param>
+    public void ForgetHeldKeys(Func<(uint Scan, bool Extended), bool>? pressedBeforeTransition = null)
+    {
+        foreach (var key in _keyDownOwnership.Keys)
+            if (pressedBeforeTransition == null || pressedBeforeTransition(key))
+                _staleKeyDowns.Add(key);
+        if (_maintainableLayers.PendingTriggerScanCode is uint trigger &&
+            (pressedBeforeTransition == null || pressedBeforeTransition((trigger, false))) &&
+            _maintainableLayers.AbandonPendingTrigger())
+            RaiseStateChanged();
+    }
+
+    /// <summary>
+    /// M1.5 I4 (1.3.0) : l'état de suspension est lu une seule fois par frappe. Le contexte
+    /// d'émission (mode du premier plan et HKL) est pris à l'entrée et sert à toutes les
+    /// gardes et émissions de l'appel : un premier plan qui change au milieu ne peut plus
+    /// rendre la touche absorbée sans émission (frappe perdue) ni transmise après émission
+    /// (doublon). Le changement est vu à la frappe suivante. Un appel imbriqué (rappel de
+    /// l'hôte pendant la frappe) garde l'instantané de l'appel extérieur.
+    /// </summary>
     public bool ProcessKey(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
     {
+        if (_keyEmitContext != null)
+            return ProcessKeyWithContext(vkCode, scanCode, flags, isKeyDown);
+        _keyEmitContext = LiveEmitContext();
+        try { return ProcessKeyWithContext(vkCode, scanCode, flags, isKeyDown); }
+        finally { _keyEmitContext = null; }
+    }
+
+    private (CompatibilityMode Mode, IntPtr Hkl)? _keyEmitContext;
+
+    private (CompatibilityMode Mode, IntPtr Hkl) LiveEmitContext() =>
+        _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
+
+    /// <summary>L'instantané de la frappe en cours, sinon une lecture fraîche (appel hors hook).</summary>
+    private (CompatibilityMode Mode, IntPtr Hkl) EmitContext() => _keyEmitContext ?? LiveEmitContext();
+
+    private bool ProcessKeyWithContext(uint vkCode, uint scanCode, uint flags, bool isKeyDown)
+    {
         var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
+        if (_staleKeyDowns.Remove(key) && isKeyDown)
+            _keyDownOwnership.Remove(key);
         if (IsEmissionSuspended)
         {
             ArbitratePendingDeadKeyWhileSuspended();
@@ -512,20 +660,49 @@ public sealed class KeyMapper
             return false;
         }
         bool hadDown = _keyDownOwnership.TryGetValue(key, out bool consumed);
-        bool handled = ProcessKeyCore(vkCode, scanCode, flags, isKeyDown);
+        // Répétition du déclencheur de couche tenu : la décision de l'appui initial suffit.
+        // Rejouer ProcessKeyCore après le relâchement du modificateur d'activation lirait la
+        // touche sans Maj (étoile émise, ou scancode périmé dans _passedThroughKeys).
+        if (isKeyDown && hadDown && consumed && !key.Item2 &&
+            _maintainableLayers.PendingTriggerScanCode == scanCode)
+        {
+            SubscriberGuard.Raise(KeyDecided, new KeyDecision(scanCode, true, string.Empty), _host, "KeyMapper.KeyDecided");
+            return true;
+        }
+        bool recording = isKeyDown && KeyDecided != null;
+        if (recording)
+        {
+            _keyEmitted.Clear();
+            _recordingKey = true;
+        }
+        bool handled;
+        try { handled = ProcessKeyCore(vkCode, scanCode, flags, isKeyDown); }
+        finally { _recordingKey = false; }
         if (isKeyDown)
         {
             // Chaque répétition garde la décision de l'appui initial.
             if (hadDown) handled = consumed;
             _keyDownOwnership[key] = handled;
         }
-        else _keyDownOwnership.Remove(key);
+        else
+        {
+            // La relâche suit la décision de l'appui (M1.4 I3 et I4), pas les modificateurs du
+            // moment : ProcessKeyCore a fait ses nettoyages (touche virtuelle relâchée, trace
+            // de passage), mais un appui absorbé puis Ctrl, Alt ou Win enfoncé, ou AltGr
+            // relâché, laissait partir sa relâche seule vers l'application (audit par frappe
+            // au hasard, AFH-1).
+            if (hadDown) handled = consumed;
+            _keyDownOwnership.Remove(key);
+        }
+        if (recording)
+            SubscriberGuard.Raise(KeyDecided, new KeyDecision(scanCode, handled, _keyEmitted.ToString()), _host, "KeyMapper.KeyDecided");
         return handled;
     }
 
     internal void TrackPassThroughKey(uint scanCode, uint flags, bool isKeyDown)
     {
         var key = (scanCode, (flags & LLKHF_EXTENDED) != 0);
+        _staleKeyDowns.Remove(key);   // l'appui ou la relâche remplace la trace périmée
         if (isKeyDown) _keyDownOwnership[key] = false;
         else _keyDownOwnership.Remove(key);
         // La cible suspendue peut différer de celle qui a reçu l'ancien down.
@@ -545,7 +722,12 @@ public sealed class KeyMapper
             case VK_LSHIFT: case VK_RSHIFT: case VK_SHIFT:
             case VK_LCONTROL: case VK_RCONTROL: case VK_CONTROL:
             case VK_LMENU: case VK_RMENU: case VK_MENU:
+                return false;
             case VK_LWIN: case VK_RWIN:
+                // Win seule : n'écrit rien, annule le coup de couche. Win + touche : la touche
+                // suivante l'annule aussi (bloc des raccourcis plus bas).
+                if (isKeyDown)
+                    CancelOneShotOnKeyOutsideLayout(vkCode, scanCode, isExtended);
                 return false;
         }
 
@@ -582,7 +764,7 @@ public sealed class KeyMapper
         if (_capsLockState != actualCaps && vkCode != VK_CAPITAL)
         {
             _capsLockState = actualCaps;
-            StateChanged?.Invoke();
+            RaiseStateChanged();
         }
 
         // Resynchroniser les modificateurs uniquement pour les touches non-modificateur.
@@ -607,7 +789,7 @@ public sealed class KeyMapper
             if (isKeyDown)
             {
                 _capsLockState = !_capsLockState;
-                StateChanged?.Invoke();
+                RaiseStateChanged();
             }
             return false; // Laisser Windows gérer la LED
         }
@@ -623,9 +805,47 @@ public sealed class KeyMapper
             bool oneShotCancelled = _maintainableLayers.CancelOneShot();
             if (compositionCancelled || oneShotCancelled)
             {
-                StateChanged?.Invoke();
+                RaiseStateChanged();
                 return false; // Laisser Windows traiter le Backspace normalement
             }
+        }
+
+        // Entrée (principale ou pavé numérique) et Tab : annuler la touche morte armée
+        // et laisser passer la touche. Sans cela l'accent restait en attente et
+        // s'accolait au premier caractère de la ligne ou du champ suivant. Le coup de couche
+        // (grec d'une lettre) suit la même règle : après Entrée ou Tab la lettre suivante sort
+        // en français, plus en grec (ME-12, constat C1.5, décision d'Antoine du 16 novembre 2026).
+        // La couche verrouillée n'est pas touchée.
+        if ((vkCode == 0x0D || vkCode == 0x09) && isKeyDown)
+        {
+            bool compositionCancelled = _composition.Cancel();
+            bool oneShotCancelled = _maintainableLayers.CancelOneShot();
+            if (compositionCancelled || oneShotCancelled)
+            {
+                RaiseStateChanged();
+                return false;
+            }
+        }
+
+        // Toute autre touche hors disposition (flèches, Début, Fin, Page préc./suiv., Inser, Suppr,
+        // Applications, Impr. écran, F1 à F24, Arrêt défil, Pause, volume et multimédia, pavé
+        // numérique qui écrit un caractère) annule le coup de couche de la même façon, sans
+        // l'absorber ni la transformer, et sans toucher à la touche morte.
+        if (isKeyDown)
+            CancelOneShotOnKeyOutsideLayout(vkCode, scanCode, isExtended);
+
+        // Échap ou raccourci (Ctrl, Alt ou Win + touche) : la touche morte armée est abandonnée
+        // sans rien écrire, et la touche suit son chemin habituel (remappage Ctrl compris).
+        // Sans cela, après « ^ » puis Ctrl+X ou Échap, l'accent restait en attente et
+        // s'accolait à la lettre suivante (audit 09/11, E15). La couche ponctuelle (grec d'un coup,
+        // armée pour une seule lettre) suit la même règle : un raccourci annule toute composition
+        // en attente, sans quoi la lettre suivante sortait en grec après un copier-coller (audit
+        // de régression 10/11, RA3, décision d'Antoine). La couche verrouillée n'est pas touchée.
+        if (isKeyDown && !IsModifierVk(vkCode) &&
+            (vkCode == VK_ESCAPE || (IsCtrlDown && !IsAltGrDown) || (_leftAltDown && !_rightCtrlDown) ||
+             _leftWinDown || _rightWinDown))
+        {
+            AbandonPendingForShortcut();
         }
 
         // Une répétition déjà transmise reste physique. Backspace et Échap ont
@@ -675,11 +895,11 @@ public sealed class KeyMapper
 
             // Obtenir le caractère de base (sans modificateurs) pour trouver le VK
             var baseChar = ctrlKeyDef.Base;
-            if (baseChar == null || baseChar.Length == 0 || baseChar.StartsWith("dk_"))
+            if (baseChar == null || baseChar.Length == 0 || baseChar.StartsWith("dk_", StringComparison.Ordinal))
                 return false;
 
             // Lettre A-Z → VK 0x41-0x5A
-            char c = char.ToUpper(baseChar[0]);
+            char c = char.ToUpperInvariant(baseChar[0]);
             if (c >= 'A' && c <= 'Z')
             {
                 // Si la touche physique produit déjà ce VK sur le layout natif,
@@ -701,7 +921,7 @@ public sealed class KeyMapper
 
             // En AZERTY, les chiffres sont souvent en couche Shift — vérifier aussi
             var shiftChar = ctrlKeyDef.Shift;
-            if (shiftChar != null && shiftChar.Length > 0 && !shiftChar.StartsWith("dk_"))
+            if (shiftChar != null && shiftChar.Length > 0 && !shiftChar.StartsWith("dk_", StringComparison.Ordinal))
             {
                 char sc = shiftChar[0];
                 if (sc >= '0' && sc <= '9')
@@ -774,7 +994,14 @@ public sealed class KeyMapper
         string? output = keyDef.GetOutput(effectiveShift, effectiveAltGr, _capsLockState);
 
         if (output == null || output == "")
+        {
+            // Touche sans caractère à ce niveau (ex. Maj+AltGr+S) : comme toute touche sans
+            // caractère, elle annule le coup de couche (M1.2 I5, « Toutes annulent », audit par
+            // frappe au hasard AFH-5). La touche morte et la couche verrouillée ne bougent pas.
+            if (_maintainableLayers.CancelOneShot())
+                RaiseStateChanged();
             return true; // Bloquer quand même pour éviter que le layout Windows sous-jacent ne produise un caractère
+        }
 
         // Couche ponctuelle ou verrouillée. Les tables des touches mortes
         // restent l'unique source de transformation. Win enfoncé = raccourci système :
@@ -821,26 +1048,33 @@ public sealed class KeyMapper
         {
             if (IsEmissionSuspended)
             {
-                // L'instantane de premier plan a change depuis l'entree de ProcessKey.
-                // Consommer ici detruirait la touche morte pour une emission qui n'aura
-                // pas lieu : le caractere disparaitrait entierement. Meme traitement que
-                // la garde d'entree, pour que les deux chemins suspendus se ressemblent.
+                // Filet : depuis M1.5 I4, l'instantane de la frappe ne change pas pendant
+                // l'appel ; seule une pause volontaire posee entre-temps (EmissionPaused)
+                // arrive ici. Consommer detruirait la touche morte pour une emission qui
+                // n'aura pas lieu : le caractere disparaitrait entierement. Meme traitement
+                // que la garde d'entree, pour que les deux chemins suspendus se ressemblent.
                 ArbitratePendingDeadKeyWhileSuspended();
                 TrackPassThroughKey(scanCode, flags, isKeyDown);
                 return false;
             }
 
             var result = _composition.Process(output);
+            // Une seule attente à la fois : la touche morte qui arme une composition annule le
+            // coup de couche en cours, la lettre suivante est alors une lettre française accentuée
+            // (ME-12, constat C1.1, décision d'Antoine du 16 novembre 2026). Après une composition
+            // déjà armée, il n'y a plus de coup à annuler : ce garde ne coûte rien.
+            if (output.StartsWith("dk_", StringComparison.Ordinal) && _composition.ActiveDeadKey != null)
+                _maintainableLayers.CancelOneShot();
             if (result.Text.Length > 0)
                 EmitText(result.Text);
             if (result.StateChanged)
-                StateChanged?.Invoke();
+                RaiseStateChanged();
             return true;
         }
 
         // Caractère normal — si le layout Windows natif produit le même caractère,
         // laisser passer la touche originale (compatibilité jeux/DirectInput)
-        if (CanPassThrough(vkCode, scanCode, output, keyDef))
+        if (CanPassThrough(vkCode, scanCode, output, keyDef, effectiveShift, effectiveAltGr))
         {
             lock (_passedThroughKeysLock) _passedThroughKeys.Add(scanCode);
             return false;
@@ -854,10 +1088,15 @@ public sealed class KeyMapper
     /// Vérifie si le layout Windows natif produit le même caractère pour ce scancode.
     /// Si oui, on peut laisser passer la touche originale (compatibilité jeux).
     /// </summary>
-    private bool CanPassThrough(uint vkCode, uint scanCode, string output, KeyDefinition keyDef)
+    private bool CanPassThrough(uint vkCode, uint scanCode, string output, KeyDefinition keyDef,
+        bool effectiveShift, bool effectiveAltGr)
     {
+        // Le système lit les modificateurs physiques : si l'un d'eux est neutralisé (celui qui
+        // a activé une couche, tenu), la touche native sortirait un autre caractère (A, pas a).
+        if (effectiveShift != IsShiftDown || effectiveAltGr != IsAltGrDown) return false;
+
         // Seulement pour les caractères simples, pas AltGr (qui produit des chars spéciaux).
-        if (output.Length != 1 || IsAltGrDown) return false;
+        if (output.Length != 1 || effectiveAltGr) return false;
 
         char outChar = output[0];
         char upper = char.ToUpperInvariant(outChar);
@@ -896,13 +1135,13 @@ public sealed class KeyMapper
         bool shiftIrrelevant = keyDef.Base != null && keyDef.Base == keyDef.Shift;
 
         return charVk == (byte)vk
-            && (shiftIrrelevant || needsShift == IsShiftDown)
+            && (shiftIrrelevant || needsShift == effectiveShift)
             && !needsCtrl && !needsAlt;
     }
 
     private IntPtr GetTargetKeyboardLayout()
     {
-        var (_, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
+        var (_, hkl) = EmitContext();
         return hkl;
     }
 
@@ -988,7 +1227,7 @@ public sealed class KeyMapper
         if (IsEmissionSuspended || !FlushInputRecovery()) return new(0, 0, Blocked: true);
         // Audit sécu 2026-05 SEV-A2-05 : lecture atomique single-shot du snapshot
         // ForegroundMonitor. Évite race mode/hkl discordants pendant alt-tab.
-        var (mode, hkl) = _foregroundMonitor?.GetEmitContext() ?? (CompatibilityMode.Default, IntPtr.Zero);
+        var (mode, hkl) = EmitContext();
 
         var inputs = Interlocked.Exchange(ref _emitInputs, null) ?? new List<Win32.INPUT>(text.Length * 16);
         try
@@ -1006,8 +1245,12 @@ public sealed class KeyMapper
     /// dans <paramref name="inputs"/> (vide), puis un seul SendInput.</summary>
     private TextEmissionResult BuildAndSendText(string text, CompatibilityMode mode, IntPtr hkl, List<Win32.INPUT> inputs)
     {
+        // ME-06 (suite) : pour un lot partiel, le décompte d'événements au début de chaque caractère
+        // dit quels caractères ont commencé à partir. Tenu seulement quand une décision est attendue.
+        List<(int Events, int Chars)>? boundaries = _recordingKey ? new() : null;
         for (int i = 0; i < text.Length; i++)
         {
+            boundaries?.Add((inputs.Count, i));
             char c = text[i];
             // Surrogate pair → fallback Unicode (Alt+code ne couvre pas > 0xFFFF)
             if (char.IsHighSurrogate(c) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
@@ -1036,6 +1279,7 @@ public sealed class KeyMapper
             }
         }
 
+        boundaries?.Add((inputs.Count, text.Length));
         if (inputs.Count == 0) return new(0, 0);
         if (IsEmissionSuspended) return new(inputs.Count, 0, Blocked: true);
         uint sent = SendInputsWithRecovery(inputs.ToArray());
@@ -1044,8 +1288,26 @@ public sealed class KeyMapper
         // Compter seulement les lots complets ; un lot partiel ne sera jamais rejoué. Rien
         // de ce qui est tapé dans un champ mot de passe ne va aux statistiques (audit 1.3.0,
         // test SaisieSecuriseeStatsTests, choix d'Antoine du 21/10).
+        if (result.IsComplete && _recordingKey) _keyEmitted.Append(text);
+        // Lot partiel (ME-06, suite) : des événements sont partis, un caractère a pu s'écrire. La
+        // décision annonce les caractères dont au moins un événement est parti, pas « rien émis » :
+        // la file des Leçons garde alors un attendu cohérent avec ce qui a pu partir. Rien n'est
+        // parti (sent == 0) : rien n'est annoncé, comme avant.
+        else if (_recordingKey && boundaries != null && sent > 0 && !result.IsComplete)
+            _keyEmitted.Append(text, 0, CharsStartedBy(boundaries, sent));
         if (result.IsComplete && _foregroundMonitor?.IsSecureInput != true) _host.RecordEmittedText(text);
         return result;
+    }
+
+    /// <summary>Longueur du préfixe de texte dont au moins un événement figure parmi les
+    /// <paramref name="sent"/> premiers. <paramref name="boundaries"/> : (événements construits,
+    /// caractères consommés) au début de chaque caractère, puis à la fin du texte.</summary>
+    internal static int CharsStartedBy(List<(int Events, int Chars)> boundaries, uint sent)
+    {
+        int last = 0;
+        for (int k = 0; k + 1 < boundaries.Count; k++)
+            if ((uint)boundaries[k].Events < sent) last = k + 1;
+        return boundaries[last].Chars;
     }
 
     /// <summary>Pause volontaire poussée par l'hôte ; couvre aussi les appels hors hook.</summary>
@@ -1059,7 +1321,7 @@ public sealed class KeyMapper
     /// morte en attente.
     /// </summary>
     private bool IsSuspendedByForeground =>
-        _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
+        EmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
 
     /// <summary>
     /// Arbitre le sort d'une touche morte en attente quand l'emission devient
@@ -1076,7 +1338,7 @@ public sealed class KeyMapper
     private void ArbitratePendingDeadKeyWhileSuspended()
     {
         if (!IsSuspendedByForeground) return;
-        if (_composition.Cancel()) StateChanged?.Invoke();
+        if (_composition.Cancel()) RaiseStateChanged();
     }
 
     private ForegroundProcessIdentity _lastApplicationIdentity;
@@ -1114,12 +1376,12 @@ public sealed class KeyMapper
     {
         if (ShouldAbandonDeadKeyOnApplicationChange(_lastApplicationIdentity, application)
             && _composition.Cancel())
-            StateChanged?.Invoke();
+            RaiseStateChanged();
         _lastApplicationIdentity = application;
     }
 
     private bool IsEmissionSuspended => EmissionPaused ||
-        _foregroundMonitor?.GetEmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
+        EmitContext().Mode == CompatibilityMode.DisabledAntiCheat;
 
     private uint SendInputsWithRecovery(Win32.INPUT[] inputs)
     {
@@ -1133,6 +1395,15 @@ public sealed class KeyMapper
         return sent;
     }
 
+    /// <summary>
+    /// M1.6 I5 (1.3.0) : plafond des essais de réparation d'un lot incomplet. Sous un refus
+    /// persistant (UIPI, bureau sécurisé, session verrouillée), chaque frappe retentait la
+    /// réparation sans fin, et la frappe passait en natif tant qu'elle était en attente. Au
+    /// plafond, la réparation est abandonnée et journalisée : les frappes suivantes repartent
+    /// sur le chemin normal (refus total compté par <see cref="RecordEmissionLoss"/>).
+    /// </summary>
+    internal const int MaxInputRecoveryAttempts = 8;
+
     private bool FlushInputRecovery()
     {
         if (_pendingInputRecovery == null) return true;
@@ -1140,7 +1411,16 @@ public sealed class KeyMapper
         var recovery = _pendingInputRecovery.Build(_api, IsPhysicalModifierDown);
         uint sent = SendInputs(recovery);
         _pendingInputRecovery.MarkDeferred();
-        if (sent != (uint)recovery.Length) return false;
+        if (sent == (uint)recovery.Length)
+        {
+            _pendingInputRecovery = null;
+            return true;
+        }
+        if (_pendingInputRecovery.RecordFailedAttempt() < MaxInputRecoveryAttempts) return false;
+        _host.LogCompatibilityCriticalEvent(
+            "ReparationAbandonnee",
+            $"{MaxInputRecoveryAttempts} essais de reparation refuses ; dernier : {sent}/{recovery.Length} evenement(s), " +
+            $"erreur Win32 {_api.LastSendInputError} ; touches du lot laissees a l'etat ou Windows les tient");
         _pendingInputRecovery = null;
         return true;
     }

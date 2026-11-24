@@ -95,7 +95,7 @@ internal static class MiniKeyboardRenderer
             var step = steps[i];
             if (step.Shift) Add(IndexOf(k => k.ContextId == VirtualKeyboard.ContextShiftLeft), MiniKeyState.Held, i + 1, null);
             if (step.AltGr) Add(IndexOf(k => k.Label == "AltGr"), MiniKeyState.Held, i + 1, null);
-            Add(KeyIndex(step.KeyCode), MiniKeyState.Struck, i + 1, step.ShortLabel);
+            Add(KeyIndex(step.KeyCode), MiniKeyState.Struck, i + 1, step.CompactLabel);
         }
         return lit;
     }
@@ -139,7 +139,7 @@ internal static class MiniKeyboardRenderer
     /// « Maj » / « Shift », « AltGr »), la gravure du temps pour les autres (rien sur l'espace).</summary>
     private static string LitLabel(VirtualKeyboard.VisualKey key, Lit on)
     {
-        if (key.Scancode == ScanCapsLock) return L.Gesture_CapsLockShort;
+        if (key.Scancode == ScanCapsLock) return L.Gesture_CapsLockCompact; // 1,75 unité : le nom en clair n'y tient pas
         if (key.ContextId == VirtualKeyboard.ContextShiftLeft || key.ContextId == VirtualKeyboard.ContextShiftRight)
             return L.Gesture_LineShift;
         if (key.Label == "AltGr") return L.Gesture_LineAltGr;
@@ -176,7 +176,7 @@ internal static class MiniKeyboardRenderer
         => new(AppFonts.Text, Math.Max(6, (int)Math.Round(unit * 0.58f) - shrink), TypeRamp.Semibold);
 
     /// <summary>La carte et ses touches ; les pastilles se posent ensuite, par-dessus les voisines.</summary>
-    private static void DrawKeyboard(IntPtr hdc, int left, int top, float unit, float scale, IReadOnlyList<MiniKey> keys, bool badges)
+    private static void DrawKeyboard(IntPtr hdc, int left, int top, float unit, FontScale scale, IReadOnlyList<MiniKey> keys, bool badges)
     {
         var (w, h) = Size(unit);
         var card = new Win32.RECT { left = left, top = top, right = left + w - 1, bottom = top + h - 1 };
@@ -185,7 +185,7 @@ internal static class MiniKeyboardRenderer
             DrawKey(hdc, key, unit, scale, badges);
     }
 
-    private static void DrawKey(IntPtr hdc, MiniKey k, float unit, float scale, bool badges)
+    private static void DrawKey(IntPtr hdc, MiniKey k, float unit, FontScale scale, bool badges)
     {
         uint fill = k.IsFunction ? PaperTheme.FunctionKey : PaperTheme.Surface;
         uint border = PaperTheme.KeyFadedBorder;
@@ -201,7 +201,7 @@ internal static class MiniKeyboardRenderer
         {
             fill = HeldFill;
             border = ink = PaperTheme.Action;
-            borderWidth = Math.Max(2, (int)Math.Round(2 * scale));
+            borderWidth = Math.Max(2, (int)Math.Round(2 * scale.Value));
         }
 
         int radius = Math.Max(1, (int)Math.Round(unit * 0.13f));
@@ -273,14 +273,14 @@ internal static class MiniKeyboardRenderer
         Win32.DeleteObject(brush);
     }
 
-    private static void DrawBadge(IntPtr hdc, Win32.RECT disc, int number, float unit)
+    private static void DrawBadge(IntPtr hdc, Win32.RECT disc, int number, float unit, FontScale scale)
     {
         int ring = BadgeRing(unit);
         // Le liseré de la couleur de la carte détache la pastille de la touche (box-shadow des maquettes).
         Disc(hdc, new Win32.RECT { left = disc.left - ring, top = disc.top - ring, right = disc.right + ring, bottom = disc.bottom + ring },
             PaperTheme.Surface);
         Disc(hdc, disc, PaperTheme.Ink);
-        var font = new FontSpec(AppFonts.Text, Math.Max(7, (int)Math.Round((disc.right - disc.left) * 0.66f)), TypeRamp.Semibold);
+        var font = scale.Font(AppFonts.Text, Math.Max(7, (int)Math.Round((disc.right - disc.left) * 0.66f)), TypeRamp.Semibold);
         PaperText.DrawLine(hdc, number.ToString(System.Globalization.CultureInfo.InvariantCulture), font, disc, PaperTheme.Surface,
             TextAlign.Center);
     }
@@ -293,14 +293,14 @@ internal static class MiniKeyboardRenderer
     /// puis 2 » (« tout en même temps » pour un seul temps). Rend la hauteur dessinée ; la largeur
     /// est celle de <see cref="Size"/>, ou plus si la légende déborde (<see cref="MeasureNumbered"/>).
     /// </summary>
-    internal static int DrawNumbered(IntPtr hdc, int left, int top, float unit, IReadOnlyList<GestureStep> steps, float scale)
+    internal static int DrawNumbered(IntPtr hdc, int left, int top, float unit, IReadOnlyList<GestureStep> steps, FontScale scale)
     {
         if (steps.Count == 0) return 0;
         var keys = Plan(left, top, unit, steps);
         DrawKeyboard(hdc, left, top, unit, scale, keys, badges: true);
         foreach (var key in keys)
             for (int i = 0; i < key.Numbers.Count; i++)
-                DrawBadge(hdc, BadgeRect(key.Rect, unit, i), key.Numbers[i], unit);
+                DrawBadge(hdc, BadgeRect(key.Rect, unit, i), key.Numbers[i], unit, scale);
         int cardHeight = Size(unit).Height;
         int gap = Scaled(6, scale);
         var (_, legendHeight) = Legend(hdc, left, top + cardHeight + gap, scale, steps.Count, draw: true);
@@ -308,7 +308,7 @@ internal static class MiniKeyboardRenderer
     }
 
     /// <summary>Taille de la notation numérotée : le clavier et sa légende.</summary>
-    internal static (int Width, int Height) MeasureNumbered(IntPtr hdc, float unit, IReadOnlyList<GestureStep> steps, float scale)
+    internal static (int Width, int Height) MeasureNumbered(IntPtr hdc, float unit, IReadOnlyList<GestureStep> steps, FontScale scale)
     {
         if (steps.Count == 0) return (0, 0);
         var (cardWidth, cardHeight) = Size(unit);
@@ -318,7 +318,7 @@ internal static class MiniKeyboardRenderer
     }
 
     /// <summary>La légende : un échantillon « frappée », un échantillon « tenue », puis l'ordre.</summary>
-    private static (int Width, int Height) Legend(IntPtr hdc, int left, int top, float scale, int stepCount, bool draw)
+    private static (int Width, int Height) Legend(IntPtr hdc, int left, int top, FontScale scale, int stepCount, bool draw)
     {
         var font = FontSpec.Of(AppFonts.Text, 12, TypeRamp.Regular, scale);
         var (ascent, descent) = PaperText.Metrics(hdc, font);
@@ -327,7 +327,7 @@ internal static class MiniKeyboardRenderer
         int baseline = top + (rowHeight - (ascent + descent)) / 2 + ascent;
         int swatchTop = top + (rowHeight - swatchH) / 2;
         int between = Scaled(8, scale), beside = Scaled(3, scale);
-        int heldBorder = Math.Max(2, (int)Math.Round(2 * scale));
+        int heldBorder = Math.Max(2, (int)Math.Round(2 * scale.Value));
 
         int x = left;
         // frappée
@@ -360,7 +360,7 @@ internal static class MiniKeyboardRenderer
     private readonly record struct FramesLayout(int[] Widths, int HeaderHeight, int HeaderGap, int ArrowWidth, int ArrowGap,
         int Width, int Height);
 
-    private static FramesLayout LayoutFrames(IntPtr hdc, float unit, IReadOnlyList<GestureStep> steps, float scale)
+    private static FramesLayout LayoutFrames(IntPtr hdc, float unit, IReadOnlyList<GestureStep> steps, FontScale scale)
     {
         var (miniWidth, miniHeight) = Size(unit);
         int circle = Scaled(20, scale), circleGap = Scaled(7, scale);
@@ -382,7 +382,7 @@ internal static class MiniKeyboardRenderer
     }
 
     /// <summary>Taille de la rangée de vignettes : tous les temps, entêtes et flèches compris.</summary>
-    internal static (int Width, int Height) MeasureFrames(IntPtr hdc, float unit, IReadOnlyList<GestureStep> steps, float scale)
+    internal static (int Width, int Height) MeasureFrames(IntPtr hdc, float unit, IReadOnlyList<GestureStep> steps, FontScale scale)
     {
         if (steps.Count == 0) return (0, 0);
         var layout = LayoutFrames(hdc, unit, steps, scale);
@@ -394,7 +394,7 @@ internal static class MiniKeyboardRenderer
     /// un numéro dans un rond et « d’abord » / « puis » (« ensemble, en un temps » s'il n'y a qu'un
     /// temps) ; « → » entre les vignettes. Rend la hauteur dessinée.
     /// </summary>
-    internal static int DrawFrames(IntPtr hdc, int left, int top, float unit, IReadOnlyList<GestureStep> steps, float scale)
+    internal static int DrawFrames(IntPtr hdc, int left, int top, float unit, IReadOnlyList<GestureStep> steps, FontScale scale)
     {
         if (steps.Count == 0) return 0;
         var layout = LayoutFrames(hdc, unit, steps, scale);
@@ -428,4 +428,5 @@ internal static class MiniKeyboardRenderer
     }
 
     private static int Scaled(float size, float scale) => Math.Max(1, (int)Math.Round(size * scale));
+    private static int Scaled(float size, FontScale scale) => Scaled(size, scale.Value);
 }

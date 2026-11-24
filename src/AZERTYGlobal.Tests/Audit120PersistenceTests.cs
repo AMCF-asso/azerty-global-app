@@ -57,7 +57,7 @@ public class Audit120PersistenceTests : IDisposable
         Assert.Equal(original, File.ReadAllText(copie));
         Assert.True(store.IsCompleted(exercise));
         Assert.True(new LessonProgressStore(path).IsCompleted(exercise));
-        Assert.False(File.Exists(path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + "*.tmp")); // T-01 : temporaire par PID depuis AG130-11 (b)
     }
 
     [Theory]
@@ -77,7 +77,7 @@ public class Audit120PersistenceTests : IDisposable
         Assert.Equal(original, File.ReadAllText(path));
         Assert.False(store.IsCompleted(exercise));
         Assert.Null(store.LastModuleId);
-        Assert.False(File.Exists(path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, Path.GetFileName(path) + "*.tmp")); // T-01 : temporaire par PID depuis AG130-11 (b)
     }
 
     public void Dispose()

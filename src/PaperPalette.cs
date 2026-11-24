@@ -71,8 +71,14 @@ internal static class HighContrast
     [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW")]
     private static extern bool SystemParametersInfoHighContrast(uint action, uint param, ref HIGHCONTRAST value, uint winIni);
 
+    /// <summary>T5 (EW-15) : réglage simulé par les tests, jamais en production. Le banc
+    /// (<c>BancCapture.Isolation</c>) le remet à null.</summary>
+    internal static Func<bool>? OverrideForTests;
+
     internal static bool IsOn()
     {
+        if (OverrideForTests is { } simulated)
+            return simulated();
         var value = new HIGHCONTRAST { cbSize = (uint)Marshal.SizeOf<HIGHCONTRAST>() };
         return SystemParametersInfoHighContrast(SPI_GETHIGHCONTRAST, value.cbSize, ref value, 0)
             && (value.dwFlags & HCF_HIGHCONTRASTON) != 0;

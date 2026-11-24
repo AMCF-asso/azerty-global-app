@@ -1,4 +1,5 @@
 // Gestion de la configuration persistante (config.json)
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -30,7 +31,11 @@ static class ConfigManager
             _logDirectoryOverride = Path.GetDirectoryName(path);
             _cache = null;
             _compatibilityCache = null;
+            _compatibilityUnknown = null;
             _loadFailed = false;
+            _readPending = false;
+            _changedWhileUnread.Clear();
+            _compatChangedWhileUnread.Clear();
             _dirty = false;
             _failedWrites = 0;
             _quarantineNoticePending = false;
@@ -119,8 +124,26 @@ static class ConfigManager
 
     private static Dictionary<string, JsonElement>? _cache;
     private static Dictionary<string, string>? _compatibilityCache; // sous-objet compatibility (process → "forceOn"/"forceOff")
+
+    /// <summary>
+    /// Entrées de <c>compatibility</c> que cette version ne connaît pas (mode d'une version plus
+    /// récente, valeur d'une autre forme), gardées telles quelles et réécrites (AF-03, audit des
+    /// fichiers 1.3.0) : avant, elles étaient jetées au chargement puis effacées à la première
+    /// écriture, alors que les clés inconnues de la racine survivent depuis AG130-11 (a). Elles
+    /// n'ont aucun effet ici ; un choix de l'utilisateur pour le même processus les remplace.
+    /// </summary>
+    private static Dictionary<string, JsonElement>? _compatibilityUnknown;
     private static readonly object _lock = new();
     private static bool _loadFailed;
+    // CE-T2 (CE-03) : config.json présent mais illisible pour l'instant (verrou d'un antivirus,
+    // d'une sauvegarde, droits). _loadFailed reste vrai (le fichier n'est jamais écrasé) et
+    // chaque accès le relit, en un essai, jusqu'à la réussite. Une quarantaine ratée, elle, reste
+    // collante : _loadFailed sans _readPending.
+    private static bool _readPending;
+    // Réglages changés pendant la panne de lecture : ils gagnent sur le fichier relu (décision
+    // d'Antoine du 17 novembre 2026), puis tout est écrit. Valeur nulle : clé retirée.
+    private static readonly Dictionary<string, JsonElement?> _changedWhileUnread = new();
+    private static readonly Dictionary<string, string?> _compatChangedWhileUnread = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Accord explicite ; une ancienne configuration n'en tient pas lieu.</summary>
     public static bool ActivationConsent
@@ -256,6 +279,19 @@ static class ConfigManager
         SetStringList("learningUsages", TutorialSteps.NormalizeUsages(usages));
 
     /// <summary>
+    /// Remet le parcours de l’accueil à zéro : exercices réussis et parcours ouvert. Sert à
+    /// « Réinitialiser l’accueil » (Debug) : sans cela, l’accueil relisait la progression
+    /// gardée et revenait à « Suivant » seul, sans « Essayer maintenant » (remontée d’Antoine,
+    /// 07/11). Les usages choisis restent.
+    /// </summary>
+    public static void ResetTutorialProgress()
+    {
+        SetUInt("learningMaxStepCompleted", 0);
+        SetIntList("learningCompletedExercises", Array.Empty<int>());
+        SetBool("learningTutorialOpened", false);
+    }
+
+    /// <summary>
     /// Le parcours d'exercices de l'accueil a été ouvert au moins une fois (audit 1.3.0, A1) :
     /// l'étape 1 de l'accueil garde alors « Suivant », même sans exercice réussi, et les étapes
     /// suivantes (dont « Ne plus afficher ») restent atteignables d'un démarrage à l'autre.
@@ -371,6 +407,57 @@ static class ConfigManager
             var raw = GetString("appLanguage");
             return raw == "en" ? "en" : "fr";
         }
+    }
+
+    /// <summary>
+    /// Langue de l'interface lue au tout début du démarrage, AVANT les mutex d'instance unique,
+    /// sans charger ni mettre de côté config.json (ME-09, C4.5). Seul le gagnant lit et déplace
+    /// les fichiers de l'utilisateur : une seconde instance qui chargeait ici le fichier
+    /// corrompu se disputait le renommage avec la gagnante, perdait la course et gardait un
+    /// « chargement échoué » collé, ou faisait perdre à la gagnante le message de remise à zéro.
+    ///
+    /// La valeur est celle que donnerait le chargement normal : réglage « en » ou « fr », « fr »
+    /// pour une config existante sans clé ou en lecture impossible, langue de l'interface
+    /// Windows pour une installation neuve ou un fichier corrompu (que le chargement mettra de
+    /// côté puis dérivera de la même façon). Aucun accès au cache, aucune écriture, aucune
+    /// quarantaine ; un cache déjà chargé répond directement.
+    /// </summary>
+    internal static string AppLanguageWithoutLoading()
+    {
+        bool loaded;
+        string path;
+        lock (_lock)
+        {
+            loaded = _cache != null;
+            path = _configPath;
+        }
+        if (loaded) return AppLanguage;
+        return PolicyManager.AppLanguage(PolicyManager.Current.Language, ReadLanguageSettingFromDisk(path));
+    }
+
+    private static string ReadLanguageSettingFromDisk(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return DerivedAppLanguage();
+            // CE-T2 (CE-04) : mêmes essais courts que le chargement. Un seul essai rendait « fr »
+            // pour toute la session quand un verrou passager tenait un fichier qui dit « en ».
+            using var doc = FileQuarantine.ParseUserFile(FileQuarantine.ReadAllTextWithRetries(path)); // AF-01
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return DerivedAppLanguage();
+            return doc.RootElement.TryGetProperty("appLanguage", out var value)
+                   && value.ValueKind == JsonValueKind.String && value.GetString() == "en"
+                ? "en" : "fr";
+        }
+        catch (Exception ex) when (FileQuarantine.IsReadFailure(ex)) { return "fr"; }
+        catch (Exception ex) when (FileQuarantine.IsCorruption(ex)) { return DerivedAppLanguage(); }
+        catch (IOException) { return DerivedAppLanguage(); } // fichier disparu : installation neuve
+    }
+
+    /// <summary>Langue initiale d'une installation neuve : celle de l'interface Windows.</summary>
+    private static string DerivedAppLanguage()
+    {
+        try { return DefaultAppLanguage(GetUserDefaultUILanguage()); }
+        catch { return "fr"; }
     }
 
     /// <summary>« fr » quand le LANGID donné est francophone (langue primaire 0x0C,
@@ -526,6 +613,25 @@ static class ConfigManager
     /// <paramref name="hadUsageBefore"/> doit être lu avant toute frappe de ce lancement
     /// (<c>UsageStats.FirstRemapDate != null</c> dans le constructeur du tray).
     /// </summary>
+    /// <summary>
+    /// Ramène à <paramref name="today"/>, et réécrit, les dates de la sollicitation d'avis
+    /// postérieures à aujourd'hui (horloge avancée puis remise : audit temps et horloge du
+    /// 17/11, TH-02). Une date de dernier essai future repoussait l'essai 2 à cette date plus
+    /// <see cref="ReviewPromptGate.SecondMinGapDays"/> jours ; une date de premier lancement
+    /// future bloquait l'essai 1. Même règle que ME-10 pour la série et le rappel.
+    /// </summary>
+    internal static void RepairFutureReviewDates(DateOnly today)
+    {
+        string text = today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        lock (_lock)
+        {
+            if (StoredDate.Parse(GetString("reviewPromptLastShown")) > today)
+                SetString("reviewPromptLastShown", text);
+            if (StoredDate.Parse(GetString("currentVersionFirstRunDate")) > today)
+                SetString("currentVersionFirstRunDate", text);
+        }
+    }
+
     internal static VersionFirstRun EnsureCurrentVersionFirstRun(string version, DateOnly today, bool hadUsageBefore)
     {
         lock (_lock)
@@ -536,7 +642,19 @@ static class ConfigManager
                 DateOnly.TryParseExact(rawDate, "yyyy-MM-dd",
                     System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.None, out var storedDate))
+            {
+                // Audit temps et horloge du 17/11, TH-02 : premier lancement fait horloge en
+                // avance, puis heure remise. La date future bloquait l'essai 1 de l'avis
+                // (today > date) jusqu'à ce que la vraie date la rattrape ; comme ME-10, elle
+                // vaut aujourd'hui et se réécrit.
+                if (storedDate > today)
+                {
+                    storedDate = today;
+                    SetString("currentVersionFirstRunDate",
+                        today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+                }
                 return new VersionFirstRun(version, storedDate, GetBool("currentVersionUpgradedWithUsage"));
+            }
 
             SetString("currentVersionFirstRunVersion", version);
             SetBool("currentVersionUpgradedWithUsage", hadUsageBefore);
@@ -628,6 +746,11 @@ static class ConfigManager
 
     public static void SetLessonInvisibleMarkersVisible(bool visible) => SetBool("lessonInvisibleMarkersVisible", visible);
 
+    /// <summary>Avertit quand la disposition système est active en même temps que l'application. Défaut : true.</summary>
+    public static bool WarnSystemLayout => GetBoolDefaultTrue("warnSystemLayout");
+
+    public static void SetWarnSystemLayout(bool warn) => SetBool("warnSystemLayout", warn);
+
     /// <summary>
     /// Raccourcis Ctrl+Shift+Lettre interdits car trop courants dans les applications.
     /// Voir aussi : Ctrl+Shift+Verr.Maj (toggle on/off), bloqué séparément via VK_CAPITAL.
@@ -654,15 +777,49 @@ static class ConfigManager
     /// Vérifie si une touche est autorisée comme raccourci Ctrl+Shift+touche.
     /// Formats acceptés : lettre (A-Z sauf bloquées), chiffre (0-9), "F1" à "F12".
     /// </summary>
-    public static bool IsShortcutAllowedVk(uint vk)
+    public static bool IsShortcutAllowedVk(uint vk) =>
+        IsShortcutAllowed(TypingEngine.Windows.ShortcutModifierRules.Default, vk);
+
+    /// <summary>
+    /// Vérifie si une combinaison (modificateurs + touche) est autorisée comme raccourci.
+    /// Les lettres courantes de BlockedLetters ne sont bloquées que sous Ctrl+Maj (où elles
+    /// entrent en conflit avec les navigateurs et éditeurs).
+    /// </summary>
+    public static bool IsShortcutAllowed(TypingEngine.Windows.ShortcutModifiers modifiers, uint vk)
     {
+        if (!TypingEngine.Windows.ShortcutModifierRules.IsValid(modifiers))
+            return false;
         if (vk >= 0x70 && vk <= 0x7B) return true;
-        // Touches de fonction F1-F12
         if (vk >= '0' && vk <= '9') return true;
-        // Chiffres 0-9
-        if (vk >= 'A' && vk <= 'Z') return !BlockedLetters.Contains((char)vk);
-        // Lettres A-Z (sauf bloquées)
+        if (vk >= 'A' && vk <= 'Z')
+        {
+            if (modifiers == TypingEngine.Windows.ShortcutModifierRules.Default)
+                return !BlockedLetters.Contains((char)vk);
+            return true;
+        }
         return false;
+    }
+
+    /// <summary>Modificateurs du raccourci clavier virtuel. Défaut : Ctrl+Maj.</summary>
+    public static TypingEngine.Windows.ShortcutModifiers ShortcutVirtualKeyboardModifiers
+    {
+        get => TypingEngine.Windows.ShortcutModifierRules.ParseOrDefault(GetString("shortcutVirtualKeyboardModifiers"));
+        set
+        {
+            if (TypingEngine.Windows.ShortcutModifierRules.IsValid(value))
+                SetString("shortcutVirtualKeyboardModifiers", TypingEngine.Windows.ShortcutModifierRules.Serialize(value));
+        }
+    }
+
+    /// <summary>Modificateurs du raccourci recherche de caractère. Défaut : Ctrl+Maj.</summary>
+    public static TypingEngine.Windows.ShortcutModifiers ShortcutCharacterSearchModifiers
+    {
+        get => TypingEngine.Windows.ShortcutModifierRules.ParseOrDefault(GetString("shortcutCharacterSearchModifiers"));
+        set
+        {
+            if (TypingEngine.Windows.ShortcutModifierRules.IsValid(value))
+                SetString("shortcutCharacterSearchModifiers", TypingEngine.Windows.ShortcutModifierRules.Serialize(value));
+        }
     }
 
     /// <summary>Lettre du raccourci clavier virtuel. Défaut : "Q" → Ctrl+Maj+Q.</summary>
@@ -671,11 +828,11 @@ static class ConfigManager
         get
         {
             uint vk = GetUInt("shortcutVirtualKeyboardVk");
-            return IsShortcutAllowedVk(vk) ? vk : DefaultShortcutVirtualKeyboardVk;
+            return IsShortcutAllowed(ShortcutVirtualKeyboardModifiers, vk) ? vk : DefaultShortcutVirtualKeyboardVk;
         }
         set
         {
-            if (IsShortcutAllowedVk(value))
+            if (IsShortcutAllowed(ShortcutVirtualKeyboardModifiers, value))
                 SetUInt("shortcutVirtualKeyboardVk", value);
         }
     }
@@ -686,11 +843,11 @@ static class ConfigManager
         get
         {
             uint vk = GetUInt("shortcutCharacterSearchVk");
-            return IsShortcutAllowedVk(vk) ? vk : DefaultShortcutCharacterSearchVk;
+            return IsShortcutAllowed(ShortcutCharacterSearchModifiers, vk) ? vk : DefaultShortcutCharacterSearchVk;
         }
         set
         {
-            if (IsShortcutAllowedVk(value))
+            if (IsShortcutAllowed(ShortcutCharacterSearchModifiers, value))
                 SetUInt("shortcutCharacterSearchVk", value);
         }
     }
@@ -749,10 +906,12 @@ static class ConfigManager
         {
             EnsureLoaded();
             _compatibilityCache ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _compatibilityUnknown?.Remove(processName);
             if (mode == null)
                 _compatibilityCache.Remove(processName);
             else
                 _compatibilityCache[processName] = mode;
+            if (_readPending) _compatChangedWhileUnread[processName] = mode;
             MarkDirty();
         }
     }
@@ -775,12 +934,18 @@ static class ConfigManager
 
     /// <summary>Opt-in explicite (fin d'onboarding ou Paramètres). Décoché par défaut.</summary>
     public static bool TrainingEnabled => GetBool("trainingEnabled");
+    /// <summary>Déclenché après un changement effectif de l'opt-in (arg : nouvelle valeur) : une
+    /// fenêtre ouverte qui en dépend (Statistiques, section Défi) refait sa mise en page.</summary>
+    public static event Action<bool>? TrainingEnabledChanged;
+
     public static void SetTrainingEnabled(bool enabled)
     {
+        bool changed = TrainingEnabled != enabled;
         SetBool("trainingEnabled", enabled);
         // Réactivation = nouveau consentement : le compteur de rappels ignorés repart à zéro
         // (garde-fou « 3 ignorés → arrêt définitif », réactivable à tout moment).
         if (enabled) SetUInt("trainingIgnoredCount", 0);
+        if (changed) TrainingEnabledChanged?.Invoke(enabled);
     }
 
     /// <summary>Rappels consécutifs ignorés (timeout sans clic). 3 → arrêt définitif.</summary>
@@ -795,6 +960,11 @@ static class ConfigManager
     /// <summary>Date (yyyy-MM-dd) de la dernière séance terminée — une séance par jour max.</summary>
     public static string? TrainingLastSessionDate => GetString("trainingLastSessionDate");
     public static void SetTrainingLastSessionDate(string date) => SetString("trainingLastSessionDate", date);
+
+    /// <summary>Meilleure vitesse (mots/min) à l'extrait du Défi, tous jours confondus ; 0 = aucune.
+    /// Audit UX du 09/11, L10 : le record de l'exercice du jour repartait de zéro chaque matin.</summary>
+    public static uint TrainingBestWpm => GetUInt("trainingBestWpm");
+    public static void SetTrainingBestWpm(uint wpm) => SetUInt("trainingBestWpm", wpm);
 
     /// <summary>Date (yyyy-MM-dd) du dernier rappel émis — jamais deux rappels le même jour.</summary>
     public static string? TrainingLastReminderDate => GetString("trainingLastReminderDate");
@@ -827,10 +997,10 @@ static class ConfigManager
 
         var parts = value.Split(',');
         if (parts.Length != 4) return false;
-        if (!int.TryParse(parts[0], out int left) ||
-            !int.TryParse(parts[1], out int top) ||
-            !int.TryParse(parts[2], out int width) ||
-            !int.TryParse(parts[3], out int height))
+        if (!TryParseStoredInt(parts[0], out int left) ||
+            !TryParseStoredInt(parts[1], out int top) ||
+            !TryParseStoredInt(parts[2], out int width) ||
+            !TryParseStoredInt(parts[3], out int height))
             return false;
 
         if (width < 100 || height < 80) return false;
@@ -849,7 +1019,29 @@ static class ConfigManager
         int width = rect.right - rect.left;
         int height = rect.bottom - rect.top;
         if (width < 100 || height < 80) return;
-        SetString(key, $"{rect.left},{rect.top},{width},{height}");
+        SetString(key, string.Create(CultureInfo.InvariantCulture, $"{rect.left},{rect.top},{width},{height}"));
+    }
+
+    /// <summary>
+    /// Relit un entier de position de fenêtre (AF-05, audit des fichiers 1.3.0). Écrit en
+    /// culture invariante depuis ce correctif ; avant, il suivait le format régional du moment,
+    /// dont le signe moins peut être U+2212 (suédois, norvégien, finnois) : une coordonnée
+    /// négative ne se relisait plus après un changement de format. Un entier formaté par défaut
+    /// ne diffère que par son signe moins (U+2212, ou trait d'union précédé d'une marque de
+    /// direction) : on retire les marques, on ramène U+2212 au trait d'union, puis on relit en
+    /// culture invariante.
+    /// </summary>
+    private static bool TryParseStoredInt(string text, out int value)
+    {
+        // Revue d'AF-05 : sous ICU, les formats arabe, hébreu et persan font précéder le signe
+        // moins d'une marque de direction (U+061C, U+200E, U+200F), de catégorie « Format ».
+        var digits = new StringBuilder(text.Length);
+        foreach (char c in text)
+        {
+            if (char.GetUnicodeCategory(c) == UnicodeCategory.Format || char.IsWhiteSpace(c)) continue;
+            digits.Append(c == '−' ? '-' : c);
+        }
+        return int.TryParse(digits.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value);
     }
 
     public static void ClearWindowBounds(string key)
@@ -859,6 +1051,8 @@ static class ConfigManager
         {
             EnsureLoaded();
             changed = _cache!.Remove(key);
+            // CE-T2 : retirée aussi du fichier relu, même absente du cache de la panne.
+            if (_readPending) _changedWhileUnread[key] = null;
             if (changed)
                 MarkDirty();
         }
@@ -877,11 +1071,164 @@ static class ConfigManager
 
     private static readonly object _logFlushLock = new();
 
-    private static void AppendLogEntry(string logDir, string logFile, string logEntry)
+    /// <summary>Tests : appelé juste avant d'écrire une ligne d'error.log, verrou du journal
+    /// tenu (simule un disque lent).</summary>
+    internal static Action<string>? LogWritePhaseForTests;
+
+    /// <summary>
+    /// File unique d'error.log (audit des accès concurrents, T2 et T5) : chaque ligne y entre
+    /// datée, avec son dossier, dans l'ordre des appels. Elle n'est retirée et écrite que sous
+    /// <c>_logFlushLock</c>, par un seul vidage à la fois sur le pool (<see cref="DrainLogQueue"/>)
+    /// ou en synchrone (<see cref="FlushLog"/>) : l'ordre du fichier est celui des appels, et le
+    /// fil d'interface n'attend plus le disque pour une ligne ordinaire.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<(string Dir, string Entry)> _logQueue = new();
+    private static int _logDraining;
+
+    private static void EnqueueLogEntry(string logEntry)
     {
-        lock (_logFlushLock)
+        _logQueue.Enqueue((LogDirectory, logEntry));
+        if (Interlocked.Exchange(ref _logDraining, 1) == 0)
+            ThreadPool.QueueUserWorkItem(static _ => DrainLogQueue());
+    }
+
+    private static void DrainLogQueue()
+    {
+        do
         {
-            try { Directory.CreateDirectory(logDir); File.AppendAllText(logFile, logEntry); } catch { }
+            FlushLog();
+            Volatile.Write(ref _logDraining, 0);
+            // Une ligne arrivée entre le dernier retrait et la remise à zéro n'a pas relancé
+            // de vidage : la reprendre ici, sauf si un autre vidage l'a déjà fait.
+        }
+        while (!_logQueue.IsEmpty && Interlocked.Exchange(ref _logDraining, 1) == 0);
+    }
+
+    /// <summary>
+    /// Écrit maintenant, sur le fil appelant et dans l'ordre, toutes les lignes en file :
+    /// ligne critique, fin de l'application, tests. Attend une écriture du journal en cours.
+    /// </summary>
+    public static void FlushLog()
+    {
+        lock (_logFlushLock) WriteQueuedLogEntriesLocked();
+    }
+
+    /// <summary>Retire et écrit les lignes en file. Sous <c>_logFlushLock</c>, sauf en dernier
+    /// recours dans <see cref="LogFatal"/>. Chaque ligne dans son try : une erreur d'écriture
+    /// ne bloque ni la suite de la file ni les vidages suivants.
+    ///
+    /// Un lecteur qui ouvre error.log sans partage d'écriture (antivirus, indexeur, éditeur,
+    /// test qui relit le fichier) fait échouer l'ajout par une violation de partage passagère.
+    /// L'écriture se fait désormais hors du fil appelant, donc plus souvent pendant une telle
+    /// lecture : la ligne est réessayée au lieu d'être jetée. Le budget est par vidage
+    /// (<see cref="LogShareRetryBudget"/> attentes de <see cref="LogShareRetryDelayMs"/> ms) :
+    /// un fichier tenu longtemps coûte au plus 200 ms au vidage, puis ses lignes sont perdues
+    /// comme avant.
+    ///
+    /// CE-T7 (CE-17, audit des chemins d'erreur) : le plafond de 5 Mo vaut aussi en cours de
+    /// session. Avant, la rotation n'avait lieu qu'au démarrage : une exception répétée (un
+    /// WndProc qui lève à chaque message) faisait grossir error.log sans borne jusqu'à la
+    /// fermeture (8 Mo mesurés en 30 000 lignes). La taille est suivie ici, sous le verrou.</summary>
+    /// <param name="mayRotate">Faux dans <see cref="LogFatal"/> quand le verrou n'a pas été
+    /// obtenu : ni suivi de taille ni renommage hors du verrou.</param>
+    private static void WriteQueuedLogEntriesLocked(bool mayRotate = true)
+    {
+        int retriesLeft = LogShareRetryBudget;
+        while (_logQueue.TryDequeue(out var item))
+        {
+            try { LogWritePhaseForTests?.Invoke(item.Entry); } catch { }
+            while (true)
+            {
+                try
+                {
+                    Directory.CreateDirectory(item.Dir);
+                    File.AppendAllText(Path.Combine(item.Dir, "error.log"), item.Entry);
+                    if (mayRotate) TrackLogSizeLocked(item.Dir, item.Entry);
+                    break;
+                }
+                catch (IOException) when (retriesLeft > 0)
+                {
+                    retriesLeft--;
+                    Thread.Sleep(LogShareRetryDelayMs);
+                }
+                catch { break; }
+            }
+        }
+    }
+
+    /// <summary>Dossier dont la taille d'error.log est suivie (null : à relire), sous
+    /// <c>_logFlushLock</c>. Le dossier change avec les tests (OverrideConfigPathForTests).</summary>
+    private static string? _logSizeDir;
+    /// <summary>Taille connue d'error.log dans <see cref="_logSizeDir"/>, en octets UTF-8.</summary>
+    private static long _logSizeBytes;
+    /// <summary>Taille à laquelle tenter le renommage ; repoussée après un échec.</summary>
+    private static long _logRotateAtBytes = LogRotationSizeBytes;
+    /// <summary>Après un renommage refusé (error.log.old tenu ouvert), réessai 64 Ko plus loin :
+    /// pas une exception par ligne, et le fichier ne dépasse le plafond que de peu.</summary>
+    private const long LogRotateRetryStepBytes = 64 * 1024;
+
+    /// <summary>Ajoute la ligne écrite à la taille suivie, puis renomme error.log en
+    /// error.log.old au-delà du plafond. Sous <c>_logFlushLock</c>.</summary>
+    private static void TrackLogSizeLocked(string dir, string entry)
+    {
+        if (!string.Equals(_logSizeDir, dir, StringComparison.Ordinal))
+        {
+            // Relue une fois par dossier : la ligne qui vient d'être écrite y est déjà.
+            var info = new FileInfo(Path.Combine(dir, "error.log"));
+            _logSizeBytes = info.Exists ? info.Length : 0;
+            _logSizeDir = dir;
+            _logRotateAtBytes = LogRotationSizeBytes;
+        }
+        else
+            _logSizeBytes += Encoding.UTF8.GetByteCount(entry);
+
+        if (_logSizeBytes < _logRotateAtBytes) return;
+        if (TryRotateLogLocked(dir))
+        {
+            _logSizeBytes = 0;
+            _logRotateAtBytes = LogRotationSizeBytes;
+        }
+        else
+            _logRotateAtBytes = _logSizeBytes + LogRotateRetryStepBytes;
+    }
+
+    /// <summary>Renomme error.log en error.log.old (écrase le précédent). Sous
+    /// <c>_logFlushLock</c>. Faux si le renommage a échoué.</summary>
+    private static bool TryRotateLogLocked(string dir)
+    {
+        try
+        {
+            var logFile = Path.Combine(dir, "error.log");
+            var oldFile = Path.Combine(dir, "error.log.old");
+            if (File.Exists(oldFile))
+                File.Delete(oldFile);
+            File.Move(logFile, oldFile);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private const int LogShareRetryBudget = 20;
+    private const int LogShareRetryDelayMs = 10;
+
+    /// <summary>
+    /// Ligne FATAL du gestionnaire d'exception non rattrapée (n'importe quel fil, processus
+    /// condamné) : écrite en synchrone après toutes les lignes encore en file, qui mourraient
+    /// sinon avec le processus (T5, P5). Le verrou est attendu 1 s au plus : une écriture
+    /// bloquée ne doit pas faire perdre la ligne FATAL.
+    /// </summary>
+    public static void LogFatal(string safeMessage)
+    {
+        _logQueue.Enqueue((LogDirectory, $"[{DateTime.Now:s}] FATAL: {safeMessage}\n"));
+        bool locked = false;
+        try
+        {
+            Monitor.TryEnter(_logFlushLock, 1000, ref locked);
+            WriteQueuedLogEntriesLocked(mayRotate: locked);
+        }
+        finally
+        {
+            if (locked) Monitor.Exit(_logFlushLock);
         }
     }
 
@@ -908,13 +1255,7 @@ static class ConfigManager
     public static void Log(string context, Exception ex)
     {
         _lastErrorUtc = DateTime.UtcNow; // garde de la sollicitation d'avis
-        var logDir = LogDirectory;
-        var logEntry = $"[{DateTime.Now:s}] {context}: {SanitizeException(ex)}\n";
-        var logFile = Path.Combine(logDir, "error.log");
-        ThreadPool.QueueUserWorkItem(_ =>
-        {
-            AppendLogEntry(logDir, logFile, logEntry);
-        });
+        EnqueueLogEntry($"[{DateTime.Now:s}] {context}: {SanitizeException(ex)}\n");
     }
 
     /// <summary>
@@ -923,15 +1264,13 @@ static class ConfigManager
     /// **Aucune frappe utilisateur ne doit jamais être loguée**, conformément à la
     /// politique de confidentialité onboarding. Ne loguer QUE des événements agrégés
     /// sans contenu (process name, mode, action) — pas de codepoint, pas de char.
-    /// Ecriture synchrone et verrouillee : ces evenements sont rares et doivent rester durables.
+    /// Mise en file, écrite sur le pool (audit des accès concurrents, T2) : appelée sur le fil
+    /// d'interface à chaque changement de mode au premier plan, elle y attendait le disque sous
+    /// le verrou du journal, donc gelait le hook clavier. Un événement qui doit survivre à un
+    /// plantage passe par <see cref="LogCompatCriticalEvent"/>.
     /// </summary>
-    public static void LogCompatEvent(string eventName, string details)
-    {
-        var logDir = LogDirectory;
-        var logEntry = $"[{DateTime.Now:s}] {eventName}: {details}\n";
-        var logFile = Path.Combine(logDir, "error.log");
-        AppendLogEntry(logDir, logFile, logEntry);
-    }
+    public static void LogCompatEvent(string eventName, string details) =>
+        EnqueueLogEntry($"[{DateTime.Now:s}] {eventName}: {details}\n");
 
     /// <summary>
     /// Audit sécu 2026-05 SEV-A1-02 : anonymise un nom de process via HMAC-SHA256
@@ -966,47 +1305,23 @@ static class ConfigManager
     /// <summary>
     /// Variante synchrone de <see cref="LogCompatEvent"/> pour les events critiques
     /// (AntiCheatDetected, OverrideInvalidCleanup) qui doivent être persistés même si
-    /// l'app crash juste après. Acquiert un lock sur _logFlushLock.
+    /// l'app crash juste après. Mise en file puis vidage synchrone (<see cref="FlushLog"/>) :
+    /// les lignes journalisées avant elle sont écrites avant elle, dans l'ordre (T5).
     /// </summary>
     public static void LogCompatCriticalEvent(string eventName, string details)
     {
-        var logDir = LogDirectory;
-        var logEntry = $"[{DateTime.Now:s}] {eventName}: {details}\n";
-        var logFile = Path.Combine(logDir, "error.log");
-        AppendLogEntry(logDir, logFile, logEntry);
+        _logQueue.Enqueue((LogDirectory, $"[{DateTime.Now:s}] {eventName}: {details}\n"));
+        FlushLog();
     }
-
-    private static readonly System.Collections.Concurrent.ConcurrentQueue<string> _deferredLogEntries = new();
-    private static int _deferredLogDraining;
 
     /// <summary>
-    /// Audit du 25/09 (M-07) : variante pour le rappel du hook. Un refus de SendInput y
-    /// journalisait par <see cref="LogCompatCriticalEvent"/> : Directory.CreateDirectory et
-    /// File.AppendAllText sous <c>_logFlushLock</c>, partagé avec le pool de threads. La ligne
-    /// est maintenant datée ici, mise en file, et écrite par un seul vidage à la fois sur le
-    /// pool de threads, dans l'ordre d'arrivée. Un plantage juste après peut la perdre.
+    /// Audit du 25/09 (M-07) : variante pour le rappel du hook, qui ne doit jamais attendre le
+    /// disque. Depuis l'audit des accès concurrents (T2), toute ligne ordinaire suit ce chemin :
+    /// datée ici, mise en file, écrite sur le pool dans l'ordre d'arrivée. Un plantage juste
+    /// après peut la perdre, sauf s'il passe par <see cref="LogFatal"/>.
     /// </summary>
-    public static void LogCompatEventDeferred(string eventName, string details)
-    {
-        _deferredLogEntries.Enqueue($"[{DateTime.Now:s}] {eventName}: {details}\n");
-        if (Interlocked.Exchange(ref _deferredLogDraining, 1) == 0)
-            ThreadPool.QueueUserWorkItem(static _ => DrainDeferredLog());
-    }
-
-    private static void DrainDeferredLog()
-    {
-        do
-        {
-            var logDir = LogDirectory;
-            var logFile = Path.Combine(logDir, "error.log");
-            while (_deferredLogEntries.TryDequeue(out var entry))
-                AppendLogEntry(logDir, logFile, entry);
-            Volatile.Write(ref _deferredLogDraining, 0);
-            // Une ligne arrivée entre le dernier TryDequeue et la remise à zéro n'a pas
-            // relancé de vidage : la reprendre ici, sauf si un autre vidage l'a déjà fait.
-        }
-        while (!_deferredLogEntries.IsEmpty && Interlocked.Exchange(ref _deferredLogDraining, 1) == 0);
-    }
+    public static void LogCompatEventDeferred(string eventName, string details) =>
+        EnqueueLogEntry($"[{DateTime.Now:s}] {eventName}: {details}\n");
 
     /// <summary>
     /// Trace de debug pour le crash post-Reset (cf. project_crash_lm_post_reset_hypothesis).
@@ -1021,24 +1336,28 @@ static class ConfigManager
 
     /// <summary>
     /// Vérifie la taille de error.log au démarrage. Si > 5 Mo, renomme en error.log.old
-    /// (écrase l'éventuel précédent .old). Une seule rotation, pas d'archivage cumulatif.
-    /// À appeler une fois au démarrage de l'app, avant toute écriture de log.
+    /// (écrase l'éventuel précédent .old). Une seule rotation, pas d'archivage cumulatif :
+    /// error.log et error.log.old font au plus ~10 Mo ensemble. Appelée au démarrage de l'app,
+    /// avant toute écriture de log ; en cours de session, l'écriture du journal applique le
+    /// même plafond (<see cref="TrackLogSizeLocked"/>, CE-T7).
     /// </summary>
     public static void RotateLogIfNeeded()
     {
-        try
+        // Sous le verrou du journal (T5) : une ligne en cours d'écriture ne part pas dans le
+        // fichier qu'on renomme, et aucune n'est écrite entre le test de taille et le renommage.
+        lock (_logFlushLock)
         {
-            var logFile = Path.Combine(LogDirectory, "error.log");
-            if (!File.Exists(logFile)) return;
-            var info = new FileInfo(logFile);
-            if (info.Length < LogRotationSizeBytes) return;
-
-            var oldFile = Path.Combine(LogDirectory, "error.log.old");
-            if (File.Exists(oldFile))
-                File.Delete(oldFile);
-            File.Move(logFile, oldFile);
+            _logSizeDir = null; // la taille suivie est relue à la ligne suivante
+            try
+            {
+                var logFile = Path.Combine(LogDirectory, "error.log");
+                if (!File.Exists(logFile)) return;
+                var info = new FileInfo(logFile);
+                if (info.Length < LogRotationSizeBytes) return;
+                TryRotateLogLocked(LogDirectory); // best-effort, ne pas bloquer le démarrage
+            }
+            catch { /* best-effort, ne pas bloquer le démarrage */ }
         }
-        catch { /* best-effort, ne pas bloquer le démarrage */ }
     }
 
     private static bool GetBool(string key)
@@ -1112,7 +1431,7 @@ static class ConfigManager
         lock (_lock)
         {
             EnsureLoaded();
-            using var doc = JsonDocument.Parse(value.ToString());
+            using var doc = JsonDocument.Parse(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             SetValueLocked(key, doc.RootElement.Clone());
         }
     }
@@ -1199,45 +1518,30 @@ static class ConfigManager
 
     private static void EnsureLoaded()
     {
-        if (_cache != null) return;
+        if (_cache != null)
+        {
+            if (_readPending) TryRereadLocked();
+            return;
+        }
         _cache = new Dictionary<string, JsonElement>();
         _loadFailed = false;
+        _readPending = false;
+        _changedWhileUnread.Clear();
+        _compatChangedWhileUnread.Clear();
         try
         {
             if (File.Exists(_configPath))
-            {
-                var json = File.ReadAllText(_configPath);
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                    throw new JsonException("La configuration doit être un objet JSON.");
-                foreach (var prop in doc.RootElement.EnumerateObject())
-                {
-                    if (prop.Name == "compatibility" && prop.Value.ValueKind == JsonValueKind.Object)
-                    {
-                        // Sous-objet compatibility : process → "forceOn"/"forceOff"
-                        _compatibilityCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                        foreach (var entry in prop.Value.EnumerateObject())
-                        {
-                            if (entry.Value.ValueKind == JsonValueKind.String)
-                            {
-                                var v = entry.Value.GetString();
-                                if (v == "forceOn" || v == "forceOff")
-                                    _compatibilityCache[entry.Name] = v;
-                            }
-                        }
-                        continue;
-                    }
-                    _cache[prop.Name] = prop.Value.Clone();
-                }
-            }
+                (_cache, _compatibilityCache, _compatibilityUnknown) = ParseConfig(FileQuarantine.ReadAllTextWithRetries(_configPath));
         }
         catch (Exception ex) when (FileQuarantine.IsReadFailure(ex))
         {
-            // Lecture impossible pour l'instant (verrou d'un antivirus ou d'une sauvegarde,
-            // droits) : le fichier est sans doute intact. Aucune écriture pendant cette
-            // session (WriteFile refuse d'écraser un fichier non chargé), le prochain
-            // lancement relit. L'accord reste absent pour la session : rien ne s'active seul.
+            // Lecture impossible malgré les essais courts (verrou d'un antivirus ou d'une
+            // sauvegarde, droits) : le fichier est sans doute intact. Réglages par défaut en
+            // attendant, aucune écriture sur ce fichier (WriteFile refuse d'écraser un fichier non
+            // chargé), et relecture au prochain accès (CE-T2, choix d'Antoine du 16 novembre 2026) :
+            // avant, l'accord et les réglages restaient perdus pour toute la session.
             _loadFailed = true;
+            _readPending = true;
             Log("ConfigManager.EnsureLoaded", ex);
         }
         catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
@@ -1250,16 +1554,24 @@ static class ConfigManager
             Log("ConfigManager.EnsureLoaded", ex);
             _cache.Clear();
             _compatibilityCache = null;
+            _compatibilityUnknown = null;
             if (FileQuarantine.TryMoveAside(_configPath, "ConfigManager.Quarantine") != null)
                 _quarantineNoticePending = true;
-            else
+            else if (File.Exists(_configPath))
                 _loadFailed = true;
+            // Sinon le fichier a disparu entre la lecture et le renommage : une autre instance
+            // l'a déjà mis de côté (ME-09, C4.5). Il n'y a plus de fichier à protéger, l'état
+            // « chargement échoué » collé bloquerait toute écriture pour rien, et la notice est
+            // celle de l'autre instance.
         }
         catch (IOException ex)
         {
             // Fichier disparu entre File.Exists et la lecture : comme une installation neuve.
             Log("ConfigManager.EnsureLoaded", ex);
         }
+
+        // AF-06 : temporaires laissés par une coupure d'un lancement précédent.
+        if (!_loadFailed) FileQuarantine.RemoveOrphanTemps(_configPath);
 
         // Installation neuve (aucun fichier, ou fichier corrompu mis de côté) : la langue
         // initiale suit l'interface Windows et s'écrit à la première écriture — un défaut
@@ -1269,13 +1581,112 @@ static class ConfigManager
         // WriteFile refuse déjà d'écraser un fichier existant non chargé.
         if (!_loadFailed && _cache.Count == 0 && !File.Exists(_configPath))
         {
-            string derived;
-            try { derived = DefaultAppLanguage(GetUserDefaultUILanguage()); }
-            catch { derived = "fr"; }
+            string derived = DerivedAppLanguage();
             using var doc = JsonDocument.Parse($"\"{derived}\"");
             _cache["appLanguage"] = doc.RootElement.Clone();
             MarkDirty();
         }
+    }
+
+    /// <summary>Analyse le contenu de config.json : réglages, et sous-objet compatibility
+    /// (processus → "forceOn"/"forceOff"). Lève <see cref="JsonException"/> sur une racine qui
+    /// n'est pas un objet.</summary>
+    private static (Dictionary<string, JsonElement> Cache, Dictionary<string, string>? Compatibility,
+        Dictionary<string, JsonElement>? CompatibilityUnknown) ParseConfig(string json)
+    {
+        var cache = new Dictionary<string, JsonElement>();
+        Dictionary<string, string>? compatibility = null;
+        Dictionary<string, JsonElement>? unknown = null;
+        using var doc = FileQuarantine.ParseUserFile(json); // AF-01
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new JsonException("La configuration doit être un objet JSON.");
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            if (prop.Name == "compatibility" && prop.Value.ValueKind == JsonValueKind.Object)
+            {
+                compatibility = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in prop.Value.EnumerateObject())
+                {
+                    // Valeur d'une version plus récente : gardée telle quelle et réécrite (audit des fichiers).
+                    var v = entry.Value.ValueKind == JsonValueKind.String ? entry.Value.GetString() : null;
+                    if (v == "forceOn" || v == "forceOff")
+                        compatibility[entry.Name] = v;
+                    else
+                    {
+                        unknown ??= new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+                        unknown[entry.Name] = entry.Value.Clone();
+                    }
+                }
+                continue;
+            }
+            cache[prop.Name] = prop.Value.Clone();
+        }
+        return (cache, compatibility, unknown);
+    }
+
+    /// <summary>
+    /// CE-T2 : relit, en un seul essai, un config.json resté illisible au chargement. Sous
+    /// <c>_lock</c>. Encore tenu : rien ne change, sans nouvelle ligne de journal. Lu : le
+    /// fichier devient la base, les réglages changés pendant la panne passent par-dessus, et
+    /// l'écriture reprend. Corrompu entre-temps : même règle qu'au chargement (mise de côté, puis
+    /// réglages de la session).
+    /// </summary>
+    private static void TryRereadLocked()
+    {
+        Dictionary<string, JsonElement> cache;
+        Dictionary<string, string>? compatibility;
+        Dictionary<string, JsonElement>? unknown = null;
+        try
+        {
+            (cache, compatibility, unknown) = ParseConfig(File.ReadAllText(_configPath));
+        }
+        catch (Exception ex) when (FileQuarantine.IsReadFailure(ex))
+        {
+            return; // toujours tenu : le premier échec est déjà journalisé
+        }
+        catch (Exception ex) when (FileQuarantine.IsCorruption(ex))
+        {
+            Log("ConfigManager.Reread", ex);
+            if (FileQuarantine.TryMoveAside(_configPath, "ConfigManager.Quarantine") != null)
+                _quarantineNoticePending = true;
+            else if (File.Exists(_configPath))
+            {
+                _readPending = false; // quarantaine ratée : collante, comme au chargement
+                return;
+            }
+            cache = new Dictionary<string, JsonElement>();
+            compatibility = null;
+        }
+        catch (IOException)
+        {
+            // Fichier disparu entre-temps : plus rien à protéger, les réglages de la session restent.
+            cache = new Dictionary<string, JsonElement>();
+            compatibility = null;
+        }
+
+        int kept = _changedWhileUnread.Count + _compatChangedWhileUnread.Count;
+        foreach (var (key, value) in _changedWhileUnread)
+        {
+            if (value is { } element) cache[key] = element;
+            else cache.Remove(key);
+        }
+        foreach (var (process, mode) in _compatChangedWhileUnread)
+        {
+            compatibility ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (mode == null) compatibility.Remove(process);
+            else compatibility[process] = mode;
+        }
+        // Une valeur connue posée pendant la panne remplace la valeur inconnue relue.
+        foreach (var (process, _) in _compatChangedWhileUnread) unknown?.Remove(process);
+        _cache = cache;
+        _compatibilityCache = compatibility;
+        _compatibilityUnknown = unknown;
+        _loadFailed = false;
+        _readPending = false;
+        _changedWhileUnread.Clear();
+        _compatChangedWhileUnread.Clear();
+        LogCompatEventDeferred("ConfigReadRecovered", $"changesKept={kept}");
+        if (kept > 0) MarkDirty();
     }
 
     /// <summary>
@@ -1331,6 +1742,12 @@ static class ConfigManager
     /// <summary>Écritures ratées d'affilée, sous <c>_lock</c> ; 0 hors d'un échec.</summary>
     private static int _failedWrites;
 
+    /// <summary>Numéro du dernier <see cref="MarkDirty"/>, sous <c>_lock</c>. <see cref="Flush"/>
+    /// le relève avec son instantané : s'il a changé à la fin d'une écriture ratée, un réglage
+    /// a relancé le cycle normal pendant l'écriture, et l'échec ne le remplace pas (audit des
+    /// accès concurrents, CM6).</summary>
+    private static int _dirtyGeneration;
+
     /// <summary>Hook de test : reçoit chaque délai armé, à la place de la minuterie. Le
     /// test déclenche lui-même l'écriture par <see cref="Flush"/>.</summary>
     internal static Action<int>? SaveSchedulerForTests;
@@ -1347,6 +1764,7 @@ static class ConfigManager
             && current.GetRawText() == value.GetRawText())
             return;
         _cache[key] = value;
+        if (_readPending) _changedWhileUnread[key] = value;
         MarkDirty();
     }
 
@@ -1355,6 +1773,7 @@ static class ConfigManager
     private static void MarkDirty()
     {
         _dirty = true;
+        _dirtyGeneration++;
         _failedWrites = 0; // un nouveau réglage relance le cycle normal
         if (SaveDelayMilliseconds < 0) return;
         ArmSaveLocked(SaveDelayMilliseconds);
@@ -1406,9 +1825,14 @@ static class ConfigManager
             byte[] content;
             bool loadFailed;
             string? failureContext;
+            int generation;
             lock (_lock)
             {
+                // CE-T2 : un fichier resté illisible est relu avant d'écrire, fermeture comprise
+                // (FlushFinal) ; sinon les réglages de la panne n'étaient jamais écrits.
+                if (_readPending) TryRereadLocked();
                 if (!_dirty || _cache == null) return;
+                generation = _dirtyGeneration;
                 content = SerializeLocked();
                 path = _configPath;
                 loadFailed = _loadFailed;
@@ -1433,11 +1857,58 @@ static class ConfigManager
                 {
                     // Le cache reste à écrire, et l'écriture se réessaie seule.
                     _dirty = true;
-                    _failedWrites++;
-                    ArmSaveLocked(RetryDelayAfter(_failedWrites));
+                    // Un réglage changé pendant l'écriture a déjà relancé le cycle normal
+                    // (MarkDirty : compteur à zéro, minuterie au délai normal) : l'échec de
+                    // l'instantané précédent ne le remplace pas par un palier d'échec (CM6).
+                    if (generation == _dirtyGeneration)
+                    {
+                        _failedWrites++;
+                        ArmSaveLocked(RetryDelayAfter(_failedWrites));
+                    }
                 }
             }
         }
+    }
+
+    /// <summary>Nouveaux essais de l'écriture de fermeture, après le premier.</summary>
+    internal const int FinalFlushRetries = 3;
+
+    /// <summary>Pause entre deux essais de l'écriture de fermeture : trois essais de plus coûtent
+    /// 750 ms au plus, sous le plafond de 1,5 s qui ne doit pas retarder l'arrêt de Windows.</summary>
+    internal const int FinalFlushDelayMilliseconds = 250;
+
+    /// <summary>
+    /// Écriture de fermeture (ME-09, C4.3) : <see cref="Flush"/>, puis, tant que le cache reste à
+    /// écrire, quelques nouveaux essais bornés, sur le fil appelant. Les reprises sur minuterie
+    /// (1 s, 5 s…) meurent avec le processus : un verrou d'antivirus tenu au moment de quitter
+    /// faisait perdre les derniers réglages (accord d'activation, progression, compteur d'avis)
+    /// sans un mot. Rend vrai si plus rien n'attend ; sinon la perte est journalisée, de façon
+    /// synchrone, le processus allant mourir. Jamais sous <c>_lock</c> (voir <see cref="Flush"/>).
+    /// </summary>
+    /// <param name="sleep">Attente entre deux essais, en millisecondes (remplaçable en test).</param>
+    internal static bool FlushFinal(Action<int>? sleep = null, int retries = FinalFlushRetries,
+        int delayMilliseconds = FinalFlushDelayMilliseconds)
+    {
+        sleep ??= static ms => Thread.Sleep(ms);
+        Flush();
+        for (int essai = 0; essai < retries && StillToWrite(); essai++)
+        {
+            sleep(delayMilliseconds);
+            Flush();
+        }
+        if (!StillToWrite()) return true;
+        LogCompatCriticalEvent("ConfigFinalWriteLost", $"failedWrites={FailedWritesSnapshot()}");
+        return false;
+    }
+
+    private static bool StillToWrite()
+    {
+        lock (_lock) return _dirty && _cache != null;
+    }
+
+    private static int FailedWritesSnapshot()
+    {
+        lock (_lock) return _failedWrites;
     }
 
     /// <summary>Instantané du cache en JSON, sous <c>_lock</c>, sans I/O : les mêmes
@@ -1461,15 +1932,23 @@ static class ConfigManager
                 val.WriteTo(writer);
             }
             // Sous-objet compatibility (overrides utilisateur par process)
-            if (_compatibilityCache != null && _compatibilityCache.Count > 0)
+            if (_compatibilityCache?.Count > 0 || _compatibilityUnknown?.Count > 0)
             {
                 writer.WritePropertyName("compatibility");
                 writer.WriteStartObject();
-                foreach (var (proc, mode) in _compatibilityCache)
-                {
-                    writer.WritePropertyName(proc);
-                    writer.WriteStringValue(mode);
-                }
+                if (_compatibilityCache != null)
+                    foreach (var (proc, mode) in _compatibilityCache)
+                    {
+                        writer.WritePropertyName(proc);
+                        writer.WriteStringValue(mode);
+                    }
+                // AF-03 : entrées inconnues, réécrites telles qu'elles ont été lues.
+                if (_compatibilityUnknown != null)
+                    foreach (var (proc, value) in _compatibilityUnknown)
+                    {
+                        writer.WritePropertyName(proc);
+                        value.WriteTo(writer);
+                    }
                 writer.WriteEndObject();
             }
             writer.WriteEndObject();

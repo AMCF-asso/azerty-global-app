@@ -357,13 +357,30 @@ static class Win32
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern uint RegisterWindowMessageW(string lpString);
 
+    // Heure du dernier message POSTÉ retiré de la file, même base que KBDLLHOOKSTRUCT.time
+    // (AFH-4). Pendant un message envoyé, elle date du message posté précédent : voir
+    // TrayApplication.SessionTransitionTime.
+    [DllImport("user32.dll")]
+    public static extern int GetMessageTime();
+
+    // ISMEX_NOSEND (0) : le message en cours a été posté (ou envoyé par ce même thread).
+    public const uint ISMEX_NOSEND = 0x00000000;
+
+    [DllImport("user32.dll")]
+    public static extern uint InSendMessageEx(IntPtr lpReserved);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetTickCount();
+
     // SetLastError : NativeWindow.RegisterClass lit l'erreur 1410 (classe déjà enregistrée).
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern ushort RegisterClassExW(ref WNDCLASSEXW lpwcx);
 
     public const int GCLP_HBRBACKGROUND = -10;
 
-    [DllImport("user32.dll")]
+    /// <summary>Rend l'ancienne valeur, ou 0 en cas d'échec : 0 est aussi une ancienne valeur
+    /// légitime, seul le code d'erreur les distingue (CE-16).</summary>
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr SetClassLongPtrW(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -467,7 +484,8 @@ static class Win32
     [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
-    [DllImport("user32.dll")]
+    // SetLastError : la cause d'un refus se journalise (CE-T3, pause sans minuterie).
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern UIntPtr SetTimer(IntPtr hWnd, UIntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
 
     [DllImport("user32.dll")]
@@ -973,6 +991,40 @@ static class Win32
     [DllImport("gdiplus.dll")]
     public static extern int GdipCreateHBITMAPFromBitmap(IntPtr bitmap, out IntPtr hbmReturn, uint background);
 
+    // Tracés lissés (cadres arrondis antialiasés, PaperDraw.SmoothRoundBox).
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreatePath(int fillMode, out IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDeletePath(IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipAddPathArc(IntPtr path, float x, float y, float w, float h, float start, float sweep);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipClosePathFigure(IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreateSolidFill(uint argb, out IntPtr brush);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDeleteBrush(IntPtr brush);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipCreatePen1(uint argb, float width, int unit, out IntPtr pen);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDeletePen(IntPtr pen);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipFillPath(IntPtr graphics, IntPtr brush, IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipDrawPath(IntPtr graphics, IntPtr pen, IntPtr path);
+
+    [DllImport("gdiplus.dll")]
+    public static extern int GdipSetPixelOffsetMode(IntPtr graphics, int mode);
+
     // ═══════════════════════════════════════════════════════════════
     // P/Invoke — OLE / COM streams
     // ═══════════════════════════════════════════════════════════════
@@ -1075,6 +1127,9 @@ static class Win32
     public const uint WM_WTSSESSION_CHANGE = 0x02B1;
     public const int WTS_CONSOLE_CONNECT = 0x1;
     public const int WTS_REMOTE_CONNECT = 0x3;
+    public const int WTS_CONSOLE_DISCONNECT = 0x2;
+    public const int WTS_REMOTE_DISCONNECT = 0x4;
+    public const int WTS_SESSION_LOCK = 0x7;
     public const int WTS_SESSION_UNLOCK = 0x8;
     public const uint NOTIFY_FOR_THIS_SESSION = 0;
 

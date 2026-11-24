@@ -203,6 +203,9 @@ static class DailyChallenge
     /// <summary>Identifiant du module synthétique dans le catalogue des leçons.</summary>
     public const string ModuleId = "defi";
 
+    /// <summary>Rang de l'extrait dans la leçon du jour (l'échauffement est au rang 0).</summary>
+    public const int ExtractExerciseIndex = 1;
+
     /// <summary>
     /// Construit le module « Défi du jour » du catalogue des leçons : une leçon du jour,
     /// deux exercices — échauffement (5 répétitions par caractère cible, dérivées de
@@ -214,7 +217,7 @@ static class DailyChallenge
         var session = SessionFor(date, sequenceIndex);
         if (session == null) return null;
 
-        string lessonId = $"defi-{date:yyyyMMdd}";
+        string lessonId = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"defi-{date:yyyyMMdd}");
         // Échauffement : une ligne par caractère cible, 5 répétitions espacées.
         string warmupContent = string.Join("\n",
             session.WarmupChars.Select(c => string.Join(" ", Enumerable.Repeat(c, WarmupRepetitions))));
@@ -227,7 +230,7 @@ static class DailyChallenge
         {
             new(ModuleId, lessonId, 0, "warmup",
                 L.Challenge_WarmupInstruction, warmupContent, LessonTypingMode.Strict),
-            new(ModuleId, lessonId, 1, "extract",
+            new(ModuleId, lessonId, ExtractExerciseIndex, "extract",
                 extractInstruction, WrapText(session.Extract.Text, 62), LessonTypingMode.Flexible),
         };
 

@@ -55,6 +55,9 @@ public static class LayoutJsonParser
         RequireKind(deadKeys, JsonValueKind.Object, "dead_keys", "an object");
         foreach (var property in deadKeys.EnumerateObject())
         {
+            // CE-18 (K107): TryGetProperty on an entry that is not an object (5, null, "dk")
+            // threw an InvalidOperationException naming no path, outside the parser's contract.
+            RequireKind(property.Value, JsonValueKind.Object, $"dead_keys.{property.Name}", "an object");
             var deadKey = new DeadKeyDefinition
             {
                 Name = property.Name,

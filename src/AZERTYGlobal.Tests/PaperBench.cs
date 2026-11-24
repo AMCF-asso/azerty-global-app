@@ -39,7 +39,7 @@ public sealed class PaperBench
                 var state = i < 17 ? TabState.Done : i == 17 ? TabState.Current : TabState.Upcoming;
                 columns.Add(new TabColumn(sample[i].G, sample[i].S, sample[i].A, sample[i].K.Length > 0 ? sample[i].K : null, state));
             }
-            var style = TablatureStyle.Lessons(1f);
+            var style = TablatureStyle.Lessons(FontScale.Shared(1f));
             var surface = new Win32.RECT { left = 24, top = 76, right = 1084, bottom = 76 + 26 + style.Height + 22 + 2 };
             PaperDraw.Fill(hdc, surface, PaperTheme.Surface);
             PaperDraw.Frame(hdc, surface, PaperTheme.Border);
@@ -52,7 +52,7 @@ public sealed class PaperBench
             var kb = new PaperKeyboardState { AltGr = false };
             kb.TargetScancodes.Add(0x39);
             kb.TargetContextLabels.Add("AltGr");
-            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 390, 52f), layout, PaperKeyboardMode.Map, kb);
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 390, 52f), layout, PaperKeyboardMode.Map, kb, fonts: null);
 
             var title = FontSpec.Of(AppFonts.Title, 26, TypeRamp.Semibold, 1f);
             PaperText.Draw(hdc, "Espace fine insécable", title, 860, 520, PaperTheme.Ink);
@@ -73,7 +73,7 @@ public sealed class PaperBench
         {
             PaperDraw.Fill(hdc, 0, 0, 1108, 640, PaperTheme.Paper);
             var text = "Éclat de Źanna.";
-            var style = TablatureStyle.LessonsText(1f);
+            var style = TablatureStyle.LessonsText(FontScale.Shared(1f));
             var columns = new List<TabColumn>();
             for (int i = 0; i < text.Length; i++)
                 columns.Add(new TabColumn(text[i].ToString(), false, false, null,
@@ -87,7 +87,7 @@ public sealed class PaperBench
             int x = grid.left + style.LabelWidth;
             for (int c = 0; c < 9; c++) x += widths[c];
             int center = x + widths[9] / 2;
-            var notation = KeyNotationStyle.Lessons(1f);
+            var notation = KeyNotationStyle.Lessons(FontScale.Shared(1f));
             var (zSteps, zNotes, _) = KeyNotation.ForLesson(Gesture.Of("Ź"), 'a', false, false);
             var (zw, _) = KeyNotation.Measure(hdc, zSteps, notation, zNotes);
             int maxAbove = 2 * (notation.TagHeight + notation.Gap);
@@ -131,10 +131,10 @@ public sealed class PaperBench
             PaperDraw.Fill(hdc, 0, 0, 1108, 600, PaperTheme.Paper);
             var (e, _, _) = KeyNotation.ForLesson(Gesture.Of("É"), 'c', false, false);
             var z = Gesture.Of("Ź");
-            MiniKeyboardRenderer.DrawNumbered(hdc, 24, 24, 24f, e, 1f);
-            MiniKeyboardRenderer.DrawNumbered(hdc, 560, 24, 24f, z, 1f);
-            MiniKeyboardRenderer.DrawFrames(hdc, 24, 230, 17f, e, 1f);
-            MiniKeyboardRenderer.DrawFrames(hdc, 24, 410, 17f, z, 1f);
+            MiniKeyboardRenderer.DrawNumbered(hdc, 24, 24, 24f, e, FontScale.Shared(1f));
+            MiniKeyboardRenderer.DrawNumbered(hdc, 560, 24, 24f, z, FontScale.Shared(1f));
+            MiniKeyboardRenderer.DrawFrames(hdc, 24, 230, 17f, e, FontScale.Shared(1f));
+            MiniKeyboardRenderer.DrawFrames(hdc, 24, 410, 17f, z, FontScale.Shared(1f));
         });
     }
 
@@ -159,13 +159,13 @@ public sealed class PaperBench
                 PaperDraw.Fill(hdc, 0, y + 49, 560, y + 50, PaperTheme.Border);
                 PaperText.DrawLine(hdc, chars[i], FontSpec.Of(AppFonts.Title, 28, TypeRamp.Semibold, 1f),
                     new Win32.RECT { left = 10, top = y, right = 62, bottom = y + 50 }, chosen ? PaperTheme.Action : PaperTheme.Ink, TextAlign.Center);
-                TablatureRenderer.DrawShortGesture(hdc, Gesture.Of(chars[i]), chosen, 1f, 544, y + 25);
+                TablatureRenderer.DrawShortGesture(hdc, Gesture.Of(chars[i]), chosen, FontScale.Shared(1f), 544, y + 25);
                 y += 50;
             }
             var stepsZ = Gesture.Of("Ź");
             PaperText.DrawLine(hdc, "Ź", FontSpec.Of(AppFonts.Title, 84, TypeRamp.Semibold, 1f),
                 new Win32.RECT { left = 4, top = y + 18, right = 120, bottom = y + 160 }, PaperTheme.Action, TextAlign.Center);
-            var style = TablatureStyle.Search(1f);
+            var style = TablatureStyle.Search(FontScale.Shared(1f));
             var columns = TabColumn.FromGesture(stepsZ);
             var widths = TablatureRenderer.MeasureColumns(hdc, columns, style);
             TablatureRenderer.Draw(hdc, columns, widths, style, new Win32.RECT { left = 128, top = y + 50, right = 540, bottom = 0 });
@@ -184,18 +184,33 @@ public sealed class PaperBench
         {
             PaperDraw.Fill(hdc, 0, 0, 854, 1000, PaperTheme.Paper);
             var altGr = new PaperKeyboardState { AltGr = true };
-            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 20, 52f), layout, PaperKeyboardMode.ActiveLayer, altGr);
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 20, 52f), layout, PaperKeyboardMode.ActiveLayer, altGr, fonts: null);
             var dead = new PaperKeyboardState { ActiveDeadKey = "dk_acute" };
-            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 340, 52f), layout, PaperKeyboardMode.ActiveLayer, dead);
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 340, 52f), layout, PaperKeyboardMode.ActiveLayer, dead, fonts: null);
             var steps = new PaperKeyboardState { Shift = true };
             steps.StepBadges[0x28] = 1;
             steps.StepBadges[0x11] = 2;
             var z = Gesture.Of("Ź");
             var columns = TabColumn.FromGesture(z);
-            var style = TablatureStyle.Banner(1f);
+            var style = TablatureStyle.Banner(FontScale.Shared(1f));
             var widths = TablatureRenderer.MeasureColumns(hdc, columns, style);
             TablatureRenderer.Draw(hdc, columns, widths, style, new Win32.RECT { left = 24, top = 650, right = 400, bottom = 0 });
-            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 720, 52f), layout, PaperKeyboardMode.ActiveLayer, steps);
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 720, 52f), layout, PaperKeyboardMode.ActiveLayer, steps, fonts: null);
+        });
+    }
+
+    /// <summary>Touche morte Symboles divers : pictogrammes (✈ ★ ☎ ⚠…) à la taille des lettres
+    /// et des flèches voisines. Mesuré par <c>PictographFitTests</c>, regardé ici.</summary>
+    [Fact]
+    public void ClavierSymbolesDivers()
+    {
+        if (OutDir is not { Length: > 0 } dir) return;
+        var layout = LayoutLoader.LoadFromResource();
+        Render(Path.Combine(dir, "papier-clavier-symboles-divers.png"), 854, 330, hdc =>
+        {
+            PaperDraw.Fill(hdc, 0, 0, 854, 330, PaperTheme.Paper);
+            var dead = new PaperKeyboardState { ActiveDeadKey = "dk_misc_symbols" };
+            PaperKeyboard.Draw(hdc, PaperKeyboard.PlaceAt(24, 20, 52f), layout, PaperKeyboardMode.ActiveLayer, dead, fonts: null);
         });
     }
 
