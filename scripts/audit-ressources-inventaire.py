@@ -107,9 +107,9 @@ RULE_VERDICTS = {
     "LoadCursorW": "aucune : curseur système partagé (LoadCursorW(NULL, IDC_*)), jamais détruit",
 }
 
-# Verdicts lus à la main : docs/audit-ressources-verdicts.tsv (site → verdict), pour les
+# Verdicts lus à la main : scripts/ressources-verdicts.tsv (site → verdict), pour les
 # sites qu'aucune règle ne classe. Le script échoue si un site reste sans verdict.
-VERDICTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "audit-ressources-verdicts.tsv")
+VERDICTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ressources-verdicts.tsv")
 
 DECL = re.compile(r"static\s+extern|static\s+partial|\[(DllImport|LibraryImport)|^\s*(internal|public|private)?\s*(static\s+)?(IntPtr|nint|bool|int|uint)\s+\w+\s*\([^)]*\)\s*(=>|;)")
 ASSIGN = re.compile(r"(?:\b(?:var|IntPtr|nint)\s+)?(?P<v>[_A-Za-z][\w\.]*)\s*(?:\?\?)?=\s*[^=]")
